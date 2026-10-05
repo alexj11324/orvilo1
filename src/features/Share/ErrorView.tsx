@@ -1,12 +1,11 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { TRPCClientError } from '@trpc/client';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NotFound from '@/components/404';
+import { Button } from '@/components/ui/button';
 import { trackLoginOrSignupClicked } from '@/features/User/UserLoginOrSignup/trackLoginOrSignupClicked';
 
 interface ShareErrorViewProps {
@@ -21,15 +20,15 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
 
   if (errorCode === 'UNAUTHORIZED') {
     return (
-      <Center height={'100%'} padding={48}>
+      <div className="flex flex-col items-center justify-center h-full p-12">
         <NotFound
           desc={t('sharePage.error.unauthorized.subtitle')}
           status={''}
           title={t('sharePage.error.unauthorized.title')}
           extra={
             <Button
-              href="/signin"
-              type="primary"
+              nativeButton={false}
+              render={<a href="/signin" />}
               onClick={(event) => {
                 event.preventDefault();
                 const callbackUrl = `${window.location.pathname}${window.location.search}`;
@@ -45,29 +44,29 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
             </Button>
           }
         />
-      </Center>
+      </div>
     );
   }
 
   if (errorCode === 'FORBIDDEN') {
     return (
-      <Center height={'100%'} padding={48}>
+      <div className="flex flex-col items-center justify-center h-full p-12">
         <NotFound
           desc={t('sharePage.error.forbidden.subtitle')}
           status={403}
           title={t('sharePage.error.forbidden.title')}
         />
-      </Center>
+      </div>
     );
   }
 
   return (
-    <Center height={'100%'} padding={48}>
+    <div className="flex flex-col items-center justify-center h-full p-12">
       <NotFound
         desc={t('sharePage.error.notFound.subtitle')}
         title={t('sharePage.error.notFound.title')}
       />
-    </Center>
+    </div>
   );
 });
 

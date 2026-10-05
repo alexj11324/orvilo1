@@ -1,11 +1,10 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { cssVar } from 'antd-style';
 import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useFetchActiveTopicDetail } from '@/hooks/useFetchActiveTopicDetail';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
@@ -32,7 +31,7 @@ const ChatHeaderTitle = memo(() => {
   return (
     <ChatHeader.Title
       desc={
-        <Flexbox horizontal align={'center'} gap={4} onClick={() => toggleConfig()}>
+        <div className="flex items-center gap-1" onClick={() => toggleConfig()}>
           <span
             style={{
               maxWidth: '60vw',
@@ -52,7 +51,7 @@ const ChatHeaderTitle = memo(() => {
               color: cssVar.colorTextDescription,
             }}
           />
-        </Flexbox>
+        </div>
       }
       title={
         <div

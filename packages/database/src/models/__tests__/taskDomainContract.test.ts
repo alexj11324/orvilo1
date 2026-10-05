@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   taskDependencies,
+  taskDispatches,
   taskDomainEvents,
   taskPlanningScopes,
   tasks,
@@ -152,11 +153,21 @@ describe('task domain contract', () => {
       { instruction: 'Verify this run' },
       { mutation: { idempotencyKey: 'command:create:verify-race', source: 'user' } },
     );
-    const [running] = await db
-      .update(tasks)
-      .set({ status: 'running' })
-      .where(eq(tasks.id, task.id))
-      .returning();
+    // Canonical 'running' is a live dispatch; the manual pause is the parked
+    // marker after the run is torn down (abandoned dispatch).
+    await db.insert(taskDispatches).values({
+      generation: 1,
+      id: 'dispatch-verify-race',
+      idempotencyKey: 'manual:verify-race',
+      phase: 'running',
+      policyRevision: 1,
+      requestedBy: `user:${userId}`,
+      requirementRevision: 1,
+      taskId: task.id,
+      taskRevision: 1,
+      workspaceId: null,
+    });
+    const [running] = await db.select().from(tasks).where(eq(tasks.id, task.id));
     const expected = {
       assigneeAgentId: running.assigneeAgentId,
       executionGeneration: running.executionGeneration,
@@ -164,7 +175,11 @@ describe('task domain contract', () => {
       requirementRevision: running.requirementRevision,
       status: 'running',
     };
-    await db.update(tasks).set({ status: 'paused' }).where(eq(tasks.id, task.id));
+    await model.updateStatus(task.id, 'paused');
+    await db
+      .update(taskDispatches)
+      .set({ phase: 'abandoned' })
+      .where(eq(taskDispatches.taskId, task.id));
 
     await expect(
       model.updateStatusForExecutionContract(task.id, 'completed', expected),

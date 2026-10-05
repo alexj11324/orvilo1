@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { type ChatVideoItem } from '@/types/index';
@@ -9,7 +8,7 @@ interface VideoFileListViewerProps {
 
 const VideoFileListViewer = memo<VideoFileListViewerProps>(({ items }) => {
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {items.map((item) => (
         <video
           controls
@@ -24,7 +23,7 @@ const VideoFileListViewer = memo<VideoFileListViewerProps>(({ items }) => {
           {item.alt}
         </video>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

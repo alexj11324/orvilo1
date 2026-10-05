@@ -10,11 +10,19 @@ vi.mock('@/store/global', () => ({
     selector({ revealInFilesTab: mockRevealInFilesTab }),
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  ActionIcon: ({ onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({ onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button type="button" {...props} onClick={onClick} />
   ),
+}));
+
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   confirmModal: vi.fn(),
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 

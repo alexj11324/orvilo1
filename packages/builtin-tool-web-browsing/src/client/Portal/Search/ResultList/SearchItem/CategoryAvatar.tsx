@@ -1,5 +1,3 @@
-import { Icon } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import {
   LucideAtom,
@@ -13,7 +11,9 @@ import {
   LucideTextSearch,
   LucideUserRound,
 } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 interface CategoryAvatarProps {
   category: string;
@@ -59,9 +59,18 @@ const CategoryAvatar = memo<CategoryAvatarProps>(({ category, size = 24 }) => {
 
   return (
     <Avatar
-      avatar={<Icon icon={categoryIcon} style={{ color: cssVar.colorTextSecondary }} />}
       background={cssVar.colorFillTertiary}
       size={size}
+      avatar={
+        <span className="anticon" role="img" style={{ color: cssVar.colorTextSecondary }}>
+          {createElement(categoryIcon, {
+            size: '1em',
+            width: '1em',
+            height: '1em',
+            fill: 'transparent',
+          })}
+        </span>
+      }
     />
   );
 });

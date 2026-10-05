@@ -1,47 +1,40 @@
-import { Block, Icon, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import type { TaskPriority, TaskStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
-import { TagIcon } from 'lucide-react';
+import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import { format, parseISO } from 'date-fns';
+import {
+  CalendarIcon,
+  ClockIcon,
+  SignalIcon,
+  TagIcon,
+  UserRoundIcon,
+  UsersIcon,
+} from 'lucide-react';
+import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import IssueStatusPicker from '../features/IssueStatusPicker';
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskStatusTag from '../features/TaskStatusTag';
+import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import TaskTriggerTag from '../features/TaskTriggerTag';
-import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
-import { RAIL_VALUE_FONT_SIZE } from './railText';
-import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
+import { isDueDateOverdue } from './isDueDateOverdue';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskPrerequisites from './TaskPrerequisites';
 import TaskScheduleConfig from './TaskScheduleConfig';
-import { resolveTaskStatusRow } from './taskStatusRow';
-
-interface StatusMeta {
-  labelKey: string;
-}
-
-const STATUS_META: Record<TaskStatus, StatusMeta> = {
-  backlog: { labelKey: 'status.backlog' },
-  canceled: { labelKey: 'status.canceled' },
-  completed: { labelKey: 'status.completed' },
-  failed: { labelKey: 'status.failed' },
-  paused: { labelKey: 'status.paused' },
-  running: { labelKey: 'status.running' },
-  scheduled: { labelKey: 'status.scheduled' },
-};
 
 interface PriorityMeta {
   labelKey: string;
@@ -55,6 +48,24 @@ const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
   4: { labelKey: 'priority.low' },
 };
 
+const PropertyRow = ({
+  children,
+  label,
+  mark,
+}: {
+  children: ReactNode;
+  label: string;
+  mark: ReactNode;
+}) => (
+  <div className={styles.propertyRow}>
+    <div className={styles.propertyLabel}>
+      <span className={styles.propertyMark}>{mark}</span>
+      <span className="truncate">{label}</span>
+    </div>
+    <div className={styles.propertyValue}>{children}</div>
+  </div>
+);
+
 const TaskProperties = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
 
@@ -65,6 +76,7 @@ const TaskProperties = memo(() => {
   const workflowStateRefId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateRefId);
   const taskTeamId = useTaskDetailSelector(taskDetailSelectors.taskTeamId);
   const priority = useTaskDetailSelector(taskDetailSelectors.taskPriority);
+  const dueDate = useTaskDetailSelector(taskDetailSelectors.taskDueDate);
   const labels = useTaskDetailSelector(taskDetailSelectors.taskLabels);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const reviewerUserId = useTaskDetailSelector(taskDetailSelectors.taskReviewerUserId);
@@ -84,255 +96,212 @@ const TaskProperties = memo(() => {
 
   if (!taskId) return null;
 
-  const statusMeta = status ? STATUS_META[status] : STATUS_META.backlog;
-  const statusRow = resolveTaskStatusRow(status, workflowCategory, workflowStateId);
   const workflowStateName = teamStates?.find(
     (state) => state.id === workflowStateRefId || state.remoteStateId === workflowStateId,
   )?.name;
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
-  const statusChip = (
-    <Block
-      clickable
-      horizontal
-      align="center"
-      className={styles.propertyItem}
-      data-task-workflow-state={statusRow.kind === 'workflow' ? statusRow.category : undefined}
-      gap={8}
-      variant={'borderless'}
+  // The rail's Status row is the canonical Issue Status — the workflow
+  // category — for every task; execution run state is a separate badge.
+  const issueCategory: TaskWorkflowCategory = workflowCategory ?? 'backlog';
+  const workflowMark = {
+    category: issueCategory,
+    color: WORKFLOW_CATEGORY_VISUALS[issueCategory].color,
+    Icon: WORKFLOW_CATEGORY_VISUALS[issueCategory].icon,
+  };
+  const WorkflowIcon = workflowMark.Icon;
+
+  const dueDateOverdue =
+    !!dueDate &&
+    isDueDateOverdue(dueDate) &&
+    status !== 'completed' &&
+    status !== 'canceled' &&
+    workflowCategory !== 'done';
+  const priorityLevel = (priority as TaskPriority | undefined) ?? 0;
+
+  const statusValue = (
+    <div
+      className="flex min-w-0 cursor-pointer items-center gap-1.5"
+      data-task-workflow-state={workflowMark?.category}
     >
-      {statusRow.kind === 'workflow' ? (
-        <Icon
-          color={WORKFLOW_CATEGORY_VISUALS[statusRow.category].color}
-          icon={WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon}
-          size={16}
-        />
-      ) : (
-        <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
-      )}
-      <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
-        {statusRow.kind === 'workflow'
-          ? (workflowStateName ?? t(`taskDetail.workflow.category.${statusRow.category}` as never))
-          : t(`taskDetail.${statusMeta.labelKey}` as never)}
-      </Text>
-    </Block>
+      <WorkflowIcon color={workflowMark.color} size={16} />
+      <span className="truncate">
+        {workflowStateName ?? t(`taskDetail.workflow.category.${workflowMark.category}` as never)}
+      </span>
+    </div>
   );
 
   return (
-    // Linear's rail order: Status → Priority → Assignee, then the Orvilo-only
-    // cells (reviewer, acceptance, schedule). Status is one row: the workflow
-    // state when the task has one, else its execution status (taskStatusRow).
+    // Plane's property order for the fields we share: State, Assignee,
+    // Priority, Due date, Labels. Reviewer and Schedule stay after those.
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
-        {/* One Status row — the workflow state when the task has one, else
-            its execution status — over one picker: the Kanban board's own
-            columns, order and glyphs, triage included. The Tooltip mounts
-            only when it has a title — lobehub returns the bare child when it
-            doesn't, which would swallow the props Menu.Trigger clones on. */}
-        <TaskStatusTag
-          status={status}
-          taskIdentifier={taskId}
-          teamId={taskTeamId}
-          workflowCategory={workflowCategory}
-          workflowStateId={workflowStateId}
-          workflowStateRefId={workflowStateRefId}
+        <PropertyRow
+          label={t('taskDetail.property.state')}
+          mark={<span className={styles.propertyStateMark} />}
         >
-          {statusRow.kind === 'workflow' && status ? (
-            <Tooltip
-              title={`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
-            >
-              {statusChip}
-            </Tooltip>
-          ) : (
-            statusChip
-          )}
-        </TaskStatusTag>
-
-        <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
-          <Block
-            clickable
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
+          <IssueStatusPicker
+            taskIdentifier={taskId}
+            teamId={taskTeamId}
+            workflowCategory={workflowCategory}
+            workflowStateId={workflowStateId}
+            workflowStateRefId={workflowStateRefId}
           >
-            <TaskPriorityTag
-              disableDropdown
-              priority={priority}
-              size={16}
-              taskIdentifier={taskId}
-            />
-            <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
-              {t(`taskDetail.${priorityMeta.labelKey}` as never)}
-            </Text>
-          </Block>
-        </TaskPriorityTag>
+            {statusValue}
+          </IssueStatusPicker>
+        </PropertyRow>
+
+        <PropertyRow label={t('taskDetail.executionStatus')} mark={<ClockIcon size={16} />}>
+          <TaskExecutionBadge showLabel size={16} status={status} />
+        </PropertyRow>
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
-          <AssigneeMemberSelector
-            currentUserId={assigneeUserId}
-            disabled={status === 'running'}
-            taskCreatorId={createdByUserId}
-            taskIdentifier={taskId}
-            taskVisibility={visibility}
-          >
-            <Block
-              clickable
-              horizontal
-              align="center"
-              className={styles.propertyItem}
-              gap={8}
-              variant={'borderless'}
-            >
-              {assigneeUserId ? (
-                <>
-                  <AssigneeUserAvatar size={16} userId={assigneeUserId} />
-                  <Text
-                    ellipsis
-                    fontSize={RAIL_VALUE_FONT_SIZE}
-                    style={{ minWidth: 0 }}
-                    weight={500}
-                  >
-                    {memberMeta?.title}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <UnassignedAssigneeIcon kind={'human'} size={16} />
-                  <Text
-                    fontSize={RAIL_VALUE_FONT_SIZE}
-                    style={{ color: cssVar.colorTextDescription }}
-                    weight={500}
-                  >
-                    {t('taskDetail.assignee')}
-                  </Text>
-                </>
-              )}
-            </Block>
-          </AssigneeMemberSelector>
-        )}
-
-        {/* Review-phase owner: visible once the task has someone accountable for
-          review (auto-stamped on the paused transition) or while it sits in
-          'paused', where the picker can re-point the review. */}
-        {(status === 'paused' || reviewerUserId) &&
-          shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
+          <PropertyRow label={t('taskDetail.assignee')} mark={<UsersIcon size={16} />}>
             <AssigneeMemberSelector
-              currentUserId={reviewerUserId}
+              currentUserId={assigneeUserId}
               disabled={status === 'running'}
               taskCreatorId={createdByUserId}
               taskIdentifier={taskId}
               taskVisibility={visibility}
-              onChange={(userId, member) =>
-                void updateTask(
-                  taskId,
-                  { reviewerUserId: userId },
-                  {
-                    optimisticReviewer: member
-                      ? {
-                          avatar: member.user?.avatar ?? null,
-                          id: member.userId,
-                          name: member.user?.fullName ?? null,
-                          type: 'user',
-                        }
-                      : undefined,
-                  },
-                )
+            >
+              <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+                {assigneeUserId ? (
+                  <>
+                    <AssigneeUserAvatar size={16} userId={assigneeUserId} />
+                    <span className="truncate">{memberMeta?.title}</span>
+                  </>
+                ) : (
+                  <span className={styles.propertyPlaceholder}>
+                    {t('taskDetail.property.addAssignee')}
+                  </span>
+                )}
+              </div>
+            </AssigneeMemberSelector>
+          </PropertyRow>
+        )}
+
+        <PropertyRow label={t('taskDetail.property.priority')} mark={<SignalIcon size={16} />}>
+          <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
+            <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+              <TaskPriorityTag
+                disableDropdown
+                priority={priority}
+                size={16}
+                taskIdentifier={taskId}
+              />
+              <span className={priorityLevel === 0 ? styles.propertyPlaceholder : undefined}>
+                {t(`taskDetail.${priorityMeta.labelKey}` as never)}
+              </span>
+            </div>
+          </TaskPriorityTag>
+        </PropertyRow>
+
+        <PropertyRow label={t('taskDetail.dueDate')} mark={<CalendarIcon size={16} />}>
+          <div
+            className="flex min-w-0 cursor-pointer items-center"
+            onClick={() => openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })}
+          >
+            <span
+              className={
+                dueDateOverdue
+                  ? styles.propertyDanger
+                  : dueDate
+                    ? undefined
+                    : styles.propertyPlaceholder
               }
             >
-              <Tooltip title={t('taskDetail.reviewer')}>
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  className={styles.propertyItem}
-                  gap={8}
-                  variant={'borderless'}
-                >
-                  {reviewerUserId ? (
-                    <>
-                      <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                      <Text
-                        ellipsis
-                        fontSize={RAIL_VALUE_FONT_SIZE}
-                        style={{ minWidth: 0 }}
-                        weight={500}
-                      >
-                        {reviewerMeta?.title}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <UnassignedAssigneeIcon kind={'human'} size={16} />
-                      <Text
-                        fontSize={RAIL_VALUE_FONT_SIZE}
-                        style={{ color: cssVar.colorTextDescription }}
-                        weight={500}
-                      >
-                        {t('taskDetail.reviewer')}
-                      </Text>
-                    </>
-                  )}
-                </Block>
-              </Tooltip>
-            </AssigneeMemberSelector>
+              {dueDate
+                ? format(parseISO(dueDate), 'MMM d, yyyy')
+                : t('taskDetail.property.addDueDate')}
+            </span>
+          </div>
+        </PropertyRow>
+
+        <PropertyRow label={t('taskDetail.labels.title')} mark={<TagIcon size={16} />}>
+          <TaskLabelSelector
+            assignedLabels={labels}
+            disabled={status === 'running'}
+            taskIdentifier={taskId}
+          >
+            <div className="flex min-w-0 cursor-pointer items-center">
+              {labels.length > 0 ? (
+                <LabelChips labels={labels} max={3} />
+              ) : (
+                <span className={styles.propertyPlaceholder}>
+                  {t('taskDetail.property.addLabels')}
+                </span>
+              )}
+            </div>
+          </TaskLabelSelector>
+        </PropertyRow>
+
+        {(workflowCategory === 'in_review' || reviewerUserId) &&
+          shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
+            <PropertyRow label={t('taskDetail.reviewer')} mark={<UserRoundIcon size={16} />}>
+              <AssigneeMemberSelector
+                currentUserId={reviewerUserId}
+                disabled={status === 'running'}
+                taskCreatorId={createdByUserId}
+                taskIdentifier={taskId}
+                taskVisibility={visibility}
+                onChange={(userId, member) =>
+                  void updateTask(
+                    taskId,
+                    { reviewerUserId: userId },
+                    {
+                      optimisticReviewer: member
+                        ? {
+                            avatar: member.user?.avatar ?? null,
+                            id: member.userId,
+                            name: member.user?.fullName ?? null,
+                            type: 'user',
+                          }
+                        : undefined,
+                    },
+                  )
+                }
+              >
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+                        {reviewerUserId ? (
+                          <>
+                            <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                            <span className="truncate">{reviewerMeta?.title}</span>
+                          </>
+                        ) : (
+                          <span className={styles.propertyPlaceholder}>
+                            {t('taskDetail.property.addReviewer')}
+                          </span>
+                        )}
+                      </div>
+                    }
+                  />
+                  <TooltipContent>{t('taskDetail.reviewer')}</TooltipContent>
+                </Tooltip>
+              </AssigneeMemberSelector>
+            </PropertyRow>
           )}
 
-        {/* Linear's issue labels — the rail row is the picker trigger and the
-            chips themselves; empty state reads as the property name. */}
-        <TaskLabelSelector
-          assignedLabels={labels}
-          disabled={status === 'running'}
-          taskIdentifier={taskId}
-        >
-          <Block
-            clickable
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
-          >
-            <Icon color={cssVar.colorTextDescription} icon={TagIcon} size={16} />
-            {labels.length > 0 ? (
-              <LabelChips labels={labels} max={3} />
-            ) : (
-              <Text
-                fontSize={RAIL_VALUE_FONT_SIZE}
-                style={{ color: cssVar.colorTextDescription }}
-                weight={500}
-              >
-                {t('taskDetail.labels.title')}
-              </Text>
-            )}
-          </Block>
-        </TaskLabelSelector>
+        <PropertyRow label={t('taskDetail.property.schedule')} mark={<ClockIcon size={16} />}>
+          <TaskScheduleConfig>
+            <div className="flex min-w-0 cursor-pointer items-center">
+              <TaskTriggerTag
+                automationMode={automationMode}
+                heartbeatInterval={heartbeatInterval}
+                mode="inline"
+                schedulePattern={schedulePattern}
+                scheduleTimezone={scheduleTimezone}
+              />
+            </div>
+          </TaskScheduleConfig>
+        </PropertyRow>
 
-        {/* The human layer: whether the delivery is accepted. Read-only here —
-            the decision itself is made on the acceptance page this links to.
-            Recurring tasks have no delivery acceptance, so no state to show. */}
-        {!automationMode && <TaskAcceptanceStateRow />}
-
-        <TaskScheduleConfig>
-          <Block
-            clickable
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
-          >
-            <TaskTriggerTag
-              automationMode={automationMode}
-              heartbeatInterval={heartbeatInterval}
-              mode="inline"
-              schedulePattern={schedulePattern}
-              scheduleTimezone={scheduleTimezone}
-            />
-          </Block>
-        </TaskScheduleConfig>
+        {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
+            Related — one flag-marked field per kind. */}
+        <TaskPrerequisites />
       </div>
     </div>
   );

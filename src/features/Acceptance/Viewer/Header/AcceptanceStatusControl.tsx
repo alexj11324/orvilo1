@@ -1,11 +1,10 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { CircleCheck, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
 import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
@@ -34,7 +33,7 @@ const AcceptanceStatusControl = () => {
   const menu: DropdownItem[] = getAcceptanceStatusActions(data.acceptance.status).map((action) => {
     if (action === 'accept') {
       return {
-        icon: <Icon icon={CircleCheck} />,
+        icon: <CircleCheck />,
         key: action,
         label: t('acceptance.workspace.actions.markAccepted'),
         onClick: () => void changeStatus('accepted'),
@@ -42,14 +41,14 @@ const AcceptanceStatusControl = () => {
     }
     if (action === 'reopen') {
       return {
-        icon: <Icon icon={RotateCcw} />,
+        icon: <RotateCcw />,
         key: action,
         label: t('acceptance.workspace.actions.reopen'),
         onClick: () => void changeStatus('delivered'),
       };
     }
     return {
-      icon: <Icon icon={X} />,
+      icon: <X />,
       key: action,
       label: t('acceptance.workspace.actions.markClosed'),
       onClick: () => void changeStatus('closed'),

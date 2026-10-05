@@ -1,0 +1,19 @@
+[Unit]
+Description=Orvilo Agent Gateway
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+RuntimeDirectory=orvilo-agent-gateway
+RuntimeDirectoryMode=0700
+EnvironmentFile=/etc/orvilo-agent-gateway/config.env
+ExecStart=/var/lib/orvilo1/agent-gateway/start.sh
+ExecStop=/usr/bin/docker stop --time 10 orvilo-agent-gateway
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

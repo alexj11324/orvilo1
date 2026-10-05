@@ -1,10 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { Clock3Icon, ClockArrowUp } from 'lucide-react';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
 import { userService } from '@/services/user';
@@ -33,12 +32,13 @@ const Welcome = memo<{ mobile?: boolean }>(({ mobile }) => {
   );
 
   return (
-    <Flexbox padding={mobile ? 16 : 0}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', padding: mobile ? 16 : 0 }}>
+      <div
+        className={'flex min-w-0'}
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
           fontSize: 16,
           fontWeight: 500,
         }}
@@ -49,7 +49,7 @@ const Welcome = memo<{ mobile?: boolean }>(({ mobile }) => {
           components={{
             span:
               isLoading || !data ? (
-                <Skeleton height={24} style={{ minWidth: 40 }} width={40} />
+                <Skeleton style={{ width: 40, height: 24, minWidth: 40 }} />
               ) : (
                 <span style={{ fontWeight: 'bold' }} />
               ),
@@ -63,12 +63,12 @@ const Welcome = memo<{ mobile?: boolean }>(({ mobile }) => {
             username: nickname || username,
           }}
         />
-      </Flexbox>
-      <Flexbox horizontal gap={16} wrap={'wrap'}>
+      </div>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
         <TimeLabel date={data?.createdAt} icon={Clock3Icon} title={t('stats.createdAt')} />
         <TimeLabel date={data?.updatedAt} icon={ClockArrowUp} title={t('stats.updatedAt')} />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,8 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Alert, Button } from '@lobehub/ui/base-ui';
+import { CircleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { useToolStore } from '@/store/tool';
 import { type MCPErrorInfo } from '@/types/plugins';
 
@@ -19,31 +20,30 @@ const InstallError = memo<InstallErrorProps>(({ errorInfo, identifier }) => {
   const cancelInstallMCPPlugin = useToolStore((s) => s.cancelInstallMCPPlugin);
 
   return (
-    <Flexbox gap={8}>
-      <Alert
-        type="error"
-        variant={'borderless'}
-        action={
-          <Flexbox>
-            <Button
-              size={'small'}
-              type={'fill'}
-              onClick={() => {
-                cancelInstallMCPPlugin(identifier);
-              }}
-            >
-              {t('common:close')}
-            </Button>
-          </Flexbox>
-        }
-        title={t('mcpInstall.installError', {
-          detail: t(`mcpInstall.errorTypes.${errorInfo.type}`),
-        })}
-      />
+    <div className="flex flex-col gap-2">
+      <Alert variant="destructive">
+        <CircleAlert />
+        <AlertTitle>
+          {t('mcpInstall.installError', {
+            detail: t(`mcpInstall.errorTypes.${errorInfo.type}`),
+          })}
+        </AlertTitle>
+        <AlertAction>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              cancelInstallMCPPlugin(identifier);
+            }}
+          >
+            {t('common:close')}
+          </Button>
+        </AlertAction>
+      </Alert>
       {errorInfo.metadata && (
         <ErrorDetails errorInfo={errorInfo.metadata} errorMessage={errorInfo.message} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 export default InstallError;

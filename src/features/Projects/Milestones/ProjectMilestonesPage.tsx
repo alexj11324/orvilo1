@@ -1,12 +1,13 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { DiamondIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { memo, useMemo, useRef } from 'react';
+import { createElement, memo, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
@@ -216,9 +217,12 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
     return (
       <div className={styles.row} key={milestone.id}>
         <MilestoneIcon />
-        <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={450}>
+        <span
+          className="text-sm truncate"
+          style={{ fontSize: 13, fontWeight: 450, flex: 1, minWidth: 0 }}
+        >
           {milestone.name}
-        </Text>
+        </span>
         <span className={cx(styles.date, !milestone.date && styles.dateEmpty)}>
           {milestone.date ? formatProjectDate(milestone.date) : t('milestones.noTargetDate')}
         </span>
@@ -244,12 +248,9 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
         )}
         {canEdit && (
           <DropdownMenu items={milestoneMenu(milestone)}>
-            <Button
-              aria-label={t('overview.milestoneMenu')}
-              icon={EllipsisIcon}
-              size={'small'}
-              type={'text'}
-            />
+            <Button aria-label={t('overview.milestoneMenu')} size="icon-sm" variant="ghost">
+              {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
+            </Button>
           </DropdownMenu>
         )}
       </div>
@@ -258,36 +259,47 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
 
   return (
     <div className={styles.body}>
-      <Flexbox gap={8}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <Text {...SECTION_LABEL_PROPS}>{t('sections.milestones')}</Text>
-        </Flexbox>
+      <div className="flex flex-col" style={{ gap: 8 }}>
+        <div
+          className="flex flex-row"
+          style={{ alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span
+            className="text-sm"
+            style={{
+              color: SECTION_LABEL_PROPS.color,
+              fontSize: SECTION_LABEL_PROPS.fontSize,
+              fontWeight: SECTION_LABEL_PROPS.weight,
+            }}
+          >
+            {t('sections.milestones')}
+          </span>
+        </div>
         {milestones.length === 0 ? (
-          <Center padding={40}>
-            <Empty
-              icon={DiamondIcon}
-              iconColor={MILESTONE_ICON_PAINT.color}
-              action={
-                canEdit ? (
-                  <Button
-                    icon={PlusIcon}
-                    type={'primary'}
-                    onClick={() => openMilestoneFormModal({ projectId: project.id })}
-                  >
-                    {t('create.addMilestone')}
-                  </Button>
-                ) : undefined
-              }
-              description={
-                <Flexbox gap={4}>
-                  <Text>{t('milestones.empty.title')}</Text>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t('milestones.empty.description')}
-                  </Text>
-                </Flexbox>
-              }
-            />
-          </Center>
+          <div className="flex flex-col items-center justify-center" style={{ padding: 40 }}>
+            <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+              {createElement(DiamondIcon, { 'size': 40, 'aria-hidden': true })}
+              <div>
+                {
+                  <div className="flex flex-col" style={{ gap: 4 }}>
+                    <span className="text-sm">{t('milestones.empty.title')}</span>
+                    <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                      {t('milestones.empty.description')}
+                    </span>
+                  </div>
+                }
+              </div>
+              {canEdit ? (
+                <Button
+                  variant="default"
+                  onClick={() => openMilestoneFormModal({ projectId: project.id })}
+                >
+                  {createElement(PlusIcon, { 'size': 16, 'aria-hidden': true })}
+                  {t('create.addMilestone')}
+                </Button>
+              ) : undefined}
+            </div>
+          </div>
         ) : (
           <div className={styles.list}>{milestones.map(renderRow)}</div>
         )}
@@ -297,11 +309,11 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
             type="button"
             onClick={() => openMilestoneFormModal({ projectId: project.id })}
           >
-            <Icon icon={PlusIcon} size={14} />
+            <PlusIcon size={14} />
             {t('create.addMilestone')}
           </button>
         )}
-      </Flexbox>
+      </div>
     </div>
   );
 });

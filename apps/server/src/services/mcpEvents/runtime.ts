@@ -1,12 +1,8 @@
-import type {
-  EventDispatchAdmission,
-  IsolationEvidence,
-} from '@orvilo/agent-execution/controlPlane';
-import { verifiedIsolation } from '@orvilo/agent-execution/controlPlane/server';
+import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlane';
 
 import type { OrviloDatabase } from '@/database/type';
-import { createCoreEventDispatchAdmission } from '@/server/services/controlPlane/eventDispatchAdmission';
 
+import { McpEventDispatchAdmissionService } from './admission';
 import type { McpEventsDatabase } from './database';
 import { createMcpEventsSql } from './database';
 import { SqlMcpEventBindingRepository, SqlMcpEventInbox } from './inbox';
@@ -32,17 +28,13 @@ const admissionWaiting = {
 };
 
 /** Called by the existing task watchdog, never by a second polling runner. */
-export async function sweepMcpEventInbox(
-  db: McpEventsDatabase,
-  admission?: EventDispatchAdmission,
-) {
-  // The canonical port is optional and is not fabricated from TaskRunner.
-  // Until an authoritative adapter is installed, admission waits.
-  // Do not burn finite delivery retries while that adapter is absent.
-  if (!admission) return admissionWaiting;
+export async function sweepMcpEventInbox(db: OrviloDatabase, admission?: EventDispatchAdmission) {
+  // The authoritative server adapter is the default; tests may substitute a
+  // fake, but there is no path that enters dispatch without durable evidence.
+  const resolved = admission ?? new McpEventDispatchAdmissionService(db);
   const database = createMcpEventsSql(db);
   return new McpEventWorker({
-    admission,
+    admission: resolved,
     inbox: new SqlMcpEventInbox(database),
     repository: new SqlMcpEventWorkRepository(database),
   }).pump();

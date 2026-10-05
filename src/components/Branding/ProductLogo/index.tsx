@@ -1,22 +1,9 @@
 'use client';
 
-import { type LobeHubProps } from '@lobehub/ui/brand';
-import { LobeHub as Orvilo } from '@lobehub/ui/brand';
-import { memo } from 'react';
-
-import { isCustomBranding } from '@/const/version';
+import { type ComponentProps, memo } from 'react';
 
 import CustomLogo from './Custom';
 
-interface ProductLogoProps extends LobeHubProps {
-  height?: number;
-  width?: number;
-}
-
-export const ProductLogo = memo<ProductLogoProps>((props) => {
-  if (isCustomBranding) {
-    return <CustomLogo {...props} />;
-  }
-
-  return <Orvilo {...props} />;
-});
+export const ProductLogo = memo<ComponentProps<typeof CustomLogo>>((props) => (
+  <CustomLogo {...props} />
+));

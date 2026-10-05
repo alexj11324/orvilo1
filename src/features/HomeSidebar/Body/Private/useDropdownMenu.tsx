@@ -1,11 +1,10 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { ArrowDownIcon, ArrowUpIcon, Hash, LucideCheck, SlidersHorizontalIcon } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { openCustomizeSidebarModal } from '@/features/HomeSidebar/Body/CustomizeSidebarModal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { reorderSidebarItems } from '@/store/global/selectors/systemStatus';
@@ -18,7 +17,7 @@ interface PrivateActionsDropdownMenuProps {
 
 export const usePrivateActionsDropdownMenu = ({
   openConfigGroupModal,
-}: PrivateActionsDropdownMenuProps): MenuProps['items'] => {
+}: PrivateActionsDropdownMenuProps): SidebarMenuItems => {
   const { t } = useTranslation('common');
 
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -53,7 +52,7 @@ export const usePrivateActionsDropdownMenu = ({
 
     const pageSizeOptions = [5, 10, 15, 20];
     const pageSizeItems = pageSizeOptions.map((size) => ({
-      icon: privateAgentPageSize === size ? <Icon icon={LucideCheck} /> : <div />,
+      icon: privateAgentPageSize === size ? <LucideCheck size={16} /> : <div />,
       key: `pageSize-${size}`,
       label: t('pageSizeItem', { count: size }),
       onClick: () => {
@@ -68,32 +67,32 @@ export const usePrivateActionsDropdownMenu = ({
       {
         children: pageSizeItems,
         extra: privateAgentPageSize,
-        icon: <Icon icon={Hash} />,
+        icon: <Hash size={16} />,
         key: 'show',
         label: t('navPanel.show'),
       },
       {
         disabled: isFirst,
-        icon: <Icon icon={ArrowUpIcon} />,
+        icon: <ArrowUpIcon size={16} />,
         key: 'moveUp',
         label: t('navPanel.moveUp'),
         onClick: () => moveSection('up'),
       },
       {
         disabled: isLast,
-        icon: <Icon icon={ArrowDownIcon} />,
+        icon: <ArrowDownIcon size={16} />,
         key: 'moveDown',
         label: t('navPanel.moveDown'),
         onClick: () => moveSection('down'),
       },
       { type: 'divider' as const },
       {
-        icon: <Icon icon={SlidersHorizontalIcon} />,
+        icon: <SlidersHorizontalIcon size={16} />,
         key: 'customizeSidebar',
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     privateAgentPageSize,
     updateSystemStatus,

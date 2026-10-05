@@ -1,13 +1,20 @@
 import type {
   HeterogeneousAgentModelCatalog,
+  HeterogeneousAgentPermissionCatalog,
   ListHeterogeneousAgentModelsParams,
+  ListHeterogeneousAgentPermissionsParams,
 } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { heterogeneousAgentService as electronHeterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 interface ListModelsParams extends ListHeterogeneousAgentModelsParams {
+  deviceId?: string;
+}
+
+interface ListPermissionsParams extends ListHeterogeneousAgentPermissionsParams {
   deviceId?: string;
 }
 
@@ -19,8 +26,25 @@ interface ListModelsParams extends ListHeterogeneousAgentModelsParams {
  * local runtime.
  */
 class HeterogeneousAgentCatalogService {
-  listModels({ deviceId, ...params }: ListModelsParams): Promise<HeterogeneousAgentModelCatalog> {
-    requireLocalExecutionTransport(deviceId, 'listModels');
+  async listPermissions({
+    deviceId,
+    ...params
+  }: ListPermissionsParams): Promise<HeterogeneousAgentPermissionCatalog[]> {
+    requireLocalExecutionTransport(
+      deviceId,
+      'listPermissions',
+      await resolveLocalExecutionIdentity(),
+    );
+    return deviceId
+      ? lambdaClient.device.listHeterogeneousAgentPermissions.query({ deviceId, ...params })
+      : electronHeterogeneousAgentService.listPermissions(params);
+  }
+
+  async listModels({
+    deviceId,
+    ...params
+  }: ListModelsParams): Promise<HeterogeneousAgentModelCatalog> {
+    requireLocalExecutionTransport(deviceId, 'listModels', await resolveLocalExecutionIdentity());
     return deviceId
       ? lambdaClient.device.listHeterogeneousAgentModels.query({ deviceId, ...params })
       : electronHeterogeneousAgentService.listModels(params);

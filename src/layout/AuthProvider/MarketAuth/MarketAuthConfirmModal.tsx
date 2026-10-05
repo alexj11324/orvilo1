@@ -1,9 +1,7 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -57,7 +55,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
     };
 
     const footer = (
-      <Text align={'center'} as={'div'} fontSize={13} type={'secondary'}>
+      <div className="text-center text-[13px] text-muted-foreground">
         <Trans
           i18nKey={'authorize.footer.agreement'}
           ns={'marketAuth'}
@@ -80,7 +78,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
             ),
           }}
         />
-      </Text>
+      </div>
     );
     return (
       <ImperativeModal
@@ -101,14 +99,19 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
       >
         <AuthCard
           footer={footer}
-          paddingBlock={'40px 20px'}
+          style={{ paddingBlock: '40px 20px', width: '100%' }}
           subtitle={ts('subtitle')}
           title={ts('title')}
-          width={'100%'}
         >
-          <Block padding={16} variant={'filled'}>
-            <Text align={'center'}>{ts('description', { appName: BRANDING_NAME })}</Text>
-          </Block>
+          <div
+            style={{
+              background: cssVar.colorFillTertiary,
+              borderRadius: cssVar.borderRadius,
+              padding: 16,
+            }}
+          >
+            <div className="text-center">{ts('description', { appName: BRANDING_NAME })}</div>
+          </div>
         </AuthCard>
       </ImperativeModal>
     );

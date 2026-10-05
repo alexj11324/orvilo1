@@ -11,6 +11,14 @@ import { MCPInstallStep } from '@/types/plugins';
 
 import { useToolStore } from '../../store';
 
+// Operation-state rows live under the scope-complete operation key
+// (principal + workspace + device scope + plugin + connection/config); the
+// identifier index resolves the active operation for identifier-based reads.
+const opKey = (
+  state: { mcpOperationKeyByIdentifier: Record<string, string> },
+  identifier: string,
+) => state.mcpOperationKeyByIdentifier[identifier] ?? identifier;
+
 vi.mock('@/libs/trpc/client', () => ({
   asyncClient: {},
   lambdaClient: {
@@ -90,7 +98,7 @@ describe('mcpStore actions', () => {
         });
       });
 
-      expect(result.current.mcpInstallProgress['test-plugin']).toEqual({
+      expect(result.current.mcpInstallProgress[opKey(result.current, 'test-plugin')]).toEqual({
         progress: 50,
         step: MCPInstallStep.GETTING_SERVER_MANIFEST,
       });
@@ -110,7 +118,9 @@ describe('mcpStore actions', () => {
         result.current.updateMCPInstallProgress('test-plugin', undefined);
       });
 
-      expect(result.current.mcpInstallProgress['test-plugin']).toBeUndefined();
+      expect(
+        result.current.mcpInstallProgress[opKey(result.current, 'test-plugin')],
+      ).toBeUndefined();
     });
   });
 
@@ -134,8 +144,12 @@ describe('mcpStore actions', () => {
       });
 
       expect(abortSpy).toHaveBeenCalled();
-      expect(result.current.mcpInstallAbortControllers['test-plugin']).toBeUndefined();
-      expect(result.current.mcpInstallProgress['test-plugin']).toBeUndefined();
+      expect(
+        result.current.mcpInstallAbortControllers[opKey(result.current, 'test-plugin')],
+      ).toBeUndefined();
+      expect(
+        result.current.mcpInstallProgress[opKey(result.current, 'test-plugin')],
+      ).toBeUndefined();
     });
 
     it('should handle cancel when no AbortController exists', async () => {
@@ -146,7 +160,9 @@ describe('mcpStore actions', () => {
       });
 
       // Should not throw error
-      expect(result.current.mcpInstallAbortControllers['non-existent-plugin']).toBeUndefined();
+      expect(
+        result.current.mcpInstallAbortControllers[opKey(result.current, 'non-existent-plugin')],
+      ).toBeUndefined();
     });
   });
 
@@ -169,9 +185,11 @@ describe('mcpStore actions', () => {
       });
 
       expect(abortSpy).toHaveBeenCalled();
-      expect(result.current.mcpTestLoading['test-plugin']).toBe(false);
-      expect(result.current.mcpTestAbortControllers['test-plugin']).toBeUndefined();
-      expect(result.current.mcpTestErrors['test-plugin']).toBeUndefined();
+      expect(result.current.mcpTestLoading[opKey(result.current, 'test-plugin')]).toBe(false);
+      expect(
+        result.current.mcpTestAbortControllers[opKey(result.current, 'test-plugin')],
+      ).toBeUndefined();
+      expect(result.current.mcpTestErrors[opKey(result.current, 'test-plugin')]).toBeUndefined();
     });
 
     it('should handle cancel when no AbortController exists', () => {
@@ -182,7 +200,9 @@ describe('mcpStore actions', () => {
       });
 
       // Should not throw error
-      expect(result.current.mcpTestAbortControllers['non-existent-plugin']).toBeUndefined();
+      expect(
+        result.current.mcpTestAbortControllers[opKey(result.current, 'non-existent-plugin')],
+      ).toBeUndefined();
     });
   });
 
@@ -225,8 +245,8 @@ describe('mcpStore actions', () => {
           success: true,
           manifest: mockManifest,
         });
-        expect(result.current.mcpTestLoading['test-plugin']).toBe(false);
-        expect(result.current.mcpTestErrors['test-plugin']).toBeUndefined();
+        expect(result.current.mcpTestLoading[opKey(result.current, 'test-plugin')]).toBe(false);
+        expect(result.current.mcpTestErrors[opKey(result.current, 'test-plugin')]).toBeUndefined();
       });
 
       it('should handle HTTP connection error', async () => {
@@ -251,8 +271,10 @@ describe('mcpStore actions', () => {
           success: false,
           error: 'Connection failed',
         });
-        expect(result.current.mcpTestLoading['test-plugin']).toBe(false);
-        expect(result.current.mcpTestErrors['test-plugin']).toBe('Connection failed');
+        expect(result.current.mcpTestLoading[opKey(result.current, 'test-plugin')]).toBe(false);
+        expect(result.current.mcpTestErrors[opKey(result.current, 'test-plugin')]).toBe(
+          'Connection failed',
+        );
       });
 
       it('should throw error when URL is missing for HTTP connection', async () => {
@@ -297,7 +319,7 @@ describe('mcpStore actions', () => {
           success: true,
           manifest: mockManifest,
         });
-        expect(result.current.mcpTestLoading['test-plugin']).toBe(false);
+        expect(result.current.mcpTestLoading[opKey(result.current, 'test-plugin')]).toBe(false);
       });
 
       it('should handle STDIO connection error', async () => {
@@ -322,7 +344,9 @@ describe('mcpStore actions', () => {
           success: false,
           error: 'Command not found',
         });
-        expect(result.current.mcpTestErrors['test-plugin']).toBe('Command not found');
+        expect(result.current.mcpTestErrors[opKey(result.current, 'test-plugin')]).toBe(
+          'Command not found',
+        );
       });
 
       it('should throw error when command is missing for STDIO connection', async () => {
@@ -350,8 +374,9 @@ describe('mcpStore actions', () => {
         const { result } = renderHook(() => useToolStore());
 
         vi.spyOn(mcpService, 'getStreamableMcpServerManifest').mockImplementation(
-          async (params, signal) => {
+          async (params, options) => {
             // Simulate cancellation
+            const signal = options instanceof AbortSignal ? options : options?.signal;
             signal?.dispatchEvent(new Event('abort'));
             throw new Error('Aborted');
           },
@@ -780,6 +805,7 @@ describe('mcpStore actions', () => {
         act(() => {
           vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
           useToolStore.setState({
+            mcpOperationKeyByIdentifier: { 'test-plugin': 'test-plugin' },
             mcpInstallProgress: {
               'test-plugin': {
                 progress: 50,
@@ -805,7 +831,7 @@ describe('mcpStore actions', () => {
             env: config,
           }),
           expect.any(Object),
-          expect.any(AbortSignal),
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
         );
       });
 
@@ -857,7 +883,7 @@ describe('mcpStore actions', () => {
             url: 'https://example.com/mcp',
             identifier: 'test-plugin',
           }),
-          expect.any(AbortSignal),
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
         );
       });
     });
@@ -966,7 +992,7 @@ describe('mcpStore actions', () => {
           await result.current.installMCPPlugin('test-plugin');
         });
 
-        const progress = result.current.mcpInstallProgress['test-plugin'];
+        const progress = result.current.mcpInstallProgress[opKey(result.current, 'test-plugin')];
         expect(progress?.step).toBe(MCPInstallStep.ERROR);
         expect(progress?.errorInfo).toMatchObject({
           type: 'CONNECTION_ERROR',
@@ -992,7 +1018,9 @@ describe('mcpStore actions', () => {
           await result.current.installMCPPlugin('test-plugin');
         });
 
-        expect(result.current.mcpInstallProgress['test-plugin']).toMatchObject({
+        expect(
+          result.current.mcpInstallProgress[opKey(result.current, 'test-plugin')],
+        ).toMatchObject({
           step: MCPInstallStep.ERROR,
           errorInfo: {
             type: 'UNKNOWN_ERROR',

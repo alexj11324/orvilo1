@@ -1,9 +1,9 @@
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import {
   BotIcon,
-  FilePenLineIcon,
   GitPullRequestIcon,
   InboxIcon,
+  MessagesSquareIcon,
   SquareUserIcon,
 } from 'lucide-react';
 import { useMemo } from 'react';
@@ -76,10 +76,10 @@ export const useNavLayout = (): NavLayout => {
           url: `/agent/${INBOX_SESSION_ID}`,
         },
         {
-          icon: FilePenLineIcon,
-          key: SidebarTabKey.Drafts,
-          title: t('drafts.title'),
-          url: '/drafts',
+          icon: MessagesSquareIcon,
+          key: SidebarTabKey.Group,
+          title: t('navPanel.groups'),
+          url: '/group',
         },
       ] as NavItem[],
     [t],

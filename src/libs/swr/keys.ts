@@ -588,10 +588,19 @@ export const agentConfigKeys = {
   available: def('agent:available', () => ['agent:available']),
   config: def('agent:config', (agentId: string) => ['agent:config', agentId]),
   search: def('agent:search', (keyword?: string) => ['agent:search', keyword]),
+  serverDefaultHeterogeneousCapability: def('agent:serverDefaultHeterogeneousCapability', () => [
+    'agent:serverDefaultHeterogeneousCapability',
+  ]),
 };
 
 // ---- aiModel ------------------------------------------------------------
 export const aiModelKeys = {
+  disabledModelsPage: def('aiModel:disabledModelsPage', (providerId: string, offset: number) => [
+    'aiModel:disabledModelsPage',
+    providerId,
+    offset,
+  ]),
+  list: def('aiModel:list', (provider: string | undefined) => ['aiModel:list', provider]),
   reasoningConfig: def('aiModel:reasoningConfig', (provider: string, model: string) => [
     'aiModel:reasoningConfig',
     provider,
@@ -923,15 +932,11 @@ export const inboxKeys = {
     'inbox:unreadCount',
     workspaceId,
   ]),
-  feed: def(
+  feed: def('inbox:feed', (workspaceId: string | null, scope: string) => [
     'inbox:feed',
-    (
-      workspaceId: string | null,
-      kind: string | undefined,
-      filter: string | undefined,
-      variant: string | undefined,
-    ) => ['inbox:feed', workspaceId, kind, filter, variant],
-  ),
+    workspaceId,
+    scope,
+  ]),
   feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
     'inbox:feedSummary',
     workspaceId,
@@ -1215,6 +1220,12 @@ export const resourceKeys = {
     workspaceId,
   ]),
 };
+export const providerKeys = {
+  clientConfig: def('provider:clientConfig', (id: string) => ['provider:clientConfig', id]),
+};
+export const ollamaKeys = {
+  downloadModel: def('ollama:downloadModel', (model: string) => ['ollama:downloadModel', model]),
+};
 export const recommendationsKeys = {
   heteroDetections: def('recommendations:heteroDetections', () => [
     'recommendations:heteroDetections',
@@ -1294,9 +1305,11 @@ export const swrKeys = {
   localFile: localFileKeys,
   message: messageKeys,
   notebook: notebookSWRKeys,
+  ollama: ollamaKeys,
   onboarding: onboardingKeys,
   openInApp: openInAppKeys,
   portal: portalKeys,
+  provider: providerKeys,
   ragEval: ragEvalKeys,
   recent: recentKeys,
   recommendations: recommendationsKeys,

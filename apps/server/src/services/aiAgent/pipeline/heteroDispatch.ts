@@ -1,5 +1,6 @@
 import { LOADING_FLAT } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
+import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
@@ -10,7 +11,9 @@ import {
 import type {
   AcpBuiltinToolSpec,
   AgentRunAdmissionState,
+  DeviceAdmissionErrorData,
   DeviceUnavailableErrorData,
+  DispatchExecutionIdentity,
   ErrorType,
   ExecAgentResult,
   HeterogeneousTopicPin,
@@ -20,24 +23,28 @@ import type {
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
+  AEGIS_ORVILO_CONTRACT,
+  AEGIS_PACK_ENV,
   applyTopicModelToHeterogeneousProvider,
   buildHeteroExecArgs,
   ChatErrorType,
   getWorkingDirEffectivePath,
+  isAegisMethodPackEnabled,
+  resolveHarnessAdapter,
   resolveHeteroAgentSystemContext,
-  resolveOrviloCliAgentType,
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DeviceModel } from '@/database/models/device';
 import type { MessageModel } from '@/database/models/message';
 import type { TopicModel } from '@/database/models/topic';
 import { agentOperations } from '@/database/schemas';
-import { resolveExecutionPlan, resolveWorkspaceScoped } from '@/helpers/executionTarget';
+import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJwt';
+import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
 import {
   createAgentStateManager,
   createStreamEventManager,
@@ -45,8 +52,22 @@ import {
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import { composeDevicePrimeRun } from '@/server/services/controlPlane/devicePrimeDispatch';
+import {
+  openEmbeddedChatDispatchHost,
+  resolveEmbeddedChatDispatchRoute,
+} from '@/server/services/controlPlane/embeddedChatDispatch';
+import {
+  driveEmbeddedCanonicalRun,
+  openEmbeddedDispatchHost,
+  resolveEmbeddedDispatchRoute,
+} from '@/server/services/controlPlane/embeddedDispatch';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
+import {
+  bindTopicDeviceAtomically,
+  resolveHeteroExecutionPlan,
+} from '@/server/services/deviceGateway/executionAdmission';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
 import { HeterogeneousAgentService } from '@/server/services/heterogeneousAgent';
 import type { ConversationHistoryEntry } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
@@ -117,7 +138,7 @@ const finalizeHeteroDispatchError = async (
     agentId?: string;
     assistantMessageId: string;
     detail: string;
-    errorData?: DeviceUnavailableErrorData;
+    errorData?: DeviceAdmissionErrorData | DeviceUnavailableErrorData;
     /**
      * Client error type. Defaults to the generic `ServerAgentRuntimeError`; pass a
      * dedicated `ChatErrorType` (e.g. `DeviceGatewayNotConfigured`) so the web
@@ -301,24 +322,171 @@ const writeDispatchAdmission = async (
     deviceId?: string;
     deviceUserId?: string;
     deviceWorkspaceId?: string;
+    /**
+     * The unified-admission identity for this run — persisted on the
+     * operation row as `metadata.executionPlan` so cancel/status/resume and
+     * every other access surface can verify they address the same subject,
+     * device, harness, model route and generation. Written once alongside
+     * the admission record in the SAME transaction; a retried admission
+     * never rewrites it.
+     */
+    executionPlan?: DispatchExecutionIdentity;
+    harness?: string;
     operationId: string;
   },
 ): Promise<void> => {
-  try {
-    await createRemoteRunAdmission(deps.db, params.operationId, {
+  // One transaction: the admission record and the canonical execution
+  // identity land together or not at all — a partial write would leave the
+  // durable intent without the identity cancel/status must verify.
+  await deps.db.transaction(async (tx) => {
+    await createRemoteRunAdmission(tx as unknown as OrviloDatabase, params.operationId, {
       channel: params.channel,
       deviceId: params.deviceId,
       deviceUserId: params.deviceUserId,
       deviceWorkspaceId: params.deviceWorkspaceId,
+      // The admission-ledger's own generation fence — the first admission of
+      // an operation is always generation 1 (the run's executionGeneration
+      // rides inside executionPlan, a distinct field on purpose).
       generation: 1,
+      harness: params.harness,
       idempotencyKey: params.operationId,
     });
+    if (params.executionPlan) {
+      await tx
+        .update(agentOperations)
+        .set({
+          metadata: sql`jsonb_set(coalesce(${agentOperations.metadata}, '{}'::jsonb), '{executionPlan}'::text[], ${JSON.stringify(
+            params.executionPlan,
+          )}::jsonb, true)`,
+        })
+        .where(
+          and(
+            eq(agentOperations.id, params.operationId),
+            sql`${agentOperations.metadata} -> 'executionPlan' IS NULL`,
+          ),
+        );
+    }
+  });
+};
+
+/**
+ * The dispatch gate: persist the admission + canonical execution identity,
+ * or refuse the run BEFORE spawn. A run whose durable identity cannot be
+ * written is never started — silently proceeding would mint an execution no
+ * surface can address (cancel/status/resume would guess a different device).
+ * Returns `null` when admitted; otherwise the already-finalized blocked
+ * result the caller returns verbatim.
+ */
+const ensureDispatchAdmission = async (
+  deps: HeteroDispatchDeps,
+  admission: Omit<Parameters<typeof writeDispatchAdmission>[1], 'operationId'> & {
+    operationId: string;
+  },
+  ctx: {
+    agentId?: string;
+    assistantMessageId: string;
+    operationId: string;
+    topicId: string;
+    userMessageId: string;
+  },
+): Promise<ExecAgentResult | null> => {
+  try {
+    await writeDispatchAdmission(deps, admission);
+    return null;
   } catch (err) {
-    // The admission write is the audit trail, not the dispatch gate — the
-    // operation row (recordStart) is already the durable intent, so a ledger
-    // hiccup must not block an otherwise healthy dispatch.
-    log('writeDispatchAdmission failed op=%s (non-fatal): %O', params.operationId, err);
+    log(
+      'execAgent: dispatch admission persist failed op=%s — no spawn: %O',
+      admission.operationId,
+      err,
+    );
+    const detail = `DISPATCH_ADMISSION_PERSIST_FAILED: ${err instanceof Error ? err.message : String(err)}`;
+    const errorData: DeviceAdmissionErrorData = {
+      code: 'DISPATCH_ADMISSION_PERSIST_FAILED',
+      deviceId: admission.deviceId,
+      operationId: admission.operationId,
+      retryable: true,
+      scope: deps.workspaceId ? 'workspace' : 'personal',
+      ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+    };
+    await finalizeHeteroDispatchError(deps, {
+      agentId: ctx.agentId,
+      assistantMessageId: ctx.assistantMessageId,
+      detail,
+      errorData,
+      message: 'Run admission could not be persisted',
+      operationId: admission.operationId,
+      topicId: ctx.topicId,
+    });
+    return {
+      agentId: ctx.agentId ?? '',
+      assistantMessageId: ctx.assistantMessageId,
+      autoStarted: false,
+      createdAt: new Date().toISOString(),
+      error: 'DISPATCH_ADMISSION_PERSIST_FAILED',
+      errorData,
+      message: 'Run admission could not be persisted — the run was not started.',
+      operationId: admission.operationId,
+      status: 'error',
+      success: false,
+      timestamp: new Date().toISOString(),
+      topicId: ctx.topicId,
+      userMessageId: ctx.userMessageId,
+    };
   }
+};
+
+/**
+ * A transport-level `DeviceChannelUnavailable` means the gateway addressed the
+ * device but it is unreachable (offline, asleep, mid-reconnect) — surface the
+ * honest `DEVICE_NOT_CONNECTED` availability code. A `DeviceNotFound` after
+ * the pre-dispatch registry check is ambiguous (the row existed moments ago):
+ * re-read the registry once on the failure path — row gone means the binding
+ * was revoked mid-run (`DEVICE_BINDING_INVALID`, explicit repair), row present
+ * means the gateway simply lost reachability (`DEVICE_NOT_CONNECTED`).
+ * Anything else passes through untouched.
+ */
+const classifyUnreachableDeviceError = async (
+  deps: { db: OrviloDatabase | undefined; userId: string },
+  params: {
+    deviceId?: string;
+    error?: string;
+    errorCode?: string;
+    errorData?: DeviceUnavailableErrorData;
+    workspaceId?: string;
+  },
+): Promise<{ error?: string; errorData?: DeviceUnavailableErrorData }> => {
+  const deviceId = params.deviceId;
+  if (!deviceId) {
+    return { error: params.error, errorData: params.errorData };
+  }
+  const notConnected = (): { error: string; errorData: DeviceUnavailableErrorData } => ({
+    error: 'DEVICE_NOT_CONNECTED',
+    errorData: {
+      ...params.errorData,
+      code: 'DEVICE_NOT_CONNECTED',
+      deviceId,
+      retryable: true,
+      scope: params.workspaceId ? 'workspace' : 'personal',
+      ...(params.workspaceId ? { workspaceId: params.workspaceId } : {}),
+    },
+  });
+
+  if (params.errorCode === DeviceTransportErrorCode.DeviceChannelUnavailable) {
+    return notConnected();
+  }
+  if (params.errorCode !== DeviceTransportErrorCode.DeviceNotFound) {
+    return { error: params.error, errorData: params.errorData };
+  }
+  const authorizationFailure = await resolveDeviceDispatchAuthorizationFailure(
+    deps.db,
+    deps.userId,
+    deviceId,
+    params.workspaceId,
+  );
+  if (authorizationFailure) {
+    return { error: authorizationFailure.code, errorData: authorizationFailure };
+  }
+  return notConnected();
 };
 
 /**
@@ -433,7 +601,6 @@ export interface HeteroDispatchInput {
   canManageAgent: boolean;
   /** Source attribution persisted onto the operation row's appContext. */
   clientIp?: string;
-  effectiveRequestedDeviceId?: string;
   /**
    * External (connector / installed-plugin MCP) tools mounted on the same
    * per-run MCP surface — persisted on the operation as
@@ -463,6 +630,20 @@ export interface HeteroDispatchInput {
   runAttachments: { imageList?: Array<{ alt: string; id: string; url: string }> };
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
+  /**
+   * The binding epoch read alongside `sessionBoundDeviceId`
+   * (`topic.metadata.bindingRevision`) — echoed in admission `errorData` so
+   * the repair client can CAS on the exact revision it was shown.
+   */
+  sessionBindingRevision?: number | null;
+  /**
+   * The conversation's durable device pin — `topic.metadata.executionConfig`
+   * `.boundDeviceId` (`turn.topicBoundDeviceId`). Unified admission consults
+   * it FIRST as the session binding: a still-valid pin wins over every other
+   * input; an invalid one blocks with `DEVICE_BINDING_INVALID` rather than
+   * silently re-resolving onto another device.
+   */
+  sessionBoundDeviceId?: string | null;
   skipTaskVerification?: boolean;
   /**
    * Per-tool mount outcomes from `resolveRunToolSurface` — persisted into the
@@ -518,7 +699,6 @@ export const dispatchHeteroAgent = async (
     externalToolMounts,
     toolSurfaceOutcomes,
     clientIp,
-    effectiveRequestedDeviceId,
     extraSystemContext,
     heteroType,
     heterogeneousProvider,
@@ -533,6 +713,8 @@ export const dispatchHeteroAgent = async (
     requestTrigger,
     requestedDeviceId,
     runAttachments,
+    sessionBindingRevision,
+    sessionBoundDeviceId,
     selfMessageIds,
     skipTaskVerification,
     topicStartOwnerOperationId,
@@ -541,14 +723,14 @@ export const dispatchHeteroAgent = async (
   } = input;
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
-  // Builtin Orvilo harness: `heteroType` keeps the declared identity for
-  // metadata and hooks, but every CLI-family concern — `lh hetero exec --type`,
-  // adapter/error classification, sandbox support, resume binding — resolves to
-  // the selected engine's family. There is no `orvilo` executable or ingest
-  // schema entry, so anything reaching a device or sandbox must carry the
-  // family type and family-encoded args.
-  const heteroCliAgentType =
-    heteroType === 'orvilo' ? resolveOrviloCliAgentType(heterogeneousProvider?.engine) : heteroType;
+  // Aegis method-pack opt-in (provider config `methodPacks.aegis`, local CLI
+  // families only). Env — not a CLI flag — carries the bit to the spawned
+  // `orvilo hetero exec` so an older device-side CLI ignores it rather than
+  // dying on an unknown option.
+  const aegisEnabled =
+    heterogeneousProvider?.type === heteroType &&
+    isAegisMethodPackEnabled(heterogeneousProvider) &&
+    isLocalHeterogeneousType(heteroType);
   // Same structured shape as the built-in path (`op_{ts}_{agentId}_{topicId}_{rand}`)
   // so hetero ops aren't visually distinct bare nanoids in the trace/op tables.
   const operationId = `op_${Date.now()}_${resolvedAgentId}_${topicId}_${nanoid(8)}`;
@@ -595,9 +777,9 @@ export const dispatchHeteroAgent = async (
     },
     chatGroupId: appContext?.groupId ?? null,
     // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
-    // runtime loop — owns this operation. `heteroAgentType` records the CLI
-    // family actually spawned (`orvilo` resolves to its engine's family), so a
-    // trace can prove which adapter drove the run.
+    // runtime loop — owns this operation. `heteroAgentType` records the agent
+    // family that executes the run ('orvilo' = the Prime harness adapter),
+    // so a trace can prove which runtime drove it.
     executionEngine: 'hetero',
     maxSteps,
     metadata: {
@@ -614,7 +796,11 @@ export const dispatchHeteroAgent = async (
             ),
           }
         : {}),
-      heteroAgentType: heteroCliAgentType,
+      heteroAgentType: heteroType,
+      // Dispatch-stamped opt-in marker: survives a run that dies before
+      // `heteroFinish`, so "enabled but produced nothing" stays
+      // distinguishable from "not enabled" for the verify gate.
+      ...(aegisEnabled ? { aegis: { enabled: true } } : {}),
       // Per-tool mount contract for this run — mounted/unsupported/
       // unauthorized/failed with reasons, so a degraded surface is
       // inspectable from the operation record instead of a lost debug log.
@@ -663,7 +849,7 @@ export const dispatchHeteroAgent = async (
   });
   const resumeSessionId = await heteroService.getHeterogeneousResumeSessionId(
     topicId,
-    getNativeHeteroSessionBindingKey(heteroCliAgentType),
+    getNativeHeteroSessionBindingKey(heteroType),
   );
   // Sign an operation-scoped JWT so the CLI can authenticate against
   // heteroIngest / heteroFinish without full user credentials.
@@ -755,6 +941,9 @@ export const dispatchHeteroAgent = async (
     [
       resolveHeteroAgentSystemContext(heterogeneousProvider, agentConfig.systemRole),
       extraSystemContext?.trim(),
+      // The deterministic `.aegis/` completion contract — the agent writes
+      // its closeout + reports there, the finish report ships them back.
+      aegisEnabled ? AEGIS_ORVILO_CONTRACT : undefined,
     ]
       .filter(Boolean)
       .join('\n\n') || undefined;
@@ -782,22 +971,8 @@ export const dispatchHeteroAgent = async (
     runAttachments.imageList && runAttachments.imageList.length > 0
       ? runAttachments.imageList.map((image) => ({ id: image.id, url: image.url }))
       : undefined;
-  const effectiveHeterogeneousProvider =
-    heterogeneousProvider?.type === heteroType
-      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
-      : undefined;
-  const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
-    ? buildHeteroExecArgs(
-        effectiveHeterogeneousProvider
-          ? { ...effectiveHeterogeneousProvider, type: heteroCliAgentType }
-          : { type: heteroCliAgentType },
-      )
-    : undefined;
-
   const heteroParams = {
-    // Devices and sandboxes receive the CLI family — their `lh hetero exec`
-    // may predate `--type orvilo` support.
-    agentType: heteroCliAgentType,
+    agentType: heteroType,
     assistantMessageId,
     builtinTools: builtinToolSpecs?.length ? builtinToolSpecs : undefined,
     githubToken,
@@ -813,57 +988,202 @@ export const dispatchHeteroAgent = async (
     userId: deps.userId,
   };
 
-  const platformPlan = isRemoteHetero
-    ? resolveExecutionPlan({
-        agencyConfig: agentConfig.agencyConfig,
-        canUseDevice,
-        clientExecutionAvailable: Boolean(localDeviceId),
-        isHetero: true,
-        localDeviceId,
-        requestedDeviceId: effectiveRequestedDeviceId,
-        sandboxExecutionAvailable: false,
-        trigger: requestTrigger,
-        workspaceScoped: resolveWorkspaceScoped(
-          isPublicWorkspaceAgent && !canManageAgent,
-          memberDeviceOverride,
-        ),
-      })
+  // ── Unified admission — the ONE device decision for this run ────────────
+  //
+  // `resolveHeteroExecutionPlan` consumes the stored execution target, the
+  // session binding (topic pin), the caller's explicit request, the member
+  // override and the authorized device inventory, and returns exactly one
+  // plan: a device, the sandbox, or a blocked answer with its contract code.
+  // Everything downstream (platform notify dispatch, CLI device dispatch,
+  // embedded/sandbox) consumes THIS plan — there is no second device pick.
+  const { enableCloudSandbox } = await getServerFeatureFlagsStateFromRuntimeConfig(deps.userId);
+  const executionPlan = await resolveHeteroExecutionPlan(deps.db, {
+    agencyConfig: agentConfig.agencyConfig,
+    agentOwnerId: agentConfig.userId,
+    canUseDevice,
+    explicitDeviceId: requestedDeviceId,
+    isPlatformTask: isRemoteHetero,
+    localDeviceId,
+    memberDeviceOverride,
+    requestTrigger,
+    // The operation this run needs: which harness adapter family the device
+    // must host — admission records it per candidate so a wrong-adapter
+    // device can never read as a verified pick.
+    requiredOperation: { adapter: resolveHarnessAdapter(heteroType), kind: 'agent-run' },
+    sandboxExecutionAvailable: !isRemoteHetero && supportsCloudHeterogeneousSandbox(heteroType),
+    sessionBoundDeviceId,
+    userId: deps.userId,
+    workspaceId: deps.workspaceId,
+    workspaceScoped: resolveWorkspaceScoped(
+      isPublicWorkspaceAgent && !canManageAgent,
+      memberDeviceOverride,
+    ),
+  });
+  const admittedDeviceId = executionPlan.kind === 'device' ? executionPlan.deviceId : undefined;
+  const admittedDeviceWorkspaceId = admittedDeviceId
+    ? await deps.resolveDeviceWorkspaceId(admittedDeviceId)
     : undefined;
-  const remoteDeviceId = platformPlan?.kind === 'device' ? platformPlan.deviceId : undefined;
-  const remoteDeviceWorkspaceId = remoteDeviceId
-    ? await deps.resolveDeviceWorkspaceId(remoteDeviceId)
-    : undefined;
+  // A single-candidate resolution is a conditional first-bind (plan §5.2):
+  // the server claims that device for the conversation durably so every
+  // surface resolves the same host. The write is a real CAS that returns the
+  // binding actually persisted — a different winner means another writer
+  // bound the topic first (DEVICE_BINDING_CONFLICT, explicit repair), and a
+  // persistence failure means NO SPAWN (the run identity is admission, not
+  // an afterthought).
+  if (executionPlan.kind === 'device' && executionPlan.reason === 'single_candidate') {
+    try {
+      const persisted = await bindTopicDeviceAtomically(deps.db, {
+        deviceId: executionPlan.deviceId,
+        topicId,
+        userId: deps.userId,
+        workspaceId: deps.workspaceId,
+      });
+      if (persisted.boundDeviceId !== executionPlan.deviceId) {
+        log(
+          'execAgent: first-bind conflict topic=%s resolved=%s winner=%s',
+          topicId,
+          executionPlan.deviceId,
+          persisted.boundDeviceId,
+        );
+        await finalizeHeteroDispatchError(deps, {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          detail: `DEVICE_BINDING_CONFLICT: this conversation was bound to another device (${persisted.boundDeviceId}) while the run was being admitted.`,
+          errorData: {
+            bindingRevision: persisted.bindingRevision,
+            code: 'DEVICE_BINDING_CONFLICT',
+            deviceId: persisted.boundDeviceId,
+            operationId,
+            retryable: true,
+            scope: deps.workspaceId ? 'workspace' : 'personal',
+            ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+          },
+          message: 'Device binding conflict',
+          operationId,
+          topicId,
+        });
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: false,
+          createdAt: new Date().toISOString(),
+          error: 'DEVICE_BINDING_CONFLICT',
+          errorData: {
+            bindingRevision: persisted.bindingRevision,
+            code: 'DEVICE_BINDING_CONFLICT',
+            deviceId: persisted.boundDeviceId,
+            operationId,
+            retryable: true,
+            scope: deps.workspaceId ? 'workspace' : 'personal',
+            ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+          },
+          message: 'This conversation was bound to another device while the run started.',
+          operationId,
+          status: 'error',
+          success: false,
+          timestamp: new Date().toISOString(),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+      log(
+        'execAgent: single-candidate first-bind topic=%s device=%s outcome=%s',
+        topicId,
+        persisted.boundDeviceId,
+        persisted.outcome,
+      );
+    } catch (err) {
+      log(
+        'execAgent: first-bind persist failed topic=%s device=%s — no spawn: %O',
+        topicId,
+        executionPlan.deviceId,
+        err,
+      );
+      const detail = `DISPATCH_ADMISSION_PERSIST_FAILED: ${err instanceof Error ? err.message : String(err)}`;
+      await finalizeHeteroDispatchError(deps, {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        detail,
+        errorData: {
+          code: 'DISPATCH_ADMISSION_PERSIST_FAILED',
+          deviceId: executionPlan.deviceId,
+          operationId,
+          retryable: true,
+          scope: deps.workspaceId ? 'workspace' : 'personal',
+          ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+        },
+        message: 'Run admission could not be persisted',
+        operationId,
+        topicId,
+      });
+      return {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        autoStarted: false,
+        createdAt: new Date().toISOString(),
+        error: 'DISPATCH_ADMISSION_PERSIST_FAILED',
+        message: 'Run admission could not be persisted — the run was not started.',
+        operationId,
+        status: 'error',
+        success: false,
+        timestamp: new Date().toISOString(),
+        topicId,
+        userMessageId: userMessageId ?? parentMessageId ?? '',
+      };
+    }
+  }
+
+  const remoteDeviceId = isRemoteHetero ? admittedDeviceId : undefined;
+  const remoteDeviceWorkspaceId = isRemoteHetero ? admittedDeviceWorkspaceId : undefined;
+  // The dispatch runs under the agent author's identity for every resolution
+  // that names the shared/workspace host (session binding, agent default);
+  // caller-picked resolutions (explicit request, member preference, first-bind
+  // of a personal candidate) address the caller's own device.
   const usesCallersPersonalDevice =
-    platformPlan?.kind === 'device' &&
+    executionPlan.kind === 'device' &&
     !remoteDeviceWorkspaceId &&
-    (effectiveRequestedDeviceId === remoteDeviceId ||
-      (platformPlan.target === 'local' &&
-        agentConfig.agencyConfig?.executionTargetSelectionPolicy !== 'fixed') ||
-      (!canManageAgent && memberDeviceOverride?.boundDeviceId === remoteDeviceId));
+    (executionPlan.reason === 'explicit_request' ||
+      executionPlan.reason === 'user_agent_preference' ||
+      executionPlan.reason === 'single_candidate');
   const remoteDeviceUserId = usesCallersPersonalDevice
     ? deps.userId
     : (agentConfig.userId ?? deps.userId);
 
-  // Resolve CLI-device routing before persisting the marker. Cancellation
-  // must address the same device even though local CLI agents use a different
-  // dispatch transport from notify-based platform agents.
-  const deviceHeteroPlan = !isRemoteHetero
-    ? resolveExecutionPlan({
-        agencyConfig: agentConfig.agencyConfig,
-        canUseDevice,
-        isHetero: true,
-        clientExecutionAvailable: false,
-        requestedDeviceId,
-        sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(
-          heteroType,
-          heterogeneousProvider?.engine,
-        ),
-        trigger: requestTrigger,
-      })
-    : undefined;
-  const cliDeviceId = deviceHeteroPlan?.kind === 'device' ? deviceHeteroPlan.deviceId : undefined;
-  const cliDeviceWorkspaceId = cliDeviceId
-    ? await deps.resolveDeviceWorkspaceId(cliDeviceId)
+  const cliDeviceId = isRemoteHetero ? undefined : admittedDeviceId;
+  const cliDeviceWorkspaceId = isRemoteHetero ? undefined : admittedDeviceWorkspaceId;
+
+  // The run's canonical execution identity (plan §5.3) — operationId +
+  // subject + agent + device + derived harnessId + model route + execution
+  // generation + resolution provenance. Persisted with each dispatch
+  // admission so every surface (web observing a desktop-started run, status,
+  // cancel) addresses the same operation/device/generation instead of
+  // re-deriving a device.
+  const runIdentity: DispatchExecutionIdentity = {
+    agentId: resolvedAgentId,
+    deviceId: admittedDeviceId,
+    executionGeneration: appContext?.executionGeneration ?? 1,
+    harnessId: resolveHarnessAdapter(heteroType),
+    modelRoute: { model: ctx.model, provider: ctx.provider },
+    operationId,
+    resolution:
+      executionPlan.kind === 'device'
+        ? { kind: 'device' as const, reason: executionPlan.reason }
+        : { kind: executionPlan.kind },
+    subject: operationTaskId
+      ? {
+          kind: 'task' as const,
+          taskId: operationTaskId,
+          ...(appContext?.dispatchId ? { dispatchId: appContext.dispatchId } : {}),
+        }
+      : { kind: 'conversation' as const, topicId },
+  };
+
+  const effectiveHeterogeneousProvider =
+    heterogeneousProvider?.type === heteroType
+      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
+      : undefined;
+  const heteroExecArgs = isLocalHeterogeneousType(heteroType)
+    ? buildHeteroExecArgs(effectiveHeterogeneousProvider ?? { type: heteroType })
     : undefined;
 
   // Register the run's lifecycle hooks so the hetero terminal path fires
@@ -991,40 +1311,43 @@ export const dispatchHeteroAgent = async (
   // so open the stream before the first notify arrives.
 
   if (isRemoteHetero) {
-    // Platform task agents require either this desktop or a connected device —
-    // there is no sandbox to degrade to when device access is denied.
-    if (!canUseDevice) {
-      log('execAgent: device access denied for remote hetero dispatch (reason=%s)');
-      await finalizeHeteroDispatchError(deps, {
-        agentId: resolvedAgentId,
-        assistantMessageId,
-        detail: 'This sender is not allowed to run agents on a bound device.',
-        message: 'Device access denied',
+    // Unified admission answered. Platform task agents have no sandbox to
+    // degrade to — a non-device plan (blocked, or defensively anything else)
+    // finalizes here with the contract code surfaced to the caller.
+    if (executionPlan.kind !== 'device' || !remoteDeviceId) {
+      const blockedCode = executionPlan.kind === 'blocked' ? executionPlan.code : 'DEVICE_REQUIRED';
+      const denied = blockedCode === 'DEVICE_ACCESS_DENIED';
+      log('execAgent: remote hetero dispatch blocked (code=%s)', blockedCode);
+      // Structured admission refusal — the code lives in `errorData.code`
+      // (the contract surface the repair UI branches on), never embedded in
+      // the detail prose. `error` keeps the established 'No bound device'/
+      // 'Device access denied' labels for compatibility.
+      const admissionError: DeviceAdmissionErrorData = {
+        bindingRevision: sessionBindingRevision ?? undefined,
+        code: blockedCode,
+        deviceId:
+          blockedCode === 'DEVICE_BINDING_INVALID'
+            ? (sessionBoundDeviceId ?? undefined)
+            : blockedCode === 'DEVICE_REQUEST_UNAUTHORIZED'
+              ? requestedDeviceId
+              : undefined,
         operationId,
-        topicId,
-      });
-      return {
-        agentId: resolvedAgentId,
-        assistantMessageId,
-        autoStarted: false,
-        createdAt: new Date().toISOString(),
-        error: 'Device access denied',
-        message: 'Remote hetero agent requires device access',
-        operationId,
-        status: 'error',
-        success: false,
-        timestamp: new Date().toISOString(),
-        topicId,
-        userMessageId: userMessageId ?? parentMessageId ?? '',
+        ...(executionPlan.kind === 'blocked' && executionPlan.repairCandidates
+          ? { repairCandidates: executionPlan.repairCandidates }
+          : {}),
+        retryable: true,
+        scope: deps.workspaceId ? 'workspace' : 'personal',
+        ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
       };
-    }
-    if (!remoteDeviceId) {
-      log('execAgent: openclaw/hermes requires a local or connected device');
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
-        detail: 'No local or connected device is available for this agent.',
-        message: 'No execution device for platform agent',
+        detail:
+          executionPlan.kind === 'blocked'
+            ? `${blockedCode}: ${executionPlan.detail}`
+            : 'No local or connected device is available for this agent.',
+        errorData: admissionError,
+        message: denied ? 'Device access denied' : 'No bound device',
         operationId,
         topicId,
       });
@@ -1033,8 +1356,11 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: 'No bound device',
-        message: 'Platform agent requires a local or connected device',
+        error: denied ? 'Device access denied' : 'No bound device',
+        errorData: admissionError,
+        message: denied
+          ? 'This sender is not allowed to run agents on a bound device'
+          : 'Platform agent requires a local or connected device',
         operationId,
         status: 'error',
         success: false,
@@ -1059,7 +1385,7 @@ export const dispatchHeteroAgent = async (
       })
       .catch((err) => log('execAgent: failed to init stream for remote hetero: %O', err));
 
-    // lh connect only handles tool_call_request (not agent_run_request),
+    // orvilo connect only handles tool_call_request (not agent_run_request),
     // so we use executeToolCall with the runHeteroTask tool instead of dispatchAgentRun.
     const authorizationError = await resolveDeviceDispatchAuthorizationFailure(
       deps.db,
@@ -1071,18 +1397,31 @@ export const dispatchHeteroAgent = async (
     // Durable admission BEFORE the dispatch: the record survives a crash or a
     // lost ack, carries the idempotency key (operationId = the device-side
     // taskId) and the exact execution-host binding for later cancel/status.
-    await writeDispatchAdmission(deps, {
-      channel: 'tool_call',
-      deviceId: remoteDeviceId,
-      deviceUserId: remoteDeviceUserId,
-      deviceWorkspaceId: remoteDeviceWorkspaceId,
-      operationId,
-    });
+    // Persisting it IS admission — a failure refuses the run before spawn.
+    const remoteAdmissionFailure = await ensureDispatchAdmission(
+      deps,
+      {
+        channel: 'tool_call',
+        deviceId: remoteDeviceId,
+        deviceUserId: remoteDeviceUserId,
+        deviceWorkspaceId: remoteDeviceWorkspaceId,
+        executionPlan: { ...runIdentity, deviceId: remoteDeviceId },
+        operationId,
+      },
+      {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        operationId,
+        topicId,
+        userMessageId: userMessageId ?? parentMessageId ?? '',
+      },
+    );
+    if (remoteAdmissionFailure) return remoteAdmissionFailure;
 
     const result = authorizationError
       ? {
           content: 'The workspace device is no longer registered or visible for this run.',
-          error: 'DEVICE_NOT_FOUND',
+          error: authorizationError.code,
           errorCode: DeviceTransportErrorCode.DeviceNotFound,
           errorData: authorizationError,
           success: false,
@@ -1160,13 +1499,20 @@ export const dispatchHeteroAgent = async (
     }
     if (dispatchOutcome.outcome === 'terminal') {
       log('execAgent: remote hetero dispatch failed: %s', result.error);
+      const terminalError = await classifyUnreachableDeviceError(deps, {
+        deviceId: remoteDeviceId,
+        error: result.error,
+        errorCode: result.errorCode,
+        errorData: result.errorData,
+        workspaceId: remoteDeviceWorkspaceId,
+      });
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
-        detail: result.error ?? 'Device dispatch failed',
-        errorData: result.errorData,
-        errorType: resolveHeteroDispatchErrorType(result.error),
-        message: humanizeHeteroDispatchError(result.error),
+        detail: terminalError.error ?? 'Device dispatch failed',
+        errorData: terminalError.errorData,
+        errorType: resolveHeteroDispatchErrorType(terminalError.error),
+        message: humanizeHeteroDispatchError(terminalError.error),
         operationId,
         topicId,
       });
@@ -1175,8 +1521,8 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: result.error,
-        errorData: result.errorData,
+        error: terminalError.error,
+        errorData: terminalError.errorData,
         message: 'Remote hetero agent dispatch failed',
         operationId,
         remoteAdmission: dispatchOutcome.admissionState,
@@ -1233,37 +1579,79 @@ export const dispatchHeteroAgent = async (
       log('execAgent: failed to init stream for local hetero: %O', err);
     }
 
-    const heteroPlan = deviceHeteroPlan!;
+    const heteroPlan = executionPlan;
 
+    if (heteroPlan.kind === 'blocked' || (heteroPlan.kind !== 'sandbox' && !cliDeviceId)) {
+      // Unified admission refused (or could not produce a device). Surface
+      // the contract code — a revoked session binding, an unauthorized
+      // explicit request and an incomplete inventory all fail loudly here
+      // instead of silently re-resolving onto a default device.
+      const blockedCode = heteroPlan.kind === 'blocked' ? heteroPlan.code : 'DEVICE_REQUIRED';
+      const denied = blockedCode === 'DEVICE_ACCESS_DENIED';
+      const pickerHint = !supportsCloudHeterogeneousSandbox(heteroType)
+        ? 'Pick a local or connected device in the Execution Device switcher.'
+        : 'Pick a device in the Execution Device switcher, or switch to Cloud sandbox.';
+      log('execAgent: hetero admission blocked (code=%s)', blockedCode);
+      // Structured admission refusal — the code lives in `errorData.code`
+      // (the contract surface the repair UI branches on), never embedded in
+      // the detail prose. `error` keeps the established 'No bound device'/
+      // 'Device access denied' labels for compatibility.
+      const admissionError: DeviceAdmissionErrorData = {
+        bindingRevision: sessionBindingRevision ?? undefined,
+        code: blockedCode,
+        deviceId:
+          blockedCode === 'DEVICE_BINDING_INVALID'
+            ? (sessionBoundDeviceId ?? undefined)
+            : blockedCode === 'DEVICE_REQUEST_UNAUTHORIZED'
+              ? requestedDeviceId
+              : undefined,
+        operationId,
+        ...(heteroPlan.kind === 'blocked' && heteroPlan.repairCandidates
+          ? { repairCandidates: heteroPlan.repairCandidates }
+          : {}),
+        retryable: true,
+        scope: deps.workspaceId ? 'workspace' : 'personal',
+        ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+      };
+      await finalizeHeteroDispatchError(deps, {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        detail:
+          heteroPlan.kind === 'blocked'
+            ? `${blockedCode}: ${heteroPlan.detail} ${pickerHint}`
+            : `No device bound. ${pickerHint}`,
+        errorData: admissionError,
+        message: denied ? 'Device access denied' : 'No bound device',
+        operationId,
+        topicId,
+      });
+      return {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        autoStarted: false,
+        createdAt: new Date().toISOString(),
+        error: denied ? 'Device access denied' : 'No bound device',
+        errorData: admissionError,
+        message: denied
+          ? 'This sender is not allowed to run agents on a bound device'
+          : 'Hetero agent requires an execution device',
+        operationId,
+        status: 'error',
+        success: false,
+        timestamp: new Date().toISOString(),
+        topicId,
+        userMessageId: userMessageId ?? parentMessageId ?? '',
+      };
+    }
+
+    // Device-first for every external harness: the shared execution plan
+    // resolves a device for all types and the device picks its harness
+    // adapter (orvilo→Prime — docs/development/device-execution-contract.md).
+    // The transitional embedded fence is gone: a builtin orvilo plan that
+    // resolves a device composes a Prime run descriptor below and dispatches
+    // to the device gateway like every other adapter.
     if (heteroPlan.kind !== 'sandbox') {
-      const dispatchDeviceId = heteroPlan.kind === 'device' ? heteroPlan.deviceId : undefined;
-      if (!dispatchDeviceId) {
-        log('execAgent: hetero executionTarget=device but no boundDeviceId set');
-        await finalizeHeteroDispatchError(deps, {
-          agentId: resolvedAgentId,
-          assistantMessageId,
-          detail: !supportsCloudHeterogeneousSandbox(heteroType, heterogeneousProvider?.engine)
-            ? 'No device bound. Pick a local or connected device in the Execution Device switcher.'
-            : 'No device bound. Pick a device in the Execution Device switcher, or switch to Cloud sandbox.',
-          message: 'No bound device for hetero agent',
-          operationId,
-          topicId,
-        });
-        return {
-          agentId: resolvedAgentId,
-          assistantMessageId,
-          autoStarted: false,
-          createdAt: new Date().toISOString(),
-          error: 'No bound device',
-          message: 'Hetero agent requires a bound device',
-          operationId,
-          status: 'error',
-          success: false,
-          timestamp: new Date().toISOString(),
-          topicId,
-          userMessageId: userMessageId ?? parentMessageId ?? '',
-        };
-      }
+      const dispatchDeviceId = heteroPlan.deviceId;
       // Resolve the working directory for the run: a topic-level override
       // wins, else the device's user-configured defaultCwd. The device row
       // lives in the DB (the gateway only knows live connections), so read
@@ -1344,27 +1732,97 @@ export const dispatchHeteroAgent = async (
         dispatchWorkspaceId,
       );
 
-      // Durable admission BEFORE the gateway call — see writeDispatchAdmission.
-      await writeDispatchAdmission(deps, {
-        channel: 'agent_run_request',
-        deviceId: dispatchDeviceId,
-        deviceUserId: deps.userId,
-        deviceWorkspaceId: dispatchWorkspaceId,
-        operationId,
-      });
+      // Durable admission BEFORE the gateway call — persisting the run's
+      // execution identity IS admission; a failure refuses the run before
+      // spawn (never mint an execution no surface can address).
+      const deviceAdmissionFailure = await ensureDispatchAdmission(
+        deps,
+        {
+          channel: 'agent_run_request',
+          deviceId: dispatchDeviceId,
+          deviceUserId: deps.userId,
+          deviceWorkspaceId: dispatchWorkspaceId,
+          executionPlan: {
+            ...runIdentity,
+            deviceId: dispatchDeviceId,
+            workingDirectoryBinding: deviceCwd,
+          },
+          operationId,
+        },
+        {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          operationId,
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        },
+      );
+      if (deviceAdmissionFailure) return deviceAdmissionFailure;
+
+      // Prime adapter (type 'orvilo' once the transitional embedded fence
+      // flips): compose the device-run descriptor — artifact pin, bound
+      // broker credential, lease, subject — and register the canonical run
+      // under device ownership for task subjects. ACP adapters skip this.
+      let primeDescriptor: PrimeRunDescriptor | undefined;
+      if (resolveHarnessAdapter(heteroType) === 'prime') {
+        const deviceEmbeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
+          appContext,
+          heteroType,
+          operationTaskId,
+        });
+        const composed = await composeDevicePrimeRun(
+          { database: deps.db, userId: deps.userId, workspaceId: deps.workspaceId },
+          {
+            deviceId: dispatchDeviceId,
+            model: ctx.model,
+            operationId,
+            task: deviceEmbeddedRoute ?? undefined,
+            topicId,
+          },
+        );
+        if (!composed.ok) {
+          const message = composed.error?.message ?? 'Prime device run is unavailable';
+          log('execAgent: prime device composition failed op=%s: %s', operationId, message);
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: message,
+            message: 'Prime device dispatch is unavailable',
+            operationId,
+            topicId,
+          });
+          return {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            autoStarted: false,
+            createdAt: new Date().toISOString(),
+            error: composed.error?.code ?? 'PRIME_DEVICE_UNAVAILABLE',
+            message: 'Prime device dispatch is unavailable',
+            operationId,
+            status: 'error',
+            success: false,
+            timestamp: new Date().toISOString(),
+            topicId,
+            userMessageId: userMessageId ?? parentMessageId ?? '',
+          };
+        }
+        primeDescriptor = composed.value.descriptor;
+      }
 
       const result = authorizationError
         ? {
-            error: 'DEVICE_NOT_FOUND',
+            error: authorizationError.code,
             errorCode: DeviceTransportErrorCode.DeviceNotFound,
             errorData: authorizationError,
             success: false,
           }
         : await deviceGateway.dispatchAgentRun({
             ...heteroParams,
+            prime: primeDescriptor,
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
+            env: aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : undefined,
             // The device dedupes agent_run_request on this key (= the task id
             // it already tracks for cancelHeteroTask), so a gateway retry can
             // never spawn a duplicate execution of this operation.
@@ -1418,13 +1876,20 @@ export const dispatchHeteroAgent = async (
       }
       if (dispatchOutcome.outcome === 'terminal') {
         log('execAgent: hetero device dispatch failed: %s', result.error);
+        const terminalError = await classifyUnreachableDeviceError(deps, {
+          deviceId: dispatchDeviceId,
+          error: result.error,
+          errorCode: result.errorCode,
+          errorData: result.errorData,
+          workspaceId: dispatchWorkspaceId,
+        });
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
           assistantMessageId,
-          detail: result.error ?? 'Device dispatch failed',
-          errorData: result.errorData,
-          errorType: resolveHeteroDispatchErrorType(result.error),
-          message: humanizeHeteroDispatchError(result.error),
+          detail: terminalError.error ?? 'Device dispatch failed',
+          errorData: terminalError.errorData,
+          errorType: resolveHeteroDispatchErrorType(terminalError.error),
+          message: humanizeHeteroDispatchError(terminalError.error),
           operationId,
           topicId,
         });
@@ -1433,8 +1898,8 @@ export const dispatchHeteroAgent = async (
           assistantMessageId,
           autoStarted: false,
           createdAt: new Date().toISOString(),
-          error: result.error,
-          errorData: result.errorData,
+          error: terminalError.error,
+          errorData: terminalError.errorData,
           message: 'Hetero agent device dispatch failed',
           operationId,
           remoteAdmission: dispatchOutcome.admissionState,
@@ -1466,7 +1931,162 @@ export const dispatchHeteroAgent = async (
         log('execAgent: failed to patch runningOperation with device info: %O', err);
       }
     } else {
-      if (!supportsCloudHeterogeneousSandbox(heteroType, heterogeneousProvider?.engine)) {
+      // Non-device plan — or a device plan fenced here by the TRANSITIONAL
+      // embedded fence above — for an own-agent type: the canonical
+      // embedded host runs Prime (`orvilo` is our own runtime). ACP/hetero
+      // kinds keep the unchanged sandbox path below.
+      const embeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
+        appContext,
+        heteroType,
+        operationTaskId,
+      });
+      // Chat-scoped sibling admission (prime-cutover.md): a `type:'orvilo'`
+      // chat run (topic-bound, no task row) is admitted through the
+      // agent_operations chat-parallel contract.
+      const embeddedChatRoute =
+        !embeddedRoute && heteroType === 'orvilo'
+          ? resolveEmbeddedChatDispatchRoute({
+              agentId: resolvedAgentId,
+              heteroType,
+              operationId,
+              operationTaskId,
+              topicId,
+            })
+          : null;
+      if (heteroType === 'orvilo' && !embeddedRoute && !embeddedChatRoute) {
+        // Malformed or context-less orvilo plans only — a valid chat plan
+        // carries agentId + operationId + topicId and never lands here.
+        const message =
+          'The builtin Orvilo agent runs the Prime harness on the embedded host; this run is missing its chat execution context (agent/operation/topic) and cannot be admitted.';
+        log('execAgent: orvilo run lacks embedded dispatch context op=%s', operationId);
+        await finalizeHeteroDispatchError(deps, {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          detail: message,
+          message,
+          operationId,
+          topicId,
+        });
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: false,
+          createdAt: new Date().toISOString(),
+          error: 'EMBEDDED_CHAT_NOT_ADMITTED',
+          message,
+          operationId,
+          status: 'error',
+          success: false,
+          timestamp: new Date().toISOString(),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+      if (embeddedRoute || embeddedChatRoute) {
+        const prepared = embeddedRoute
+          ? await openEmbeddedDispatchHost(
+              { database: deps.db, userId: deps.userId },
+              {
+                ...embeddedRoute,
+                model: ctx.model,
+                operationId,
+                topicId,
+              },
+            )
+          : await openEmbeddedChatDispatchHost(
+              { database: deps.db, userId: deps.userId },
+              { ...embeddedChatRoute!, model: ctx.model },
+            );
+        if (!prepared.ok) {
+          // Pre-launch denial (unavailable binding, bad manifest, stale
+          // contract): finalize through the same terminal funnel as every
+          // other dispatch rejection so the run and its task settle `error`.
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: prepared.error.message,
+            message: 'Embedded dispatch is unavailable',
+            operationId,
+            topicId,
+          });
+          return {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            autoStarted: false,
+            createdAt: new Date().toISOString(),
+            error: prepared.error.message,
+            message: 'Embedded dispatch is unavailable',
+            operationId,
+            status: 'error',
+            success: false,
+            timestamp: new Date().toISOString(),
+            topicId,
+            userMessageId: userMessageId ?? parentMessageId ?? '',
+          };
+        }
+        // Server-hosted admission — the run executes in-process, so the
+        // ledger records `embedded` (no device fields) for status/cancel. A
+        // persist failure still refuses the run before spawn.
+        const embeddedAdmissionFailure = await ensureDispatchAdmission(
+          deps,
+          {
+            channel: 'embedded',
+            executionPlan: runIdentity,
+            operationId,
+          },
+          {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            operationId,
+            topicId,
+            userMessageId: userMessageId ?? parentMessageId ?? '',
+          },
+        );
+        if (embeddedAdmissionFailure) return embeddedAdmissionFailure;
+        // Fire-and-forget — same posture as the sandbox spawn: the driver
+        // finishes the run through heteroIngest/heteroFinish itself; the
+        // catch is the last-resort funnel if it throws before doing so.
+        void driveEmbeddedCanonicalRun(
+          { database: deps.db, userId: deps.userId, workspaceId: deps.workspaceId },
+          prepared.value,
+          {
+            agentType: 'orvilo',
+            assistantMessageId,
+            operationId,
+            prompt: [systemContext, prompt].filter(Boolean).join('\n\n'),
+            topicId,
+          },
+        ).catch(async (err) => {
+          log('execAgent: embedded dispatch driver failed: %O', err);
+          if (await hasHeteroRunStarted(deps, { operationId, topicId })) return;
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: err instanceof Error ? err.message : String(err),
+            message: 'Embedded dispatch failed',
+            operationId,
+            topicId,
+          }).catch((finalizeErr) =>
+            log('execAgent: embedded-failure finalize failed: %O', finalizeErr),
+          );
+        });
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          heteroType,
+          message: 'Hetero agent dispatched successfully',
+          operationId,
+          status: 'created',
+          success: true,
+          timestamp: new Date().toISOString(),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+
+      if (!supportsCloudHeterogeneousSandbox(heteroType)) {
         const message = `${getHeterogeneousAgentTitle(heteroType)} requires a local or connected device; cloud sandbox execution is not supported.`;
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
@@ -1501,7 +2121,7 @@ export const dispatchHeteroAgent = async (
       const { spawnHeteroSandbox } =
         await import('@/server/services/heterogeneousAgent/sandboxRunner');
       const marketService = await deps.getMarketService();
-      // The sandbox authenticates its nested `lh` calls with this JWT. The
+      // The sandbox authenticates its nested `orvilo` calls with this JWT. The
       // narrow `hetero-operation` token (used for the device-dispatch path
       // above) is rejected by `oidcAuth`, so CC capabilities that hit
       // user-scoped endpoints — e.g. uploading a `Read`-on-image result to
@@ -1511,8 +2131,24 @@ export const dispatchHeteroAgent = async (
       // so it outlives a multi-hour run.
       const sandboxJwt = await signUserJWT(deps.userId, '4h');
       // Durable admission BEFORE the spawn — the sandbox is the execution host
-      // for this channel; `deviceId` stays absent by design.
-      await writeDispatchAdmission(deps, { channel: 'cloud_sandbox', operationId });
+      // for this channel; `deviceId` stays absent by design. A persist failure
+      // refuses the run before spawn.
+      const sandboxAdmissionFailure = await ensureDispatchAdmission(
+        deps,
+        {
+          channel: 'cloud_sandbox',
+          executionPlan: { ...runIdentity, workingDirectoryBinding: '/workspace' },
+          operationId,
+        },
+        {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          operationId,
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        },
+      );
+      if (sandboxAdmissionFailure) return sandboxAdmissionFailure;
 
       // Same builtinToolContext contract as the device branch — sandbox runs
       // have no bound device but do have a working directory (`/workspace`).
@@ -1533,8 +2169,9 @@ export const dispatchHeteroAgent = async (
 
       spawnHeteroSandbox({
         ...heteroParams,
-        agentType: heteroCliAgentType as 'claude-code' | 'codex',
+        agentType: heteroType as 'claude-code' | 'codex',
         args: heteroExecArgs,
+        env: aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : undefined,
         jwt: sandboxJwt,
         marketService,
         // `heteroParams.jwt` (the operation token) is overridden above for

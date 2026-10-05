@@ -5,6 +5,7 @@ import { isLocalOnlyMessage } from '@/store/chat/utils/localMessages';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
 import { type Store as ConversationStore } from '../../../action';
+import { recordSendAgentUsage } from './recordSendAgentUsage';
 
 const throwIfAborted = (signal?: AbortSignal) => {
   if (!signal?.aborted) return;
@@ -87,6 +88,8 @@ export const sendMessage = (
       ...(messages ? { messages } : undefined),
       onTopicCreated: hooks.onTopicCreated,
     });
+
+    recordSendAgentUsage(targetContext);
 
     // ===== Hook: onAfterMessageCreate =====
     // Called after messages are created but before AI response is complete

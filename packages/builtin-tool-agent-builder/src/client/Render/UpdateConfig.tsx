@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { memo } from 'react';
@@ -19,9 +18,9 @@ const UpdateConfig = memo<BuiltinRenderProps<UpdateAgentConfigParams, UpdateConf
     }
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {hasTogglePlugin && (
-          <Flexbox horizontal align={'center'} gap={8} style={{ fontSize: 13 }}>
+          <div className="flex items-center gap-2" style={{ fontSize: 13 }}>
             {togglePlugin.enabled ? (
               <CheckCircle size={14} style={{ color: 'var(--lobe-success-6)' }} />
             ) : (
@@ -41,7 +40,7 @@ const UpdateConfig = memo<BuiltinRenderProps<UpdateAgentConfigParams, UpdateConf
                 {togglePlugin.pluginId}
               </code>
             </span>
-          </Flexbox>
+          </div>
         )}
         {hasConfig && (
           <ConfigDiffView
@@ -57,7 +56,7 @@ const UpdateConfig = memo<BuiltinRenderProps<UpdateAgentConfigParams, UpdateConf
             updatedFields={meta.updatedFields}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

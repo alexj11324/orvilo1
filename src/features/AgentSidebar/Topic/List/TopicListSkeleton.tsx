@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
-// Mirrors the grouped topic list frame (12px group caption + icon-led 36px
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Mirrors the grouped topic list frame (12px group caption + 36px text-led
 // rows) so the deferred-mount frame reads as the layout it resolves into,
 // unlike the avatar-style generic SkeletonList.
 const GROUPS = [
@@ -13,18 +13,14 @@ const GROUPS = [
   { header: 60, rows: ['64%', '76%', '48%', '68%'] },
 ];
 
+// No leading square: a topic row carries no leading icon, so its title starts
+// at the row's text inset. `paddingInline: 4` is that whole inset — it mirrors
+// the NavItem's own `px-1`, since the group caption's 8px belongs to the
+// header, not the rows. Without this the frame flashes an indented layout
+// before snapping left.
 const RowSkeleton = memo<{ width: string }>(({ width }) => (
-  <Flexbox horizontal align={'center'} gap={8} height={36} paddingInline={4}>
-    <Skeleton
-      style={{
-        borderRadius: cssVar.borderRadiusSM,
-        height: 16,
-        maxHeight: 16,
-        maxWidth: 16,
-        minWidth: 16,
-      }}
-    />
-    <Flexbox flex={1}>
+  <div className="flex items-center h-[36px]" style={{ paddingInline: 4 }}>
+    <div className="flex flex-col flex-1">
       <Skeleton
         style={{
           borderRadius: cssVar.borderRadius,
@@ -36,17 +32,21 @@ const RowSkeleton = memo<{ width: string }>(({ width }) => (
           width,
         }}
       />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 RowSkeleton.displayName = 'TopicRowSkeleton';
 
 const TopicListSkeleton = memo(() => (
-  <Flexbox gap={2}>
+  <div className="flex flex-col gap-0.5">
     {GROUPS.map((group, i) => (
-      <Flexbox gap={1} key={i} paddingBlock={4} paddingInline={'8px 4px'}>
-        <Flexbox horizontal align={'center'} height={24}>
+      <div className="flex flex-col gap-[1px]" key={i} style={{ paddingBlock: 4 }}>
+        {/* The 8px inline inset belongs to the group caption alone — the real
+            list puts it on the AccordionTrigger, so rows sit flush at the
+            container's own inset. Keeping it on the group wrapper would push
+            every skeleton row 8px right of the real one. */}
+        <div className="flex items-center h-[24px]" style={{ paddingInline: '8px 4px' }}>
           <Skeleton
             style={{
               borderRadius: cssVar.borderRadiusSM,
@@ -57,13 +57,13 @@ const TopicListSkeleton = memo(() => (
               opacity: 0.6,
             }}
           />
-        </Flexbox>
+        </div>
         {group.rows.map((width) => (
           <RowSkeleton key={width} width={width} />
         ))}
-      </Flexbox>
+      </div>
     ))}
-  </Flexbox>
+  </div>
 ));
 
 TopicListSkeleton.displayName = 'TopicListSkeleton';

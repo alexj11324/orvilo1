@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { CheckCircle, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 
@@ -29,21 +28,21 @@ const ConfigDiffView = memo<ConfigDiffViewProps>(({ updatedFields, previousValue
   }
 
   return (
-    <Flexbox gap={8} style={{ fontSize: 13 }}>
-      <Flexbox horizontal align={'center'} gap={6} style={{ color: 'var(--lobe-success-6)' }}>
+    <div className="flex flex-col gap-2" style={{ fontSize: 13 }}>
+      <div className="flex items-center gap-[6px]" style={{ color: 'var(--lobe-success-6)' }}>
         <CheckCircle size={14} />
         <span style={{ fontWeight: 500 }}>Updated {updatedFields.length} field(s)</span>
-      </Flexbox>
+      </div>
 
-      <Flexbox gap={8} style={{ marginLeft: 20 }}>
+      <div className="flex flex-col gap-2" style={{ marginLeft: 20 }}>
         {updatedFields.map((field) => {
           const oldValue = previousValues[field];
           const newValue = newValues[field];
 
           return (
-            <Flexbox gap={4} key={field}>
+            <div className="flex flex-col gap-1" key={field}>
               <span style={{ color: 'var(--lobe-text-secondary)', fontWeight: 500 }}>{field}:</span>
-              <Flexbox horizontal align={'center'} gap={8} style={{ marginLeft: 12 }}>
+              <div className="flex items-center gap-2" style={{ marginLeft: 12 }}>
                 <span
                   style={{
                     color: 'var(--lobe-text-tertiary)',
@@ -60,12 +59,12 @@ const ConfigDiffView = memo<ConfigDiffViewProps>(({ updatedFields, previousValue
                 <span style={{ color: 'var(--lobe-success-6)', fontWeight: 500 }}>
                   {formatValue(newValue)}
                 </span>
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           );
         })}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

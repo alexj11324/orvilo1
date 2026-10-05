@@ -25,6 +25,11 @@ const MOBILE_UNSUPPORTED_SHARED_PATHS = [
   'agent/:aid/self-evolving/:domainId/rules/:lessonId',
   'agent/:aid/self-evolving/new',
   'agent/:aid/self-learning/*',
+  // Canonical `/chat` conversation URLs are desktop-only — mobile keeps its
+  // own `agent/:aid(/:topicId)` chat routes; mapping them over is follow-up.
+  'chat',
+  'chat/:topicId',
+  'chat/new',
   // The automations console is desktop-only.
   'automations',
   'automations/:taskId',
@@ -40,9 +45,16 @@ const MOBILE_UNSUPPORTED_SHARED_PATHS = [
   'group/:gid/:topicId',
   'group/:gid/permission',
   'group/:gid/profile',
-  // Mobile `/memory` only carries the retired-root guard, not the preferences
-  // page the desktop mounts underneath it.
+  // Mobile `/memory` only carries the retired-root guard, not the memory
+  // pages the desktop mounts underneath it.
+  'memory/activities',
+  'memory/contexts',
+  'memory/experiences',
+  'memory/home',
+  'memory/identities',
   'memory/preferences',
+  'memory/prime',
+  'memory/search',
   // The project workspace is desktop-only.
   'project/:projectId',
   'project/:projectId/activity',

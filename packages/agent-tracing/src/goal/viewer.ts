@@ -66,7 +66,7 @@ export const renderGoalTrajectory = (trajectory: GoalTrajectory): string => {
     `Outcomes  ${bucket(rollup.advancesByOutcome)}`,
     `Graph     ${rollup.nodesTotal} nodes · ${rollup.tasksCompleted} tasks done · ${rollup.findingsTotal} findings`,
     `Human     ${rollup.gatesOpened} gate(s), ${duration(rollup.humanWaitingMs)} waiting`,
-    `Ops       ${rollup.operationsTotal} operation(s) — lh trace op inspect <opId> to go deeper`,
+    `Ops       ${rollup.operationsTotal} operation(s) — orvilo trace op inspect <opId> to go deeper`,
   ].join('\n');
 
   return [header, '', ...trajectory.advances.map((advance) => renderAdvance(advance))].join('\n');

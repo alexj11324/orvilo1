@@ -1375,15 +1375,57 @@
     {
       "idx": 196,
       "version": "7",
-      "when": 1790786176768,
-      "tag": "0196_provider_bindings",
+      "when": 1790788144810,
+      "tag": "0196_task_due_date_and_reminders",
       "breakpoints": true
     },
     {
       "idx": 197,
       "version": "7",
-      "when": 1790786196366,
-      "tag": "0197_experience_memory_shadow",
+      "when": 1790805560195,
+      "tag": "0197_cloud_control_plane",
+      "breakpoints": true
+    },
+    {
+      "idx": 198,
+      "version": "7",
+      "when": 1790822577561,
+      "tag": "0198_sudden_magma",
+      "breakpoints": true
+    },
+    {
+      "idx": 199,
+      "version": "7",
+      "when": 1790897308249,
+      "tag": "0199_dispatch_recovery_bounds",
+      "breakpoints": true
+    },
+    {
+      "idx": 200,
+      "version": "7",
+      "when": 1790909453017,
+      "tag": "0200_project_agent_tiers",
+      "breakpoints": true
+    },
+    {
+      "idx": 201,
+      "version": "7",
+      "when": 1790965227455,
+      "tag": "0201_retire_task_status_parked_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 202,
+      "version": "7",
+      "when": 1790974050382,
+      "tag": "0202_pr_delivery_gate_workflow_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 203,
+      "version": "7",
+      "when": 1791162171349,
+      "tag": "0203_device_capability_snapshot",
       "breakpoints": true
     },
     {

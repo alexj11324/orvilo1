@@ -1,8 +1,7 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { SquareArrowOutUpRight } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 export interface ItemLinkProps {
   // Optional: an omitted branding URL means "this deployment has no such
@@ -16,10 +15,13 @@ export interface ItemLinkProps {
 const ItemLink = memo<ItemLinkProps>(({ label, href }) => {
   return (
     <a href={href} rel="noreferrer" style={{ color: 'inherit' }} target="_blank">
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+      >
         {label}
-        <Icon color={cssVar.colorTextDescription} icon={SquareArrowOutUpRight} size={14} />
-      </Flexbox>
+        {createElement(SquareArrowOutUpRight, { color: cssVar.colorTextDescription, size: 14 })}
+      </div>
     </a>
   );
 });

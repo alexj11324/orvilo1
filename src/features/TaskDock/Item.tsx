@@ -1,9 +1,11 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon, ExternalLinkIcon, RotateCwIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 
 import type { DockTask } from './type';
 
@@ -64,22 +66,17 @@ const Item = memo<ItemProps>(
     const closable = dismiss && status !== 'running' && status !== 'pending';
 
     return (
-      <Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.container}
-          gap={12}
-          paddingBlock={8}
-          paddingInline={12}
+      <div className="flex flex-col">
+        <div
+          className={`flex items-center gap-3 px-3 py-2 ${styles.container}`}
           style={{ position: 'relative' }}
         >
           {icon}
-          <Flexbox flex={1} gap={2} style={{ overflow: 'hidden' }}>
+          <div className="flex flex-1 flex-col gap-0.5" style={{ overflow: 'hidden' }}>
             <div className={styles.title}>{title}</div>
             {detail}
             {extra}
-          </Flexbox>
+          </div>
 
           {cancel && (
             <ActionIcon
@@ -102,24 +99,22 @@ const Item = memo<ItemProps>(
           {status === 'running' && progress !== undefined && (
             <div className={styles.progress} style={{ insetInlineEnd: `${100 - progress}%` }} />
           )}
-        </Flexbox>
+        </div>
 
         {result && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.result}
-            gap={8}
-            paddingBlock={6}
+          <div
+            className={`flex items-center gap-2 py-1.5 ${styles.result}`}
             style={{ paddingInlineEnd: 8, paddingInlineStart: solo ? 12 : 48 }}
           >
-            <Text
-              ellipsis
-              className={styles.resultLabel}
-              type={result.onOpen ? undefined : 'secondary'}
+            <div
+              className={cn(
+                'truncate min-w-0',
+                styles.resultLabel,
+                !result.onOpen && 'text-muted-foreground',
+              )}
             >
               {result.label}
-            </Text>
+            </div>
             {result.onCopy && (
               <ActionIcon icon={CopyIcon} size="small" title={t('copy')} onClick={result.onCopy} />
             )}
@@ -132,13 +127,13 @@ const Item = memo<ItemProps>(
               />
             )}
             {result.action && (
-              <Button size={'small'} onClick={result.onAction}>
+              <Button size="sm" onClick={result.onAction}>
                 {result.action}
               </Button>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

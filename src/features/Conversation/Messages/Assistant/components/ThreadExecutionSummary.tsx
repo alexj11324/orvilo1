@@ -1,7 +1,12 @@
-import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors } from '@/store/chat/selectors';
 
@@ -37,14 +42,14 @@ const ThreadExecutionSummary = memo<ThreadExecutionSummaryProps>(({ messageId })
   });
 
   return (
-    <Accordion
-      indicatorPlacement="inline"
-      items={[{ key: 'execution-record', title: <Text type={'secondary'}>{label}</Text> }]}
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
-      value={[]}
-      variant={'borderless'}
-      onValueChange={handleValueChange}
-    />
+    <Accordion multiple value={[]} onValueChange={handleValueChange}>
+      <AccordionItem value="execution-record">
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          <div className="text-muted-foreground">{label}</div>
+        </AccordionTrigger>
+        <AccordionContent>{null}</AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 });
 

@@ -26,9 +26,8 @@ vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
+vi.mock('./SimpleTooltip', () => ({
+  SimpleTooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
     <span data-tooltip={String(title ?? '')}>{children}</span>
   ),
 }));
@@ -74,12 +73,16 @@ vi.mock('./TaskPriorityTag', () => ({
   default: () => <span>priority</span>,
 }));
 
-vi.mock('./TaskStatusTag', () => ({
+vi.mock('./IssueStatusPicker', () => ({
   default: ({ glyph }: { glyph?: { icon?: { displayName?: string } } }) => (
-    <span data-glyph={glyph?.icon?.displayName ?? 'execution'} data-testid="status-mark">
+    <span data-glyph={glyph?.icon?.displayName ?? 'category-default'} data-testid="status-mark">
       status
     </span>
   ),
+}));
+
+vi.mock('./TaskExecutionBadge', () => ({
+  default: () => <span data-testid="execution-badge" />,
 }));
 
 vi.mock('./TaskSubtaskProgressTag', () => ({
@@ -276,10 +279,13 @@ describe('AgentTaskItem', () => {
       ).toBeTruthy();
     });
 
-    it('falls back to the execution glyph when the task has no workflow state', () => {
+    it('keeps the category mark while run state stays a separate badge', () => {
       render(<AgentTaskItem routeScope={'global'} task={createTask('agent-1')} />);
 
-      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'execution');
+      // No workflow state → the picker falls back to the category default;
+      // the execution state is the read-only badge beside it, never the mark.
+      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'category-default');
+      expect(screen.getByTestId('execution-badge')).toBeInTheDocument();
     });
   });
 

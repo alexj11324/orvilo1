@@ -1,4 +1,18 @@
 export default {
+  'creation.runtime.title': 'Choose Agent runtime',
+  'creation.runtime.description':
+    'Choose Orvilo AI with a saved host and model, or reuse an existing connected runtime.',
+  'creation.runtime.label': 'Runtime',
+  'creation.runtime.prime': 'Orvilo AI',
+  'creation.runtime.host': 'Execution host',
+  'creation.runtime.hostEmpty': 'Choose a registered host',
+  'creation.runtime.hostHelp':
+    'Register a device in Devices. Shared Agents require a public Workspace device.',
+  'creation.runtime.provider': 'Provider and model',
+  'creation.runtime.devices': 'Open Devices',
+  'creation.runtime.use': 'Use runtime',
+
+  'workingPanel.overview.configure': 'Review execution setup',
   'goalExperiment.continuedFrom': 'Continued exploration',
   'goalExperiment.drill': 'Explore inside',
   'goalExperiment.drillNamed': 'Explore inside: {{title}}',
@@ -81,6 +95,7 @@ export default {
   'agentDocument.emptyTitle': 'No document open',
   'agentDocument.linkCopied': 'Link copied',
   'agentDocument.openAsPage': 'Open as full page',
+  'agentHandoffMarker': '── Agent changed to {{name}} ──',
   'agentNotFound.desc':
     'This agent does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'permission.configAccess.agentChatOnly':
@@ -92,6 +107,9 @@ export default {
   'permission.configAccess.groupRoleRestricted':
     'Your workspace role cannot configure Agent Groups. You were returned to chat.',
   'agentNotFound.title': 'Agent Unavailable',
+  'topicNotFound.desc':
+    'This conversation does not exist or is no longer accessible — it may have been deleted or the link is out of date.',
+  'topicNotFound.title': 'Conversation Unavailable',
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
@@ -120,6 +138,11 @@ export default {
   'agentSignal.receipts.skill.detail': 'Self-refined how this agent handles similar requests',
   'agentSignal.receipts.skill.title': 'Auto-learned a new skill',
   'agents': 'Agents',
+  'agentSwitchChoice.continue': 'Continue with {{name}}',
+  'agentSwitchChoice.description':
+    'Continue reassigns this conversation — it keeps its history and place in the list. Fork starts a new conversation seeded from this one, leaving it untouched.',
+  'agentSwitchChoice.fork': 'Fork to {{name}}',
+  'agentSwitchChoice.title': 'Hand off to {{name}}?',
   'artifact.generating': 'Generating',
   'artifact.inThread':
     'Cannot view in subtopic, please switch to the main conversation area to open',
@@ -354,8 +377,11 @@ export default {
     'When enabled, web links will be automatically parsed to retrieve the actual webpage context content',
   'extendParams.urlContext.title': 'Extract Webpage Link Content',
   'group.desc': 'Move a task forward with multiple Agents in one shared space.',
+  'group.emptyDescription': 'A room where agents and people work together.',
+  'group.emptyTitle': 'Start a group chat',
   'group.memberTooltip': 'There are {{count}} members in the group',
   'group.orchestratorThinking': 'Orchestrator is thinking...',
+  'group.profile.addInstructions': 'Add instructions',
   'group.profile.addMember.addExisting': 'Add existing agent',
   'group.profile.addMember.createNew': 'New member',
   'group.profile.addMember.newMemberTitle': 'New member',
@@ -406,6 +432,32 @@ export default {
   'heteroAgent.fullAccess.label': 'Full access',
   'heteroAgent.fullAccess.tooltip':
     'The local coding agent runs with full read/write access to the working directory. Switching permission modes is not available yet.',
+  'heteroAgent.apiMode.agentUnsupported': '{{name}} does not support Orvilo Provider binding.',
+  'heteroAgent.apiMode.configMissing':
+    'Provider binding requires a provider and model. Open the agent profile to configure it.',
+  'heteroAgent.apiMode.defaultProviderConfigMissing':
+    'Orvilo requires a compatible model. Open the agent profile to select one.',
+  'heteroAgent.apiMode.credentialUnsupported':
+    'The provider "{{providerId}}" uses an authentication method this agent does not support.',
+  'heteroAgent.apiMode.credentialsMissing':
+    'The provider "{{providerId}}" has no API key configured.',
+  'heteroAgent.apiMode.endpointMissing':
+    'The provider "{{providerId}}" requires a base URL for this agent.',
+  'heteroAgent.apiMode.endpointUnsupported':
+    'The provider "{{providerId}}" has an unsupported base URL.',
+  'heteroAgent.apiMode.labDisabled.action': 'Enable in Labs',
+  'heteroAgent.apiMode.labDisabled.desc':
+    'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
+  'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
+  'heteroAgent.apiMode.localOnly.desc':
+    'Switch the execution device to Local device, or use Subscription authentication.',
+  'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
+  'heteroAgent.apiMode.modelUnavailable':
+    'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
+  'heteroAgent.apiMode.protocolMismatch':
+    'The provider "{{providerId}}" does not expose a protocol supported by {{agentType}}.',
+  'heteroAgent.apiMode.providerUnavailable':
+    'The provider "{{providerId}}" is disabled or no longer available.',
   'heteroAgent.claudeQuota.accounts': 'Accounts',
   'heteroAgent.claudeQuota.calendar.burnout.exhausted': 'Exhausted — resets {{time}}',
   'heteroAgent.claudeQuota.calendar.burnout.safe':
@@ -545,6 +597,7 @@ export default {
   'heteroAgent.modelSelector.speed.fastDesc': '1.5x speed, increased usage',
   'heteroAgent.modelSelector.speed.standard': 'Standard',
   'heteroAgent.modelSelector.speed.standardDesc': 'Default speed',
+  'heteroAgent.modelSelector.unsupported': 'This agent cannot switch models in chat',
   'heteroAgent.cliModel.ariaLabel': '{{name}} model: {{model}}',
   'heteroAgent.cliModel.cliNotFound': 'The CLI is not installed on the target device.',
   'heteroAgent.cliModel.defaultDesc': 'Use the default model configured in {{name}}',
@@ -566,13 +619,13 @@ export default {
   'heteroAgent.resumeReset.cwdChanged':
     'Working directory changed. Previous Claude Code session can only be resumed from its original directory, so a new conversation has started.',
   'heteroAgent.resumeReset.cursorAcpIncompatible':
-    'The previous Cursor session could not be restored through ACP, so a new conversation has started with fresh context.',
+    'The previous Cursor session could not be restored, so a new conversation has started with fresh context.',
   'heteroAgent.resumeReset.resumeFailed':
     'The saved Codex thread could not be resumed safely, so a new conversation has started for this topic.',
   'heteroAgent.switchCwd.cancel': 'Cancel',
   'heteroAgent.switchCwd.content':
-    'Agent sessions are pinned to a working directory. Switching will start a new session for this topic — chat messages stay, but the previous session context cannot be resumed.',
-  'heteroAgent.switchCwd.ok': 'Switch and start new session',
+    'Agent sessions belong to a working directory. Switching uses the saved session for the destination, or starts a new one if none exists. This topic’s messages are kept.',
+  'heteroAgent.switchCwd.ok': 'Switch working directory',
   'heteroAgent.switchCwd.title': 'Switch working directory?',
   'heteroAgent.cloudNotConfigured.action': 'Configure',
   'heteroAgent.cloudNotConfigured.desc':
@@ -588,27 +641,28 @@ export default {
   'heteroAgent.executionTarget.autoDesc':
     'Use an online device automatically, picking one when several are available',
   'heteroAgent.executionTarget.fixedTip':
-    'The execution environment is fixed in the Agent Profile and cannot be switched while chatting.',
+    'The execution device is fixed in the agent\u0027s settings and cannot be switched while chatting.',
   'heteroAgent.executionTarget.infoTooltip':
     'Choose where this Agent runs. A device can read and write files or operate a computer; Cloud Sandbox runs in an isolated temporary environment.',
+  'heteroAgent.executionTarget.readOnlyTip': 'This run executes on this device.',
   'heteroAgent.executionTarget.gateway': 'Gateway',
   'heteroAgent.executionTarget.gatewayDesc':
-    'Run through the device gateway so other clients can follow progress',
+    'Run on this computer via the gateway; other clients can follow progress',
   'heteroAgent.executionTarget.loading': 'Loading devices…',
-  'heteroAgent.executionTarget.local': 'Local device',
-  'heteroAgent.executionTarget.localDesc': 'Run as a local process on this desktop app',
-  'heteroAgent.executionTarget.localSandbox': 'Local sandbox',
+  'heteroAgent.executionTarget.local': 'Local',
+  'heteroAgent.executionTarget.localDesc': 'Run directly on this computer through the desktop app',
+  'heteroAgent.executionTarget.localSandbox': 'Shell isolation',
   'heteroAgent.executionTarget.localSandboxDesc':
-    'Run on this computer, with commands limited to the working directory and no network',
+    'Optional shell isolation: writes stay in the working directory and temporary directory; network is blocked',
   'heteroAgent.executionTarget.localSandboxDescNetwork':
-    'Run on this computer, with commands limited to the working directory and to common developer domains',
+    'Optional shell isolation: writes stay in the working directory and temporary directory; developer domains are allowed',
   'heteroAgent.executionTarget.localSandboxSetUp': 'Set up',
   'heteroAgent.executionTarget.localSandboxNetworkTip':
     'Let sandboxed commands reach package registries and source forges — npm, PyPI, crates.io, RubyGems, Go, GitHub, GitLab. Every other domain stays blocked; the sandbox cannot open the network entirely.',
   'heteroAgent.executionTarget.localSandboxUnavailable': 'Not available on this device: {{reason}}',
   'heteroAgent.executionTarget.manage': 'Manage',
   'heteroAgent.executionTarget.noDevices':
-    'No remote devices yet. Run `lh connect` on another machine to add one.',
+    'No connected devices yet. Run `orvilo connect` on this computer or another computer to add one.',
   'heteroAgent.executionTarget.noWorkspaceDevices':
     'No workspace devices yet. Run `{{cmd}}` on a machine to enroll it for every member.',
   'heteroAgent.executionTarget.none': 'No device',
@@ -620,6 +674,16 @@ export default {
   'heteroAgent.executionTarget.reconnect': 'Reconnect',
   'heteroAgent.executionTarget.reconnectFailed':
     'Could not reconnect this device. Make sure the desktop app is running, then try again.',
+  'heteroAgent.executionTarget.bindingInvalid': 'Rebind device',
+  'heteroAgent.executionTarget.bindingInvalidBanner':
+    'The bound device ({{device}}) is no longer available — pick a device below to rebind.',
+  'heteroAgent.executionTarget.externalGroup': 'External devices',
+  'heteroAgent.permission.loading': 'Loading permissions…',
+  'heteroAgent.permission.unavailable': 'Permissions unavailable',
+  'heteroAgent.permission.unsupported': 'Permissions not advertised',
+  'heteroAgent.permission.saveError': 'Could not save permission setting',
+  'heteroAgent.permission.stale': 'Permission selection unavailable',
+  'heteroAgent.permission.label': 'Permissions',
   'heteroAgent.executionTarget.personalGroup': 'Private Devices',
   'heteroAgent.executionTarget.sandbox': 'Cloud Sandbox',
   'heteroAgent.executionTarget.sandboxDesc': 'Run in an ephemeral cloud sandbox',
@@ -627,8 +691,21 @@ export default {
   'heteroAgent.executionTarget.downloadDesktop': 'Get Desktop App',
   'heteroAgent.executionTarget.downloadDesktopDesc': 'Run agents with access to your computer',
   'heteroAgent.executionTarget.downloadDesktopTitle': 'Get the desktop app',
-  'heteroAgent.executionTarget.title': 'Execution Environment',
+  'heteroAgent.executionTarget.title': 'Device',
   'heteroAgent.executionTarget.unknownDevice': 'Unknown device',
+  'deviceAdmission.bindingChanged':
+    'The device binding changed while repairing — nothing was written.',
+  'deviceAdmission.connect': 'Connect a device',
+  'deviceAdmission.operation': 'Run: {{id}}',
+  'deviceAdmission.repairDesc':
+    'Pick the device this conversation runs on. The broken binding is only replaced by the device you choose — the old device\u0027s session is never reused.',
+  'deviceAdmission.repairFailed': 'Could not repair the device binding — try again.',
+  'deviceAdmission.repairTo': 'Repair binding to {{device}}',
+  'deviceAdmission.repaired': 'Device binding repaired.',
+  'deviceAdmission.requestAuthorization': 'Manage device access',
+  'deviceAdmission.retryInventory': 'Retry device lookup',
+  'deviceAdmission.title': 'This run could not start on a device',
+  'deviceAdmission.viewRunStatus': 'View run status',
   'hideForYou':
     "Direct message content is hidden. Please enable 'Show Direct Message Content' in settings to view.",
   'history.title': 'The Agent will keep only the latest {{count}} messages.',
@@ -1034,6 +1111,7 @@ export default {
   'traeInstallGuide.reason': 'Orvilo could not start TRAE CLI: {{message}}',
   'traeInstallGuide.title': 'Install TRAE CLI',
   'addAgent': 'Add Agent',
+  'agentCreated': 'Created {{name}}',
   'addAgentFromList': 'Add from Agent list',
   'addAgentFromMarket': 'Add from Market',
   'newAgent': 'Create Agent',
@@ -1053,6 +1131,7 @@ export default {
   'newPlatformAgent': 'Connect External Agents',
   'newPlatformAgentDesc': 'Connect Claude Code, OpenClaw, and other agents',
   'newGroupChat': 'Create Group',
+  'newGroupChatFromDescription': 'Generate from a description',
   'agent.publishToWorkspace': 'Publish to Workspace',
   'agent.publishToWorkspaceErrorFixedPrivateDevice':
     'Publish the fixed device to the workspace, or let members choose a device, before publishing this Agent.',
@@ -1070,6 +1149,44 @@ export default {
   'resources.mode.workspaceHint': 'Shared with everyone in this workspace',
   'resources.knowledgePicker.publicAgentHint':
     'Public agents can only reference workspace resources. Publish a private resource to the workspace first if you want to attach it.',
+
+  // First-run onboarding (the conversation landing when nothing can run yet)
+  'onboarding.api.description':
+    'Use an OpenAI-compatible provider. Your new API key is stored securely in your account.',
+  'onboarding.api.endpoint': 'Provider endpoint (HTTPS)',
+  'onboarding.api.model': 'Model ID',
+  'onboarding.api.key': 'API key',
+  'onboarding.account': 'Account settings',
+  'onboarding.api.configure': 'Use my API key',
+  'onboarding.api.create': 'Verify and create agent',
+  'onboarding.api.failed':
+    'Setup could not finish. Check your device, key, endpoint, and model, then retry. Your saved setup will be reused.',
+  'onboarding.connect': 'Connect an agent',
+  'onboarding.prime.create': 'Create Orvilo AI',
+  'onboarding.prime.ready': 'An existing provider route is available for Orvilo AI.',
+  'onboarding.prime.unavailable':
+    'Orvilo AI needs a verified provider route. Connect an agent or configure your API key.',
+  'onboarding.builtin.action': 'Open settings',
+  'onboarding.builtin.desc': 'No model provider is configured yet, so it cannot run.',
+  'onboarding.builtin.group': 'Built-in Agent',
+  'onboarding.builtin.unavailable': 'Unavailable',
+  'onboarding.device.title': 'Choose an execution device',
+  'onboarding.device.description':
+    'Orvilo AI is the built-in harness. It runs on your connected device, with your verified model provider.',
+  'onboarding.device.empty':
+    'No connected device is online. Connect this computer or enroll a device, then check again.',
+  'onboarding.device.use': 'Use {{name}}',
+  'onboarding.device.connect': 'Connect a device',
+  'onboarding.emptyDesc': 'Connect an agent or create Orvilo AI with your API key.',
+  'onboarding.emptyTitle': 'Create your first agent',
+  'onboarding.footerHint': 'Create your first usable agent to continue setup.',
+  'onboarding.installCli.desc': 'Claude Code / Codex / OpenCode…',
+  'onboarding.installCli.hint': 'Come back here to check again once it is installed.',
+  'onboarding.installCli.title': 'Install a CLI',
+  'onboarding.provider.desc': 'Connect one with an API key to use Orvilo AI.',
+  'onboarding.provider.title': 'Configure a model provider',
+  'onboarding.rescan': 'Check again',
+  'onboarding.title': 'Create your first agent',
 
   // Op status tray (floating panel above the chat input during a run)
   'opStatusTray.status.compressing': 'Compressing context',
@@ -1089,6 +1206,7 @@ export default {
   'connectAgent.create.stepAgents': 'Step 2 of 3 · {{device}}',
   'connectAgent.create.stepConfirm': 'Step 3 of 3 · Name it for your agent list',
   'connectAgent.create.thisDevice': 'This device',
+  'connectAgent.create.desktopChannel': 'Desktop',
   'connectAgent.create.connectedDevices': 'Connected devices',
   'connectAgent.create.localDevice': 'This computer',
   'connectAgent.create.localDeviceDesc': 'Runs agents directly on this machine',
@@ -1103,9 +1221,9 @@ export default {
   'connectAgent.create.download': 'Download',
   'connectAgent.create.connectCli': 'Connect with CLI',
   'connectAgent.create.noDevicesCliHint': 'Run this command on the computer you want to connect',
-  'connectAgent.create.noDevicesCmd': 'lh connect',
+  'connectAgent.create.noDevicesCmd': 'orvilo connect',
   'connectAgent.create.refresh': 'Refresh',
-  'connectAgent.create.scanning': 'Scanning agents on this device…',
+  'connectAgent.create.scanning': 'Scanning agents on {{device}}…',
   'connectAgent.create.scanFailed': 'Scan failed',
   'connectAgent.create.rescan': 'Rescan',
   'connectAgent.create.rescanDevice': 'Rescan Device',
@@ -1140,17 +1258,26 @@ export default {
   'connectAgent.providerDesc.amp': 'Sourcegraph coding agent CLI',
   'connectAgent.providerDesc.kimi-code': 'Moonshot AI coding agent CLI',
   'connectAgent.providerDesc.opencode': 'Open-source coding agent CLI',
-  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent engine',
+  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent',
   'connectAgent.providerDesc.pi': 'Minimal coding agent CLI',
   'connectAgent.providerDesc.qoder': 'Qoder coding agent CLI',
   'connectAgent.providerDesc.trae': 'TRAE Enterprise coding agent CLI',
   'connectAgent.providerDesc.openclaw': 'Personal agent platform',
   'connectAgent.providerDesc.hermes': 'Personal agent platform',
 
+  // Composer agent picker · harnesses installed on this desktop
+  'localHarness.connect': 'Connect',
+  'localHarness.hideMissing': 'Hide not installed',
+  'localHarness.noneInstalled': 'No coding agents found on this device',
+  'localHarness.scanFailed': 'Could not check this device',
+  'localHarness.scanning': 'Checking this device…',
+  'localHarness.showMissing': 'Show {{total}} not installed',
+  'localHarness.title': 'Installed on this device',
+
   // Connect agent device guard banner
   'platformAgent.deviceGuard.deviceOffline.title': 'Device not connected',
   'platformAgent.deviceGuard.deviceOffline.desc':
-    'The bound device is not connected. Run `lh connect` on that machine then refresh.',
+    'The bound device is not connected. Run `orvilo connect` on that machine then refresh.',
   'platformAgent.deviceGuard.platformUnavailable.title': '{{name}} not available',
   'platformAgent.deviceGuard.platformUnavailable.desc':
     '{{name}} is not installed on the connected device.',
@@ -1241,14 +1368,6 @@ export default {
   'chatMode.chat': 'Chat',
   'chatMode.chatDesc': 'No runtime environment or autonomy; uses fewer tokens',
   'chatMode.select': 'Switch Mode',
-  'runtimeEnv.mode.cloud': 'Cloud Sandbox',
-  'runtimeEnv.mode.cloudDesc': 'Run in a secure cloud sandbox',
-  'runtimeEnv.mode.local': 'Local',
-  'runtimeEnv.mode.localDesc': 'Access local files and commands',
-  'runtimeEnv.mode.none': 'Off',
-  'runtimeEnv.mode.noneDesc': 'Disable runtime environment',
-  'runtimeEnv.selectMode': 'Select Runtime Environment',
-  'runtimeEnv.title': 'Runtime Environment',
   'search.grounding.searchQueries': 'Search Keywords',
   'search.grounding.title': 'Found {{count}} results',
   'search.mode.auto.desc': 'Search the web automatically when needed.',
@@ -1264,6 +1383,7 @@ export default {
   'search.title': 'Web Search',
   'searchAgentPlaceholder': 'Search agents...',
   'searchAgents': 'Search agents...',
+  'searchTopicPlaceholder': 'Search conversations...',
   'selectedAgents': 'Selected agents',
   'floatingChatPanel.collapse': 'Collapse chat',
   'floatingChatPanel.expand': 'Expand chat',
@@ -1406,6 +1526,7 @@ export default {
   'supervisor.todoList.allComplete': 'All tasks completed',
   'supervisor.todoList.title': 'Tasks Completed',
   'tab.groupProfile': 'Group Profile',
+  'tab.home': 'Home',
   'tab.integration': 'Channels',
   'tab.profile': 'Agent Profile',
   'tab.profileBasic': 'Profile',
@@ -1488,6 +1609,21 @@ export default {
   'taskSchedule.weekdays.thu': 'Thu',
   'taskSchedule.weekdays.tue': 'Tue',
   'taskSchedule.weekdays.wed': 'Wed',
+  'taskDetail.relations.add': 'Add relation',
+  'taskDetail.relations.addFailed': 'Could not add that relation. Try again.',
+  'taskDetail.relations.blocking': 'Blocks',
+  'taskDetail.relations.blockedBy': 'Blocked by',
+  'taskDetail.relations.relates': 'Related',
+  'taskDetail.relations.none': 'None',
+  'taskDetail.relations.search': 'Search issues',
+  'taskDetail.relations.searching': 'Searching…',
+  'taskDetail.relations.noMatches': 'No matching issues',
+  'taskDetail.relations.remove': 'Remove relation',
+  'taskDetail.relations.actions': 'Relation actions',
+  'taskDetail.autoRunFailed': 'Could not start the run for this status.',
+  'taskDetail.activities.filter.all': 'All',
+  'taskDetail.activities.filter.comments': 'Comments',
+  'taskDetail.activities.filter.updates': 'Updates',
   'taskDetail.prerequisites.title': 'Prerequisite tasks',
   'taskDetail.prerequisites.blocked': 'Blocked until every prerequisite is completed.',
   'taskDetail.prerequisites.blockedBy': 'Blocked by',
@@ -1652,6 +1788,22 @@ export default {
   'taskDetail.priority.normal': 'Medium',
   'taskDetail.priority.urgent': 'Urgent',
   'taskDetail.properties': 'Properties',
+  'taskDetail.property.state': 'State',
+  'taskDetail.property.priority': 'Priority',
+  'taskDetail.property.schedule': 'Schedule',
+  'taskDetail.property.addAssignee': 'Add assignee',
+  'taskDetail.property.addReviewer': 'Add reviewer',
+  'taskDetail.property.addDueDate': 'Add due date',
+  'taskDetail.property.addLabels': 'Add labels',
+  'taskDetail.dueDate': 'Due date',
+  'taskDetail.execution.canceled': 'Canceled',
+  'taskDetail.execution.failed': 'Failed',
+  'taskDetail.execution.outcome_unknown': 'Outcome unknown',
+  'taskDetail.execution.provisioning': 'Provisioning',
+  'taskDetail.execution.queued': 'Queued',
+  'taskDetail.execution.running': 'Running',
+  'taskDetail.execution.succeeded': 'Succeeded',
+  'taskDetail.execution.waiting': 'Waiting',
   'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
   'taskDetail.noProject': 'No project',
@@ -1720,6 +1872,7 @@ export default {
   'taskDetail.topicMenu.stopConfirm.content':
     'The current run will be canceled. Generated messages are kept and you can re-run the task later.',
   'taskDetail.topicMenu.stopConfirm.title': 'Stop Run?',
+  'taskDetail.runTrigger.event': 'Event',
   'taskDetail.runTrigger.goal': 'Goal loop',
   'taskDetail.runTrigger.heartbeat': 'Heartbeat',
   'taskDetail.runTrigger.orchestrator': 'Orchestrator',
@@ -2241,6 +2394,20 @@ export default {
   'taskList.mine.emptyCreated': "You haven't created any tasks yet",
   'taskList.mine.title': 'My tasks',
   'taskList.noMilestone': 'No milestone',
+  'taskList.schedule.inOneWeek': 'In one week',
+  'taskList.schedule.loadFailed': 'Could not load the reminder. Try again.',
+  'taskList.schedule.nextMonth': 'Next month',
+  'taskList.schedule.previousMonth': 'Previous month',
+  'taskList.schedule.remindInHour': 'In 1 hour',
+  'taskList.schedule.remindInThreeHours': 'In 3 hours',
+  'taskList.schedule.remindInWeek': 'In one week',
+  'taskList.schedule.remindMe': 'Remind me',
+  'taskList.schedule.remindTomorrow': 'Tomorrow morning',
+  'taskList.schedule.removeDueDate': 'Remove due date',
+  'taskList.schedule.removeReminder': 'Remove reminder',
+  'taskList.schedule.saveFailed': 'Could not update the schedule. Try again.',
+  'taskList.schedule.today': 'Today',
+  'taskList.schedule.tomorrow': 'Tomorrow',
   'taskList.scheduled.empty': 'No automations yet',
   // The collection keeps the `scheduled` identifier — it names a query and a
   // route, and renaming it would break stored deep links. The product calls the
@@ -2320,13 +2487,25 @@ export default {
   'taskList.contextMenu.copyFailed': 'Failed to copy task',
   'taskList.contextMenu.copyId': 'Copy ID',
   'taskList.contextMenu.copyIdSuccess': 'ID copied',
+  'taskList.contextMenu.copyIssueTitle': 'Copy title',
   'taskList.contextMenu.copyLink': 'Copy Link',
   'taskList.contextMenu.copyLinkSuccess': 'Link copied',
+  'taskList.contextMenu.copyMarkdown': 'Copy as Markdown',
+  'taskList.contextMenu.copyMarkdownSuccess': 'Markdown copied',
   'taskList.contextMenu.copySuccess': 'Task copied',
   'taskList.contextMenu.copyTitle': 'Copy task',
+  'taskList.contextMenu.copyTitleAsLink': 'Copy title as link',
+  'taskList.contextMenu.copyTitleSuccess': 'Title copied',
   'taskList.contextMenu.copyTo': 'Copy to…',
+  'taskList.contextMenu.dueDate': 'Due date…',
+  'taskList.contextMenu.favorite': 'Favorite',
+  'taskList.contextMenu.labels': 'Labels',
+  'taskList.contextMenu.labelsEmpty': 'No labels',
+  'taskList.contextMenu.noProject': 'No project',
   'taskList.contextMenu.openRun': 'Open run',
   'taskList.contextMenu.priority': 'Priority',
+  'taskList.contextMenu.project': 'Project',
+  'taskList.contextMenu.remindMe': 'Remind me…',
   'taskList.contextMenu.runNow': 'Run now',
   'taskList.contextMenu.status': 'Status',
   'taskList.contextMenu.transferConfirm': 'Move',
@@ -2338,6 +2517,7 @@ export default {
   'taskList.contextMenu.transferTo': 'Move to…',
   'taskList.contextMenu.transferWarning':
     'Cross-workspace references like assigned agent and active topic will be cleared.',
+  'taskList.contextMenu.unfavorite': 'Unfavorite',
   'taskList.kanban.addTask': 'Create task',
   'taskList.attention.blocking': 'Blocking issues',
   'taskList.attention.urgent': 'Urgent issues',
@@ -2765,8 +2945,8 @@ export default {
   'workingPanel.overview.ci.failure': 'Failed',
   'workingPanel.overview.ci.pending': 'Running',
   'workingPanel.overview.empty':
-    'Workspace activity and outputs will appear here as the agent works.',
-  'workingPanel.overview.emptyTitle': 'Ready to work',
+    'Activity and outputs appear here after a run starts. Review the agent’s execution setup before sending.',
+  'workingPanel.overview.emptyTitle': 'Workspace activity',
   'workingPanel.overview.environmentError': 'Could not load the repository status',
   'workingPanel.overview.execution.device': 'Connected device',
   'workingPanel.overview.execution.local': 'This device',
@@ -3030,6 +3210,7 @@ export default {
   'workingPanel.tabs.closeRight': 'Close tabs to the right',
   'workingPanel.tabs.pin': 'Pin tab',
   'workingPanel.tabs.pinned': 'Pinned tab',
+  'workingPanel.tabs.swapThreads': 'Swap threads',
   'workingPanel.tabs.unpin': 'Unpin tab',
   'workingPanel.documents.close': 'Close',
   'workingPanel.documents.error': 'Failed to load document',

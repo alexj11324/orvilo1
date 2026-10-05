@@ -1,4 +1,7 @@
 import type {
+  AgentTier,
+  OrviloAgentAgencyConfig,
+  ProjectOrchestrationPolicy,
   TaskDispatchOrigin,
   TaskDispatchPhase,
   TaskDispatchSettlementGrant,
@@ -6,8 +9,24 @@ import type {
   TaskItem,
   TaskRunTrigger,
 } from '@orvilo/types';
-import { and, asc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  ne,
+  not,
+  notLike,
+  or,
+  sql,
+} from 'drizzle-orm';
 
+import { agents } from '../schemas/agent';
 import { goals } from '../schemas/goal';
 import { goalNodes } from '../schemas/goalGraph';
 import { projectAgents, projects } from '../schemas/project';
@@ -19,6 +38,7 @@ import type { OrviloDatabase, Transaction } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './projectOrchestrationPolicy';
+import { hasActiveExecution, isExecutionParked, isParked, parkMarkerSet } from './taskExecutionSql';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'requested',
@@ -42,6 +62,29 @@ const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
 ];
 
 const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
+
+/** Column projection shared by the resume-sweep candidate finders. */
+const resumeCandidateColumns = () => ({
+  dispatchId: taskDispatches.id,
+  fence: taskDispatches.fence,
+  generation: taskDispatches.generation,
+  idempotencyKey: taskDispatches.idempotencyKey,
+  phase: taskDispatches.phase,
+  planRevision: taskDispatches.planRevision,
+  recoveryAttempts: taskDispatches.recoveryAttempts,
+  requestedBy: taskDispatches.requestedBy,
+  taskId: taskDispatches.taskId,
+  userId: sql<
+    string | null
+  >`coalesce(${projects.userId}, ${teams.createdByUserId}, ${tasks.createdByUserId}, ${tasks.createdBySubjectId})`,
+  waitingReason: taskDispatches.waitingReason,
+  workspaceId: taskDispatches.workspaceId,
+});
+
+const resumeCandidates = (
+  rows: Array<Omit<TaskDispatchResumeCandidate, 'userId'> & { userId: string | null }>,
+): TaskDispatchResumeCandidate[] =>
+  rows.flatMap((row) => (row.userId === null ? [] : [{ ...row, userId: row.userId }]));
 
 /**
  * Goal statuses that fence automated dispatch for a goal-owned Task. Pausing,
@@ -82,8 +125,62 @@ export class TaskDispatchSettlementGrantError extends Error {
   }
 }
 
+/** Denial codes mirror DispatchAdmissionErrorCode in @orvilo/agent-execution. */
+export type EventDispatchEvidenceCode =
+  | 'stale-binding'
+  | 'revoked'
+  | 'tenant-mismatch'
+  | 'loop'
+  | 'admission-held'
+  | 'runtime-unavailable'
+  | 'idempotency-conflict'
+  | 'invalid-event';
+
+/**
+ * Persisted event-admission evidence an `event`-triggered claim must cite.
+ * The trigger run, trigger, binding, inbox row, connector and saved scope
+ * are all re-verified under the same task lock that mints the dispatch —
+ * verify association, never marker presence.
+ */
+export interface EventDispatchEvidence {
+  /** Upstream dispatch ids the event names as its cause, when carried. */
+  causationIds?: string[];
+  eventId: string;
+  /** Stable occurrence key — must equal the claim's idempotency key. */
+  idempotencyKey: string;
+  /** Inbox row the delivery was claimed under (`mcp_event_inbox.id`). */
+  inboxRef: string;
+  sourceId: string;
+  subscriptionId: string;
+  tenantId: string;
+  triggerId: string;
+  triggerRevision: number;
+  /** Durable fan-out row (`mcp_event_trigger_runs.id`). */
+  triggerRunId: string;
+  userId: string;
+  workspaceId: string;
+}
+
+/**
+ * An `event` claim whose cited evidence no longer verifies — stale trigger
+ * revision, settled or missing receipt, lost lease, revoked subscription,
+ * dead connector, drifted scope, or a causation loop. The claim is refused
+ * like a stale settlement grant, never silently downgraded to another origin.
+ */
+export class TaskDispatchEventEvidenceError extends Error {
+  readonly code: EventDispatchEvidenceCode;
+
+  constructor(code: EventDispatchEvidenceCode, message: string) {
+    super(message);
+    this.name = 'TaskDispatchEventEvidenceError';
+    this.code = code;
+  }
+}
+
 export interface RequestTaskDispatchInput {
   dispatchId?: string;
+  /** Server-verified admission evidence for `trigger: 'event'` rows. */
+  eventEvidence?: EventDispatchEvidence;
   idempotencyKey: string;
   /** Raw actor identity persisted separately from the `trigger:actor`
    *  `requestedBy` audit string (SA05-B). */
@@ -142,6 +239,61 @@ export interface TaskPlanningDispatchCandidate {
 }
 
 /**
+ * A resumable durable intent discovered by the resume sweep — either a
+ * start that never reached provisioning (`requested`/`claimed`) or a parked
+ * `waiting` row whose recorded reason a re-evaluation can clear. The resume
+ * service re-drives these through the same `request()` path so contract,
+ * policy and goal re-checks decide whether the row resumes or re-parks.
+ */
+export interface TaskDispatchResumeCandidate {
+  dispatchId: string;
+  fence: number;
+  generation: number;
+  idempotencyKey: string;
+  phase: TaskDispatchPhase;
+  planRevision: number | null;
+  recoveryAttempts: number;
+  requestedBy: string;
+  taskId: string;
+  userId: string;
+  waitingReason: string | null;
+  workspaceId: string | null;
+}
+
+/** A `backlog` task eligible for project `autoDispatch` intake. */
+export interface TaskBacklogIntakeCandidate {
+  assigneeAgentId: string | null;
+  createdBySubjectId: string | null;
+  createdByUserId: string | null;
+  executionGeneration: number;
+  orchestrationPolicy: ProjectOrchestrationPolicy;
+  priority: number | null;
+  projectId: string;
+  taskId: string;
+  userId: string | null;
+  workspaceId: string;
+}
+
+/** The latest terminally settled dispatch for a task, used for tier escalation. */
+export interface TaskTerminalDispatchOutcome {
+  agentId: string | null;
+  generation: number;
+  phase: TaskDispatchPhase;
+  requestedBy: string;
+  tier: AgentTier | null;
+}
+
+/** A tiered roster row the intake matcher may route a task onto. */
+export interface ProjectAgentRosterEntry {
+  agencyConfig: OrviloAgentAgencyConfig | null;
+  agentId: string;
+  model: string | null;
+  role: string | null;
+  sortOrder: number;
+  tier: AgentTier | null;
+}
+
+/**
  * Durable arbiter for Task execution. Every automated entry point must request
  * a dispatch before provisioning an environment or calling the agent runtime.
  * The Task row lock serializes generation changes; the partial unique index is
@@ -165,6 +317,34 @@ export class TaskDispatchModel {
         `Idempotency key already belongs to Task ${existing.taskId}`,
       );
     }
+  }
+
+  /**
+   * Capability band the task's bound agent holds on the project roster — the
+   * snapshot persisted as `task_dispatches.tier` so a later roster edit cannot
+   * rewrite which tier an attempt ran at. Non-project tasks and agents absent
+   * from the roster have no band.
+   */
+  private async projectAgentTier(
+    db: OrviloDatabase,
+    projectId: string | null,
+    agentId: string | null,
+  ): Promise<AgentTier | null> {
+    if (!projectId || !agentId) return null;
+    const [row] = await db
+      .select({ tier: projectAgents.tier })
+      .from(projectAgents)
+      .where(
+        and(
+          eq(projectAgents.projectId, projectId),
+          eq(projectAgents.agentId, agentId),
+          this.workspaceId
+            ? eq(projectAgents.workspaceId, this.workspaceId)
+            : isNull(projectAgents.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row?.tier ?? null;
   }
 
   private async projectDispatchWaitingReason(
@@ -333,6 +513,201 @@ export class TaskDispatchModel {
       .limit(limit);
   }
 
+  /**
+   * Discover durable start intents that never reached provisioning — a
+   * `requested` row no worker ever claimed, or a `claimed` row whose worker
+   * lease lapsed before the environment started. Planner intents are owned
+   * by their dedicated sweep and excluded here. Event intents stay
+   * discoverable so the sweep can retire them: they cannot be re-driven
+   * without the event's admission evidence, so the only convergence is
+   * `requestStop`.
+   */
+  static async findStaleStartCandidates(
+    db: OrviloDatabase,
+    input: { graceMs?: number; limit?: number; now?: Date } = {},
+  ): Promise<TaskDispatchResumeCandidate[]> {
+    const now = input.now ?? new Date();
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    const staleBefore = new Date(now.getTime() - (input.graceMs ?? 5 * 60 * 1000));
+    const rows = await db
+      .select(resumeCandidateColumns())
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .leftJoin(projects, eq(projects.id, tasks.projectId))
+      .leftJoin(teams, eq(teams.id, tasks.teamId))
+      .where(
+        and(
+          inArray(taskDispatches.phase, ['requested', 'claimed']),
+          lt(taskDispatches.updatedAt, staleBefore),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          notLike(taskDispatches.requestedBy, 'orchestrator:planning:%'),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
+    return resumeCandidates(rows);
+  }
+
+  /**
+   * Discover parked `waiting` dispatches whose recorded reason a
+   * re-evaluation may clear — capacity/budget ceilings, a newly assigned
+   * agent, a resumed admission flag, a retryable prepare failure. Reasons
+   * owned by another sweep (`goal_*`), evidence-bound intents (`event:*`),
+   * planner intents, and terminal-coded waits are skipped: none of them can
+   * resume from a generic re-drive.
+   */
+  static async findWaitingResumeCandidates(
+    db: OrviloDatabase,
+    input: { graceMs?: number; limit?: number; now?: Date } = {},
+  ): Promise<TaskDispatchResumeCandidate[]> {
+    const now = input.now ?? new Date();
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    const staleBefore = new Date(now.getTime() - (input.graceMs ?? 5 * 60 * 1000));
+    const rows = await db
+      .select(resumeCandidateColumns())
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .leftJoin(projects, eq(projects.id, tasks.projectId))
+      .leftJoin(teams, eq(teams.id, tasks.teamId))
+      .where(
+        and(
+          eq(taskDispatches.phase, 'waiting'),
+          lt(taskDispatches.updatedAt, staleBefore),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          notLike(taskDispatches.requestedBy, 'event:%'),
+          notLike(taskDispatches.requestedBy, 'orchestrator:planning:%'),
+          or(
+            isNull(taskDispatches.waitingReason),
+            and(
+              notLike(taskDispatches.waitingReason, 'goal_%'),
+              notLike(taskDispatches.waitingReason, 'superseded_%'),
+              notLike(taskDispatches.waitingReason, 'settlement_%'),
+              ne(taskDispatches.waitingReason, 'planning_resume_instruction_missing'),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
+    return resumeCandidates(rows);
+  }
+
+  /**
+   * Discover `backlog` tasks a project has opted into autonomous dispatch
+   * for (`orchestrationPolicy.autoDispatch`): assigned, not automation-owned
+   * (heartbeat/schedule tasks mint their own tick intents), not deleted, and
+   * without a live dispatch. Dependency readiness is checked by the service
+   * in the caller's owner scope before each start.
+   */
+  static async findBacklogIntakeCandidates(
+    db: OrviloDatabase,
+    input: { limit?: number } = {},
+  ): Promise<TaskBacklogIntakeCandidate[]> {
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 10)));
+    const rows = await db
+      .select({
+        assigneeAgentId: tasks.assigneeAgentId,
+        createdBySubjectId: tasks.createdBySubjectId,
+        createdByUserId: tasks.createdByUserId,
+        executionGeneration: tasks.executionGeneration,
+        orchestrationPolicy: projects.orchestrationPolicy,
+        priority: tasks.priority,
+        // The join keys on the project, so the column is always present here.
+        projectId: sql<string>`${tasks.projectId}`,
+        taskId: tasks.id,
+        userId: sql<string | null>`coalesce(${tasks.createdByUserId}, ${tasks.createdBySubjectId})`,
+        workspaceId: tasks.workspaceId,
+      })
+      .from(tasks)
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .where(
+        and(
+          eq(tasks.workflowCategory, 'backlog'),
+          sql`NOT ${isParked}`,
+          isNotNull(tasks.workspaceId),
+          isNotNull(tasks.assigneeAgentId),
+          isNull(tasks.automationMode),
+          sql`${tasks.isDeleted} IS NOT TRUE`,
+          sql`(${projects.orchestrationPolicy} ->> 'autoDispatch')::boolean`,
+          sql`NOT EXISTS (
+            SELECT 1 FROM ${taskDispatches} active
+            WHERE active.task_id = ${tasks.id}
+              AND active.phase IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown')
+          )`,
+        ),
+      )
+      .orderBy(asc(tasks.createdAt), asc(tasks.id))
+      .limit(limit);
+    return rows.flatMap((row) =>
+      row.userId === null || row.workspaceId === null
+        ? []
+        : [{ ...row, userId: row.userId, workspaceId: row.workspaceId }],
+    );
+  }
+
+  /**
+   * The task's most recent terminally settled dispatch — the durable outcome
+   * the tiered orchestrator escalates from. `generation` is minted under the
+   * task row lock, so it orders attempts strictly within a task.
+   */
+  static async findLatestTerminalDispatch(
+    db: OrviloDatabase,
+    input: { taskId: string; workspaceId: string | null },
+  ): Promise<TaskTerminalDispatchOutcome | undefined> {
+    const [row] = await db
+      .select({
+        agentId: taskDispatches.agentId,
+        generation: taskDispatches.generation,
+        phase: taskDispatches.phase,
+        requestedBy: taskDispatches.requestedBy,
+        tier: taskDispatches.tier,
+      })
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, input.taskId),
+          input.workspaceId
+            ? eq(taskDispatches.workspaceId, input.workspaceId)
+            : isNull(taskDispatches.workspaceId),
+          inArray(taskDispatches.phase, ['canceled', 'failed', 'succeeded', 'abandoned']),
+        ),
+      )
+      .orderBy(desc(taskDispatches.generation))
+      .limit(1);
+    return row;
+  }
+
+  /**
+   * The enabled roster rows a tiered intake may route work onto, in roster
+   * order (`sortOrder`, then insertion) so cheap-first matching is stable.
+   */
+  static async listProjectAgentRoster(
+    db: OrviloDatabase,
+    input: { projectId: string; workspaceId: string | null },
+  ): Promise<ProjectAgentRosterEntry[]> {
+    return db
+      .select({
+        agencyConfig: agents.agencyConfig,
+        agentId: projectAgents.agentId,
+        model: agents.model,
+        role: projectAgents.role,
+        sortOrder: projectAgents.sortOrder,
+        tier: projectAgents.tier,
+      })
+      .from(projectAgents)
+      .innerJoin(agents, eq(agents.id, projectAgents.agentId))
+      .where(
+        and(
+          eq(projectAgents.projectId, input.projectId),
+          eq(projectAgents.enabled, true),
+          input.workspaceId
+            ? eq(projectAgents.workspaceId, input.workspaceId)
+            : isNull(projectAgents.workspaceId),
+        ),
+      )
+      .orderBy(asc(projectAgents.sortOrder), asc(projectAgents.createdAt));
+  }
+
   /** Discover committed planner dispatch intents whose post-commit wakeup was lost. */
   static async findPlanningStartCandidates(
     db: OrviloDatabase,
@@ -426,6 +801,11 @@ export class TaskDispatchModel {
         throw new TaskDispatchNotFoundError('Task not found in dispatch scope');
       }
 
+      // The roster band the bound agent runs at — snapshotted once under the
+      // task lock so every agentId write below records the tier the attempt
+      // was made at (the escalation signal for the next dispatch).
+      const attemptedTier = await this.projectAgentTier(tx, task.projectId, task.assigneeAgentId);
+
       // Resolve idempotency only after locking the Task. Besides serializing
       // concurrent retries, this makes the assignee and revision snapshots
       // below authoritative for the exact dispatch we are about to claim.
@@ -497,8 +877,10 @@ export class TaskDispatchModel {
               phase: 'requested',
               planRevision: input.planRevision,
               policyRevision: task.policyRevision,
+              recoveryAttempts: 0,
               requirementRevision: task.requirementRevision,
               taskRevision: task.domainRevision,
+              tier: attemptedTier,
               waitingReason: null,
             })
             .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
@@ -547,8 +929,10 @@ export class TaskDispatchModel {
             agentId: task.assigneeAgentId,
             phase: 'requested',
             policyRevision: task.policyRevision,
+            recoveryAttempts: 0,
             requirementRevision: task.requirementRevision,
             taskRevision: task.domainRevision,
+            tier: attemptedTier,
             waitingReason: null,
           })
           .where(and(eq(taskDispatches.id, active.id), eq(taskDispatches.phase, 'waiting')))
@@ -567,6 +951,15 @@ export class TaskDispatchModel {
           grant: input.settlementGrant,
         });
         if (settlementStale) throw new TaskDispatchSettlementGrantError(settlementStale);
+      }
+
+      // Persisted-claim verification for `event` writers: the durable
+      // trigger run, trigger, subscription binding, inbox lease and saved
+      // ownership scope must all still match under the task lock that mints
+      // the dispatch — a bare `event` trigger string is never evidence.
+      if (input.trigger === 'event') {
+        const evidenceStale = await this.verifyEventEvidence(tx, task, input.eventEvidence);
+        if (evidenceStale) throw evidenceStale;
       }
 
       const waitingReason =
@@ -592,6 +985,7 @@ export class TaskDispatchModel {
           sourceDispatchId: input.sourceDispatchId ?? null,
           taskId: task.id,
           taskRevision: task.domainRevision,
+          tier: attemptedTier,
           waitingReason,
           workspaceId: task.workspaceId,
         })
@@ -747,6 +1141,36 @@ export class TaskDispatchModel {
     });
   }
 
+  /**
+   * Mark one sweep-driven resume attempt. This must NOT hold a lease: the
+   * re-drive immediately re-enters `claimForProvisioning`, which rejects a
+   * live lease owned by someone else — a resume lease would make every
+   * re-drive land on `busy` instead of starting. The phase CAS alone is the
+   * fence (a row that moved on fails it), and the downstream request path is
+   * CAS-serialized end to end. The stale lease is cleared so the next owner
+   * cannot be blocked by a dead claimant's window.
+   */
+  async claimForResume(dispatchId: string): Promise<TaskDispatchLease | null> {
+    const now = new Date();
+    const [claimed] = await this.db
+      .update(taskDispatches)
+      .set({
+        leaseExpiresAt: null,
+        leaseOwner: null,
+        recoveryAttempts: sql`${taskDispatches.recoveryAttempts} + 1`,
+      })
+      .where(
+        and(
+          eq(taskDispatches.id, dispatchId),
+          this.scopeCondition(),
+          inArray(taskDispatches.phase, ['requested', 'claimed', 'waiting']),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+        ),
+      )
+      .returning();
+    return claimed ? { dispatch: claimed, fence: claimed.fence } : null;
+  }
+
   /** Release a reconciliation lease without changing the execution fence or operation identity. */
   async releaseRecovery(input: {
     dispatchId: string;
@@ -762,6 +1186,10 @@ export class TaskDispatchModel {
         leaseExpiresAt: new Date(Date.now() + Math.max(1, input.retryAfterMs)),
         leaseOwner: null,
         phase: input.phase,
+        // A rescheduled `outcome_unknown` counts toward the reconcile bound;
+        // a stable live identity resets it — the writer is provably alive.
+        recoveryAttempts:
+          input.phase === 'outcome_unknown' ? sql`${taskDispatches.recoveryAttempts} + 1` : 0,
         waitingReason: input.reason,
       })
       .where(
@@ -956,6 +1384,12 @@ export class TaskDispatchModel {
         }
       }
 
+      // Rebinding the agent re-snapshots its roster tier alongside — the
+      // durable record of which band this attempt ran at.
+      const tierSnapshot =
+        input.agentId === undefined
+          ? undefined
+          : await this.projectAgentTier(tx, dispatch.projectId, input.agentId);
       const [updated] = await tx
         .update(taskDispatches)
         .set({
@@ -964,6 +1398,7 @@ export class TaskDispatchModel {
           leaseExpiresAt: input.leaseExpiresAt,
           operationId: input.operationId,
           phase: input.phase,
+          tier: tierSnapshot,
           waitingReason: input.waitingReason,
         })
         .where(
@@ -1040,6 +1475,157 @@ export class TaskDispatchModel {
         source.generation !== input.expectedSourceGeneration)
     ) {
       return 'settlement_grant_source_stale';
+    }
+    return null;
+  }
+
+  /**
+   * Verify the durable event admission evidence an `event` claim cites:
+   * the trigger run must still be pending, its trigger still enabled at the
+   * cited revision, the subscription binding active and unexpired, the
+   * inbox lease live, and the saved tenant/member/connector ownership scope
+   * unchanged. Denial codes mirror the canonical DispatchAdmissionErrorCode.
+   */
+  private async verifyEventEvidence(
+    tx: Transaction,
+    task: TaskItem,
+    evidence: EventDispatchEvidence | undefined,
+  ): Promise<TaskDispatchEventEvidenceError | null> {
+    const denied = (code: EventDispatchEvidenceCode, message: string) =>
+      new TaskDispatchEventEvidenceError(code, message);
+    if (!evidence) return denied('invalid-event', 'Event admission evidence missing');
+    const now = Date.now();
+    const result = await tx.execute<{
+      binding_expires: string | null;
+      binding_state: string | null;
+      connector_agent: string | null;
+      connector_enabled: boolean | null;
+      connector_status: string | null;
+      connector_user: string | null;
+      inbox_event: string | null;
+      inbox_status: string | null;
+      lease_until: string | null;
+      member_deleted: Date | null;
+      member_role: string | null;
+      member_suspended: Date | null;
+      run_status: string | null;
+      task_creator: string | null;
+      task_deleted: Date | null;
+      trigger_enabled: boolean | null;
+      trigger_now: number | null;
+      trigger_source: string | null;
+      trigger_subscription: string | null;
+      trigger_task: string | null;
+      trigger_user: string | null;
+      trigger_workspace: string | null;
+    }>(sql`
+      SELECT run.status AS run_status,
+             t.revision AS trigger_now,
+             t.enabled AS trigger_enabled,
+             t.task_id AS trigger_task,
+             t.workspace_id AS trigger_workspace,
+             t.user_id AS trigger_user,
+             t.subscription_id AS trigger_subscription,
+             t.source_id AS trigger_source,
+             i.status AS inbox_status,
+             i.event_id AS inbox_event,
+             i.lease_until AS lease_until,
+             b.state AS binding_state,
+             b.binding->>'expiresAt' AS binding_expires,
+             connector.is_enabled AS connector_enabled,
+             connector.status AS connector_status,
+             connector.agent_id AS connector_agent,
+             connector.user_id AS connector_user,
+             member.role AS member_role,
+             member.deleted_at AS member_deleted,
+             member.suspended_at AS member_suspended,
+             task.created_by_user_id AS task_creator,
+             task.deleted_at AS task_deleted
+      FROM mcp_event_trigger_runs run
+      LEFT JOIN mcp_event_triggers t
+        ON t.id = run.trigger_id AND t.tenant_id = run.tenant_id
+      LEFT JOIN mcp_event_inbox i
+        ON i.id = run.inbox_id AND i.tenant_id = run.tenant_id
+      LEFT JOIN mcp_event_bindings b
+        ON b.id = t.subscription_id AND b.tenant_id = t.tenant_id
+      LEFT JOIN user_connectors connector
+        ON connector.id::text = t.source_id AND connector.workspace_id = t.workspace_id
+      LEFT JOIN workspace_members member
+        ON member.workspace_id = t.workspace_id AND member.user_id = t.user_id
+      LEFT JOIN tasks task
+        ON task.id = t.task_id AND task.workspace_id = t.workspace_id
+      WHERE run.id = ${evidence.triggerRunId}
+        AND run.tenant_id = ${evidence.tenantId}
+        AND run.trigger_id = ${evidence.triggerId}
+        AND run.inbox_id = ${evidence.inboxRef}
+        AND run.idempotency_key = ${evidence.idempotencyKey}
+      LIMIT 1`);
+    const row = result.rows[0];
+    if (!row) return denied('invalid-event', 'Event admission receipt not found');
+    if (row.run_status !== 'pending') {
+      return denied('invalid-event', 'Event admission receipt already settled');
+    }
+    if (
+      row.trigger_task !== task.id ||
+      row.trigger_workspace !== evidence.workspaceId ||
+      row.trigger_user !== evidence.userId ||
+      row.trigger_subscription !== evidence.subscriptionId ||
+      row.trigger_source !== evidence.sourceId
+    ) {
+      return denied('tenant-mismatch', 'Event admission scope drifted');
+    }
+    if (row.trigger_now !== evidence.triggerRevision) {
+      return denied('stale-binding', 'Event trigger revision drifted');
+    }
+    if (row.trigger_enabled !== true) return denied('revoked', 'Event trigger disabled');
+    if (
+      row.inbox_status !== 'processing' ||
+      row.inbox_event !== evidence.eventId ||
+      !row.lease_until ||
+      Number(row.lease_until) <= now
+    ) {
+      return denied('invalid-event', 'Event inbox claim no longer held');
+    }
+    if (
+      row.binding_state !== 'active' ||
+      (row.binding_expires !== null && Number(row.binding_expires) <= now)
+    ) {
+      return denied('revoked', 'Event subscription revoked or expired');
+    }
+    if (
+      row.connector_enabled !== true ||
+      row.connector_status !== 'connected' ||
+      row.connector_agent !== null
+    ) {
+      return denied('revoked', 'Event source connector unavailable');
+    }
+    if (
+      row.member_deleted !== null ||
+      row.member_suspended !== null ||
+      !['owner', 'member'].includes(row.member_role ?? '') ||
+      row.task_creator === null
+    ) {
+      return denied('revoked', 'Event scope member no longer active');
+    }
+    if (
+      row.member_role !== 'owner' &&
+      !(row.task_creator === row.trigger_user && row.connector_user === row.trigger_user)
+    ) {
+      return denied('tenant-mismatch', 'Event scope ownership drifted');
+    }
+    if (row.task_deleted !== null) {
+      return denied('revoked', 'Event target task deleted');
+    }
+    const causation = evidence.causationIds?.filter((id) => id.length > 0) ?? [];
+    if (causation.length > 0) {
+      const ancestors = await tx
+        .select({ taskId: taskDispatches.taskId })
+        .from(taskDispatches)
+        .where(inArray(taskDispatches.id, causation))
+        .limit(10);
+      if (ancestors.some((ancestor) => ancestor.taskId === task.id)) {
+        return denied('loop', 'Event causation loops into the same task');
+      }
     }
     return null;
   }
@@ -1261,24 +1847,24 @@ export class TaskDispatchModel {
         }
       }
 
-      if (currentGeneration && task.status === 'running') {
+      if (currentGeneration) {
         const [paused] = await runner
           .update(tasks)
           .set({
+            context: parkMarkerSet({ at: new Date().toISOString(), reason: 'canceled' }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             reviewerUserId: sql<string | null>`coalesce(
               ${tasks.reviewerUserId},
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              hasActiveExecution,
             ),
           )
           .returning();
@@ -1385,10 +1971,11 @@ export class TaskDispatchModel {
         }
       }
 
-      if (task.status === 'running' && task.executionGeneration === dispatch.generation) {
+      if (task.executionGeneration === dispatch.generation) {
         const [paused] = await runner
           .update(tasks)
           .set({
+            context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
             reviewerUserId: sql<string | null>`coalesce(
@@ -1396,14 +1983,13 @@ export class TaskDispatchModel {
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              hasActiveExecution,
             ),
           )
           .returning();
@@ -1436,6 +2022,134 @@ export class TaskDispatchModel {
           and(
             eq(taskDispatches.id, dispatch.id),
             eq(taskDispatches.phase, 'cancel_requested'),
+            eq(taskDispatches.fence, input.fence),
+            eq(taskDispatches.generation, input.generation),
+            eq(taskDispatches.leaseOwner, input.owner),
+          ),
+        )
+        .returning();
+      return abandoned ? { dispatch: abandoned, topicId: topic?.topicId ?? null } : null;
+    });
+  }
+
+  /**
+   * Give up on an `outcome_unknown` dispatch whose reconcile retries hit the
+   * bound — the `abandonCancellation` counterpart for the recovery sweep. No
+   * settlement ever arrived: the row leaves the active-phase set (freeing the
+   * task's single execution slot) with the fence bumped, so a late write from
+   * the unreachable runtime is rejected as stale. The task parks at `paused`
+   * for human attention.
+   */
+  async abandonRecovery(input: {
+    dispatchId: string;
+    fence: number;
+    generation: number;
+    owner: string;
+    reason: string;
+  }): Promise<{ dispatch: TaskDispatchItem; topicId: string | null } | null> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const [dispatch] = await runner
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, input.dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (
+        !dispatch ||
+        dispatch.phase !== 'outcome_unknown' ||
+        dispatch.fence !== input.fence ||
+        dispatch.generation !== input.generation ||
+        dispatch.leaseOwner !== input.owner
+      ) {
+        return null;
+      }
+
+      const [task] = await runner
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, dispatch.taskId))
+        .limit(1)
+        .for('update');
+      if (!task || task.workspaceId !== (this.workspaceId ?? null)) return null;
+
+      const [topic] = await runner
+        .select()
+        .from(taskTopics)
+        .where(eq(taskTopics.dispatchId, dispatch.id))
+        .limit(1)
+        .for('update');
+      if (topic) {
+        await runner
+          .update(taskTopics)
+          .set({ runState: 'canceled', status: 'abandoned' })
+          .where(
+            and(
+              eq(taskTopics.id, topic.id),
+              eq(taskTopics.dispatchId, dispatch.id),
+              eq(taskTopics.executionGeneration, dispatch.generation),
+            ),
+          );
+        if (topic.topicId) {
+          await runner
+            .update(topics)
+            .set({ completedAt: new Date() })
+            .where(eq(topics.id, topic.topicId));
+        }
+      }
+
+      if (task.executionGeneration === dispatch.generation) {
+        const [paused] = await runner
+          .update(tasks)
+          .set({
+            context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            error: input.reason,
+            reviewerUserId: sql<string | null>`coalesce(
+              ${tasks.reviewerUserId},
+              ${tasks.assigneeUserId},
+              ${tasks.createdByUserId}
+            )`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tasks.id, task.id),
+              eq(tasks.executionGeneration, dispatch.generation),
+              hasActiveExecution,
+            ),
+          )
+          .returning();
+        if (!paused) return null;
+        if (this.workspaceId) {
+          await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(
+            runner,
+            {
+              changedFields: ['status'],
+              eventType: 'task.status.changed',
+              idempotencyKey: `task:${paused.id}:revision:${paused.domainRevision}:task.status.changed`,
+              source: 'system',
+              suppressLinearOutbox: true,
+              task: paused,
+            },
+          );
+        }
+      }
+
+      const [abandoned] = await runner
+        .update(taskDispatches)
+        .set({
+          fence: sql`${taskDispatches.fence} + 1`,
+          lastCancelError: input.reason,
+          leaseExpiresAt: null,
+          leaseOwner: null,
+          phase: 'abandoned',
+          waitingReason: input.reason,
+        })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.phase, 'outcome_unknown'),
             eq(taskDispatches.fence, input.fence),
             eq(taskDispatches.generation, input.generation),
             eq(taskDispatches.leaseOwner, input.owner),
@@ -1614,10 +2328,14 @@ export class TaskDispatchModel {
       // policy, or assignee snapshot is obsolete. Park that exact run while the
       // Task row is still locked so a successor dispatch cannot start between
       // settlement and the protective status transition.
-      if (currentGeneration && !currentContract && task.status === 'running') {
+      if (currentGeneration && !currentContract) {
         const [parked] = await tx
           .update(tasks)
           .set({
+            context: parkMarkerSet({
+              at: new Date().toISOString(),
+              reason: 'stale-contract',
+            }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: 'Task changed while this run was active; review before retrying.',
             reviewerUserId: sql<string | null>`coalesce(
@@ -1625,14 +2343,16 @@ export class TaskDispatchModel {
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              // The dispatch row above already left the active-phase set, so
+              // "was live" is asserted by the generation bind; the guard that
+              // remains is that nobody parked the task ahead of this settle.
+              not(isExecutionParked),
             ),
           )
           .returning();

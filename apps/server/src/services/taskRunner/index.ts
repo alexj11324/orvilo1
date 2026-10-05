@@ -23,17 +23,19 @@ import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
+import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
+import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
 import {
-  type PreparedTaskDispatch,
   TaskDispatchConflictError,
   TaskDispatchService,
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
+import { settleTaskExecution } from '@/server/services/taskSettlement';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskExecutionContract } from './buildTaskExecutionContract';
@@ -60,6 +62,13 @@ export interface RunTaskParams {
    * delegation cannot commit.
    */
   delegation?: { agentId: string; grantId: string };
+  /**
+   * Event dispatch admission evidence — the durable trigger run, inbox
+   * claim and saved scope the admission boundary verified. Required for
+   * `trigger: 'event'`; re-verified inside the shared claim transaction,
+   * never trusted as marker presence.
+   */
+  eventEvidence?: EventDispatchEvidence;
   extraPrompt?: string;
   /** Stable identity supplied by the originating command or scheduler tick. */
   idempotencyKey?: string;
@@ -146,6 +155,8 @@ export interface RunTaskResult extends ExecAgentResult {
     revision?: number;
     sourceContractId?: string;
   };
+  /** The durable dispatch this run was claimed under. */
+  dispatchId?: string;
   taskId: string;
   taskIdentifier: string;
 }
@@ -190,6 +201,7 @@ export class TaskRunnerService {
       taskId: idOrIdentifier,
       continueTopicId,
       delegation,
+      eventEvidence,
       extraPrompt,
       integrationSeed,
       idempotencyKey,
@@ -207,12 +219,13 @@ export class TaskRunnerService {
     } = params;
 
     // Events may enter only through the authoritative EventDispatchAdmission
-    // integration. A new trigger literal must not silently become an external
-    // run that bypasses its inbox/trigger/ownership fences.
-    if (trigger === 'event') {
+    // integration carrying durable evidence. A bare `event` trigger string
+    // or fabricated evidence is rejected — TaskDispatchModel re-verifies the
+    // cited trigger run, inbox lease, binding and scope under the task lock.
+    if (trigger === 'event' && !eventEvidence) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Event dispatch admission is not configured',
+        message: 'Event dispatch admission evidence is required',
       });
     }
 
@@ -294,6 +307,7 @@ export class TaskRunnerService {
     try {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
+          eventEvidence,
           idempotencyKey: resolvedIdempotencyKey,
           // Raw actor persisted separately from the `trigger:actor` audit
           // string — the persisted origin's initiator is what the final
@@ -318,6 +332,16 @@ export class TaskRunnerService {
       } catch (error) {
         if (error instanceof TaskDispatchConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        if (error instanceof TaskDispatchEventEvidenceError) {
+          // A stale or missing event evidence claim is a deterministic
+          // refusal — keep the typed code on the cause so the admission
+          // boundary can map it to a denial reason.
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
         }
         if (error instanceof TaskDispatchWaitingError) {
           // Keep the typed cause: callers like the completion cascade treat a
@@ -411,11 +435,9 @@ export class TaskRunnerService {
           Boolean(task.runReservationId) &&
           !!task.runReservationExpiresAt &&
           new Date(task.runReservationExpiresAt).getTime() > now;
-        if (
-          task.status === 'running' &&
-          (hasRunningTopic || hasActiveReservation) &&
-          elapsed > task.heartbeatTimeout
-        ) {
+        // A running topic row or an unexpired reservation IS the canonical
+        // live-execution check — the retired column adds nothing here.
+        if ((hasRunningTopic || hasActiveReservation) && elapsed > task.heartbeatTimeout) {
           // A stale heartbeat is evidence that the run needs attention, not
           // proof that its external writer has stopped. Starting a replacement
           // here can put two agents in the same delivery pipeline. Keep the
@@ -615,6 +637,19 @@ export class TaskRunnerService {
         });
       }
       ownsReservation = true;
+      // Run-start settlement stamps the Issue Status layer (in_progress +
+      // exact state ref); the legacy 'running' projection is already on the
+      // row from reserveRun, so a no-op is an acceptable result here.
+      await settleTaskExecution(
+        this.db,
+        this.userId,
+        {
+          context: { reservationId },
+          runStarted: true,
+          taskId: task.id,
+        },
+        this.workspaceId,
+      );
       // Workspace provisioning (CAID isolation): a fresh run on a
       // workspace-bound task gets its own git worktree on the bound device —
       // or, when no device exists and the run resolves to the cloud sandbox,
@@ -1126,6 +1161,7 @@ export class TaskRunnerService {
       return {
         ...result,
         contract: contractResult,
+        dispatchId: preparedDispatch!.dispatch.id,
         taskId: task.id,
         taskIdentifier: task.identifier,
       };

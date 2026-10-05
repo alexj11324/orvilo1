@@ -158,6 +158,26 @@ export const ACP_AGENT_RUNTIMES = {
 /** Agent types driven through {@link ACP_AGENT_RUNTIMES} sessions. */
 export const ACP_RUNTIME_AGENT_TYPES = new Set<string>(Object.keys(ACP_AGENT_RUNTIMES));
 
+/**
+ * Runtimes that actually deliver the `session/new` `mcpServers` payload to the
+ * agent — the transport-capable set minus bridges that accept it and silently
+ * drop it. Audited against the pinned upstream bridge releases:
+ * - `amp-acp@0.9.0`: converts the payload to `--mcp-config`
+ *   (`convertAcpMcpServersToAmpConfig`) passed to the amp CLI.
+ * - `claude-agent-acp@0.76.0`: merges entries into the SDK `mcpServers`
+ *   options.
+ * - `codex-acp@1.11.0`: writes `mcp_servers` into the codex session config and
+ *   tracks each server's startup status.
+ * - `pi-acp@0.0.33`: stores `mcpServers` on the session object and never reads
+ *   it — pi has no built-in MCP support, so builtin tools would vanish without
+ *   error (the upstream wiring PR was closed unmerged).
+ * Native `acpArgs` entries run the vendor's own ACP implementation, which owns
+ * `mcpServers` handling end to end.
+ */
+export const ACP_MCP_MOUNT_AGENT_TYPES = new Set<string>(
+  Object.keys(ACP_AGENT_RUNTIMES).filter((type) => type !== 'pi'),
+);
+
 export const getAcpAgentRuntime = (agentType: string): AcpAgentRuntimeSpec | undefined =>
   (ACP_AGENT_RUNTIMES as Record<string, AcpAgentRuntimeSpec>)[agentType];
 

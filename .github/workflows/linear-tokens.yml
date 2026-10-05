@@ -17,13 +17,20 @@ jobs:
       # Do not check out or execute code from the PR: otherwise a PR could
       # alter its own required check.
       - uses: actions/checkout@v6
+        with:
+          # Full history so git merge-base can locate the PR's base commit.
+          fetch-depth: 0
 
       - name: Diff the PR and fetch its body
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr diff "$PR_NUMBER" > /tmp/pr.diff
+          # `gh pr diff` hits GitHub's 300-file diff API limit on large PRs
+          # (HTTP 406). Diff locally instead: refs/pull/N/head is the PR head,
+          # triple-dot diffs it against the merge-base — the same diff.
+          git fetch --no-tags origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/pr-head"
+          git diff origin/canary...pr-head > /tmp/pr.diff
           gh pr view "$PR_NUMBER" --json body --jq .body > /tmp/pr-body.txt
 
       - name: Enforce Linear type/icon scale on parity surfaces

@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,9 +26,7 @@ const styles = createStaticStyles(({ css }) => ({
 
 const GeneralField = memo<{ children: React.ReactNode; label: string }>(({ children, label }) => (
   <div className={styles.field}>
-    <Text className={styles.label} fontSize={13} type={'secondary'}>
-      {label}
-    </Text>
+    <div className={cn('text-[13px] text-muted-foreground', styles.label)}>{label}</div>
     {children}
   </div>
 ));
@@ -41,10 +38,10 @@ const WorkspaceGeneral = memo(() => {
   const workspace = useActiveWorkspace();
 
   return (
-    <Flexbox gap={8} width={'100%'}>
-      <Text fontSize={20} weight={600}>
+    <div className="flex w-full flex-col gap-2">
+      <div className="text-[20px] font-semibold">
         {t('workspaceSetting.tab.general', { defaultValue: 'General' })}
-      </Text>
+      </div>
       <GeneralField label={t('workspaceSetting.general.logo', { defaultValue: 'Logo' })}>
         <Avatar
           avatar={workspace?.avatar ?? undefined}
@@ -54,19 +51,19 @@ const WorkspaceGeneral = memo(() => {
         />
       </GeneralField>
       <GeneralField label={t('workspaceSetting.general.name', { defaultValue: 'Name' })}>
-        <Text fontSize={13}>{workspace?.name ?? '—'}</Text>
+        <div className="text-[13px]">{workspace?.name ?? '—'}</div>
       </GeneralField>
       <GeneralField label={t('workspaceSetting.general.url', { defaultValue: 'URL' })}>
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {workspace?.slug ? `/${workspace.slug}` : '—'}
-        </Text>
+        </div>
       </GeneralField>
       <GeneralField label={t('workspaceSetting.general.created', { defaultValue: 'Created' })}>
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {workspace?.createdAt ? dayjs(workspace.createdAt).format('MMM D, YYYY') : '—'}
-        </Text>
+        </div>
       </GeneralField>
-    </Flexbox>
+    </div>
   );
 });
 

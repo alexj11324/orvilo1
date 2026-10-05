@@ -9,7 +9,7 @@ import { CLI_DISPLAY_NAME } from '../constants/identity';
 // Pull package metadata from the shared `src/pkg.ts` module (resolved at the
 // bundled entry's depth) rather than a local `require('../../package.json')`,
 // which would point outside the package once bundled into dist/index.js.
-import { cliPackageName, cliVersion } from '../pkg';
+import { cliVersion } from '../pkg';
 import { log } from '../utils/logger';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
@@ -84,20 +84,32 @@ export function isNewerVersion(latest: string, current: string): boolean {
   return semver.gt(latestParsed, currentParsed);
 }
 
-async function fetchLatestVersion(name: string, tag: string): Promise<string> {
-  const url = `https://registry.npmjs.org/${name}/${encodeURIComponent(tag)}`;
+export async function fetchLatestRelease(tag: string): Promise<{ spec: string; version: string }> {
+  const releases = 'https://api.github.com/repos/alexj11324/orvilo1/releases';
+  const url =
+    tag === 'latest' ? `${releases}/latest` : `${releases}/tags/${encodeURIComponent(tag)}`;
   const res = await fetch(url, { headers: { accept: 'application/json' } });
 
   if (!res.ok) {
-    throw new Error(`npm registry returned status ${res.status} for tag "${tag}"`);
+    throw new Error(`GitHub Releases returned status ${res.status} for tag "${tag}"`);
   }
 
-  const data = (await res.json()) as { version?: string };
-  if (!data.version) {
-    throw new Error('npm registry response is missing the "version" field');
+  const data = (await res.json()) as {
+    assets?: { browser_download_url: string; name: string }[];
+  };
+  for (const asset of data.assets ?? []) {
+    const version = /^orvilo-cli-(.+)\.tgz$/.exec(asset.name)?.[1];
+    if (
+      version &&
+      semver.valid(version) &&
+      asset.browser_download_url.startsWith(
+        'https://github.com/alexj11324/orvilo1/releases/download/',
+      )
+    ) {
+      return { spec: asset.browser_download_url, version };
+    }
   }
-
-  return data.version;
+  throw new Error(`Release "${tag}" does not include an installable CLI package`);
 }
 
 function runInstall(command: string, args: string[]): Promise<void> {
@@ -120,7 +132,7 @@ export function registerUpdateCommand(program: Command) {
     .command('update')
     .description(`Update the ${CLI_DISPLAY_NAME} to the latest published version`)
     .option('--check', 'Only check for a newer version without installing')
-    .option('--tag <tag>', 'npm dist-tag to update to', 'latest')
+    .option('--tag <tag>', 'GitHub release tag to update to', 'latest')
     .option(
       '--package-manager <pm>',
       `Force a package manager (${PACKAGE_MANAGERS.join(', ')}) instead of auto-detecting`,
@@ -140,8 +152,9 @@ export function registerUpdateCommand(program: Command) {
       log.info(`Current version: ${pc.bold(current)}`);
 
       let latest: string;
+      let spec: string;
       try {
-        latest = await fetchLatestVersion(cliPackageName, tag);
+        ({ spec, version: latest } = await fetchLatestRelease(tag));
       } catch (error) {
         log.error(`Unable to check for updates: ${(error as Error).message}`);
         process.exit(1);
@@ -157,13 +170,12 @@ export function registerUpdateCommand(program: Command) {
 
       if (options.check) {
         log.info(
-          `Update available: ${current} → ${pc.green(latest)}. Run ${pc.cyan('lh update')} to upgrade.`,
+          `Update available: ${current} → ${pc.green(latest)}. Run ${pc.cyan('orvilo update')} to upgrade.`,
         );
         return;
       }
 
       const pm = options.packageManager || detectPackageManager();
-      const spec = `${cliPackageName}@${latest}`;
       const { args, command } = buildInstallCommand(pm, spec);
 
       log.info(`Upgrading via ${pc.bold(pm)}: ${pc.dim([command, ...args].join(' '))}`);

@@ -55,7 +55,28 @@ const isRenderableValue = (spec: WorkQueryFieldSpec, predicate: WorkQueryPredica
   if (isNullary(predicate.op)) return predicate.value === undefined;
   const value = predicate.value;
   if (predicate.op === 'in' || predicate.op === 'notIn') {
-    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+    return (
+      Array.isArray(value) &&
+      value.every(
+        (item) =>
+          typeof item === 'string' ||
+          typeof item === 'number' ||
+          (typeof item === 'object' && item !== null && 'ref' in item),
+      )
+    );
+  }
+  if (predicate.op === 'between') {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'from' in value &&
+      'to' in value &&
+      typeof value.from === 'string' &&
+      typeof value.to === 'string'
+    );
+  }
+  if (predicate.op === 'contains' || predicate.op === 'lt' || predicate.op === 'gte') {
+    return typeof value === 'string' && value.length > 0;
   }
   if (spec.valueKind === 'user') {
     return (
@@ -82,7 +103,15 @@ export const filterToBuilder = (
   const slots: BuilderSlot[] = [];
   for (const node of filter?.all ?? []) {
     const spec = isPredicate(node) ? workQueryFieldSpec(entityType, node.field) : undefined;
-    if (spec && isPredicate(node) && spec.ops.includes(node.op) && isRenderableValue(spec, node)) {
+    // Deprecated fields (legacy `status`) stay verbatim node slots — an old
+    // saved view keeps its read-only predicate instead of an editable row.
+    if (
+      spec &&
+      !spec.deprecated &&
+      isPredicate(node) &&
+      spec.ops.includes(node.op) &&
+      isRenderableValue(spec, node)
+    ) {
       const row: FilterRow = {
         field: node.field,
         id: nextRowId(),
@@ -104,7 +133,7 @@ const rowToPredicate = (
   row: FilterRow,
 ): WorkQueryPredicate | undefined => {
   const spec = workQueryFieldSpec(entityType, row.field);
-  if (!spec || !spec.ops.includes(row.op)) return undefined;
+  if (!spec || spec.deprecated || !spec.ops.includes(row.op)) return undefined;
   if (isNullary(row.op)) return { field: row.field as WorkQueryPredicate['field'], op: row.op };
   if (row.value === undefined) return undefined;
   if (row.op === 'in' || row.op === 'notIn') {
@@ -146,15 +175,29 @@ export const builderToFilter = (
 };
 
 export const newFilterRow = (entityType: WorkQueryEntityType): FilterRow => {
-  const specs = workQueryFieldSpecs(entityType);
-  const firstSpec = specs[0];
-  return { field: firstSpec?.field ?? 'status', id: nextRowId(), op: firstSpec?.ops[0] ?? 'eq' };
+  // First non-deprecated spec — `workflowCategory` ("Status") on tasks.
+  const firstSpec = workQueryFieldSpecs(entityType).find((spec) => !spec.deprecated);
+  return {
+    field: firstSpec?.field ?? 'workflowCategory',
+    id: nextRowId(),
+    op: firstSpec?.ops[0] ?? 'eq',
+  };
 };
 
 export const isRowComplete = (row: FilterRow): boolean => {
   if (isNullary(row.op)) return true;
   if (row.op === 'in' || row.op === 'notIn') {
     return Array.isArray(row.value) && row.value.length > 0;
+  }
+  if (row.op === 'between') {
+    return (
+      typeof row.value === 'object' &&
+      row.value !== null &&
+      'from' in row.value &&
+      'to' in row.value &&
+      Boolean(row.value.from) &&
+      Boolean(row.value.to)
+    );
   }
   return row.value !== undefined && row.value !== '';
 };

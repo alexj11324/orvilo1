@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { cx } from 'antd-style';
 import { memo, useRef, useState } from 'react';
 
@@ -44,9 +43,16 @@ const ChatMinimap = memo(() => {
   };
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox className={styles.hoverArea} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-        <Flexbox className={cx(styles.rail, hovered && styles.railFaded)} role={'group'}>
+    <div className={cx(styles.container, 'flex flex-col')}>
+      <div
+        className={cx(styles.hoverArea, 'flex flex-col')}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+      >
+        <div
+          className={cx(cx(styles.rail, hovered && styles.railFaded), 'flex flex-col')}
+          role={'group'}
+        >
           {indicators.map(({ id, width, virtuosoIndex }, position) => (
             <MinimapIndicator
               activePosition={activeIndicatorPosition}
@@ -58,7 +64,7 @@ const ChatMinimap = memo(() => {
               onJump={handleJump}
             />
           ))}
-        </Flexbox>
+        </div>
         <div
           aria-hidden={!hovered}
           className={cx(styles.previewPanel, hovered && styles.previewPanelVisible)}
@@ -69,8 +75,8 @@ const ChatMinimap = memo(() => {
             onJump={handleJumpAndClose}
           />
         </div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -286,14 +286,18 @@ When('用户选择删除消息选项', async function (this: CustomWorld) {
 When('用户确认删除消息', async function (this: CustomWorld) {
   console.log('   📍 Step: 确认删除消息...');
 
-  // A confirmation popconfirm might appear
-  const confirmButton = this.page.locator('.ant-popconfirm-buttons button.ant-btn-dangerous');
+  // A confirmation dialog might appear (migrated confirmModal renders
+  // role="dialog" or role="alertdialog")
+  const confirmButton = this.page
+    .getByRole('dialog')
+    .or(this.page.getByRole('alertdialog'))
+    .getByRole('button', { name: /^(ok|delete|删除|确认|确定)$/i });
 
   if ((await confirmButton.count()) > 0) {
     await confirmButton.click();
     console.log('   ✅ 已确认删除消息');
   } else {
-    // If no popconfirm, deletion might be immediate
+    // If no confirmation, deletion might be immediate
     console.log('   ✅ 删除操作已执行（无需确认）');
   }
 
@@ -360,7 +364,9 @@ Then('消息内容应该被复制到剪贴板', async function (this: CustomWorl
   console.log('   📍 Step: 验证消息已复制到剪贴板...');
 
   // Check for success message/toast
-  const successMessage = this.page.locator('.ant-message-success, [class*="toast"]');
+  const successMessage = this.page.locator(
+    '[data-sonner-toast][data-type="success"], [data-sonner-toast]',
+  );
 
   // Wait briefly for any success notification
   await this.page.waitForTimeout(1000);

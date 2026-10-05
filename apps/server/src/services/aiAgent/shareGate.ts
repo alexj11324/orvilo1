@@ -446,7 +446,7 @@ export const isShareBlockedBuiltinDispatch = (
  *
  * - `lobe-cloud-sandbox`: general-purpose shell/script execution, but a share
  *   visitor's run gets a fresh, isolated per-topic sandbox session — never
- *   the creator's own sandbox state. The `lh` CLI's JWT credential shim
+ *   the creator's own sandbox state. The `orvilo` CLI's JWT credential shim
  *   (`preprocessLhCommand.ts`) that would otherwise mint a creator-scoped
  *   token inside a shell the visitor controls is skipped entirely for
  *   `agentShareVisitor` runs (`serverRuntimes/cloudSandbox.ts`), and

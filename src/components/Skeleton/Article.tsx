@@ -1,8 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { type CSSProperties, memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ArticleSkeletonProps {
   avatar?: boolean | number;
@@ -15,31 +16,39 @@ interface ArticleSkeletonProps {
 const ArticleSkeleton = memo<ArticleSkeletonProps>(
   ({ avatar = false, className, rows = 3, style, title = true }) => {
     const body = (
-      <Flexbox gap={16} width={'100%'}>
-        {title !== false && <Skeleton.Text width={title === true ? '60%' : title} />}
-        {rows > 0 && <Skeleton.Text rows={rows} />}
-      </Flexbox>
+      <div className={'flex flex-col gap-4'} style={{ width: '100%' }}>
+        {title !== false && (
+          <Skeleton className={'h-4'} style={{ width: title === true ? '60%' : title }} />
+        )}
+        {rows > 0 && (
+          <div className={'flex flex-col gap-2'}>
+            {Array.from({ length: rows }).map((_, index) => (
+              <Skeleton
+                className={'h-4'}
+                key={index}
+                style={{ width: index === rows - 1 ? '60%' : '100%' }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     );
 
     if (!avatar)
       return (
-        <Flexbox className={className} style={style} width={'100%'}>
+        <div className={cn('flex', className)} style={{ ...style, width: '100%' }}>
           {body}
-        </Flexbox>
+        </div>
       );
 
     return (
-      <Flexbox
-        horizontal
-        align={'flex-start'}
-        className={className}
-        gap={16}
-        style={style}
-        width={'100%'}
-      >
-        <Skeleton.Avatar size={avatar === true ? 40 : avatar} />
+      <div className={cn('flex gap-4', className)} style={{ ...style, width: '100%' }}>
+        <Skeleton
+          className={'rounded-full'}
+          style={{ height: avatar === true ? 40 : avatar, width: avatar === true ? 40 : avatar }}
+        />
         {body}
-      </Flexbox>
+      </div>
     );
   },
 );

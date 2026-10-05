@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 
+import { isFirstAgentSetupPath } from '@/features/AgentOnboarding/setupPath';
 import { onboardingSelectors } from '@/store/user/selectors';
 import { type UserInitializationState } from '@/types/user';
 import { buildOnboardingRedirectUrl } from '@/utils/onboardingRedirect';
@@ -15,6 +16,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'acceptance',
   'agent',
   'apps',
+  'chat',
   'desktop-onboarding',
   'devtools',
   'eval',
@@ -63,6 +65,7 @@ const parseFirstSegment = (pathname: string): string | null => {
  * onboarding check.
  */
 export const shouldDeferOnboardingRedirect = (pathname: string): boolean => {
+  if (isFirstAgentSetupPath(pathname)) return true;
   if (DEFER_REDIRECT_PREFIXES.some((prefix) => isPathUnder(pathname, prefix))) return true;
 
   const first = parseFirstSegment(pathname);

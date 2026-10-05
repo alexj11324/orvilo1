@@ -1,9 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { t } from 'i18next';
 import { ArrowLeftRight, XIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import NavHeader from '@/features/NavHeader';
 import { useChatStore } from '@/store/chat';
 
@@ -20,15 +20,14 @@ const Header = memo(() => {
   return (
     <NavHeader
       left={<Title />}
-      paddingBlock={6}
-      paddingInline={8}
       showTogglePanelButton={false}
       right={
-        <Flexbox horizontal gap={4}>
+        <div className="flex flex-row gap-1">
           {hasPortal && (
             <ActionIcon
               icon={ArrowLeftRight}
               size={'small'}
+              title={t('workingPanel.tabs.swapThreads', { ns: 'chat' })}
               onClick={() => {
                 if (!portalThreadId) return;
 
@@ -37,10 +36,17 @@ const Header = memo(() => {
               }}
             />
           )}
-          <ActionIcon icon={XIcon} size={'small'} onClick={closeThreadPortal} />
-        </Flexbox>
+          <ActionIcon
+            icon={XIcon}
+            size={'small'}
+            title={t('close', { ns: 'common' })}
+            onClick={closeThreadPortal}
+          />
+        </div>
       }
       style={{
+        paddingBlock: 6,
+        paddingInline: 8,
         borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
       }}
     />

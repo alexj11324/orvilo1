@@ -1,15 +1,12 @@
-import { copyToClipboard, Icon } from '@lobehub/ui';
-import {
-  ActionIcon,
-  confirmModal,
-  type DropdownItem,
-  DropdownMenu,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { CopyIcon, LinkIcon, MoreHorizontalIcon, TrashIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
@@ -38,22 +35,22 @@ const GoalDetailActions = memo<GoalDetailActionsProps>(({ agentId, goalId, proje
   const items = useMemo<DropdownItem[]>(
     () => [
       {
-        icon: <Icon icon={CopyIcon} />,
+        icon: <CopyIcon />,
         key: 'copyId',
         label: t('taskList.contextMenu.copyId'),
         onClick: async () => {
-          await copyToClipboard(goalId);
+          await navigator.clipboard.writeText(goalId);
           toast.success(t('taskList.contextMenu.copyIdSuccess'));
         },
       },
       {
         disabled: !shareUrl,
-        icon: <Icon icon={LinkIcon} />,
+        icon: <LinkIcon />,
         key: 'copyLink',
         label: t('taskList.contextMenu.copyLink'),
         onClick: async () => {
           if (!shareUrl) return;
-          await copyToClipboard(shareUrl);
+          await navigator.clipboard.writeText(shareUrl);
           toast.success(t('taskList.contextMenu.copyLinkSuccess'));
         },
       },
@@ -61,7 +58,7 @@ const GoalDetailActions = memo<GoalDetailActionsProps>(({ agentId, goalId, proje
       {
         danger: true,
         disabled: !canEditTask,
-        icon: <Icon icon={TrashIcon} />,
+        icon: <TrashIcon />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => {

@@ -6,6 +6,7 @@ import { SettingsTabs } from '@/store/global/initialState';
 
 import About from '../about';
 import Advanced from '../advanced';
+import Agents from '../agents';
 import APIKey from '../apikey';
 import Appearance from '../appearance';
 import Connector from '../connector';
@@ -17,18 +18,21 @@ import Labs from '../labs';
 import Memory from '../memory';
 import { DesktopNotificationSettings } from '../notification';
 import Profile from '../profile';
-import ProviderBindings from '../ProviderBindings';
+import Provider from '../provider';
 import Proxy from '../proxy';
 import Security from '../security';
+import ServiceModel from '../service-model';
 import Stats from '../stats';
 import Storage from '../storage';
 import SystemTools from '../system-tools';
 
 export const componentMap = {
-  [SettingsTabs.Provider]: ProviderBindings,
   [SettingsTabs.Advanced]: Advanced,
   [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,
+  [SettingsTabs.Agents]: Agents,
+  [SettingsTabs.Provider]: Provider,
+  [SettingsTabs.ServiceModel]: ServiceModel,
   [SettingsTabs.Memory]: Memory,
   [SettingsTabs.Notification]: DesktopNotificationSettings,
   [SettingsTabs.About]: About,

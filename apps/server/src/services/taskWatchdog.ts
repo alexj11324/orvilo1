@@ -2,6 +2,7 @@ import debug from 'debug';
 
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -9,8 +10,18 @@ import { runTaskDeliveryReviewSweep } from '@/server/services/taskDeliveryReview
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
+import { settleTaskExecution } from '@/server/services/taskSettlement';
 
 const log = debug('lobe-server:task-watchdog');
+
+/**
+ * Bound on watchdog passes that fail to confirm cancellation for a task
+ * whose running topics carry no durable dispatch. Dispatched topics hand
+ * the stop to the bounded cancellation sweep via `requestStop`; legacy or
+ * dispatch-less topics have no such path, so the task parks at `paused`
+ * for human attention once the bound is hit instead of looping forever.
+ */
+const MAX_UNCONFIRMED_CANCELS = 3;
 
 export interface TaskWatchdogOptions {
   /** Restrict a manual/API sweep to tasks created by this user. */
@@ -107,27 +118,101 @@ export async function runTaskWatchdog(
         }
       }
       if (!cancellationConfirmed) {
+        const dispatchModel = new TaskDispatchModel(db, wsId);
+        let unfencedTopic = false;
+        for (const topic of runningTopics) {
+          if (
+            !topic.dispatchId ||
+            topic.dispatchFence === null ||
+            topic.dispatchFence === undefined ||
+            topic.executionGeneration === null ||
+            topic.executionGeneration === undefined
+          ) {
+            unfencedTopic = true;
+            continue;
+          }
+          try {
+            const stopped = await dispatchModel.requestStop({
+              dispatchId: topic.dispatchId,
+              fence: topic.dispatchFence,
+              generation: topic.executionGeneration,
+              operationId: topic.operationId ?? undefined,
+              reason: 'watchdog_heartbeat_timeout',
+            });
+            if (!stopped) unfencedTopic = true;
+          } catch (error) {
+            unfencedTopic = true;
+            log(
+              'Watchdog requestStop failed: task=%s dispatch=%s error=%O',
+              task.identifier,
+              topic.dispatchId,
+              error,
+            );
+          }
+        }
+        if (unfencedTopic) {
+          const watchdogCancel = ((task.context as Record<string, unknown> | null)
+            ?.watchdogCancel ?? {}) as { unconfirmedAttempts?: number };
+          const attempts = (watchdogCancel.unconfirmedAttempts ?? 0) + 1;
+          await taskModel.updateContext(task.id, {
+            watchdogCancel: { unconfirmedAttempts: attempts },
+          });
+          if (attempts >= MAX_UNCONFIRMED_CANCELS) {
+            // The run's fate is unprovable — settle it as outcome_unknown so the
+            // issue stays open with the correct attention reason.
+            const settlement = await settleTaskExecution(
+              db,
+              taskOwnerId,
+              {
+                context: {
+                  clearRunReservation: true,
+                  error: 'Watchdog cancellation unconfirmed',
+                  expectedStatus: 'running',
+                  reservationId: task.runReservationId ?? undefined,
+                },
+                outcome: 'outcome_unknown',
+                taskId: task.id,
+              },
+              wsId,
+            );
+            if (settlement.applied) {
+              await new BriefModel(db, taskOwnerId, wsId).create({
+                agentId: task.assigneeAgentId || undefined,
+                priority: 'urgent',
+                summary: `Task heartbeat timed out and ${attempts} watchdog passes could not confirm its operations canceled. Parked for manual review.`,
+                taskId: task.id,
+                title: `${task.identifier} cancellation unconfirmed`,
+                trigger: 'task',
+                type: 'error',
+              });
+            }
+            continue;
+          }
+        }
         cancellationRequired.push(task.identifier);
         continue;
       }
     }
 
-    const failureExtra = {
-      completedAt: new Date(),
-      error: 'Heartbeat timeout',
-      runReservationExpiresAt: null,
-      runReservationId: null,
-    } as const;
-    const failedTask = task.runReservationId
-      ? await taskModel.updateStatusIfReservation(
-          task.id,
-          task.runReservationId,
-          'running',
-          'failed',
-          failureExtra,
-        )
-      : await taskModel.updateStatusIfCurrent(task.id, 'running', 'failed', failureExtra);
-    if (!failedTask) {
+    // The heartbeat-dead run is an execution failure — the issue keeps its
+    // open workflow state with `execution_failed` attention (legacy
+    // projection: 'paused'), not a terminal 'failed' write.
+    const settlement = await settleTaskExecution(
+      db,
+      taskOwnerId,
+      {
+        context: {
+          clearRunReservation: true,
+          error: 'Heartbeat timeout',
+          expectedStatus: 'running',
+          reservationId: task.runReservationId ?? undefined,
+        },
+        outcome: 'failed',
+        taskId: task.id,
+      },
+      wsId,
+    );
+    if (!settlement.applied) {
       log('Watchdog failure ignored superseded task=%s', task.identifier);
       continue;
     }

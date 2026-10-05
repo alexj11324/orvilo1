@@ -1,7 +1,7 @@
-import { Icon } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 interface MentionItemIconProps {
   avatar?: string;
@@ -16,11 +16,29 @@ const MentionItemIcon = memo<MentionItemIconProps>(({ avatar, category, label, s
   const normalizedAvatar = isAvatarPlaceholder(avatar) ? undefined : avatar;
 
   if (category === 'tool' && !normalizedAvatar) {
-    return <Icon icon={McpIcon} size={Math.round(size * 0.8)} />;
+    return (
+      <span className="anticon" role="img">
+        <McpIcon
+          fill={'transparent'}
+          height={Math.round(size * 0.8)}
+          size={Math.round(size * 0.8)}
+          width={Math.round(size * 0.8)}
+        />
+      </span>
+    );
   }
 
   if (category === 'skill' && !normalizedAvatar) {
-    return <Icon icon={SkillsIcon} size={Math.round(size * 0.8)} />;
+    return (
+      <span className="anticon" role="img">
+        <SkillsIcon
+          fill={'transparent'}
+          height={Math.round(size * 0.8)}
+          size={Math.round(size * 0.8)}
+          width={Math.round(size * 0.8)}
+        />
+      </span>
+    );
   }
 
   return (

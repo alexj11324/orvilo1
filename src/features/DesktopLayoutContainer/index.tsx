@@ -1,4 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
+import { cx } from 'antd-style';
 import { type FC, type PropsWithChildren } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 
@@ -37,29 +37,29 @@ const DesktopLayoutContainer: FC<PropsWithChildren> = ({ children }) => {
   }, [innerCssVariables]);
 
   return (
-    <Flexbox
-      className={styles.outerContainer}
-      height={'100%'}
+    <div
+      className={cx(styles.outerContainer, 'flex flex-col')}
       // Linear parity: no inline-start inset. The main region must begin at the
       // nav panel's own divider (244 sidebar + 1px border = 245), because the
       // whole shell budget — 787 left column, 669 content column, 360 right rail
       // — is measured from that edge. An 8px start gutter pushes every one of
       // those 8px right and the deviation is invisible in isolation.
-      paddingBlock={8}
-      paddingInline={'0 8px'}
-      style={outerCssVariables}
-      width={'100%'}
+      style={{
+        height: '100%',
+        paddingBlock: 8,
+        paddingInline: '0 8px',
+        width: '100%',
+        ...outerCssVariables,
+      }}
     >
-      <Flexbox
-        className={styles.innerContainer}
-        height={'100%'}
+      <div
+        className={cx(styles.innerContainer, 'flex flex-col h-full w-full')}
         ref={innerContainerRef}
-        style={innerCssVariables}
-        width={'100%'}
+        style={{ ...innerCssVariables }}
       >
         <LayoutContainerContext value={innerContainerRef}>{children}</LayoutContainerContext>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 export default DesktopLayoutContainer;

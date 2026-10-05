@@ -1,10 +1,10 @@
 import type { IEditor, ISlashMenuOption } from '@lobehub/editor';
 import type { EditorProps } from '@lobehub/editor/react';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { useCallback, useMemo } from 'react';
 
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import Avatar from '@/components/Avatar';
 
 import {
   createTopicCommentMentionItems,

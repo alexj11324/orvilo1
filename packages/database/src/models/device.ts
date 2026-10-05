@@ -1,10 +1,10 @@
 import type { WorkingDirEntry } from '@orvilo/types';
-import { and, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { DeviceItem } from '../schemas';
 import { agents, devices, workspaces } from '../schemas';
 import type { OrviloDatabase } from '../type';
-import { buildWorkspaceWhere } from '../utils/workspace';
+import { buildStrictWorkspaceWhere } from '../utils/workspace';
 
 export type DeviceVisibility = 'private' | 'public';
 
@@ -26,6 +26,12 @@ export class WorkspaceDevicePrivateConflictError extends Error {
 }
 
 export interface RegisterDeviceParams {
+  /**
+   * Device client version (`app.getVersion()` on desktop, package version on
+   * CLI). Self-reported at every register — the admission gate reads it as
+   * `registry` evidence for `minAdapterVersion` requirements.
+   */
+  adapterVersion?: string | null;
   deviceId: string;
   hostname?: string | null;
   identitySource: string;
@@ -102,18 +108,23 @@ export class DeviceModel {
     const [result] = await this.db
       .insert(devices)
       .values({
+        adapterVersion: params.adapterVersion,
         deviceId: params.deviceId,
         hostname: params.hostname,
         identitySource: params.identitySource,
         lastSeenAt: now,
+        // Registration is itself a fresh report from the device.
+        lastVerifiedAt: now,
         platform: params.platform,
         userId: this.userId,
       })
       .onConflictDoUpdate({
         set: {
+          adapterVersion: params.adapterVersion,
           hostname: params.hostname,
           identitySource: params.identitySource,
           lastSeenAt: now,
+          lastVerifiedAt: now,
           platform: params.platform,
         },
         target: [devices.userId, devices.deviceId],
@@ -167,10 +178,12 @@ export class DeviceModel {
     const [result] = await this.db
       .insert(devices)
       .values({
+        adapterVersion: params.adapterVersion,
         deviceId: params.deviceId,
         hostname: params.hostname,
         identitySource: params.identitySource,
         lastSeenAt: now,
+        lastVerifiedAt: now,
         platform: params.platform,
         // Set for enrollments driven from the owner's personal device list —
         // links this workspace row back to its personal twin (see the schema
@@ -187,7 +200,7 @@ export class DeviceModel {
       // ONE device no matter which member (re-)runs the enrollment. `userId` and
       // `sharedFromDeviceId` are left untouched on conflict — the original
       // enroller keeps the enrollment. `visibility` on conflict:
-      //   - an EXPLICIT `visibility: 'public'` (`lh connect --workspace --public`)
+      //   - an EXPLICIT `visibility: 'public'` (`orvilo connect --workspace --public`)
       //     always publishes — the caller just asked for it, silently keeping the
       //     row private would make the flag a no-op on re-enroll. Callers pass
       //     `visibility` only when the user chose explicitly, so a plain
@@ -203,9 +216,11 @@ export class DeviceModel {
       // `targetWhere`.
       .onConflictDoUpdate({
         set: {
+          adapterVersion: params.adapterVersion,
           hostname: params.hostname,
           identitySource: params.identitySource,
           lastSeenAt: now,
+          lastVerifiedAt: now,
           platform: params.platform,
           visibility: params.visibility === 'public' ? 'public' : sql`${devices.visibility}`,
         },
@@ -215,6 +230,29 @@ export class DeviceModel {
       .returning();
 
     return result;
+  };
+
+  /**
+   * Persist the last capability report a device produced (the
+   * `queryDeviceSystemInfo` probe result from admission). The candidate set
+   * later reads it as `registry:snapshot` evidence when the device is
+   * authorized but not reachable for a live probe — see
+   * `listAuthorizedDeviceCandidates`.
+   *
+   * Scoped to rows the caller can address: their own personal row and the
+   * current workspace's pooled rows — never another user's personal device.
+   */
+  updateCapabilityEvidence = async (
+    deviceId: string,
+    capabilitySnapshot: { supportedTools?: string[] },
+  ) => {
+    const scopes = [and(eq(devices.userId, this.userId), isNull(devices.workspaceId))];
+    if (this.workspaceId) scopes.push(eq(devices.workspaceId, this.workspaceId));
+
+    await this.db
+      .update(devices)
+      .set({ capabilitySnapshot, lastVerifiedAt: new Date() })
+      .where(and(eq(devices.deviceId, deviceId), or(...scopes)));
   };
 
   query = async (): Promise<DeviceItem[]> => {
@@ -235,16 +273,19 @@ export class DeviceModel {
   /**
    * Devices of the current workspace VISIBLE to the caller: every public device
    * plus the caller's own private enrollments. Other members' private devices
-   * are excluded at the SQL level (`buildWorkspaceWhere`) so no read path — the
+   * are excluded at the SQL level (`buildStrictWorkspaceWhere`) so no read path — the
    * settings list, the run-device picker, the CLI, the device tool — can leak
    * them.
    */
   queryWorkspaceDevices = async (): Promise<DeviceItem[]> => {
     if (!this.workspaceId) return [];
-    return this.db.query.devices.findMany({
-      orderBy: [desc(devices.lastSeenAt)],
-      where: buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
-    });
+    return this.db
+      .select()
+      .from(devices)
+      .where(
+        buildStrictWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
+      )
+      .orderBy(desc(devices.lastSeenAt));
   };
 
   /**
@@ -278,12 +319,20 @@ export class DeviceModel {
    */
   findWorkspaceDeviceById = async (deviceId: string) => {
     if (!this.workspaceId) return undefined;
-    return this.db.query.devices.findFirst({
-      where: and(
-        eq(devices.deviceId, deviceId),
-        buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
-      ),
-    });
+    const [device] = await this.db
+      .select()
+      .from(devices)
+      .where(
+        and(
+          eq(devices.deviceId, deviceId),
+          buildStrictWorkspaceWhere(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            devices,
+          ),
+        ),
+      )
+      .limit(1);
+    return device;
   };
 
   findByDeviceId = async (deviceId: string) => {

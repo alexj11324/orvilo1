@@ -1,5 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 
 import SkeletonBar from '@/components/Skeleton/Bar';
 
@@ -50,45 +49,45 @@ const styles = createStaticStyles(({ css }) => ({
 const ReviewDetailSkeleton = ({ view }: { view: 'overview' | 'diff' }) =>
   view === 'overview' ? (
     <div aria-busy className={styles.overview}>
-      <Flexbox className={styles.main} gap={12}>
+      <div className={cx('flex flex-col gap-3', styles.main)}>
         <SkeletonBar height={30} width={'75%'} />
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           <SkeletonBar height={20} radius={'50%'} width={20} />
           <SkeletonBar height={12} width={100} />
           <SkeletonBar height={12} width={160} />
-        </Flexbox>
-        <Flexbox gap={12} style={{ marginBlockStart: 32 }}>
+        </div>
+        <div className="flex flex-col gap-3" style={{ marginBlockStart: 32 }}>
           <SkeletonBar height={12} width={90} />
           <SkeletonBar height={14} width={'94%'} />
           <SkeletonBar height={14} width={'82%'} />
           <SkeletonBar height={14} width={'65%'} />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox gap={24}>
+        </div>
+      </div>
+      <div className="flex flex-col gap-6">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Flexbox gap={8} key={index}>
+          <div className="flex flex-col gap-2" key={index}>
             <SkeletonBar height={12} width={80} />
             <SkeletonBar height={14} width={index === 3 ? '90%' : 130} />
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
+      </div>
     </div>
   ) : (
-    <Flexbox aria-busy className={styles.diff} gap={16}>
+    <div aria-busy className={cx('flex flex-col gap-4', styles.diff)}>
       {Array.from({ length: 2 }).map((_, index) => (
-        <Flexbox className={styles.file} key={index}>
-          <Flexbox className={styles.fileHeader}>
+        <div className={cx('flex flex-col', styles.file)} key={index}>
+          <div className={cx('flex flex-col', styles.fileHeader)}>
             <SkeletonBar height={14} width={'min(420px, 65%)'} />
-          </Flexbox>
-          <Flexbox gap={10} padding={16}>
+          </div>
+          <div className="flex flex-col gap-2.5 p-4">
             <SkeletonBar height={12} width={'88%'} />
             <SkeletonBar height={12} width={'72%'} />
             <SkeletonBar height={12} width={'94%'} />
             <SkeletonBar height={12} width={'58%'} />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 
 export default ReviewDetailSkeleton;

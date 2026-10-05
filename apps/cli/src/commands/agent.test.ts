@@ -153,7 +153,7 @@ describe('agent command', () => {
   }
 
   async function writeGraphFixture(graph: unknown) {
-    tempDir = await mkdtemp(path.join(tmpdir(), 'lh-agent-graph-'));
+    tempDir = await mkdtemp(path.join(tmpdir(), 'orvilo-agent-graph-'));
     const graphFile = path.join(tempDir, 'graph.json');
     await writeFile(graphFile, JSON.stringify(graph), 'utf8');
 
@@ -915,7 +915,7 @@ describe('agent command', () => {
         'local',
       ]);
 
-      expect(log.error).toHaveBeenCalledWith(expect.stringContaining("Run 'lh connect' first"));
+      expect(log.error).toHaveBeenCalledWith(expect.stringContaining("Run 'orvilo connect' first"));
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 

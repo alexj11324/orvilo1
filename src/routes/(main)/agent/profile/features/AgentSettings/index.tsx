@@ -1,8 +1,8 @@
 'use client';
 
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
-
-import Content from './Content';
+import { createModal } from '@/components/Modal';
+import { type ModalInstance } from '@/components/Modal';
+import Content from '@/features/AgentSetting/Content';
 
 export const openAgentSettingsModal = (): ModalInstance =>
   createModal({

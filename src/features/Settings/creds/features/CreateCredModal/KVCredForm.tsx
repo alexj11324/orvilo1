@@ -1,29 +1,15 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input } from 'antd';
-import { createStaticStyles } from 'antd-style';
-import { Minus, Plus } from 'lucide-react';
+import { Loader2, Minus, Plus } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type CredsApi } from '../useCredsApi';
+import Form from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 24px;
-  `,
-  kvPair: css`
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-  `,
-}));
+import { type CredsApi } from '../useCredsApi';
 
 interface KVCredFormProps {
   credsApi: CredsApi;
@@ -79,7 +65,7 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
   };
 
   return (
-    <Form<FormValues>
+    <Form
       form={form}
       initialValues={{ kvPairs: [{ key: '', value: '' }] }}
       layout="vertical"
@@ -107,9 +93,9 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
       <Form.Item label={t('creds.form.values')}>
         <Form.List name="kvPairs">
           {(fields, { add, remove }) => (
-            <Flexbox gap={8}>
+            <div className="flex flex-col gap-2">
               {fields.map(({ key, name, ...restField }) => (
-                <div className={styles.kvPair} key={key}>
+                <div className="flex items-start gap-2" key={key}>
                   <Form.Item
                     {...restField}
                     name={[name, 'key']}
@@ -125,53 +111,55 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
                     name={[name, 'value']}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
-                    <Input.Password
+                    <Input
                       autoComplete="new-password"
                       disabled={disabled}
                       placeholder={t('creds.form.valuePlaceholder')}
+                      type="password"
                     />
                   </Form.Item>
                   {fields.length > 1 && (
                     <Button
                       disabled={disabled}
-                      icon={Minus}
-                      size="small"
-                      type="text"
+                      size="sm"
+                      type="button"
+                      variant="ghost"
                       onClick={() => remove(name)}
-                    />
+                    >
+                      <Minus />
+                    </Button>
                   )}
                 </div>
               ))}
               <Button
-                block
+                className="w-full"
                 disabled={disabled}
-                icon={Plus}
-                type="dashed"
+                type="button"
+                variant="outline"
                 onClick={() => add({ key: '', value: '' })}
               >
+                <Plus />
                 {t('creds.form.addPair')}
               </Button>
-            </Flexbox>
+            </div>
           )}
         </Form.List>
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
-        <Input.TextArea
+        <Textarea
           disabled={disabled}
           placeholder={t('creds.form.descriptionPlaceholder')}
           rows={2}
         />
       </Form.Item>
 
-      <div className={styles.footer}>
-        <Button onClick={onBack}>{t('creds.form.back')}</Button>
-        <Button
-          disabled={disabled}
-          htmlType="submit"
-          loading={createMutation.isPending}
-          type="primary"
-        >
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onBack}>
+          {t('creds.form.back')}
+        </Button>
+        <Button disabled={createMutation.isPending || disabled} type="submit" variant="default">
+          {createMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.submit')}
         </Button>
       </div>

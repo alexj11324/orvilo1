@@ -32,7 +32,7 @@ describe('artifact publish', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'lh-artifact-'));
+    workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'orvilo-artifact-'));
     exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     fetchSpy = vi
@@ -57,7 +57,7 @@ describe('artifact publish', () => {
     const program = new Command();
     program.exitOverride();
     registerArtifactCommand(program);
-    await program.parseAsync(['node', 'lh', 'artifact', 'publish', ...args]);
+    await program.parseAsync(['node', 'orvilo', 'artifact', 'publish', ...args]);
   };
 
   const prepareReturns = (files: { path: string }[]) => {

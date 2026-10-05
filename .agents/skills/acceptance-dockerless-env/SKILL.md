@@ -1,6 +1,6 @@
 ---
 name: acceptance-dockerless-env
-description: Run the local acceptance environment without Docker (brew Postgres + pgvector + Redis), pg_search marker-row workaround, Electron/CDP + agent-browser auth flow, and known gotchas for this repo's .agents/acceptance scripts.
+description: Run the local acceptance environment without Docker (brew Postgres + pgvector + Redis), pg_search marker-row workaround, Electron/CDP + agent-browser auth flow, personal-scope forcing for provider_bindings testing, and known gotchas for this repo's .agents/acceptance scripts.
 ---
 
 # Dockerless Acceptance Environment (macOS, no Docker virtualization)
@@ -43,11 +43,11 @@ export REDIS_URL="redis://localhost:6379" DB_PORT=5432 REDIS_PORT=6379
 
 Then run: `setup-db` (skipped — it requires docker/paradedb), `s3` (nohup), `seed-user`, `dev` (nohup). Resolved ports land in `.records/env/agent-testing-ports.env` (Next :26730-class, Vite :21725-class, s3rver :29000-class — auto-allocated, read the file).
 
-## pg\_search migration gap
+## pg_search migration gap
 
-`paradedb/paradedb` image and the pg\_search extension are unobtainable on this host (homebrew tap 403 via git proxy, no virtualization). Migrations that create pg\_search/bm25 indexes (e.g. 0090, 0093) will fail.
+`paradedb/paradedb` image and the pg_search extension are unobtainable on this host (homebrew tap 403 via git proxy, no virtualization). Migrations that create pg_search/bm25 indexes (e.g. 0090, 0093) will fail.
 
-Workaround (verified): apply the non-pg\_search migrations by hand, then mark the pg\_search ones applied in `drizzle.__drizzle_migrations`:
+Workaround (verified): apply the non-pg_search migrations by hand, then mark the pg_search ones applied in `drizzle.__drizzle_migrations`:
 
 ```sql
 -- row format: (id uuid?, hash text, created_at bigint) — hash = sha256 of the .sql file contents,
@@ -60,7 +60,7 @@ Dialect applies only entries with `folderMillis > max(created_at)`, so a marker 
 
 - **Clerk-era web session (post `feat/remove-better-auth`)**: sign-in lives on the accounts portal (`AUTH_ACCOUNTS_URL || https://accounts.aspectlylabs.com`). `/signin`/`/signup`/`/verify-email`/`/reset-password` are public bounce routes — the auth SPA `window.location.replace`s to `<portal>/login?return_url=<origin+callbackUrl>` (forwards `sign_out`/`reason`/`hl`). Local sign-in via the portal's email+password cannot finish locally because `POST /api/auth/clerk` needs `CLERK_SECRET_KEY`; without it the exchange 500s at the Clerk Backend API check (`assertClerkSessionActive`/`fetchClerkUser`), while signature failures correctly 401.
 - **Seeding a web session locally**: insert a `users` row (`id`, `email`, `normalized_email`, `username`, `full_name`, `email_verified=true`, `onboarding={"finishedAt":...,"version":1}` jsonb, `created_at`/`updated_at`/`last_active_at`) then `INSERT INTO auth_sessions (id, token, user_id, expires_at, created_at, updated_at)` with a random token and future `expires_at` — mirror `e2e/src/support/seedTestUser.ts createTestSession()`. Set cookie `orvilo_auth=<token>` (CDP `Network.setCookie` or `document.cookie`; `Secure` not needed on localhost). `GET /api/auth/session` returns 200 `{"user":{...}}` when valid, 401 `{"error":"unauthorized"` otherwise; legacy `<prefix>.session_token` (default `better-auth.session_token`) is dual-read from the same `auth_sessions` rows. `POST /api/auth/signout` deletes the row and clears both cookies; expired tokens are 401 + row-deleted on read.
-- `setup-auth.sh web-seed` on Clerk-era branches inserts an `auth_sessions` row for `SEED_EMAIL` and injects the `orvilo_auth` cookie (needs `DATABASE_URL`; run `init-dev-env.sh seed-user` first). On pre-migration branches it POSTed the removed `/api/auth/sign-in/email` and harvested `better-auth.*` cookies — use the auth\_sessions insert above there.
+- `setup-auth.sh web-seed` on Clerk-era branches inserts an `auth_sessions` row for `SEED_EMAIL` and injects the `orvilo_auth` cookie (needs `DATABASE_URL`; run `init-dev-env.sh seed-user` first). On pre-migration branches it POSTed the removed `/api/auth/sign-in/email` and harvested `better-auth.*` cookies — use the auth_sessions insert above there.
 - Electron: `.agents/acceptance/scripts/electron-dev.sh start` (CDP :9222). `login-status` reports snapshot/golden-profile state; `stop` snapshots login into `~/.orvilo/agent-testing/electron-login`.
 - `/signin`+`/signup` are a separate auth bundle (`entry.auth.tsx`) — no SPAGlobalProvider, no session-auth listener. For non-`(main)` route probes use e.g. `/verify-im` (stays mounted signed-out).
 
@@ -157,10 +157,238 @@ agent-browser --cdp 9222 eval "typeof __ELECTRON__ !== 'undefined' && !!__ELECTR
 - Inspect zustand stores in the page: `window.__ORVILO_STORES.<name>()` is a getter returning live state (e.g. `__ORVILO_STORES.tool().connectors`, `.isConnectorsInit`); store entries are functions, not objects — call them.
 - OAuth popups need a real user gesture: synthetic `el.click()`/`dispatchEvent` in `agent-browser eval` does NOT count → `window.open` gets popup-blocked and the flow throws `OAuth popup was blocked` with only a transient toast. Use real `computer` clicks (e.g. DevModal's mid-form "Authorize & Connect" ≈ (562,427) after scrollIntoView) — the popup then opens to the provider authorize URL.
 - CustomConnectorModal DOM hooks: identifier `#identifier`, MCP URL `#customParams_mcp_url`, bearer token `#customParams_mcp_auth_token`; auth radios labeled "No auth"/"API Key"/"OAuth"; footer submit is "Install", the mid-form button is "Authorize & Connect" (oauth2) or "Test connection" (non-oauth). Give the modal \~3s to mount before `fill` or the element isn't found.
-- Public no-auth MCP endpoints for real create→sync→connected flows: `https://mcp.deepwiki.com/mcp` (tools: ask\_wiki\_question, read\_wiki\_structure, read\_wiki\_contents). `https://api.githubcopilot.com/mcp/` and `https://mcp.linear.app/mcp` return 401 unauthenticated — usable only as a reachable auth boundary, not for sync. Non-oauth creates run a sync and roll back on failure, so the endpoint must really work.
+- Public no-auth MCP endpoints for real create→sync→connected flows: `https://mcp.deepwiki.com/mcp` (tools: ask_wiki_question, read_wiki_structure, read_wiki_contents). `https://api.githubcopilot.com/mcp/` and `https://mcp.linear.app/mcp` return 401 unauthenticated — usable only as a reachable auth boundary, not for sync. Non-oauth creates run a sync and roll back on failure, so the endpoint must really work.
 - Connector list after a hard reload into a `/ws-*/settings/connector` URL can come back empty even though rows exist: a personal-scope `connector.list` can latch `isConnectorsInit=true` before `activeWorkspaceId` resolves, and no refetch follows. Workaround for testing: `await __ORVILO_STORES.tool().fetchConnectors()` or trigger any mutation refresh; treat a persistent empty list as the scope-race, not missing data — verify with `X-Workspace-Id` curl before suspecting the DB.
-- Respawn the web dev server with env, not `dev-up.sh`/`bun run dev`: `dev-up.sh` only works when the worktree has a `.env`. In the no-.env acceptance setup (guard\_no\_root\_env), spawning `bun run dev` binds the default :3010 and crashes `KEY_VAULTS_SECRET is not set`. Use `export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres REDIS_URL=redis://localhost:6379 DB_PORT=5432 REDIS_PORT=6379 ALLOC_SERVER_PORT=<port> ALLOC_SPA_PORT=<port>` + `nohup .agents/acceptance/scripts/init-dev-env.sh dev > /tmp/initdev.log 2>&1 &` (apply\_env supplies KEY\_VAULTS\_SECRET/JWKS; ports come from `.records/env/agent-testing-ports.env`).
-- Stale Turbopack graph after branch checkout under a running dev server: pages 500 with `module factory is not available` for changed `packages/*` imports — `next dev` does not pick up workspace-package edits. Full restart via the recipe above fixes it; a stale agent-browser `open` failure (ERR\_HTTP\_RESPONSE\_CODE\_FAILURE) is usually this, not auth.
-- `lh connect -d` registers a device row, but the gateway `wss://device-gateway.aspectlylabs.com` is unreachable from this box → device stays `offline`. Offline devices still exercise web quota/execution surfaces through the persisted-fallback path; live-consult responses can be stubbed at the browser with CDP `Fetch.fulfillRequest` (see below).
-- Multi-user workspace fixtures: invitee signup via `POST /api/auth/sign-up/email`; the invite token ships only by email and `workspace_invitations` stores only `token_hash` — mint locally with `UPDATE workspace_invitations SET token_hash='<sha256hex of chosen raw token>'`. API-created users have `users.email_verified=false` → invite accept is blocked by "Verify your account email" until you `UPDATE users SET email_verified=true`. `lh ws invite` may return UNAUTHORIZED under the API-key credential — the owner's web UI Invite modal works.
+- Respawn the web dev server with env, not `dev-up.sh`/`bun run dev`: `dev-up.sh` only works when the worktree has a `.env`. In the no-.env acceptance setup (guard_no_root_env), spawning `bun run dev` binds the default :3010 and crashes `KEY_VAULTS_SECRET is not set`. Use `export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres REDIS_URL=redis://localhost:6379 DB_PORT=5432 REDIS_PORT=6379 ALLOC_SERVER_PORT=<port> ALLOC_SPA_PORT=<port>` + `nohup .agents/acceptance/scripts/init-dev-env.sh dev > /tmp/initdev.log 2>&1 &` (apply_env supplies KEY_VAULTS_SECRET/JWKS; ports come from `.records/env/agent-testing-ports.env`).
+- Stale Turbopack graph after branch checkout under a running dev server: pages 500 with `module factory is not available` for changed `packages/*` imports — `next dev` does not pick up workspace-package edits. Full restart via the recipe above fixes it; a stale agent-browser `open` failure (ERR_HTTP_RESPONSE_CODE_FAILURE) is usually this, not auth.
+- `orvilo connect -d` registers a device row, but the gateway `wss://device-gateway.aspectlylabs.com` is unreachable from this box → device stays `offline`. Offline devices still exercise web quota/execution surfaces through the persisted-fallback path; live-consult responses can be stubbed at the browser with CDP `Fetch.fulfillRequest` (see below).
+- Multi-user workspace fixtures: invitee signup via `POST /api/auth/sign-up/email`; the invite token ships only by email and `workspace_invitations` stores only `token_hash` — mint locally with `UPDATE workspace_invitations SET token_hash='<sha256hex of chosen raw token>'`. API-created users have `users.email_verified=false` → invite accept is blocked by "Verify your account email" until you `UPDATE users SET email_verified=true`. `orvilo ws invite` may return UNAUTHORIZED under the API-key credential — the owner's web UI Invite modal works.
 - Quota surface fixtures (web): set `agents.agency_config` to `{"heterogeneousProvider":{"type":"claude-code","authMode":"subscription"},"executionTarget":"device","boundDeviceId":"<registered offline device id>"}`; seed `agent_provider_accounts` (provider `claude-code`, `external_account_id`) + `agent_quota_snapshots` rows. With a bound device the menu only paints persisted rows after a live consult proves identity (`trustedDeviceAccounts`) — stub `device.getClaudeCodeQuota` via CDP `Fetch.fulfillRequest` returning `[{"result":{"data":{"json":{…ClaudeCodeQuotaSnapshot…}}}}]` with `identity.externalAccountId` matching the seeded account. For the focus-park regression use `Fetch.requestPaused` + `Fetch.continueRequest` after a delay on `agentQuota.*`; count calls by continuing unmatched requests and tallying the log.
+
+## Forcing personal scope (provider settings / bindings plane testing)
+
+The seeded app auto-provisions a workspace on first load
+(`useWorkspaceUrlSync` → `workspace.ensureDefault`), so `X-Workspace-Id` is
+always sent. Provider settings credentials are personal by design — new writes
+land on the bindings plane regardless of workspace presence — but a workspace
+context still pulls shared `ai_providers`/`ai_models` rows into the dual-read
+overlay (and historically diverted writes to the legacy plane entirely). To
+exercise the clean personal-scope path — no workspace overlay, no shared
+legacy rows — remove the workspace and block re-provisioning:
+
+```sql
+DELETE FROM ai_providers;                       -- stray workspace-scoped rows
+DELETE FROM workspace_members;
+DELETE FROM workspaces;
+CREATE FUNCTION block_workspace_insert() RETURNS trigger AS $$
+BEGIN RAISE EXCEPTION 'workspace provisioning disabled for this test'; END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER block_ws_insert BEFORE INSERT ON workspaces
+  EXECUTE block_workspace_insert();
+```
+
+Then cold-boot at `/` (the `workspaceContextStore` is deliberately NOT
+persisted; `activeWorkspaceId` stays null → no `X-Workspace-Id` header →
+personal scope). Bottom-left should read "Personal space".
+
+Cleanup when done so the env returns to normal:
+
+```sql
+DROP TRIGGER block_ws_insert ON workspaces;
+DROP FUNCTION block_workspace_insert();
+```
+
+## Verifying provider settings writes landed on the bindings plane
+
+```sql
+-- anchor row: model='__provider_config__' carries providerSettings
+-- (enabled, name, source, fetchOnClient, settings, config);
+-- route rows: one per enabled model (config->>'model' = modelId)
+SELECT config->>'provider', config->>'model', config->>'enabled',
+       config->'providerSettings'->>'enabled'
+FROM provider_bindings ORDER BY 1,2;
+
+-- per-provider credential row (apiKey/baseURL land here, encrypted)
+SELECT key, name, type FROM credentials
+WHERE key = 'provider-binding:<providerId>';   -- type 'kv-env'
+
+-- invariant: writes create no NEW ai_providers rows
+-- (pre-existing legacy rows may still exist — they are dual-read)
+SELECT count(*) FROM ai_providers;
+```
+
+Semantics to expect:
+
+- `setProviderEnabled(false)` keeps route rows with `enabled=false`;
+  `setModelEnabled(false)` DELETES the model's route row.
+- `ai_models` is still the model registry plane — a disabled model keeps an
+  `enabled=f` row there (not a failure).
+- List overlay ORs deployment force-enable over the binding flag
+  (`enabled: anchorItem.enabled || item.enabled` in
+  `repositories/aiInfra/index.ts`), so deployment-enabled providers
+  (e.g. ollama, deepseek, or any provider whose `*_API_KEY` env var is set in
+  the dev server env) CANNOT be disabled from the UI — pick a provider that
+  is not force-enabled (e.g. xAI) for toggle tests.
+
+## Real-Postgres live-path harness for backend PRs (no dev server, no Hatchet)
+
+When a PR's surface is backend-only (tRPC procedures, services, DB models), the
+fastest end-to-end check is a scratch vitest spec driven against a real local
+Postgres — full production code path, real SQL, durable row evidence.
+
+1. **DB**: brew Postgres on :5432. Create a scratch DB, run
+   `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/<db> bun run db:migrate`
+   (pg_search gap: apply the sandwiched non-pg_search .sql files by hand and give
+   them their own marker rows — the migrator uses a single `max(created_at)`
+   watermark, so marking a later migration first permanently skips earlier ones).
+2. **Spec placement**: must live under `apps/server/**` to match the root
+   `vitest.config.mts` `|server|` project (its include is `**/apps/server/**/*.test.ts`).
+   Run:
+   `TEST_SERVER_DB=1 DATABASE_TEST_URL=postgresql://... DATABASE_URL=postgresql://... bunx vitest run --project server <file>`
+   `TEST_SERVER_DB=1` flips `packages/database/src/core/getTestDB.ts` to
+   node-postgres (assertTestDatabaseUrl accepts `localhost`) and runs
+   `nodeMigrate` — a no-op on an already-migrated DB. Seed with drizzle inserts
+   using `@/database/schemas` table objects.
+3. **tRPC procedures**: `createCallerFactory(<router>)(await createContextInner({userId}))`
+   from `@/libs/trpc/lambda` + `@/libs/trpc/lambda/context`. No `workspaceId` →
+   personal mode: `cloudWorkspaceAuth` passes membership:null and
+   PERSONAL_DEFAULT_PERMISSIONS grant `*:owner` codes (e.g. `agent:update:owner`).
+   **Pitfall**: `getDBInstance()` returns `{}` when `NODE_ENV==='test'`, so the
+   real `serverDatabase` middleware gets a dead handle
+   (`this.db.select is not a function`). Fix by mocking only the adaptor, not the
+   chain:
+   ```ts
+   vi.mock('@/database/core/db-adaptor', async () => {
+     const { getTestDB } = await import('@/database/core/getTestDB');
+     const db = await getTestDB();
+     return { getServerDB: () => Promise.resolve(db), serverDB: {} };
+   });
+   ```
+   Zod input validation, RBAC, the resolver and the model then all run for real;
+   `BAD_REQUEST` on invalid enum input is exercised at the real input layer.
+4. **Services**: orchestration sweeps like `sweepTaskBacklogIntake({db})` are
+   plain exported functions — call them directly; `findBacklogIntakeCandidates`,
+   `resolveBacklogIntakeAssignment`, `TaskDispatchModel.request/settle` are all
+   real over PG. To escalate: `model.settle({phase:'failed', fence, generation,
+expected:[<current phase>]})` is the same transition the runtime callback uses.
+5. **Boundary you'll see locally**: with no agent runtime admission
+   (`caid_dispatch` flag off), prepared dispatches park `phase='waiting'`,
+   `waiting_reason='caid_dispatch_disabled'`, sweep outcome `'waiting'` —
+   never `'started'`. The durable artifacts (assignee rebind via
+   `updateWithLog`, `task_dispatches` rows with `requested_by='orchestrator:…'`,
+   tier snapshots, generation bumps) still persist and are the evidence;
+   actual agent execution needs a live runtime (Hatchet + CAID) elsewhere.
+6. vitest suppresses `console.log` for passing tests — write evidence rows to a
+   file (`fs.writeFileSync('/tmp/evidence.json', ...)`) or snapshot them via
+   `psql -P pager=off` after the run instead of relying on stdout.
+
+## Broken `pnpm install` on this box (as of Oct 2026)
+
+`pnpm install` fails: the registry lacks `@aws-sdk/token-providers@3.1145.0` (and the
+lockfile pins it). Root `node_modules` ends up partially populated and `apps/server`
+has none. Symptoms at Vite dev time are sequential `Failed to resolve import "X"`
+500s — each fix reveals the next missing package, and a stale `node_modules/.vite`
+deps bundle can keep serving the old failure until you clear it AND restart dev.
+
+Workaround that got a working SPA + in-process server:
+
+```bash
+mkdir -p /tmp/missdeps && cd /tmp/missdeps
+npm install --no-save --legacy-peer-deps \
+  sonner@2.0.8 react-day-picker@10.0.2 @date-fns/tz \
+  @dnd-kit/modifiers @tanstack/react-table @tanstack/react-virtual \
+  date-fns@4 embla-carousel embla-carousel-react use-sync-external-store \
+  tslib scheduler
+cp -R node_modules/* ~/repos/orvilo1/node_modules/ # merge, don't replace
+# workspace packages that never got linked:
+ln -sfn ~/repos/orvilo1/packages/agent-runtime \
+  ~/repos/orvilo1/node_modules/@orvilo/agent-runtime
+rm -rf ~/repos/orvilo1/node_modules/.vite # force re-optimize
+# then restart the dev server — clearing .vite alone is NOT enough
+```
+
+Note: a second `import()` of a failed module inside the same document returns the
+cached rejection with NO new network request — always reload + capture Network
+events (Page.reload ignoreCache) to find the real 500 module.
+
+## APP_URL override for `init-dev-env.sh dev`
+
+If the environment leaks `APP_URL=http://localhost:3010` (a platform secret), dev
+signin bounces to a dead port. Restart with the real Next port, e.g.
+`APP_URL=http://localhost:37789 .agents/acceptance/scripts/init-dev-env.sh dev`.
+
+## Hetero "Cloud credentials required" guard
+
+`useHeteroAgentCloudConfig` blocks hetero sends until the agent advertises a creds
+env var. No real token is needed — presence of the env key is enough:
+
+```sql
+UPDATE agents SET agency_config = agency_config ||
+  '{"heterogeneousProvider":{"type":"claude-code","env":{"CLAUDE_CODE_CRED_KEY":"dummy"},"apiMode":"local"}}'::jsonb
+WHERE id='<agent-id>';
+```
+
+Nested `jsonb_set` on a missing path silently no-ops — use the `||` jsonb merge.
+
+## PG17 trigger syntax + workspace auto-provision crash
+
+- `CREATE TRIGGER ... EXECUTE FUNCTION f()` (not `EXECUTE PROCEDURE`) on PG17.
+- The `block_ws_insert` workspaces trigger from older notes CRASHES
+  current-branch boot: `workspace.ensureDefault` 500s → React error boundary.
+  Drop it and let the app auto-provision the workspace on first load instead;
+  seed test rows into that auto-created workspace id.
+
+## Server-side dispatch testing without the desktop app
+
+The web composer's send is two tRPC calls: `aiChat.sendMessageInServer` (persists
+messages, \~30ms) then `aiAgent.execAgent` (the actual dispatch, \~300ms+). Calling
+only the first silently strands the turn — no op, no error. To drive a server
+dispatch from the authenticated page (e.g. when a client guard like
+"Device not connected" blocks the send button):
+
+```js
+fetch('/trpc/lambda/aiAgent.execAgent', {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    'X-Workspace-Id': '<ws-id>',
+  },
+  body: JSON.stringify({
+    json: {
+      agentId: '<a>',
+      prompt: '...',
+      appContext: { topicId: '<t>' },
+      clientIds: { userMessageId: 'msg_x1', assistantMessageId: 'msg_x2' },
+      trigger: 'chat',
+    },
+  }),
+});
+```
+
+- `X-Workspace-Id` is REQUIRED for workspace-scoped topics — without it the
+  server resolves personal scope and execAgent fails "Topic not found".
+- `clientIds` rows must not already exist (409 "already been created").
+- Blocked admissions return 200 with `error` in the payload and land the honest
+  error on `messages.error` + `agent_operations` (`status='error'`); resolved
+  device dispatches write `metadata.executionPlan` + `metadata.remoteAdmission`
+  before the gateway call.
+
+## Device admission fixture shape
+
+`topics.metadata.executionConfig` must snapshot BOTH `executionTarget` and
+`boundDeviceId` (what `snapshotTopicExecutionConfig` writes). A config with only
+`boundDeviceId` applies `executionTarget: undefined` onto the agent and blocks
+with EXECUTION_TARGET_NONE before the pin is ever evaluated. The session pin
+admission consults comes from the topic's applied `boundDeviceId`; the raw
+`deviceId` request param is the explicit-request slot; for a NEW topic the raw
+deviceId BECOMES the session pin (so a rogue id blocks as DEVICE_BINDING_INVALID,
+not DEVICE_REQUEST_UNAUTHORIZED — use an existing unpinned topic for the latter).
+
+## Known flaky symptom: eternal "Task is running" after instant-finalize
+
+When a dispatch fails in <100ms (e.g. GATEWAY_NOT_CONFIGURED), the topic can be
+left with `topics.status='running'` and both surfaces show an eternal
+"Task is running in the server" banner even though `agent_operations` is `error`,
+`messages.error` is set, and `agent_runtime_end` was published to the Redis
+stream. The client op store never sees the terminal state in the local env —
+verify terminal state in Postgres/Redis, not the banner.

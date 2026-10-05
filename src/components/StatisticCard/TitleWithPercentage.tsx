@@ -1,8 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
+
+import { Badge } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { calcGrowthPercentage } from './growthPercentage';
 
@@ -26,32 +27,32 @@ const TitleWithPercentage = memo<TitleWithPercentageProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
-        justify={'flex-start'}
-        style={{
-          overflow: 'hidden',
-          position: 'inherit',
-        }}
+      <div
+        className={'flex gap-1 items-center justify-start'}
+        style={{ overflow: 'hidden', position: 'inherit' }}
       >
-        <Text
-          as={'h2'}
-          ellipsis={{ rows: 1, tooltip: title }}
-          style={{
-            fontSize: 'inherit',
-            fontWeight: 'inherit',
-            lineHeight: 'inherit',
-            margin: 0,
-            overflow: 'hidden',
-          }}
-        >
-          {title}
-        </Text>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <h2
+                className="line-clamp-1"
+                style={{
+                  fontSize: 'inherit',
+                  fontWeight: 'inherit',
+                  lineHeight: 'inherit',
+                  margin: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                {title}
+              </h2>
+            }
+          />
+          <TooltipContent>{title}</TooltipContent>
+        </Tooltip>
         {count && prvCount && percentage && percentage !== 0 ? (
-          <Tag
-            variant={'borderless'}
+          <Badge
+            variant="secondary"
             style={{
               ...(inverseColor
                 ? percentage > 0
@@ -64,9 +65,9 @@ const TitleWithPercentage = memo<TitleWithPercentageProps>(
           >
             {percentage > 0 ? '+' : ''}
             {percentage.toFixed(1)}%
-          </Tag>
+          </Badge>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

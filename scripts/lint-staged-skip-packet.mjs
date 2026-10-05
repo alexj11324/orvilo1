@@ -10,7 +10,11 @@ const run = (command, args) => {
 const kind = process.argv[2];
 const files = process.argv
   .slice(3)
-  .filter((file) => !file.replaceAll('\\', '/').includes(PACKET_PREFIX));
+  .filter(
+    (file) =>
+      !file.replaceAll('\\', '/').includes(PACKET_PREFIX) &&
+      !file.replaceAll('\\', '/').startsWith('vendor/'),
+  );
 if (files.length === 0) process.exit(0);
 
 if (kind === 'md') {

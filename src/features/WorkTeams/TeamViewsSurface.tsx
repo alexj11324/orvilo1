@@ -1,27 +1,56 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Popover, Select, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQueryEntityType } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { FilterIcon, Layers2Icon, PlusIcon, Settings2Icon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { cn } from 'cn';
+import { FilterIcon, Layers2Icon, LoaderCircleIcon, PlusIcon, Settings2Icon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import { useWorkQueryGroupTitle } from '@/features/MyWork/useWorkQueryGroupTitle';
+import {
+  mergeWorkQueryGroups,
+  mergeWorkQueryPage,
+  type WorkQueryGroupPage,
+  workQueryHasMore,
+  workQueryResponseGroups,
+  workQueryResponseTasks,
+  type WorkQueryResultTask,
+} from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { filterSavedViewsByEntity } from '@/features/SavedViews/savedViewDirectory';
-import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
+import {
+  savedViewProjectsPageByGroup,
+  workQueryWithViewerTimeZone,
+} from '@/features/SavedViews/savedViewDisplay';
+import {
+  SavedViewProjectBoard,
+  SavedViewProjectGroupList,
+  SavedViewProjectRow,
+} from '@/features/SavedViews/SavedViewPage';
 import { savedViewVisibilityKey } from '@/features/SavedViews/savedViewVisibility';
 import ViewDefinitionEditor from '@/features/SavedViews/ViewDefinitionEditor';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -31,30 +60,6 @@ import { newTeamViewDraft, teamViewDraftQuery } from './teamViewsDraft';
 import { nextTeamViewsSearch, readTeamViewsSearch } from './teamViewsNavigation';
 
 const styles = createStaticStyles(({ css }) => ({
-  choice: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 12px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  choiceActive: css`
-    border-color: ${cssVar.colorBorderSecondary};
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
   directoryBody: css`
     display: flex;
     flex-direction: column;
@@ -118,6 +123,27 @@ interface TeamViewsSurfaceProps {
   views: SavedViewItem[];
 }
 
+type PreviewProject = {
+  id: string;
+  identifier?: string | null;
+  name: string;
+  slug?: string | null;
+  status?: string | null;
+  updatedAt?: Date | string | null;
+};
+
+const previewProjectGroups = (
+  data: { projectGroups?: { hasMore: boolean; key: string; projects: PreviewProject[]; total: number }[] } | undefined,
+): WorkQueryGroupPage<PreviewProject>[] => {
+  if (!data?.projectGroups) return [];
+  return data.projectGroups.map((group) => ({
+    hasMore: group.hasMore,
+    key: group.key,
+    tasks: group.projects,
+    total: group.total,
+  }));
+};
+
 /** Team-scoped directory and a routed draft, using the same saved-view query model as workspace Views. */
 const TeamViewsSurface = ({
   error,
@@ -155,7 +181,8 @@ const TeamViewsSurface = ({
               ...current,
               builder: { any: [], rows: [], slots: [] },
               entityType,
-              groupBy: entityType === 'task' ? 'status' : 'none',
+              groupBy:
+                entityType === 'task' || current.layout === 'board' ? 'status' : 'none',
             },
       );
     }
@@ -163,19 +190,134 @@ const TeamViewsSurface = ({
   }, [creating, entityType, teamId]);
 
   const query = useMemo(() => teamViewDraftQuery(draft, teamId), [draft, teamId]);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
+  const previewQuery = useMemo(
+    () => workQueryWithViewerTimeZone(query, viewerTimeZone),
+    [query, viewerTimeZone],
+  );
+  const groupTitle = useWorkQueryGroupTitle({
+    cycleTeamIds: query.groupBy === 'cycle' ? [teamId] : [],
+    needsAssignee: query.groupBy === 'assignee' || query.subGroupBy === 'assignee',
+    needsProject: query.groupBy === 'project' || query.subGroupBy === 'project',
+  });
   const {
     data: preview,
     error: previewError,
     isLoading: previewLoading,
     mutate: retryPreview,
   } = useClientDataSWR(
-    creating && workspaceId ? ['team-view-preview', workspaceId, query] : null,
-    () => workAttentionService.query({ query }),
+    creating && workspaceId ? ['team-view-preview', workspaceId, previewQuery] : null,
+    () => workAttentionService.query({ query: previewQuery }),
   );
   const result = preview?.data;
-  const tasks = result && 'tasks' in result ? (result.tasks ?? []) : [];
-  const groups = result && 'groups' in result ? (result.groups ?? []) : [];
-  const projects = result && 'projects' in result ? (result.projects ?? []) : [];
+  const queryHash = result && 'queryHash' in result ? result.queryHash : undefined;
+  const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(result);
+  const firstGroups = workQueryResponseGroups<WorkQueryResultTask>(result);
+  const firstProjectGroups = previewProjectGroups(
+    result && 'projectGroups' in result ? result : undefined,
+  );
+  const firstProjects: PreviewProject[] =
+    result && 'projects' in result ? (result.projects ?? []) : [];
+  const previewKey = `${workspaceId ?? ''}\u001F${JSON.stringify(previewQuery)}`;
+  const pageTokenRef = useRef(previewKey);
+  pageTokenRef.current = previewKey;
+  const [taskTail, setTaskTail] = useState<WorkQueryResultTask[]>([]);
+  const [groupTail, setGroupTail] = useState<WorkQueryGroupPage<WorkQueryResultTask>[]>([]);
+  const [projectTail, setProjectTail] = useState<PreviewProject[]>([]);
+  const [projectGroupTail, setProjectGroupTail] = useState<WorkQueryGroupPage<PreviewProject>[]>([]);
+  const {
+    loadMoreError,
+    loadMoreGroupErrors,
+    resetLoadMoreError,
+    retryLoadMore,
+    retryLoadMoreGroup,
+    runLoadMore,
+    runLoadMoreGroup,
+  } = usePagedLoadMore();
+  useEffect(() => {
+    setTaskTail([]);
+    setGroupTail([]);
+    setProjectTail([]);
+    setProjectGroupTail([]);
+    resetLoadMoreError();
+  }, [previewKey, resetLoadMoreError]);
+  const tasks = mergeWorkQueryPage(firstTasks, taskTail);
+  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
+  const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
+  const projectGroups = mergeWorkQueryGroups(firstProjectGroups, projectGroupTail);
+  const projectGrouped = savedViewProjectsPageByGroup(draft.layout, previewQuery.groupBy);
+  const loadMoreTasks = useCallback(async () => {
+    const last = tasks.at(-1);
+    const started = pageTokenRef.current;
+    if (!last || !queryHash) return;
+    const next = await workAttentionService.query({
+      afterId: last.id,
+      query: previewQuery,
+      queryHash,
+    });
+    if (pageTokenRef.current !== started) return;
+    setTaskTail((current) =>
+      mergeWorkQueryPage(current, workQueryResponseTasks<WorkQueryResultTask>(next.data)),
+    );
+  }, [previewQuery, queryHash, tasks]);
+  const loadMoreTaskGroup = useCallback(
+    async (groupKey: string) => {
+      const column = groups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
+      if (!last || !queryHash) return;
+      const next = await workAttentionService.query({
+        afterId: last.id,
+        groupKey,
+        query: previewQuery,
+        queryHash,
+      });
+      if (pageTokenRef.current !== started) return;
+      setGroupTail((current) =>
+        mergeWorkQueryGroups(current, workQueryResponseGroups<WorkQueryResultTask>(next.data)),
+      );
+    },
+    [groups, previewQuery, queryHash],
+  );
+  const loadMoreProjects = useCallback(async () => {
+    const last = projectRows.at(-1);
+    const started = pageTokenRef.current;
+    if (!last || !queryHash) return;
+    const next = await workAttentionService.query({
+      afterId: last.id,
+      query: previewQuery,
+      queryHash,
+    });
+    if (pageTokenRef.current !== started) return;
+    const incoming: PreviewProject[] =
+      next.data && 'projects' in next.data ? (next.data.projects ?? []) : [];
+    setProjectTail((current) => mergeWorkQueryPage(current, incoming));
+  }, [previewQuery, projectRows, queryHash]);
+  const loadMoreProjectGroup = useCallback(
+    async (groupKey: string) => {
+      const column = projectGroups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
+      if (!last || !queryHash) return;
+      const next = await workAttentionService.query({
+        afterId: last.id,
+        groupKey,
+        query: previewQuery,
+        queryHash,
+      });
+      if (pageTokenRef.current !== started) return;
+      setProjectGroupTail((current) =>
+        mergeWorkQueryGroups(
+          current,
+          previewProjectGroups(next.data && 'projectGroups' in next.data ? next.data : undefined),
+        ),
+      );
+    },
+    [previewQuery, projectGroups, queryHash],
+  );
   const filteredViews = filterSavedViewsByEntity(views, entityType, '', (view) => view.name);
   const sortedViews = [...filteredViews].sort((a, b) => {
     const direction = sort.endsWith('Desc') ? -1 : 1;
@@ -196,7 +338,7 @@ const TeamViewsSurface = ({
         ...current,
         builder: { any: [], rows: [], slots: [] },
         entityType: next,
-        groupBy: next === 'task' ? 'status' : 'none',
+        groupBy: next === 'task' || current.layout === 'board' ? 'status' : 'none',
       }));
     changeLocation({ entityType: next });
   };
@@ -227,46 +369,60 @@ const TeamViewsSurface = ({
   };
 
   const entityTabs = (
-    <Flexbox horizontal align="center" gap={6}>
-      {(['task', 'project'] as const).map((kind) => (
-        <button
-          aria-current={entityType === kind ? 'page' : undefined}
-          className={`${styles.choice} ${entityType === kind ? styles.choiceActive : ''}`}
-          key={kind}
-          type="button"
-          onClick={() => selectEntity(kind)}
-        >
-          {t(kind === 'task' ? 'savedViews.tabIssues' : 'savedViews.entityProject')}
-        </button>
-      ))}
-    </Flexbox>
+    <Tabs
+      value={entityType}
+      onValueChange={(kind) => {
+        if (kind === 'task' || kind === 'project') selectEntity(kind);
+      }}
+    >
+      <TabsList>
+        {(['task', 'project'] as const).map((kind) => (
+          <TabsTrigger key={kind} value={kind}>
+            {t(kind === 'task' ? 'savedViews.tabIssues' : 'savedViews.entityProject')}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
+
+  const sortOptions = [
+    { label: t('savedViews.sort.nameAsc'), value: 'nameAsc' },
+    { label: t('savedViews.sort.nameDesc'), value: 'nameDesc' },
+    { label: t('savedViews.sort.createdDesc'), value: 'createdDesc' },
+    { label: t('savedViews.sort.createdAsc'), value: 'createdAsc' },
+    { label: t('savedViews.sort.updatedDesc'), value: 'updatedDesc' },
+    { label: t('savedViews.sort.updatedAsc'), value: 'updatedAsc' },
+  ];
 
   const displayControl = (
     <Popover
       open={control === 'display'}
-      placement="bottomRight"
-      trigger="click"
-      content={
-        creating ? (
-          <Flexbox className={styles.popover}>
+      onOpenChange={(open) => setControl(open ? 'display' : null)}
+    >
+      <PopoverTrigger
+        render={
+          <Button
+            aria-label={t('savedViews.displayOptions')}
+            size="icon"
+            title={t('savedViews.displayOptions')}
+            variant="ghost"
+          >
+            <Settings2Icon aria-hidden className="size-4" />
+          </Button>
+        }
+      />
+      <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+        {creating ? (
+          <div className={cn('flex flex-col', styles.popover)}>
             <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox className={styles.popover} gap={10}>
-            <Text>{t('savedViews.sortDefault')}</Text>
+          <div className={cn('flex flex-col', styles.popover)} style={{ gap: 10 }}>
+            <span className="text-sm">{t('savedViews.sortDefault')}</span>
             <Select
-              aria-label={t('savedViews.sortDefault')}
+              items={sortOptions}
               value={sort}
-              options={[
-                { label: t('savedViews.sort.nameAsc'), value: 'nameAsc' },
-                { label: t('savedViews.sort.nameDesc'), value: 'nameDesc' },
-                { label: t('savedViews.sort.createdDesc'), value: 'createdDesc' },
-                { label: t('savedViews.sort.createdAsc'), value: 'createdAsc' },
-                { label: t('savedViews.sort.updatedDesc'), value: 'updatedDesc' },
-                { label: t('savedViews.sort.updatedAsc'), value: 'updatedAsc' },
-              ]}
-              onChange={(value) => {
+              onValueChange={(value) => {
                 if (
                   value === 'nameAsc' ||
                   value === 'nameDesc' ||
@@ -277,18 +433,21 @@ const TeamViewsSurface = ({
                 )
                   setSort(value);
               }}
-            />
-          </Flexbox>
-        )
-      }
-      onOpenChange={(open) => setControl(open ? 'display' : null)}
-    >
-      <ActionIcon
-        aria-label={t('savedViews.displayOptions')}
-        icon={Settings2Icon}
-        size="small"
-        title={t('savedViews.displayOptions')}
-      />
+            >
+              <SelectTrigger aria-label={t('savedViews.sortDefault')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </PopoverContent>
     </Popover>
   );
 
@@ -297,80 +456,147 @@ const TeamViewsSurface = ({
       <WorkSurface>
         <NavHeader
           left={
-            <Text weight={500}>
+            <span className="text-sm font-medium">
               {teamName} › {draft.name || defaultName}
-            </Text>
+            </span>
           }
         />
-        <Flexbox className={styles.editorHeader} gap={14}>
-          <Flexbox horizontal align="center" gap={12} wrap="wrap">
+        <div className={cn('flex flex-col', styles.editorHeader)} style={{ gap: 14 }}>
+          <div className="flex flex-row items-center gap-3 flex-wrap">
             <Input
               aria-label={t('savedViews.name')}
+              className="flex-1"
               placeholder={defaultName}
-              style={{ flex: 1, minWidth: 180 }}
+              style={{ minWidth: 180 }}
               value={draft.name}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, name: event.target.value }))
               }
             />
-            <Text type="secondary">
+            <span className="text-sm text-muted-foreground">
               {t('teams.viewSaveTo')} {teamName}
-            </Text>
-            <Button onClick={cancel}>{t('cancel')}</Button>
-            <Button loading={saving} type="primary" onClick={() => void save()}>
+            </span>
+            <Button variant="outline" onClick={cancel}>
+              {t('cancel')}
+            </Button>
+            <Button aria-busy={saving} disabled={saving} onClick={() => void save()}>
+              {saving ? <LoaderCircleIcon className="animate-spin" /> : null}
               {t('savedViews.createView')}
             </Button>
-          </Flexbox>
+          </div>
           <Input disabled placeholder={t('teams.viewDescription')} />
-        </Flexbox>
+        </div>
         <WorkSurfaceToolbar>
           {entityTabs}
-          <Flexbox horizontal align="center" gap={6} style={{ marginInlineStart: 'auto' }}>
+          <div className="flex flex-row items-center" style={{ gap: 6, marginInlineStart: 'auto' }}>
             <Popover
               open={control === 'filters'}
-              placement="bottomRight"
-              trigger="click"
-              content={
-                <Flexbox className={styles.popover}>
-                  <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
-                </Flexbox>
-              }
               onOpenChange={(open) => setControl(open ? 'filters' : null)}
             >
-              <ActionIcon
-                aria-label={t('savedViews.filters.add')}
-                icon={FilterIcon}
-                size="small"
-                title={t('savedViews.filters.add')}
+              <PopoverTrigger
+                render={
+                  <Button
+                    aria-label={t('savedViews.filters.add')}
+                    size="icon"
+                    title={t('savedViews.filters.add')}
+                    variant="ghost"
+                  >
+                    <FilterIcon aria-hidden className="size-4" />
+                  </Button>
+                }
               />
+              <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+                <div className={cn('flex flex-col', styles.popover)}>
+                  <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
+                </div>
+              </PopoverContent>
             </Popover>
             {displayControl}
-          </Flexbox>
+          </div>
         </WorkSurfaceToolbar>
         <div className={styles.resultScroll}>
           {previewError ? (
             <AsyncError error={previewError} onRetry={() => void retryPreview()} />
           ) : draft.entityType === 'project' ? (
             previewLoading ? (
-              <Text>{t('savedViews.loading')}</Text>
-            ) : projects.length ? (
-              projects.map((project) => <SavedViewProjectRow key={project.id} project={project} />)
+              <span className="text-sm">{t('savedViews.loading')}</span>
+            ) : projectGrouped && draft.layout === 'board' ? (
+              <SavedViewProjectBoard
+                groups={projectGroups}
+                loadMoreGroupErrors={loadMoreGroupErrors}
+                loadMoreLabel={t('savedViews.loadMore')}
+                onRetryLoadMoreGroup={retryLoadMoreGroup}
+                onLoadMoreGroup={(key) =>
+                  runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
+                }
+              />
+            ) : projectGrouped ? (
+              projectGroups.some((group) => group.total > 0 || group.tasks.length > 0) ? (
+                <SavedViewProjectGroupList
+                  groups={projectGroups}
+                  loadMoreGroupErrors={loadMoreGroupErrors}
+                  loadMoreLabel={t('savedViews.loadMore')}
+                  onRetryLoadMoreGroup={retryLoadMoreGroup}
+                  onLoadMoreGroup={(key) =>
+                    runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
+                  }
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-12">
+                  <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                    <p>{t('savedViews.emptyResults')}</p>
+                  </div>
+                </div>
+              )
+            ) : projectRows.length ? (
+              <>
+                {projectRows.map((project) => (
+                  <SavedViewProjectRow key={project.id} project={project} />
+                ))}
+                {loadMoreError ? (
+                  <AsyncError
+                    error={loadMoreError}
+                    variant={'inline'}
+                    onRetry={retryLoadMore}
+                  />
+                ) : workQueryHasMore(projectRows.length, result?.total) ? (
+                  <div className="flex flex-row justify-center">
+                    <Button size="sm" onClick={() => runLoadMore(loadMoreProjects)}>
+                      {t('savedViews.loadMore')}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             ) : (
-              <Center padding={48}>
-                <Empty description={t('savedViews.emptyResults')} />
-              </Center>
+              <div className="flex flex-col items-center justify-center p-12">
+                <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                  <p>{t('savedViews.emptyResults')}</p>
+                </div>
+              </div>
             )
           ) : (
             <WorkQueryResults
               emptyLabel={t('savedViews.emptyResults')}
               groupBy={result && 'groupBy' in result ? result.groupBy : undefined}
+              groupTitle={groupTitle}
               groups={groups}
               layout={draft.layout}
+              loadMoreError={loadMoreError}
+              loadMoreGroupErrors={loadMoreGroupErrors}
               loadMoreLabel={t('savedViews.loadMore')}
               loading={previewLoading}
               loadingLabel={t('savedViews.loading')}
+              subGroupBy={query.subGroupBy}
               tasks={tasks}
               total={result?.total}
+              onRetryLoadMore={retryLoadMore}
+              onRetryLoadMoreGroup={retryLoadMoreGroup}
+              onLoadMore={
+                draft.layout === 'list' ? () => runLoadMore(loadMoreTasks) : undefined
+              }
+              onLoadMoreGroup={(key) =>
+                runLoadMoreGroup(key, () => loadMoreTaskGroup(key))
+              }
             />
           )}
         </div>
@@ -380,63 +606,77 @@ const TeamViewsSurface = ({
   return (
     <WorkSurface>
       <NavHeader
-        left={<Text weight={500}>{t('tab.views')}</Text>}
+        left={<span className="text-sm font-medium">{t('tab.views')}</span>}
         right={
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
-            <Button icon={PlusIcon} size="small" onClick={() => changeLocation({ creating: true })}>
+            <Button variant="outline" onClick={() => changeLocation({ creating: true })}>
+              <PlusIcon aria-hidden className="size-4" />
               {t('savedViews.newView')}
             </Button>
-          </Flexbox>
+          </div>
         }
       />
       <WorkSurfaceToolbar>
         {entityTabs}
-        <Flexbox style={{ marginInlineStart: 'auto' }}>{displayControl}</Flexbox>
+        <div className="flex flex-col" style={{ marginInlineStart: 'auto' }}>
+          {displayControl}
+        </div>
       </WorkSurfaceToolbar>
       <WorkSurfaceCollection className={styles.directoryBody}>
         {error && sortedViews.length === 0 ? (
           <AsyncError error={error} onRetry={onRetry} />
         ) : isLoading && sortedViews.length === 0 ? (
-          <SkeletonList aria-label={t('savedViews.loading')} rows={4} />
+          <div aria-busy aria-label={t('savedViews.loading')} className="flex flex-col gap-2">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
         ) : sortedViews.length ? (
-          <Flexbox gap={0}>
+          <div className="flex flex-col gap-0">
             {error ? <AsyncError error={error} variant="inline" onRetry={onRetry} /> : null}
             {sortedViews.map((view) => (
               <WorkspaceLink className={styles.viewRow} key={view.id} to={`/views/${view.id}`}>
-                <Icon icon={Layers2Icon} size={16} />
-                <Text style={{ flex: 1 }}>{view.name}</Text>
-                <Text fontSize={12} type="secondary">
+                <Layers2Icon aria-hidden className="size-4 shrink-0" />
+                <span className={cn('flex-1', 'text-sm')}>{view.name}</span>
+                <span className="text-sm text-muted-foreground">
                   {t(savedViewVisibilityKey(view.visibility))}
-                </Text>
+                </span>
               </WorkspaceLink>
             ))}
-          </Flexbox>
+          </div>
         ) : (
           <div className={styles.empty}>
-            <Icon icon={Layers2Icon} size={64} />
-            <Text fontSize={20} weight={600}>
+            {
+              <Layers2Icon
+                aria-hidden
+                className="size-4 shrink-0"
+                style={{ width: 64, height: 64 }}
+              />
+            }
+            <span className="text-sm font-semibold" style={{ fontSize: 20 }}>
               {t('tab.views')}
-            </Text>
-            <Text type="secondary">
+            </span>
+            <span className="text-sm text-muted-foreground">
               {t(
                 entityType === 'task'
                   ? 'teams.viewDirectoryDescriptionIssues'
                   : 'teams.viewDirectoryDescriptionProjects',
               )}
-            </Text>
-            <Flexbox horizontal gap={8} justify="center" wrap="wrap">
-              <Button type="primary" onClick={() => changeLocation({ creating: true })}>
+            </span>
+            <div className="flex flex-row justify-center gap-2 flex-wrap">
+              <Button onClick={() => changeLocation({ creating: true })}>
                 {t('teams.viewCreateNew')}
               </Button>
               <Button
+                variant="outline"
                 onClick={() =>
                   window.open('/docs/usage/getting-started/work', '_blank', 'noopener,noreferrer')
                 }
               >
                 {t('teams.viewDocumentation')}
               </Button>
-            </Flexbox>
+            </div>
           </div>
         )}
       </WorkSurfaceCollection>

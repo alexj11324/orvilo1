@@ -1,27 +1,14 @@
 /**
  * @vitest-environment happy-dom
  */
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
-
 import TeamTriageRow from './TeamTriageRow';
-
-const renderedIcons = vi.hoisted(() => [] as unknown[]);
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ i18n: { language: 'en-US' }, t: (key: string) => key }),
-}));
-
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Icon: ({ icon }: { icon: unknown }) => {
-    renderedIcons.push(icon);
-    return <span data-testid="workflow-icon" />;
-  },
-  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@/features/AgentTasks/features/TaskStatusIcon', () => ({
@@ -34,7 +21,7 @@ vi.mock('@/features/Workspace/WorkspaceLink', () => ({
 
 afterEach(() => {
   cleanup();
-  renderedIcons.length = 0;
+  vi.clearAllMocks();
 });
 
 const props = {
@@ -61,12 +48,15 @@ describe('TeamTriageRow status icon', () => {
       />,
     );
 
-    expect(screen.getByTestId('workflow-icon')).toBeInTheDocument();
-    expect(renderedIcons).toContain(WORKFLOW_CATEGORY_VISUALS.in_progress.icon);
+    expect(
+      screen.getByRole('link').querySelector('[data-workflow-icon="in_progress"]'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
   });
 
-  it('keeps the execution icon when no provider workflow state is linked', () => {
+  it('draws the category mark for a local task without a provider link', () => {
+    // `workflowCategory` IS the Issue Status — no provider workflow state
+    // needed for the glyph to render.
     render(
       <TeamTriageRow
         {...props}
@@ -74,7 +64,34 @@ describe('TeamTriageRow status icon', () => {
       />,
     );
 
+    expect(
+      screen.getByRole('link').querySelector('[data-workflow-icon="todo"]'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
+  });
+
+  it('keeps the execution icon when the task has no workflow category', () => {
+    render(
+      <TeamTriageRow
+        {...props}
+        task={{ id: 'task-2b', name: 'Legacy issue', status: 'backlog' }}
+      />,
+    );
+
     expect(screen.getByTestId('execution-icon')).toHaveTextContent('backlog');
-    expect(screen.queryByTestId('workflow-icon')).not.toBeInTheDocument();
+    expect(screen.getByRole('link').querySelector('[data-workflow-icon]')).toBeNull();
+  });
+  it('keeps accept and decline actions and explains disabled snooze', () => {
+    render(
+      <TeamTriageRow {...props} task={{ id: 'task-3', name: 'Local issue', status: 'backlog' }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'teams.accept' }));
+    fireEvent.click(screen.getByRole('button', { name: 'teams.decline' }));
+    expect(props.onAction.mock.calls).toEqual([['accept'], ['decline']]);
+    expect(screen.getByRole('button', { name: 'teams.snooze' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'teams.snooze' })).toHaveAttribute(
+      'title',
+      'teams.snoozeUnavailable',
+    );
   });
 });

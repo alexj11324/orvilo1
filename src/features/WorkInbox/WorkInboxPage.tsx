@@ -1,49 +1,51 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  type DropdownItem,
-  DropdownMenu,
-  SplitButton,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
-  ArchiveIcon,
   ArrowUpRightIcon,
-  CheckIcon,
+  CheckCheckIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
-  EyeIcon,
   InboxIcon,
   ListFilterIcon,
-  MailOpenIcon,
-  MoreHorizontalIcon,
-  SlidersHorizontalIcon,
-  TimerOffIcon,
+  MoreVerticalIcon,
+  RefreshCwIcon,
+  TriangleAlertIcon,
+  XIcon,
 } from 'lucide-react';
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createElement,
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
-import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
-import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurfaceSplit } from '@/features/WorkSurface';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -51,13 +53,10 @@ import { mutate, useClientDataSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
-import { useGlobalStore } from '@/store/global';
-import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
-import { formatInboxAge } from './inboxAge';
 import { inboxCardTitleKey } from './inboxCardCopy';
 import {
   inboxActionIdentity,
@@ -77,7 +76,8 @@ import { inboxDeepLinkTerminal, resolveInboxDeepLink } from './inboxDeepLink';
 import { inboxDraftKeyForCard, useInboxDraft } from './inboxDrafts';
 import { inboxFeedScopeKey, mergeInboxFeedPages, useInboxFeedPager } from './inboxFeedPager';
 import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedState';
-import InboxHeaderMenu from './InboxHeaderMenu';
+import InboxListRow from './InboxListRow';
+import InboxListRowSkeleton from './InboxListRowSkeleton';
 import {
   armInboxReadReceiptSuppression,
   type InboxReadReceiptAttempt,
@@ -87,27 +87,20 @@ import {
   retainSelectedInboxCard,
 } from './inboxListSelection';
 import {
-  feedFilterForChip,
-  INBOX_FILTER_CHIPS,
-  INBOX_SNOOZE_PRESETS,
-  inboxBulkFingerprint,
-  type InboxFilterChip,
+  INBOX_TABS,
+  INBOX_TYPE_FILTERS,
+  type InboxDisplayOption,
   inboxIssueTaskId,
   inboxOpenTarget,
-  type InboxSnoozePreset,
-  resolveInboxFilterChip,
+  type InboxTab,
+  type InboxTypeFilter,
+  resolveInboxDisplayOption,
   resolveInboxTab,
-  snoozeUntilForPreset,
+  resolveInboxTypeFilters,
+  serializeInboxTypeFilters,
 } from './inboxOrganize';
-import {
-  inboxFeedKind,
-  type InboxPriorityMode,
-  inboxPriorityScopeKey,
-  inboxScopeKindToken,
-  resolveInboxPriority,
-} from './inboxPriority';
+import { openInboxSnoozeModal } from './InboxSnoozeModal';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
-import { inboxCardIcon } from './notificationIcons';
 import { INBOX_LIST_HOTKEY_OPTIONS, useInboxListKeyboard } from './useInboxListKeyboard';
 
 // The shared task body — mounted inside the split detail pane, lazily so the
@@ -116,6 +109,12 @@ const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
 );
 
+/**
+ * Plane's inbox layout: a narrow list column whose chrome lives *inside* the
+ * column — title+icon row (h-header), the All|Mentions tab row, then the
+ * applied-filters strip — and a detail pane on the right.
+ * (docs/research/plane/inbox/PAGE_TOPOLOGY.md)
+ */
 const styles = createStaticStyles(({ css }) => ({
   stage: css`
     position: relative;
@@ -128,130 +127,92 @@ const styles = createStaticStyles(({ css }) => ({
     flex-direction: column;
     min-height: 100%;
   `,
-  listHeader: css`
-    flex: none;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  /* Linear's priority-inbox banner, inside the list column between the
-     control row and the first notification row. Measured: a centred 12px/500
-     prompt over two plain buttons in a 12px-radius card, 16/16/18 padding,
-     8px margin. */
-  banner: css`
+  columnHeader: css`
     display: flex;
     flex: none;
-    flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
+    justify-content: space-between;
 
-    margin: 8px;
-    padding-block: 16px 18px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    text-align: center;
-
-    background: ${cssVar.colorFillQuaternary};
+    height: 48px;
+    padding-inline: 16px 8px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
-  row: css`
+  tabsRow: css`
+    display: flex;
+    flex: none;
+    align-items: stretch;
+
+    height: 36px;
+    padding-inline: 8px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  tab: css`
     cursor: pointer;
 
-    width: 100%;
-    min-height: 55px;
-    padding-block: 6px;
+    position: relative;
+
     padding-inline: 12px;
     border: 0;
-    border-block-end: 1px solid ${cssVar.colorFillQuaternary};
 
-    font: inherit;
-    color: inherit;
-    text-align: start;
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar.colorTextTertiary};
 
     appearance: none;
     background: transparent;
 
-    transition: background ${cssVar.motionDurationFast};
-
     &:hover {
-      background: ${cssVar.colorFillQuaternary};
+      color: ${cssVar.colorTextSecondary};
     }
 
     &[data-active='true'] {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
+      color: ${cssVar.colorPrimary};
     }
   `,
-  avatarSlot: css`
-    position: relative;
-    flex: none;
-    width: 32px;
-    height: 32px;
-  `,
-  // Linear's notification-type badge: a 14px disc cut from the page
-  // background, hanging off the avatar's bottom-right corner.
-  typeBadge: css`
+  tabUnderline: css`
     position: absolute;
-    inset-block-start: 19px;
-    inset-inline-start: 21px;
+    inset-block-end: 0;
+    inset-inline: 0;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  typeGlyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  unreadDot: css`
-    flex: none;
-
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    height: 2px;
+    border-radius: 4px 4px 0 0;
 
     background: ${cssVar.colorPrimary};
   `,
-  // Read rows fade to the description colour as a whole — Linear's read state.
-  readText: css`
-    color: ${cssVar.colorTextDescription} !important;
-  `,
-  snippet: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  time: css`
+  appliedFilters: css`
+    display: flex;
     flex: none;
-    font-weight: 450;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+
+    padding-block: 8px;
+    padding-inline: 12px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  filterPill: css`
+    cursor: pointer;
+
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+
+    padding-block: 3px;
+    padding-inline: 8px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 999px;
+
+    font-size: 12px;
+    color: ${cssVar.colorTextSecondary};
+
+    appearance: none;
+    background: transparent;
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillQuaternary};
+    }
   `,
   detail: css`
     display: flex;
@@ -263,10 +224,9 @@ const styles = createStaticStyles(({ css }) => ({
     min-height: 100%;
   `,
   /**
-   * Task-linked cards get the reference's detail chrome: a sticky header row
-   * carrying the issue identifier plus pin/open/overflow actions (Linear's
-   * `ORV-115` · ★ · ⋯), while the issue body scrolls beneath it — the same
-   * peek-header contract `MyWorkIssuePane` uses.
+   * Task-linked cards get the detail chrome: a sticky header row carrying the
+   * issue identifier plus pin/open actions, while the issue body scrolls
+   * beneath it — the same peek-header contract `MyWorkIssuePane` uses.
    */
   paneHeader: css`
     position: sticky;
@@ -304,20 +264,24 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const WorkInboxPage = memo(() => {
-  const { i18n, t } = useTranslation('notification');
+  const { t } = useTranslation('notification');
   const { t: tCommon } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const userId = useUserStore(userProfileSelectors.userId);
   const navigate = useWorkspaceAwareNavigate();
   const isMobile = useIsMobile();
-  // Selection, tab, filter and the mobile detail surface live in the URL so a
-  // refresh/back/deep link restores the exact inbox state (and stays shareable).
+  // Tab, display option, type filters, selection and the mobile detail surface
+  // all live in the URL so a refresh/back/deep link restores the exact inbox
+  // state (and stays shareable).
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = resolveInboxTab(searchParams.get('tab'));
-  const filterChip = resolveInboxFilterChip(searchParams.get('filter'));
+  const displayOption = resolveInboxDisplayOption(searchParams.get('filter'));
+  const unreadOnly = searchParams.get('unread') === '1';
+  const typeFilters = resolveInboxTypeFilters(searchParams.get('types'));
   const selectedId = searchParams.get('item');
   const detailOpen = searchParams.get('detail') === '1';
   const [pendingDecisions, setPendingDecisions] = useState<ReadonlySet<string>>(() => new Set());
+  const [organizeBusy, setOrganizeBusy] = useState<'markAll' | 'refresh' | null>(null);
   const readReceiptRetentionRef = useRef<InboxReadReceiptRetention<NotificationFeedCard> | null>(
     null,
   );
@@ -327,17 +291,32 @@ const WorkInboxPage = memo(() => {
   const deadLinkToastRef = useRef<string | null>(null);
 
   const writeInboxParams = useCallback(
-    (patch: { detail?: string | null; filter?: string; item?: string | null; tab?: string }) => {
+    (patch: {
+      detail?: string | null;
+      filter?: InboxDisplayOption | null;
+      item?: string | null;
+      tab?: InboxTab | null;
+      types?: string | null;
+      unread?: string | null;
+    }) => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
           if (patch.tab !== undefined) {
-            if (patch.tab === 'priority') next.delete('tab');
+            if (patch.tab === 'all' || patch.tab === null) next.delete('tab');
             else next.set('tab', patch.tab);
           }
           if (patch.filter !== undefined) {
-            if (patch.filter === 'all') next.delete('filter');
+            if (patch.filter === null) next.delete('filter');
             else next.set('filter', patch.filter);
+          }
+          if (patch.unread !== undefined) {
+            if (patch.unread === null) next.delete('unread');
+            else next.set('unread', patch.unread);
+          }
+          if (patch.types !== undefined) {
+            if (!patch.types) next.delete('types');
+            else next.set('types', patch.types);
           }
           if (patch.item !== undefined) {
             if (patch.item === null) next.delete('item');
@@ -355,58 +334,43 @@ const WorkInboxPage = memo(() => {
     [setSearchParams],
   );
 
-  // Priority-inbox choice is persisted per (user, workspace) in SystemStatus:
-  // there is no server field for it, so the local record is the source of
-  // truth. Undecided scopes get the Linear-style onboarding banner; 'all'
-  // collapses the tabs into one unified feed.
-  const priorityScopeKey = inboxPriorityScopeKey({ userId, workspaceId });
-  const priorityMode = useGlobalStore(systemStatusSelectors.inboxPriorityMode(priorityScopeKey));
-  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
-  const { bannerVisible, priorityEnabled } = resolveInboxPriority(priorityMode);
-  const setPriorityMode = useCallback(
-    (mode: InboxPriorityMode) => {
-      updateSystemStatus({ inboxPriorityMode: { [priorityScopeKey]: mode } });
-    },
-    [priorityScopeKey, updateSystemStatus],
+  // Plane's feed query: the tab sends `mentioned` (the All view excludes
+  // mentions), the ⋮ menu sends a single base `filter` plus an optional
+  // `unread` overlay on archived/snoozed, and the funnel sends `types`.
+  const mentioned = tab === 'mentions';
+  const feedInput = useMemo(
+    () => ({
+      filter: displayOption,
+      mentioned,
+      types: typeFilters.length > 0 ? typeFilters : undefined,
+      // `unread` on its own is already a base filter — only the combination
+      // (Plane's read=false + archived/snoozed) needs the overlay flag.
+      unreadOnly: unreadOnly && displayOption && displayOption !== 'unread' ? true : undefined,
+    }),
+    [displayOption, mentioned, typeFilters, unreadOnly],
   );
-  // Linear's display-options "Show snoozed" — same per-(user, workspace)
-  // persistence channel as the priority-inbox choice.
-  const showSnoozed =
-    useGlobalStore(systemStatusSelectors.inboxShowSnoozed(priorityScopeKey)) ?? false;
-  const setShowSnoozed = useCallback(
-    (show: boolean) => {
-      updateSystemStatus({ inboxShowSnoozed: { [priorityScopeKey]: show } });
-    },
-    [priorityScopeKey, updateSystemStatus],
-  );
-
-  // `kind` is the feed bucket: the tab queries the priority classification
-  // (pending action or unread mention) rather than the stored row kind. In
-  // unified mode the request omits the bucket so the server returns one list.
-  const kind = inboxFeedKind(priorityEnabled, tab);
-  // The pager identity must still differ per logical feed — 'all' keeps the
-  // unified tail from ever committing into a tab bucket's scope.
-  const scopeKind = inboxScopeKindToken(priorityEnabled, tab);
-  const filter = feedFilterForChip(filterChip);
-  const { data, error, isLoading } = useClientDataSWR(
-    inboxKeys.feed(workspaceId, kind, filter, showSnoozed ? 'snoozed' : undefined),
+  const feedScope = useMemo(
     () =>
-      notificationService.feed({
-        filter,
-        includeSnoozed: showSnoozed || undefined,
-        kind,
-        limit: 50,
+      inboxFeedScopeKey({
+        filter: displayOption,
+        mentioned,
+        types: serializeInboxTypeFilters(typeFilters),
+        unreadOnly,
+        userId,
+        workspaceId,
       }),
+    [displayOption, mentioned, typeFilters, unreadOnly, userId, workspaceId],
+  );
+  const feedKey = inboxKeys.feed(workspaceId, feedScope);
+  const { data, error, isLoading } = useClientDataSWR(
+    feedKey,
+    () => notificationService.feed({ ...feedInput, limit: 50 }),
     { focusThrottleInterval: INBOX_FEED_FOCUS_THROTTLE_MS },
   );
   // Pages beyond the first stay client-side so a focus-triggered refetch of
   // page one never reorders rows the user already paged through. The pager is
   // bound to user + workspace + query fingerprint + request generation: a
   // page fetched under a stale scope can never commit into the new one.
-  const feedScope = useMemo(
-    () => inboxFeedScopeKey({ filter, kind: scopeKind, snoozed: showSnoozed, userId, workspaceId }),
-    [filter, scopeKind, showSnoozed, userId, workspaceId],
-  );
   const pager = useInboxFeedPager(feedScope);
   const tail = pager.tailFor(feedScope);
   const cards = useMemo(
@@ -418,15 +382,9 @@ const WorkInboxPage = memo(() => {
   const loadingMore = pager.loadingMore;
   const loadMore = useCallback(async () => {
     await pager.loadMore(feedScope, data?.nextCursor ?? null, (cursor) =>
-      notificationService.feed({
-        cursor,
-        filter,
-        includeSnoozed: showSnoozed || undefined,
-        kind,
-        limit: 50,
-      }),
+      notificationService.feed({ ...feedInput, cursor, limit: 50 }),
     );
-  }, [data?.nextCursor, feedScope, filter, kind, pager, showSnoozed]);
+  }, [data?.nextCursor, feedScope, feedInput, pager]);
   const partial = Boolean(data?.partial);
   const { data: summary } = useClientDataSWR(inboxKeys.feedSummary(workspaceId), () =>
     notificationService.feedSummary(),
@@ -577,7 +535,7 @@ const WorkInboxPage = memo(() => {
         // the unread dot clears at the same moment the badge does.
         void mutate(inboxKeys.feedSummary(workspaceId));
         void mutate(inboxKeys.unreadCount(workspaceId));
-        void mutate(inboxKeys.feed(workspaceId, kind, filter, showSnoozed ? 'snoozed' : undefined));
+        void mutate(feedKey);
         void mutate(inboxKeys.feedCard(workspaceId, selectedNotificationId));
       })
       .catch(() => {
@@ -587,30 +545,41 @@ const WorkInboxPage = memo(() => {
       });
   }, [
     cards,
+    feedKey,
     feedScope,
-    filter,
-    kind,
     markSelectedRead,
     selected,
     selectedActivityVersion,
     selectedNotificationId,
     selectedRead,
-    showSnoozed,
     t,
     workspaceId,
   ]);
 
   const refresh = useCallback(async () => {
     await Promise.all([
-      mutate(inboxKeys.feed(workspaceId, kind, filter, showSnoozed ? 'snoozed' : undefined)),
+      mutate(feedKey),
       mutate(inboxKeys.feedSummary(workspaceId)),
       mutate(inboxKeys.unreadCount(workspaceId)),
     ]);
-  }, [filter, kind, showSnoozed, workspaceId]);
+  }, [feedKey, workspaceId]);
 
   const organizeFailed = useCallback(() => {
     toast.error(t('inbox.organizeFailed'));
   }, [t]);
+
+  const releaseSelection = useCallback(
+    (card: NotificationFeedCard) => {
+      // Same contract as archive/decide: a card that left this view releases
+      // the selection instead of leaving the detail pane on a row the list no
+      // longer holds.
+      if (card.notificationId === selectedId) {
+        readReceiptRetentionRef.current = null;
+        writeInboxParams({ detail: null, item: null });
+      }
+    },
+    [selectedId, writeInboxParams],
+  );
 
   const archiveCard = useCallback(
     async (card: NotificationFeedCard) => {
@@ -618,47 +587,108 @@ const WorkInboxPage = memo(() => {
         await notificationService.archive(card.notificationId, card.activityVersion);
         // The row leaves this view — update the loaded tail at once; the
         // archived filter keeps it because it still belongs there.
-        if (filterChip !== 'archived') pager.removeCard(card.notificationId);
-        if (card.notificationId === selectedId) {
-          readReceiptRetentionRef.current = null;
-          writeInboxParams({ detail: null, item: null });
+        if (displayOption !== 'archived') {
+          pager.removeCard(card.notificationId);
+          releaseSelection(card);
         }
+        toast.success(t('inbox.toast.archived'));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [filterChip, organizeFailed, pager, refresh, selectedId, writeInboxParams],
+    [displayOption, organizeFailed, pager, refresh, releaseSelection, t],
+  );
+
+  const unarchiveCard = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.unarchive(card.notificationId, card.activityVersion);
+        // An unarchived row leaves the archived view; elsewhere it is a no-op.
+        if (displayOption === 'archived') {
+          pager.removeCard(card.notificationId);
+          releaseSelection(card);
+        }
+        toast.success(t('inbox.toast.unarchived'));
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [displayOption, organizeFailed, pager, refresh, releaseSelection, t],
+  );
+
+  const toggleArchiveCard = useCallback(
+    (card: NotificationFeedCard) =>
+      displayOption === 'archived' ? unarchiveCard(card) : archiveCard(card),
+    [archiveCard, displayOption, unarchiveCard],
   );
 
   const snoozeCard = useCallback(
-    async (card: NotificationFeedCard, preset: InboxSnoozePreset) => {
+    async (card: NotificationFeedCard, until: string) => {
       try {
-        const until = snoozeUntilForPreset(preset);
         await notificationService.snooze(card.notificationId, until, card.activityVersion);
-        // Snoozed cards hide until wake (Linear semantics): drop the tail copy
-        // unless the snoozed filter or the show-snoozed toggle keeps it listed.
-        if (filter === 'snoozed' || showSnoozed) {
+        // Snoozed cards hide until wake: drop the row everywhere except the
+        // snoozed view, where it just updates its countdown.
+        if (displayOption === 'snoozed') {
           pager.updateCard(card.notificationId, (current) => ({
             ...current,
             snoozedUntil: until,
           }));
         } else {
           pager.removeCard(card.notificationId);
-          // Same contract as archive/decide: a card that left this view
-          // releases the selection instead of leaving the detail pane on a
-          // row the list no longer holds.
-          if (card.notificationId === selectedId) {
-            readReceiptRetentionRef.current = null;
-            writeInboxParams({ detail: null, item: null });
-          }
+          releaseSelection(card);
         }
+        toast.success(t('inbox.toast.snoozed'));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [filter, organizeFailed, pager, refresh, selectedId, showSnoozed, writeInboxParams],
+    [displayOption, organizeFailed, pager, refresh, releaseSelection, t],
+  );
+
+  const unsnoozeCard = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.unsnooze(card.notificationId, card.activityVersion);
+        // The row rejoins the visible feed — it leaves the snoozed view and
+        // wakes up everywhere else.
+        if (displayOption === 'snoozed') {
+          pager.removeCard(card.notificationId);
+          releaseSelection(card);
+        } else {
+          pager.updateCard(card.notificationId, (current) => ({
+            ...current,
+            snoozedUntil: null,
+          }));
+        }
+        toast.success(t('inbox.toast.unsnoozed'));
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [displayOption, organizeFailed, pager, refresh, releaseSelection, t],
+  );
+
+  const markCardRead = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.markReadObserved(card.notificationId, card.activityVersion);
+        pager.updateCard(card.notificationId, (current) => ({
+          ...current,
+          read: true,
+          readVersion: Math.max(current.readVersion, current.activityVersion),
+        }));
+        void mutate(inboxKeys.feedCard(workspaceId, card.notificationId));
+        toast.success(t('inbox.toast.read'));
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [organizeFailed, pager, refresh, t, workspaceId],
   );
 
   const markCardUnread = useCallback(
@@ -675,15 +705,21 @@ const WorkInboxPage = memo(() => {
         pager.updateCard(card.notificationId, (current) => ({
           ...current,
           read: false,
-          readVersion: current.readVersion + 1,
+          readVersion: 0,
         }));
         void mutate(inboxKeys.feedCard(workspaceId, card.notificationId));
+        toast.success(t('inbox.toast.unread'));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [feedScope, organizeFailed, pager, refresh, selectedId, workspaceId],
+    [feedScope, organizeFailed, pager, refresh, selectedId, t, workspaceId],
+  );
+
+  const toggleReadCard = useCallback(
+    (card: NotificationFeedCard) => (card.read ? markCardUnread(card) : markCardRead(card)),
+    [markCardRead, markCardUnread],
   );
 
   const decide = useCallback(
@@ -766,10 +802,7 @@ const WorkInboxPage = memo(() => {
           // A decided card leaves the pending view — drop it from the tail
           // immediately instead of waiting for a full refetch.
           pager.removeCard(card.notificationId);
-          if (card.notificationId === selectedId) {
-            readReceiptRetentionRef.current = null;
-            writeInboxParams({ detail: null, item: null });
-          }
+          releaseSelection(card);
         }
         await refresh();
       } catch {
@@ -782,17 +815,7 @@ const WorkInboxPage = memo(() => {
         });
       }
     },
-    [
-      pendingDecisions,
-      refresh,
-      t,
-      userId,
-      workspaceId,
-      pager,
-      clearDraftFor,
-      selectedId,
-      writeInboxParams,
-    ],
+    [pendingDecisions, refresh, t, userId, workspaceId, pager, clearDraftFor, releaseSelection],
   );
 
   const openTarget = useCallback(
@@ -813,44 +836,6 @@ const WorkInboxPage = memo(() => {
   );
   const selectedOpenTarget = selected ? inboxOpenTarget(selected) : null;
 
-  // Secondary card actions live behind `…` — only actions the card actually
-  // advertises make the list, and an empty list hides the trigger entirely.
-  const detailMoreItems = useMemo(() => {
-    if (!selected) return [] as DropdownItem[];
-    return [
-      selected.availableActions.includes('archive')
-        ? {
-            icon: <Icon icon={ArchiveIcon} />,
-            key: 'archive',
-            label: t('inbox.archive'),
-            onClick: () => void archiveCard(selected),
-          }
-        : null,
-      selected.availableActions.includes('snooze')
-        ? {
-            // Pick an absolute moment, not a bare "4h" —
-            // every preset resolves against local time.
-            children: INBOX_SNOOZE_PRESETS.map((preset) => ({
-              key: `snooze-${preset}`,
-              label: t(`inbox.snoozePreset.${preset}`),
-              onClick: () => void snoozeCard(selected, preset),
-            })),
-            icon: <Icon icon={TimerOffIcon} />,
-            key: 'snooze',
-            label: t('inbox.snooze'),
-          }
-        : null,
-      selected.read
-        ? {
-            icon: <Icon icon={MailOpenIcon} />,
-            key: 'markUnread',
-            label: t('inbox.markUnread'),
-            onClick: () => void markCardUnread(selected),
-          }
-        : null,
-    ].filter(Boolean) as DropdownItem[];
-  }, [archiveCard, markCardUnread, selected, snoozeCard, t]);
-
   const selectCard = useCallback(
     (id: string, openDetail: boolean) => {
       writeInboxParams({ detail: openDetail ? '1' : undefined, item: id });
@@ -859,44 +844,68 @@ const WorkInboxPage = memo(() => {
   );
 
   const markAllRead = useCallback(async () => {
+    if (organizeBusy) return;
+    setOrganizeBusy('markAll');
     try {
-      const prepared = await notificationService.prepareBulk({
-        action: 'mark_read',
-        queryFingerprint: inboxBulkFingerprint('mark_read', filterChip, kind),
-      });
-      await notificationService.applyBulk(prepared.data.token);
+      // Plane's "mark all as read" — the whole feed, captured at one
+      // statement snapshot (not just the current view).
+      await notificationService.markAllAsRead();
       await refresh();
     } catch {
       organizeFailed();
+    } finally {
+      setOrganizeBusy(null);
     }
-  }, [filterChip, kind, organizeFailed, refresh]);
+  }, [organizeBusy, organizeFailed, refresh]);
 
-  // The header menu advertises ⌥U like the reference — bind it for real so
-  // the hint is never a dead affordance.
+  // The header advertises ⌥U like the reference — bind it for real so the
+  // hint is never a dead affordance.
   useHotkeys('alt+u', () => void markAllRead(), INBOX_LIST_HOTKEY_OPTIONS, [markAllRead]);
 
-  const archiveAll = useCallback(async () => {
+  const refreshFeed = useCallback(async () => {
+    if (organizeBusy) return;
+    setOrganizeBusy('refresh');
     try {
-      const prepared = await notificationService.prepareBulk({
-        action: 'archive',
-        queryFingerprint: inboxBulkFingerprint('archive', filterChip, kind),
-      });
-      await notificationService.applyBulk(prepared.data.token);
-      readReceiptRetentionRef.current = null;
-      writeInboxParams({ detail: null, item: null });
       await refresh();
-    } catch {
-      organizeFailed();
+    } finally {
+      setOrganizeBusy(null);
     }
-  }, [filterChip, kind, organizeFailed, refresh, writeInboxParams]);
+  }, [organizeBusy, refresh]);
 
-  const filterLabel = (chip: InboxFilterChip) => {
-    if (chip === 'all') return t('inbox.allStatus');
-    if (chip === 'unread') return t('inbox.unread');
-    if (chip === 'mentions') return t('inbox.filterMentions');
-    if (chip === 'snoozed') return t('inbox.filterSnoozed');
-    return t('inbox.filterArchived');
-  };
+  // Plane's ⋮ menu: unread is independent while archived/snoozed are
+  // exclusive — they share the same `filter` slot, so checking one drops the
+  // other. `unread` under an archived/snoozed base rides on the `unread`
+  // overlay param instead of replacing it.
+  const showUnreadChecked = displayOption === 'unread' || unreadOnly;
+  const toggleUnread = useCallback(() => {
+    if (displayOption === 'archived' || displayOption === 'snoozed') {
+      writeInboxParams({ unread: unreadOnly ? null : '1' });
+      return;
+    }
+    writeInboxParams({ filter: displayOption === 'unread' ? null : 'unread' });
+  }, [displayOption, unreadOnly, writeInboxParams]);
+  const toggleArchived = useCallback(() => {
+    writeInboxParams({ filter: displayOption === 'archived' ? null : 'archived' });
+  }, [displayOption, writeInboxParams]);
+  const toggleSnoozed = useCallback(() => {
+    writeInboxParams({ filter: displayOption === 'snoozed' ? null : 'snoozed' });
+  }, [displayOption, writeInboxParams]);
+  const toggleTypeFilter = useCallback(
+    (filter: InboxTypeFilter) => {
+      const next = typeFilters.includes(filter)
+        ? typeFilters.filter((item) => item !== filter)
+        : [...typeFilters, filter];
+      writeInboxParams({ types: serializeInboxTypeFilters(next) || null });
+    },
+    [typeFilters, writeInboxParams],
+  );
+
+  const openCustomSnooze = useCallback(
+    (card: NotificationFeedCard) => {
+      openInboxSnoozeModal((until) => void snoozeCard(card, until));
+    },
+    [snoozeCard],
+  );
 
   useInboxListKeyboard({
     ids: cardIds,
@@ -912,233 +921,240 @@ const WorkInboxPage = memo(() => {
     selectedId: selected?.notificationId ?? null,
   });
 
+  const tabCount = (which: InboxTab) =>
+    which === 'mentions' ? (summary?.unreadMentionCount ?? 0) : (summary?.unreadBadgeCount ?? 0);
+
   const listPane = (
     <div className={styles.listColumn}>
-      <Flexbox className={styles.listHeader} gap={4}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          {priorityEnabled ? (
-            <TabsRoot
-              size={'small'}
-              style={{ flex: 1, minWidth: 0 }}
-              value={tab}
-              onValueChange={(value) => writeInboxParams({ tab: value })}
-            >
-              <TabsList>
-                <TabsIndicator />
-                <TabsTab value="priority">
-                  {t('inbox.priorityTab')}
-                  {(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)
-                    ? ` ${(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)}`
-                    : ''}
-                </TabsTab>
-                <TabsTab value="other">
-                  {t('inbox.otherTab')}
-                  {summary?.unreadOtherCount ? ` ${summary.unreadOtherCount}` : ''}
-                </TabsTab>
-              </TabsList>
-            </TabsRoot>
-          ) : (
-            // Unified mode (Linear's "Disable"): no Priority/Other segments —
-            // one list over the whole feed.
-            <Text fontSize={13} style={{ paddingInlineStart: 4 }} type={'secondary'} weight={500}>
-              {t('inbox.all')}
-            </Text>
-          )}
-          <Flexbox horizontal align={'center'} flex={'none'}>
-            <Tooltip title={t('inbox.filterUnread')}>
-              <ActionIcon
-                active={filterChip === 'unread'}
-                icon={EyeIcon}
-                size={'small'}
-                style={{ borderRadius: 9999 }}
-                onClick={() =>
-                  writeInboxParams({ filter: filterChip === 'unread' ? 'all' : 'unread' })
-                }
-              />
-            </Tooltip>
-            <DropdownMenu
-              placement={'bottomRight'}
-              items={INBOX_FILTER_CHIPS.map((chip) => ({
-                icon: chip === filterChip ? <Icon icon={CheckIcon} size={14} /> : undefined,
-                key: chip,
-                label: filterLabel(chip),
-                onClick: () => writeInboxParams({ filter: chip }),
-              }))}
-            >
-              <Tooltip title={t('inbox.addFilter')}>
-                <ActionIcon icon={ListFilterIcon} size={'small'} style={{ borderRadius: 9999 }} />
-              </Tooltip>
-            </DropdownMenu>
-            <DropdownMenu
-              placement={'bottomRight'}
-              items={[
-                {
-                  checked: priorityEnabled,
-                  closeOnClick: false,
-                  key: 'priorityInbox',
-                  label: t('inbox.displayPriorityInbox'),
-                  onCheckedChange: (checked: boolean) =>
-                    setPriorityMode(checked ? 'priority' : 'all'),
-                  type: 'switch',
-                },
-                {
-                  checked: showSnoozed,
-                  closeOnClick: false,
-                  key: 'showSnoozed',
-                  label: t('inbox.displayShowSnoozed'),
-                  onCheckedChange: (checked: boolean) => setShowSnoozed(checked),
-                  type: 'switch',
-                },
-                // Linear's unread-first ordering still has no backend support
-                // here — omitted rather than faked.
-              ]}
-            >
-              <Tooltip title={t('inbox.displayOptions')}>
-                <ActionIcon
-                  icon={SlidersHorizontalIcon}
-                  size={'small'}
-                  style={{ borderRadius: 9999 }}
+      <div className={styles.columnHeader}>
+        <div className="flex min-w-0 items-center gap-2">
+          {createElement(InboxIcon, {
+            'aria-hidden': true,
+            'className': 'size-4 shrink-0 text-muted-foreground',
+          })}
+          <span className="truncate text-sm font-medium">{tCommon('tab.inbox')}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-label={t('inbox.markAllRead')}
+                  disabled={organizeBusy !== null}
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => void markAllRead()}
                 />
-              </Tooltip>
-            </DropdownMenu>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
-      {bannerVisible ? (
-        <div className={styles.banner}>
-          <Text fontSize={12} weight={500}>
-            {t('inbox.priorityBanner.title')}
-          </Text>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <SplitButton size={'small'}>
-              <SplitButton.Main onClick={() => setPriorityMode('priority')}>
-                {t('inbox.priorityBanner.keep')}
-              </SplitButton.Main>
-              <SplitButton.Menu
-                items={[
-                  {
-                    key: 'disable',
-                    label: t('inbox.priorityBanner.disable'),
-                    onClick: () => setPriorityMode('all'),
-                  },
-                ]}
-              />
-            </SplitButton>
-            <Button size={'small'} onClick={() => setPriorityMode('all')}>
-              {t('inbox.priorityBanner.disable')}
-            </Button>
-          </Flexbox>
+              }
+            >
+              {organizeBusy === 'markAll' ? <Spinner /> : <CheckCheckIcon />}
+            </TooltipTrigger>
+            <TooltipContent>{t('inbox.markAllRead')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-label={t('inbox.refresh')}
+                  disabled={organizeBusy !== null}
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => void refreshFeed()}
+                />
+              }
+            >
+              {organizeBusy === 'refresh' ? <Spinner /> : <RefreshCwIcon />}
+            </TooltipTrigger>
+            <TooltipContent>{t('inbox.refresh')}</TooltipContent>
+          </Tooltip>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <DropdownMenuTrigger
+                    render={<Button aria-label={t('inbox.filters')} size="icon" variant="ghost" />}
+                  />
+                }
+              >
+                <ListFilterIcon />
+              </TooltipTrigger>
+              <TooltipContent>{t('inbox.filters')}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              {INBOX_TYPE_FILTERS.map((filter) => (
+                <DropdownMenuCheckboxItem
+                  checked={typeFilters.includes(filter)}
+                  closeOnClick={false}
+                  key={filter}
+                  onCheckedChange={() => toggleTypeFilter(filter)}
+                >
+                  {t(`inbox.filterType.${filter}`)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <DropdownMenuTrigger
+                    render={
+                      <Button aria-label={t('inbox.displayOptions')} size="icon" variant="ghost" />
+                    }
+                  />
+                }
+              >
+                <MoreVerticalIcon />
+              </TooltipTrigger>
+              <TooltipContent>{t('inbox.displayOptions')}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              <DropdownMenuCheckboxItem
+                checked={showUnreadChecked}
+                closeOnClick={false}
+                onCheckedChange={toggleUnread}
+              >
+                {t('inbox.showUnread')}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={displayOption === 'archived'}
+                closeOnClick={false}
+                onCheckedChange={toggleArchived}
+              >
+                {t('inbox.showArchived')}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={displayOption === 'snoozed'}
+                closeOnClick={false}
+                onCheckedChange={toggleSnoozed}
+              >
+                {t('inbox.showSnoozed')}
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <div className={styles.tabsRow} role="tablist">
+        {INBOX_TABS.map((which) => {
+          const count = tabCount(which);
+          return (
+            <button
+              aria-selected={tab === which}
+              className={styles.tab}
+              data-active={tab === which}
+              key={which}
+              role="tab"
+              type="button"
+              onClick={() => writeInboxParams({ tab: which })}
+            >
+              <span className="flex h-full items-center justify-center gap-1">
+                {t(`inbox.tab.${which}`)}
+                {count > 0 ? (
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs leading-none text-muted-foreground">
+                    {count}
+                  </span>
+                ) : null}
+              </span>
+              {tab === which ? <span className={styles.tabUnderline} /> : null}
+            </button>
+          );
+        })}
+      </div>
+      {typeFilters.length > 0 ? (
+        <div className={styles.appliedFilters}>
+          {typeFilters.map((filter) => (
+            <button
+              className={styles.filterPill}
+              key={filter}
+              type="button"
+              onClick={() => toggleTypeFilter(filter)}
+            >
+              {t(`inbox.filterType.${filter}`)}
+              <XIcon aria-hidden className="size-3" />
+            </button>
+          ))}
+          <button
+            className={styles.filterPill}
+            type="button"
+            onClick={() => writeInboxParams({ types: null })}
+          >
+            <XIcon aria-hidden className="size-3" />
+            {t('inbox.clearFilters')}
+          </button>
         </div>
       ) : null}
       {partial ? (
-        <Alert
-          showIcon
-          description={t('inbox.sourceUnavailable')}
-          style={{ margin: 8 }}
-          type="warning"
-        />
+        <div
+          className="m-2 flex items-center gap-2 rounded-lg border border-border bg-muted p-3 text-sm"
+          role="status"
+        >
+          <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
+          <span>{t('inbox.sourceUnavailable')}</span>
+        </div>
       ) : null}
       {error ? (
-        <Alert
-          showIcon
-          description={t('inbox.loadFailed')}
-          style={{ margin: 8 }}
-          type="error"
-          action={
-            <Button size={'small'} type={'text'} onClick={() => void refresh()}>
-              {tCommon('retry')}
-            </Button>
-          }
-        />
+        <div
+          className="m-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
+          <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
+          <span className="flex-1">{t('inbox.loadFailed')}</span>
+          <Button variant="ghost" onClick={() => void refresh()}>
+            {tCommon('retry')}
+          </Button>
+        </div>
       ) : null}
       {listMode === 'loading' ? (
-        <SkeletonList padding={12} rows={8} />
+        <InboxListRowSkeleton />
       ) : error && cards.length === 0 ? (
-        <Center flex={1} padding={24}>
+        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
           <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />
-        </Center>
-      ) : listMode === 'empty' ? (
-        <Center flex={1} padding={48}>
-          <Empty description={t('inbox.empty')} icon={InboxIcon} />
-        </Center>
-      ) : listMode === 'partial-empty' ? (
-        <Center flex={1} padding={48}>
-          <Empty description={t('inbox.empty')} icon={InboxIcon} />
-        </Center>
+        </div>
+      ) : listMode === 'empty' || listMode === 'partial-empty' ? (
+        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 48 }}>
+          <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+            {createElement(InboxIcon, { 'className': 'size-8 shrink-0', 'aria-hidden': true })}
+            <p>
+              {displayOption
+                ? t('inbox.empty')
+                : tab === 'mentions'
+                  ? t('inbox.emptyMentions')
+                  : t('inbox.emptyAll')}
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           {visibleCards.map((card) => (
-            <button
-              aria-current={card.notificationId === selected?.notificationId ? 'true' : undefined}
-              className={styles.row}
-              data-active={card.notificationId === selected?.notificationId}
-              data-inbox-id={card.notificationId}
+            <InboxListRow
+              archivedView={displayOption === 'archived'}
+              card={card}
               key={card.notificationId}
-              type="button"
-              onClick={() => selectCard(card.notificationId, true)}
-            >
-              <Flexbox horizontal align={'center'} gap={10}>
-                {card.actor || card.agent ? (
-                  <span className={styles.avatarSlot}>
-                    <Avatar
-                      avatar={card.actor?.avatar ?? card.agent?.avatar}
-                      background={card.agent?.backgroundColor}
-                      name={card.actor?.name ?? card.agent?.name}
-                      size={32}
-                    />
-                    <span aria-hidden data-inbox-type-badge className={styles.typeBadge}>
-                      <Icon icon={inboxCardIcon(card)} size={10} />
-                    </span>
-                  </span>
-                ) : (
-                  <span className={styles.typeGlyph}>
-                    <Icon icon={inboxCardIcon(card)} size={14} />
-                  </span>
-                )}
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                  <Flexbox horizontal align={'center'} gap={6}>
-                    {card.read ? null : <span className={styles.unreadDot} />}
-                    <Text
-                      ellipsis
-                      className={card.read ? styles.readText : undefined}
-                      fontSize={13}
-                      weight={500}
-                    >
-                      {titleFor(card)}
-                    </Text>
-                  </Flexbox>
-                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                    <Text
-                      className={cx(styles.snippet, card.read && styles.readText)}
-                      fontSize={12}
-                    >
-                      {card.content}
-                    </Text>
-                    <Text
-                      className={cx(styles.time, card.read && styles.readText)}
-                      fontSize={12}
-                      title={dayjs(card.lastActivityAt).format('LLL')}
-                    >
-                      {formatInboxAge(card.lastActivityAt, { locale: i18n.language })}
-                    </Text>
-                  </Flexbox>
-                </Flexbox>
-              </Flexbox>
-            </button>
+              selected={card.notificationId === selected?.notificationId}
+              snoozedView={displayOption === 'snoozed'}
+              onCustomSnooze={openCustomSnooze}
+              onSelect={selectCard}
+              onSnooze={(target, until) => void snoozeCard(target, until)}
+              onToggleArchive={(target) => void toggleArchiveCard(target)}
+              onToggleRead={(target) => void toggleReadCard(target)}
+              onUnsnooze={(target) => void unsnoozeCard(target)}
+            />
           ))}
           {hasMore || loadMoreError ? (
-            <Center padding={12} style={{ flexDirection: 'column', gap: 8 }}>
+            <div
+              className="flex flex-col items-center justify-center"
+              style={{ padding: 12, flexDirection: 'column', gap: 8 }}
+            >
               {loadMoreError ? (
-                <Text fontSize={12} type={'danger'}>
-                  {t('inbox.loadFailed')}
-                </Text>
+                <span className="text-sm text-destructive">{t('inbox.loadFailed')}</span>
               ) : null}
               {hasMore ? (
-                <Button loading={loadingMore} size={'small'} onClick={() => void loadMore()}>
+                <Button disabled={loadingMore} variant="outline" onClick={() => void loadMore()}>
+                  {loadingMore ? <Spinner /> : <></>}
                   {t('inbox.loadMore')}
                 </Button>
               ) : null}
-            </Center>
+            </div>
           ) : null}
         </>
       )}
@@ -1147,114 +1163,144 @@ const WorkInboxPage = memo(() => {
 
   const detailPane = selected ? (
     selectedIssueTaskId ? (
-      // Task-linked card — the pane IS the issue detail (Linear's inbox detail
-      // surface), not a bare notification card. The sticky header carries the
-      // issue identifier plus pin/open/overflow (the reference's `ORV-115` ·
-      // ★ · ⋯ row); the notification's own context and decision row stay above
-      // the shared issue body so the request remains first-class for
-      // approval-type cards. IssueContent mounts directly in the pane's scroll
-      // owner — no nested scroll host, no page chrome.
+      // Task-linked card — the pane IS the issue detail (Plane's peek), not a
+      // bare notification card. The sticky header carries the issue
+      // identifier plus pin/open actions; the notification's own context and
+      // decision row stay above the shared issue body so the request remains
+      // first-class for approval-type cards. IssueContent mounts directly in
+      // the pane's scroll owner — no nested scroll host, no page chrome.
       <>
         <div className={styles.paneHeader}>
           {surface === 'detail' ? (
-            <ActionIcon
-              icon={ChevronLeftIcon}
-              size={'small'}
+            <Button
+              aria-label={tCommon('back')}
+              size="icon"
               title={tCommon('back')}
+              variant="ghost"
               onClick={() => writeInboxParams({ detail: null, item: null })}
-            />
+            >
+              {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
+            </Button>
           ) : null}
-          <Text ellipsis fontSize={13} style={{ minWidth: 0 }} weight={500}>
+          <span className="truncate text-sm font-medium" style={{ minWidth: 0 }}>
             {selectedIssueIdentifier ?? titleFor(selected)}
-          </Text>
-          <Flexbox horizontal align={'center'} flex={1} gap={4} justify={'flex-end'}>
+          </span>
+          <div
+            className="flex flex-row"
+            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
+          >
             <WorkFavoriteButton
               targetId={selectedIssueIdentifier}
               targetType="task"
               variant={'icon'}
             />
             {selectedOpenTarget ? (
-              <ActionIcon
-                icon={ArrowUpRightIcon}
-                size={'small'}
+              <Button
+                aria-label={t('inbox.open')}
+                size="icon"
                 title={t('inbox.open')}
+                variant="ghost"
                 onClick={() => openTarget(selected)}
-              />
+              >
+                {createElement(ArrowUpRightIcon, { className: 'size-4 shrink-0' })}
+              </Button>
             ) : null}
-            {detailMoreItems.length > 0 ? (
-              <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
-                <ActionIcon
-                  icon={MoreHorizontalIcon}
-                  size={'small'}
-                  title={t('inbox.moreActions')}
-                />
-              </DropdownMenu>
-            ) : null}
-          </Flexbox>
+          </div>
         </div>
         <div className={styles.detail}>
-          <Flexbox gap={4}>
-            <Text fontSize={16} weight={600}>
-              {titleFor(selected)}
-            </Text>
-            <Text className={styles.paneMeta} fontSize={12}>
+          <div className="flex flex-col" style={{ gap: 4 }}>
+            <span className="text-base font-semibold">{titleFor(selected)}</span>
+            <span className={cn('text-sm', styles.paneMeta)}>
               {dayjs(selected.lastActivityAt).fromNow()}
               {!selected.read ? ` · ${t('inbox.unread')}` : ''}
-            </Text>
-          </Flexbox>
-          <Text type={'secondary'}>{selected.content}</Text>
+            </span>
+          </div>
+          <span className="text-sm text-muted-foreground">{selected.content}</span>
           <div className={styles.divider} />
           {decisionVerbs.length > 0 ? (
-            <Flexbox gap={8}>
+            <div className="flex flex-col" style={{ gap: 8 }}>
               {decisionVerbs.includes('submit_input') ? (
                 <Input
+                  aria-label={t('inbox.inputPlaceholder')}
                   placeholder={t('inbox.inputPlaceholder')}
                   value={inputDraft}
                   onChange={(event) => setInputDraft(event.target.value)}
                 />
               ) : null}
-              <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+              <div className="flex flex-row" style={{ gap: 8, flexWrap: 'wrap' }}>
                 {decisionVerbs.includes('approve') ? (
                   <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
-                    type="primary"
+                    disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                    variant="default"
                     onClick={() => void decide(selected, 'approve')}
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:approve`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.approve')}
                   </Button>
                 ) : null}
                 {decisionVerbs.includes('decline') ? (
                   <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    variant="outline"
                     onClick={() => void decide(selected, 'decline')}
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:decline`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.decline')}
                   </Button>
                 ) : null}
                 {decisionVerbs.includes('cancel') ? (
                   <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    variant="outline"
                     onClick={() => void decide(selected, 'cancel')}
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:cancel`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.cancel')}
                   </Button>
                 ) : null}
                 {decisionVerbs.includes('submit_input') ? (
                   <Button
-                    disabled={!inputDraft.trim()}
-                    loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
-                    type="primary"
+                    variant="default"
+                    disabled={
+                      pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
+                      !inputDraft.trim()
+                    }
                     onClick={() =>
                       void decide(selected, 'submit_input', { text: inputDraft.trim() })
                     }
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:submit_input`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.submitInput')}
                   </Button>
                 ) : null}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           ) : null}
-          <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
+          <Suspense
+            fallback={
+              <div aria-busy className="flex flex-col gap-2 p-3" role="status">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
+              </div>
+            }
+          >
             <LazyIssueContent taskId={selectedIssueTaskId} />
           </Suspense>
         </div>
@@ -1262,90 +1308,95 @@ const WorkInboxPage = memo(() => {
     ) : (
       <div className={styles.detail}>
         {surface === 'detail' ? (
-          <Flexbox horizontal>
+          <div className="flex flex-row">
             <Button
-              icon={ChevronLeftIcon}
-              size={'small'}
+              variant="outline"
               onClick={() => writeInboxParams({ detail: null, item: null })}
             >
+              {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
               {tCommon('back')}
             </Button>
-          </Flexbox>
+          </div>
         ) : null}
-        <Flexbox gap={4}>
-          <Text fontSize={16} weight={600}>
-            {titleFor(selected)}
-          </Text>
-          <Text className={styles.paneMeta} fontSize={12}>
+        <div className="flex flex-col" style={{ gap: 4 }}>
+          <span className="text-base font-semibold">{titleFor(selected)}</span>
+          <span className={cn('text-sm', styles.paneMeta)}>
             {dayjs(selected.lastActivityAt).fromNow()}
             {!selected.read ? ` · ${t('inbox.unread')}` : ''}
-          </Text>
-        </Flexbox>
-        <Text type={'secondary'}>{selected.content}</Text>
+          </span>
+        </div>
+        <span className="text-sm text-muted-foreground">{selected.content}</span>
         <div className={styles.divider} />
-        <Flexbox gap={8}>
+        <div className="flex flex-col" style={{ gap: 8 }}>
           {decisionVerbs.includes('submit_input') ? (
             <Input
+              aria-label={t('inbox.inputPlaceholder')}
               placeholder={t('inbox.inputPlaceholder')}
               value={inputDraft}
               onChange={(event) => setInputDraft(event.target.value)}
             />
           ) : null}
-          <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+          <div className="flex flex-row" style={{ gap: 8, flexWrap: 'wrap' }}>
             {decisionVerbs.includes('approve') ? (
               <Button
-                loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
-                type="primary"
+                disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                variant="default"
                 onClick={() => void decide(selected, 'approve')}
               >
+                {pendingDecisions.has(`${selected.notificationId}:approve`) ? <Spinner /> : <></>}
                 {t('inbox.approve')}
               </Button>
             ) : null}
             {decisionVerbs.includes('decline') ? (
               <Button
-                loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                variant="outline"
                 onClick={() => void decide(selected, 'decline')}
               >
+                {pendingDecisions.has(`${selected.notificationId}:decline`) ? <Spinner /> : <></>}
                 {t('inbox.decline')}
               </Button>
             ) : null}
             {decisionVerbs.includes('cancel') ? (
               <Button
-                loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                variant="outline"
                 onClick={() => void decide(selected, 'cancel')}
               >
+                {pendingDecisions.has(`${selected.notificationId}:cancel`) ? <Spinner /> : <></>}
                 {t('inbox.cancel')}
               </Button>
             ) : null}
             {decisionVerbs.includes('submit_input') ? (
               <Button
-                disabled={!inputDraft.trim()}
-                loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
-                type="primary"
+                variant="default"
+                disabled={
+                  pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
+                  !inputDraft.trim()
+                }
                 onClick={() => void decide(selected, 'submit_input', { text: inputDraft.trim() })}
               >
+                {pendingDecisions.has(`${selected.notificationId}:submit_input`) ? (
+                  <Spinner />
+                ) : (
+                  <></>
+                )}
                 {t('inbox.submitInput')}
               </Button>
             ) : null}
             {selectedOpenTarget ? (
-              <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
+              <Button variant="outline" onClick={() => openTarget(selected)}>
+                {createElement(ExternalLinkIcon, { className: 'size-4 shrink-0' })}
                 {t('inbox.open')}
               </Button>
             ) : null}
-            {detailMoreItems.length > 0 ? (
-              <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
-                <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
-              </DropdownMenu>
-            ) : null}
-            {decisionVerbs.length === 0 && !selectedOpenTarget && detailMoreItems.length === 0 ? (
+            {decisionVerbs.length === 0 && !selectedOpenTarget ? (
               // Truthful empty state: the card offers no action the client can
               // perform, so no dead controls render.
-              <Text fontSize={12} type={'secondary'}>
-                {t('inbox.noActions')}
-              </Text>
+              <span className="text-sm text-muted-foreground">{t('inbox.noActions')}</span>
             ) : null}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
     )
   ) : deepLink === 'failed' ? (
@@ -1353,76 +1404,60 @@ const WorkInboxPage = memo(() => {
     // honest failure with retry instead of silently dropping the selection.
     <div className={styles.detail}>
       {surface === 'detail' ? (
-        <Flexbox horizontal>
-          <Button
-            icon={ChevronLeftIcon}
-            size={'small'}
-            onClick={() => writeInboxParams({ detail: null, item: null })}
-          >
+        <div className="flex flex-row">
+          <Button variant="outline" onClick={() => writeInboxParams({ detail: null, item: null })}>
+            {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
             {tCommon('back')}
           </Button>
-        </Flexbox>
+        </div>
       ) : null}
-      <Center flex={1} padding={24}>
+      <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
         <AsyncError
           error={fetchCardError}
           retrying={validatingCard}
           variant={'block'}
           onRetry={() => void retryFetchCard()}
         />
-      </Center>
+      </div>
     </div>
   ) : deepLink === 'loading' ? (
     // Deep link still resolving — a skeleton reads truer than "Select an
     // item", and it keeps the pane from flashing a wrong empty state.
     <div className={styles.detail}>
-      <SkeletonList padding={8} rows={6} />
+      <div aria-busy className="flex flex-col gap-2 p-3" role="status">
+        {Array.from({ length: 6 }, (_, index) => (
+          <Skeleton className="h-10 w-full" key={index} />
+        ))}
+      </div>
     </div>
   ) : null;
 
+  // Plane's right-pane empty state: "No notification selected — Select a
+  // notification to view its details."
   const detailPlaceholder = (
-    <Center className={styles.detailPlaceholder} flex={1} padding={48}>
-      <Empty
-        icon={InboxIcon}
-        description={
-          listMode === 'list' && filterChip === 'all' && summary
-            ? t('inbox.unreadCount', {
-                // `unreadBadgeCount` is already the unique badge-worthy total —
-                // correct for both the Priority tab and the unified list.
-                count:
-                  priorityEnabled && tab === 'other'
-                    ? summary.unreadOtherCount
-                    : summary.unreadBadgeCount,
-              })
-            : listMode === 'list'
-              ? t('inbox.loadedCount', { count: visibleCards.length })
-              : t('inbox.selectItem')
-        }
-      />
-    </Center>
+    <div
+      className={cn('flex flex-col items-center justify-center', styles.detailPlaceholder)}
+      style={{ flex: 1, padding: 48 }}
+    >
+      <div className="flex flex-col items-center gap-2 text-center">
+        {createElement(InboxIcon, {
+          'aria-hidden': true,
+          'className': 'size-8 shrink-0 text-muted-foreground',
+        })}
+        <p className="text-sm font-medium">{t('inbox.detailEmptyTitle')}</p>
+        <p className="text-sm text-muted-foreground">{t('inbox.detailEmptyDescription')}</p>
+      </div>
+    </div>
   );
 
   return (
-    <Flexbox flex={1} height="100%">
-      <NavHeader
-        left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {tCommon('tab.inbox')}
-          </Text>
-        }
-        right={
-          <InboxHeaderMenu
-            onDeleteAll={() => void archiveAll()}
-            onMarkAllRead={() => void markAllRead()}
-          />
-        }
-      />
+    <TooltipProvider>
       <div className={styles.stage}>
         <WorkSurfaceSplit
           detail={surface === 'split' ? (detailPane ?? detailPlaceholder) : undefined}
           list={listPane}
           listLabel={tCommon('tab.inbox')}
-          listWidth={400}
+          listWidth={360}
           detailLabel={
             selected
               ? titleFor(selected)
@@ -1430,19 +1465,19 @@ const WorkInboxPage = memo(() => {
                 ? t('inbox.loadFailed')
                 : deepLink === 'loading'
                   ? t('inbox.loading')
-                  : t('inbox.selectItem')
+                  : t('inbox.detailEmptyTitle')
           }
         />
         {surface === 'detail' && detailPane ? (
           <div
-            aria-label={selected ? titleFor(selected) : t('inbox.selectItem')}
+            aria-label={selected ? titleFor(selected) : t('inbox.detailEmptyTitle')}
             className={styles.detailOverlay}
           >
             {detailPane}
           </div>
         ) : null}
       </div>
-    </Flexbox>
+    </TooltipProvider>
   );
 });
 

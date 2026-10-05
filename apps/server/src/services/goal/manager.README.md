@@ -1,11 +1,11 @@
 # CLI main Agent Goals
 
-`lh goal create "Research objective" --agent <agent-id> --requirement "Delivery contract" --max-manager-turns 12 --max-rounds 10`
+`orvilo goal create "Research objective" --agent <agent-id> --requirement "Delivery contract" --max-manager-turns 12 --max-rounds 10`
 
-The main Agent must have a working shell and an authenticated `lh` CLI in its
+The main Agent must have a working shell and an authenticated `orvilo` CLI in its
 execution environment (for example a configured device Kimi/Codex Agent). Its
 normal Agent configuration selects the runtime; dispatch uses the same
-`execAgent` service as `lh agent run`. There is no exclusive supervisor tool set.
+`execAgent` service as `orvilo agent run`. There is no exclusive supervisor tool set.
 Manager mode is explicit: pass `--max-manager-turns` through the CLI or
 `config.manager` through the API after ensuring the Agent has a working CLI.
 The application tool supplies `createdByAgentId`; the CLI inherits
@@ -15,8 +15,8 @@ ordinary unseeded goals keep the coordinator planner. Seed/exploration/legacy
 supervision paths retain their existing planning behavior. Task assignees can
 differ, and changing them does not replace the configured main Agent.
 
-The main Agent reads `lh goal show`, `lh task view`, `lh topic view`, and document
-commands. It submits a JSON file through `lh goal plan <goal-id> --token <turn> --file plan.json`. The runtime supplies `ORVILO_OPERATION_ID`. Plan actions:
+The main Agent reads `orvilo goal show`, `orvilo task view`, `orvilo topic view`, and document
+commands. It submits a JSON file through `orvilo goal plan <goal-id> --token <turn> --file plan.json`. The runtime supplies `ORVILO_OPERATION_ID`. Plan actions:
 
 - `tasks`: reason and 1–10 objects with title/description. All existing work must
   first be settled. The coordinator creates and runs ordinary Tasks.
@@ -129,7 +129,7 @@ shell sandbox. Do not install a broad personal credential in an untrusted runtim
 Legacy `--supervise` Goals retain their existing behavior and cancellation fixes.
 
 Each new planning turn includes up to 20 recent Task comments (2,000 characters
-per comment); the main Agent can read full comments through `lh task view`. A
+per comment); the main Agent can read full comments through `orvilo task view`. A
 comment digest rejects uncommitted plans when feedback changed since dispatch.
 That check is optimistic at read time: concurrent comment writes do not share
 the Goal lock, and feedback arriving after a committed plan does not stop

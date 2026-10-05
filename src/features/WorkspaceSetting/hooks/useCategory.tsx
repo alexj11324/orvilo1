@@ -1,8 +1,8 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
+  Brain,
   Building2,
   ChartColumnBigIcon,
   Coins,
@@ -19,12 +19,14 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
+  Sparkles,
   TagIcon,
   Users,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
@@ -191,6 +193,20 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
         },
         {
           items: [
+            // AI provider config (keys/endpoints) is shared workspace infra —
+            // Admin-or-higher, hidden from members entirely.
+            canManageWorkspace && {
+              icon: Brain,
+              key: WorkspaceSettingsTabs.Provider,
+              label: t('tab.provider'),
+            },
+            // Service-model preferences steer the shared workspace model
+            // policy — Admin-or-higher, hidden from members like Provider.
+            canManageWorkspace && {
+              icon: Sparkles,
+              key: WorkspaceSettingsTabs.ServiceModel,
+              label: t('tab.serviceModel'),
+            },
             // The workspace skill settings page was retired with the platform's
             // skill marketplace; the route survives only as a redirect to this
             // settings root (see `WORKSPACE_SETTINGS_ALIASES`).

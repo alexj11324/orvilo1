@@ -88,7 +88,7 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    const container = screen.getByTestId('action-container');
+    const container = screen.getByTestId('action-group').parentElement!;
     expect(container).toContainElement(screen.getByRole('button', { name: 'Reaction' }));
     const actionGroup = screen.getByTestId('action-group');
     expect(actionGroup).toHaveAttribute('data-variant', 'borderless');

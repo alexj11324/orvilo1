@@ -207,16 +207,128 @@ describe('MCP event durable worker', () => {
       maxAttempts: 1,
       admission: {
         async admit() {
-          return { status: 'waiting', retryable: true, reason: 'runtime-unavailable' };
+          return { status: 'waiting', retryable: true, reason: 'admission-held' };
         },
       } satisfies EventDispatchAdmission,
     });
     await worker.pump();
     now += 3000;
     await worker.pump();
+    expect((await db.query('SELECT status,attempts,last_error FROM mcp_event_inbox')).rows).toEqual(
+      [{ status: 'pending', attempts: 0, last_error: 'admission_held' }],
+    );
+  });
+
+  it('propagates _meta causation fields into the admission request', async () => {
+    const signed = event();
+    signed.event._meta = { causationId: 'cause-7', extra: 'ignored', rootDispatchId: 'root-3' };
+    const untyped = event('untyped');
+    untyped.event._meta = { causationId: 42, rootDispatchId: '' };
+    await inbox.accept(signed);
+    await inbox.accept(untyped);
+    const seen: { causationId?: string; rootDispatchId?: string }[] = [];
+    const worker = new McpEventWorker({
+      inbox,
+      repository,
+      now: () => now,
+      admission: {
+        async admit(request: { causationId?: string; rootDispatchId?: string }) {
+          seen.push({ causationId: request.causationId, rootDispatchId: request.rootDispatchId });
+          return { status: 'accepted', dispatchId: 'dispatch' };
+        },
+      },
+    });
+    expect(await worker.pump()).toEqual({ claimed: 2, completed: 2, retried: 0 });
+    expect(seen).toHaveLength(2);
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        { causationId: 'cause-7', rootDispatchId: 'root-3' },
+        { causationId: undefined, rootDispatchId: undefined },
+      ]),
+    );
+  });
+
+  it('holds a delivery whose lease died mid-admission for the next claim owner', async () => {
+    await inbox.accept(event());
+    const dispatches: string[] = [];
+    const worker = new McpEventWorker({
+      inbox,
+      repository,
+      leaseMs: 10,
+      now: () => now,
+      admission: {
+        async admit() {
+          const dispatchId = `dispatch-${dispatches.length}`;
+          dispatches.push(dispatchId);
+          if (dispatches.length === 1) now += 20; // the claim dies while admission is in flight
+          return { status: 'accepted', dispatchId };
+        },
+      },
+    });
+    // Admission succeeded but settle cannot commit under a dead lease: nothing
+    // is acknowledged and the receipt stays recoverable for the next owner.
+    expect(await worker.pump()).toEqual({ claimed: 1, completed: 0, retried: 0 });
     expect((await db.query('SELECT status,attempts FROM mcp_event_inbox')).rows).toEqual([
-      { status: 'pending', attempts: 0 },
+      { status: 'processing', attempts: 1 },
     ]);
+    expect((await db.query('SELECT status FROM mcp_event_trigger_runs')).rows).toEqual([
+      { status: 'pending' },
+    ]);
+    expect(await worker.pump()).toEqual({ claimed: 1, completed: 1, retried: 0 });
+    expect((await db.query('SELECT status,dispatch_id FROM mcp_event_trigger_runs')).rows).toEqual([
+      { status: 'accepted', dispatch_id: 'dispatch-1' },
+    ]);
+  });
+
+  it('backs off failed admissions exponentially and dead-letters at the attempt ceiling', async () => {
+    await inbox.accept(event());
+    const worker = new McpEventWorker({
+      inbox,
+      repository,
+      now: () => now,
+      maxAttempts: 3,
+      admission: {
+        async admit() {
+          throw new Error('transport disconnected');
+        },
+      },
+    });
+    const inboxRow = async () => {
+      const row = (
+        await db.query<{
+          attempts: number;
+          available_at: number | string;
+          last_error: string | null;
+          status: string;
+        }>('SELECT status,attempts,available_at,last_error FROM mcp_event_inbox')
+      ).rows[0];
+      return { ...row, available_at: Number(row.available_at) };
+    };
+    expect(await worker.pump()).toEqual({ claimed: 1, completed: 0, retried: 1 });
+    expect(await inboxRow()).toMatchObject({
+      status: 'pending',
+      attempts: 1,
+      available_at: now + 2000,
+      last_error: 'admission_interrupted',
+    });
+    // The backoff window gates re-claim — a pump inside it sees no ready rows.
+    expect(await worker.pump()).toEqual({ claimed: 0, completed: 0, retried: 0 });
+    now += 2000;
+    expect(await worker.pump()).toEqual({ claimed: 1, completed: 0, retried: 1 });
+    expect(await inboxRow()).toMatchObject({
+      status: 'pending',
+      attempts: 2,
+      available_at: now + 4000,
+      last_error: 'admission_interrupted',
+    });
+    now += 4000;
+    expect(await worker.pump()).toEqual({ claimed: 1, completed: 0, retried: 1 });
+    expect(await inboxRow()).toMatchObject({
+      status: 'dead',
+      attempts: 3,
+      available_at: now + 8000,
+      last_error: 'admission_interrupted',
+    });
   });
 
   it('retains exhausted transport failures for operator recovery', async () => {

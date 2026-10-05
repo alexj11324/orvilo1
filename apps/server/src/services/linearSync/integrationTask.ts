@@ -284,6 +284,10 @@ export class LinearIntegrationTaskService {
   /** Public-only lookup: private tasks are intentionally indistinguishable from missing tasks. */
   findPublicTask = (taskId: string) => this.taskModel.findById(taskId);
 
+  /** Canonical execution truth — the retired `tasks.status` recomputed from dispatch rows. */
+  isTaskExecutionLive = async (taskId: string) =>
+    (await this.taskModel.derivedStatusByIds([taskId]))[taskId] === 'running';
+
   updatePublicTask = async (
     taskId: string,
     patch: Parameters<TaskModel['update']>[1],
@@ -293,14 +297,21 @@ export class LinearIntegrationTaskService {
     // transfer, not an attribute edit: fence the incumbent's dispatch first,
     // then rewrite — a bare update would produce the "stored owner B /
     // running executor A" split-brain the handoff protocol exists to
-    // prevent (and the model-layer guard would reject it outright). Linear
-    // reassignment uses the park policy: settle + pause, and the
-    // orchestrator decides whether a successor dispatch starts.
+    // prevent (and the model-layer guard would reject it outright). Human-
+    // initiated Linear writes (conflict resolution) use the park policy:
+    // settle + pause, and the orchestrator decides whether a successor
+    // dispatch starts. Inbound sync never reaches this path — the worker
+    // defers live reassignments into a link conflict instead
+    // (deferRunningTaskAssignee).
     if (patch.assigneeAgentId === undefined || mutation.executionTransfer === true) {
       return this.taskModel.update(taskId, patch, mutation);
     }
     const task = await this.taskModel.findById(taskId);
-    if (!task || task.status !== 'running' || patch.assigneeAgentId === task.assigneeAgentId) {
+    if (
+      !task ||
+      !(await this.isTaskExecutionLive(taskId)) ||
+      patch.assigneeAgentId === task.assigneeAgentId
+    ) {
       return this.taskModel.update(taskId, patch, mutation);
     }
     return transferTaskExecutionOwnership({

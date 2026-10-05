@@ -182,9 +182,12 @@ export interface AgentExecutionError {
 /**
  * Dispatch transport an admission was sent over. `agent_run_request` is the
  * device CLI path; `tool_call` is the platform-agent path (`runHeteroTask`
- * for openclaw / hermes); `cloud_sandbox` is the managed sandbox spawn.
+ * for openclaw / hermes); `cloud_sandbox` is the managed sandbox spawn;
+ * `embedded` is the server-hosted canonical runtime (Prime embedded harness)
+ * — no remote execution host exists to address, so `device*` fields stay
+ * empty for it.
  */
-export type RemoteRunChannel = 'agent_run_request' | 'cloud_sandbox' | 'tool_call';
+export type RemoteRunChannel = 'agent_run_request' | 'cloud_sandbox' | 'embedded' | 'tool_call';
 
 /**
  * Durable admission record for a remotely-executed run (P20). Persisted on
@@ -210,6 +213,13 @@ export interface AgentRunAdmissionRecord {
   errorCode?: string;
   /** Run generation/fence minted at admission; a re-admission bumps it. */
   generation: number;
+  /**
+   * Harness adapter the run executes under (`prime`, `codex`, ...). Lets
+   * reconcile sweeps scope to one adapter's runs — a prime device run has
+   * different liveness evidence (activation record, `/cancel`) than an ACP
+   * hetero run on the same channel.
+   */
+  harness?: string;
   /**
    * Admission idempotency key — always the operationId, which is also the
    * task id the device dedupes dispatch/cancel on.

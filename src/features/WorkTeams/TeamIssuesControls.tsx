@@ -1,19 +1,29 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Checkbox, Popover, Select, Switch } from '@lobehub/ui/base-ui';
 import type { WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { FilterIcon, PanelRightCloseIcon, PanelRightOpenIcon, Settings2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
 import WorkQueryFilterBuilder from '@/features/SavedViews/WorkQueryFilterBuilder';
 
 import type {
   TeamIssuesBoardGrouping,
+  TeamIssuesBoardLane,
   TeamIssuesCompletedWindow,
   TeamIssuesDisplay,
   TeamIssuesListGrouping,
@@ -21,9 +31,11 @@ import type {
 } from './teamIssuesDisplay';
 import {
   TEAM_ISSUES_BOARD_GROUPINGS,
+  TEAM_ISSUES_BOARD_LANES,
   TEAM_ISSUES_COMPLETED_WINDOWS,
   TEAM_ISSUES_LIST_GROUPINGS,
   TEAM_ISSUES_ORDERINGS,
+  teamIssuesBoardLane,
 } from './teamIssuesDisplay';
 import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 
@@ -48,12 +60,10 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
-  <Flexbox horizontal align="center" gap={8}>
+  <div className="flex min-h-10 flex-row items-center gap-2">
     <span className={styles.optionLabel}>{label}</span>
-    <Flexbox flex={1} style={{ minWidth: 0 }}>
-      {children}
-    </Flexbox>
-  </Flexbox>
+    <div className="flex flex-col flex-1 min-w-0">{children}</div>
+  </div>
 ));
 
 OptionRow.displayName = 'OptionRow';
@@ -136,89 +146,145 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
       }
     };
 
+    const layoutItems = [
+      { label: t('teams.layoutList'), value: 'list' },
+      { label: t('teams.layoutBoard'), value: 'board' },
+    ];
+    const groupingItems = groupingOptions.map((value) => ({
+      label: groupingLabel(value),
+      value,
+    }));
+    const laneOptions = TEAM_ISSUES_BOARD_LANES.filter(
+      (lane) => lane === 'none' || teamIssuesBoardLane(display.boardGrouping, lane) === lane,
+    );
+    const laneItems = laneOptions.map((value) => ({
+      label: groupingLabel(value),
+      value,
+    }));
+    const orderingItems = TEAM_ISSUES_ORDERINGS.map((value) => ({
+      label:
+        value === 'default' ? t('savedViews.sortDefault') : t(`myWork.ordering.${value}` as never),
+      value,
+    }));
+    const completedItems = TEAM_ISSUES_COMPLETED_WINDOWS.map((value) => ({
+      label: t(`myWork.completed.${value}` as never),
+      value,
+    }));
+
     return (
-      <Flexbox horizontal align="center" gap={6} style={{ flex: 'none' }}>
-        <Popover
-          placement="bottomRight"
-          trigger="click"
-          content={
-            <Flexbox className={styles.controlPopover} gap={12}>
-              <Flexbox gap={8}>
+      <div className="flex flex-row items-center shrink-0" style={{ gap: 6 }}>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                aria-label={t('myWork.addFilter')}
+                aria-pressed={activeFilterCount > 0 || noProject || cycleId !== ALL_TEAM_CYCLES}
+                size="icon"
+                title={t('myWork.addFilter')}
+                variant={
+                  activeFilterCount > 0 || noProject || cycleId !== ALL_TEAM_CYCLES
+                    ? 'secondary'
+                    : 'ghost'
+                }
+              >
+                <FilterIcon aria-hidden className="size-4" />
+              </Button>
+            }
+          />
+          <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+            <div className={cn('flex flex-col gap-3', styles.controlPopover)}>
+              <div className="flex flex-col gap-2">
                 {cycleOptions.length > 1 ? (
                   <OptionRow label={t('teams.cycle')}>
                     <Select
-                      aria-label={t('teams.cycle')}
-                      options={cycleOptions}
-                      size="small"
-                      style={{ minWidth: 160 }}
+                      items={cycleOptions}
                       value={cycleId}
-                      onChange={(next) => {
+                      onValueChange={(next) => {
                         if (typeof next === 'string') onCycleChange(next);
                       }}
-                    />
+                    >
+                      <SelectTrigger aria-label={t('teams.cycle')} style={{ minWidth: 160 }}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cycleOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </OptionRow>
                 ) : null}
-                <Checkbox checked={noProject} onChange={onNoProjectChange}>
+                <label className="flex min-h-10 items-center gap-3 ps-3">
+                  <Checkbox checked={noProject} onCheckedChange={onNoProjectChange} />
                   {t('teams.noProject')}
-                </Checkbox>
-              </Flexbox>
+                </label>
+              </div>
               <WorkQueryFilterBuilder
                 entityType={'task'}
                 value={builder}
                 onChange={onBuilderChange}
               />
               {activeFilterCount > 0 ? (
-                <Flexbox horizontal justify="flex-end">
-                  <Button size="small" type="text" onClick={onResetFilters}>
+                <div className="flex flex-row justify-end">
+                  <Button variant="ghost" onClick={onResetFilters}>
                     {t('myWork.filtersReset')}
                   </Button>
-                </Flexbox>
+                </div>
               ) : null}
-            </Flexbox>
-          }
-        >
-          <ActionIcon
-            active={activeFilterCount > 0 || noProject || cycleId !== ALL_TEAM_CYCLES}
-            aria-label={t('myWork.addFilter')}
-            icon={FilterIcon}
-            size="small"
-            title={t('myWork.addFilter')}
-          />
+            </div>
+          </PopoverContent>
         </Popover>
-        <Popover
-          placement="bottomRight"
-          trigger="click"
-          content={
-            <Flexbox className={styles.controlPopover} gap={12}>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                aria-label={t('savedViews.displayOptions')}
+                size="icon"
+                title={t('savedViews.displayOptions')}
+                variant="ghost"
+              >
+                <Settings2Icon aria-hidden className="size-4" />
+              </Button>
+            }
+          />
+          <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+            <div className={cn('flex flex-col gap-3', styles.controlPopover)}>
               <OptionRow label={t('myWork.displayLayout')}>
                 <Select
-                  size="small"
-                  style={{ minWidth: 140 }}
+                  items={layoutItems}
                   value={layout}
-                  options={[
-                    { label: t('teams.layoutList'), value: 'list' },
-                    { label: t('teams.layoutBoard'), value: 'board' },
-                  ]}
-                  onChange={(next) => {
+                  onValueChange={(next) => {
                     if (next === 'board' || next === 'list') onLayoutChange(next);
                   }}
-                />
+                >
+                  <SelectTrigger aria-label={t('myWork.displayLayout')} style={{ minWidth: 140 }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {layoutItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </OptionRow>
               <OptionRow label={t('savedViews.grouping')}>
                 <Select
-                  size="small"
-                  style={{ minWidth: 150 }}
+                  items={groupingItems}
                   value={layout === 'board' ? display.boardGrouping : display.grouping}
-                  options={groupingOptions.map((value) => ({
-                    label: groupingLabel(value),
-                    value,
-                  }))}
-                  onChange={(next) => {
+                  onValueChange={(next) => {
                     if (layout === 'board') {
                       if (
                         (TEAM_ISSUES_BOARD_GROUPINGS as readonly string[]).includes(next as string)
                       ) {
-                        onDisplayChange({ boardGrouping: next as TeamIssuesBoardGrouping });
+                        const boardGrouping = next as TeamIssuesBoardGrouping;
+                        onDisplayChange({
+                          boardGrouping,
+                          boardLane: teamIssuesBoardLane(boardGrouping, display.boardLane),
+                        });
                       }
                     } else if (
                       (TEAM_ISSUES_LIST_GROUPINGS as readonly string[]).includes(next as string)
@@ -226,66 +292,110 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                       onDisplayChange({ grouping: next as TeamIssuesListGrouping });
                     }
                   }}
-                />
+                >
+                  <SelectTrigger aria-label={t('savedViews.grouping')} style={{ minWidth: 150 }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupingItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </OptionRow>
+              {layout === 'board' ? (
+                <OptionRow label={t('myWork.subGrouping')}>
+                  <Select
+                    items={laneItems}
+                    value={teamIssuesBoardLane(display.boardGrouping, display.boardLane)}
+                    onValueChange={(next) => {
+                      if ((TEAM_ISSUES_BOARD_LANES as readonly string[]).includes(next as string)) {
+                        onDisplayChange({ boardLane: next as TeamIssuesBoardLane });
+                      }
+                    }}
+                  >
+                    <SelectTrigger aria-label={t('myWork.subGrouping')} style={{ minWidth: 150 }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {laneItems.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </OptionRow>
+              ) : null}
               <OptionRow label={t('savedViews.ordering')}>
                 <Select
-                  size="small"
-                  style={{ minWidth: 170 }}
+                  items={orderingItems}
                   value={display.ordering}
-                  options={TEAM_ISSUES_ORDERINGS.map((value) => ({
-                    label:
-                      value === 'default'
-                        ? t('savedViews.sortDefault')
-                        : t(`myWork.ordering.${value}` as never),
-                    value,
-                  }))}
-                  onChange={(next) => {
+                  onValueChange={(next) => {
                     if ((TEAM_ISSUES_ORDERINGS as readonly string[]).includes(next as string)) {
                       onDisplayChange({ ordering: next as TeamIssuesOrdering });
                     }
                   }}
-                />
+                >
+                  <SelectTrigger aria-label={t('savedViews.ordering')} style={{ minWidth: 170 }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orderingItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </OptionRow>
               <OptionRow label={t('myWork.completedIssues')}>
                 <Select
-                  size="small"
-                  style={{ minWidth: 140 }}
+                  items={completedItems}
                   value={display.completed}
-                  options={TEAM_ISSUES_COMPLETED_WINDOWS.map((value) => ({
-                    label: t(`myWork.completed.${value}` as never),
-                    value,
-                  }))}
-                  onChange={(next) => {
+                  onValueChange={(next) => {
                     if (
                       (TEAM_ISSUES_COMPLETED_WINDOWS as readonly string[]).includes(next as string)
                     ) {
                       onDisplayChange({ completed: next as TeamIssuesCompletedWindow });
                     }
                   }}
-                />
+                >
+                  <SelectTrigger aria-label={t('myWork.completedIssues')} style={{ minWidth: 140 }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {completedItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </OptionRow>
               <OptionRow label={t('myWork.showSubIssues')}>
                 <Switch
+                  aria-label={t('myWork.showSubIssues')}
                   checked={display.showSubIssues}
-                  size="small"
-                  onChange={(checked) => onDisplayChange({ showSubIssues: checked })}
+                  onCheckedChange={(checked) => onDisplayChange({ showSubIssues: checked })}
                 />
               </OptionRow>
               <OptionRow label={t('myWork.nestedSubIssues')}>
                 <Switch
+                  aria-label={t('myWork.nestedSubIssues')}
                   checked={display.nestedSubIssues}
                   disabled={!display.showSubIssues}
-                  size="small"
-                  onChange={(checked) => onDisplayChange({ nestedSubIssues: checked })}
+                  onCheckedChange={(checked) => onDisplayChange({ nestedSubIssues: checked })}
                 />
               </OptionRow>
               {layout === 'board' ? (
                 <OptionRow label={t('teams.showEmptyColumns')}>
                   <Switch
+                    aria-label={t('teams.showEmptyColumns')}
                     checked={display.showEmptyColumns}
-                    size="small"
-                    onChange={(checked) => onDisplayChange({ showEmptyColumns: checked })}
+                    onCheckedChange={(checked) => onDisplayChange({ showEmptyColumns: checked })}
                   />
                 </OptionRow>
               ) : null}
@@ -294,36 +404,34 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
               <span className={styles.sectionLabel}>{t('savedViews.displayProperties')}</span>
               <OptionRow label={t('savedViews.fields.projectId')}>
                 <Switch
+                  aria-label={t('savedViews.fields.projectId')}
                   checked={display.projectChip}
-                  size="small"
-                  onChange={(checked) => onDisplayChange({ projectChip: checked })}
+                  onCheckedChange={(checked) => onDisplayChange({ projectChip: checked })}
                 />
               </OptionRow>
-              <Flexbox horizontal justify="flex-end">
-                <Button size="small" type="text" onClick={onResetDisplay}>
+              <div className="flex flex-row justify-end">
+                <Button variant="ghost" onClick={onResetDisplay}>
                   {t('myWork.filtersReset')}
                 </Button>
-              </Flexbox>
-            </Flexbox>
-          }
-        >
-          <ActionIcon
-            aria-label={t('savedViews.displayOptions')}
-            icon={Settings2Icon}
-            size="small"
-            title={t('savedViews.displayOptions')}
-          />
+              </div>
+            </div>
+          </PopoverContent>
         </Popover>
-        <ActionIcon
+        <Button
           aria-expanded={detailsExpanded}
           aria-label={t(detailsOpen ? 'myWork.closeDetails' : 'myWork.openDetails')}
           disabled={detailsDisabled}
-          icon={detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon}
-          size="small"
+          size="icon"
           title={t(detailsOpen ? 'myWork.closeDetails' : 'myWork.openDetails')}
+          variant="ghost"
           onClick={onToggleDetails}
-        />
-      </Flexbox>
+        >
+          {createElement(detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon, {
+            'aria-hidden': true,
+            'className': 'size-4',
+          })}
+        </Button>
+      </div>
     );
   },
 );

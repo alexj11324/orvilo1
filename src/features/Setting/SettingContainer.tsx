@@ -1,47 +1,58 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { cssVar, useTheme } from 'antd-style';
-import { type PropsWithChildren, type ReactNode } from 'react';
+import { type HTMLAttributes, type PropsWithChildren, type ReactNode, type Ref } from 'react';
 import { memo } from 'react';
 
-interface SettingContainerProps extends FlexboxProps {
+interface SettingContainerProps extends HTMLAttributes<HTMLDivElement> {
   addonAfter?: ReactNode;
   addonBefore?: ReactNode;
   maxWidth?: number | string;
+  paddingBlock?: string | number;
+  paddingInline?: string | number;
+  ref?: Ref<HTMLDivElement>;
   variant?: 'default' | 'secondary';
 }
 const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
-  ({ variant, maxWidth = 1024, children, addonAfter, addonBefore, style, ...rest }) => {
+  ({
+    variant,
+    maxWidth = 1024,
+    children,
+    addonAfter,
+    addonBefore,
+    paddingBlock,
+    paddingInline,
+    style,
+    ref,
+    ...rest
+  }) => {
     const theme = useTheme(); // Keep for colorBgContainerSecondary (not in cssVar)
     return (
-      <Flexbox
-        align={'center'}
-        height={'100%'}
-        width={'100%'}
+      <div
+        className="flex flex-col items-center h-full w-full"
+        {...rest}
+        ref={ref}
         style={{
           background:
             variant === 'secondary' ? theme.colorBgContainerSecondary : cssVar.colorBgContainer,
           overflowX: 'hidden',
           overflowY: 'auto',
+          paddingBlock,
+          paddingInline,
           ...style,
         }}
-        {...rest}
       >
         {addonBefore}
-        <Flexbox
-          flex={1}
-          gap={36}
-          width={'100%'}
+        <div
+          className="flex flex-col flex-1 gap-[36px] w-full"
           style={{
             maxWidth,
           }}
         >
           {children}
-        </Flexbox>
+        </div>
         {addonAfter}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,10 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronRightIcon, FoldVerticalIcon, UnfoldVerticalIcon } from 'lucide-react';
 import { type KeyboardEvent, memo, type MouseEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   // Sticky group header — appears once per repo (parent + each dirty submodule)

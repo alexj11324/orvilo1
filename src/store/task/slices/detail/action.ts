@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type {
   TaskDetailActivityAuthor,
   TaskDetailData,
@@ -11,6 +10,7 @@ import type {
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { isTaskListKey, isWorkQueryTaskRowsKey, taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
@@ -48,6 +48,8 @@ export interface TaskUpdatePayload {
   assigneeUserId?: string | null;
   beforeId?: string | null;
   description?: string;
+  /** `YYYY-MM-DD` calendar date or `null` to clear. */
+  dueDate?: string | null;
   editorData?: unknown;
   /**
    * Optimistic-concurrency CAS — the server requires it whenever assignee
@@ -741,7 +743,9 @@ export class TaskDetailSliceActionImpl {
       // 15s below, including a teammate adding the very first prerequisite.
       return (
         hasInFlightActivity(detail) ||
-        detail?.dependencies?.some((dep) => dep.type === 'blocks') === true
+        detail?.dependencies?.some(
+          (dep) => dep.type === 'blocks' && dep.direction !== 'blocking',
+        ) === true
       );
     });
 

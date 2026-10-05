@@ -167,7 +167,7 @@ describe('overlayLiveTitles', () => {
   it('replaces a stored title when the live map has that resource', () => {
     const cards = overlayLiveTitles(
       [toFeedCard(row({ title: 'Old name' }))],
-      new Map([['task:t1', 'Live name']]),
+      new Map([['task:t1', { title: 'Live name' }]]),
     );
     expect(cards[0]?.title).toBe('Live name');
   });

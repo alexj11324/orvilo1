@@ -9,20 +9,23 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>{children}</SWRConfig>
 );
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));
 
-vi.mock('@orvilo/const', () => ({
-  isDesktop: true,
-}));
-
-vi.mock('@/services/electron/openInApp', () => ({
-  electronOpenInAppService: {
+const hostPort = vi.hoisted(() => ({
+  ensureLocalDeviceId: vi.fn(),
+  shell: {
     detectApps: vi.fn(),
     openInApp: vi.fn(),
   },
+}));
+
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => hostPort,
+  hasHostCapability: () => true,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -94,19 +97,18 @@ describe('resolveDefaultApp', () => {
 describe('useOpenInApp', () => {
   const importModules = async () => {
     const hookMod = await import('./useOpenInApp');
-    const svc = await import('@/services/electron/openInApp');
-    const { toast } = await import('@lobehub/ui/base-ui');
+    const { toast } = await import('@/components/toast');
     return {
-      service: svc.electronOpenInAppService,
+      shell: hostPort.shell,
       toast,
       useOpenInApp: hookMod.useOpenInApp,
     };
   };
 
   it('returns ready=false and empty installedApps while detection pending', async () => {
-    const { service, useOpenInApp } = await importModules();
+    const { shell, useOpenInApp } = await importModules();
     // Never-resolving promise to simulate "in flight".
-    (service.detectApps as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useOpenInApp('/tmp/proj'), { wrapper });
 
@@ -115,8 +117,8 @@ describe('useOpenInApp', () => {
   });
 
   it('filters out apps with installed=false', async () => {
-    const { service, useOpenInApp } = await importModules();
-    (service.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const { shell, useOpenInApp } = await importModules();
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
       apps: [
         { displayName: 'Finder', id: 'finder', installed: true },
         { displayName: 'VS Code', id: 'vscode', installed: true },
@@ -132,14 +134,18 @@ describe('useOpenInApp', () => {
 
   it('persists user preference when launching a non-default app succeeds', async () => {
     mockUserDefault = 'finder';
-    const { service, useOpenInApp } = await importModules();
-    (service.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const { shell, useOpenInApp } = await importModules();
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
       apps: [
         { displayName: 'Finder', id: 'finder', installed: true },
         { displayName: 'VS Code', id: 'vscode', installed: true },
       ],
     });
-    (service.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+    hostPort.ensureLocalDeviceId.mockResolvedValue('device-local-1');
+    (shell.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: 'ok',
+      value: { success: true },
+    });
 
     const { result } = renderHook(() => useOpenInApp('/tmp/proj'), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -148,20 +154,24 @@ describe('useOpenInApp', () => {
       await result.current.launch('vscode');
     });
 
-    expect(service.openInApp).toHaveBeenCalledWith({
+    expect(shell.openInApp).toHaveBeenCalledWith({
       appId: 'vscode',
-      path: '/tmp/proj',
+      resource: { deviceId: 'device-local-1', path: '/tmp/proj' },
     });
     expect(updatePreferenceMock).toHaveBeenCalledWith({ defaultOpenInApp: 'vscode' });
   });
 
   it('does not update preference when launching the current default succeeds', async () => {
     mockUserDefault = 'vscode';
-    const { service, useOpenInApp } = await importModules();
-    (service.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const { shell, useOpenInApp } = await importModules();
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
       apps: [{ displayName: 'VS Code', id: 'vscode', installed: true }],
     });
-    (service.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+    hostPort.ensureLocalDeviceId.mockResolvedValue('device-local-1');
+    (shell.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: 'ok',
+      value: { success: true },
+    });
 
     const { result } = renderHook(() => useOpenInApp('/tmp/proj'), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -174,13 +184,14 @@ describe('useOpenInApp', () => {
   });
 
   it('surfaces a pathNotFound toast when main reports Path not found', async () => {
-    const { service, toast, useOpenInApp } = await importModules();
-    (service.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const { shell, toast, useOpenInApp } = await importModules();
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
       apps: [{ displayName: 'VS Code', id: 'vscode', installed: true }],
     });
-    (service.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
-      error: 'Path not found: /tmp/proj',
-      success: false,
+    hostPort.ensureLocalDeviceId.mockResolvedValue('device-local-1');
+    (shell.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: 'ok',
+      value: { error: 'Path not found: /tmp/proj', success: false },
     });
 
     const { result } = renderHook(() => useOpenInApp('/tmp/proj'), { wrapper });
@@ -195,15 +206,16 @@ describe('useOpenInApp', () => {
   });
 
   it('surfaces an appNotInstalled toast when main reports X is not installed', async () => {
-    const { service, toast, useOpenInApp } = await importModules();
-    (service.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const { shell, toast, useOpenInApp } = await importModules();
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
       apps: [{ displayName: 'VS Code', id: 'vscode', installed: true }],
     });
+    hostPort.ensureLocalDeviceId.mockResolvedValue('device-local-1');
     // Match the actual main-process controller contract: `${appId} is not installed`
     // (see apps/desktop/src/main/controllers/OpenInAppCtr.ts).
-    (service.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
-      error: 'vscode is not installed',
-      success: false,
+    (shell.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: 'ok',
+      value: { error: 'vscode is not installed', success: false },
     });
 
     const { result } = renderHook(() => useOpenInApp('/tmp/proj'), { wrapper });
@@ -218,13 +230,14 @@ describe('useOpenInApp', () => {
   });
 
   it('surfaces a generic launchFailed toast for unknown errors', async () => {
-    const { service, toast, useOpenInApp } = await importModules();
-    (service.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const { shell, toast, useOpenInApp } = await importModules();
+    (shell.detectApps as ReturnType<typeof vi.fn>).mockResolvedValue({
       apps: [{ displayName: 'VS Code', id: 'vscode', installed: true }],
     });
-    (service.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
-      error: 'spawn ENOENT',
-      success: false,
+    hostPort.ensureLocalDeviceId.mockResolvedValue('device-local-1');
+    (shell.openInApp as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: 'ok',
+      value: { error: 'spawn ENOENT', success: false },
     });
 
     const { result } = renderHook(() => useOpenInApp('/tmp/proj'), { wrapper });

@@ -62,7 +62,7 @@ export class InterventionController {
    * execAgent (replacement path)
    *   -> {@link AiAgentService.interruptTask}
    *     -> deviceGateway.executeToolCall(cancelHeteroTask)
-   *       -> HeterogeneousAgentCtr.cancelLhHeteroExec
+   *       -> HeterogeneousAgentCtr.cancelOrviloHeteroExec
    *
    * Use when:
    * - A user stops an agent runtime by thread or operation id.

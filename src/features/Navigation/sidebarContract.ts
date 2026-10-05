@@ -17,6 +17,7 @@ export const FIXED_PRIMARY_KEYS = [
   'my-work',
   'reviews',
   'agent',
+  'group',
   'drafts',
   'create',
   'workspace',

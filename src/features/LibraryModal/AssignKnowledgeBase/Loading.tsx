@@ -1,11 +1,14 @@
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Loading = () => {
   return (
-    <Flexbox>
-      <Skeleton.Text rows={8} />
-    </Flexbox>
+    <div className="flex flex-col">
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Skeleton key={index} style={{ width: index === 7 ? '60%' : '100%' }} />
+        ))}
+      </div>
+    </div>
   );
 };
 

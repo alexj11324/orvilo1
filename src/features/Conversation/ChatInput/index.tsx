@@ -1,10 +1,9 @@
 'use client';
-
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Flexbox, type MenuProps } from '@lobehub/ui';
-import { Alert } from '@lobehub/ui/base-ui';
 import { type VoiceMessageRecording } from '@orvilo/types';
+import debug from 'debug';
+import { Info, X } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +12,12 @@ import {
   getBusinessChatInputSendAreaPrefix,
   useBusinessChatInputAlerts,
 } from '@/business/client/hooks/useBusinessChatInputSendAreaPrefix';
+import ActionIcon from '@/components/ActionIcon';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
+import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
+import { conversationDraftKey } from '@/features/ChatInput/draftStorage';
 import {
   type SendButtonHandler,
   type SendButtonProps,
@@ -53,6 +56,7 @@ import { canSendVoiceMessage, useCanSendVoiceMessage } from './voiceMessageCapab
 
 /** Max recent messages to feed into auto-complete context (≈10 conversation turns) */
 const MAX_CONTEXT_MESSAGES = 25;
+const log = debug('orvilo-client:conversation-input');
 
 export interface ChatInputProps {
   /**
@@ -153,7 +157,7 @@ export interface ChatInputProps {
   /**
    * Send menu configuration (for send options like Enter/Cmd+Enter, Add AI/User message)
    */
-  sendMenu?: MenuProps;
+  sendMenu?: ActionDropdownMenu;
   /**
    * Whether to show the control bar (Local/Cloud/Auto Approve)
    */
@@ -203,6 +207,14 @@ const ChatInput = memo<ChatInputProps>(
     const dbMessages = useConversationStore(dataSelectors.dbMessages);
     const context = useConversationStore((s) => s.context);
     const contextKey = useMemo(() => messageMapKey(context), [context]);
+    // Drafts belong to the conversation: an existing topic's draft keys on
+    // its topicId so an agent handoff (Continue with {agent}) never strands
+    // the typed text under the previous agent's bucket. The blank composer
+    // keys on the workspace so an agent pick there keeps the text too.
+    const draftKey = useMemo(
+      () => conversationDraftKey(context, contextKey),
+      [context, contextKey],
+    );
     const canRecordVoiceMessage = useCanSendVoiceMessage(context);
     const [agentId, inputMessage, sendMessage, stopGenerating] = useConversationStore((s) => [
       s.context.agentId,
@@ -345,7 +357,7 @@ const ChatInput = memo<ChatInputProps>(
 
     // Send handler - gets message, clears editor immediately, then sends
     const handleSend: SendButtonHandler = useCallback(
-      async ({ clearContent, getMarkdownContent, getEditorData }) => {
+      async ({ clearContent, getMarkdownContent, getEditorData, restoreDraft }) => {
         // Host surface is read-only (e.g. page locked) — block Enter too, not
         // just the grayed-out button.
         if (disableSend) return;
@@ -396,17 +408,25 @@ const ChatInput = memo<ChatInputProps>(
         const { contextSelections, pageSelections } =
           buildMessageContextSelections(currentContextList);
 
-        // Fire and forget - send with captured message
-        await sendMessage({
-          contextSelections,
-          editorData,
-          files: currentFileList,
-          message,
-          onPreflightFailure: () => {
-            useFileStore.getState().restoreChatContextSelections(contextKey, currentContextList);
-          },
-          pageSelections,
-        });
+        let accepted = false;
+        try {
+          await sendMessage({
+            contextSelections,
+            editorData,
+            files: currentFileList,
+            message,
+            onMessageAccepted: () => {
+              accepted = true;
+            },
+            onPreflightFailure: restoreDraft,
+            pageSelections,
+          });
+        } catch (error) {
+          // Access/mention preflights can throw before their failure callback.
+          // A persisted turn owns its attachments and must never be replayed.
+          if (!accepted) restoreDraft();
+          log('Message send failed before acceptance=%s: %O', !accepted, error);
+        }
       },
       [contextKey, sendMessage, storeApi, disableQueue, disableSend, isInputQueueBlocked],
     );
@@ -453,18 +473,26 @@ const ChatInput = memo<ChatInputProps>(
             unmounting would wipe the Lexical editor's in-memory document. */}
         <div style={{ display: hasPendingInterventions ? 'none' : 'contents' }}>
           {sendMessageErrorMsg && (
-            <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
-              <Alert
-                closable
-                title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
-                type={'secondary'}
-                onClose={clearSendMessageError}
-              />
-            </Flexbox>
+            <div className="flex flex-col px-3" style={{ paddingBlock: '0 6px' }}>
+              <Alert variant="default">
+                <Info />
+                <AlertTitle>{t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}</AlertTitle>
+                <AlertAction>
+                  <ActionIcon
+                    icon={X}
+                    size={'small'}
+                    title={t('close', { ns: 'common' })}
+                    onClick={() => {
+                      clearSendMessageError?.();
+                    }}
+                  />
+                </AlertAction>
+              </Alert>
+            </div>
           )}
           {businessAlerts}
-          <Flexbox
-            paddingInline={12}
+          <div
+            className="flex flex-col px-3"
             ref={overlayRef}
             style={{
               bottom: '100%',
@@ -481,7 +509,7 @@ const ChatInput = memo<ChatInputProps>(
             <GoalTray
               topAttached={(!disableQueue && hasQueuedMessages) || hasTodos || hasOpStatus}
             />
-          </Flexbox>
+          </div>
           {/* Append the armed-goal chip to every composer's action bar. While armed,
               the next message becomes the goal and the placeholder explains that state. */}
           <DesktopChatInput
@@ -516,7 +544,7 @@ const ChatInput = memo<ChatInputProps>(
         canRecordVoiceMessage={canRecordVoiceMessage}
         contextSelectionKey={contextKey}
         contextWindowMessages={contextWindowMessages}
-        draftKey={contextKey}
+        draftKey={draftKey}
         feature={feature}
         getMessages={getMessages}
         leftActions={leftActions}

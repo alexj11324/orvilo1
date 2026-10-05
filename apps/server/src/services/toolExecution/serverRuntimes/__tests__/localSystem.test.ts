@@ -494,10 +494,10 @@ describe('localSystemRuntime', () => {
     });
   });
 
-  // A device shell runs the user's own `lh` against their stored credentials,
+  // A device shell runs the user's own `orvilo` against their stored credentials,
   // which default to PERSONAL scope — so a workspace agent asking the CLI to
   // edit itself silently read and wrote the wrong tenancy.
-  describe('lh workspace scope on device commands', () => {
+  describe('orvilo workspace scope on device commands', () => {
     const parseArgs = () => JSON.parse(mockExecuteToolCall.mock.calls[0][1].arguments);
 
     const buildProxy = (context: Partial<ToolExecutionContext>) => {
@@ -510,23 +510,23 @@ describe('localSystemRuntime', () => {
       });
     };
 
-    it('injects the workspace scope into lh commands', async () => {
+    it('injects the workspace scope into orvilo commands', async () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
-      await proxy[LocalSystemApiName.runCommand]({ command: 'lh agent edit agt_1 -t x' });
+      await proxy[LocalSystemApiName.runCommand]({ command: 'orvilo agent edit agt_1 -t x' });
 
       expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-42' });
     });
 
     it('never sends the caller JWT to the device', async () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
-      await proxy[LocalSystemApiName.runCommand]({ command: 'lh agent list' });
+      await proxy[LocalSystemApiName.runCommand]({ command: 'orvilo agent list' });
 
       expect(parseArgs().env).not.toHaveProperty('ORVILO_JWT');
     });
 
     it('keeps the scope on a personal-scope device, which is addressed personally but still edits workspace content', async () => {
       const proxy = buildProxy({ activeDeviceScope: 'personal', workspaceId: 'ws-42' });
-      await proxy[LocalSystemApiName.runCommand]({ command: 'lh agent edit agt_1 -t x' });
+      await proxy[LocalSystemApiName.runCommand]({ command: 'orvilo agent edit agt_1 -t x' });
 
       // Gateway addressing drops the workspace (no `workspace:<id>` connection
       // for this device) — the CONTENT scope must not follow it down.
@@ -534,17 +534,17 @@ describe('localSystemRuntime', () => {
       expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-42' });
     });
 
-    // Regression: injection used to be gated on detecting `lh` in command
-    // position, so a command that reaches `lh` through a child shell, a script
+    // Regression: injection used to be gated on detecting `orvilo` in command
+    // position, so a command that reaches `orvilo` through a child shell, a script
     // or a Makefile got no scope and silently used the device credentials'
     // personal tenancy. The device merges env into the spawned process, so
     // every descendant inherits it — which is the only way to cover these.
     it.each([
-      ['child shell', "bash -lc 'lh whoami'"],
+      ['child shell', "bash -lc 'orvilo whoami'"],
       ['shell script', './sync.sh'],
       ['makefile target', 'make deploy'],
       ['npm script', 'npm run sync'],
-    ])('scopes a workspace run invoking lh via a %s', async (_label, command) => {
+    ])('scopes a workspace run invoking orvilo via a %s', async (_label, command) => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({ command });
 
@@ -553,15 +553,15 @@ describe('localSystemRuntime', () => {
 
     it('does not inject in a personal run', async () => {
       const proxy = buildProxy({});
-      await proxy[LocalSystemApiName.runCommand]({ command: 'lh agent list' });
+      await proxy[LocalSystemApiName.runCommand]({ command: 'orvilo agent list' });
 
-      expect(parseArgs()).toEqual({ command: 'lh agent list' });
+      expect(parseArgs()).toEqual({ command: 'orvilo agent list' });
     });
 
     it('lets a model-supplied env win', async () => {
       const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({
-        command: 'lh agent list',
+        command: 'orvilo agent list',
         env: { ORVILO_WORKSPACE_ID: 'ws-explicit' },
       });
 

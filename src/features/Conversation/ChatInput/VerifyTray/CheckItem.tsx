@@ -1,11 +1,13 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight, CircleDashed, PencilIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { openCheckEditModal } from './EditModal';
 import type { TrayCheck } from './types';
@@ -58,51 +60,53 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <Flexbox className={styles.row} gap={8}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.head}
-        gap={8}
-        justify={'space-between'}
+    <div className={cn('flex flex-col gap-2', styles.row)}>
+      <div
+        className={cn('flex items-center gap-2 justify-between', styles.head)}
         onClick={() => setOpen(!open)}
       >
-        <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
+        <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
           {/* Draft item has no verdict yet — a neutral glyph, not a false pass/fail. */}
-          <Icon color={cssVar.colorTextQuaternary} icon={CircleDashed} size={14} />
-          <Text ellipsis fontSize={13}>
-            {check.name}
-          </Text>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={4} style={{ flexShrink: 0 }}>
-          <Tooltip title={t('acceptance.tray.editModal.editTitle')}>
-            <ActionIcon
-              className={cx('verify-tray-row-edit', styles.rowEdit)}
-              icon={PencilIcon}
-              size={'small'}
-              onClick={(e) => {
-                e.stopPropagation();
-                openCheckEditModal({ initial: check, onRemove, onSubmit: onUpdate });
-              }}
-            />
-          </Tooltip>
-          <Icon
-            color={cssVar.colorTextQuaternary}
-            icon={open ? ChevronDown : ChevronRight}
-            size={14}
-          />
-        </Flexbox>
-      </Flexbox>
+          <CircleDashed color={cssVar.colorTextQuaternary} size={14} />
+          <div className="truncate text-sm">{check.name}</div>
+        </div>
+        <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <ActionIcon
+                      className={cx('verify-tray-row-edit', styles.rowEdit)}
+                      icon={PencilIcon}
+                      size={'small'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCheckEditModal({ initial: check, onRemove, onSubmit: onUpdate });
+                      }}
+                    />
+                  </span>
+                }
+              />
+              <TooltipContent>{t('acceptance.tray.editModal.editTitle')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {createElement(open ? ChevronDown : ChevronRight, {
+            color: cssVar.colorTextQuaternary,
+            size: 14,
+          })}
+        </div>
+      </div>
 
       {open && (
-        <Flexbox className={styles.detail} gap={5}>
-          <Text className={styles.secLabel}>{t('acceptance.tray.section.method')}</Text>
-          <Text className={styles.method} fontSize={12}>
+        <div className={cn('flex flex-col', styles.detail)} style={{ gap: 5 }}>
+          <div className={styles.secLabel}>{t('acceptance.tray.section.method')}</div>
+          <div className={cn('text-[12px]', styles.method)}>
             {check.method || t('acceptance.tray.section.methodEmpty')}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

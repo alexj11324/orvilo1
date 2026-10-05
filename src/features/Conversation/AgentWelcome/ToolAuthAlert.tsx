@@ -1,15 +1,19 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Alert, Avatar, Button, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import {
   ConnectorConnectionMarketAuthRequiredError,
@@ -220,26 +224,22 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
     if (typeof tool.icon === 'string') {
       return <Avatar alt={tool.label} avatar={tool.icon} size={20} style={{ flex: 'none' }} />;
     }
-    return <Icon fill={cssVar.colorText} icon={tool.icon} size={20} />;
+    return <tool.icon fill={cssVar.colorText} size={20} />;
   };
 
   const isLoading = isConnecting || isWaitingAuth;
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      className={cx(styles.row)}
-      gap={12}
-      justify="space-between"
+    <div
+      className={cn('flex items-center gap-3 justify-between', cx(styles.row))}
       style={{
         cursor: 'pointer',
       }}
       onClick={handleAuthorize}
     >
-      <Flexbox horizontal align="center" gap={8}>
+      <div className="flex items-center gap-2">
         {renderIcon()}
-        <Text>{tool.label}</Text>
+        <div>{tool.label}</div>
         <ActionIcon
           className={cx('tool-auth-remove', styles.removeIcon)}
           icon={XIcon}
@@ -250,18 +250,18 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
             handleRemove();
           }}
         />
-      </Flexbox>
+      </div>
       <Button
         disabled={isLoading}
-        icon={PlusIcon}
         loading={isLoading}
-        size="small"
-        type="text"
+        size="sm"
+        variant="ghost"
         onClick={handleAuthorize}
       >
+        <PlusIcon data-icon="inline-start" />{' '}
         {isLoading ? t('toolAuth.authorizing') : t('toolAuth.authorize')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -309,22 +309,18 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
     typeof tool.icon === 'string' ? (
       <Avatar alt={tool.label} avatar={tool.icon} size={20} style={{ flex: 'none' }} />
     ) : (
-      <Icon fill={cssVar.colorText} icon={tool.icon} size={20} />
+      <tool.icon fill={cssVar.colorText} size={20} />
     );
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      className={cx(styles.row)}
-      gap={12}
-      justify="space-between"
+    <div
+      className={cn('flex items-center gap-3 justify-between', cx(styles.row))}
       style={{ cursor: 'pointer' }}
       onClick={handleAuthorize}
     >
-      <Flexbox horizontal align="center" gap={8}>
+      <div className="flex items-center gap-2">
         {icon}
-        <Text>{tool.label}</Text>
+        <div>{tool.label}</div>
         <ActionIcon
           className={cx('tool-auth-remove', styles.removeIcon)}
           icon={XIcon}
@@ -335,21 +331,21 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
             void handleRemove();
           }}
         />
-      </Flexbox>
+      </div>
       <Button
         disabled={isConnecting}
-        icon={PlusIcon}
         loading={isConnecting}
-        size="small"
-        type="text"
+        size="sm"
+        variant="ghost"
         onClick={(event) => {
           event.stopPropagation();
           void handleAuthorize();
         }}
       >
+        <PlusIcon data-icon="inline-start" />{' '}
         {isConnecting ? t('toolAuth.authorizing') : t('toolAuth.authorize')}
       </Button>
-    </Flexbox>
+    </div>
   );
 };
 
@@ -379,20 +375,16 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
   };
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      className={cx(styles.row)}
-      gap={12}
-      justify="space-between"
+    <div
+      className={cn('flex items-center gap-3 justify-between', cx(styles.row))}
       style={{
         cursor: 'pointer',
       }}
       onClick={handleSignIn}
     >
-      <Flexbox horizontal align="center" gap={8}>
+      <div className="flex items-center gap-2">
         <Avatar alt={tool.label} avatar={tool.avatar} size={20} style={{ flex: 'none' }} />
-        <Text>{tool.label}</Text>
+        <div>{tool.label}</div>
         <ActionIcon
           className={cx('tool-auth-remove', styles.removeIcon)}
           icon={XIcon}
@@ -403,18 +395,18 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
             handleRemove();
           }}
         />
-      </Flexbox>
+      </div>
       <Button
         disabled={isLoading}
-        icon={PlusIcon}
         loading={isLoading}
-        size="small"
-        type="text"
+        size="sm"
+        variant="ghost"
         onClick={handleSignIn}
       >
+        <PlusIcon data-icon="inline-start" />{' '}
         {isLoading ? t('toolAuth.authorizing') : t('toolAuth.signIn')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -471,41 +463,41 @@ const ToolAuthAlert = memo(() => {
   }
 
   return (
-    <Alert
-      showIcon={false}
-      style={{ background: 'transparent', width: '100%' }}
-      type="secondary"
-      description={
-        <>
-          {t('toolAuth.hint')}
-          <Divider dashed style={{ marginBlock: 12 }} />
-          <Flexbox gap={12} style={{ marginTop: 8 }}>
-            {pendingAuthTools.map((tool) => {
-              if (tool.authType === 'composio') {
-                return (
-                  <ComposioToolAuthItem
-                    key={tool.identifier}
-                    tool={tool}
-                    onAuthComplete={() => {
-                      // Component will re-render and tool will be removed from list
-                    }}
-                  />
-                );
-              }
-              if (tool.authType === 'orvilo') {
-                return <OrviloToolAuthItem key={tool.id} tool={tool} />;
-              }
-              return <MarketToolAuthItem key={tool.identifier} tool={tool} />;
-            })}
-          </Flexbox>
-        </>
-      }
-      title={
-        <Flexbox horizontal align="center" gap={6}>
-          {t('toolAuth.title')}
-        </Flexbox>
-      }
-    />
+    <Alert style={{ background: 'transparent', width: '100%' }} variant="default">
+      <AlertTitle>
+        <div className="flex items-center gap-1.5">{t('toolAuth.title')}</div>
+      </AlertTitle>
+      <AlertDescription>
+        {
+          <>
+            {t('toolAuth.hint')}
+            <Separator
+              className={'bg-transparent border-t border-dashed'}
+              style={{ marginBlock: 12 }}
+            />
+            <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
+              {pendingAuthTools.map((tool) => {
+                if (tool.authType === 'composio') {
+                  return (
+                    <ComposioToolAuthItem
+                      key={tool.identifier}
+                      tool={tool}
+                      onAuthComplete={() => {
+                        // Component will re-render and tool will be removed from list
+                      }}
+                    />
+                  );
+                }
+                if (tool.authType === 'orvilo') {
+                  return <OrviloToolAuthItem key={tool.id} tool={tool} />;
+                }
+                return <MarketToolAuthItem key={tool.identifier} tool={tool} />;
+              })}
+            </div>
+          </>
+        }
+      </AlertDescription>
+    </Alert>
   );
 });
 

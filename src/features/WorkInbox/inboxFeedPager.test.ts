@@ -60,8 +60,8 @@ describe('appendInboxFeedPage', () => {
 });
 
 describe('InboxFeedPager', () => {
-  const scopeA = inboxFeedScopeKey({ kind: 'priority', userId: 'u1', workspaceId: 'ws1' });
-  const scopeB = inboxFeedScopeKey({ kind: 'priority', userId: 'u1', workspaceId: 'ws2' });
+  const scopeA = inboxFeedScopeKey({ userId: 'u1', workspaceId: 'ws1' });
+  const scopeB = inboxFeedScopeKey({ userId: 'u1', workspaceId: 'ws2' });
 
   it('commits a fetched tail page for the current scope', async () => {
     const pager = new InboxFeedPager();

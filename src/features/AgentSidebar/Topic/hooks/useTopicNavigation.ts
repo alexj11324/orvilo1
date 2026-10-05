@@ -1,8 +1,9 @@
-import { AGENT_CHAT_TOPIC_URL, AGENT_CHAT_URL } from '@orvilo/const';
+import { CHAT_NEW_URL, CHAT_TOPIC_URL } from '@orvilo/const';
 import { useCallback, useMemo } from 'react';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useFocusTopicPopup } from '@/features/TopicPopupGuard/useTopicPopupsRegistry';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
@@ -62,32 +63,17 @@ export const useTopicNavigation = () => {
         await focusTopicPopup(topicId);
       }
 
-      // If in agent sub-route, navigate back to agent chat first
-      if (isInAgentSubRoute() && routeAgentId) {
-        const basePath = topicId
-          ? AGENT_CHAT_TOPIC_URL(routeAgentId, topicId)
-          : AGENT_CHAT_URL(routeAgentId);
-        const targetPath = buildPrefixedAgentRoutePath(basePath, agentRoute, activeWorkspaceSlug);
-
-        // Include topicId in URL when navigating from sub-route
-        router.push(targetPath);
-        toggleConfig(false);
-        return;
-      }
-
+      // The conversation is the navigation unit: `/chat/:topicId` resolves
+      // the topic's owner agent on the route, so a row never needs the
+      // owner's id — and the workspace feed can mix topics from many agents.
+      // No topic id means the blank composer (`/chat/new`).
+      const basePath = topicId ? CHAT_TOPIC_URL(topicId) : CHAT_NEW_URL;
+      const awarePath = buildWorkspaceAwarePath(basePath, activeWorkspaceSlug);
+      router.push(buildPrefixedAgentRoutePath(awarePath, agentRoute, activeWorkspaceSlug));
       switchTopic(topicId);
       toggleConfig(false);
     },
-    [
-      activeWorkspaceSlug,
-      agentRoute,
-      focusTopicPopup,
-      isInAgentSubRoute,
-      routeAgentId,
-      router,
-      switchTopic,
-      toggleConfig,
-    ],
+    [activeWorkspaceSlug, agentRoute, focusTopicPopup, router, switchTopic, toggleConfig],
   );
 
   return {

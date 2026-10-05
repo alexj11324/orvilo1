@@ -1,0 +1,1 @@
+ALTER TABLE "task_dispatches" ADD COLUMN IF NOT EXISTS "recovery_attempts" integer DEFAULT 0 NOT NULL;

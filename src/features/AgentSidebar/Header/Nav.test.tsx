@@ -1,11 +1,12 @@
 /**
  * @vitest-environment happy-dom
  */
-import { toast } from '@lobehub/ui/base-ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { toast } from '@/components/toast';
 
 import Nav from './Nav';
 
@@ -14,7 +15,7 @@ vi.mock('react', async (importOriginal) => {
   return { ...actual, memo: (component: unknown) => component };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
+vi.mock('@/components/toast', async (importOriginal) => {
   const actual = await importOriginal<{ toast: Record<string, unknown> }>();
   return { ...actual, toast: { ...actual.toast, error: vi.fn() } };
 });
@@ -268,20 +269,6 @@ describe('Agent sidebar header nav', () => {
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
-  it.each([['/agent/agt_eH4zL98zBx5u/profile'], ['/agent/agt_eH4zL98zBx5u/statistics']])(
-    'keeps the profile entry active on %s',
-    (pathname) => {
-      usePathnameMock.mockReturnValue(pathname);
-
-      render(<Nav />);
-
-      expect(screen.getByRole('button', { name: 'tab.profile' })).toHaveAttribute(
-        'data-active',
-        'true',
-      );
-    },
-  );
-
   it('navigates to the agent goals page', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
@@ -290,6 +277,14 @@ describe('Agent sidebar header nav', () => {
 
     expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
     expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/goals');
+  });
+
+  it('opens workspace tasks from a new conversation without an agent route parameter', () => {
+    useParamsMock.mockReturnValue({});
+    usePathnameMock.mockReturnValue('/chat/new');
+    render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'tab.tasks' }));
+    expect(pushMock).toHaveBeenCalledWith('/tasks');
   });
 
   it('navigates to the agent tasks page', () => {
@@ -345,13 +340,14 @@ describe('Agent sidebar header nav', () => {
     expect(screen.getByRole('button', { name: 'title' })).toHaveAttribute('data-active', 'true');
   });
 
-  it('orders profile, goals, self-learning, and tasks in the agent navigation', () => {
+  // The profile entry was dropped from this nav on 2026-10-03: the sidebar is a
+  // flat list of destinations, with no trailing "about this agent" row.
+  it('orders self-learning, goals, and tasks in the agent navigation', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
     render(<Nav />);
 
     const labels = screen.getAllByRole('button').map((button) => button.textContent);
-    expect(labels.indexOf('tab.profile')).toBeLessThan(labels.indexOf('title'));
     expect(labels.indexOf('title')).toBeLessThan(labels.indexOf('goalList.title'));
     expect(labels.indexOf('goalList.title')).toBeLessThan(labels.indexOf('tab.tasks'));
   });

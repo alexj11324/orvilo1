@@ -1,8 +1,6 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { Block, Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Select, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { Minimize2, Paperclip, X } from 'lucide-react';
@@ -10,6 +8,11 @@ import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } fr
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { useModalContext } from '@/components/Modal';
+import Select from '@/components/Select';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import {
   getAttachmentFileIdsFromEditor,
@@ -37,6 +40,8 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 
 export interface CreateTaskContentProps {
   agentId?: string;
+  /** Member preset from a board column or swimlane. `null` stays unassigned. */
+  assigneeUserId?: string | null;
   /**
    * Continue-editing an issue draft (Drafts page → Edit draft): hydrates
    * title/body/properties once and binds autosave to the draft's id, so edits
@@ -49,6 +54,8 @@ export interface CreateTaskContentProps {
    */
   lockAssignee?: boolean;
   onCreated?: (task: { agentId?: string; identifier: string; name?: string }) => void;
+  /** Priority preset from a board column. `0` is "no priority". */
+  priority?: number;
   projectId?: string;
   /**
    * Whether to show the "minimize to inline entry" button. Only the list view has an
@@ -74,8 +81,10 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
   ({
     agentId,
     draft,
+    assigneeUserId: assigneeUserIdPreset,
     lockAssignee,
     onCreated,
+    priority: priorityPreset = 0,
     projectId,
     showInlineToggle = true,
     status,
@@ -94,9 +103,11 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     const activeWorkspaceId = useActiveWorkspaceId();
 
     const [title, setTitle] = useState('');
-    const [priority, setPriority] = useState(0);
+    const [priority, setPriority] = useState(priorityPreset);
     const [assigneeAgentId, setAssigneeAgentId] = useState<string | undefined>(agentId);
-    const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>();
+    const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>(
+      assigneeUserIdPreset ?? undefined,
+    );
     // Default to workspace-visible: workspace tasks are team work by default,
     // and going private stays one click away. In personal mode the field is
     // irrelevant and the chip is hidden anyway.
@@ -302,9 +313,9 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     }, []);
 
     return (
-      <Flexbox onKeyDown={handleKeyDown}>
-        <Flexbox horizontal style={{ padding: '16px 24px 0' }}>
-          <Flexbox flex={1} style={{ minHeight: 180 }}>
+      <div className="flex flex-col" onKeyDown={handleKeyDown}>
+        <div className="flex" style={{ padding: '16px 24px 0' }}>
+          <div className="flex flex-1 flex-col" style={{ minHeight: 180 }}>
             <input
               autoFocus={canCreateTask}
               disabled={!canCreateTask}
@@ -332,8 +343,8 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               style={{ fontSize: 14, paddingBottom: 16 }}
               onContentChange={handleContentChange}
             />
-          </Flexbox>
-          <Flexbox horizontal gap={4} style={{ flexShrink: 0 }}>
+          </div>
+          <div className="flex gap-1" style={{ flexShrink: 0 }}>
             {showInlineToggle && (
               <ActionIcon
                 icon={Minimize2}
@@ -341,36 +352,26 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 onClick={handleInline}
               />
             )}
-            <ActionIcon icon={X} onClick={close} />
-          </Flexbox>
-        </Flexbox>
+            <ActionIcon icon={X} title={t('close', { ns: 'common' })} onClick={close} />
+          </div>
+        </div>
 
-        <Flexbox
-          horizontal
-          align={'center'}
-          justify={'space-between'}
+        <div
+          className="flex items-center justify-between"
           style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, padding: '8px 16px' }}
         >
-          <Flexbox horizontal gap={2} wrap={'wrap'}>
+          <div className="flex flex-wrap gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <Block
-                clickable
-                horizontal
-                align="center"
-                gap={6}
-                paddingBlock={4}
-                paddingInline={8}
-                variant={'borderless'}
-              >
+              <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <Text fontSize={12}>
+                <div className="text-[12px]">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
                         `taskDetail.priority.${(['', 'urgent', 'high', 'normal', 'low'] as const)[priority]}` as never,
                       )}
-                </Text>
-              </Block>
+                </div>
+              </div>
             </TaskPriorityTag>
 
             {activeWorkspaceId && (
@@ -379,73 +380,50 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 taskVisibility={visibility}
                 onChange={handleMemberChange}
               >
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  gap={6}
-                  paddingBlock={4}
-                  paddingInline={8}
-                  variant={'borderless'}
-                >
+                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <Text fontSize={12}>{memberMeta?.title}</Text>
+                      <div className="text-[12px]">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <Text color={cssVar.colorTextDescription} fontSize={12}>
+                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.member')}
-                      </Text>
+                      </div>
                     </>
                   )}
-                </Block>
+                </div>
               </AssigneeMemberSelector>
             )}
 
             {lockAssignee ? (
-              <Block
-                horizontal
-                align="center"
-                gap={6}
-                paddingBlock={4}
-                paddingInline={8}
-                variant={'borderless'}
-              >
+              <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <Text fontSize={12}>{assigneeMeta?.title}</Text>
-              </Block>
+                <div className="text-[12px]">{assigneeMeta?.title}</div>
+              </div>
             ) : (
               <AssigneeAgentSelector
                 currentAgentId={assigneeAgentId}
                 taskVisibility={isOtherMemberAssignee ? 'public' : undefined}
                 onChange={handleAgentChange}
               >
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  gap={6}
-                  paddingBlock={4}
-                  paddingInline={8}
-                  variant={'borderless'}
-                >
+                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <Text fontSize={12}>{assigneeMeta?.title}</Text>
+                      <div className="text-[12px]">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <Text color={cssVar.colorTextDescription} fontSize={12}>
+                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.assignee')}
-                      </Text>
+                      </div>
                     </>
                   )}
-                </Block>
+                </div>
               </AssigneeAgentSelector>
             )}
 
@@ -486,21 +464,21 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               title={t('upload.action.tooltip')}
               onClick={handleAttach}
             />
-          </Flexbox>
+          </div>
 
           <Button
+            className="rounded-full"
             disabled={!canCreateTask || isCreating}
             loading={isCreating}
-            shape={'round'}
-            size={'small'}
+            size="sm"
             title={canCreateTask ? undefined : reason}
-            type={'primary'}
+            variant="default"
             onClick={handleSubmit}
           >
             {t('createTask.submit')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

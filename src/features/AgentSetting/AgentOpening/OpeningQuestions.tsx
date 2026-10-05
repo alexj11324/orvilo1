@@ -1,12 +1,16 @@
 'use client';
 
-import { Empty, Flexbox, Input, SortableList } from '@lobehub/ui';
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { MessageCircle, PlusIcon, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useMergeState from 'use-merge-value';
+
+import ActionIcon from '@/components/ActionIcon';
+import { Sortable, SortableItem, SortableItemHandle } from '@/components/reui/sortable';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
 
 import { useStore } from '../store';
 import { selectors } from '../store/selectors';
@@ -95,41 +99,48 @@ const OpeningQuestions = memo(() => {
   const isRepeat = openingQuestions.includes(questionInput.trim());
 
   return (
-    <Flexbox gap={8} width={'100%'}>
-      <Flexbox gap={4} width={'100%'}>
-        <Flexbox horizontal align={'center'} gap={8} width={'100%'}>
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex flex-col gap-1 w-full">
+        <div className="flex items-center gap-2 w-full">
           <Input
             disabled={disabled}
             placeholder={t('settingOpening.openingQuestions.placeholder')}
             style={{ flex: 1 }}
             value={questionInput}
             onChange={(e) => setQuestionInput(e.target.value)}
-            onPressEnter={addQuestion}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') addQuestion();
+            }}
           />
           <Button
             // don't allow repeat
             disabled={disabled || openingQuestions.includes(questionInput.trim())}
-            icon={PlusIcon}
+            size={'icon'}
             onClick={addQuestion}
-          />
-        </Flexbox>
+          >
+            <PlusIcon />
+          </Button>
+        </div>
 
         {isRepeat && (
           <p className={styles.repeatError}>{t('settingOpening.openingQuestions.repeat')}</p>
         )}
-      </Flexbox>
+      </div>
 
       <div className={styles.questionsList}>
         {openingQuestions.length > 0 ? (
-          <SortableList
-            items={items}
-            renderItem={(item: QuestionItem) => (
-              <SortableList.Item
+          <Sortable
+            getItemValue={(item: QuestionItem) => String(item.id)}
+            value={items}
+            onValueChange={handleSortEnd}
+          >
+            {items.map((item: QuestionItem) => (
+              <SortableItem
                 className={styles.questionItemContainer}
-                id={item.id}
-                variant={'filled'}
+                key={item.id}
+                value={String(item.id)}
               >
-                {!disabled && <SortableList.DragHandle />}
+                {!disabled && <SortableItemHandle />}
                 <div className={styles.questionItemContent}>{item.content}</div>
                 <ActionIcon
                   disabled={disabled}
@@ -137,21 +148,21 @@ const OpeningQuestions = memo(() => {
                   size={'small'}
                   onClick={() => removeQuestion(item.content)}
                 />
-              </SortableList.Item>
-            )}
-            onChange={handleSortEnd}
-          />
+              </SortableItem>
+            ))}
+          </Sortable>
         ) : (
-          <Empty
-            className={styles.empty}
-            description={t('settingOpening.openingQuestions.empty')}
-            descriptionProps={{ fontSize: 14 }}
-            icon={MessageCircle}
-            style={{ maxWidth: 400 }}
-          />
+          <Empty className={styles.empty} style={{ maxWidth: 400 }}>
+            <EmptyHeader>
+              <EmptyMedia variant={'icon'}>
+                <MessageCircle />
+              </EmptyMedia>
+              <EmptyDescription>{t('settingOpening.openingQuestions.empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

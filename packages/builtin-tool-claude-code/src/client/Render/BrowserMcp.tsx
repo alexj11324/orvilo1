@@ -1,11 +1,12 @@
 'use client';
 
-import { Block, Flexbox, Highlighter, Image, PreviewGroup } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRender, BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import {
   BROWSER_MCP_TOOL_NAMES,
@@ -55,10 +56,10 @@ const PageRow = memo<{ content?: string }>(({ content }) => {
   if (!content) return null;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.row} gap={6}>
+    <div className={cx('flex flex-row items-center gap-1.5', styles.row)}>
       <Globe size={14} />
-      <Text ellipsis>{content}</Text>
-    </Flexbox>
+      <div className="truncate block">{content}</div>
+    </div>
   );
 });
 
@@ -84,16 +85,16 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
 
   return (
     <PreviewGroup>
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {images.map((image, index) => (
-          <Block
-            key={image.fileId || image.url || index}
+          <div
             // The border frames the capture, so it has to sit on the image's edge:
             // any padding reads as a mat around the screenshot rather than a frame.
             // `display: flex` also kills the inline-image baseline gap, which would
             // otherwise leave a sliver of background under the picture.
+            className="rounded-lg border"
+            key={image.fileId || image.url || index}
             style={{ alignSelf: 'flex-start', display: 'flex', overflow: 'hidden', padding: 0 }}
-            variant={'outlined'}
           >
             {/* A full-page capture of the sidebar browser is tall (e.g. 720×1620), so
                 bound the height and let the user click through to the preview for the
@@ -105,9 +106,9 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
               src={image.url}
               style={{ maxWidth: '100%' }}
             />
-          </Block>
+          </div>
         ))}
-      </Flexbox>
+      </div>
     </PreviewGroup>
   );
 });
@@ -123,15 +124,13 @@ const PageDump = memo<BrowserMcpRenderProps>(({ content }) => {
   if (!content) return null;
 
   return (
-    <Highlighter
+    <CodeBlock
       wrap
+      code={content}
       language={'text'}
-      showLanguage={false}
       style={{ maxHeight: 240, overflow: 'auto' }}
-      variant={'borderless'}
-    >
-      {content}
-    </Highlighter>
+      variant={'ghost'}
+    />
   );
 });
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type MouseEvent, type ReactNode, useCallback } from 'react';
 
 import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';
@@ -130,8 +130,8 @@ const MessageSelectionWrapper = memo<MessageSelectionWrapperProps>(({ children, 
   const inner = (
     <>
       <div className={styles.checkbox}>{selectable && <SelectCircle checked={isSelected} />}</div>
-      <Flexbox align={'center'} flex={1} style={{ minWidth: 0 }}>
-        <Flexbox className={styles.lane} width={laneWidth}>
+      <div className="flex flex-col items-center flex-1" style={{ minWidth: 0 }}>
+        <div className={cn('flex flex-col', styles.lane)} style={{ width: laneWidth }}>
           <div
             className={cx(
               styles.content,
@@ -141,28 +141,22 @@ const MessageSelectionWrapper = memo<MessageSelectionWrapperProps>(({ children, 
           >
             {children}
           </div>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </>
   );
 
   if (!selectable) {
-    return (
-      <Flexbox horizontal align={'center'} className={styles.disabledBand}>
-        {inner}
-      </Flexbox>
-    );
+    return <div className={cn('flex items-center', styles.disabledBand)}>{inner}</div>;
   }
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.band, isSelected && styles.bandSelected)}
+    <div
+      className={cn('flex items-center', cx(styles.band, isSelected && styles.bandSelected))}
       onClick={handleToggle}
     >
       {inner}
-    </Flexbox>
+    </div>
   );
 });
 

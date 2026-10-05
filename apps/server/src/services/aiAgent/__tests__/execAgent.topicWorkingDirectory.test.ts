@@ -217,6 +217,11 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
   spawnHeteroSandbox: mockSpawnHeteroSandbox,
 }));
 
+vi.mock('@/server/services/providerBinding/execution', () => ({
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/server/services/deviceGateway/dispatchAuthorization', () => ({
   resolveDeviceDispatchAuthorizationFailure: vi.fn().mockResolvedValue(undefined),
 }));
@@ -258,7 +263,9 @@ const SOURCE_PATH = '/repo/orvilo';
 const WORKTREE_PATH = '/repo/orvilo/.worktrees/feat';
 
 const createAgentConfig = (agencyConfig: Record<string, any>) => ({
-  agencyConfig,
+  // External-agent binding — the builtin orvilo agent's harness is fixed to
+  // Prime; device routing is exercised on the external claude-code adapter.
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' }, ...agencyConfig },
   chatConfig: {},
   id: 'agent-1',
   model: 'gpt-4',

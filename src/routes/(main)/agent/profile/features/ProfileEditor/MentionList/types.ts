@@ -1,4 +1,4 @@
-import { type DropdownItem } from '@lobehub/ui';
+import { type ISlashMenuOption } from '@lobehub/editor';
 import { type API } from '@orvilo/prompts';
 
 export type MentionEntityType = 'collection' | 'api';
@@ -14,7 +14,7 @@ export interface MentionMetadata {
   type?: MentionEntityType;
 }
 
-type MentionMenuItem = Extract<DropdownItem, { type?: 'item' }>;
+type MentionMenuItem = Omit<ISlashMenuOption, 'description' | 'metadata'>;
 
 export type MentionListOption = MentionMenuItem & {
   description?: string;

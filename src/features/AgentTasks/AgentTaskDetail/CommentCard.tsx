@@ -1,13 +1,22 @@
 import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
-import { Block, type DropdownItem, DropdownMenu, Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, confirmModal, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import { mentionFilledClassName } from '@/features/ChatInput/InputEditor/mentionStyle';
 import { EditorCanvas } from '@/features/EditorCanvas';
@@ -110,17 +119,17 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
     });
   }, [commentId, deleteComment, t]);
 
-  const menuItems = useMemo<DropdownItem[]>(
+  const menuItems = useMemo(
     () => [
       {
-        icon: <Icon icon={Pencil} />,
+        icon: Pencil,
         key: 'edit',
         label: t('taskDetail.comment.edit'),
         onClick: handleEdit,
       },
       {
         danger: true,
-        icon: <Icon icon={Trash} />,
+        icon: Trash,
         key: 'delete',
         label: t('taskDetail.comment.delete'),
         onClick: handleDelete,
@@ -130,15 +139,15 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   );
 
   return (
-    <Block
-      className={styles.commentCard}
-      gap={8}
-      paddingBlock={12}
-      paddingInline={8}
-      style={{ borderRadius: cssVar.borderRadiusLG }}
-      variant={'outlined'}
+    <div
+      className={`relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-3 ${styles.commentCard}`}
+      style={{
+        borderColor: cssVar.colorBorderSecondary,
+        borderRadius: cssVar.borderRadiusLG,
+        background: cssVar.colorBgContainer,
+      }}
     >
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex items-center gap-2">
         {activity.author?.avatar ? (
           <Avatar avatar={activity.author.avatar} size={24} />
         ) : (
@@ -146,15 +155,15 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
             <MessageCircle size={12} />
           </div>
         )}
-        <Text weight={500}>
+        <div className="font-medium">
           {activity.author?.name || t('taskDetail.activities.fallback.comment')}
-        </Text>
+        </div>
         {relTime && (
-          <Text fontSize={12} title={relTimeTitle} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground" title={relTimeTitle}>
             {relTime}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
       {isEditing && (
         <>
@@ -168,17 +177,17 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
               style={{ paddingBottom: 4 }}
             />
           </div>
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+          <div className="flex items-center justify-between gap-2">
             <AttachmentUploadButton onFiles={handleAttach} />
-            <Flexbox horizontal gap={8}>
-              <Button disabled={submitting} size={'small'} onClick={handleCancel}>
+            <div className="flex gap-2">
+              <Button disabled={submitting} size="sm" onClick={handleCancel}>
                 {t('taskDetail.comment.cancel')}
               </Button>
-              <Button loading={submitting} size={'small'} type={'primary'} onClick={handleSave}>
+              <Button loading={submitting} size="sm" variant="default" onClick={handleSave}>
                 {t('taskDetail.comment.save')}
               </Button>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </>
       )}
       {!isEditing && Boolean(activity.editorData) && (
@@ -197,12 +206,24 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
       {!isEditing && commentId && !isOptimisticActivityId(commentId) && (
         <div className={`${styles.commentActions} comment-actions`}>
-          <DropdownMenu items={menuItems}>
-            <ActionIcon icon={MoreHorizontal} size={'small'} />
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+            <DropdownMenuContent align={'end'} className="min-w-40">
+              {menuItems.map((item) => (
+                <DropdownMenuItem
+                  key={item.key}
+                  variant={item.danger ? 'destructive' : 'default'}
+                  onClick={item.onClick}
+                >
+                  <item.icon size={16} />
+                  <span className="flex-1">{item.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
           </DropdownMenu>
         </div>
       )}
-    </Block>
+    </div>
   );
 });
 

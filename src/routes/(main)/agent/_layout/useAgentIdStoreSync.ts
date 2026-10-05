@@ -32,6 +32,9 @@ export const useAgentIdStoreSync = ({
     if (previousAgentId === undefined || previousAgentId === activeId) return;
 
     useChatStore.getState().clearPortalStack();
+    // A blank-composer agent pick is scoped to the room it was made in —
+    // entering another agent's room must not inherit it.
+    useChatStore.setState({ composerAgentId: undefined }, false, 'AgentIdSync/clearComposerAgent');
     if (!topicFromPath && !topicFromQuery) {
       useChatStore.getState().switchTopic(null, { skipRefreshMessage: true });
     }

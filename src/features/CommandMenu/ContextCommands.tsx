@@ -3,7 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
+import { useSettingsCapabilityContext } from '@/features/Settings/hooks/useSettingsCapability';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { CommandItem } from './components';
@@ -17,7 +17,9 @@ const ContextCommands = memo(() => {
   const { t: tCommon } = useTranslation('common');
   const { handleNavigate } = useCommandMenu();
   const { menuContext, pathname } = useCommandMenuContext();
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
+  // One context object feeds the palette AND the page renderer — an entry can
+  // never be offered for a destination the registry would refuse to mount.
+  const capabilityContext = useSettingsCapabilityContext();
 
   // Extract subPath from pathname
   const subPath = useMemo(() => {
@@ -25,13 +27,13 @@ const ContextCommands = memo(() => {
     return pathParts && pathParts.length > 1 ? pathParts[1] : undefined;
   }, [pathname]);
 
-  const commands = getContextCommands(menuContext, subPath, { enableBusinessFeatures });
+  const commands = getContextCommands(menuContext, subPath, { capabilityContext });
 
   // Get settings commands to show globally (when not in settings context)
   const globalSettingsCommands = useMemo(() => {
     if (menuContext === 'settings') return [];
-    return buildContextCommands({ enableBusinessFeatures }).settings;
-  }, [menuContext, enableBusinessFeatures]);
+    return buildContextCommands({ capabilityContext }).settings;
+  }, [menuContext, capabilityContext]);
 
   const hasCommands = commands.length > 0 || globalSettingsCommands.length > 0;
 

@@ -73,22 +73,22 @@ Connect a Slack bot to your agent.
 
 \`\`\`bash
 # Webhook mode
-lh bot add -a <agentId> \\
+orvilo bot add -a <agentId> \\
   --platform slack \\
   --app-id <appId> \\
   --bot-token <xoxbToken> \\
   --signing-secret <signingSecret>
 
 # Socket Mode (WebSocket) — also pass App Token
-lh bot add -a <agentId> \\
+orvilo bot add -a <agentId> \\
   --platform slack \\
   --app-id <appId> \\
   --bot-token <xoxbToken> \\
   --signing-secret <signingSecret> \\
   --app-token <xappToken>
 
-lh bot test <botId>
-lh bot connect <botId>
+orvilo bot test <botId>
+orvilo bot connect <botId>
 \`\`\`
 
 ## Notes

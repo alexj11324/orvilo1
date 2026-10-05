@@ -1,0 +1,21 @@
+{
+  "name": "@orvilo/device-prime-host",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "bunx vitest run --silent='passed-only'",
+    "test:coverage": "bunx vitest run --coverage"
+  },
+  "dependencies": {
+    "@orvilo/agent-execution": "link:../agent-execution",
+    "@orvilo/device-gateway-client": "workspace:*",
+    "@orvilo/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "5.0.0"
+  }
+}

@@ -42,11 +42,9 @@ vi.mock('@/store/user', () => ({
   useUserStore: () => userMock.currentUserId,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  confirmModal: confirmModalMock,
-  toast: messageMock,
-}));
+vi.mock('@/components/Modal', () => ({ confirmModal: confirmModalMock }));
+
+vi.mock('@/components/toast', () => ({ toast: messageMock }));
 
 vi.mock('antd', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -182,11 +180,11 @@ describe('group useTopicActionsDropdownMenu', () => {
     await confirmModalMock.mock.calls[0][0].onOk();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledTimes(2);
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'own-merged',
     });
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'other-merged',
     });
 
@@ -247,7 +245,7 @@ describe('group useTopicActionsDropdownMenu', () => {
     if (archiveItem && 'onClick' in archiveItem) await archiveItem.onClick?.({} as never);
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledOnce();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'own-merged',
     });
 
@@ -299,7 +297,7 @@ describe('group useTopicActionsDropdownMenu', () => {
 
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledOnce();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'merged',
     });
     expect(chatStoreMock.refreshTopic).toHaveBeenCalledOnce();

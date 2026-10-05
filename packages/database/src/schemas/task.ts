@@ -1,4 +1,5 @@
 import type {
+  AgentTier,
   BriefArtifacts,
   BriefMetadata,
   TaskActivityLogPayload,
@@ -24,6 +25,7 @@ import { isNotNull, isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   foreignKey,
   index,
@@ -88,9 +90,10 @@ export const tasks = pgTable(
     assigneeAgentId: text('assignee_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
-    // Reviewer — the human accountable while the task sits in 'paused'
-    // ("pending review"). Stamped when a run finishes and hands off for
-    // review; the assignees above stay the executors.
+    // Reviewer — the human accountable while the issue is in review
+    // (`workflowCategory === 'in_review'` / a review-gate workflow state).
+    // Settlement stamps it when a run finishes and hands off for review;
+    // the assignees above stay the executors.
     reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
     /**
      * Team intake state. NULL means the task is not in triage (legacy and
@@ -116,8 +119,12 @@ export const tasks = pgTable(
     // Optional: when null, callers fall back to parsing `instruction` markdown.
     editorData: jsonb('editor_data'),
 
-    // Lifecycle (same state machine for user and agent)
-    // 'backlog' | 'running' | 'paused' | 'completed' | 'failed' | 'canceled'
+    // Legacy compatibility projection — maintained for old readers, NOT the
+    // Issue Status. The canonical Issue Status is `workflowCategory` +
+    // `workflowStateRefId`; execution state lives on `task_dispatches.phase` +
+    // `task_topics.run_state`. Do not read this column to decide business
+    // state; transitions between the layers run through the settlement policy.
+    // 'backlog' | 'scheduled' | 'running' | 'paused' | 'failed' | 'completed' | 'canceled'
     status: text('status').notNull().default('backlog'),
     /**
      * External workflow-state projection (provider state UUID as received).
@@ -150,6 +157,7 @@ export const tasks = pgTable(
     projectMilestoneId: uuid('project_milestone_id').references(() => projectMilestones.id, {
       onDelete: 'set null',
     }),
+    // Canonical Issue Status, together with `workflowStateRefId`.
     workflowCategory: text('workflow_category')
       .$type<TaskWorkflowCategory>()
       .notNull()
@@ -181,6 +189,14 @@ export const tasks = pgTable(
      * orders subtasks within their parent only.
      */
     position: doublePrecision('position'),
+
+    /**
+     * Issue deadline as a calendar date (`YYYY-MM-DD`), matching Linear's
+     * dueDate. NULL = no due date. Calendar-date rather than timestamptz:
+     * the picker offers whole days only, and a date is rendered against the
+     * viewer's locale instead of an instant.
+     */
+    dueDate: date('due_date', { mode: 'string' }),
 
     // Automation mode (mutually exclusive with each other; null = no automation)
     automationMode: text('automation_mode').$type<'heartbeat' | 'schedule'>(),
@@ -283,6 +299,13 @@ export const taskDispatches = pgTable(
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
     agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    /**
+     * Capability band the bound agent ran under — snapshotted from
+     * `project_agents.tier` whenever the dispatch binds an agent, so a later
+     * roster edit cannot rewrite history. The tiered orchestrator escalates
+     * the next attempt off the tier recorded on a terminally failed row.
+     */
+    tier: text('tier').$type<AgentTier>(),
     phase: text('phase').$type<TaskDispatchPhase>().notNull().default('requested'),
     generation: integer('generation').notNull(),
     taskRevision: integer('task_revision').notNull(),
@@ -318,6 +341,12 @@ export const taskDispatches = pgTable(
     cancelAttempts: integer('cancel_attempts').notNull().default(0),
     cancelRequestedAt: timestamptz('cancel_requested_at'),
     lastCancelError: text('last_cancel_error'),
+    // Bounded sweep bookkeeping (resume + recovery): incremented each time a
+    // sweep-claimed row is re-driven or its `outcome_unknown` reconcile is
+    // rescheduled; reset to 0 when a waiting row resumes or a reconcile finds
+    // a stable live identity. Sweeps stop the dispatch once attempts pass the
+    // ceiling so a permanently stuck intent cannot pin the execution slot.
+    recoveryAttempts: integer('recovery_attempts').notNull().default(0),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
     ...timestamps,
   },

@@ -1,12 +1,3 @@
-import { Block, Center, Empty, Flexbox } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionRoot,
-  AccordionTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -16,6 +7,9 @@ import type { Components } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Accordion, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
 import { isInteractiveRowClick } from '@/features/MyWork/myWorkDisplay';
 import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useTaskStore } from '@/store/task';
@@ -101,17 +95,23 @@ const normalizeGroupBy = (value: TaskGroupBy | string | undefined, fallback: Tas
 };
 
 const renderGroupTitle = (group: TaskGroupMeta, count: number, sub?: boolean) => (
-  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+  <div className="flex items-center justify-between gap-2">
     <TaskGroupLabel group={group} />
-    <Text fontSize={12} type={'secondary'}>
-      {count}
-    </Text>
+    <div className="text-[12px] text-muted-foreground">{count}</div>
     {sub ? (
-      <Divider style={{ margin: 0, borderColor: cssVar.colorBorder }} />
+      <Separator
+        className="flex-1"
+        style={{
+          background: 'transparent',
+          borderTop: `1px solid ${cssVar.colorBorder}`,
+          height: 'auto',
+          margin: 0,
+        }}
+      />
     ) : (
-      <Flexbox flex={1} />
+      <div className="flex-1" />
     )}
-  </Flexbox>
+  </div>
 );
 
 /**
@@ -126,14 +126,13 @@ const TaskGroupHeader = memo<{
   const sub = item.kind === 'subGroup';
   return (
     <div style={{ paddingTop: item.first ? 0 : 8 }}>
-      <AccordionRoot
-        indicatorPlacement={'start'}
+      <Accordion
+        multiple
         value={item.collapsed ? [] : [item.key]}
-        variant={'borderless'}
         onValueChange={() => onToggle(item.key)}
       >
-        <AccordionItem value={item.key}>
-          <AccordionHeader
+        <AccordionItem className="border-b-0" value={item.key}>
+          <div
             style={{
               paddingBlock: 4,
               paddingInline: 12,
@@ -141,12 +140,15 @@ const TaskGroupHeader = memo<{
               borderRadius: 6,
             }}
           >
-            <AccordionTrigger style={{ padding: 0, minHeight: 28 }}>
+            <AccordionTrigger
+              className="[&_[data-slot=accordion-trigger-icon]]:mr-2 [&_[data-slot=accordion-trigger-icon]]:ml-0 [&_[data-slot=accordion-trigger-icon]]:order-first"
+              style={{ padding: 0, minHeight: 28 }}
+            >
               {renderGroupTitle(item.meta, item.count, sub)}
             </AccordionTrigger>
-          </AccordionHeader>
+          </div>
         </AccordionItem>
-      </AccordionRoot>
+      </Accordion>
     </div>
   );
 });
@@ -289,7 +291,7 @@ const TaskList = memo<TaskListProps>((props) => {
   // The page scrolls in an ancestor (`WideScreenContainer`'s wrapper), with the
   // inline composer above this list. Windowing against that ancestor keeps the
   // page layout intact instead of nesting a second scroller.
-  const { ref: anchorRef, scrollParent } = useClosestScrollParent();
+  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
 
   const peekArmed = Boolean(peekOnSelect && onSelectTask);
 
@@ -355,52 +357,56 @@ const TaskList = memo<TaskListProps>((props) => {
   );
 
   const skeleton = (
-    <Block gap={2} padding={2} variant={'borderless'}>
+    <div className="flex flex-col gap-0.5 p-0.5">
       {Array.from({ length: 5 }).map((_, index) => (
         <div key={`task-skeleton-${index}`}>
           <TaskItemSkeleton />
-          {index !== 4 && <Divider dashed style={{ margin: 0 }} />}
+          {index !== 4 && (
+            <Separator
+              style={{
+                background: 'transparent',
+                borderTop: `1px dashed ${cssVar.colorBorderSecondary}`,
+                height: 'auto',
+                margin: 0,
+              }}
+            />
+          )}
         </div>
       ))}
-    </Block>
+    </div>
   );
 
   const emptyState = (
-    <Center height={'80vh'} width={'100%'}>
-      <Empty
+    <div className="flex h-[80vh] w-full items-center justify-center">
+      <SimpleEmpty
         description={props.emptyDescription ?? t('taskList.empty')}
         icon={ClipboardCheckIcon}
       />
-    </Center>
+    </div>
   );
 
   const hiddenFooter = hiddenCount > 0 && (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={16}
-      justify={'center'}
-      paddingBlock={16}
-      style={{ fontSize: 13 }}
-    >
-      <Flexbox horizontal align={'center'} gap={6}>
-        <Text weight={500}>{t('taskList.hiddenCompleted.count', { count: hiddenCount })}</Text>
-        <Text type={'secondary'}>{t('taskList.hiddenCompleted.suffix')}</Text>
-      </Flexbox>
+    <div className="flex items-center justify-center gap-4 py-4" style={{ fontSize: 12 }}>
+      <div className="flex items-center gap-1.5">
+        <div className="font-medium">
+          {t('taskList.hiddenCompleted.count', { count: hiddenCount })}
+        </div>
+        <div className="text-muted-foreground">{t('taskList.hiddenCompleted.suffix')}</div>
+      </div>
       {onShowHiddenCompleted && (
-        <Text style={{ cursor: 'pointer' }} weight={500} onClick={onShowHiddenCompleted}>
+        <div className="font-medium" style={{ cursor: 'pointer' }} onClick={onShowHiddenCompleted}>
           {t('taskList.hiddenCompleted.show')}
-        </Text>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 
   const truncatedFooter = isTruncated && (
-    <Flexbox horizontal align={'center'} justify={'center'} paddingBlock={16}>
-      <Text fontSize={13} type={'secondary'}>
+    <div className="flex items-center justify-center py-4">
+      <div className="text-xs text-muted-foreground">
         {t('taskList.truncated', { loaded: tasks.length, total: storeTasksTotal })}
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   // Error is gated ahead of empty by AsyncBoundary, so a failed fetch shows a
@@ -421,7 +427,7 @@ const TaskList = memo<TaskListProps>((props) => {
         ref={anchorRef}
         style={{ width: '100%', ...issueIdColumnStyle(tasks.map((task) => task.identifier)) }}
       >
-        {scrollParent && (
+        {scrollParent ? (
           <Virtuoso
             // Footer belongs to the window so it follows the last rendered row
             // rather than sitting under an unrendered tail.
@@ -441,6 +447,14 @@ const TaskList = memo<TaskListProps>((props) => {
               ),
             }}
           />
+        ) : unresolved ? null : (
+          <div className="flex flex-col">
+            {virtualItems.map((item, index) => (
+              <div key={item.key}>{renderItem(index, item)}</div>
+            ))}
+            {hiddenFooter}
+            {truncatedFooter}
+          </div>
         )}
       </div>
     </AsyncBoundary>

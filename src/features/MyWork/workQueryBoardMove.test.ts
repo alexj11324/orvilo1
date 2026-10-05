@@ -1,18 +1,17 @@
 import { WORKFLOW_STATE_REQUIRED } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { STATUS_KANBAN_COLUMNS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import {
+  kanbanColumnForWorkflowCategory,
+  RAW_STATUS_KANBAN_COLUMNS,
+  WORKFLOW_KANBAN_COLUMNS,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 
 import {
-  applyWorkQueryStatusChange,
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
-  commitWorkQueryListStatus,
-  kanbanStatusMoveGroupBy,
   moveBoardMaybePickingState,
-  storeKanbanUsesWorkflowMove,
   workQueryBoardMoveToastKey,
-  workQueryMoveGroupBy,
 } from './workQueryBoardMove';
 
 const mocks = vi.hoisted(() => ({
@@ -44,11 +43,19 @@ vi.mock('./WorkflowStatePickerModal', () => ({
 
 vi.mock('@/features/AgentTasks/features/TaskStatusCascadeModal', () => ({
   createTaskStatusCascadeModal: mocks.createCascadeModal,
+  getOpenSubtasks: (items: Array<{ status?: string }>) =>
+    items.filter((item) => item.status !== 'completed' && item.status !== 'canceled'),
 }));
 
-const column = (key: string) => {
-  const found = STATUS_KANBAN_COLUMNS.find((item) => item.key === key);
-  if (!found) throw new Error(`missing column ${key}`);
+const wfColumn = (category: string) => {
+  const found = WORKFLOW_KANBAN_COLUMNS.find((item) => item.key === `wf:${category}`);
+  if (!found) throw new Error(`missing workflow column ${category}`);
+  return found;
+};
+
+const stColumn = (status: string) => {
+  const found = RAW_STATUS_KANBAN_COLUMNS.find((item) => item.key === `st:${status}`);
+  if (!found) throw new Error(`missing status column ${status}`);
   return found;
 };
 
@@ -152,19 +159,6 @@ describe('moveBoardMaybePickingState', () => {
   });
 });
 
-describe('storeKanbanUsesWorkflowMove', () => {
-  it('sends Linear-linked My Work drops through moveBoard', () => {
-    expect(storeKanbanUsesWorkflowMove('status', { workflowStateId: 'state-1' })).toBe(true);
-    expect(storeKanbanUsesWorkflowMove('status', { workflowStateId: null })).toBe(false);
-    expect(storeKanbanUsesWorkflowMove('assignee', { workflowStateId: 'state-1' })).toBe(false);
-    expect(workQueryMoveGroupBy('status', { workflowStateId: 'state-1' })).toBe('workflowCategory');
-    expect(workQueryMoveGroupBy('status', { workflowStateId: null })).toBe('status');
-    expect(workQueryMoveGroupBy('workflowCategory', { workflowStateId: 'state-1' })).toBe(
-      'workflowCategory',
-    );
-  });
-});
-
 describe('commitWorkQueryBoardMove', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -175,10 +169,10 @@ describe('commitWorkQueryBoardMove', () => {
     mocks.moveBoard.mockResolvedValue({ success: true });
   });
 
-  it('drops onto In review through moveBoard, not a raw category patch', async () => {
+  it('drops onto a workflow column through moveBoard, not a raw category patch', async () => {
     await expect(
       commitWorkQueryBoardMove({
-        column: column('needsInput'),
+        column: wfColumn('in_review'),
         groupBy: 'workflowCategory',
         task,
       }),
@@ -198,7 +192,7 @@ describe('commitWorkQueryBoardMove', () => {
 
     await expect(
       commitWorkQueryBoardMove({
-        column: column('needsInput'),
+        column: wfColumn('in_review'),
         groupBy: 'workflowCategory',
         task,
       }),
@@ -212,7 +206,7 @@ describe('commitWorkQueryBoardMove', () => {
 
     await expect(
       commitWorkQueryBoardMove({
-        column: column('done'),
+        column: wfColumn('done'),
         groupBy: 'workflowCategory',
         task,
       }),
@@ -221,29 +215,14 @@ describe('commitWorkQueryBoardMove', () => {
     expect(mocks.createPicker).toHaveBeenCalledWith({ category: 'done', teamId: 'team_1' });
   });
 
-  it('promotes a status-grouped Linear card onto the workflow move path', async () => {
+  it('keeps an `st:` Runs-view drop on the execution-status axis — even for a linked task', async () => {
+    // The `st:` board groups by the legacy execution projection; a drop there
+    // writes that projection directly and never mutates the Issue Status.
     await expect(
       commitWorkQueryBoardMove({
-        column: column('needsInput'),
+        column: stColumn('paused'),
         groupBy: 'status',
         task,
-      }),
-    ).resolves.toBe(true);
-
-    expect(mocks.moveBoard).toHaveBeenCalledWith({
-      expectedDomainRevision: 3,
-      groupBy: 'workflowCategory',
-      targetKey: 'in_review',
-      taskId: 'tsk_1',
-    });
-  });
-
-  it('keeps an unlinked status drop on the status path', async () => {
-    await expect(
-      commitWorkQueryBoardMove({
-        column: column('needsInput'),
-        groupBy: 'status',
-        task: { ...task, workflowStateId: null },
       }),
     ).resolves.toBe(true);
 
@@ -254,181 +233,77 @@ describe('commitWorkQueryBoardMove', () => {
       taskId: 'tsk_1',
     });
   });
-});
 
-describe('commitWorkQueryListStatus', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.moveBoard.mockResolvedValue({ success: true });
-  });
-
-  it('sends a Linear list glyph through moveBoard instead of a local status patch', async () => {
+  it('treats a drop onto the task’s own column as a noop — no write at all', async () => {
     await expect(
-      commitWorkQueryListStatus({
-        groupBy: 'status',
-        status: 'paused',
-        task,
-      }),
-    ).resolves.toBe('moved');
-
-    expect(mocks.moveBoard).toHaveBeenCalledWith({
-      expectedDomainRevision: 3,
-      groupBy: 'workflowCategory',
-      targetKey: 'in_review',
-      taskId: 'tsk_1',
-    });
-  });
-
-  it('leaves unlinked list rows on the local task.update path', async () => {
-    await expect(
-      commitWorkQueryListStatus({
-        groupBy: 'status',
-        status: 'paused',
-        task: { ...task, workflowStateId: null },
-      }),
-    ).resolves.toBe('local');
-    expect(mocks.moveBoard).not.toHaveBeenCalled();
-  });
-
-  it('does not fall through to a local patch when the picker is cancelled', async () => {
-    mocks.moveBoard.mockRejectedValueOnce(precondition);
-    mocks.createPicker.mockResolvedValueOnce(undefined);
-
-    await expect(
-      commitWorkQueryListStatus({
-        groupBy: 'status',
-        status: 'completed',
-        task,
-      }),
-    ).resolves.toBe('cancelled');
-  });
-});
-
-describe('applyWorkQueryStatusChange', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.moveBoard.mockResolvedValue({ success: true });
-  });
-
-  it('does not fall through to a local patch for a Linear board-card status', async () => {
-    const changeLocal = vi.fn(async () => true);
-
-    await expect(
-      applyWorkQueryStatusChange({
-        changeLocal,
-        groupBy: 'status',
-        status: 'paused',
-        task,
-      }),
-    ).resolves.toBe(true);
-
-    expect(changeLocal).not.toHaveBeenCalled();
-    expect(mocks.moveBoard).toHaveBeenCalledWith({
-      expectedDomainRevision: 3,
-      groupBy: 'workflowCategory',
-      targetKey: 'in_review',
-      taskId: 'tsk_1',
-    });
-  });
-
-  it('uses the local patch for an unlinked board card', async () => {
-    const changeLocal = vi.fn(async () => true);
-
-    await expect(
-      applyWorkQueryStatusChange({
-        changeLocal,
-        groupBy: 'status',
-        status: 'paused',
-        task: { ...task, workflowStateId: null },
-      }),
-    ).resolves.toBe(true);
-
-    expect(changeLocal).toHaveBeenCalledWith('T-1', 'paused');
-    expect(mocks.moveBoard).not.toHaveBeenCalled();
-  });
-
-  it('does not fall through when the workflow-state picker is cancelled', async () => {
-    mocks.moveBoard.mockRejectedValueOnce(precondition);
-    mocks.createPicker.mockResolvedValueOnce(undefined);
-    const changeLocal = vi.fn(async () => true);
-
-    await expect(
-      applyWorkQueryStatusChange({
-        changeLocal,
-        groupBy: 'status',
-        status: 'completed',
-        task,
-      }),
-    ).resolves.toBe(false);
-
-    expect(changeLocal).not.toHaveBeenCalled();
-  });
-
-  it('returns false when the local cascade is cancelled', async () => {
-    const changeLocal = vi.fn(async () => false);
-
-    await expect(
-      applyWorkQueryStatusChange({
-        changeLocal,
-        groupBy: 'status',
-        status: 'completed',
-        task: { ...task, workflowStateId: null },
-      }),
-    ).resolves.toBe(false);
-  });
-});
-
-describe('kanbanStatusMoveGroupBy', () => {
-  it('keeps a Saved View workflow grouping and defaults store boards to status', () => {
-    expect(kanbanStatusMoveGroupBy('workflowCategory')).toBe('workflowCategory');
-    expect(kanbanStatusMoveGroupBy('status')).toBe('status');
-    expect(kanbanStatusMoveGroupBy()).toBe('status');
-  });
-});
-
-describe('precise-state picks', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.moveBoard.mockResolvedValue({ success: true });
-  });
-
-  it('carries the picks exact ref into the first CAS write — no picker', async () => {
-    await expect(
-      moveBoardMaybePickingState({
-        expectedDomainRevision: 3,
+      commitWorkQueryBoardMove({
+        column: wfColumn('todo'),
         groupBy: 'workflowCategory',
-        targetKey: 'todo',
-        targetWorkflowStateRefId: 'tws_todo_b',
-        taskId: 'tsk_1',
-        teamId: 'team_1',
+        task,
+      }),
+    ).resolves.toBe(true);
+
+    expect(mocks.moveBoard).not.toHaveBeenCalled();
+  });
+
+  it('cascades an unlinked Done drop through subtasks before the board move', async () => {
+    mocks.getTaskTree.mockResolvedValue({
+      data: [{ id: 'tsk_1', identifier: 'T-1' }],
+    });
+    mocks.update.mockResolvedValue({ success: true });
+    mocks.find.mockResolvedValue({ data: { domainRevision: 4 } });
+
+    const unlinked = { ...task, workflowCategory: 'in_progress', workflowStateId: null };
+    await expect(
+      commitWorkQueryBoardMove({
+        column: wfColumn('done'),
+        groupBy: 'workflowCategory',
+        task: unlinked,
+      }),
+    ).resolves.toBe(true);
+
+    expect(mocks.update).toHaveBeenCalledWith('tsk_1', { status: 'completed' });
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 4,
+      groupBy: 'workflowCategory',
+      targetKey: 'done',
+      taskId: 'tsk_1',
+    });
+  });
+});
+
+describe('applyWorkQueryStatusChoice', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.moveBoard.mockResolvedValue({ success: true });
+  });
+
+  it('routes a category menu row through the shared board command', async () => {
+    const column = kanbanColumnForWorkflowCategory('in_review')!;
+    await expect(
+      applyWorkQueryStatusChoice({
+        choice: { column, workflowCategory: 'in_review' },
+        task,
       }),
     ).resolves.toBe(true);
 
     expect(mocks.moveBoard).toHaveBeenCalledWith({
       expectedDomainRevision: 3,
       groupBy: 'workflowCategory',
-      targetKey: 'todo',
-      targetWorkflowStateRefId: 'tws_todo_b',
+      targetKey: 'in_review',
       taskId: 'tsk_1',
     });
-    expect(mocks.createPicker).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
-  it('routes a precise-state menu row through the shared board command', async () => {
+  it('carries a precise-state pick into the first CAS write — no picker', async () => {
+    const column = kanbanColumnForWorkflowCategory('todo')!;
     const choice = {
-      column: STATUS_KANBAN_COLUMNS.find((item) => item.key === 'todo')!,
+      column,
       state: {
         category: 'todo' as const,
         id: 'tws_todo_b',
@@ -443,10 +318,8 @@ describe('precise-state picks', () => {
 
     await expect(
       applyWorkQueryStatusChoice({
-        changeLocal: async () => true,
         choice,
-        groupBy: 'status',
-        task,
+        task: { ...task, workflowCategory: 'in_progress', workflowStateRefId: 'tws_todo_a' },
       }),
     ).resolves.toBe(true);
 
@@ -459,6 +332,17 @@ describe('precise-state picks', () => {
     });
     expect(mocks.createPicker).not.toHaveBeenCalled();
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a choice without a workflow target — execution rows are never picks', async () => {
+    await expect(
+      applyWorkQueryStatusChoice({
+        choice: { column: stColumn('paused') },
+        task,
+      }),
+    ).resolves.toBe(false);
+
+    expect(mocks.moveBoard).not.toHaveBeenCalled();
   });
 });
 

@@ -45,11 +45,11 @@ function resolvePersistedScope(): WorkspaceScope | undefined {
 
 /**
  * Resolve the workspace scope for outbound API calls, along with where it came
- * from — `lh workspace current` and `lh whoami` report the source so a caller
+ * from — `orvilo workspace current` and `orvilo whoami` report the source so a caller
  * can tell "wrong workspace" from "not found".
  *
  * Precedence: explicit caller arg -> `ORVILO_WORKSPACE_ID` env ->
- * `lh workspace use` (persisted, and still bound to this account/server) ->
+ * `orvilo workspace use` (persisted, and still bound to this account/server) ->
  * personal mode.
  */
 export function resolveWorkspaceScope(explicit?: string): WorkspaceScope {

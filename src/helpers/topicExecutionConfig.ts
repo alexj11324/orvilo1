@@ -7,16 +7,20 @@ import {
 import { agentGroupByIdSelectors, getChatGroupStoreState } from '@/store/agentGroup';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
+import { getServerConfigStoreState } from '@/store/serverConfig';
 
 export const getTopicAgencyConfig = (
   defaults: OrviloAgentAgencyConfig | undefined,
   topicId?: string | null,
 ) =>
-  applyTopicExecutionConfig(
-    defaults,
-    topicId
-      ? topicSelectors.getTopicById(topicId)(useChatStore.getState())?.metadata?.executionConfig
-      : undefined,
+  applyCloudSandboxAvailability(
+    applyTopicExecutionConfig(
+      defaults,
+      topicId
+        ? topicSelectors.getTopicById(topicId)(useChatStore.getState())?.metadata?.executionConfig
+        : undefined,
+    ),
+    getServerConfigStoreState()?.featureFlags.enableCloudSandbox === true,
   );
 
 export const getTopicWorkspaceScoped = (
@@ -30,13 +34,25 @@ export const getTopicWorkspaceScoped = (
   return resolveTopicAgencyConfig(defaults, execution, fallback).workspaceScoped;
 };
 
+const applyCloudSandboxAvailability = (
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
+  available: boolean,
+) =>
+  !available && agencyConfig?.executionTarget === 'sandbox'
+    ? { ...agencyConfig, executionTarget: 'none' as const }
+    : agencyConfig;
+
 /** Keep the UI and dispatch interpretation of a Topic selection identical. */
 export const resolveTopicAgencyConfig = (
   defaults: OrviloAgentAgencyConfig | undefined,
   execution: TopicExecutionConfig | undefined,
   workspaceScoped: boolean,
+  cloudSandboxAvailable = true,
 ) => ({
-  agencyConfig: applyTopicExecutionConfig(defaults, execution),
+  agencyConfig: applyCloudSandboxAvailability(
+    applyTopicExecutionConfig(defaults, execution),
+    cloudSandboxAvailable,
+  ),
   workspaceScoped:
     execution &&
     !execution.inheritWorkspaceScope &&

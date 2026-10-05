@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { MonitorIcon } from 'lucide-react';
@@ -39,7 +38,9 @@ export const ListOnlineDevicesInspector = memo<
 
   return (
     <div className={cx(inspectorTextStyles.root, styles.root)}>
-      <Icon className={styles.icon} icon={MonitorIcon} size={14} />
+      <span className={cx('anticon', styles.icon)} role="img">
+        <MonitorIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
       <span className={cx(isPending && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-remote-device.apiName.listOnlineDevices')}
       </span>

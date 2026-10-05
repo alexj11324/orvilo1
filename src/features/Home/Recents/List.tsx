@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -59,7 +58,7 @@ const RecentsList = memo<RecentsListProps>(({ error, onRetry, scope }) => {
       loading={<SkeletonList rows={3} />}
       onRetry={onRetry}
     >
-      <Flexbox gap={1}>
+      <div className="flex flex-col gap-[1px]">
         {displayItems.map((item) => {
           const itemRef = `${item.type}:${item.id}` as const;
           return (
@@ -70,7 +69,7 @@ const RecentsList = memo<RecentsListProps>(({ error, onRetry, scope }) => {
           <NavItem icon={MoreHorizontalIcon} title={t('input.more')} onClick={openDrawer} />
         )}
         <AllRecentsDrawer open={drawerOpen} onClose={closeDrawer} />
-      </Flexbox>
+      </div>
     </AsyncBoundary>
   );
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -100,14 +99,13 @@ const TopicChat = memo(() => {
     >
       <Suspense
         fallback={
-          <Flexbox flex={1} height={'100%'}>
+          <div className="flex flex-col flex-1 h-[100%]">
             <SkeletonList />
-          </Flexbox>
+          </div>
         }
       >
-        <Flexbox
-          flex={1}
-          width={'100%'}
+        <div
+          className="flex flex-col flex-1 w-[100%]"
           style={{
             overflowX: 'hidden',
             overflowY: 'auto',
@@ -119,10 +117,10 @@ const TopicChat = memo(() => {
           ) : (
             <ChatList />
           )}
-        </Flexbox>
+        </div>
       </Suspense>
       {topicPending ? (
-        <Flexbox horizontal align={'center'} justify={'center'} paddingBlock={6} paddingInline={16}>
+        <div className="flex flex-row items-center justify-center py-[6px] px-4">
           <span style={{ color: cssVar.colorTextDescription, fontSize: 12, textAlign: 'center' }}>
             {t(
               migrationJob?.type === 'copy'
@@ -130,7 +128,7 @@ const TopicChat = memo(() => {
                 : 'transferMigration.inputDisabledHint',
             )}
           </span>
-        </Flexbox>
+        </div>
       ) : isHeterogeneousAgent ? (
         <HeterogeneousChatInput />
       ) : (

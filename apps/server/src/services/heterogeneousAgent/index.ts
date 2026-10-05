@@ -4,16 +4,25 @@ import type { OrviloDatabase } from '@orvilo/database';
 import {
   classifyHeteroProcessFailure,
   getNativeHeteroSessionBindingKey,
+  type HeterogeneousAgentType as AnyHeterogeneousAgentType,
   isHeteroStatusGuideErrorData,
-  type LocalHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
-import { ThreadStatus } from '@orvilo/types';
+import { type AegisFinishReport, getWorkingDirEffectivePath, ThreadStatus } from '@orvilo/types';
+import { pickString, toRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
+import {
+  getHeteroSessionBindingKeyForWorkingDirectory,
+  getHeteroSessionIdForWorkingDirectory,
+  removeHeteroSessionBindingKeyForWorkingDirectory,
+  removeHeteroSessionIdForWorkingDirectory,
+  setHeteroSessionBindingKeyForWorkingDirectory,
+  setHeteroSessionIdForWorkingDirectory,
+} from '@/helpers/heteroSessionByWorkingDirectory';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
@@ -35,7 +44,12 @@ import {
 
 const log = debug('orvilo-server:hetero-agent-service');
 
-export type HeterogeneousAgentType = LocalHeterogeneousAgentType;
+/**
+ * Producer identity carried on ingest/finish calls. Covers every hetero
+ * producer surface — external CLI agents (local + remote families) and the
+ * builtin `'orvilo'` type, which produces through the Prime adapter.
+ */
+export type HeterogeneousAgentType = AnyHeterogeneousAgentType;
 
 export type HeterogeneousFinishResult = 'success' | 'error' | 'cancelled';
 
@@ -56,6 +70,12 @@ export interface HeterogeneousIngestParams {
 }
 
 export interface HeterogeneousFinishParams {
+  /**
+   * Aegis method-pack report, present iff the run opted in. `{ enabled: true,
+   * files: [] }` is meaningful — "opted in, produced nothing" downgrades the
+   * task to requires-review instead of reading as "not enabled".
+   */
+  aegis?: AegisFinishReport;
   agentType: HeterogeneousAgentType;
   /** Initial assistant placeholder supplied by the producer. This remains
    * usable when gateway completion wins the race and clears runningOperation
@@ -78,7 +98,7 @@ export interface HeterogeneousFinishParams {
   runGeneration?: number;
   /**
    * Native CLI session id (e.g. CC's per-cwd session). Used in phase 2c to
-   * persist on `topic.metadata` so a subsequent `lh hetero exec` run can
+   * persist on `topic.metadata` so a subsequent `orvilo hetero exec` run can
    * resume context.
    */
   sessionId?: string;
@@ -88,7 +108,7 @@ export interface HeterogeneousFinishParams {
 type HeterogeneousFinishError = NonNullable<HeterogeneousFinishParams['error']>;
 
 /**
- * Older or partially upgraded `lh hetero exec` producers can flatten an
+ * Older or partially upgraded `orvilo hetero exec` producers can flatten an
  * adapter-classified terminal error before calling `heteroFinish`. Reclassify
  * the final payload at the server boundary so a recognizable authentication
  * failure always reaches the message row as the structured status-guide shape
@@ -137,7 +157,7 @@ export interface HeterogeneousAgentServiceOptions {
 }
 
 /**
- * Server-side ingest handler for heterogeneous agent CLIs (`lh hetero exec`
+ * Server-side ingest handler for heterogeneous agent CLIs (`orvilo hetero exec`
  * for Amp / Claude Code / CodeBuddy / Codex / OpenCode / Pi / Qoder / TRAE). Receives
  * `AgentStreamEvent` batches from the
  * producer and republishes them through the existing `StreamEventManager`
@@ -175,6 +195,7 @@ export class HeterogeneousAgentService {
     this.persistenceHandler =
       options.persistenceHandler ??
       new HeterogeneousPersistenceHandler({
+        agentOperationModel: this.agentOperationModel,
         messageModel: this.messageModel,
         threadModel: new ThreadModel(db, userId, workspaceId),
         topicModel: this.topicModel,
@@ -285,6 +306,7 @@ export class HeterogeneousAgentService {
 
   async heteroFinish(params: HeterogeneousFinishParams): Promise<void> {
     const {
+      aegis,
       agentType,
       assistantMessageId: seedAssistantMessageId,
       operationId,
@@ -358,11 +380,30 @@ export class HeterogeneousAgentService {
       topicId,
     });
 
+    // Aegis report → `agent_operations.metadata.aegis`. Written BEFORE
+    // `completeOperation` fans out to the verify lifecycle / work
+    // registration / task settle, so every downstream consumer reads the
+    // same durable record. The write deep-merges: `aegis.enabled` stamped at
+    // dispatch survives. Best-effort — a metadata failure must not strand
+    // the terminal transition; the gate then simply sees no artifacts.
+    if (aegis) {
+      try {
+        await this.agentOperationModel.recordAegisMetadata(operationId, {
+          artifacts: aegis.files,
+          collectedAt: new Date().toISOString(),
+          enabled: aegis.enabled,
+        });
+      } catch (err) {
+        log('heteroFinish: aegis metadata write failed op=%s (non-fatal): %O', operationId, err);
+      }
+    }
+
     let serializedHooks: SerializedHook[] | undefined;
     let assistantMessageId = seedAssistantMessageId;
     let isolationThreadId: string | undefined;
     let orchestrationRole: 'member' | 'supervisor' | undefined;
     let staleActiveOperationId: string | undefined;
+    let executionWorkingDirectory: string | undefined;
 
     // The operation row is the durable lifecycle owner. The frontend may have
     // already consumed the in-stream terminal event and cleared the topic's
@@ -370,6 +411,9 @@ export class HeterogeneousAgentService {
     try {
       const operation = await this.agentOperationModel.findById(operationId);
       const metadata = operation?.metadata as Record<string, unknown> | null | undefined;
+      executionWorkingDirectory = pickString(
+        toRecord(metadata?.executionPlan)?.workingDirectoryBinding,
+      );
       const operationHooks = metadata?._hooks;
       if (Array.isArray(operationHooks)) serializedHooks = operationHooks as SerializedHook[];
       if (typeof metadata?.assistantMessageId === 'string') {
@@ -436,7 +480,7 @@ export class HeterogeneousAgentService {
     const resumeBindingUpdate = sessionId
       ? {
           // Bind the saved native session to the CLI family that produced it
-          // (`agentType` is already engine-normalized by `lh hetero exec`) so a
+          // (`agentType` is already engine-normalized by `orvilo hetero exec`) so a
           // later turn running under a different family/engine can't silently
           // resume it — mirrors the renderer's binding-key tracking.
           heteroSessionBindingKey: getNativeHeteroSessionBindingKey(agentType),
@@ -450,7 +494,39 @@ export class HeterogeneousAgentService {
         // Only the producer can distinguish a missing native session from a
         // transient pre-init error such as Codex's "already has an active writer".
         // Clearing every error without a new id would fork the next turn empty.
-        await this.topicModel.updateMetadata(topicId, resumeBindingUpdate);
+        const topic = await this.topicModel.findById(topicId);
+        const metadata = topic?.metadata;
+        const cwd =
+          executionWorkingDirectory ??
+          getWorkingDirEffectivePath(metadata?.workingDirectoryConfig) ??
+          metadata?.workingDirectory;
+        await this.topicModel.updateMetadata(topicId, {
+          ...resumeBindingUpdate,
+          ...(cwd === undefined
+            ? {}
+            : sessionId
+              ? {
+                  heteroSessionIdByWorkingDirectory: setHeteroSessionIdForWorkingDirectory(
+                    metadata,
+                    cwd,
+                    sessionId,
+                  ),
+                  heteroSessionBindingKeyByWorkingDirectory:
+                    setHeteroSessionBindingKeyForWorkingDirectory(
+                      metadata,
+                      cwd,
+                      getNativeHeteroSessionBindingKey(agentType),
+                    ),
+                }
+              : {
+                  heteroSessionIdByWorkingDirectory: removeHeteroSessionIdForWorkingDirectory(
+                    metadata,
+                    cwd,
+                  ),
+                  heteroSessionBindingKeyByWorkingDirectory:
+                    removeHeteroSessionBindingKeyForWorkingDirectory(metadata, cwd),
+                }),
+        });
       } catch (err) {
         log('heteroFinish: update resume session binding failed (non-fatal): %O', err);
       }
@@ -648,7 +724,7 @@ export class HeterogeneousAgentService {
   /**
    * Look up the persisted CLI session id for a topic so the orchestrator
    * (phase 3 cloud sandbox) can pass `--resume <sessionId>` to the next
-   * `lh hetero exec` spawn. Returns undefined when no prior run completed
+   * `orvilo hetero exec` spawn. Returns undefined when no prior run completed
    * on this topic — caller should spawn fresh.
    *
    * Reads the same `topic.metadata.heteroSessionId` the desktop renderer
@@ -665,9 +741,17 @@ export class HeterogeneousAgentService {
     expectedBindingKey?: string,
   ): Promise<string | undefined> {
     const topic = await this.topicModel.findById(topicId);
-    const sessionId = topic?.metadata?.heteroSessionId;
+    const metadata = topic?.metadata;
+    const cwd =
+      getWorkingDirEffectivePath(metadata?.workingDirectoryConfig) ?? metadata?.workingDirectory;
+    const scopedSessionId = getHeteroSessionIdForWorkingDirectory(metadata, cwd);
+    const sessionId = scopedSessionId ?? metadata?.heteroSessionId;
     if (!sessionId) return undefined;
-    const savedBindingKey = topic?.metadata?.heteroSessionBindingKey;
+    // A legacy source-repo session must not execute inside a selected worktree.
+    if (!scopedSessionId && cwd !== metadata?.workingDirectory) return undefined;
+    const savedBindingKey = scopedSessionId
+      ? getHeteroSessionBindingKeyForWorkingDirectory(metadata, cwd)
+      : metadata?.heteroSessionBindingKey;
     if (savedBindingKey && expectedBindingKey && savedBindingKey !== expectedBindingKey) {
       log(
         'getHeterogeneousResumeSessionId: binding mismatch topic=%s saved=%s expected=%s — skipping resume',

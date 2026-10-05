@@ -1,4 +1,8 @@
-import type { WorkQuery, WorkQueryEntityType } from '@orvilo/types';
+import {
+  normalizeWorkQuerySubGroupBy,
+  type WorkQuery,
+  type WorkQueryEntityType,
+} from '@orvilo/types';
 
 import type { ViewEditorState } from '@/features/SavedViews/ViewDefinitionEditor';
 import { builderToFilter } from '@/features/SavedViews/workQueryBuilder';
@@ -25,8 +29,12 @@ export const teamViewDraftQuery = (draft: ViewEditorState, teamId: string): Work
     },
     groupBy: draft.groupBy === 'none' ? undefined : draft.groupBy,
     layout: draft.layout,
-    schemaVersion: 1,
+    schemaVersion: 2,
     sort: draft.sort,
     sortMode: draft.layout === 'board' ? draft.sortMode : undefined,
+    subGroupBy:
+      draft.entityType === 'task' && draft.groupBy !== 'none'
+        ? normalizeWorkQuerySubGroupBy(draft.groupBy, draft.subGroupBy)
+        : undefined,
   };
 };

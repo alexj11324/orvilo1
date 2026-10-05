@@ -15,7 +15,7 @@ import { expect, it, vi } from 'vitest';
 import { taskDispatches, workspaces } from '@/database/schemas';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import { CanonicalCoreRuntimeHost } from './coreRuntimeHost';
 
 const command = promisify(execFile);
@@ -25,7 +25,7 @@ it.skipIf(!process.env.CORE_DOCKER_IMAGE || process.env.TEST_SERVER_DB !== '1')(
   'composes canonical admission, actual Prime tree, durable file action, and recovered stop drain',
   async () => {
     const imageId = process.env.CORE_DOCKER_IMAGE!;
-    const dockerPath = '/usr/local/bin/docker';
+    const dockerPath = process.env.DOCKER_PATH ?? 'docker';
     const { stdout } = await command(dockerPath, ['image', 'inspect', imageId]);
     const [image] = JSON.parse(stdout);
     expect(image.Id).toBe(imageId);
@@ -56,7 +56,7 @@ it.skipIf(!process.env.CORE_DOCKER_IMAGE || process.env.TEST_SERVER_DB !== '1')(
       fileCommitments: [
         {
           id: 'approved-file',
-          taskId: binding.taskId,
+          taskId: fixtureTaskId(binding),
           actionKinds: ['file.write' as const],
           postconditions: [
             {

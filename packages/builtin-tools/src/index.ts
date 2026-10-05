@@ -207,7 +207,7 @@ export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
   AcceptanceEvidenceManifest.identifier,
   OrviloAgentManifest.identifier,
   // `orvilo-cloud-sandbox`: allowed because a share-visitor run gets its own
-  // fresh per-topic sandbox session, not the creator's. The `lh` CLI JWT
+  // fresh per-topic sandbox session, not the creator's. The `orvilo` CLI JWT
   // shim that would otherwise mint a creator-scoped token inside the shell
   // is skipped for visitor runs (see `cloudSandbox.ts` /
   // `preprocessLhCommand.ts`), and `orvilo-creds` stays denied so

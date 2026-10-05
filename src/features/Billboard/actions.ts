@@ -3,7 +3,7 @@ import urlJoin from 'url-join';
 
 import { openChangelogModal } from '@/components/ChangelogModal';
 import { openFeedbackModal } from '@/components/FeedbackModal';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { getElectronStoreState } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { getUserStoreState } from '@/store/user';
@@ -69,7 +69,7 @@ const billboardActionHandlers: Record<BillboardAction, () => Promise<void> | voi
     await getUserStoreState().resetOnboarding();
 
     if (isDesktop) {
-      await electronSystemService.openExternalLink(urlJoin(OFFICIAL_URL, '/onboarding'));
+      await getHostPort().openExternal(urlJoin(OFFICIAL_URL, '/onboarding'));
       return;
     }
 

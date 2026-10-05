@@ -1,16 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Input, TextArea, Tooltip } from '@lobehub/ui';
-import {
-  Alert,
-  Button,
-  Checkbox,
-  createModal,
-  type ModalInstance,
-  ScrollArea,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { isDesktop } from '@orvilo/const';
 import type {
   HeterogeneousAgentScanStatus,
@@ -20,27 +10,42 @@ import type {
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type { DeviceListItem } from '@orvilo/types';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import {
   ArrowLeft,
   CheckCircle2,
+  CircleAlert,
   Download,
   LaptopIcon,
   RefreshCw,
   ScanSearch,
   TerminalIcon,
 } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import CommandLine from '@/components/CommandLine';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DOWNLOAD_URL } from '@/const/url';
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
+import { getDeviceLabel } from '@/features/DeviceManager/getDeviceLabel';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import type { CreateAgentParams } from '@/services/agent';
+import {
+  createOnboardingAgentOnce,
+  type FirstAgentCreationCheckpoint,
+} from '@/services/agentOnboarding';
 import { deviceService } from '@/services/device';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { useAgentStore } from '@/store/agent';
 import { heteroAgentDefaultName } from '@/store/agent/utils/heteroAgentDefaultName';
 import { useElectronStore } from '@/store/electron';
@@ -190,11 +195,6 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorFillTertiary};
   `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
   row: css`
     cursor: pointer;
 
@@ -269,9 +269,9 @@ interface CreatedAgent {
 }
 
 const SectionLabel = memo<{ children: ReactNode }>(({ children }) => (
-  <Text fontSize={12} style={{ paddingInline: 4 }} type={'secondary'}>
+  <div className="text-[12px] text-muted-foreground" style={{ paddingInline: 4 }}>
     {children}
-  </Text>
+  </div>
 ));
 
 const SkeletonRow = memo<{ squareIcon?: boolean; width: number }>(({ squareIcon, width }) => (
@@ -283,24 +283,28 @@ const SkeletonRow = memo<{ squareIcon?: boolean; width: number }>(({ squareIcon,
     />
     {/* Column height matches a real row's two-line text block so the
         scanning → done swap doesn't shift the modal */}
-    <Flexbox flex={1} gap={10} justify={'center'} style={{ height: 42 }}>
+    <div className="flex flex-col flex-1 gap-2.5 justify-center" style={{ height: 42 }}>
       <div className={styles.skeletonBar} style={{ width }} />
       <div className={styles.skeletonBar} style={{ opacity: 0.6, width: width * 1.6 }} />
-    </Flexbox>
+    </div>
   </div>
 ));
 
 const ScrollableAgentList = memo<{ children: ReactNode }>(({ children }) => (
-  <ScrollArea
-    disableContentFit
-    scrollFade
-    className={styles.groupList}
-    scrollbarProps={{ className: styles.agentListScrollbar }}
-    thumbProps={{ className: styles.agentListThumb }}
-    viewportProps={{ className: styles.agentListViewport }}
-  >
-    {children}
-  </ScrollArea>
+  <ScrollAreaPrimitive.Root className={styles.groupList}>
+    <ScrollAreaPrimitive.Viewport className={styles.agentListViewport}>
+      {children}
+    </ScrollAreaPrimitive.Viewport>
+    <ScrollAreaPrimitive.Scrollbar
+      className={cx('flex touch-none p-px select-none', styles.agentListScrollbar)}
+      orientation={'vertical'}
+    >
+      <ScrollAreaPrimitive.Thumb
+        className={cx('relative flex-1 rounded-full', styles.agentListThumb)}
+      />
+    </ScrollAreaPrimitive.Scrollbar>
+    <ScrollAreaPrimitive.Corner />
+  </ScrollAreaPrimitive.Root>
 ));
 
 ScrollableAgentList.displayName = 'ScrollableAgentList';
@@ -320,20 +324,14 @@ const DeviceRow = memo<{
     onClick={offline ? undefined : onClick}
   >
     <div className={styles.iconBox}>{icon}</div>
-    <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-      <Text ellipsis strong>
-        {title}
-      </Text>
-      <Text fontSize={12} type={'secondary'}>
-        {subtitle}
-      </Text>
-    </Flexbox>
-    <Flexbox horizontal align={'center'} gap={6} style={{ flex: 'none' }}>
+    <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+      <div className="truncate block font-semibold">{title}</div>
+      <div className="text-[12px] text-muted-foreground">{subtitle}</div>
+    </div>
+    <div className="flex items-center gap-1.5" style={{ flex: 'none' }}>
       <div className={offline ? styles.dotOff : styles.dot} />
-      <Text fontSize={12} type={'secondary'}>
-        {statusText}
-      </Text>
-    </Flexbox>
+      <div className="text-[12px] text-muted-foreground">{statusText}</div>
+    </div>
   </div>
 ));
 
@@ -342,9 +340,8 @@ const AgentScanRow = memo<{
   provider: ConnectableProvider;
   selected: boolean;
   status?: HeterogeneousAgentScanStatus;
-  subtitle: string;
   unavailableText: string;
-}>(({ onToggle, provider, selected, status, subtitle, unavailableText }) => {
+}>(({ onToggle, provider, selected, status, unavailableText }) => {
   const available = status?.available === true;
   const row = (
     <div
@@ -354,37 +351,52 @@ const AgentScanRow = memo<{
       onClick={available ? onToggle : undefined}
     >
       <provider.brand.Avatar size={32} />
-      <Flexbox flex={1} gap={1} style={{ minWidth: 0 }}>
-        <Text strong>{provider.title}</Text>
-        <Text ellipsis fontSize={12} type={'secondary'}>
-          {subtitle}
-        </Text>
-      </Flexbox>
+      <div className="flex flex-col flex-1 justify-center" style={{ minHeight: 42, minWidth: 0 }}>
+        <div className="font-semibold">{provider.title}</div>
+      </div>
       {available ? (
-        <>
-          {status?.version && <span className={styles.mono}>{status.version}</span>}
-          <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
-        </>
+        <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
       ) : (
-        <Text fontSize={12} type={'secondary'}>
-          {unavailableText}
-        </Text>
+        <div className="text-[12px] text-muted-foreground">{unavailableText}</div>
       )}
     </div>
   );
 
-  if (!available && status?.reason) return <Tooltip title={status.reason}>{row}</Tooltip>;
+  if (!available && status?.reason)
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<span>{row}</span>} />
+        <TooltipContent>{status.reason}</TooltipContent>
+      </Tooltip>
+    );
   return row;
 });
 
 interface ConnectAgentContentProps {
+  creationCheckpoint?: FirstAgentCreationCheckpoint;
   groupId?: string;
+  initialTarget?: ScanTarget;
+  /**
+   * Harness the caller already chose (the composer picker's "installed on this
+   * device" row). Seeded into the step-2 selection once its scan settles, so
+   * that hand-off does not make the user find the same row again.
+   */
+  initialType?: HeterogeneousAgentType;
+  onCreated?: (agentId: string, config: CreateAgentParams['config']) => Promise<void>;
   onTitleChange: (title: string) => void;
   visibility?: 'private' | 'public';
 }
 
 const ConnectAgentContent = memo<ConnectAgentContentProps>(
-  ({ groupId, onTitleChange, visibility }) => {
+  ({
+    groupId,
+    initialType,
+    initialTarget,
+    creationCheckpoint,
+    onCreated,
+    onTitleChange,
+    visibility,
+  }) => {
     const { t } = useTranslation('chat');
     const { close, setCanDismissByClickOutside } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
@@ -395,7 +407,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     // Workspace agents must bind workspace devices: a workspace agent on a
     // personal device is unreachable to other members and rejected server-side.
     const activeWorkspaceId = useActiveWorkspaceId();
-    const restrictToWorkspaceDevices = Boolean(activeWorkspaceId);
+    const restrictToWorkspaceDevices = Boolean(activeWorkspaceId) && !creationCheckpoint;
 
     const [step, setStep] = useState(0);
     const [target, setTarget] = useState<ScanTarget | null>(null);
@@ -417,6 +429,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 
     const {
       data: devices,
+      error: devicesError,
       isLoading: loadingDevices,
       isValidating: fetchingDevices,
       mutate: refetchDevices,
@@ -426,25 +439,30 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       () => (devices ?? []).filter((d) => !restrictToWorkspaceDevices || d.scope === 'workspace'),
       [devices, restrictToWorkspaceDevices],
     );
-    const onlineDevices = listedDevices.filter((d) => d.online);
+    // The connect flow obeys the same 0/1/N device rules as the execution
+    // contract: with exactly one legal candidate (desktop counts as its own
+    // "This device" candidate) the flow auto-resolves it instead of showing a
+    // one-row picker. Loading/failed inventory never counts as 0 or 1.
+    const deviceInventoryComplete = !loadingDevices && !fetchingDevices && !devicesError;
 
     const deviceLabel = useCallback(
-      (device: DeviceListItem) => device.friendlyName || device.hostname || device.deviceId,
-      [],
+      (device: DeviceListItem) => getDeviceLabel(device, t('connectAgent.create.desktopChannel')),
+      [t],
     );
 
     const targetLabel =
       target?.kind === 'device' ? deviceLabel(target.device) : t('connectAgent.create.localDevice');
 
+    // Only providers the scan actually found are listed — this step is the
+    // picker for what can be connected, so uninstalled harnesses never render.
     const inventory = useMemo(() => {
       if (scanState.status !== 'success' || !scanState.agents) return [];
-      const rank = (available?: boolean) => (available ? 0 : 1);
-      return [...CONNECTABLE_PROVIDERS]
-        .map((provider) => ({ provider, status: scanState.agents?.[provider.type] }))
-        .sort((a, b) => rank(a.status?.available) - rank(b.status?.available));
+      return CONNECTABLE_PROVIDERS.filter(
+        (provider) => scanState.agents?.[provider.type]?.available,
+      ).map((provider) => ({ provider, status: scanState.agents?.[provider.type] }));
     }, [scanState]);
 
-    const detectedCount = inventory.filter((entry) => entry.status?.available).length;
+    const detectedCount = inventory.length;
 
     const selectedProviders = useMemo(
       () => CONNECTABLE_PROVIDERS.filter((provider) => selectedTypes.includes(provider.type)),
@@ -465,6 +483,38 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       [scan],
     );
 
+    // 1-candidate rule: exactly one legal connect target resolves at flow
+    // admission rather than rendering a one-row picker — desktop is its own
+    // "This device" candidate, so this fires only when (isDesktop ? 1 : 0) +
+    // listedDevices.length totals 1.
+    const autoResolvedTargetRef = useRef(false);
+    useEffect(() => {
+      if (!initialTarget || autoResolvedTargetRef.current) return;
+      autoResolvedTargetRef.current = true;
+      pickTarget(initialTarget);
+    }, [initialTarget, pickTarget]);
+    useEffect(() => {
+      if (autoResolvedTargetRef.current || step !== 0 || !deviceInventoryComplete) return;
+      const candidates = (isDesktop ? 1 : 0) + listedDevices.length;
+      if (candidates !== 1) return;
+      autoResolvedTargetRef.current = true;
+      pickTarget(isDesktop ? { kind: 'local' } : { device: listedDevices[0], kind: 'device' });
+    }, [deviceInventoryComplete, listedDevices, pickTarget, step]);
+
+    // Seed a hand-off selection once — and only once the scan confirms the
+    // binary is actually on the target. Seeding before that could preselect a
+    // harness the device does not have, and re-seeding after an explicit
+    // Rescan would undo the user's own selection.
+    const seededInitialTypeRef = useRef(false);
+    useEffect(() => {
+      const pending = initialType;
+      if (seededInitialTypeRef.current || !pending) return;
+      if (scanState.status !== 'success') return;
+      if (scanState.agents?.[pending]?.available !== true) return;
+      seededInitialTypeRef.current = true;
+      setSelectedTypes((prev) => (prev.includes(pending) ? prev : [...prev, pending]));
+    }, [initialType, scanState]);
+
     const rescan = useCallback(() => {
       if (!target) return;
       setSelectedTypes([]);
@@ -476,7 +526,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         setSelectedTypes((prev) =>
           prev.includes(provider.type)
             ? prev.filter((type) => type !== provider.type)
-            : [...prev, provider.type],
+            : creationCheckpoint
+              ? [provider.type]
+              : [...prev, provider.type],
         );
         // Prefetch the platform's profile so create/customize can prefill
         // title / description / avatar without an extra wait.
@@ -485,16 +537,19 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           isRemoteHeterogeneousType(provider.type) &&
           !profiles[provider.type]
         ) {
-          const deviceId = target?.kind === 'device' ? target.device.deviceId : currentDeviceId;
-          if (!deviceId) return;
           const platform = provider.type;
-          void deviceService
-            .getAgentProfile({ deviceId, platform })
-            .then((profile) => setProfiles((prev) => ({ ...prev, [platform]: profile })))
-            .catch(() => {});
+          void (async () => {
+            const deviceId =
+              target?.kind === 'device'
+                ? target.device.deviceId
+                : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
+            if (!deviceId) return;
+            const profile = await deviceService.getAgentProfile({ deviceId, platform });
+            setProfiles((prev) => ({ ...prev, [platform]: profile }));
+          })().catch(() => {});
         }
       },
-      [currentDeviceId, profiles, target],
+      [creationCheckpoint, currentDeviceId, profiles, target],
     );
 
     const goConfirm = useCallback(() => {
@@ -510,7 +565,17 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     }, [activeWorkspaceId, profiles, single, visibility]);
 
     const buildCreateParams = useCallback(
-      (provider: ConnectableProvider, overrides?: { description?: string; name?: string }) => {
+      async (
+        provider: ConnectableProvider,
+        overrides?: { description?: string; name?: string },
+      ) => {
+        // A local target binds this computer's device: the electron-store
+        // snapshot can be absent before the gateway handshake lands, so fall
+        // back to the proven identity owner instead of shipping an empty id.
+        const localDeviceId =
+          target?.kind === 'device'
+            ? target.device.deviceId
+            : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
         return {
           config: buildConnectAgentConfig({
             overrides,
@@ -519,7 +584,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             target:
               target?.kind === 'device'
                 ? { deviceId: target.device.deviceId, kind: 'device' }
-                : { deviceId: currentDeviceId, kind: 'local' },
+                : { deviceId: localDeviceId, kind: 'local' },
           }),
           groupId,
           visibility,
@@ -536,30 +601,45 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         try {
           const created = await Promise.all(
             selectedProviders.map(async (provider) => {
-              const params = buildCreateParams(
+              const params = await buildCreateParams(
                 provider,
                 provider === single ? overrides : undefined,
               );
-              const result = await storeCreateAgent(params);
+              const result = creationCheckpoint
+                ? await createOnboardingAgentOnce(creationCheckpoint, params, storeCreateAgent)
+                : { ...(await storeCreateAgent(params)), config: params.config };
+              const savedConfig = result.config ?? params.config;
+              await onCreated?.(result.agentId, savedConfig);
+              const savedProvider =
+                CONNECTABLE_PROVIDERS.find(
+                  (item) => item.type === savedConfig.agencyConfig?.heterogeneousProvider?.type,
+                ) ?? provider;
+              const savedDevice = devices?.find(
+                (item) => item.deviceId === savedConfig.agencyConfig?.boundDeviceId,
+              );
               return {
                 agentId: result.agentId,
-                locationLabel: targetLabel,
-                provider,
+                locationLabel: savedDevice ? deviceLabel(savedDevice) : targetLabel,
+                provider: savedProvider,
                 // Mirror the default-name seeding in createAgent so the done
                 // screen shows the same label the sidebar will.
                 title:
-                  params.config.name?.trim() ||
+                  savedConfig.name?.trim() ||
                   heteroAgentDefaultName({
-                    productTitle: params.config.title,
+                    productTitle: savedConfig.title ?? undefined,
                     visibility,
                     workspaceId: activeWorkspaceId,
                   }) ||
-                  agentDisplayName(params.config, provider.title),
+                  agentDisplayName(savedConfig, savedProvider.title),
                 version: scanState.agents?.[provider.type]?.version,
               } satisfies CreatedAgent;
             }),
           );
           await refreshAgentList();
+          if (onCreated) {
+            close();
+            return;
+          }
           setDone(created);
           onTitleChange(
             created.length === 1
@@ -574,8 +654,13 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       },
       [
         activeWorkspaceId,
+        close,
         buildCreateParams,
+        creationCheckpoint,
+        deviceLabel,
+        devices,
         onTitleChange,
+        onCreated,
         refreshAgentList,
         scanState,
         selectedProviders,
@@ -599,34 +684,32 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     // ── Done: connected summary stays inside the modal ──
     if (done) {
       return (
-        <Flexbox gap={8} paddingBlock={'16px 8px'}>
+        <div className="flex flex-col gap-2" style={{ paddingBlock: '16px 8px' }}>
           <SectionLabel>{t('connectAgent.create.doneHint')}</SectionLabel>
           <div className={styles.groupList}>
             {done.map((agent) => (
               <div className={`${styles.row} ${styles.rowStatic}`} key={agent.agentId}>
                 <agent.provider.brand.Avatar size={32} />
-                <Flexbox flex={1} gap={1} style={{ minWidth: 0 }}>
-                  <Text strong fontSize={13}>
-                    {agentDisplayName(agent)}
-                  </Text>
-                  <Text ellipsis fontSize={12} type={'secondary'}>
+                <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
+                  <div className="font-semibold text-[13px]">{agentDisplayName(agent)}</div>
+                  <div className="truncate block text-[12px] text-muted-foreground">
                     {agent.provider.title}
                     {agent.version ? ` ${agent.version}` : ''} · {agent.locationLabel}
-                  </Text>
-                </Flexbox>
+                  </div>
+                </div>
                 <div className={styles.dot} />
-                <Button size={'small'} onClick={() => openChat(agent.agentId)}>
+                <Button size="sm" onClick={() => openChat(agent.agentId)}>
                   {t('connectAgent.create.openChat')}
                 </Button>
               </div>
             ))}
           </div>
-          <Flexbox horizontal justify={'flex-end'} style={{ paddingBlockStart: 8 }}>
-            <Button type={'primary'} onClick={close}>
+          <div className="flex justify-end" style={{ paddingBlockStart: 8 }}>
+            <Button variant="default" onClick={close}>
               {t('connectAgent.create.done')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 
@@ -637,42 +720,42 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         hasDevices: listedDevices.length > 0,
         isFetching: isRefreshing,
       });
-      const showEmpty = !isDesktop && !isRefreshing && onlineDevices.length === 0;
+      // Offline devices stay legal candidates (they cannot start yet, but
+      // they are not "no device"), so the empty state only covers a truly
+      // empty inventory — matching the contract's zero-device rule.
+      const showEmpty = !isDesktop && !isRefreshing && listedDevices.length === 0;
 
       return (
-        <Flexbox gap={16} paddingBlock={'16px 8px'}>
+        <div className="flex flex-col gap-4" style={{ paddingBlock: '16px 8px' }}>
           <SectionLabel>{t('connectAgent.create.stepDevice')}</SectionLabel>
           {showEmpty ? (
             <div className={styles.emptyCard}>
-              <Flexbox align={'center'} className={styles.emptyHero} gap={10}>
+              <div className={`flex flex-col items-center gap-2.5 ${styles.emptyHero}`}>
                 <span className={styles.heroIcon}>
-                  <Icon icon={LaptopIcon} size={26} />
+                  <LaptopIcon size={26} />
                 </span>
-                <Text fontSize={17} weight={600}>
+                <div className="text-[17px] font-semibold">
                   {t('connectAgent.create.noDevices')}
-                </Text>
-                <Text style={{ maxWidth: 400 }} type={'secondary'}>
+                </div>
+                <div className="text-muted-foreground" style={{ maxWidth: 400 }}>
                   {t('connectAgent.create.noDevicesDesc')}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
               <div className={styles.emptyOptions}>
                 <div className={styles.emptyOption}>
                   <span className={styles.emptyOptionIcon}>
-                    <Icon icon={Download} size={20} />
+                    <Download size={20} />
                   </span>
-                  <Flexbox gap={3}>
-                    <Text weight={500}>{t('connectAgent.create.downloadDesktop')}</Text>
-                    <Text fontSize={12} type={'secondary'}>
+                  <div className="flex flex-col gap-[3px]">
+                    <div className="font-medium">{t('connectAgent.create.downloadDesktop')}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('connectAgent.create.noDevicesDesktopHint')}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                   <div className={styles.emptyOptionAction}>
                     <a href={DOWNLOAD_URL.default} rel={'noreferrer'} target={'_blank'}>
-                      <Button
-                        icon={<Icon icon={Download} size={14} />}
-                        style={{ width: '100%' }}
-                        type={'primary'}
-                      >
+                      <Button style={{ width: '100%' }} variant="default">
+                        <Download data-icon="inline-start" size={14} />
                         {t('connectAgent.create.download')}
                       </Button>
                     </a>
@@ -680,61 +763,61 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                 </div>
                 <div className={styles.emptyOption}>
                   <span className={styles.emptyOptionIcon}>
-                    <Icon icon={TerminalIcon} size={20} />
+                    <TerminalIcon size={20} />
                   </span>
-                  <Flexbox gap={3}>
-                    <Text weight={500}>{t('connectAgent.create.connectCli')}</Text>
-                    <Text fontSize={12} type={'secondary'}>
+                  <div className="flex flex-col gap-[3px]">
+                    <div className="font-medium">{t('connectAgent.create.connectCli')}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('connectAgent.create.noDevicesCliHint')}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                   <div className={styles.emptyOptionAction}>
                     <CommandLine command={t('connectAgent.create.noDevicesCmd')} />
                   </div>
                 </div>
               </div>
-              <Flexbox horizontal justify={'flex-end'} padding={8}>
+              <div className="flex justify-end" style={{ padding: 8 }}>
                 <Button
-                  icon={<Icon icon={RefreshCw} size={13} />}
                   loading={isRefreshing}
-                  size={'small'}
-                  type={'text'}
+                  size="sm"
+                  variant="ghost"
                   onClick={() => void refetchDevices()}
                 >
+                  <RefreshCw data-icon="inline-start" size={13} />
                   {t('connectAgent.create.refresh')}
                 </Button>
-              </Flexbox>
+              </div>
             </div>
           ) : (
-            <Flexbox gap={16}>
+            <div className="flex flex-col gap-4">
               {isDesktop && (
-                <Flexbox gap={6}>
+                <div className="flex flex-col gap-1.5">
                   <SectionLabel>{t('connectAgent.create.thisDevice')}</SectionLabel>
                   <div className={styles.groupList}>
                     <DeviceRow
-                      icon={<Icon icon={LaptopIcon} size={18} />}
+                      icon=<LaptopIcon data-icon="inline-start" size={18} />
                       statusText={t('connectAgent.create.online')}
                       subtitle={t('connectAgent.create.localDeviceDesc')}
                       title={t('connectAgent.create.localDevice')}
                       onClick={() => pickTarget({ kind: 'local' })}
                     />
                   </div>
-                </Flexbox>
+                </div>
               )}
               {deviceListState !== 'empty' && (
-                <Flexbox gap={6}>
-                  <Flexbox horizontal align={'center'} justify={'space-between'}>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
                     <SectionLabel>{t('connectAgent.create.connectedDevices')}</SectionLabel>
                     <Button
-                      icon={<Icon icon={RefreshCw} size={13} />}
                       loading={isRefreshing}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={() => void refetchDevices()}
                     >
+                      <RefreshCw data-icon="inline-start" size={13} />
                       {t('connectAgent.create.refresh')}
                     </Button>
-                  </Flexbox>
+                  </div>
                   <div className={styles.groupList}>
                     {deviceListState === 'loading'
                       ? [96, 140, 112].map((width) => (
@@ -756,17 +839,19 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                           />
                         ))}
                   </div>
-                </Flexbox>
+                </div>
               )}
               {isDesktop && deviceListState === 'empty' && (
                 <div className={styles.commandHint}>
-                  <Text type={'secondary'}>{t('connectAgent.create.noDevicesCliHint')}</Text>
+                  <div className="text-muted-foreground">
+                    {t('connectAgent.create.noDevicesCliHint')}
+                  </div>
                   <CommandLine command={t('connectAgent.create.noDevicesCmd')} />
                 </div>
               )}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       );
     }
 
@@ -775,30 +860,27 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       const scanning = scanState.status === 'scanning';
 
       return (
-        <Flexbox gap={8} paddingBlock={'0 8px'}>
+        <div className="flex flex-col gap-2" style={{ paddingBlock: '0 8px' }}>
           {/* Rescan stays mounted (disabled while scanning) and the row reserves
               its height — no jump when the scan settles */}
-          <Flexbox horizontal align={'center'} justify={'space-between'} style={{ minHeight: 28 }}>
+          <div className="flex items-center justify-between" style={{ minHeight: 28 }}>
             <SectionLabel>
               {t('connectAgent.create.stepAgents', { device: targetLabel })}
             </SectionLabel>
             {!(scanState.status === 'success' && detectedCount === 0) &&
               scanState.status !== 'error' && (
-                <Button
-                  disabled={scanning}
-                  icon={<Icon icon={RefreshCw} size={13} />}
-                  size={'small'}
-                  type={'text'}
-                  onClick={rescan}
-                >
+                <Button disabled={scanning} size="sm" variant="ghost" onClick={rescan}>
+                  <RefreshCw data-icon="inline-start" size={13} />
                   {t('connectAgent.create.rescan')}
                 </Button>
               )}
-          </Flexbox>
+          </div>
 
           {scanning && (
-            <Flexbox gap={6}>
-              <SectionLabel>{t('connectAgent.create.scanning')}</SectionLabel>
+            <div className="flex flex-col gap-1.5">
+              <SectionLabel>
+                {t('connectAgent.create.scanning', { device: targetLabel })}
+              </SectionLabel>
               <ScrollableAgentList>
                 {[90, 70, 110, 80, 100, 75, 95]
                   .slice(0, CONNECTABLE_PROVIDERS.length)
@@ -806,43 +888,38 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     <SkeletonRow key={i} width={width} />
                   ))}
               </ScrollableAgentList>
-            </Flexbox>
+            </div>
           )}
 
           {scanState.status === 'error' && (
-            <Alert
-              showIcon
-              description={scanState.error}
-              message={t('connectAgent.create.scanFailed')}
-              type={'error'}
-              action={
-                <Button size={'small'} onClick={rescan}>
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t('connectAgent.create.scanFailed')}</AlertTitle>
+              <AlertDescription>{scanState.error}</AlertDescription>
+              <AlertAction>
+                <Button size="sm" onClick={rescan}>
                   {t('connectAgent.create.rescan')}
                 </Button>
-              }
-            />
+              </AlertAction>
+            </Alert>
           )}
 
           {scanState.status === 'success' && detectedCount === 0 && (
-            <Flexbox align={'center'} gap={12} paddingBlock={24}>
-              <Icon icon={ScanSearch} size={28} />
-              <Text strong>{t('connectAgent.create.noneDetected')}</Text>
-              <Text style={{ textAlign: 'center' }} type={'secondary'}>
+            <div className="flex flex-col items-center gap-3" style={{ paddingBlock: 24 }}>
+              <ScanSearch size={28} />
+              <div className="font-semibold">{t('connectAgent.create.noneDetected')}</div>
+              <div className="text-muted-foreground" style={{ textAlign: 'center' }}>
                 {t('connectAgent.create.noneDetectedHint')}
-              </Text>
-              <Button
-                icon={<Icon icon={RefreshCw} size={13} />}
-                size={'small'}
-                type={'primary'}
-                onClick={rescan}
-              >
+              </div>
+              <Button size="sm" variant="default" onClick={rescan}>
+                <RefreshCw data-icon="inline-start" size={13} />
                 {t('connectAgent.create.rescanDevice')}
               </Button>
-            </Flexbox>
+            </div>
           )}
 
           {scanState.status === 'success' && detectedCount > 0 && (
-            <Flexbox gap={6}>
+            <div className="flex flex-col gap-1.5">
               <SectionLabel>
                 {t('connectAgent.create.detectedCount', { total: detectedCount })}
               </SectionLabel>
@@ -853,80 +930,87 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     provider={provider}
                     selected={selectedTypes.includes(provider.type)}
                     status={status}
-                    subtitle={t(`connectAgent.providerDesc.${provider.type}`)}
                     unavailableText={t('connectAgent.create.notInstalled')}
                     onToggle={() => toggleType(provider)}
                   />
                 ))}
               </ScrollableAgentList>
-            </Flexbox>
+            </div>
           )}
 
           {createError && (
-            <Alert
-              showIcon
-              description={createError}
-              message={t('connectAgent.create.createFailed')}
-              type={'error'}
-            />
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t('connectAgent.create.createFailed')}</AlertTitle>
+              <AlertDescription>{createError}</AlertDescription>
+            </Alert>
           )}
 
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-            <Button
-              icon={<Icon icon={ArrowLeft} size={14} />}
-              type={'text'}
-              onClick={() => setStep(0)}
-            >
+          <div className="flex items-center gap-2 justify-between">
+            <Button variant="ghost" onClick={() => setStep(0)}>
+              <ArrowLeft data-icon="inline-start" size={14} />
               {t('connectAgent.create.back')}
             </Button>
-            <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex items-center gap-2">
               {single && (
-                <Button type={'text'} onClick={goConfirm}>
+                <Button variant="ghost" onClick={goConfirm}>
                   {t('connectAgent.create.customizeName')}
                 </Button>
               )}
-              <Tooltip
-                title={selectedProviders.length > 0 ? '' : t('connectAgent.create.selectFirst')}
-              >
-                <Button
-                  disabled={selectedProviders.length === 0}
-                  loading={creating}
-                  type={'primary'}
-                  onClick={() => void handleCreate()}
-                >
-                  {selectedProviders.length === 0
-                    ? t('connectAgent.create.connect')
-                    : selectedProviders.length === 1
-                      ? t('connectAgent.create.connectOne', { name: selectedProviders[0].title })
-                      : t('connectAgent.create.connectMany', { total: selectedProviders.length })}
-                </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <Button
+                        disabled={selectedProviders.length === 0}
+                        loading={creating}
+                        variant="default"
+                        onClick={() => void handleCreate()}
+                      >
+                        {selectedProviders.length === 0
+                          ? t('connectAgent.create.connect')
+                          : selectedProviders.length === 1
+                            ? t('connectAgent.create.connectOne', {
+                                name: selectedProviders[0].title,
+                              })
+                            : t('connectAgent.create.connectMany', {
+                                total: selectedProviders.length,
+                              })}
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {selectedProviders.length > 0 ? '' : t('connectAgent.create.selectFirst')}
+                </TooltipContent>
               </Tooltip>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       );
     }
 
     // ── Step 3: confirm (optional customization, single-select only) ──
     if (step === 2 && single) {
       return (
-        <Flexbox gap={16} paddingBlock={'16px 8px'}>
+        <div className="flex flex-col gap-4" style={{ paddingBlock: '16px 8px' }}>
           <SectionLabel>{t('connectAgent.create.stepConfirm')}</SectionLabel>
-          <Flexbox horizontal align={'center'} gap={12}>
+          <div className="flex items-center gap-3">
             <single.brand.Avatar size={44} />
-            <Flexbox flex={1}>
+            <div className="flex flex-col flex-1">
               <Input
                 maxLength={60}
                 placeholder={t('connectAgent.create.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-            </Flexbox>
-          </Flexbox>
-          <TextArea
-            autoSize={{ maxRows: 4, minRows: 2 }}
+            </div>
+          </div>
+          <Textarea
             maxLength={200}
             placeholder={t('connectAgent.create.descriptionPlaceholder')}
+            rows={2}
+            style={{ maxHeight: '4lh' }}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
@@ -936,48 +1020,44 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                 {target?.kind === 'device' ? (
                   getDeviceIcon(target.device.platform, 18)
                 ) : (
-                  <Icon icon={LaptopIcon} size={18} />
+                  <LaptopIcon size={18} />
                 )}
               </div>
-              <Flexbox flex={1} gap={1} style={{ minWidth: 0 }}>
-                <Text fontSize={13}>
+              <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
+                <div className="text-[13px]">
                   {t('connectAgent.create.runsOn', { device: targetLabel })}
-                </Text>
-                <Text fontSize={12} type={'secondary'}>
+                </div>
+                <div className="text-[12px] text-muted-foreground">
                   {single.title}
                   {singleVersion ? ` ${singleVersion}` : ''} ·{' '}
                   {t('connectAgent.create.detectedInScan')}
-                </Text>
-              </Flexbox>
-              <Icon color={cssVar.colorSuccess} icon={CheckCircle2} size={16} />
+                </div>
+              </div>
+              <CheckCircle2 color={cssVar.colorSuccess} size={16} />
             </div>
           </div>
           {createError && (
-            <Alert
-              showIcon
-              description={createError}
-              message={t('connectAgent.create.createFailed')}
-              type={'error'}
-            />
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t('connectAgent.create.createFailed')}</AlertTitle>
+              <AlertDescription>{createError}</AlertDescription>
+            </Alert>
           )}
-          <Flexbox horizontal align={'center'} justify={'space-between'}>
-            <Button
-              icon={<Icon icon={ArrowLeft} size={14} />}
-              type={'text'}
-              onClick={() => setStep(1)}
-            >
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setStep(1)}>
+              <ArrowLeft data-icon="inline-start" size={14} />
               {t('connectAgent.create.back')}
             </Button>
             <Button
               disabled={!name.trim()}
               loading={creating}
-              type={'primary'}
+              variant="default"
               onClick={() => void handleCreate({ description, name })}
             >
               {t('connectAgent.create.connectOne', { name: single.title })}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 
@@ -988,7 +1068,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 ConnectAgentContent.displayName = 'ConnectAgentContent';
 
 export interface OpenConnectAgentModalOptions {
+  creationCheckpoint?: FirstAgentCreationCheckpoint;
   groupId?: string;
+  initialTarget?: ScanTarget;
+  /** Pre-select this harness when the scan finds it (composer picker hand-off). */
+  initialType?: HeterogeneousAgentType;
+  onCreated?: (agentId: string, config: CreateAgentParams['config']) => Promise<void>;
   visibility?: 'private' | 'public';
 }
 
@@ -1000,8 +1085,12 @@ export const openConnectAgentModal = (options?: OpenConnectAgentModalOptions): M
   holder.instance = createModal({
     content: (
       <ConnectAgentContent
+        creationCheckpoint={options?.creationCheckpoint}
         groupId={options?.groupId}
+        initialTarget={options?.initialTarget}
+        initialType={options?.initialType}
         visibility={options?.visibility}
+        onCreated={options?.onCreated}
         onTitleChange={(title) => holder.instance?.update({ title })}
       />
     ),

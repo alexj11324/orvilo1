@@ -50,9 +50,13 @@ vi.mock('@/features/Portal/router', () => ({
   PortalContent: () => <div data-testid={'portal-content'} />,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  Drawer: ({ children, open }: { children?: React.ReactNode; open?: boolean }) =>
-    open ? <div data-testid={'drawer'}>{children}</div> : null,
+vi.mock('@/components/ui/sheet', () => ({
+  Sheet: ({ children, open }: { children?: React.ReactNode; open?: boolean }) =>
+    open ? <>{children}</> : null,
+  SheetContent: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid={'drawer'}>{children}</div>
+  ),
+  SheetTitle: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 const copies = () => screen.queryAllByTestId('portal-content').length;

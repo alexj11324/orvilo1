@@ -6,6 +6,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { OrviloDatabase } from '@/database/type';
 import type { McpEventsDatabase } from '@/server/services/mcpEvents/database';
 import type { McpEventBinding } from '@/server/services/mcpEvents/deliveryTypes';
 import {
@@ -14,6 +15,7 @@ import {
   SqlMcpEventBindingRepository,
 } from '@/server/services/mcpEvents/inbox';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
+import { MCP_EVENT_WORK_SCHEMA_SQL } from '@/server/services/mcpEvents/workerRepository';
 
 import { mcpEventsWebhook } from './mcpEvents';
 
@@ -61,7 +63,9 @@ describe('MCP Events Hono raw callback route', () => {
 
   beforeEach(async () => {
     database = new PGlite();
-    await database.exec(MCP_EVENT_BINDING_SCHEMA_SQL + MCP_EVENT_INBOX_SCHEMA_SQL);
+    await database.exec(
+      MCP_EVENT_BINDING_SCHEMA_SQL + MCP_EVENT_INBOX_SCHEMA_SQL + MCP_EVENT_WORK_SCHEMA_SQL,
+    );
     connection.db = drizzle(database);
     const binding: McpEventBinding = {
       callbackToken: 'token-1',
@@ -117,15 +121,39 @@ describe('MCP Events Hono raw callback route', () => {
     expect((await request(occurrence())).status).toBe(503);
   });
 
-  it('preserves accepted work and retry budget until core admission is configured', async () => {
+  it('rejects a signature forged under a different key before any persistence', async () => {
+    const raw = occurrence();
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const forged = createHmac('sha256', Buffer.alloc(32, 99))
+      .update(`event-1.${timestamp}.`)
+      .update(raw)
+      .digest('base64');
+    const response = await app.request('/api/webhooks/mcp-events/token-1', {
+      body: raw,
+      headers: {
+        'content-type': 'application/json',
+        'webhook-id': 'event-1',
+        'webhook-signature': `v1,${forged}`,
+        'webhook-timestamp': timestamp,
+        'x-mcp-subscription-id': 'remote-1',
+      },
+      method: 'POST',
+    });
+    expect(response.status).toBe(401);
+    expect((await database.query('SELECT id FROM mcp_event_inbox')).rows).toEqual([]);
+  });
+
+  it('completes a delivery whose events match no enabled trigger', async () => {
     expect((await request(occurrence())).status).toBe(202);
-    expect(await sweepMcpEventInbox(drizzle(database))).toMatchObject({
-      claimed: 0,
-      reason: 'runtime-unavailable',
-      status: 'waiting',
+    // The real admission service is installed — a delivery with no matching
+    // trigger has no run to admit and settles completed.
+    expect(await sweepMcpEventInbox(drizzle(database) as unknown as OrviloDatabase)).toMatchObject({
+      claimed: 1,
+      completed: 1,
+      retried: 0,
     });
     expect((await database.query('SELECT status, attempts FROM mcp_event_inbox')).rows).toEqual([
-      { attempts: 0, status: 'pending' },
+      { attempts: 1, status: 'completed' },
     ]);
   });
 });

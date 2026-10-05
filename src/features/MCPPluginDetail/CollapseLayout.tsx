@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -17,18 +16,18 @@ export interface CollapseLayoutProps {
 
 const CollapseLayout = memo<CollapseLayoutProps>(({ items }) => {
   return (
-    <Flexbox gap={24}>
+    <div className="flex flex-col gap-6">
       {items.map((item) => (
-        <Flexbox gap={12} key={item.key}>
+        <div className="flex flex-col gap-3" key={item.key}>
           {item.title && (
             <Title level={3} {...item.titleProps}>
               {item.title}
             </Title>
           )}
           {item.children}
-        </Flexbox>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

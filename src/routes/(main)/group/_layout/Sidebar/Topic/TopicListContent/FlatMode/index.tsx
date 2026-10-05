@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
 import React, { memo } from 'react';
@@ -21,7 +20,6 @@ const FlatMode = memo(() => {
   const { t } = useTranslation('topic');
   const topicPageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
   const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
-  const topicIncludeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
 
   const [activeTopicId, activeThreadId, hasMore, isExpandingPageSize, openAllTopicsDrawer] =
     useChatStore((s) => [
@@ -33,12 +31,12 @@ const FlatMode = memo(() => {
     ]);
 
   const activeTopicList = useChatStore(
-    topicSelectors.displayTopicsForSidebar(topicPageSize, topicSortBy, topicIncludeCompleted),
+    topicSelectors.displayTopicsForSidebar(topicPageSize, topicSortBy),
     isEqual,
   );
 
   return (
-    <Flexbox gap={1}>
+    <div className="flex flex-col" style={{ gap: 1 }}>
       {activeTopicList?.map((topic) => (
         <TopicItem
           active={activeTopicId === topic.id}
@@ -55,7 +53,7 @@ const FlatMode = memo(() => {
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

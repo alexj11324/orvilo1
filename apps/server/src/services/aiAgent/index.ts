@@ -3,7 +3,7 @@ import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { builtinSkills } from '@orvilo/builtin-skills';
 import { isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
-import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
+import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -15,12 +15,7 @@ import type {
   ScheduleAgentRunResult,
   WorkingDirConfig,
 } from '@orvilo/types';
-import {
-  getActivePluginIds,
-  getWorkingDirEffectivePath,
-  RequestTrigger,
-  resolveOrviloCliAgentType,
-} from '@orvilo/types';
+import { getActivePluginIds, getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -518,7 +513,7 @@ export class AiAgentService {
     // A replacement is allowed to take over the topic marker, but the device
     // process that owned the old marker may still hold a native Codex/CC writer.
     // Settle that physical run before reserving and dispatching the replacement;
-    // otherwise two `lh hetero exec` wrappers can resume the same thread.
+    // otherwise two `orvilo hetero exec` wrappers can resume the same thread.
     if (params.replacesOperationId && !isInterventionThreadStart) {
       const interruption = await this.interruptTask({
         operationId: params.replacesOperationId,
@@ -718,6 +713,10 @@ export class AiAgentService {
       !!resumeToolResult ||
       !!parentMessageId;
     const clientIds = isResumeLike ? undefined : params.clientIds;
+    // Same fresh-send rule for the composer's topic pins: they describe the topic
+    // this send is about to create, and a replay would re-write the row the
+    // original send already owns.
+    const newTopicPins = isResumeLike ? undefined : params.newTopicPins;
 
     // Validate that either agentId or slug is provided
     if (!agentId && !slug) {
@@ -937,6 +936,7 @@ export class AiAgentService {
         cronJobId,
         files,
         modelOverride,
+        newTopicPins,
         operationTaskId,
         parentMessageId,
         prompt,
@@ -1018,14 +1018,14 @@ export class AiAgentService {
       externalTools,
       requiredToolIds,
       selectedToolIds,
-      // MCP-mountable harnesses are the standard-ACP runtimes; remote platform
-      // types and the non-standard adapters (cursor/devin/droid/grok/trae)
-      // never see a spec, so they never advertise uncallable tools.
-      supportsBuiltinToolMount: ACP_RUNTIME_AGENT_TYPES.has(
-        turn.heteroType === 'orvilo'
-          ? resolveOrviloCliAgentType(turn.heterogeneousProvider?.engine)
-          : turn.heteroType,
-      ),
+      // MCP-mountable harnesses are the standard-ACP runtimes whose adapter
+      // delivers `session/new` mcpServers; remote platform types, the
+      // non-standard adapters (cursor/devin/droid/grok/trae) and bridges that
+      // drop the payload (pi-acp) never see a spec, so they never advertise
+      // uncallable tools.
+      supportsBuiltinToolMount: canMountBuiltinToolSurface({
+        type: turn.heteroType,
+      }),
     });
 
     const dispatchResult = await dispatchHeteroAgent(
@@ -1048,7 +1048,6 @@ export class AiAgentService {
         externalToolMounts: toolSurface.externalTools,
         toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
-        effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
         // Skill content, mounted-tool usage guidance and eval env prompts all
         // ride the ACP system-context channel — the retired loop consumed them
         // as live tool definitions / `evalContext` during operation prep.
@@ -1066,8 +1065,17 @@ export class AiAgentService {
         parentOperationId,
         pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,
         requestTrigger: requestTriggerMetadata.trigger,
-        requestedDeviceId: turn.effectiveRequestedDeviceId,
+        // The caller's raw per-request device id — admission treats it as the
+        // explicit request (subject to request authorization), NOT the pin.
+        requestedDeviceId,
         runAttachments,
+        // The binding epoch paired with the pin — echoed in admission
+        // errorData so repair can CAS on the revision it was shown.
+        sessionBindingRevision: turn.topicBindingRevision,
+        // The topic's durable device pin — the session binding admission
+        // consults first (invalid → DEVICE_BINDING_INVALID, never silently
+        // re-resolved onto another device).
+        sessionBoundDeviceId: turn.topicBoundDeviceId,
         selfMessageIds,
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,

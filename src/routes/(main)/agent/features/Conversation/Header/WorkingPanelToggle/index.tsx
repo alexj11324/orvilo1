@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@orvilo/const';
 import { LayoutDashboardIcon, PanelRightOpenIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 

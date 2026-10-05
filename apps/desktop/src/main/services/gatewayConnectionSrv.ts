@@ -245,15 +245,14 @@ export default class GatewayConnectionService extends ServiceModule {
 
   /**
    * Derive the stable, user-scoped device id. Survives Orvilo reinstalls
-   * because it hashes the OS machine id; falls back to the stored random UUID
-   * when the machine id is unavailable. Caches the result for this session.
+   * because it hashes the OS machine id; the shared per-principal record preserves
+   * the fallback identity when the machine id is unavailable.
    */
   async resolveDeviceIdentity(
     userId: string,
   ): Promise<{ deviceId: string; identitySource: IdentitySource }> {
-    const { deriveDeviceId } = await import('@orvilo/device-identity');
-    const fallbackId = this.app.storeManager.get('gatewayDeviceId') as string | undefined;
-    const identity = deriveDeviceId(userId, { fallbackId });
+    const { resolvePersistentDeviceIdentity } = await import('@orvilo/device-identity');
+    const identity = await resolvePersistentDeviceIdentity(userId);
     this.deviceId = identity.deviceId;
     this.identitySource = identity.identitySource;
     return identity;
@@ -268,7 +267,7 @@ export default class GatewayConnectionService extends ServiceModule {
    * from the stable `deviceId`. Reuses the persisted random UUID (historically
    * `gatewayDeviceId`, now used purely as the connectionId) so a reconnect of
    * this install replaces only its own previous socket, while a co-running
-   * `lh connect` on the same machine (same deviceId, different connectionId)
+   * `orvilo connect` on the same machine (same deviceId, different connectionId)
    * stays connected.
    */
   getConnectionId(): string {
@@ -286,11 +285,18 @@ export default class GatewayConnectionService extends ServiceModule {
     return this.status;
   }
 
-  getDeviceInfo() {
+  async getDeviceInfo() {
+    const token = await this.tokenProvider?.();
+    const userId = token ? this.extractUserIdFromToken(token) : null;
+    const { resolvePersistentDeviceIdentity } = await import('@orvilo/device-identity');
+    const deviceId = userId
+      ? (await resolvePersistentDeviceIdentity(userId)).deviceId
+      : this.getConnectionId();
     return {
-      deviceId: this.getDeviceId(),
+      deviceId,
       hostname: os.hostname(),
       platform: process.platform,
+      userId: userId ?? undefined,
     };
   }
 
@@ -368,8 +374,10 @@ export default class GatewayConnectionService extends ServiceModule {
     // Resolve the stable, user-scoped device id and register with the server
     // registry before opening the WS, so the device row exists by the time the
     // gateway reports it online.
+    let deviceId = this.getDeviceId();
     if (userId) {
       const identity = await this.resolveDeviceIdentity(userId);
+      deviceId = identity.deviceId;
       await this.deviceRegistrar?.({
         deviceId: identity.deviceId,
         hostname: os.hostname(),
@@ -384,7 +392,7 @@ export default class GatewayConnectionService extends ServiceModule {
     const client = new GatewayClient({
       channel: isDev ? 'desktop-dev' : 'desktop',
       connectionId: this.getConnectionId(),
-      deviceId: this.getDeviceId(),
+      deviceId,
       gatewayUrl,
       logger,
       token,
@@ -498,24 +506,14 @@ export default class GatewayConnectionService extends ServiceModule {
    * Identity for a WORKSPACE share connection. MUST stay byte-compatible with
    * the CLI's `resolveWorkspaceDeviceIdentity` (apps/cli/src/device/register.ts):
    * both hash the `workspace:<id>` principal, so the same physical machine
-   * enrolled into a workspace — via desktop share or `lh connect --workspace` —
+   * enrolled into a workspace — via desktop share or `orvilo connect --workspace` —
    * resolves to one workspace device.
    */
   private async resolveWorkspaceDeviceIdentity(
     workspaceId: string,
   ): Promise<EnrollWorkspaceResult> {
-    const { deriveDeviceId, deriveScopedFallbackId } = await import('@orvilo/device-identity');
-    // Fallback machines (no readable machine id) must still derive a STABLE
-    // workspace id — the identity-only probe, the real enroll, and restore
-    // checks each re-derive it. Namespace the persisted install UUID rather
-    // than passing it raw: the raw UUID IS the personal deviceId on fallback
-    // machines, and reusing it here would collide the two pools.
-    const storedFallback = this.app.storeManager.get('gatewayDeviceId') as string | undefined;
-    return deriveDeviceId(`workspace:${workspaceId}`, {
-      fallbackId: storedFallback
-        ? deriveScopedFallbackId(storedFallback, `workspace:${workspaceId}`)
-        : undefined,
-    });
+    const { resolvePersistentDeviceIdentity } = await import('@orvilo/device-identity');
+    return resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
   }
 
   private async openWorkspaceClient(
@@ -782,7 +780,7 @@ export default class GatewayConnectionService extends ServiceModule {
     // observe the whole dispatch round trip, so without this number a slow tool
     // and slow transport are indistinguishable — and desktop is where most
     // device tool calls actually happen, so leaving it out here would bias the
-    // measurement toward the `lh connect` subset.
+    // measurement toward the `orvilo connect` subset.
     const startedAt = performance.now();
 
     try {

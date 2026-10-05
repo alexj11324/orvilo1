@@ -17,6 +17,13 @@ describe('shouldDeferOnboardingRedirect', () => {
     expect(shouldDeferOnboardingRedirect('/')).toBe(false);
     expect(shouldDeferOnboardingRedirect('/agent')).toBe(false);
     expect(shouldDeferOnboardingRedirect('/projects')).toBe(false);
-    expect(shouldDeferOnboardingRedirect('/settings/profile')).toBe(false);
+    expect(shouldDeferOnboardingRedirect('/settings/profile')).toBe(true);
+  });
+
+  it('keeps required provider and credential setup reachable without opening normal app routes', () => {
+    expect(shouldDeferOnboardingRedirect('/settings/provider/openai')).toBe(true);
+    expect(shouldDeferOnboardingRedirect('/settings/credential')).toBe(true);
+    expect(shouldDeferOnboardingRedirect('/settings/agents/new-agent')).toBe(true);
+    expect(shouldDeferOnboardingRedirect('/settings/general')).toBe(false);
   });
 });

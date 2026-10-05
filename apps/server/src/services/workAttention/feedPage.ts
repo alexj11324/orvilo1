@@ -3,6 +3,7 @@ import type {
   NotificationFeedBucket,
   NotificationFeedCard,
   NotificationFeedPage,
+  NotificationFeedTypeFilter,
   NotificationPresentationFilter,
 } from '@orvilo/types';
 
@@ -30,6 +31,9 @@ export interface InboxFeedDeps {
     includeSnoozed?: boolean;
     kind?: NotificationFeedBucket;
     limit?: number;
+    mentioned?: boolean;
+    types?: NotificationFeedTypeFilter[];
+    unreadOnly?: boolean;
   };
   notificationModel: {
     ensureActionCards: (pending: PendingSourceCard[]) => Promise<unknown>;
@@ -42,9 +46,14 @@ export interface InboxFeedDeps {
     findByIds: (ids: string[]) => Promise<Array<{ id: string; name: string }>>;
   };
   taskModel: {
-    findByIds: (
-      ids: string[],
-    ) => Promise<Array<{ id: string; instruction?: string | null; name?: string | null }>>;
+    findByIds: (ids: string[]) => Promise<
+      Array<{
+        id: string;
+        identifier?: string | null;
+        instruction?: string | null;
+        name?: string | null;
+      }>
+    >;
   };
 }
 
@@ -56,24 +65,29 @@ const uniqueIds = (cards: NotificationFeedCard[], resourceType: string) => [
   ),
 ];
 
+export interface LiveResourceInfo {
+  identifier?: string | null;
+  title: string;
+}
+
 export const collectLiveTitles = async (
   cards: NotificationFeedCard[],
   taskModel: InboxFeedDeps['taskModel'],
   projectModel: InboxFeedDeps['projectModel'],
-): Promise<Map<string, string>> => {
+): Promise<Map<string, LiveResourceInfo>> => {
   const taskIds = uniqueIds(cards, 'task');
   const projectIds = uniqueIds(cards, 'project');
-  const titles = new Map<string, string>();
+  const titles = new Map<string, LiveResourceInfo>();
   const [tasks, projects] = await Promise.all([
     taskIds.length > 0 ? taskModel.findByIds(taskIds) : [],
     projectIds.length > 0 ? projectModel.findByIds(projectIds) : [],
   ]);
   for (const task of tasks) {
     const title = liveTitle(task);
-    if (title) titles.set(`task:${task.id}`, title);
+    if (title) titles.set(`task:${task.id}`, { identifier: task.identifier, title });
   }
   for (const project of projects) {
-    if (project.name) titles.set(`project:${project.id}`, project.name);
+    if (project.name) titles.set(`project:${project.id}`, { title: project.name });
   }
   return titles;
 };
@@ -91,7 +105,7 @@ export const buildInboxFeed = async (deps: InboxFeedDeps): Promise<NotificationF
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
   const cards = mapFeedWithLiveActions(pageRows, pending);
-  let titles = new Map<string, string>();
+  let titles = new Map<string, LiveResourceInfo>();
   try {
     titles = await collectLiveTitles(cards, deps.taskModel, deps.projectModel);
   } catch (error) {
@@ -125,7 +139,7 @@ export const buildInboxFeedCard = async (
   if (!row) return null;
   const [card] = mapFeedWithLiveActions([row], pending);
   if (!card) return null;
-  let titles = new Map<string, string>();
+  let titles = new Map<string, LiveResourceInfo>();
   try {
     titles = await collectLiveTitles([card], deps.taskModel, deps.projectModel);
   } catch (error) {

@@ -1,19 +1,19 @@
 # Model & Provider Commands
 
-## Model Management (`lh model`)
+## Model Management (`orvilo model`)
 
 Manage AI models within providers.
 
 **Source**: `apps/cli/src/commands/model.ts`
 
-### `lh model list <providerId>`
+### `orvilo model list <providerId>`
 
 List models for a specific provider.
 
 ```bash
-lh model list openai
-lh model list openai --type image --enabled
-lh model list orvilo --type video --json
+orvilo model list openai
+orvilo model list openai --type image --enabled
+orvilo model list orvilo --type video --json
 ```
 
 | Option            | Description                                                                            | Default |
@@ -27,18 +27,18 @@ lh model list orvilo --type video --json
 
 **Backend**: `aiModel.getAiProviderModelList` → `AiInfraRepos.getAiProviderModelList` (supports `type` filter at repository level)
 
-### `lh model view <id>`
+### `orvilo model view <id>`
 
 ```bash
-lh model view [fields]] < modelId > [--json
+orvilo model view [fields]] < modelId > [--json
 ```
 
 **Displays**: Name, provider, type, enabled status, capabilities.
 
-### `lh model create`
+### `orvilo model create`
 
 ```bash
-lh model create --id [--type < id > --provider < providerId > [--display-name < name > ] < type > ]
+orvilo model create --id [--type < id > --provider < providerId > [--display-name < name > ] < type > ]
 ```
 
 | Option                    | Description  | Default  |
@@ -48,19 +48,19 @@ lh model create --id [--type < id > --provider < providerId > [--display-name < 
 | `--display-name <name>`   | Display name | -        |
 | `--type <type>`           | Model type   | `chat`   |
 
-### `lh model edit <id>`
+### `orvilo model edit <id>`
 
 ```bash
-lh model edit [--type < modelId > --provider < providerId > [--display-name < name > ] < type > ]
+orvilo model edit [--type < modelId > --provider < providerId > [--display-name < name > ] < type > ]
 ```
 
-### `lh model toggle <id>`
+### `orvilo model toggle <id>`
 
 Enable or disable a model.
 
 ```bash
-lh model toggle < modelId > --provider < providerId > --enable
-lh model toggle < modelId > --provider < providerId > --disable
+orvilo model toggle < modelId > --provider < providerId > --enable
+orvilo model toggle < modelId > --provider < providerId > --disable
 ```
 
 | Option                    | Description       | Required     |
@@ -69,56 +69,56 @@ lh model toggle < modelId > --provider < providerId > --disable
 | `--enable`                | Enable the model  | One required |
 | `--disable`               | Disable the model | One required |
 
-### `lh model batch-toggle <ids...>`
+### `orvilo model batch-toggle <ids...>`
 
 Enable or disable multiple models at once.
 
 ```bash
-lh model batch-toggle model1 model2 model3 --provider openai --enable
+orvilo model batch-toggle model1 model2 model3 --provider openai --enable
 ```
 
-### `lh model delete <id>`
+### `orvilo model delete <id>`
 
 ```bash
-lh model delete < modelId > --provider < providerId > [--yes]
+orvilo model delete < modelId > --provider < providerId > [--yes]
 ```
 
-### `lh model clear`
+### `orvilo model clear`
 
 Clear all models (or only remote/fetched models) for a provider.
 
 ```bash
-lh model clear --provider [--yes] < providerId > [--remote]
+orvilo model clear --provider [--yes] < providerId > [--remote]
 ```
 
 ---
 
-## Provider Management (`lh provider`)
+## Provider Management (`orvilo provider`)
 
 Manage AI service providers.
 
 **Source**: `apps/cli/src/commands/provider.ts`
 
-### `lh provider list`
+### `orvilo provider list`
 
 ```bash
-lh provider list [--json [fields]]
+orvilo provider list [--json [fields]]
 ```
 
 **Table columns**: ID, NAME, ENABLED, SOURCE
 
-### `lh provider view <id>`
+### `orvilo provider view <id>`
 
 ```bash
-lh provider view [fields]] < providerId > [--json
+orvilo provider view [fields]] < providerId > [--json
 ```
 
 **Displays**: Name, enabled status, source, configuration.
 
-### `lh provider create`
+### `orvilo provider create`
 
 ```bash
-lh provider create --id [-d [--logo [--sdk-type < id > -n < name > [-s < source > ] < desc > ] < url > ] < type > ]
+orvilo provider create --id [-d [--logo [--sdk-type < id > -n < name > [-s < source > ] < desc > ] < url > ] < type > ]
 ```
 
 | Option                     | Description                                       | Default  |
@@ -130,23 +130,23 @@ lh provider create --id [-d [--logo [--sdk-type < id > -n < name > [-s < source 
 | `--logo <logo>`            | Provider logo URL                                 | -        |
 | `--sdk-type <sdkType>`     | SDK type (openai, anthropic, azure, bedrock, ...) | -        |
 
-### `lh provider edit <id>`
+### `orvilo provider edit <id>`
 
 ```bash
-lh provider edit [-d [--logo [--sdk-type < providerId > [-n < name > ] < desc > ] < url > ] < type > ]
+orvilo provider edit [-d [--logo [--sdk-type < providerId > [-n < name > ] < desc > ] < url > ] < type > ]
 ```
 
 Requires at least one change flag.
 
-### `lh provider config <id>`
+### `orvilo provider config <id>`
 
 Configure provider settings (API key, base URL, etc.).
 
 ```bash
-lh provider config openai --api-key sk-xxx
-lh provider config openai --base-url https://custom-endpoint.com
-lh provider config openai --show
-lh provider config openai --show --json
+orvilo provider config openai --api-key sk-xxx
+orvilo provider config openai --base-url https://custom-endpoint.com
+orvilo provider config openai --show
+orvilo provider config openai --show --json
 ```
 
 | Option                   | Description                       |
@@ -163,24 +163,24 @@ lh provider config openai --show --json
 
 **Important**: The `orvilo` provider is platform-managed. Attempting to set `--api-key` or `--base-url` on it will be rejected with an error message.
 
-### `lh provider test <id>`
+### `orvilo provider test <id>`
 
 Test provider connectivity.
 
 ```bash
-lh provider test openai
-lh provider test openai -m gpt-4o --json
+orvilo provider test openai
+orvilo provider test openai -m gpt-4o --json
 ```
 
-### `lh provider toggle <id>`
+### `orvilo provider toggle <id>`
 
 ```bash
-lh provider toggle < providerId > --enable
-lh provider toggle < providerId > --disable
+orvilo provider toggle < providerId > --enable
+orvilo provider toggle < providerId > --disable
 ```
 
-### `lh provider delete <id>`
+### `orvilo provider delete <id>`
 
 ```bash
-lh provider delete < providerId > [--yes]
+orvilo provider delete < providerId > [--yes]
 ```

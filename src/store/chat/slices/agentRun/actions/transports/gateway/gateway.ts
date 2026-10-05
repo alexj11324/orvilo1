@@ -11,6 +11,7 @@ import type {
   ChatTopicStatus,
   ConversationContext,
   ExecAgentResult,
+  HeterogeneousTopicPin,
   MessageMetadata,
   RuntimeMentionedAgent,
 } from '@orvilo/types';
@@ -90,19 +91,27 @@ const interruptGatewayTaskOrThrow = async (
 };
 
 /**
- * When the agent runs against the local machine, resolve this desktop's
- * own gateway deviceId so it can be passed as the run's routing `deviceId` and
- * `localDeviceId` capability hint. The server then presets `activeDeviceId`,
- * injects `orvilo-local-system` into the first LLM payload, and advertises direct
- * image reads only when the routed device still matches this desktop. This
- * skips the extra `activateDevice` round-trip the model is otherwise forced to
- * make whenever more than one device is online (with a single device the
- * server's heuristic already covered it).
+ * When the agent may run against the local machine, resolve this desktop's
+ * own gateway deviceId and pass it as the `localDeviceId` capability hint —
+ * "which registered device IS the requester's own machine". Unified
+ * admission on the server consumes it to resolve a stored `local` target
+ * (or a member's own `local` override) onto this desktop; it then presets
+ * `activeDeviceId`, injects `orvilo-local-system` into the first LLM payload,
+ * and advertises direct image reads only when the routed device still
+ * matches this desktop.
+ *
+ * The routing `deviceId` override is deliberately NOT sent: under unified
+ * admission a per-request id is an *explicit request* — an authorization-
+ * gated input distinct from the stored `local` intent — so a fixed-policy or
+ * workspace-scoped run would reject the hint it previously accepted, and an
+ * admitted run would wrongly outrank the session pin. The server's
+ * `resolveExecutionDevice` answer (session pin → explicit → preference →
+ * default) owns the pick.
  *
  * Gated on the effective runtime mode (`isLocalSystemEnabledById`), which
- * derives from `agencyConfig.executionTarget` — only a `local` target presets
- * the device. Resolving a device for `sandbox` / `none` / `device` targets
- * would wrongly route the run to this machine.
+ * derives from `agencyConfig.executionTarget` — only a `local` target sends
+ * the hint for local CLI agents; platform tasks always send it as a
+ * capability claim for the server's plan to accept or ignore.
  *
  * Desktop-only and best-effort: any failure falls back to the server-side
  * device-resolution heuristics. We don't pre-check online status here — an
@@ -111,7 +120,7 @@ const interruptGatewayTaskOrThrow = async (
 const resolveDesktopDeviceHints = async (
   agentId?: string,
   topicId?: string | null,
-): Promise<{ deviceId?: string; localDeviceId?: string }> => {
+): Promise<{ localDeviceId?: string }> => {
   if (!isDesktop || !agentId) return {};
 
   const agentState = getAgentStoreState();
@@ -180,9 +189,14 @@ const resolveDesktopDeviceHints = async (
   try {
     const info = await gatewayConnectionService.getDeviceInfo();
     if (!info?.deviceId) return {};
-    return isPlatformTask
-      ? { localDeviceId: info.deviceId }
-      : { deviceId: agencyConfig?.boundDeviceId ?? info.deviceId, localDeviceId: info.deviceId };
+    // `localDeviceId` is the only hint: it tells unified admission which
+    // registered device IS the requester's own machine. The previous `deviceId`
+    // override asked the server to run on that id as an *explicit request* —
+    // under admission that is a different, authorization-gated input than the
+    // stored `local` intent, so a fixed/workspace-scoped run would reject the
+    // hint it used to accept. The server resolves the actual device from the
+    // session pin + stored target instead.
+    return { localDeviceId: info.deviceId };
   } catch {
     return {};
   }
@@ -608,6 +622,15 @@ export class GatewayActionImpl {
      */
     mentionedAgents?: RuntimeMentionedAgent[];
     /**
+     * Blank-composer picks for the topic this send creates. The gateway path is
+     * the one route where the SERVER creates the topic, so the picks have to
+     * travel with the request — there is no client-side `internal_createTopic`
+     * to stamp them onto. The server writes them to the topic's own pin fields
+     * and never to the agent row (docs/development/chat-agent-model-ia.md §5.2).
+     * Ignored when the send reuses an existing topic.
+     */
+    newTopicPins?: HeterogeneousTopicPin;
+    /**
      * Temporary message IDs created during the initial sendMessage phase.
      * These are associated with the new gateway operation so the UI doesn't
      * show a blank loading state while waiting for the first `step_start`
@@ -634,6 +657,7 @@ export class GatewayActionImpl {
       resumeToolResult,
       selectedToolIds,
       mentionedAgents,
+      newTopicPins,
       tempMessageIds,
     } = params;
 
@@ -780,6 +804,7 @@ export class GatewayActionImpl {
               fileIds,
               replacesOperationId,
               mentionedAgents,
+              newTopicPins,
               parentMessageId,
               prompt: message,
               resumeApproval,
@@ -946,6 +971,40 @@ export class GatewayActionImpl {
       return result;
     }
 
+    // Dispatch can persist the turn but reject execution (e.g. DEVICE_REQUIRED).
+    // It has already ended server-side: retain the error row, not a phantom
+    // runtime waiting for a terminal event published before we subscribed.
+    if (!result.success || result.status === 'error') {
+      if (parentOperationId)
+        this.#get().failOperation(parentOperationId, {
+          message: result.error || result.message,
+          type: 'GatewayError',
+        });
+      if (
+        !this.#isSupersededRunningOperation({
+          agentId: messageContext.agentId,
+          groupId: messageContext.groupId,
+          operationId: result.operationId,
+          topicId: result.topicId,
+        })
+      ) {
+        this.clearLocalRunningOperation({
+          agentId: messageContext.agentId,
+          groupId: messageContext.groupId,
+          operationId: result.operationId,
+          topicId: result.topicId,
+        });
+        if (!agentShareId)
+          void this.#get().updateTopicStatus?.({
+            agentId: messageContext.agentId,
+            groupId: messageContext.groupId,
+            status: 'failed',
+            topicId: result.topicId,
+          });
+      }
+      return result;
+    }
+
     // `updateTopicStatus` persists through the owner-scoped `topic.updateTopic`
     // procedure, which a share visitor is never authorized to call — firing it
     // would only produce a rejected request (and a pinned optimistic write that
@@ -1027,6 +1086,13 @@ export class GatewayActionImpl {
 
       await interruptGatewayTaskOrThrow({
         operationId: result.operationId,
+        topicId: result.topicId,
+      });
+      this.clearLocalRunningOperation({
+        agentId: messageContext.agentId,
+        groupId: messageContext.groupId,
+        operationId: result.operationId,
+        status: 'active',
         topicId: result.topicId,
       });
     });
@@ -1306,6 +1372,12 @@ export class GatewayActionImpl {
       }
 
       await interruptGatewayTaskOrThrow({ operationId });
+      this.clearLocalRunningOperation({
+        agentId: context.agentId,
+        operationId,
+        status: 'active',
+        topicId,
+      });
     });
 
     const eventHandler = createGatewayEventHandler(this.#get, {
@@ -1472,10 +1544,10 @@ export class GatewayActionImpl {
    * 404 forever and wedges the conversation.
    *
    * The `updateTopic` reducer shallow-merges `value.metadata` (`{...currentTopic, ...value}`),
-   * so we spread the existing metadata to avoid dropping its other keys. Only dispatch when
-   * the topic still carries the marker for `operationId` — a late close of a finished op
-   * can race with a retry/send that already wrote a NEWER operation's marker, and clearing
-   * unconditionally would break reconnect-after-reload for that live run.
+   * so we spread the existing metadata to avoid dropping its other keys. An already-cleared
+   * marker still permits the terminal status pin; only a different operation's marker blocks
+   * dispatch. A late close must preserve a newer run's marker and status so reconnect-after-reload
+   * continues to work for that live run.
    *
    * `agentId`/`groupId` route the lookup + dispatch to the run's OWNING topic bucket
    * (same convention as `updateTopicStatus`): a background completion can land after the
@@ -1501,10 +1573,12 @@ export class GatewayActionImpl {
   }): boolean => {
     const { agentId, groupId, operationId, topicId } = params;
     const state = this.#get();
-    const key = topicMapKey({
-      agentId: agentId ?? state.activeAgentId,
-      groupId: groupId ?? state.activeGroupId,
-    });
+    const key =
+      topicSelectors.getTopicContainerKeyById(topicId)(state) ??
+      topicMapKey({
+        agentId: agentId ?? state.activeAgentId,
+        groupId: groupId ?? state.activeGroupId,
+      });
     const owner = state.topicDataMap[key]?.items?.find((t) => t.id === topicId)?.metadata
       ?.runningOperation?.operationId;
 
@@ -1525,20 +1599,24 @@ export class GatewayActionImpl {
   }): void => {
     const { topicId, operationId, agentId, groupId, status } = params;
     const state = this.#get();
-    const key = topicMapKey({
-      agentId: agentId ?? state.activeAgentId,
-      groupId: groupId ?? state.activeGroupId,
-    });
+    const key =
+      topicSelectors.getTopicContainerKeyById(topicId)(state) ??
+      topicMapKey({
+        agentId: agentId ?? state.activeAgentId,
+        groupId: groupId ?? state.activeGroupId,
+      });
     const existingTopic = state.topicDataMap[key]?.items?.find((t) => t.id === topicId);
     // Same ownership guard the removed client-side `superseded` check used to
     // provide: if a newer run already overwrote this topic's local marker with
     // its own operationId, this stale session's completion must not clobber it
     // (neither the metadata clear nor, now, the status write).
-    if (existingTopic?.metadata?.runningOperation?.operationId !== operationId) return;
+    const owner = existingTopic?.metadata?.runningOperation?.operationId;
+    if (!existingTopic || (owner && owner !== operationId)) return;
 
     state.internal_dispatchTopic({
       agentId,
       groupId,
+      containerKey: key,
       id: topicId,
       type: 'updateTopic',
       value: { metadata: { ...existingTopic.metadata, runningOperation: null } },

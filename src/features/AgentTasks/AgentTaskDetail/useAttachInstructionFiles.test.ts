@@ -10,7 +10,7 @@ const { pickAndInsertAttachments, toastError } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/features/EditorCanvas/editorAttachments', () => ({ pickAndInsertAttachments }));
-vi.mock('@lobehub/ui/base-ui', () => ({ toast: { error: toastError } }));
+vi.mock('@/components/toast', () => ({ toast: { error: toastError } }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

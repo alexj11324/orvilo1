@@ -1,22 +1,35 @@
-import { Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  DropdownMenu,
-  Pagination,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { TaskListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { MoreHorizontalIcon, PauseIcon, PlayIcon, SearchIcon, Trash2Icon } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  MoreHorizontalIcon,
+  PauseIcon,
+  PlayIcon,
+  SearchIcon,
+  Trash2Icon,
+  XIcon,
+} from 'lucide-react';
+import {
+  createElement,
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import TablePagination from '@/components/TablePagination';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
@@ -103,12 +116,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const CreatedByCell = memo<{ userId: string | null }>(({ userId }) => {
   const meta = useUserDisplayMeta(userId);
   return (
-    <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
+    <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
       <AssigneeUserAvatar size={16} userId={userId} />
-      <Text ellipsis fontSize={12} type={'secondary'}>
-        {meta?.title ?? ''}
-      </Text>
-    </Flexbox>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">{meta?.title ?? ''}</div>
+    </div>
   );
 });
 
@@ -131,24 +142,27 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
   return (
     <div className={styles.row} onClick={() => onOpen(task.identifier)}>
       <div onClick={(e) => e.stopPropagation()}>
-        <Checkbox checked={checked} onChange={(next) => onCheckedChange(task.identifier, next)} />
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(next) => onCheckedChange(task.identifier, next === true)}
+        />
       </div>
       <div className={styles.titleCell}>
         <span className={styles.titleText}>{task.name || task.identifier}</span>
       </div>
       <CreatedByCell userId={task.createdByUserId} />
       <AutomationStatusBadge status={status} />
-      <Text ellipsis fontSize={12} type={'secondary'}>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">
         {automationTriggerSummary(task, t)}
-      </Text>
-      <Text ellipsis fontSize={12} type={'secondary'}>
+      </div>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">
         {nextRun ? dayjs(nextRun.toDate()).fromNow() : '—'}
-      </Text>
+      </div>
       <div onClick={(e) => e.stopPropagation()}>
         <DropdownMenu
           items={[
             {
-              icon: <Icon icon={PlayIcon} />,
+              icon: <PlayIcon />,
               key: 'run',
               label: t('detail.run_now'),
               onClick: () =>
@@ -158,7 +172,7 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
                 ),
             },
             {
-              icon: <Icon icon={status === 'paused' ? PlayIcon : PauseIcon} />,
+              icon: createElement(status === 'paused' ? PlayIcon : PauseIcon),
               key: 'toggle',
               label: t(status === 'paused' ? 'actions.resume' : 'actions.pause'),
               onClick: () =>
@@ -167,7 +181,7 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
             { type: 'divider' },
             {
               danger: true,
-              icon: <Icon icon={Trash2Icon} />,
+              icon: <Trash2Icon />,
               key: 'delete',
               label: t('actions.delete'),
               onClick: () => remove(task.identifier),
@@ -306,35 +320,57 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
         {error ? (
           <AsyncError error={error} onRetry={() => void onRefetch()} />
         ) : isLoading ? (
-          <Flexbox padding={24}>
-            <Text type={'secondary'}>{t('page.loading')}</Text>
-          </Flexbox>
+          <div className="flex flex-col p-6">
+            <div className="text-muted-foreground">{t('page.loading')}</div>
+          </div>
         ) : isEmptyUnfiltered ? (
           emptyContent
         ) : (
           <>
-            <Input
-              allowClear
-              placeholder={t('overview.search_automations')}
-              prefix={<Icon icon={SearchIcon} size={16} />}
-              size={'small'}
-              style={{ marginBlockEnd: 12, maxWidth: 320 }}
-              value={search}
-              variant={'filled'}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="relative" style={{ marginBlockEnd: 12, maxWidth: 320 }}>
+              <SearchIcon
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={16}
+              />
+              <Input
+                className="h-7 pl-8"
+                placeholder={t('overview.search_automations')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  aria-label={t('overview.search_automations')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setSearch('')}
+                >
+                  <XIcon size={12} />
+                </button>
+              )}
+            </div>
             <div className={styles.headerRow}>
-              <Tooltip title={t('overview.select_all')}>
-                <Checkbox
-                  checked={allChecked}
-                  indeterminate={selected.size > 0 && !allChecked}
-                  onChange={(checkedAll) =>
-                    setSelected(
-                      checkedAll ? new Set(visibleTasks.map((task) => task.identifier)) : new Set(),
-                    )
-                  }
-                />
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span className="inline-flex">
+                        <Checkbox
+                          checked={allChecked}
+                          indeterminate={selected.size > 0 && !allChecked}
+                          onCheckedChange={(checkedAll) =>
+                            setSelected(
+                              checkedAll
+                                ? new Set(visibleTasks.map((task) => task.identifier))
+                                : new Set(),
+                            )
+                          }
+                        />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('overview.select_all')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span>{t('page.table.name')}</span>
               <span>{t('page.table.created_by')}</span>
               <span>{t('run_history.status')}</span>
@@ -343,9 +379,9 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
               <span />
             </div>
             {visibleTasks.length === 0 ? (
-              <Flexbox align={'center'} paddingBlock={48}>
-                <Text type={'secondary'}>{t('page.no_matches')}</Text>
-              </Flexbox>
+              <div className="flex flex-col items-center py-12">
+                <div className="text-muted-foreground">{t('page.no_matches')}</div>
+              </div>
             ) : (
               visibleTasks.map((task) => (
                 <AutomationRow
@@ -358,31 +394,31 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
               ))
             )}
             {(total > SCHEDULED_TASKS_PAGE_SIZE || page > 1) && (
-              <Flexbox horizontal justify={'center'} paddingBlock={16}>
-                <Pagination
+              <div className="flex justify-center py-4">
+                <TablePagination
                   current={page}
                   pageSize={SCHEDULED_TASKS_PAGE_SIZE}
-                  showSizeChanger={false}
+                  pageSizeOptions={[SCHEDULED_TASKS_PAGE_SIZE]}
                   total={total}
                   onChange={onPageChange}
                 />
-              </Flexbox>
+              </div>
             )}
             {tasks.length > 0 && footer}
           </>
         )}
         {selected.size > 0 && (
           <div className={styles.batchBar}>
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('batch.selected', { count: selected.size })}
-            </Text>
-            <Button size={'small'} onClick={() => handleBatch('resume')}>
+            </div>
+            <Button size="sm" onClick={() => handleBatch('resume')}>
               {t('batch.resume')}
             </Button>
-            <Button size={'small'} onClick={() => handleBatch('pause')}>
+            <Button size="sm" onClick={() => handleBatch('pause')}>
               {t('batch.pause')}
             </Button>
-            <Button danger size={'small'} onClick={() => handleBatch('delete')}>
+            <Button size="sm" variant="destructive" onClick={() => handleBatch('delete')}>
               {t('batch.delete')}
             </Button>
           </div>

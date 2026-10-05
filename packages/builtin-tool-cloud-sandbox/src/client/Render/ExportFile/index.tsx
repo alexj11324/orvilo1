@@ -1,11 +1,11 @@
 'use client';
 
-import { CheckCircleFilled, CloseCircleFilled, DownloadOutlined } from '@ant-design/icons';
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { CircleCheck, CircleX, Download } from 'lucide-react';
 import { memo, useCallback } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import type { ExportFileState } from '../../../types';
 
@@ -53,31 +53,23 @@ const ExportFile = memo<BuiltinRenderProps<ExportFileParams, ExportFileState>>(
     }, [pluginState?.downloadUrl, pluginState?.filename]);
 
     return (
-      <Flexbox className={styles.container} gap={8}>
-        <Flexbox horizontal align={'center'} gap={8}>
+      <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className="flex flex-row items-center gap-2">
           {pluginState === undefined ? null : isSuccess ? (
-            <CheckCircleFilled
-              className={styles.statusIcon}
-              style={{ color: cssVar.colorSuccess }}
-            />
+            <CircleCheck className={styles.statusIcon} style={{ color: cssVar.colorSuccess }} />
           ) : (
-            <CloseCircleFilled className={styles.statusIcon} style={{ color: cssVar.colorError }} />
+            <CircleX className={styles.statusIcon} style={{ color: cssVar.colorError }} />
           )}
-          <Text code as={'span'} fontSize={12}>
+          <span className="font-mono rounded bg-muted px-1 text-[12px]">
             {isSuccess
               ? `Exported: ${pluginState?.filename || args.path}`
               : `Failed to export ${args.path}`}
-          </Text>
+          </span>
           {isSuccess && pluginState?.downloadUrl && (
-            <ActionIcon
-              icon={DownloadOutlined}
-              size={'small'}
-              title="Download"
-              onClick={handleDownload}
-            />
+            <ActionIcon icon={Download} size={'small'} title="Download" onClick={handleDownload} />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

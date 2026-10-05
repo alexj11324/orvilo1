@@ -1,8 +1,10 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import type { AgentGroupDetail, AgentGroupMember, AgentPluginEntry } from '@orvilo/types';
+import type { AgentGroupDetail, AgentGroupMember, CreateAgentConfig } from '@orvilo/types';
 import { cleanObject } from '@orvilo/utils';
+import { TRPCError } from '@trpc/server';
 import { and, asc, count, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 
+import { AgentModel } from '../../models/agent';
 import {
   AGENT_COPY_IN_PROGRESS,
   AgentCopyJobModel,
@@ -40,6 +42,7 @@ import {
   topics,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { assertAgentRuntimeCreation } from '../../utils/agentRuntimeCreation';
 import { insertInBatches, splitCrossBatchSelfReferences } from '../../utils/batchInsert';
 import { COPIED_TOPIC_USAGE_RESET } from '../../utils/copiedTranscript';
 import { copyMessagesInDatabase, type IdPair } from '../../utils/copyMessagesInDatabase';
@@ -74,19 +77,22 @@ interface CopyAgentGroupToWorkspaceOptions {
   targetVisibility?: 'private' | 'public';
 }
 
-export interface SupervisorAgentConfig {
-  avatar?: string;
-  backgroundColor?: string;
-  chatConfig?: any;
-  description?: string;
-  model?: string;
-  params?: any;
-  plugins?: AgentPluginEntry[];
-  provider?: string;
-  systemRole?: string;
-  tags?: string[];
-  title?: string;
-}
+export interface SupervisorAgentConfig extends Pick<
+  CreateAgentConfig,
+  | 'agencyConfig'
+  | 'avatar'
+  | 'backgroundColor'
+  | 'chatConfig'
+  | 'description'
+  | 'model'
+  | 'params'
+  | 'plugins'
+  | 'provider'
+  | 'systemRole'
+  | 'tags'
+  | 'title'
+  | 'visibility'
+> {}
 
 /**
  * Result of checking agents before removal
@@ -398,12 +404,17 @@ export class AgentGroupRepository {
 
     // 4. If no supervisor exists, create a virtual supervisor agent
     if (!supervisorAgentId) {
+      const runtime = await new AgentModel(
+        this.db,
+        this.userId,
+        this.workspaceId,
+      ).getPrimeRuntimeForCreation({ visibility: group.visibility });
       // Create supervisor agent (virtual agent)
       const [supervisorAgent] = await this.db
         .insert(agents)
         .values({
-          model: undefined,
-          provider: undefined,
+          ...runtime,
+          visibility: group.visibility,
           title: 'Supervisor',
           userId: this.userId,
           virtual: true,
@@ -506,6 +517,28 @@ export class AgentGroupRepository {
     // private. Defaults to 'public' to match the column default.
     const groupVisibility = groupParams.visibility ?? folderVisibility ?? 'public';
 
+    if (
+      supervisorConfig?.agencyConfig &&
+      supervisorConfig.agencyConfig.heterogeneousProvider?.type !== 'orvilo'
+    ) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'GROUP_SUPERVISOR_PRIME_REQUIRED' });
+    }
+    const runtime = supervisorConfig?.agencyConfig
+      ? {
+          agencyConfig: await assertAgentRuntimeCreation(
+            this.db,
+            { userId: this.userId, workspaceId: this.workspaceId },
+            { ...supervisorConfig, visibility: groupVisibility },
+          ),
+          model: supervisorConfig.model,
+          provider: supervisorConfig.provider,
+        }
+      : await new AgentModel(this.db, this.userId, this.workspaceId).getPrimeRuntimeForCreation({
+          visibility: groupVisibility,
+          model: supervisorConfig?.model ?? undefined,
+          provider: supervisorConfig?.provider ?? undefined,
+        });
+
     // 1. Create supervisor agent (virtual agent)
     const [supervisorAgent] = await this.db
       .insert(agents)
@@ -514,14 +547,13 @@ export class AgentGroupRepository {
         backgroundColor: supervisorConfig?.backgroundColor,
         chatConfig: supervisorConfig?.chatConfig,
         description: supervisorConfig?.description,
-        model: supervisorConfig?.model,
+        ...runtime,
         params: supervisorConfig?.params,
         // The `plugins` column is still typed `string[]` at the schema layer
         // (widening deferred to the tri-state rollout's final phase) but
         // legitimately holds mixed AgentPluginEntry[] at runtime — JSONB has
         // no schema enforcement.
         plugins: supervisorConfig?.plugins as unknown as string[] | undefined,
-        provider: supervisorConfig?.provider,
         systemRole: supervisorConfig?.systemRole,
         tags: supervisorConfig?.tags,
         title: supervisorConfig?.title ?? 'Supervisor',
@@ -799,6 +831,21 @@ export class AgentGroupRepository {
 
     // Use transaction to ensure atomicity
     return this.db.transaction(async (trx) => {
+      for (const source of [
+        sourceSupervisor?.agent,
+        ...virtualMembers.map((member) => member.agent),
+      ]) {
+        await assertAgentRuntimeCreation(
+          trx,
+          { userId: this.userId, workspaceId: this.workspaceId },
+          {
+            agencyConfig: source?.agencyConfig,
+            model: source?.model,
+            provider: source?.provider,
+            visibility: sourceGroup.visibility,
+          },
+        );
+      }
       // 4. Create the new group
       const [newGroup] = await trx
         .insert(chatGroups)
@@ -830,6 +877,7 @@ export class AgentGroupRepository {
       const [newSupervisor] = await trx
         .insert(agents)
         .values({
+          agencyConfig: supervisorAgent?.agencyConfig,
           avatar: supervisorAgent?.avatar,
           backgroundColor: supervisorAgent?.backgroundColor,
           description: supervisorAgent?.description,
@@ -853,6 +901,7 @@ export class AgentGroupRepository {
       const newVirtualAgentMap = new Map<string, string>(); // oldId -> newId
       if (virtualMembers.length > 0) {
         const virtualAgentConfigs = virtualMembers.map((member) => ({
+          agencyConfig: member.agent.agencyConfig,
           // Metadata
           avatar: member.agent.avatar,
           backgroundColor: member.agent.backgroundColor,
@@ -1183,6 +1232,20 @@ export class AgentGroupRepository {
         (await AgentCopyJobModel.hasPendingCopyJobForSourceGroups(trx, [groupId]))
       ) {
         throw new Error(AGENT_COPY_IN_PROGRESS);
+      }
+
+      for (const member of referencedMembers) {
+        await assertAgentRuntimeCreation(
+          trx,
+          { userId: targetUserId, workspaceId: targetWorkspaceId ?? undefined },
+          this.buildCopiedAgent(
+            lockedReferencedAgents.get(member.agentId) ?? member.agent,
+            targetWorkspaceId,
+            targetUserId,
+            'Agent',
+            targetVisibility,
+          ),
+        );
       }
 
       const ownershipUpdate = {
@@ -1558,6 +1621,19 @@ export class AgentGroupRepository {
         }
 
         for (const agent of visibleMembers) lockedReferencedSourceAgents.set(agent.id, agent);
+      }
+
+      for (const source of [
+        sourceSupervisor?.agent,
+        ...sourceMembers.map(
+          (member) => lockedReferencedSourceAgents.get(member.agent.id) ?? member.agent,
+        ),
+      ]) {
+        await assertAgentRuntimeCreation(
+          trx,
+          { userId: targetUserId, workspaceId: targetWorkspaceId ?? undefined },
+          this.buildCopiedAgent(source, targetWorkspaceId, targetUserId, 'Agent', targetVisibility),
+        );
       }
 
       const [newGroup] = await trx

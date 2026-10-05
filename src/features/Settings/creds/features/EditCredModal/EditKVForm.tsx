@@ -1,32 +1,18 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Button, Spin } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input } from 'antd';
-import { createStaticStyles } from 'antd-style';
-import { Minus, Plus } from 'lucide-react';
+import { Loader2, Minus, Plus } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 
 import { type CredsApi } from '../useCredsApi';
-
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 24px;
-  `,
-  kvPair: css`
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-  `,
-}));
 
 interface EditKVFormProps {
   cred: OwnCredSummary;
@@ -123,14 +109,14 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
 
   if (isLoading) {
     return (
-      <Flexbox align="center" justify="center" style={{ padding: 48 }}>
-        <Spin />
-      </Flexbox>
+      <div className="flex flex-col items-center justify-center" style={{ padding: 48 }}>
+        <Spinner />
+      </div>
     );
   }
 
   return (
-    <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
       <Form.Item
         label={t('creds.form.name')}
         name="name"
@@ -142,9 +128,9 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
       <Form.Item label={t('creds.form.values')}>
         <Form.List name="kvPairs">
           {(fields, { add, remove }) => (
-            <Flexbox gap={8}>
+            <div className="flex flex-col gap-2">
               {fields.map(({ key, name, ...restField }) => (
-                <div className={styles.kvPair} key={key}>
+                <div className="flex items-start gap-2" key={key}>
                   <Form.Item
                     {...restField}
                     name={[name, 'key']}
@@ -160,53 +146,59 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                     name={[name, 'value']}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
-                    <Input.Password
+                    <Input
                       autoComplete="new-password"
                       disabled={!canManageCredentials}
                       placeholder={t('creds.form.valuePlaceholder')}
+                      type="password"
                     />
                   </Form.Item>
                   {fields.length > 1 && (
                     <Button
                       disabled={!canManageCredentials}
-                      icon={Minus}
-                      size="small"
-                      type="text"
+                      size="sm"
+                      type="button"
+                      variant="ghost"
                       onClick={() => remove(name)}
-                    />
+                    >
+                      <Minus />
+                    </Button>
                   )}
                 </div>
               ))}
               <Button
-                block
+                className="w-full"
                 disabled={!canManageCredentials}
-                icon={Plus}
-                type="dashed"
+                type="button"
+                variant="outline"
                 onClick={() => add({ key: '', value: '' })}
               >
+                <Plus />
                 {t('creds.form.addPair')}
               </Button>
-            </Flexbox>
+            </div>
           )}
         </Form.List>
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
-        <Input.TextArea
+        <Textarea
           disabled={!canManageCredentials}
           placeholder={t('creds.form.descriptionPlaceholder')}
           rows={2}
         />
       </Form.Item>
 
-      <div className={styles.footer}>
-        <Button onClick={onCancel}>{t('creds.form.cancel')}</Button>
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          {t('creds.form.cancel')}
+        </Button>
         <Button
-          disabled={!canManageCredentials}
-          htmlType="submit"
-          loading={updateMutation.isPending}
-          type="primary"
+          disabled={updateMutation.isPending || !canManageCredentials}
+          type="submit"
+          variant="default"
         >
+          {updateMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.save')}
         </Button>
       </div>

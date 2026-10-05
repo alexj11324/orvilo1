@@ -1,3 +1,5 @@
+import type { OrviloAgentConfig } from './item';
+
 /** Durable producer families which can pause an agent run for a person. */
 export const AGENT_INTERVENTION_SOURCES = ['runtime', 'heterogeneous'] as const;
 
@@ -215,7 +217,22 @@ export type AgentInterventionFormValue = boolean | number | string | string[] | 
 export type AgentInterventionFormAnswers = Record<string, AgentInterventionFormValue>;
 
 /** Schema-validated, deliberately shallow result accepted from bespoke forms. */
-export type AgentInterventionCustomResult = Record<string, AgentInterventionFormValue>;
+export type AgentMarketplaceRuntimeConfig = Pick<OrviloAgentConfig, 'agencyConfig'> & {
+  // Imported CLI runtimes may carry no selected model at all — the fork only
+  // needs the heterogeneous provider. Keep these fields honest (nullable like
+  // the stored row), not required like `OrviloAgentConfig` pretends.
+  model?: string | null;
+  provider?: string | null;
+  title?: string | null;
+};
+
+export type AgentInterventionCustomResult =
+  | Record<string, AgentInterventionFormValue>
+  | {
+      kind: 'agent_marketplace';
+      selectedTemplateIds: string[];
+      runtimeConfig: AgentMarketplaceRuntimeConfig;
+    };
 
 /**
  * Discriminated private outbox payload. Only user-edited arguments may be

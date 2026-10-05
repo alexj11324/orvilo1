@@ -1,24 +1,15 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { t } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   BotIcon,
   Eye,
   EyeOff,
-  FilePenLineIcon,
   GitPullRequestIcon,
   Inbox,
+  MessagesSquare,
   PinIcon,
   RotateCcw,
   SquareUser,
@@ -30,6 +21,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useGlobalStore } from '@/store/global';
 import { DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS } from '@/store/global/initialState';
@@ -54,7 +49,7 @@ const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   { alwaysVisible: true, icon: SquareUser, id: 'my-work', labelKey: 'tab.myWork' },
   { alwaysVisible: true, icon: GitPullRequestIcon, id: 'reviews', labelKey: 'tab.reviews' },
   { alwaysVisible: true, icon: BotIcon, id: 'agent', labelKey: 'navPanel.agent' },
-  { alwaysVisible: true, icon: FilePenLineIcon, id: 'drafts', labelKey: 'drafts.title' },
+  { alwaysVisible: true, icon: MessagesSquare, id: 'group', labelKey: 'navPanel.groups' },
   { icon: PROJECT_ENTITY_ICON, id: 'workspace', labelKey: 'navPanel.workspace' },
   { icon: Star, id: 'favorites', labelKey: 'tab.favorites' },
   { icon: Users, id: 'teams', labelKey: 'navPanel.yourTeams', workspaceOnly: true },
@@ -96,32 +91,52 @@ const SectionRow = memo<{
   const isHidden = hiddenSections.includes(config.id);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.item}
-      gap={8}
-      justify={'space-between'}
+    <div
+      className={cx(styles.item, 'flex items-center gap-2 justify-between')}
       style={{ opacity: isHidden ? 0.5 : undefined }}
     >
-      <Flexbox horizontal align={'center'} gap={8}>
-        <Icon icon={config.icon} size={18} />
-        <Text>{t(config.labelKey as never)}</Text>
-      </Flexbox>
+      <div className="flex items-center gap-2">
+        <config.icon size={18} />
+        <div>{t(config.labelKey as never)}</div>
+      </div>
       {config.alwaysVisible ? (
-        <Tooltip title={t('navPanel.pinned' as never)}>
-          <ActionIcon icon={PinIcon} size={'small'} style={{ cursor: 'default', opacity: 0.45 }} />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <ActionIcon
+                    icon={PinIcon}
+                    size={'small'}
+                    style={{ cursor: 'default', opacity: 0.45 }}
+                  />
+                </span>
+              }
+            />
+            <TooltipContent>{t('navPanel.pinned' as never)}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ) : (
-        <Tooltip title={t(isHidden ? ('navPanel.hidden' as never) : ('navPanel.visible' as never))}>
-          <ActionIcon
-            icon={isHidden ? EyeOff : Eye}
-            size={'small'}
-            onClick={() => onToggle(config.id)}
-          />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <ActionIcon
+                    icon={isHidden ? EyeOff : Eye}
+                    size={'small'}
+                    onClick={() => onToggle(config.id)}
+                  />
+                </span>
+              }
+            />
+            <TooltipContent>
+              {t(isHidden ? ('navPanel.hidden' as never) : ('navPanel.visible' as never))}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -179,7 +194,7 @@ const CustomizeSidebarContent = memo(() => {
 
   return (
     <>
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {sections.map((config) => (
           <SectionRow
             config={config}
@@ -188,17 +203,13 @@ const CustomizeSidebarContent = memo(() => {
             onToggle={toggleSection}
           />
         ))}
-      </Flexbox>
+      </div>
       <div className={styles.footer}>
-        <Button
-          block
-          htmlType="button"
-          icon={<Icon icon={RotateCcw} size={14} />}
-          onClick={handleResetDefault}
-        >
+        <Button className="w-full" type="button" variant="outline" onClick={handleResetDefault}>
+          <RotateCcw data-icon="inline-start" size={14} />
           {commonT('navPanel.resetDefault')}
         </Button>
-        <Button block htmlType="button" type="primary" onClick={handleConfirm}>
+        <Button className="w-full" type="button" variant="default" onClick={handleConfirm}>
           {commonT('confirm')}
         </Button>
       </div>

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { useUserStore } from '@/store/user';
@@ -27,7 +26,7 @@ export const UserMessageExtra = memo<UserMessageExtraProps>(({ extra, id, conten
   if (!showExtra) return;
 
   return (
-    <Flexbox gap={8} style={{ marginTop: 8 }}>
+    <div className="flex flex-col gap-2" style={{ marginTop: 8 }}>
       {extra?.tts && (
         <ExtraContainer>
           <TTS content={content} id={id} loading={loading} {...extra?.tts} />
@@ -38,6 +37,6 @@ export const UserMessageExtra = memo<UserMessageExtraProps>(({ extra, id, conten
           <Translate id={id} {...extra?.translate} loading={loading} />
         </ExtraContainer>
       )}
-    </Flexbox>
+    </div>
   );
 });

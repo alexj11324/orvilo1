@@ -24,7 +24,7 @@ export async function resolveMcpRenewalScope(database: McpInboxSql, binding: Mcp
     SELECT t.user_id,t.workspace_id FROM mcp_event_triggers t
     JOIN tasks task ON task.id=t.task_id AND task.workspace_id=t.workspace_id
     JOIN workspace_members member ON member.workspace_id=t.workspace_id AND member.user_id=t.user_id
-    JOIN user_connectors connector ON connector.id=t.source_id AND connector.workspace_id=t.workspace_id
+    JOIN user_connectors connector ON connector.id::text=t.source_id AND connector.workspace_id=t.workspace_id
     WHERE t.tenant_id=$1 AND t.workspace_id=$1 AND t.subscription_id=$2 AND t.source_id=$3
       AND member.deleted_at IS NULL AND member.suspended_at IS NULL AND member.role IN ('owner','member')
       AND (member.role='owner' OR (task.created_by_user_id=t.user_id AND connector.user_id=t.user_id))

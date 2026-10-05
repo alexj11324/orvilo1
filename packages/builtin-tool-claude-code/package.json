@@ -18,6 +18,7 @@
   "peerDependencies": {
     "@lobehub/ui": "^5",
     "antd-style": "*",
+    "diff": "*",
     "lucide-react": "*",
     "path-browserify-esm": "*",
     "react": "*"

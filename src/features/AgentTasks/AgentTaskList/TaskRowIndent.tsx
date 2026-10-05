@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 
@@ -57,17 +56,15 @@ const TaskRowIndent = ({ children, depth, muted }: TaskRowIndentProps) => {
   if (depth <= 0 && !muted) return <>{children}</>;
 
   return (
-    <Flexbox
-      horizontal
-      align={'stretch'}
-      className={muted ? styles.muted : undefined}
+    <div
+      className={muted ? `flex items-stretch ${styles.muted}` : 'flex items-stretch'}
       style={depth > 0 ? { paddingInlineStart: depth * INDENT_STEP - CONNECTOR_SPAN } : undefined}
     >
       {depth > 0 && <div className={styles.connector} />}
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
+      <div className="flex-1" style={{ minWidth: 0 }}>
         {children}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

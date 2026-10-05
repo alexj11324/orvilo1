@@ -1,7 +1,8 @@
-import { Flexbox, Grid } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { type ViewMode } from './ViewModeSwitcher';
 
@@ -22,30 +23,43 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const Loading = memo<{ rows?: number; viewMode?: ViewMode }>(({ viewMode, rows = 3 }) => {
   if (viewMode === 'timeline') {
     return (
-      <Flexbox gap={24} paddingBlock={24} style={{ paddingLeft: 32 }}>
+      <div className="flex flex-col gap-6 py-6" style={{ paddingLeft: 32 }}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <Flexbox gap={8} key={i}>
-            <Skeleton.Text fontSize={18} lineHeight={1.4} width={'30%'} />
-            <Skeleton.Text rows={4} style={{ marginBottom: 0 }} />
-          </Flexbox>
+          <div className="flex flex-col gap-2" key={i}>
+            <Skeleton style={{ height: 22, marginBlock: 2, width: '30%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '66%' }} />
+          </div>
         ))}
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Grid gap={12} maxItemWidth={240} paddingBlock={8} rows={rows}>
+    <div
+      className="grid gap-3"
+      style={{
+        gridTemplateColumns: `repeat(auto-fill, minmax(max(240px, calc((100% - 12px * ${rows - 1}) / ${rows})), 1fr))`,
+        paddingBlock: 8,
+      }}
+    >
       {Array.from({ length: 6 }).map((_, i) => (
-        <Flexbox className={styles.card} key={i}>
-          <Skeleton.Text fontSize={16} lineHeight={1.4} width={'80%'} />
-          <Skeleton.Text rows={5} style={{ marginBottom: 0 }} />
-          <Flexbox horizontal gap={8}>
-            <Skeleton height={20} width={60} />
-            <Skeleton height={20} width={50} />
-          </Flexbox>
-        </Flexbox>
+        <div className={cn('flex flex-col', styles.card)} key={i}>
+          <Skeleton style={{ height: 19, marginBlock: 2, width: '80%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '66%' }} />
+          <div className="flex gap-2">
+            <Skeleton style={{ height: 20, width: 60 }} />
+            <Skeleton style={{ height: 20, width: 50 }} />
+          </div>
+        </div>
       ))}
-    </Grid>
+    </div>
   );
 });
 

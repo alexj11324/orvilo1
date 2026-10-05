@@ -1,15 +1,15 @@
 'use client';
 
-import { Icon, Tooltip } from '@lobehub/ui';
 import { type VoiceMessageRecording } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ArrowUp, type LucideProps, RotateCcw, X } from 'lucide-react';
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { createElement, memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ChatInputAction } from '../ActionBar/components/ChatInputAction';
 import { useAgentId } from '../hooks/useAgentId';
 import { useEffectiveModel } from '../hooks/useEffectiveModel';
+import { SimpleTooltip } from '../SimpleTooltip';
 import { useChatInputStore, useStoreApi } from '../store';
 import { formatVoiceDuration } from './mediaRecorder';
 import { useIntentionalHover } from './useIntentionalHover';
@@ -503,7 +503,9 @@ export const VoiceMessageControl = memo<VoiceMessageControlProps>(
           type="button"
           onClick={onCancel}
         >
-          <Icon icon={X} size={17} />
+          <span className="anticon" role="img">
+            <X fill={'transparent'} height={17} size={17} width={17} />
+          </span>
         </button>
 
         <div className={styles.pill} data-testid="voice-message-pill">
@@ -525,7 +527,7 @@ export const VoiceMessageControl = memo<VoiceMessageControlProps>(
             </div>
           )}
 
-          <Tooltip title={tooltip}>
+          <SimpleTooltip title={tooltip}>
             <button
               aria-label={actionLabel}
               className={styles.sendButton}
@@ -546,10 +548,17 @@ export const VoiceMessageControl = memo<VoiceMessageControlProps>(
                 <SendDots />
               </span>
               <span className={styles.sendArrow}>
-                <Icon icon={isRetry ? RotateCcw : ArrowUp} size={18} />
+                <span className="anticon" role="img">
+                  {createElement(isRetry ? RotateCcw : ArrowUp, {
+                    size: 18,
+                    width: 18,
+                    height: 18,
+                    fill: 'transparent',
+                  })}
+                </span>
               </span>
             </button>
-          </Tooltip>
+          </SimpleTooltip>
 
           {progress !== undefined && (
             <div aria-hidden className={styles.progress}>
@@ -680,21 +689,21 @@ const VoiceMessage = memo(() => {
       <ChatInputAction
         aria-label={t('voiceMessage.action')}
         data-testid="voice-message-action"
-        icon={VoiceMessageIcon}
+        icon={<VoiceMessageIcon />}
         title={t('voiceMessage.action')}
         onClick={handleStart}
       />
     ) : (
-      <Tooltip title={disabledReason}>
+      <SimpleTooltip title={disabledReason}>
         <ChatInputAction
           disabled
           aria-label={t('voiceMessage.action')}
           data-testid="voice-message-action"
-          icon={VoiceMessageIcon}
+          icon={<VoiceMessageIcon />}
           showTooltip={false}
           title={t('voiceMessage.action')}
         />
-      </Tooltip>
+      </SimpleTooltip>
     );
   }
 

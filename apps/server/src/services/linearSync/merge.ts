@@ -148,11 +148,8 @@ export const taskLinearIssueSnapshot = (
   // of the binding and handle local project moves explicitly.
   projectId: issue.projectId,
   stateId:
-    settings.statusMappings?.find(
-      (mapping) =>
-        mapping.workflowCategory === task.workflowCategory ||
-        (!mapping.workflowCategory && mapping.localStatus === task.status),
-    )?.linearStateId ??
+    settings.statusMappings?.find((mapping) => mapping.workflowCategory === task.workflowCategory)
+      ?.linearStateId ??
     task.workflowStateId ??
     issue.stateId,
   title: task.name || task.identifier,

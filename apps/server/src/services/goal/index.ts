@@ -23,7 +23,7 @@ import type {
 } from '@orvilo/types';
 import { experimentOwner, provenanceParentId } from '@orvilo/utils/goalGraph';
 import { TRPCError } from '@trpc/server';
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
@@ -32,17 +32,25 @@ import { MetricModel } from '@/database/models/metric';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { ACTIVE_DISPATCH_PHASES } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
+import { taskDispatches } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import {
+  assertAgentUsableBy,
+  findUsableAgentExecutionBinding,
+} from '@/database/utils/agent-access';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
+import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
+import { taskRequiresBuiltinToolMount } from '../taskRunner/toolMountRequirement';
+import { settleTaskExecution } from '../taskSettlement';
 import { AcceptanceService } from '../verify/acceptanceService';
 import { VerifyPlanGeneratorService } from '../verify/planGenerator';
 import { GoalCriteriaGeneratorService, type GoalDecompositionDraft } from './criteriaGenerator';
@@ -187,13 +195,31 @@ export class GoalService {
       ? new GoalGraphModel(this.db, this.userId, this.workspaceId, { id: agentId, type: 'agent' })
       : this.graphModel;
 
-  create = async (input: CreateGoalGraphInput): Promise<GoalGraphSnapshot> => {
-    if (input.agentId) {
-      await assertAgentUsableBy(this.db, input.agentId, {
-        userId: this.userId,
-        workspaceId: this.workspaceId,
+  /**
+   * The agent a goal binds to executes every Task the coordinator creates —
+   * goal-mode work whose contract always requires the builtin/MCP tool
+   * surface. Binding a mount-incapable engine would mint dispatches that can
+   * only throw at admission, so binding refuses it up front (visibility is
+   * checked by the same lookup; a missing agent is still NOT_FOUND).
+   */
+  private assertGoalAgentMountCapable = async (agentId: string) => {
+    const binding = await findUsableAgentExecutionBinding(this.db, agentId, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (!binding) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+    if (!agentCanMountBuiltinToolSurface({ agencyConfig: binding.agencyConfig }, binding.model)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'The selected agent cannot run goal tasks: its engine cannot mount the builtin tool ' +
+          'surface goal work requires (acceptance evidence). Choose an agent on an ' +
+          'MCP-mount-capable runtime.',
       });
     }
+  };
+
+  create = async (input: CreateGoalGraphInput): Promise<GoalGraphSnapshot> => {
     if (input.projectId) {
       const project = await new ProjectModel(
         this.db,
@@ -206,6 +232,12 @@ export class GoalService {
     // goal config so the page can edit them and the terminal acceptance Task
     // is gated on exactly these checks (not an AI re-derivation of the prose).
     const creatorAgentId = input.createdByAgentId ?? input.agentId;
+    // The goal-bound agent executes every Task this goal mints — goal-mode
+    // work whose contract always requires the builtin tool surface. The gate
+    // covers the *resolved* binding (`input.agentId ?? creatorAgentId`), and
+    // subsumes the visibility assert for `input.agentId`.
+    const boundAgentId = input.agentId ?? creatorAgentId;
+    if (boundAgentId) await this.assertGoalAgentMountCapable(boundAgentId);
     const { manager: managerOptions, ...options } = input.config ?? {};
     const managed = managerOptions !== undefined;
     let config: GoalConfig | undefined = input.config ? options : undefined;
@@ -1021,6 +1053,7 @@ export class GoalService {
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
+    await this.assertGoalAgentMountCapable(agentId);
     const goal = await this.goalModel.update(goalId, { agentId });
     if (!goal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
 
@@ -1034,13 +1067,15 @@ export class GoalService {
       const taskIds = graph.nodes.flatMap((node) => (node.taskId ? [node.taskId] : []));
       const reassignable = (await this.taskModel.findByIds(taskIds)).filter(
         (task) =>
-          task.status !== 'completed' &&
-          task.status !== 'canceled' &&
+          task.workflowCategory !== 'done' &&
+          task.workflowCategory !== 'canceled' &&
           task.assigneeAgentId !== agentId,
       );
-      const runningTaskIds = reassignable
-        .filter((task) => task.status === 'running')
-        .map((task) => task.id);
+      const derivedStatuses = await this.taskModel.derivedStatusByIds(
+        reassignable.map((task) => task.id),
+      );
+      const isRunning = (task: { id: string }) => derivedStatuses[task.id] === 'running';
+      const runningTaskIds = reassignable.filter(isRunning).map((task) => task.id);
       // Fence running incumbents BEFORE rewriting any assignee — the
       // ownership-transfer ordering (never commit "stored owner B / running
       // executor A"). The cancellation sweep then interrupts the remote
@@ -1053,7 +1088,7 @@ export class GoalService {
         await this.taskModel.update(
           task.id,
           { assigneeAgentId: agentId },
-          task.status === 'running' ? { executionTransfer: true } : {},
+          isRunning(task) ? { executionTransfer: true } : {},
         );
         reassignedTaskIds.push(task.id);
       }
@@ -1077,6 +1112,7 @@ export class GoalService {
         userId: this.userId,
         workspaceId: this.workspaceId,
       });
+      await this.assertGoalAgentMountCapable(options.agentId);
     }
     const graph = await this.requireGraph(goalId);
 
@@ -1116,14 +1152,36 @@ export class GoalService {
       // tick dispatching concurrently moves the row between our read and the
       // write, the CAS loses, and that task is skipped instead of yanked out
       // from under a freshly claimed run (which would double-dispatch it).
+      const derivedStatuses = await this.taskModel.derivedStatusByIds(unfinishedTaskIds);
+      // Interrupt live executions first: `cancelTopic` stops the operation, and
+      // the stop request retires the dispatch row so the task frees up once the
+      // runtime acknowledges (the cancel sweep settles it; the parks route
+      // through the same recovery path as any other interrupted attempt).
+      const liveTaskIds = unfinishedTaskIds.filter(
+        (taskId) => derivedStatuses[taskId] === 'running',
+      );
+      if (liveTaskIds.length > 0) {
+        await TaskDispatchModel.requestStopForTasks(this.db, liveTaskIds, 'goal_restart');
+      }
       for (const task of await this.taskModel.findByIds(unfinishedTaskIds)) {
-        if (task.status === 'completed') continue;
-        const reset = await this.taskModel.updateStatusIfCurrent(task.id, task.status, 'backlog', {
-          error: null,
-        });
+        if (task.workflowCategory === 'done') continue;
+        const reset = await this.taskModel.updateStatusIfCurrent(
+          task.id,
+          derivedStatuses[task.id] ?? task.status,
+          'backlog',
+          {
+            error: null,
+          },
+        );
         if (!reset) continue;
         if (options?.agentId) {
-          await this.taskModel.update(task.id, { assigneeAgentId: options.agentId });
+          // The stop request above already fenced the incumbent run, so this
+          // rebind is an ownership transfer, not a mid-flight reassignment.
+          await this.taskModel.update(
+            task.id,
+            { assigneeAgentId: options.agentId },
+            derivedStatuses[task.id] === 'running' ? { executionTransfer: true } : {},
+          );
         }
         restartedTaskIds.push(task.id);
       }
@@ -1324,12 +1382,18 @@ export class GoalService {
         (task) => [task.id, task],
       ),
     );
+    // Canonical execution truth per candidate — the retired `tasks.status`
+    // label recomputed from workflow/execution rows, so a stale column value
+    // cannot steer the coordinator.
+    const statusById = new Map(
+      Object.entries(await this.taskModel.derivedStatusByIds(candidateTaskIds)),
+    );
 
     // Asked of every unblocked candidate, not just the head: the scheduler
     // walks past a running head to start an independent task, so a head that
     // needs no budget must not decide that nothing does. A goal with nothing
     // startable still skips the query.
-    const budget = frontierNeedsBudget(frontier, tasksById)
+    const budget = frontierNeedsBudget(frontier, tasksById, statusById)
       ? toBudgetState(graph.goal, await this.evaluateBudget(graph.goal, graph))
       : undefined;
 
@@ -1346,6 +1410,7 @@ export class GoalService {
       frontier,
       graph,
       metricCriteria,
+      statusById,
       tasksById,
     });
     // The scheduler may pick past the head of the frontier, so every arm below
@@ -1369,7 +1434,7 @@ export class GoalService {
         effects,
         candidateTasks: frontier.eligible.flatMap(({ node }) => {
           const task = node.taskId ? tasksById.get(node.taskId) : undefined;
-          return task ? [toFrontierTaskState(task, node.id)] : [];
+          return task ? [toFrontierTaskState(task, node.id, statusById.get(task.id))] : [];
         }),
         concurrency,
         graphState: toTraceGraphState(graph),
@@ -1522,7 +1587,8 @@ export class GoalService {
           }
 
           case 'task_running': {
-            if (task.status === 'running') {
+            const taskStatus = (await this.taskModel.derivedStatusByIds([task.id]))[task.id];
+            if (taskStatus === 'running') {
               const recovered = await this.recoverAbandonedTask(graph, acting!.id, task, effects);
               if (recovered) return observe(recovered);
             }
@@ -1835,12 +1901,54 @@ export class GoalService {
       };
     }
 
+    // A task bound before the mount gate existed can still carry a
+    // mount-incapable assignee. Minting its dispatch is a guaranteed
+    // admission throw (the contract's builtin tools cannot mount), so park
+    // the Task with the reason recorded and hand the stop to the same
+    // manager-or-human gate every other unresolvable failure uses.
+    if (
+      task.assigneeAgentId &&
+      (await taskRequiresBuiltinToolMount(this.db, task, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }))
+    ) {
+      const binding = await findUsableAgentExecutionBinding(this.db, task.assigneeAgentId, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      if (
+        !binding ||
+        !agentCanMountBuiltinToolSurface({ agencyConfig: binding.agencyConfig }, binding.model)
+      ) {
+        const reason = !binding
+          ? 'The assigned agent is no longer usable — reassign the goal or this task'
+          : 'The assigned agent cannot mount the builtin tools this goal task requires ' +
+            '(its runtime cannot host the MCP tool surface) — reassign it to a capable agent';
+        const parked = await this.taskModel.updateStatusIfCurrent(task.id, task.status, 'paused', {
+          error: reason,
+        });
+        if (!parked) {
+          return {
+            goalId,
+            message: `Task ${task.identifier} moved while its dispatch was being gated`,
+            nodeId,
+            outcome: 'waiting_external',
+            taskId: task.id,
+          };
+        }
+        return this.gateOrTakeOver(graph, nodeId, task.id, reason, effects);
+      }
+    }
+
     // Advances arrive from independent sources — an event hook, a manual nudge,
     // the sweep — and can overlap. `runTask` decides whether a run is already
     // in flight by reading the task's topics and only then creating one, so two
     // overlapping advances would both dispatch this Task and pay for it twice.
     // Claim the task first: the transition is a single conditional UPDATE, so
-    // exactly one advance can win it.
+    // exactly one advance can win it. The durable claim is the dispatch row
+    // itself — `hasActiveExecution` flips inside this transaction, so a racing
+    // advance's fence fails instead of minting a second run.
     //
     // Counting free slots is a *separate* race the per-task claim cannot cover:
     // two advances reading the same `inFlight` below the cap would each claim a
@@ -1848,6 +1956,12 @@ export class GoalService {
     // `maxConcurrentTasks`. So the count and the claim happen together, under a
     // per-goal advisory lock — the planner's cap check is a fast path, this is
     // the enforcement.
+    const attemptKey = taskRunIdempotencyKey.goalTaskAttempt({
+      executionGeneration: task.executionGeneration ?? 0,
+      goalId: graph.goal.id,
+      taskId: task.id,
+      taskRevision: task.domainRevision ?? 0,
+    });
     const claimed = await this.db.transaction(async (tx) => {
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(${GOAL_DISPATCH_LOCK_NAMESPACE}, hashtext(${goalId}))`,
@@ -1900,10 +2014,26 @@ export class GoalService {
       ).countRunningTasks(goalId);
       if (inFlight >= resolveMaxConcurrentTasks(graph.goal)) return 'at-capacity' as const;
 
-      return claimGoalTask(new TaskModel(tx, this.userId, this.workspaceId), task, 'running', {
-        error: null,
-        startedAt: new Date(),
+      const fenced = await claimGoalTask(
+        new TaskModel(tx, this.userId, this.workspaceId),
+        // Fence on the derived status the decision read — `task.status` is
+        // already that derived label on a model-fetched row.
+        { id: task.id, status: task.status },
+        'running',
+        {
+          error: null,
+          startedAt: new Date(),
+        },
+      );
+      if (!fenced) return false;
+      const claim = await new TaskDispatchModel(tx, this.workspaceId).request({
+        idempotencyKey: attemptKey,
+        initiator: GOAL_COORDINATOR_ACTOR_ID,
+        requestedBy: GOAL_COORDINATOR_ACTOR_ID,
+        taskId: task.id,
+        trigger: 'goal',
       });
+      return claim.state === 'busy' ? false : { dispatchId: claim.dispatch.id };
     });
 
     if (claimed === 'stopped')
@@ -1953,12 +2083,7 @@ export class GoalService {
             ? graph.goal.config.managerState.submitted.reason
             : undefined),
         maxSteps: resolveTaskMaxSteps(graph.goal),
-        idempotencyKey: taskRunIdempotencyKey.goalTaskAttempt({
-          executionGeneration: task.executionGeneration ?? 0,
-          goalId: graph.goal.id,
-          taskId: task.id,
-          taskRevision: task.domainRevision ?? 0,
-        }),
+        idempotencyKey: attemptKey,
         taskId: task.id,
         trigger: 'goal',
       });
@@ -1981,15 +2106,52 @@ export class GoalService {
         taskId: run.taskId,
       };
     } catch (error) {
-      // We claimed the task, so nothing else will put it back. Release it or the
-      // Task stays 'running' with no run behind it and only the lease reclaims it.
-      await this.taskModel
-        .updateStatusIfCurrent(task.id, 'running', task.status)
-        .catch((releaseError) => {
-          console.error('[GoalService.tick] failed to release claimed task:', releaseError);
-        });
+      // We claimed the task, so nothing else will put it back. Release the
+      // orphaned dispatch or the Task reads as running with no run behind it
+      // and only the lease reclaims it. Abandoning parks it (`paused`), which
+      // routes through the same recovery path as any other dead attempt.
+      await this.releaseOrphanedDispatch(
+        claimed.dispatchId,
+        `goal dispatch claim released: ${error}`,
+      ).catch((releaseError) => {
+        console.error('[GoalService.tick] failed to release claimed task:', releaseError);
+      });
       throw error;
     }
+  };
+
+  /** Dispatch phases a task with no live operation can only be orphaned in. */
+  private static readonly UNSTARTED_CLAIM_PHASES = [
+    'requested',
+    'claimed',
+    'provisioning',
+    'dispatched',
+    'running',
+  ] as const;
+
+  /**
+   * Settle a dispatch that never produced a run — the claim's terminal write.
+   * `abandoned` leaves the active phase set, so the task's derived status falls
+   * to `paused` and the recovery coordinator can pick it up.
+   */
+  private releaseOrphanedDispatch = async (dispatchId: string, reason: string) => {
+    const settled = await this.db
+      .update(taskDispatches)
+      .set({
+        lastCancelError: reason,
+        leaseExpiresAt: null,
+        leaseOwner: null,
+        phase: 'abandoned',
+        waitingReason: reason,
+      })
+      .where(
+        and(
+          eq(taskDispatches.id, dispatchId),
+          inArray(taskDispatches.phase, ACTIVE_DISPATCH_PHASES),
+        ),
+      )
+      .returning({ id: taskDispatches.id });
+    return settled.length > 0;
   };
 
   private requireGraph = async (goalId: string) => {
@@ -2056,10 +2218,26 @@ export class GoalService {
       // the sliver between the claim and `runTask` creating the topic; if the
       // worker died in there it is permanent, and every later advance would
       // report `waiting_external` forever because there is no operation to
-      // reclaim. Once the claim is older than the lease, hand it back.
+      // reclaim. Once the claim is older than the lease, hand it back — the
+      // orphaned dispatch abandons and the task parks (`paused`) for recovery.
       if (new Date(task.updatedAt) >= staleBefore) return undefined;
-      const released = await this.taskModel.updateStatusIfCurrent(task.id, 'running', 'backlog');
-      if (!released) return undefined;
+      const released = await this.db
+        .update(taskDispatches)
+        .set({
+          lastCancelError: 'goal dispatch claim lease expired without a run',
+          leaseExpiresAt: null,
+          leaseOwner: null,
+          phase: 'abandoned',
+          waitingReason: 'goal dispatch claim lease expired without a run',
+        })
+        .where(
+          and(
+            eq(taskDispatches.taskId, task.id),
+            inArray(taskDispatches.phase, GoalService.UNSTARTED_CLAIM_PHASES),
+          ),
+        )
+        .returning({ id: taskDispatches.id });
+      if (released.length === 0) return undefined;
       return {
         goalId: graph.goal.id,
         message: `Released the abandoned dispatch claim on task ${task.identifier}`,
@@ -2083,9 +2261,18 @@ export class GoalService {
         topicId,
         'timeout',
       );
-      await new TaskModel(tx, this.userId, this.workspaceId).updateStatus(task.id, 'paused', {
-        error: LEASE_EXPIRED_ERROR,
-      });
+      // The run's lease died without a verdict — settle it inside the reclaim
+      // transaction so the operation/topic/task writes stay atomic.
+      await settleTaskExecution(
+        tx,
+        this.userId,
+        {
+          context: { error: LEASE_EXPIRED_ERROR },
+          outcome: 'outcome_unknown',
+          taskId: task.id,
+        },
+        this.workspaceId,
+      );
       return true;
     });
     if (!reclaimed) return undefined;
@@ -2567,8 +2754,10 @@ export class GoalService {
           taskId,
         };
       }
-      const task = await new TaskModel(tx, this.userId, this.workspaceId).findById(taskId);
-      if (task && ['running', 'backlog', 'completed'].includes(task.status)) {
+      const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+      const task = await taskModel.findById(taskId);
+      const taskStatus = task ? (await taskModel.derivedStatusByIds([taskId]))[taskId] : undefined;
+      if (task && ['running', 'backlog', 'completed'].includes(taskStatus ?? '')) {
         return {
           goalId: graph.goal.id,
           message: 'Task state changed while recovery was being evaluated',

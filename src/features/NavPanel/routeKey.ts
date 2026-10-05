@@ -17,12 +17,21 @@ export const resolveNavPanelKey = (
       return grandchildSegment === 'docs' ? 'agent-docs' : 'agent';
     }
 
+    case 'chat': {
+      // `/chat/:topicId` is the canonical conversation surface — it owns the
+      // same topics panel as the legacy `/agent/:aid` route it redirects from.
+      return 'agent';
+    }
+
     case 'community': {
       return 'discover';
     }
 
     case 'group': {
-      return 'group';
+      // `/group` itself is the Groups index — a destination inside the global
+      // navigation, so it keeps the home panel. Only an actual group
+      // (`/group/:gid/...`) owns the route panel.
+      return childSegment ? 'group' : 'home';
     }
 
     case 'image': {

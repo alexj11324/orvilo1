@@ -3,7 +3,7 @@ import type {
   ProviderConfigurationBroker,
   ProviderConfigurationScope,
 } from '@orvilo/agent-execution/controlPlane';
-import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
+import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import type { ProviderBindingModel } from '@/database/models/providerBinding';
@@ -57,6 +57,26 @@ export async function checkProviderBinding(
     .catch(() => {
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_CHECK_UNAVAILABLE' });
     });
+  // Authentication alone does not prove the selected model can run. Use the
+  // same broker capabilities that issuance uses before arming this route.
+  const capabilities =
+    result.ok &&
+    result.value.status === 'ready' &&
+    row.config.model !== PROVIDER_CONFIG_ANCHOR_MODEL
+      ? await composition.broker
+          .capabilities({
+            schemaVersion: 1,
+            scope,
+            bindingId: row.id,
+            bindingRevision: row.revision,
+          })
+          .catch(() => {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'PROVIDER_CHECK_UNAVAILABLE',
+            });
+          })
+      : undefined;
   const fresh = await load();
   const freshScope = await active.authorizeScope(userId);
   if (
@@ -73,6 +93,21 @@ export async function checkProviderBinding(
     throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_CHECK_UNAVAILABLE' });
   }
   if (result.value.bindingId !== row.id || result.value.bindingRevision !== row.revision) {
+    throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
+  }
+  if (
+    result.value.status === 'ready' &&
+    row.config.model !== PROVIDER_CONFIG_ANCHOR_MODEL &&
+    (!capabilities?.ok ||
+      !capabilities.value.some((item) => item.modelRoute === row.config.model && item.text))
+  ) {
+    return { ...result.value, status: 'unavailable' };
+  }
+  // A verified binding is enabled for runtime execution; a check that the
+  // provider rejected (`unavailable`) must not arm it. Enabling is not a
+  // config edit — `revision` stays put, and the next save lands
+  // `enabled: false` again until re-verified.
+  if (result.value.status === 'ready' && !(await model.setEnabled(row.id, true))) {
     throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
   }
   return result.value;

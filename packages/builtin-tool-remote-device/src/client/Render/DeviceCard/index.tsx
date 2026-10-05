@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { CheckCircle2, MonitorIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -116,17 +115,19 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
     .join(' · ');
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.root, variant === 'card' ? styles.card : styles.listItem)}
-      gap={12}
+    <div
       role={variant === 'listItem' ? 'listitem' : undefined}
+      className={cx(
+        'flex flex-row items-center gap-3',
+        cx(styles.root, variant === 'card' ? styles.card : styles.listItem),
+      )}
     >
-      <Flexbox align={'center'} className={styles.icon} justify={'center'}>
-        <Icon icon={MonitorIcon} size={18} />
-      </Flexbox>
-      <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
+      <div className={cx('flex flex-col items-center justify-center', styles.icon)}>
+        <span className="anticon" role="img">
+          <MonitorIcon fill={'transparent'} height={18} size={18} width={18} />
+        </span>
+      </div>
+      <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
         <span className={styles.hostname}>{displayName}</span>
         {!activated && (
           <span className={styles.status}>
@@ -142,16 +143,18 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
             )}
           </span>
         )}
-      </Flexbox>
+      </div>
       {activated ? (
         <span className={[styles.badge, styles.activated].join(' ')}>
-          <Icon icon={CheckCircle2} size={12} />
+          <span className="anticon" role="img">
+            <CheckCircle2 fill={'transparent'} height={12} size={12} width={12} />
+          </span>
           {t('builtins.orvilo-remote-device.render.activated')}
         </span>
       ) : (
         details && <span className={styles.details}>{details}</span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

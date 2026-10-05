@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
@@ -42,12 +41,12 @@ export const DuplicateAgentInspector = memo<BuiltinInspectorProps<DuplicateAgent
     }
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+      <div className={cx('flex flex-row items-center gap-2', styles.root)}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-agent-management.inspector.duplicateAgent.title')}
         </span>
         <span className={highlightTextStyles.primary}>{newTitle || agentId}</span>
-      </Flexbox>
+      </div>
     );
   },
 );

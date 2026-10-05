@@ -1,14 +1,14 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Icon } from '@lobehub/ui';
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronLeft, Plus } from 'lucide-react';
-import { memo, type ReactNode, useCallback } from 'react';
+import { createElement, memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import type { StatusVisual } from '@/components/ExecutionStatus';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
@@ -32,10 +32,11 @@ const cardStyles = createStaticStyles(({ css }) => ({
 }));
 
 const SortableTaskCard = memo<{
+  hiddenProperties?: ReadonlySet<string>;
   onStatusChange?: (task: TaskListItem, choice: TaskStatusChoice) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
-}>(({ onStatusChange, routeScope, task }) => {
+}>(({ hiddenProperties, onStatusChange, routeScope, task }) => {
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
     data: { task },
     id: task.identifier,
@@ -58,6 +59,7 @@ const SortableTaskCard = memo<{
       {...attributes}
     >
       <TaskBoardCard
+        hiddenProperties={hiddenProperties}
         routeScope={routeScope}
         task={task}
         onStatusChange={onStatusChange ? handleStatusChange : undefined}
@@ -202,9 +204,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   count: css`
     flex: none;
-
-    font-size: 13px;
-    font-weight: 450;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: ${cssVar.colorTextDescription};
   `,
@@ -276,7 +276,7 @@ export const CollapsedKanbanColumn = memo<CollapsedKanbanColumnProps>(
           type="button"
           onClick={onExpand}
         >
-          {statusIcon && <Icon color={statusIcon.color} icon={statusIcon.icon} size={16} />}
+          {statusIcon && createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
           <span
             className={cx(styles.collapsedLabel, !upright && styles.collapsedLabelRotated)}
             style={{ flex: 1, minHeight: 0 }}
@@ -299,6 +299,7 @@ interface KanbanColumnProps {
   footer?: ReactNode;
   groupBy: TaskKanbanGroupBy;
   groupMeta?: TaskGroupMeta;
+  hiddenProperties?: ReadonlySet<string>;
   loading?: boolean;
   onCreate?: () => void;
   onHide?: () => void;
@@ -314,6 +315,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
     droppable,
     footer,
     groupBy,
+    hiddenProperties,
     groupMeta,
     loading,
     onCreate,
@@ -359,21 +361,19 @@ const KanbanColumn = memo<KanbanColumnProps>(
           <div className={styles.headerTitle}>
             {headerVariant === 'loading' ? (
               <>
-                <Skeleton.Avatar
-                  shape={'square'}
-                  size={16}
-                  style={{ borderRadius: 4, flex: 'none' }}
+                <Skeleton
+                  className="rounded-md shrink-0"
+                  style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
                 />
-                <Skeleton height={14} style={{ minWidth: 64 }} width={64} />
+                <Skeleton style={{ minWidth: 64, height: 14, width: 64 }} />
               </>
             ) : headerVariant === 'group' && groupMeta ? (
               <TaskGroupLabel group={groupMeta} />
             ) : (
               <>
-                {statusIcon && <Icon color={statusIcon.color} icon={statusIcon.icon} size={16} />}
-                <Text fontSize={13} weight={500}>
-                  {label}
-                </Text>
+                {statusIcon &&
+                  createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
+                <div className="text-sm font-medium">{label}</div>
               </>
             )}
             {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}
@@ -409,6 +409,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             >
               {tasks.map((task) => (
                 <SortableTaskCard
+                  hiddenProperties={hiddenProperties}
                   key={task.identifier}
                   routeScope={routeScope}
                   task={task}
@@ -418,7 +419,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             </SortableContext>
           ) : onCreate ? (
             <div className={styles.addPill} title={t('taskList.kanban.addTask')} onClick={onCreate}>
-              <Icon icon={Plus} size={16} />
+              <Plus size={16} />
             </div>
           ) : null}
           {footer}

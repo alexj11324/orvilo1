@@ -17,7 +17,7 @@ describe('man command', () => {
   function createProgram() {
     const program = new Command();
 
-    program.name('lh').description('Sample CLI').version('1.0.0');
+    program.name('orvilo').description('Sample CLI').version('1.0.0');
 
     const generate = program
       .command('generate')
@@ -45,10 +45,9 @@ describe('man command', () => {
 
     const output = consoleSpy.mock.calls.at(0)?.[0];
 
-    expect(output).toContain('LH(1)');
-    expect(output).toContain('NAME\n  lh - Sample CLI');
-    expect(output).toContain('ALIASES\n  orvilo, orvilo');
-    expect(output).toContain('SYNOPSIS\n  lh [options] [command]');
+    expect(output).toContain('ORVILO(1)');
+    expect(output).toContain('NAME\n  orvilo - Sample CLI');
+    expect(output).toContain('SYNOPSIS\n  orvilo [options] [command]');
     expect(output).toContain('generate|gen [options] [command]');
     expect(output).toContain('man [options] [command...]');
   });
@@ -60,10 +59,10 @@ describe('man command', () => {
 
     const output = consoleSpy.mock.calls.at(0)?.[0];
 
-    expect(output).toContain('LH-GENERATE(1)');
-    expect(output).toContain('NAME\n  lh generate - Generate content');
+    expect(output).toContain('ORVILO-GENERATE(1)');
+    expect(output).toContain('NAME\n  orvilo generate - Generate content');
     expect(output).toContain('ALIASES\n  gen');
-    expect(output).toContain('SYNOPSIS\n  lh generate [options] [command]');
+    expect(output).toContain('SYNOPSIS\n  orvilo generate [options] [command]');
     expect(output).toContain('text [options] <prompt>');
     expect(output).toContain('-m, --model <model>');
   });
@@ -75,8 +74,8 @@ describe('man command', () => {
 
     const output = consoleSpy.mock.calls.at(0)?.[0];
 
-    expect(output).toContain('LH-GENERATE-TEXT(1)');
-    expect(output).toContain('NAME\n  lh generate text - Generate text from a prompt');
+    expect(output).toContain('ORVILO-GENERATE-TEXT(1)');
+    expect(output).toContain('NAME\n  orvilo generate text - Generate text from a prompt');
     expect(output).toContain('ARGUMENTS');
     expect(output).toContain('<prompt>');
     expect(output).toContain('Required argument');

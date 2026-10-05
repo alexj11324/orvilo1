@@ -9,7 +9,7 @@ const { nullComponent, passthrough } = vi.hoisted(() => ({
   passthrough: () => ({ default: ({ children }: { children?: unknown }) => children }),
 }));
 
-vi.mock('@/const/version', () => ({ isDesktop: true }));
+vi.mock('@/const/version', () => ({ CURRENT_VERSION: '0.0.0', isDesktop: true }));
 vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isPWA: false }) }));
 vi.mock('@/store/serverConfig', () => ({
   featureFlagsSelectors: () => ({ showCloudPromotion: false }),
@@ -53,6 +53,9 @@ vi.mock('@/features/Electron/titlebar/TitleBar', nullComponent);
 vi.mock('@/features/GlobalOverlays', nullComponent);
 vi.mock('@/features/HotkeyHelperPanel', nullComponent);
 vi.mock('@/features/NavPanel/Shell', nullComponent);
+vi.mock('@/features/ReUIShell/SidebarShell', () => ({
+  SidebarShell: () => null,
+}));
 vi.mock('@/layout/GlobalProvider/CmdkLazy', nullComponent);
 vi.mock('./RegisterHotkeys', nullComponent);
 vi.mock('../home', nullComponent);

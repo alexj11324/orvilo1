@@ -20,6 +20,7 @@ import {
   priorityLabel,
 } from '@orvilo/prompts';
 import type { TaskAutomationMode, TaskStatus } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
@@ -247,7 +248,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         name: task.name,
         parentLabel,
         priority: task.priority,
-        status: task.status,
+        status: deriveLegacyTaskStatus(task),
       }),
       identifier: task.identifier,
       success: true,

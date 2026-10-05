@@ -2,7 +2,7 @@
  * Producer-side helpers for converting external agent CLI output into the
  * unified `AgentStreamEvent` wire shape. Imported by:
  *   - Electron main (`HeterogeneousAgentCtr`) — desktop CC / Codex flow
- *   - The future `lh hetero exec` CLI — sandbox + terminal flow ()
+ *   - The future `orvilo hetero exec` CLI — sandbox + terminal flow ()
  *
  * Consumers (renderer executor, server `heteroIngest` handler) never need to
  * touch adapters — every event reaching them is already an `AgentStreamEvent`.
@@ -36,6 +36,25 @@ export {
   type AgentStreamPipelineOptions,
   type UploadHeterogeneousImage,
 } from './agentStreamPipeline';
+export {
+  CACHE_KEEPALIVE_PROMPT_TEXT,
+  CACHE_KEEPALIVE_PROMPT_TIMEOUT_MS,
+  type CacheKeepaliveClock,
+  CacheKeepaliveController,
+  type CacheKeepaliveControllerOptions,
+  type CacheKeepaliveDisarmReason,
+} from './cacheKeepalive';
+export {
+  AGENT_CACHE_POLICIES,
+  type AgentCachePolicy,
+  CACHE_KEEPALIVE_ENV,
+  type CacheKeepaliveOverrides,
+  CODEX_PROMPT_CACHE_KEY_ENV,
+  computeMaxKeepalivePings,
+  resolveAgentCachePolicy,
+  resolveCacheKeepalive,
+  type ResolvedCacheKeepalive,
+} from './cachePolicy';
 export {
   classifyHeteroProcessFailure,
   type ClassifyHeteroProcessFailureParams,
@@ -115,6 +134,7 @@ export {
 } from './input';
 export { JsonlStreamProcessor } from './jsonlProcessor';
 export type {
+  HeterogeneousAgentCacheKeepaliveStatus,
   HeterogeneousAgentRuntimeState,
   HeterogeneousAgentRuntimeStatus,
   HeterogeneousAgentRuntimeTask,
@@ -127,6 +147,7 @@ export type {
 // resolveCliCommand` subpath instead.
 export {
   ACP_AGENT_RUNTIMES,
+  ACP_MCP_MOUNT_AGENT_TYPES,
   ACP_RUNTIME_AGENT_TYPES,
   type AcpAgentRuntimeSpec,
   type AcpBridgeRunnerTarget,
@@ -137,6 +158,7 @@ export {
   getAcpAgentRuntime,
   isAcpBridgeAgent,
 } from './acpRuntime';
+export { canMountBuiltinToolSurface } from './builtinToolMount';
 export {
   ensureClaudeCodeResumeTranscript,
   type EnsureResumeTranscriptReason,
@@ -156,6 +178,7 @@ export {
   extractStandardAcpSelectors,
   listStandardAcpModels,
   type ListStandardAcpModelsOptions,
+  listStandardAcpPermissions,
   resolveAcpSpawnTarget,
   type StandardAcpSelectors,
 } from './standardAcpAgents';

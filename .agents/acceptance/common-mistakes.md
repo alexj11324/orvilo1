@@ -48,7 +48,7 @@ the next free number of that prefix.
 
 **Environment safety**
 
-- **L-S1** Prove which environment a CLI call targets from effective settings or an environment-distinguishing probe, never from `lh whoami` alone.
+- **L-S1** Prove which environment a CLI call targets from effective settings or an environment-distinguishing probe, never from `orvilo whoami` alone.
 - **L-S2** Green Vite/Vitest/lint/tsc is not boot insurance: boot the real surface and read `agent-browser console` on an ErrorBoundary.
 - **L-S3** Fetch `origin canary`, record the SHA, and confirm it is an ancestor of the branch before starting the evidence environment.
 - **L-S5** Before driving CDP 9222 or a pool port, prove who owns it: Electron `Browser` string on `/json/version`, a Orvilo renderer marker, and _your_ worktree's absolute source path.
@@ -193,7 +193,7 @@ after a cold reload, and the assistant continuation when the environment allows.
 
 ### L-E16 — Treating a terminal reply as evidence of live streaming
 
-`since 2026-08-10` · `holds-while: lh hetero exec runs Claude Code without --include-partial-messages`
+`since 2026-08-10` · `holds-while: orvilo hetero exec runs Claude Code without --include-partial-messages`
 
 **Trap:** a one-token marker recorded until process exit; the UI shows an empty
 target-Agent shell for the whole run and acquires text only at reconciliation,
@@ -310,10 +310,10 @@ landing on a list page is the tell.
 
 ### L-S1 — Calling an assumed server target
 
-`since 2026-07-24` · `holds-while: lh whoami does not print the effective serverUrl`
+`since 2026-07-24` · `holds-while: orvilo whoami does not print the effective serverUrl`
 
-**Trap:** stripping a server env var and taking `lh whoami` as proof a CLI call
-targets production; `lh login` persists `serverUrl` in CLI settings and a local
+**Trap:** stripping a server env var and taking `orvilo whoami` as proof a CLI call
+targets production; `orvilo login` persists `serverUrl` in CLI settings and a local
 DB may hold the synchronized profile.
 
 **Rule:** inspect the effective CLI settings or run a data probe that

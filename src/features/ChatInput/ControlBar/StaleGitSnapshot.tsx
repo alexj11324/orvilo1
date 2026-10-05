@@ -1,19 +1,16 @@
-import { Icon } from '@lobehub/ui';
-import {
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@lobehub/ui/base-ui';
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { GitBranchIcon, GitForkIcon, GitPullRequest, RotateCcwIcon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { electronSystemService } from '@/services/electron/system';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { getHostPort } from '@/platform';
 
 import { gitChipStyles } from './gitChipStyles';
 import { resolveStaleSnapshot } from './staleSnapshot';
@@ -62,6 +59,7 @@ interface StaleGitSnapshotProps {
   path: string;
   /** The source repo the worktree was linked from, when the topic recorded one. */
   sourcePath?: string;
+  topicId?: string | null;
 }
 
 /**
@@ -76,18 +74,23 @@ interface StaleGitSnapshotProps {
  * explains why the branch is frozen but leaves no way out of it.
  */
 const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
-  ({ agentId, git, isGithub, path, sourcePath }) => {
+  ({ agentId, git, isGithub, path, sourcePath, topicId }) => {
     const { t } = useTranslation('device');
     const [open, setOpen] = useState(false);
     const [resetting, setResetting] = useState(false);
-    const switchWorktree = useSwitchWorktree({ agentId, isGithub, sourcePath: sourcePath ?? path });
+    const switchWorktree = useSwitchWorktree({
+      agentId,
+      isGithub,
+      sourcePath: sourcePath ?? path,
+      topicId,
+    });
 
     const { branch, explanation, isWorktree, pullRequest, reset, worktreePath } =
       resolveStaleSnapshot({ git, path, sourcePath });
 
     const handleOpenPr = useCallback(() => {
       if (pullRequest?.url) {
-        void electronSystemService.openExternalLink(pullRequest.url);
+        void getHostPort().openExternal(pullRequest.url);
       }
     }, [pullRequest?.url]);
 
@@ -107,7 +110,14 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
 
     const trigger = (
       <div className={gitChipStyles.staleTrigger}>
-        <Icon icon={isWorktree ? GitForkIcon : GitBranchIcon} size={12} />
+        <span className="anticon" role="img">
+          {createElement(isWorktree ? GitForkIcon : GitBranchIcon, {
+            size: 12,
+            width: 12,
+            height: 12,
+            fill: 'transparent',
+          })}
+        </span>
         <span className={styles.triggerLabel}>{branch}</span>
       </div>
     );
@@ -115,38 +125,40 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
     return (
       <>
         <div className={gitChipStyles.separator} />
-        <DropdownMenuRoot open={open} onOpenChange={setOpen}>
+        <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger>
             <div>{trigger}</div>
           </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuPositioner placement="topLeft" sideOffset={8}>
-              <DropdownMenuPopup className={styles.popup}>
-                <div className={styles.explanation}>
-                  {t(explanation.key, explanation.values)}
-                  <span className={styles.path}>{worktreePath}</span>
-                </div>
-                {reset && (
-                  <DropdownMenuItem
-                    aria-disabled={resetting}
-                    closeOnClick={false}
-                    onClick={handleReset}
-                  >
-                    <div className={styles.action}>
-                      <Icon icon={RotateCcwIcon} size={14} />
-                      <span>{t('workingDirectory.staleResetToSource', { name: reset.name })}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuPopup>
-            </DropdownMenuPositioner>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
+          <DropdownMenuContent align="start" className={styles.popup} side="top" sideOffset={8}>
+            <div>
+              <div className={styles.explanation}>
+                {t(explanation.key, explanation.values)}
+                <span className={styles.path}>{worktreePath}</span>
+              </div>
+              {reset && (
+                <DropdownMenuItem
+                  aria-disabled={resetting}
+                  closeOnClick={false}
+                  onClick={handleReset}
+                >
+                  <div className={styles.action}>
+                    <span className="anticon" role="img">
+                      <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                    </span>
+                    <span>{t('workingDirectory.staleResetToSource', { name: reset.name })}</span>
+                  </div>
+                </DropdownMenuItem>
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {pullRequest && (
           <>
             <div className={gitChipStyles.separator} />
             <div className={gitChipStyles.prTrigger} role="button" onClick={handleOpenPr}>
-              <Icon icon={GitPullRequest} size={12} />
+              <span className="anticon" role="img">
+                <GitPullRequest fill={'transparent'} height={12} size={12} width={12} />
+              </span>
               <span>#{pullRequest.number}</span>
             </div>
           </>

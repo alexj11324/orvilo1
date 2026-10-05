@@ -1,15 +1,18 @@
 import '../initialize';
+import '@/app/globals.css';
 
 import { RouterProvider } from 'react-router/dom';
 
 import NextThemeProvider from '@/layout/GlobalProvider/NextThemeProvider';
 import { bootTiming } from '@/libs/bootTiming';
+import { createWebHostPort, registerHostPort } from '@/platform';
 import { createAppRouter } from '@/utils/router';
 
 import { startAppInitialization } from './initialize/bootstrap';
 import { mobileRoutes } from './router/mobileRouter.config';
 import { createSPARoot } from './runtime';
 
+registerHostPort(createWebHostPort('mobile'));
 bootTiming.mark('bundle-eval');
 startAppInitialization();
 

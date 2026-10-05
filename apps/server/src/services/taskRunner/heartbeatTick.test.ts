@@ -69,7 +69,6 @@ describe('runHeartbeatTick', () => {
     heartbeatInterval: 30,
     id: taskId,
     identifier: 'T-1',
-    status: 'scheduled',
     ...overrides,
   });
 
@@ -136,23 +135,33 @@ describe('runHeartbeatTick', () => {
   });
 
   it('cancels the deferred message when pause or a newer tick wins the CAS', async () => {
-    mockSelectTask.mockResolvedValue([baseTask()]);
+    // A stored tickToken both derives 'scheduled' and authenticates this tick.
+    mockSelectTask.mockResolvedValue([
+      baseTask({ context: { scheduler: { tickToken: 'tick-1' } } }),
+    ]);
     mockRunner.runTask.mockRejectedValue(new TaskDependencyError('Blocked', 'PRECONDITION_FAILED'));
     commitTick.mockResolvedValue(false);
-    await runHeartbeatTick(taskId, userId);
+    await runHeartbeatTick(taskId, userId, 'tick-1');
     expect(cancelTick).toHaveBeenCalledWith('next-message');
   });
 
   it('propagates queue failures instead of falsely claiming a deferred tick', async () => {
-    mockSelectTask.mockResolvedValue([baseTask()]);
+    mockSelectTask.mockResolvedValue([
+      baseTask({ context: { scheduler: { tickToken: 'tick-1' } } }),
+    ]);
     mockRunner.runTask.mockRejectedValue(new TaskDependencyError('Blocked', 'PRECONDITION_FAILED'));
     scheduleTick.mockRejectedValue(new Error('queue offline'));
-    await expect(runHeartbeatTick(taskId, userId)).rejects.toThrow('queue offline');
+    await expect(runHeartbeatTick(taskId, userId, 'tick-1')).rejects.toThrow('queue offline');
     expect(commitTick).not.toHaveBeenCalled();
   });
 
   it('does not resume or re-arm an explicitly paused task', async () => {
-    mockSelectTask.mockResolvedValue([baseTask({ status: 'paused' })]);
+    // `status` is retired — a pause lives on the parked marker now.
+    mockSelectTask.mockResolvedValue([
+      baseTask({
+        context: { execution: { parked: { at: '2026-05-02T00:00:00.000Z' } } },
+      }),
+    ]);
     expect(await runHeartbeatTick(taskId, userId)).toEqual({ ran: false, reason: 'paused' });
     expect(mockRunner.runTask).not.toHaveBeenCalled();
     expect(scheduleTick).not.toHaveBeenCalled();

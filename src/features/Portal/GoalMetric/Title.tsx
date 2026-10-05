@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,9 +10,9 @@ const Title = memo(() => {
   if (!view) return null;
 
   return (
-    <Text style={{ fontSize: 14 }} weight={500}>
+    <div className="font-medium" style={{ fontSize: 14 }}>
       {t(`goalProcess.metricDetail.${view.metric}.title` as const)}
-    </Text>
+    </div>
   );
 });
 

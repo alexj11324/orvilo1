@@ -1,6 +1,6 @@
-import { isDesktop } from '@orvilo/const';
 import { type LucideIcon } from 'lucide-react';
 import {
+  Brain,
   ChartColumnBigIcon,
   Coins,
   CreditCard,
@@ -14,6 +14,9 @@ import {
   UserCircle,
 } from 'lucide-react';
 
+import { isSettingsTabAvailable, type SettingsCapabilityContext } from '@/config/routes/settings';
+import { SettingsTabs } from '@/store/global/initialState';
+
 import { type ContextType, type MenuContext } from '../types';
 
 export interface ContextCommand {
@@ -24,6 +27,13 @@ export interface ContextCommand {
   labelKey?: string;
   labelNamespace?: 'setting' | 'auth' | 'subscription';
   path: string;
+  /**
+   * The settings tab this command opens. When set, the command is offered only
+   * while `SETTINGS_CAPABILITIES` serves that tab for the current context —
+   * the palette follows the same gate as the page itself instead of keeping a
+   * second copy of each platform/deployment rule.
+   */
+  settingsTab?: SettingsTabs;
   subPath: string;
 }
 
@@ -36,6 +46,7 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
     labelKey: 'tab.plans',
     labelNamespace: 'subscription',
     path: '/settings/plans',
+    settingsTab: SettingsTabs.Plans,
     subPath: 'plans',
   },
   {
@@ -46,6 +57,7 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
     labelKey: 'tab.credits',
     labelNamespace: 'subscription',
     path: '/settings/credits',
+    settingsTab: SettingsTabs.Credits,
     subPath: 'credits',
   },
   {
@@ -56,6 +68,7 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
     labelKey: 'tab.usage',
     labelNamespace: 'subscription',
     path: '/settings/usage',
+    settingsTab: SettingsTabs.Usage,
     subPath: 'usage',
   },
   {
@@ -66,6 +79,7 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
     labelKey: 'tab.billing',
     labelNamespace: 'subscription',
     path: '/settings/billing',
+    settingsTab: SettingsTabs.Billing,
     subPath: 'billing',
   },
   // There is deliberately no Referral entry here. That settings page was an
@@ -101,10 +115,23 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       label: 'Appearance',
       labelKey: 'tab.common',
       labelNamespace: 'setting',
-      path: '/settings/common',
-      subPath: 'common',
+      // `common` is a retired alias of `appearance`; deep-link the live tab
+      // rather than riding the registry's compatibility redirect.
+      path: '/settings/appearance',
+      settingsTab: SettingsTabs.Appearance,
+      subPath: 'appearance',
     },
-
+    {
+      icon: Brain,
+      keywords: ['provider', 'llm', 'model', 'ai'],
+      keywordsKey: 'cmdk.keywords.provider',
+      label: 'Model Provider',
+      labelKey: 'tab.provider',
+      labelNamespace: 'setting',
+      path: '/settings/provider',
+      settingsTab: SettingsTabs.Provider,
+      subPath: 'provider',
+    },
     {
       icon: KeyboardIcon,
       keywords: ['hotkey', 'shortcut', 'keyboard'],
@@ -113,22 +140,21 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       labelKey: 'tab.hotkey',
       labelNamespace: 'setting',
       path: '/settings/hotkey',
+      settingsTab: SettingsTabs.Hotkey,
       subPath: 'hotkey',
     },
-    ...(isDesktop
-      ? [
-          {
-            icon: EthernetPort,
-            keywords: ['proxy', 'network', 'connection'],
-            keywordsKey: 'cmdk.keywords.proxy',
-            label: 'Proxy',
-            labelKey: 'tab.proxy',
-            labelNamespace: 'setting' as const,
-            path: '/settings/proxy',
-            subPath: 'proxy',
-          },
-        ]
-      : []),
+    {
+      icon: EthernetPort,
+      keywords: ['proxy', 'network', 'connection'],
+      keywordsKey: 'cmdk.keywords.proxy',
+      label: 'Proxy',
+      labelKey: 'tab.proxy',
+      labelNamespace: 'setting' as const,
+      path: '/settings/proxy',
+      // Host-scoped: the registry's isDesktop gate answers for the palette too.
+      settingsTab: SettingsTabs.Proxy,
+      subPath: 'proxy',
+    },
     {
       icon: ChartColumnBigIcon,
       keywords: ['stats', 'statistics', 'analytics'],
@@ -137,6 +163,7 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       labelKey: 'tab.stats',
       labelNamespace: 'auth',
       path: '/settings/stats',
+      settingsTab: SettingsTabs.Stats,
       subPath: 'stats',
     },
     {
@@ -149,6 +176,7 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       // Signed Orvilo TRPC keys (`/settings/apikey`). Not model-provider
       // credentials — `/settings/provider` stays retired.
       path: '/settings/apikey',
+      settingsTab: SettingsTabs.APIKey,
       subPath: 'apikey',
     },
     {
@@ -159,25 +187,32 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       labelKey: 'tab.about',
       labelNamespace: 'setting',
       path: '/settings/about',
+      settingsTab: SettingsTabs.About,
       subPath: 'about',
     },
   ],
 };
 
 interface BuildContextCommandsOptions {
-  enableBusinessFeatures: boolean;
+  /** The same context object the settings renderer resolves against. */
+  capabilityContext: SettingsCapabilityContext;
 }
 
 /**
- * Build the full command map, optionally appending business-only entries.
+ * Build the full command map. Every settings entry tagged with `settingsTab`
+ * passes through `SETTINGS_CAPABILITIES` — business surfaces are therefore
+ * offered exactly when the registry serves the page, host surfaces exactly
+ * when the host gate is open, and retired/unknown tabs never advertise.
  */
 export const buildContextCommands = ({
-  enableBusinessFeatures,
+  capabilityContext,
 }: BuildContextCommandsOptions): Record<ContextType, ContextCommand[]> => ({
   ...CONTEXT_COMMANDS,
-  settings: enableBusinessFeatures
-    ? [...CONTEXT_COMMANDS.settings, ...BUSINESS_SETTINGS_COMMANDS]
-    : CONTEXT_COMMANDS.settings,
+  settings: [...CONTEXT_COMMANDS.settings, ...BUSINESS_SETTINGS_COMMANDS].filter(
+    (command) =>
+      command.settingsTab === undefined ||
+      isSettingsTabAvailable(command.settingsTab, capabilityContext),
+  ),
 });
 
 /**

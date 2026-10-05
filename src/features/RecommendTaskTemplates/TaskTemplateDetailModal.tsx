@@ -1,19 +1,16 @@
 'use client';
 
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { TaskTemplate } from '@orvilo/const';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
+import { t } from 'i18next';
 import { Clock, X } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 import { ConnectorAuthRow } from './ConnectorAuthRow';
 import { resolveTemplateIcon } from './resolveTemplateIcon';
@@ -57,36 +54,47 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
     }, [created, close]);
 
     return (
-      <Flexbox gap={16} padding={20}>
-        <Flexbox horizontal align={'flex-start'} gap={12} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={12} style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex flex-col gap-4 p-5">
+        <div className="flex flex-row items-start gap-3 justify-between">
+          <div className="flex flex-row items-center gap-3" style={{ flex: 1, minWidth: 0 }}>
             <TemplateBriefIcon spec={iconSpec} tileSize={36} />
-            <Flexbox gap={2} style={{ minWidth: 0 }}>
-              <Text ellipsis fontSize={18} weight={600}>
-                {title}
-              </Text>
-              <Flexbox horizontal align={'center'} gap={4}>
-                <Icon color={cssVar.colorTextSecondary} icon={Clock} size={12} />
-                <Text fontSize={12} type={'secondary'}>
-                  {scheduleText}
-                </Text>
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
-          <ActionIcon icon={X} size={'small'} onClick={close} />
-        </Flexbox>
+            <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
+              <span className="truncate text-[18px] font-semibold">{title}</span>
+              <div className="flex flex-row items-center gap-1">
+                <span className="anticon" role="img">
+                  <Clock
+                    color={cssVar.colorTextSecondary}
+                    fill={'transparent'}
+                    height={12}
+                    size={12}
+                    width={12}
+                  />
+                </span>
+                <span className="text-[12px] text-muted-foreground">{scheduleText}</span>
+              </div>
+            </div>
+          </div>
+          <ActionIcon
+            icon={X}
+            size={'small'}
+            title={t('close', { ns: 'common' })}
+            onClick={close}
+          />
+        </div>
 
-        {description.trim().length > 0 && <Text type={'secondary'}>{description}</Text>}
+        {description.trim().length > 0 && (
+          <span className="text-muted-foreground">{description}</span>
+        )}
 
         {instruction.trim().length > 0 && (
           <>
-            <Divider dashed style={{ marginBlock: 0 }} />
+            <Separator className="border-dashed" style={{ marginBlock: 0 }} />
             <Markdown variant={'chat'}>{instruction}</Markdown>
           </>
         )}
 
         {visibleAuthSpecs.length > 0 && (
-          <Flexbox gap={6}>
+          <div className="flex flex-col gap-1.5">
             {visibleAuthSpecs.map((spec) => (
               <ConnectorAuthRow
                 disabled={disabled}
@@ -95,21 +103,21 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
                 onError={handleConnectError}
               />
             ))}
-          </Flexbox>
+          </div>
         )}
 
-        <Flexbox horizontal justify={'flex-end'}>
+        <div className="flex flex-row justify-end">
           <Button
+            className="rounded-full"
             disabled={disabled}
             loading={loading || pendingCreate}
-            shape={'round'}
-            type={'primary'}
+            variant="default"
             onClick={handleAddTask}
           >
             {primaryButtonLabel}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

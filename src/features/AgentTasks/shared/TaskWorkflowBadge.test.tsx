@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
-import { Icon } from '@lobehub/ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { cssVar } from 'antd-style';
 import { Loader2 } from 'lucide-react';
+import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
@@ -45,7 +45,7 @@ const badgeShape = (category: TaskWorkflowCategory) => {
 };
 
 const referenceShape = (icon: StatusVisual['icon'], color: string) => {
-  const { container } = render(<Icon color={color} icon={icon} size={12} />);
+  const { container } = render(createElement(icon, { color, size: 12 }));
   return glyphShape(container);
 };
 
@@ -60,12 +60,14 @@ const ALL_CATEGORIES: TaskWorkflowCategory[] = [
 ];
 
 describe('TaskWorkflowBadge', () => {
-  it('does not invent a business state for a local-only task', () => {
+  it('draws the category mark for a local-only task — no provider link needed', () => {
+    // `workflowCategory` IS the Issue Status; a task without a linked
+    // `workflowStateId` still renders its canonical category mark.
     const { container } = render(
       <TaskWorkflowBadge executionStatus={'running'} workflowCategory={'in_progress'} />,
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(container.querySelector('[data-task-workflow-state="in_progress"]')).toBeInTheDocument();
   });
 
   it('keeps external Done separate from an unverified delivery', () => {
@@ -123,8 +125,8 @@ describe('TaskWorkflowBadge', () => {
       const { icon: Done } = WORKFLOW_CATEGORY_VISUALS.done;
       const { container } = render(
         <>
-          <Icon color={'#5e6ad2'} icon={Done} size={14} />
-          <Icon color={'#5e6ad2'} icon={Done} size={14} />
+          {createElement(Done, { color: '#5e6ad2', size: 14 })}
+          {createElement(Done, { color: '#5e6ad2', size: 14 })}
         </>,
       );
 
@@ -142,7 +144,7 @@ describe('TaskWorkflowBadge', () => {
     it('draws the progress states without a mask', () => {
       for (const category of ['backlog', 'todo', 'in_progress', 'in_review'] as const) {
         const { container, unmount } = render(
-          <Icon icon={WORKFLOW_CATEGORY_VISUALS[category].icon} size={14} />,
+          createElement(WORKFLOW_CATEGORY_VISUALS[category].icon, { size: 14 }),
         );
         expect(container.querySelector('mask')).toBeNull();
         expect(container.querySelector('svg')).toHaveAttribute('data-workflow-icon', category);

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronUp } from 'lucide-react';
 import { memo } from 'react';
@@ -92,7 +91,7 @@ const HoverExpandBar = memo<HoverExpandBarProps>(({ bottomOffset = 0, visible, o
         type="button"
         onClick={onExpand}
       >
-        <Icon icon={ChevronUp} size={12} />
+        <ChevronUp size={12} />
         {t('floatingChatPanel.expand', { defaultValue: 'Expand' })}
       </button>
     </div>

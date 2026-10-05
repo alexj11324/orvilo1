@@ -444,7 +444,7 @@ export interface VerifyWritingScope {
   chapters?: number;
   /** Documents holding the deliverable under verification. */
   documentIds?: string[];
-  /** Entry point / command exercised, e.g. "lh doc export". */
+  /** Entry point / command exercised, e.g. "orvilo doc export". */
   entry?: string;
   /** Genre / form of the work, e.g. "长篇小说". */
   genre?: string;
@@ -815,7 +815,7 @@ export interface ToulminVerdict {
 /**
  * Declares that a criterion is evidence-driven: it cannot pass on the
  * deliverable text alone — the run must capture and upload an artifact of each
- * listed `type` (via `lh verify upload-evidence`). Stored under the plan item's
+ * listed `type` (via `orvilo verify upload-evidence`). Stored under the plan item's
  * `verifierConfig.requiredEvidence`, so adding it needs no schema change. The
  * structural gate marks a required item `uncertain` when any listed type is
  * missing, independent of the LLM judge.

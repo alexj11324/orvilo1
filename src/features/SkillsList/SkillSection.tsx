@@ -1,10 +1,15 @@
-import { Center, Flexbox } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode, useState } from 'react';
 
 import AsyncError from '@/components/AsyncError';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 export interface SkillSectionHeader {
   /** Wrap the section in a collapsible Accordion. Defaults to true. */
@@ -62,12 +67,10 @@ interface HeaderRowProps {
 }
 
 const HeaderRow = memo<HeaderRowProps>(({ count, title }) => (
-  <Flexbox horizontal align={'center'} gap={6}>
-    <Text className={styles.label} type={'secondary'}>
-      {title}
-    </Text>
+  <div className="flex items-center gap-1.5">
+    <div className={cn('text-muted-foreground', styles.label)}>{title}</div>
     {typeof count === 'number' && count > 0 && <span className={styles.count}>{count}</span>}
-  </Flexbox>
+  </div>
 ));
 
 HeaderRow.displayName = 'SkillSectionHeaderRow';
@@ -85,23 +88,23 @@ const Body = memo<BodyProps>(({ children, emptyText, error, isEmpty, isLoading, 
   // Error before empty: a failed scan gets its own state, never a "no skills".
   if (error && isEmpty) {
     return (
-      <Flexbox paddingBlock={4} paddingInline={4}>
+      <div className="flex flex-col py-1 px-1">
         <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
-      </Flexbox>
+      </div>
     );
   }
   if (isLoading) {
     return (
-      <Center paddingBlock={12}>
+      <div className="flex flex-col items-center justify-center py-3">
         <NeuralNetworkLoading size={24} />
-      </Center>
+      </div>
     );
   }
   if (isEmpty) {
     return (
-      <Center paddingBlock={8}>
-        <Text className={styles.empty}>{emptyText}</Text>
-      </Center>
+      <div className="flex flex-col items-center justify-center py-2">
+        <div className={cn(styles.empty)}>{emptyText}</div>
+      </div>
     );
   }
   return <>{children}</>;
@@ -132,26 +135,27 @@ const SkillSection = memo<SkillSectionProps>(
 
     if (!collapsible) {
       return (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <div className={styles.flatHeader}>
             <HeaderRow count={count} title={title} />
           </div>
           {body}
-        </Flexbox>
+        </div>
       );
     }
 
     return (
       <Accordion
-        gap={4}
-        indicatorPlacement="inline"
-        styles={{ trigger: { paddingBlock: 2, paddingInline: 4 } }}
         value={expanded ? [ITEM_KEY] : []}
-        items={[
-          { key: ITEM_KEY, title: <HeaderRow count={count} title={title} />, children: body },
-        ]}
         onValueChange={(keys) => setExpanded(keys.length > 0)}
-      />
+      >
+        <AccordionItem value={ITEM_KEY}>
+          <AccordionTrigger style={{ paddingBlock: 2, paddingInline: 4 }}>
+            <HeaderRow count={count} title={title} />
+          </AccordionTrigger>
+          <AccordionContent>{body}</AccordionContent>
+        </AccordionItem>
+      </Accordion>
     );
   },
 );

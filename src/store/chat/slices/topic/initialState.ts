@@ -1,3 +1,5 @@
+import { type HeterogeneousReasoningEffort } from '@orvilo/types';
+
 import { type ChatTopic } from '@/types/topic';
 
 /**
@@ -34,6 +36,29 @@ export interface ChatTopicState {
    * whether all topics drawer is open
    */
   allTopicsDrawerOpen: boolean;
+  /**
+   * Agent picked in the blank composer (no topic yet) — the agent the next
+   * send binds to the new topic. Transient: read only while `activeTopicId`
+   * is empty, cleared once a send consumes it.
+   */
+  composerAgentId?: string;
+  /**
+   * Effort picked in the blank composer (no topic yet) — bound to the new topic
+   * on the first message, alongside `composerModelSelection`. Mirrors the
+   * `metadata.heteroEffort` column `updateTopicHeteroEffort` writes, so a blank
+   * composer pick and a topic pick land in the same place. Transient: cleared
+   * once a send consumes it, and dropped when the composer's agent changes.
+   */
+  composerHeteroEffort?: HeterogeneousReasoningEffort;
+  /**
+   * Model picked in the blank composer (no topic yet) — bound to the new topic
+   * on the first message, alongside `composerAgentId`. Chat never writes the
+   * agent row, so a conversation-scoped pick has to wait here until the topic
+   * exists (see `selectModelForConversation`). Transient: cleared once a send
+   * consumes it, and dropped when the composer's agent changes — a model
+   * belongs to the agent it was taken for.
+   */
+  composerModelSelection?: { model: string; provider: string };
   creatingTopic: boolean;
   /**
    * Ids of client-minted topics whose server row does not exist yet (the
@@ -57,18 +82,27 @@ export interface ChatTopicState {
   topicDataMap: Record<string, TopicData>;
   /**
    * Per-id topic detail cache, filled by `useFetchTopicDetail` when the active
-   * topic is missing from the loaded list bucket — e.g. an archived
-   * (`completed`) topic that the sidebar fetch excludes via `excludeStatuses`.
+   * topic is missing from the loaded list bucket — e.g. an archived topic that
+   * the sidebar fetch excludes via `excludeStatuses`.
    * `currentActiveTopic` / `getTopicById` read it as a fallback so the header
    * keeps the real title instead of degrading to the "new topic" placeholder.
    */
   topicDetailMap: Record<string, ChatTopic>;
+  /** Topics with effort selections queued or being persisted. */
+  topicEffortUpdatingIds: string[];
   /**
    * Internal ref-count for topic loading owners. A topic can be loading because
    * the agent is running and because title-summary is streaming at the same time.
    */
   topicLoadingIdCounts: Record<string, number>;
   topicLoadingIds: string[];
+  /**
+   * Topics whose by-id detail fetch settled on `null` — the row is gone or
+   * became inaccessible (deleted, or a stale list row pointing at it). Route
+   * guards read this to swap the conversation surface for a 404 card instead
+   * of rendering the raw fetch failure / a phantom empty conversation.
+   */
+  topicNotFoundMap: Record<string, boolean>;
   topicRenamingId?: string;
   topicSearchKeywords: string;
 }
@@ -83,6 +117,8 @@ export const initialTopicState: ChatTopicState = {
   topicDataMap: {},
   topicDetailMap: {},
   topicLoadingIdCounts: {},
+  topicNotFoundMap: {},
   topicLoadingIds: [],
+  topicEffortUpdatingIds: [],
   topicSearchKeywords: '',
 };

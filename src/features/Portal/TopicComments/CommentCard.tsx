@@ -1,19 +1,18 @@
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import {
-  ActionIcon,
-  Avatar,
-  Button,
-  confirmModal,
-  DropdownMenu,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { TopicCommentItem } from '@orvilo/types';
+import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import RichTextMessage from '@/features/Conversation/Messages/User/components/RichTextMessage';
 import { useTopicCommentMutations } from '@/features/TopicComment/hooks';
 import { useActivityTime } from '@/hooks/useActivityTime';
@@ -128,7 +127,11 @@ const CommentCard = memo<CommentCardProps>(
       const items: DropdownItem[] = [];
       if (comment.canEdit) {
         items.push({
-          icon: <Icon icon={Pencil} />,
+          icon: (
+            <span className="anticon" role="img">
+              <Pencil fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ),
           key: 'edit',
           label: t('topicComment.edit'),
           onClick: () => {
@@ -141,7 +144,11 @@ const CommentCard = memo<CommentCardProps>(
       if (comment.canDelete) {
         items.push({
           danger: true,
-          icon: <Icon icon={Trash} />,
+          icon: (
+            <span className="anticon" role="img">
+              <Trash fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ),
           key: 'delete',
           label: t('topicComment.delete'),
           onClick: handleDelete,
@@ -151,72 +158,65 @@ const CommentCard = memo<CommentCardProps>(
     }, [comment.canDelete, comment.canEdit, comment.content, comment.editorData, handleDelete, t]);
 
     return (
-      <Flexbox
-        className={`${styles.card} ${replyStyle ? styles.reply : ''}`}
+      <div
+        className={cx('flex flex-col gap-2', `${styles.card} ${replyStyle ? styles.reply : ''}`)}
         data-topic-comment-id={comment.id}
-        gap={8}
       >
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-row items-center gap-2">
           <Avatar avatar={comment.author.avatar || authorName} size={24} />
-          <Text fontSize={13} weight={500}>
-            {authorName}
-          </Text>
+          <div className="text-[13px] font-medium">{authorName}</div>
           {comment.author.status === 'former' && (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('topicComment.author.former')}
-            </Text>
+            </div>
           )}
           {pending ? (
-            <Text fontSize={12} type={'secondary'}>
-              {t('topicComment.sending')}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">{t('topicComment.sending')}</div>
           ) : (
             time && (
-              <Text fontSize={12} title={timeTitle} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground" title={timeTitle}>
                 {time}
-              </Text>
+              </div>
             )
           )}
           {edited && !deleted && (
-            <Text className={styles.edited} fontSize={12}>
-              {t('topicComment.edited')}
-            </Text>
+            <div className={cn('text-[12px]', styles.edited)}>{t('topicComment.edited')}</div>
           )}
-        </Flexbox>
+        </div>
 
         <AnchorPreview comment={comment} />
 
         {deleted ? (
-          <Text className={styles.deleted}>{t('topicComment.deleted')}</Text>
+          <div className={cn(styles.deleted)}>{t('topicComment.deleted')}</div>
         ) : moderated ? (
-          <Flexbox gap={8}>
-            <Text className={styles.deleted}>
+          <div className="flex flex-col gap-2">
+            <div className={cn(styles.deleted)}>
               {comment.moderationIsOwn
                 ? t('topicComment.removedOwn')
                 : comment.canRestore
                   ? t('topicComment.removedOwnerView')
                   : t('topicComment.removed')}
-            </Text>
+            </div>
             {comment.canRestore && comment.content && (
               <div className={styles.moderatedContent}>
                 <CommentContent content={comment.content} editorData={comment.editorData} />
               </div>
             )}
             {comment.canRestore && comment.moderationExpiresAt && (
-              <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                <Text fontSize={12} type={'secondary'}>
+              <div className="flex flex-row items-center gap-2 justify-between">
+                <div className="text-[12px] text-muted-foreground">
                   {t('topicComment.restoreDeadline', {
                     date: new Date(comment.moderationExpiresAt).toLocaleString(),
                   })}
-                </Text>
-                <Button loading={mutating} size={'small'} onClick={handleRestore}>
+                </div>
+                <Button loading={mutating} size="sm" variant="outline" onClick={handleRestore}>
                   {t('topicComment.restore')}
                 </Button>
-              </Flexbox>
+              </div>
             )}
-          </Flexbox>
+          </div>
         ) : editing ? (
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             <div className={styles.editEditor}>
               <TopicCommentEditor
                 autoFocus
@@ -231,32 +231,35 @@ const CommentCard = memo<CommentCardProps>(
                 }}
               />
             </div>
-            <Flexbox horizontal gap={8} justify={'flex-end'}>
-              <Button disabled={mutating} size={'small'} onClick={() => setEditing(false)}>
+            <div className="flex flex-row gap-2 justify-end">
+              <Button
+                disabled={mutating}
+                size="sm"
+                variant="outline"
+                onClick={() => setEditing(false)}
+              >
                 {t('topicComment.cancel')}
               </Button>
-              <Button loading={mutating} size={'small'} type={'primary'} onClick={handleUpdate}>
+              <Button loading={mutating} size="sm" variant="default" onClick={handleUpdate}>
                 {t('topicComment.save')}
               </Button>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ) : (
           <CommentContent content={comment.content} editorData={comment.editorData} />
         )}
 
         {onOpenThread && (
-          <Flexbox horizontal justify={'flex-end'}>
-            <Button
-              icon={<Icon icon={MessageCircle} />}
-              size={'small'}
-              type={'text'}
-              onClick={onOpenThread}
-            >
+          <div className="flex flex-row justify-end">
+            <Button size="sm" variant="ghost" onClick={onOpenThread}>
+              <span className="anticon" role="img">
+                <MessageCircle fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
               {replyCount
                 ? t('topicComment.replies', { count: replyCount })
                 : t('topicComment.reply')}
             </Button>
-          </Flexbox>
+          </div>
         )}
 
         {!editing && menuItems.length > 0 && (
@@ -266,7 +269,7 @@ const CommentCard = memo<CommentCardProps>(
             </DropdownMenu>
           </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

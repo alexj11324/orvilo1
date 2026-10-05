@@ -1410,7 +1410,7 @@ describe('parse', () => {
     it('should keep follow-up chain visible after compressedGroup from recursive tool result', () => {
       // Data provenance:
       // - The compressedGroup + nested assistant/tool structure is abstracted from the
-      //   real `lh eval message list` output after we fixed the CLI/router to expose
+      //   real `orvilo eval message list` output after we fixed the CLI/router to expose
       //   full compression data.
       // - That output models the async eval path: long-running search/tool chains that
       //   later get compressed by the backend before follow-up steps continue.

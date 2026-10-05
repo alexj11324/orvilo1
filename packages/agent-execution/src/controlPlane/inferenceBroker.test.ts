@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { InferenceEvent, InferenceRequest, ProviderBindingRequest } from './contracts';
+import { toInferenceMessage } from './contracts';
+import { isSanitizedInferenceRequest } from './harnessProtocol';
 import type {
   ConfigurationAuthoritySnapshot,
   InferenceAuthoritySnapshot,
@@ -85,6 +87,86 @@ const backend = (): TrustedProviderBackend => ({
 
 // Real broker execution with explicit test authority/backend boundaries; no provider IO.
 describe('inference broker admission and live authority', () => {
+  it.each([
+    [
+      'Prime user text blocks',
+      [{ role: 'user', content: [{ type: 'text', text: 'Reply PRIME_OK' }] }],
+    ],
+    [
+      'Prime assistant/tool history',
+      [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'toolCall', id: 'call-read', name: 'read', arguments: { path: 'README.md' } },
+          ],
+        },
+        {
+          role: 'tool',
+          toolCallId: 'call-read',
+          toolName: 'read',
+          isError: false,
+          content: [{ type: 'text', text: 'File contents' }],
+        },
+      ],
+    ],
+  ] satisfies [string, InferenceRequest['messages']][])(
+    'admits the canonical sanitized %s shape before provider IO',
+    async (_name, messages) => {
+      const input = request();
+      input.messages = messages.map((message) => toInferenceMessage(structuredClone(message)));
+      expect(isSanitizedInferenceRequest(input)).toBe(true);
+      const received: InferenceRequest[] = [];
+      const implementation = backend();
+      implementation.infer = async function* (_binding, value) {
+        received.push(value);
+        yield { type: 'text', text: 'PRIME_OK' };
+      };
+      const broker = createInferenceBroker({
+        authority: {
+          async resolve() {
+            return snapshot();
+          },
+        },
+        backend: implementation,
+        now: () => 100,
+      });
+      expect(await collect(broker.infer(input))).toEqual([{ type: 'text', text: 'PRIME_OK' }]);
+      expect(received[0].messages).toEqual(input.messages);
+    },
+  );
+
+  it.each([
+    { role: 'user', content: [{ type: 'text', text: 42 }] },
+    { role: 'tool', content: [{ type: 'text', text: 'result' }] },
+    { role: 'user', content: [{ type: 'unknown', text: 'invalid' }] },
+  ])('rejects malformed canonical messages before authority or provider IO', async (message) => {
+    const input = request();
+    input.messages = [message] as unknown as InferenceRequest['messages'];
+    let authorityCalls = 0;
+    let providerCalls = 0;
+    const implementation = backend();
+    implementation.infer = async function* () {
+      providerCalls++;
+      yield { type: 'text', text: 'must not run' };
+    };
+    const broker = createInferenceBroker({
+      authority: {
+        async resolve() {
+          authorityCalls++;
+          return snapshot();
+        },
+      },
+      backend: implementation,
+      now: () => 100,
+    });
+    expect(await collect(broker.infer(input))).toMatchObject([
+      { type: 'error', error: { code: 'invalid_request' } },
+    ]);
+    expect(authorityCalls).toBe(0);
+    expect(providerCalls).toBe(0);
+  });
+
   it.each([
     [
       'incomplete fence',

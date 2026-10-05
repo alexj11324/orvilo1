@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { useAgentStore } from '@/store/agent';
@@ -21,22 +20,20 @@ const Actions = memo<ActionsProps>(({ actionAddon, placement, actions }) => {
 
   const isUser = placement === 'right';
   return (
-    <Flexbox
-      align={'center'}
-      direction={'horizontal'}
-      gap={4}
+    <div
+      className="flex items-center gap-1"
       style={{
         alignSelf: isUser ? 'flex-end' : 'flex-start',
       }}
     >
       {!isUser && actionAddon}
       {actions && (
-        <Flexbox horizontal align={'center'} role="menubar">
+        <div className="flex items-center" role="menubar">
           {actions}
-        </Flexbox>
+        </div>
       )}
       {isUser && actionAddon}
-    </Flexbox>
+    </div>
   );
 });
 

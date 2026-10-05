@@ -1,3 +1,3 @@
-import { type ItemType } from 'antd/es/menu/interface';
+import { type ItemType } from '@/components/Menu';
 
 export const useBusinessAgentImportMenuItem = (_agentId?: string): ItemType | null => null;

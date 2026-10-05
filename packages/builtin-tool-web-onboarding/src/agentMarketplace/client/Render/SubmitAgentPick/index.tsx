@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Avatar from '@/components/Avatar';
 
 import type { InstallMarketplaceAgentSummary } from '../../../pickResult';
 import type { SubmitAgentPickArgs } from '../../../types';
@@ -101,12 +101,12 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
   const skippedCount = summaries.length - installedCount;
 
   return (
-    <Flexbox gap={12}>
-      <Text style={{ fontSize: 13 }} type="secondary">
+    <div className="flex flex-col gap-3">
+      <div className="text-[13px] text-muted-foreground">
         {t('agentMarketplace.inspector.pickCount', { count: installedCount })}
         {skippedCount > 0 &&
           ` · ${t('agentMarketplace.render.alreadyInLibrary', { count: skippedCount })}`}
-      </Text>
+      </div>
       <div className={styles.list}>
         {summaries.map((summary) => (
           <div
@@ -114,7 +114,7 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
             key={summary.templateId}
           >
             <Avatar avatar={summary.avatar || '🤖'} shape="square" size={36} />
-            <Flexbox flex={1} gap={4} style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
               <div className={styles.titleRow}>
                 <span className={styles.title}>{summary.title || summary.templateId}</span>
                 {summary.skipped && (
@@ -126,11 +126,11 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
               {summary.description && (
                 <div className={styles.description}>{summary.description}</div>
               )}
-            </Flexbox>
+            </div>
           </div>
         ))}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

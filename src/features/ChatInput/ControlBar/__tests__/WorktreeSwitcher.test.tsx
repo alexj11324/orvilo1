@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import BranchSwitcher from '../BranchSwitcher';
 import WorktreeSwitcher from '../WorktreeSwitcher';
 
 const commitMock = vi.hoisted(() => vi.fn());
@@ -18,35 +19,36 @@ vi.mock('../useCommitWorkingDirectory', () => ({
   useCommitWorkingDirectory: () => ({ commit: commitMock }),
 }));
 
+vi.mock('@/store/device', () => ({
+  useFetchGitWorkingTreeStatus: () => ({ data: undefined, mutate: vi.fn() }),
+}));
+
 vi.mock('@/services/git', () => ({
   gitService: {
     removeGitWorktree: removeGitWorktreeMock,
   },
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Icon: ({ icon }: any) => <span data-icon={icon?.displayName ?? icon?.name} data-testid="icon" />,
-  Tooltip: ({ children }: { children: ReactNode }) => (
-    <span data-testid="worktree-tooltip">{children}</span>
-  ),
-}));
-
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: confirmModalMock,
+}));
+
+vi.mock('@/components/ui/dropdown-menu', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuItem: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
-  DropdownMenuPopup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DropdownMenuPositioner: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DropdownMenuRoot: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children, className }: { children: ReactNode; className?: string }) => (
     <div className={className} data-testid="worktree-dropdown-trigger">
       {children}
     </div>
   ),
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: {
     error: messageErrorMock,
     info: vi.fn(),
@@ -74,9 +76,10 @@ beforeEach(() => {
 });
 
 const triggerIconName = () =>
-  within(screen.getByTestId('worktree-dropdown-trigger'))
-    .getAllByTestId('icon')[0]
-    .getAttribute('data-icon');
+  screen
+    .getByTestId('worktree-dropdown-trigger')
+    .querySelector('.anticon svg')
+    ?.getAttribute('class') ?? '';
 
 /** Text of the worktree row owning `el` — rows render as `<button>` (mocked DropdownMenuItem). */
 const rowTextOf = (el: HTMLElement) => el.closest('button')?.textContent ?? '';
@@ -109,7 +112,7 @@ describe('WorktreeSwitcher', () => {
 
     const trigger = screen.getByTestId('worktree-dropdown-trigger');
     expect(trigger.firstElementChild?.tagName).toBe('DIV');
-    expect(within(trigger).getByTestId('worktree-tooltip')).toBeTruthy();
+    expect(trigger.querySelector('[data-base-ui-tooltip-trigger]')).toBeTruthy();
   });
 
   it('shows a branch icon on the main worktree and a fork icon on a linked one', () => {
@@ -129,7 +132,7 @@ describe('WorktreeSwitcher', () => {
         worktrees={worktrees}
       />,
     );
-    expect(triggerIconName()).toBe('GitBranch');
+    expect(triggerIconName()).toContain('lucide-git-branch');
 
     // The user picked the linked worktree directly as the working directory, so
     // `sourcePath` is the worktree itself — the icon must still read "worktree".
@@ -146,7 +149,7 @@ describe('WorktreeSwitcher', () => {
         ]}
       />,
     );
-    expect(triggerIconName()).toBe('GitFork');
+    expect(triggerIconName()).toContain('lucide-git-fork');
   });
 
   it('treats every checkout of a bare repository as a linked worktree', () => {
@@ -165,7 +168,7 @@ describe('WorktreeSwitcher', () => {
       />,
     );
 
-    expect(triggerIconName()).toBe('GitFork');
+    expect(triggerIconName()).toContain('lucide-git-fork');
   });
 
   it('renders dirty stats and omits clean labels in the worktree list', () => {
@@ -481,4 +484,22 @@ describe('WorktreeSwitcher', () => {
 
     expect(commitMock).toHaveBeenCalledWith({ path: '/repo', repoType: 'git' });
   });
+});
+
+it('renders a branch switcher outside a conversation provider', () => {
+  render(
+    <BranchSwitcher
+      agentId="agent"
+      currentBranch="main"
+      isGithub={false}
+      open={false}
+      path="/repo"
+      sourcePath="/repo"
+      worktrees={[]}
+      onOpenChange={vi.fn()}
+    >
+      <span>Current branch</span>
+    </BranchSwitcher>,
+  );
+  expect(screen.getByText('Current branch')).toBeInTheDocument();
 });

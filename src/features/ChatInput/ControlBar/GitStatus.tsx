@@ -1,5 +1,3 @@
-import { Icon, Tooltip } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowDownIcon, ArrowUpIcon, GitPullRequest } from 'lucide-react';
@@ -7,7 +5,8 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
-import { electronSystemService } from '@/services/electron/system';
+import { toast } from '@/components/toast';
+import { getHostPort } from '@/platform';
 import { gitService } from '@/services/git';
 import {
   deviceSelectors,
@@ -21,6 +20,7 @@ import {
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import BranchSwitcher from './BranchSwitcher';
 import { gitChipStyles } from './gitChipStyles';
 import StaleGitSnapshot from './StaleGitSnapshot';
@@ -123,10 +123,11 @@ interface GitStatusProps {
   isGithub: boolean;
   path: string;
   sourcePath?: string;
+  topicId?: string | null;
 }
 
 const GitStatus = memo<GitStatusProps>(
-  ({ agentId, path, sourcePath, isGithub, deviceId, fallbackGit }) => {
+  ({ agentId, path, sourcePath, isGithub, deviceId, fallbackGit, topicId }) => {
     const { t } = useTranslation('device');
     // Transport (Electron IPC vs device RPC) is decided inside the service; the
     // component just reads, identically for local and remote.
@@ -191,7 +192,7 @@ const GitStatus = memo<GitStatusProps>(
 
     const handleOpenPr = useCallback(() => {
       if (prData?.pullRequest?.url) {
-        void electronSystemService.openExternalLink(prData.pullRequest.url);
+        void getHostPort().openExternal(prData.pullRequest.url);
       }
     }, [prData?.pullRequest?.url]);
 
@@ -294,6 +295,7 @@ const GitStatus = memo<GitStatusProps>(
           isGithub={isGithub}
           path={path}
           sourcePath={sourcePath}
+          topicId={topicId}
         />
       );
     }
@@ -329,7 +331,9 @@ const GitStatus = memo<GitStatusProps>(
 
     const branchTrigger = (
       <div className={gitChipStyles.trigger}>
-        <span className={styles.branchLabel}>{branch}</span>
+        <span data-workspace-label className={styles.branchLabel}>
+          {branch}
+        </span>
       </div>
     );
 
@@ -344,6 +348,7 @@ const GitStatus = memo<GitStatusProps>(
         isGithub={isGithub}
         path={path}
         sourcePath={sourcePath ?? path}
+        topicId={topicId}
         worktrees={worktrees}
         onWorktreesChange={mutateWorktrees}
       />
@@ -351,7 +356,7 @@ const GitStatus = memo<GitStatusProps>(
 
     const branchNode = detached ? (
       // Detached HEAD → plain branch label (nothing to switch to).
-      <Tooltip title={branchTooltip}>{branchTrigger}</Tooltip>
+      <SimpleTooltip title={branchTooltip}>{branchTrigger}</SimpleTooltip>
     ) : (
       // Local switches over IPC; a remote device switches over RPC (deviceId set).
       <BranchSwitcher
@@ -362,6 +367,7 @@ const GitStatus = memo<GitStatusProps>(
         open={switcherOpen}
         path={path}
         sourcePath={sourcePath ?? path}
+        topicId={topicId}
         worktrees={worktrees}
         onExternalRefresh={refreshAfterSync}
         onOpenChange={setSwitcherOpen}
@@ -374,7 +380,7 @@ const GitStatus = memo<GitStatusProps>(
           void mutateWorktrees();
         }}
       >
-        <Tooltip title={branchTooltip}>{branchTrigger}</Tooltip>
+        <SimpleTooltip title={branchTooltip}>{branchTrigger}</SimpleTooltip>
       </BranchSwitcher>
     );
 
@@ -393,7 +399,7 @@ const GitStatus = memo<GitStatusProps>(
         });
 
     const pullNode = showBehind && (
-      <Tooltip title={pullTooltip}>
+      <SimpleTooltip title={pullTooltip}>
         <div
           aria-busy={pulling}
           aria-disabled={syncBusy}
@@ -402,15 +408,21 @@ const GitStatus = memo<GitStatusProps>(
           onClick={syncBusy ? undefined : handlePull}
         >
           <span className={styles.aheadBehindStat}>
-            {pulling ? <RingLoadingIcon size={10} /> : <Icon icon={ArrowDownIcon} size={10} />}
+            {pulling ? (
+              <RingLoadingIcon size={10} />
+            ) : (
+              <span className="anticon" role="img">
+                <ArrowDownIcon fill={'transparent'} height={10} size={10} width={10} />
+              </span>
+            )}
             {aheadBehind!.behind}
           </span>
         </div>
-      </Tooltip>
+      </SimpleTooltip>
     );
 
     const pushNode = showAhead && (
-      <Tooltip title={pushTooltip}>
+      <SimpleTooltip title={pushTooltip}>
         <div
           aria-busy={pushing}
           aria-disabled={syncBusy}
@@ -419,11 +431,17 @@ const GitStatus = memo<GitStatusProps>(
           onClick={syncBusy ? undefined : handlePush}
         >
           <span className={styles.aheadBehindStat}>
-            {pushing ? <RingLoadingIcon size={10} /> : <Icon icon={ArrowUpIcon} size={10} />}
+            {pushing ? (
+              <RingLoadingIcon size={10} />
+            ) : (
+              <span className="anticon" role="img">
+                <ArrowUpIcon fill={'transparent'} height={10} size={10} width={10} />
+              </span>
+            )}
             {aheadBehind!.ahead}
           </span>
         </div>
-      </Tooltip>
+      </SimpleTooltip>
     );
 
     const diffNode = (() => {
@@ -443,7 +461,7 @@ const GitStatus = memo<GitStatusProps>(
           </span>
         </div>
       );
-      return <Tooltip title={diffStatTooltip}>{diffButton}</Tooltip>;
+      return <SimpleTooltip title={diffStatTooltip}>{diffButton}</SimpleTooltip>;
     })();
 
     return (
@@ -461,12 +479,14 @@ const GitStatus = memo<GitStatusProps>(
         {prData?.pullRequest && (
           <>
             <div className={gitChipStyles.separator} />
-            <Tooltip title={prTooltip}>
+            <SimpleTooltip title={prTooltip}>
               <div className={gitChipStyles.prTrigger} role="button" onClick={handleOpenPr}>
-                <Icon icon={GitPullRequest} size={12} />
+                <span className="anticon" role="img">
+                  <GitPullRequest fill={'transparent'} height={12} size={12} width={12} />
+                </span>
                 <span>#{prData.pullRequest.number}</span>
               </div>
-            </Tooltip>
+            </SimpleTooltip>
           </>
         )}
       </>

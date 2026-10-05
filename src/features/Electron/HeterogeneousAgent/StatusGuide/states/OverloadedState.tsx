@@ -1,8 +1,9 @@
-import { Flexbox, Highlighter, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Ban, Loader2, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { Button } from '@/components/ui/button';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -34,27 +35,27 @@ const OverloadedState = ({
     return (
       <GuideShell
         compact
-        icon={<Icon spin icon={Loader2} size={18} />}
+        icon={<Loader2 className="animate-spin" size={18} />}
         title={t('cliOverloadedGuide.autoRetry.title', { name: config.title })}
         variant={variant}
         actions={
-          <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
-            <Button icon={<Ban size={14} />} size="small" type="text" onClick={autoRetry.onCancel}>
-              {t('cliOverloadedGuide.autoRetry.actions.cancel')}
+          <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
+            <Button size="sm" variant="ghost" onClick={autoRetry.onCancel}>
+              <Ban size={14} /> {t('cliOverloadedGuide.autoRetry.actions.cancel')}
             </Button>
-            <Button icon={<RotateCcw size={14} />} size="small" onClick={autoRetry.onRetryNow}>
-              {t('cliOverloadedGuide.autoRetry.actions.retryNow')}
+            <Button size="sm" onClick={autoRetry.onRetryNow}>
+              <RotateCcw size={14} /> {t('cliOverloadedGuide.autoRetry.actions.retryNow')}
             </Button>
-          </Flexbox>
+          </div>
         }
         headerDescription={
-          <Text style={{ fontSize: 12 }} type="secondary">
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {t('cliOverloadedGuide.autoRetry.status', {
               attempt: autoRetry.attempt,
               max: autoRetry.maxAttempts,
               seconds: autoRetry.secondsLeft,
             })}
-          </Text>
+          </div>
         }
       />
     );
@@ -69,29 +70,28 @@ const OverloadedState = ({
         <GuideActions retryLabel={t('cliOverloadedGuide.actions.retry')} onRetry={onRetry} />
       }
       headerDescription={
-        <Text type="secondary">{t('cliOverloadedGuide.desc', { name: config.title })}</Text>
+        <div className="text-muted-foreground">
+          {t('cliOverloadedGuide.desc', { name: config.title })}
+        </div>
       }
     >
-      <Text style={{ fontSize: 12 }} type="secondary">
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('cliOverloadedGuide.retryHint')}
-      </Text>
+      </div>
 
       {rawErrorDetails && (
-        <Flexbox gap={6}>
-          <Text strong style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliOverloadedGuide.errorDetails')}
-          </Text>
-          <Highlighter
+          </div>
+          <CodeBlock
             wrap
-            actionIconSize={'small'}
-            classNames={{ content: styles.errorDetails }}
-            language={'log'}
+            className={styles.errorDetails}
+            code={rawErrorDetails}
+            language="log"
             style={{ maxHeight: 200, overflow: 'auto' }}
-            variant={'outlined'}
-          >
-            {rawErrorDetails}
-          </Highlighter>
-        </Flexbox>
+          />
+        </div>
       )}
     </GuideShell>
   );

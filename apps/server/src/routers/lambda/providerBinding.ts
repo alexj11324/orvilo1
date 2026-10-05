@@ -9,6 +9,7 @@ import {
   checkProviderBinding,
   type ProviderConfigurationComposition,
 } from '@/server/services/providerBinding/configuration';
+import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 
 const version = z.object({ id: z.uuid(), revision: z.number().int().positive() }).strict();
 const procedure = authedProcedure.use(serverDatabase).use(({ ctx, next }) =>
@@ -37,13 +38,23 @@ export const createProviderBindingRouter = (composition?: ProviderConfigurationC
     })),
     create: procedure.input(providerBindingConfigSchema).mutation(async ({ ctx, input }) => {
       await assertCredential(ctx.providerBindings, input.secretReference);
-      return { success: true, data: present(await ctx.providerBindings.create(input)) };
+      // A save never arms a binding: `enabled` is set only by `checkConnection`
+      // after the broker verifies the row end-to-end. Forwarding a client-
+      // supplied `enabled: true` would let a crafted request skip that check.
+      return {
+        success: true,
+        data: present(await ctx.providerBindings.create({ ...input, enabled: false })),
+      };
     }),
     update: procedure
       .input(version.extend({ config: providerBindingConfigSchema }))
       .mutation(async ({ ctx, input }) => {
         await assertCredential(ctx.providerBindings, input.config.secretReference);
-        const row = await ctx.providerBindings.update(input.id, input.revision, input.config);
+        // Editing a binding disarms it until `checkConnection` re-verifies.
+        const row = await ctx.providerBindings.update(input.id, input.revision, {
+          ...input.config,
+          enabled: false,
+        });
         if (!row) throw conflict();
         return { success: true, data: present(row) };
       }),
@@ -52,10 +63,15 @@ export const createProviderBindingRouter = (composition?: ProviderConfigurationC
       return { success: true };
     }),
     checkConnection: procedure.input(version).mutation(async ({ ctx, input }) => {
-      return checkProviderBinding(ctx.providerBindings, ctx.userId, input, composition);
+      return checkProviderBinding(
+        ctx.providerBindings,
+        ctx.userId,
+        input,
+        composition ?? createProviderBindingComposition(ctx.serverDB),
+      );
     }),
   });
 
-// The default check uses the canonical broker and refuses provider network access.
-// Pass an explicit composition only when it supplies a real trusted backend.
+// Default composition resolves the canonical configuration broker from the
+// server database — the real provider request happens inside checkBinding.
 export const providerBindingRouter = createProviderBindingRouter();

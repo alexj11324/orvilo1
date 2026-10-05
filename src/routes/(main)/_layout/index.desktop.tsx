@@ -1,14 +1,16 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { HotkeyScopeEnum } from '@orvilo/const/hotkeys';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { type CSSProperties, type FC } from 'react';
 import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
+import AgentOnboarding from '@/features/AgentOnboarding';
+import FirstLoginGate from '@/features/AgentOnboarding/FirstLoginGate';
 import DesktopFileMenuBridge from '@/features/DesktopFileMenuBridge';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
 import DesktopNavigationBridge from '@/features/DesktopNavigationBridge';
@@ -28,9 +30,8 @@ import TitleBar from '@/features/Electron/titlebar/TitleBar';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
-import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
-import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
+import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
 import { usePlatform } from '@/hooks/usePlatform';
 import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
 import dynamic from '@/libs/next/dynamic';
@@ -53,7 +54,6 @@ const Layout: FC = () => {
   useWindowUrlMirror();
   useLastWorkspaceSlugSync();
   useDesktopDocumentTitle();
-  useWorkspaceUrlSync();
 
   // The provider wraps the whole tree — the `<TabHost/>` subtree that resolves
   // each tab's page *and* the `<GlobalOverlays/>` host below it. Panels declared
@@ -63,45 +63,53 @@ const Layout: FC = () => {
     <GlobalOverlayHostContext value={true}>
       <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
         <DesktopAutoOidcOnFirstOpen />
-        <WorkspaceContextSlot>
-          <ActiveConversationBridge />
-          <TabCacheBridges />
-          <Suspense fallback={null}>
-            <DesktopNavigationBridge />
-            <DesktopFileMenuBridge />
-            <OverlaySnapshotPublisher />
-            <OverlayCaptureUploader />
-            <OverlayMessageDispatcher />
-            {showCloudPromotion && <CloudBanner />}
-          </Suspense>
-          <ZoomHUD />
+        <FirstLoginGate>
+          <WorkspaceContextSlot>
+            {/* Until the first usable agent exists the gate covers the whole
+                window — nothing else can run yet, so no page or sidebar entry
+                may be reachable mid-setup. */}
+            <AgentOnboarding>
+              <ActiveConversationBridge />
+              <TabCacheBridges />
+              <Suspense fallback={null}>
+                <DesktopNavigationBridge />
+                <DesktopFileMenuBridge />
+                <OverlaySnapshotPublisher />
+                <OverlayCaptureUploader />
+                <OverlayMessageDispatcher />
+                {showCloudPromotion && <CloudBanner />}
+              </Suspense>
+              <ZoomHUD />
 
-          <Suspense fallback={null}>
-            <TitleBar />
-          </Suspense>
-          <DndContextWrapper>
-            <Flexbox
-              horizontal
-              className={cx(isPWA ? styles.mainContainerPWA : styles.mainContainer)}
-              height={`calc(100% - ${TITLE_BAR_HEIGHT}px)`}
-              width={'100%'}
-            >
-              <NavPanelShell />
-              <DesktopLayoutContainer>
-                <Flexbox height={'100%'} style={tabHostContainer} width={'100%'}>
-                  <TabHost />
-                </Flexbox>
-              </DesktopLayoutContainer>
-            </Flexbox>
-          </DndContextWrapper>
-          <Suspense fallback={null}>
-            <HotkeyHelperPanel />
-            <RegisterHotkeys />
-            <CmdkLazy />
-            <GlobalApprovalNotification />
-            <GlobalOverlays />
-          </Suspense>
-        </WorkspaceContextSlot>
+              <Suspense fallback={null}>
+                <TitleBar />
+              </Suspense>
+              <DndContextWrapper>
+                <div
+                  className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+                  style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
+                >
+                  <SidebarShell />
+                  <DesktopLayoutContainer>
+                    <div
+                      className="flex flex-col"
+                      style={{ height: '100%', width: '100%', ...tabHostContainer }}
+                    >
+                      <TabHost />
+                    </div>
+                  </DesktopLayoutContainer>
+                </div>
+              </DndContextWrapper>
+              <Suspense fallback={null}>
+                <HotkeyHelperPanel />
+                <RegisterHotkeys />
+                <CmdkLazy />
+                <GlobalApprovalNotification />
+                <GlobalOverlays />
+              </Suspense>
+            </AgentOnboarding>
+          </WorkspaceContextSlot>
+        </FirstLoginGate>
       </HotkeysProvider>
     </GlobalOverlayHostContext>
   );

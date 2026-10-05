@@ -10,8 +10,26 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
 const DEFAULT_RETRY_MS = 30 * 1000;
+/**
+ * Window matching the operation lease convention (`settleStaleRunning`): a
+ * `running` operation row is liveness evidence only while the runner keeps
+ * touching `updatedAt` (`touchRunning`). A stale row is the signature of a
+ * dead executor — treating it as active would reset the reconcile bound and
+ * re-arm the task heartbeat every pass, live-locking the dispatch forever.
+ * `waiting_*` statuses park legitimately quiet and converge through their
+ * own abandonment path, so the staleness gate applies to `running` only.
+ */
+const DEFAULT_STALE_OPERATION_MS = 5 * 60 * 1000;
+/**
+ * Bound on consecutive unresolved `outcome_unknown` reconciles: each
+ * reschedule bumps `recovery_attempts` (a stable live identity resets it),
+ * so an op that never reaches a persisted terminal state cannot retry
+ * forever while its dispatch pins the task's single execution slot.
+ */
+const MAX_RECOVERY_ATTEMPTS = 60;
 
 export type TaskDispatchRecoveryOutcome =
+  | { dispatchId: string; outcome: 'abandoned' }
   | { dispatchId: string; outcome: 'active'; operationId: string }
   | { dispatchId: string; outcome: 'retry'; reason: string }
   | { dispatchId: string; outcome: 'settled'; operationId: string }
@@ -70,6 +88,7 @@ export const processTaskDispatchRecovery = async (input: {
   dispatchId: string;
   leaseMs?: number;
   retryMs?: number;
+  staleOperationMs?: number;
   workspaceId?: string;
 }): Promise<TaskDispatchRecoveryOutcome> => {
   const model = new TaskDispatchModel(input.db, input.workspaceId);
@@ -80,6 +99,20 @@ export const processTaskDispatchRecovery = async (input: {
     input.leaseMs ?? DEFAULT_LEASE_MS,
   );
   if (!claim) return { dispatchId: input.dispatchId, outcome: 'skipped' };
+
+  if (claim.dispatch.recoveryAttempts >= MAX_RECOVERY_ATTEMPTS) {
+    const abandoned = await model.abandonRecovery({
+      dispatchId: claim.dispatch.id,
+      fence: claim.fence,
+      generation: claim.dispatch.generation,
+      owner,
+      reason: `recovery_attempts_exhausted:${claim.dispatch.recoveryAttempts}`,
+    });
+    return {
+      dispatchId: claim.dispatch.id,
+      outcome: abandoned ? 'abandoned' : 'skipped',
+    };
+  }
 
   const retryMs = input.retryMs ?? DEFAULT_RETRY_MS;
   const operationId = claim.dispatch.operationId;
@@ -95,11 +128,8 @@ export const processTaskDispatchRecovery = async (input: {
   }
 
   try {
-    const operation = await new AgentOperationModel(
-      input.db,
-      principalId,
-      input.workspaceId,
-    ).findById(operationId);
+    const operationModel = new AgentOperationModel(input.db, principalId, input.workspaceId);
+    const operation = await operationModel.findById(operationId);
     if (!operation) {
       return releaseUnknown({
         claim,
@@ -120,6 +150,35 @@ export const processTaskDispatchRecovery = async (input: {
     }
 
     if (['running', 'waiting_for_async_tool', 'waiting_for_human'].includes(operation.status)) {
+      const staleBefore = Date.now() - (input.staleOperationMs ?? DEFAULT_STALE_OPERATION_MS);
+      const stale = new Date(operation.updatedAt).getTime() < staleBefore;
+      if (operation.status === 'running' && stale) {
+        return releaseUnknown({
+          claim,
+          model,
+          owner,
+          reason: `operation_stale:${operation.status}`,
+          retryMs,
+        });
+      }
+      // `waiting_for_async_tool` parks legitimately quiet, so `updatedAt` alone
+      // cannot stale it out — but a stale park with no live child op has no
+      // producer left to fulfil its barrier (child missing/terminal and its
+      // own abandonment path dead). Restoring 'running' re-arms the lease and
+      // resets the reconcile bound every pass, which is the orphan-slot leak.
+      if (
+        operation.status === 'waiting_for_async_tool' &&
+        stale &&
+        !(await operationModel.hasLiveChildOperation(operation.id))
+      ) {
+        return releaseUnknown({
+          claim,
+          model,
+          owner,
+          reason: `operation_orphaned_wait:${operation.status}`,
+          retryMs,
+        });
+      }
       const restored = await model.releaseRecovery({
         dispatchId: claim.dispatch.id,
         fence: claim.fence,

@@ -5,6 +5,7 @@ import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 
 import type { AskUserBridge } from '../askUser/AskUserBridge';
 import { resolveHeterogeneousAgentCommand } from '../config';
+import type { HeterogeneousAgentPermission } from '../types';
 import { ACP_RUNTIME_AGENT_TYPES } from './acpRuntime';
 import type { UploadHeterogeneousImage } from './agentStreamPipeline';
 import { isPathLikeCommand } from './cliSpawn';
@@ -57,6 +58,7 @@ export interface SpawnAgentOptions {
   extraArgs?: string[];
   /** Initial model selected through the agent protocol after session setup. */
   initialModel?: string;
+  initialPermission?: HeterogeneousAgentPermission;
   /**
    * Image normalization options (URL fetch + on-disk cache + path
    * materialization). Forwarded to the prompt builder. When `prompt` is a
@@ -70,7 +72,7 @@ export interface SpawnAgentOptions {
   mcpServers?: Record<string, unknown>[];
   /**
    * Optional tee for the ACP wire traffic — every raw JSON-RPC line the agent
-   * writes, BEFORE the adapter sees it. `lh hetero exec --raw-dump` wires it
+   * writes, BEFORE the adapter sees it. `orvilo hetero exec --raw-dump` wires it
    * to a file writer so the untouched stream can be inspected after the fact.
    */
   onRawStdout?: (chunk: Buffer) => void;
@@ -123,7 +125,7 @@ export interface SpawnAgentHandle {
   /**
    * The agent's native session id, reported by `session/new` / `session/load`.
    * Available after the `events` async iterable has been fully consumed.
-   * Used by `lh hetero exec` to pass `sessionId` to `heteroFinish` so the
+   * Used by `orvilo hetero exec` to pass `sessionId` to `heteroFinish` so the
    * server can persist it for `--resume` on the next turn.
    */
   readonly sessionId: string | undefined;
@@ -362,6 +364,10 @@ const spawnDevinAcpAgent = async (
   const session = new DevinAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
+    // One-shot exec turns: the bridge process exits at turn end, so a
+    // keeper could never ping again — it would only hold the event loop
+    // (or orphan the child) for up to the residency window.
+    cacheKeepalive: { enabled: false },
     clientVersion: 'orvilo-cli',
     commandPath: command,
     cwd,
@@ -412,6 +418,10 @@ const spawnStandardAcpAgent = async (
   const session = createStandardAcpSession(options.agentType, {
     args: selectors.args,
     askUserBridge: options.askUserBridge,
+    // One-shot exec turns: the bridge process exits at turn end, so a
+    // keeper could never ping again — it would only hold the event loop
+    // (or orphan the child) for up to the residency window.
+    cacheKeepalive: { enabled: false },
     clientVersion: 'orvilo-cli',
     commandArgs: target.commandArgs,
     commandPath: target.commandPath,
@@ -421,6 +431,7 @@ const spawnStandardAcpAgent = async (
     env: target.env,
     initialCumulativeUsage,
     initialModel: options.initialModel ?? selectors.initialModel,
+    initialPermission: options.initialPermission,
     inputOptions: options.inputOptions,
     mcpServers: options.mcpServers,
     onEvents: bridge.onEvents,
@@ -440,7 +451,7 @@ const spawnStandardAcpAgent = async (
 /**
  * Spawn an external agent through its ACP v1 session — every locally
  * executed agent type runs the shared initialize → session/new|load →
- * session/prompt lifecycle. Used by `lh hetero exec` for both standalone
+ * session/prompt lifecycle. Used by `orvilo hetero exec` for both standalone
  * terminal runs and sandbox-driven runs that ingest into the server.
  *
  * Stays minimal on purpose — no on-disk tracing, no proxy env composition,
@@ -453,6 +464,11 @@ const spawnStandardAcpAgent = async (
  * failed image fetch surfaces before the child starts.
  */
 export const spawnAgent = async (options: SpawnAgentOptions): Promise<SpawnAgentHandle> => {
+  if (options.initialPermission && !ACP_RUNTIME_AGENT_TYPES.has(options.agentType)) {
+    throw new Error(
+      `spawnAgent: permission selection is unsupported for agent type "${options.agentType}"`,
+    );
+  }
   if (options.agentType === 'trae') return spawnTraeAcpAgent(options);
 
   const command = resolveHeterogeneousAgentCommand(options.agentType, options.command);

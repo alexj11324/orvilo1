@@ -7,6 +7,17 @@ import {
   ResolveAgentInterventionSchema,
 } from './agentIntervention';
 
+const runtimeConfig = {
+  agencyConfig: {
+    executionTarget: 'device',
+    boundDeviceId: 'host-1',
+    heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
+  },
+  model: 'prime-model',
+  provider: 'openai',
+  title: 'Orvilo AI',
+};
+
 const revision = {
   hash: 'a'.repeat(64),
   version: 1,
@@ -113,6 +124,19 @@ describe('ResolveAgentInterventionSchema', () => {
     expect(parse({ content: 'bounded' })).toBe(true);
   });
 
+  it('rejects marketplace submission without an explicit runtime', () => {
+    expect(
+      ResolveAgentInterventionSchema.safeParse({
+        ...wrapper,
+        action: {
+          itemId: 'item-1',
+          result: { kind: 'agent_marketplace', selectedTemplateIds: ['template-1'] },
+          type: 'submit_custom',
+        },
+      }).success,
+    ).toBe(false);
+  });
+
   it('keeps the marketplace external result discriminator exact', () => {
     expect(
       ResolveAgentInterventionSchema.safeParse({
@@ -129,7 +153,23 @@ describe('ResolveAgentInterventionSchema', () => {
         ...wrapper,
         action: {
           itemId: 'item-1',
-          result: { kind: 'agent_marketplace', selectedTemplateIds: ['agent-1'] },
+          result: { kind: 'agent_marketplace', selectedTemplateIds: ['agent-1'], runtimeConfig },
+          type: 'submit_custom',
+        },
+      }).success,
+    ).toBe(true);
+    // Imported CLI runtimes may carry no selected model — the picker must be
+    // able to submit them (Devin Review: model-less runtimes were rejected).
+    expect(
+      ResolveAgentInterventionSchema.safeParse({
+        ...wrapper,
+        action: {
+          itemId: 'item-1',
+          result: {
+            kind: 'agent_marketplace',
+            runtimeConfig: { ...runtimeConfig, model: null },
+            selectedTemplateIds: ['agent-1'],
+          },
           type: 'submit_custom',
         },
       }).success,
@@ -156,7 +196,7 @@ describe('ResolveAgentInterventionBySourceSchema', () => {
       ResolveAgentInterventionBySourceSchema.safeParse({
         ...source,
         action: {
-          result: { kind: 'agent_marketplace', selectedTemplateIds: ['template-1'] },
+          result: { kind: 'agent_marketplace', selectedTemplateIds: ['template-1'], runtimeConfig },
           type: 'submit_custom',
         },
       }).success,

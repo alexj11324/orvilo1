@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { access, appendFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import type {
   ClaudeCodeQuotaSnapshot,
   CodexQuotaSnapshot,
@@ -13,6 +14,7 @@ import type {
   HeterogeneousCliAgentType,
 } from '@orvilo/electron-client-ipc';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc/types/heterogeneous-agent';
+import type { HeterogeneousProviderBindingReference } from '@orvilo/heterogeneous-agents';
 import {
   buildHeterogeneousAgentAuthRequiredError,
   buildHeterogeneousAgentCliNotFoundError,
@@ -23,7 +25,10 @@ import {
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
 import { ASK_USER_MCP_SERVER_NAME, AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import type { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
-import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
+import {
+  listHeterogeneousAgentModels,
+  listHeterogeneousAgentPermissions,
+} from '@orvilo/heterogeneous-agents/models';
 import type {
   HeteroExecImageRef,
   HeterogeneousAgentCancellationResult,
@@ -68,6 +73,7 @@ import {
   extractStandardAcpSelectors,
   getAcpAgentRuntime,
   GrokAcpSession,
+  type HeterogeneousAgentCacheKeepaliveStatus,
   type HeterogeneousAgentRuntimeStatus,
   isCursorAcpSessionNotFoundError,
   isDevinAcpSessionNotFoundError,
@@ -87,11 +93,11 @@ import type {
   AcpBuiltinToolSpec,
   BuiltinHeterogeneousAgentType,
   HeterogeneousAgentModelCatalog,
+  HeterogeneousAgentPermissionCatalog,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
-  OrviloEngineKind,
+  ListHeterogeneousAgentPermissionsParams,
 } from '@orvilo/types';
-import { resolveOrviloCliAgentType, resolveOrviloEngine } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp, BrowserWindow } from 'electron';
 import { isPlainObject } from 'es-toolkit';
@@ -189,10 +195,9 @@ export const redactPromptArgs = (
 
 interface StartSessionParams {
   /**
-   * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. May carry
-   * the builtin harness type `'orvilo'`; the session then resolves the
-   * engine's CLI family (`claude-code` / `codex`) for spawn/preflight while
-   * `orviloEngine` records which engine the harness runs on.
+   * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. The
+   * builtin `'orvilo'` type is refused until the device-side Prime adapter is
+   * packaged — the fixed adapter map resolves it, never a CLI family.
    */
   agentType?: BuiltinHeterogeneousAgentType | HeterogeneousCliAgentType;
   /** Additional CLI arguments */
@@ -205,17 +210,20 @@ interface StartSessionParams {
   env?: Record<string, string>;
   /** Protocol-native model selected after session setup (ACP sessions). */
   initialModel?: string;
+  initialPermission?: { configId: string; value: string };
   /**
-   * Builtin Orvilo engine selection. When set, the session runs the engine's
-   * CLI family (`claude-sdk` → claude-code, `codex-app-server` → codex) over
-   * its ACP transport (`claude-agent-acp` / `codex-acp`).
+   * BYOK provider binding for api-mode heterogeneous runs. The current driver
+   * pipeline does not consume it; it rides along so the renderer can pass the
+   * resolved binding without a second IPC contract.
    */
-  orviloEngine?: OrviloEngineKind;
+  providerBinding?: HeterogeneousProviderBindingReference;
   /** Session ID to resume (for multi-turn) */
   resumeSessionId?: string;
 }
 
 export interface StartSessionResult {
+  /** Binding key of the provider binding the session started under, if any. */
+  providerBindingKey?: string;
   sessionId: string;
 }
 
@@ -307,9 +315,7 @@ export interface SessionInfo {
 interface AgentSession {
   agentSessionId?: string;
   /**
-   * Resolved CLI family this session executes through. For the builtin
-   * `'orvilo'` harness this is the engine's family (`claude-code` / `codex`) —
-   * `orviloEngine` below records which engine it came from.
+   * Resolved CLI family this session executes through.
    */
   agentType: HeterogeneousCliAgentType;
   args: string[];
@@ -330,12 +336,7 @@ interface AgentSession {
   grokAcpSession?: GrokAcpSession;
   model?: string;
   modelSource?: string;
-  /**
-   * Set only for builtin-Orvilo sessions: records which engine family the
-   * harness runs on (`claude-sdk` → claude-code ACP, `codex-app-server` →
-   * codex ACP).
-   */
-  orviloEngine?: OrviloEngineKind;
+  permission?: { configId: string; value: string };
   /**
    * Absolute CLI path resolved by spawn preflight detection. Used for spawn()
    * when the configured command is bare: detection can find the CLI through
@@ -364,15 +365,18 @@ interface CliTraceSession {
   writeQueue: Promise<void>;
 }
 
-export type LhHeteroExecCancellationResult = HeterogeneousAgentCancellationResult;
+export type OrviloHeteroExecCancellationResult = HeterogeneousAgentCancellationResult;
 
-interface LhHeteroExecTask {
-  cancellation?: Promise<LhHeteroExecCancellationResult>;
+interface OrviloHeteroExecTask {
+  cancellation?: Promise<OrviloHeteroExecCancellationResult>;
   exit: Promise<void>;
   process: ChildProcess;
 }
 
 interface InteractiveAcpSession {
+  cacheKeepaliveTelemetry?: HeterogeneousAgentCacheKeepaliveStatus;
+  /** True while the session's cache keep-alive holds the child alive post-run. */
+  keepaliveArmed?: boolean;
   run: () => Promise<void>;
 }
 
@@ -417,7 +421,7 @@ export default class HeterogeneousAgentCtr {
 
   private sessions = new Map<string, AgentSession>();
   /** Device-gateway CLI wrappers keyed by their server operation id. */
-  private lhHeteroExecTasks = new Map<string, LhHeteroExecTask>();
+  private orviloHeteroExecTasks = new Map<string, OrviloHeteroExecTask>();
   /**
    * Per-operation AskUserQuestion bridge state. Keyed by `operationId` so the
    * `submitIntervention` IPC can route an answer to the right pending MCP
@@ -446,7 +450,7 @@ export default class HeterogeneousAgentCtr {
   /**
    * Uploads a base64 tool_result image (CC `Read` on an image file) to the file
    * store, so the persisted event carries a `{ fileId, url }` reference instead
-   * of heavy base64. Mirrors what `lh hetero exec` does for the gateway path.
+   * of heavy base64. Mirrors what `orvilo hetero exec` does for the gateway path.
    */
   private uploadResultImage = createFileStoreImageUploader(() =>
     createLambdaFileStorePort(this.remoteServerAuth),
@@ -1145,18 +1149,16 @@ export default class HeterogeneousAgentCtr {
   async startSession(params: StartSessionParams): Promise<StartSessionResult> {
     const sessionId = randomUUID();
     const declaredAgentType = params.agentType || 'claude-code';
-    // The builtin Orvilo harness declares itself as `agentType: 'orvilo'` (or
-    // implicitly via `orviloEngine`); it has no executable of its own. Resolve
-    // the engine's CLI family once so every downstream gate — driver, command
-    // resolution, provider bindings, preflight, error classification — works
-    // in family terms. `orviloEngine` on the session records the engine.
-    const orviloEngine =
-      declaredAgentType === 'orvilo' || params.orviloEngine !== undefined
-        ? resolveOrviloEngine(params.orviloEngine)
-        : undefined;
-    const agentType: HeterogeneousCliAgentType = orviloEngine
-      ? resolveOrviloCliAgentType(orviloEngine)
-      : (declaredAgentType as HeterogeneousCliAgentType);
+    if (declaredAgentType === 'orvilo') {
+      // The fixed adapter map resolves 'orvilo' → the Prime adapter
+      // (docs/development/device-execution-contract.md); the device-side
+      // Prime adapter is not packaged yet, so refuse loudly rather than
+      // spawning a wrong-family executable.
+      throw new Error(
+        "The builtin Orvilo agent's Prime adapter is not packaged for device execution yet",
+      );
+    }
+    const agentType = declaredAgentType as HeterogeneousCliAgentType;
     this.sessions.set(sessionId, {
       // If resuming, pre-set the agent session ID so sendPrompt issues ACP session/load
       agentSessionId: params.resumeSessionId,
@@ -1166,7 +1168,7 @@ export default class HeterogeneousAgentCtr {
       cwd: params.cwd,
       env: params.env,
       model: params.initialModel,
-      orviloEngine,
+      permission: params.initialPermission,
       sessionId,
       resumeSessionId: params.resumeSessionId,
     });
@@ -1568,6 +1570,13 @@ export default class HeterogeneousAgentCtr {
     params: SendPromptParams,
     session: AgentSession,
   ): Promise<void> {
+    // A previous turn's cache keep-alive may still hold the old child warm —
+    // retire it so this prompt spawns fresh; the new process's session/load
+    // replays the same prefix against the still-warm provider cache.
+    if (session.devinAcpSession?.keepaliveArmed) {
+      session.devinAcpSession.close();
+      session.devinAcpSession = undefined;
+    }
     const cwd = this.resolveSessionWorkingDirectory(session);
     const spawnEnv = this.buildSessionSpawnEnv(session);
     const commandPath = session.resolvedCommandPath ?? this.resolveSessionCommand(session);
@@ -1666,6 +1675,7 @@ export default class HeterogeneousAgentCtr {
     try {
       await acpSession.run();
       void this.writeCliTraceJson(traceSession, 'exit.json', {
+        cacheKeepalive: acpSession.cacheKeepaliveTelemetry,
         finishedAt: new Date().toISOString(),
         transport,
       });
@@ -1699,13 +1709,30 @@ export default class HeterogeneousAgentCtr {
       });
     } finally {
       await cleanup?.();
-      if (activeSessionKey === 'cursorAcpSession' && session.cursorAcpSession === acpSession) {
+      // A session that armed its cache keep-alive stays referenced so the
+      // keeper's disarm → close path (and cancel/stop) can still reach it;
+      // the next sendPrompt retires it before spawning a fresh process.
+      const clearable = !acpSession.keepaliveArmed;
+      if (
+        clearable &&
+        activeSessionKey === 'cursorAcpSession' &&
+        session.cursorAcpSession === acpSession
+      ) {
         session.cursorAcpSession = undefined;
-      } else if (activeSessionKey === 'devinAcpSession' && session.devinAcpSession === acpSession) {
+      } else if (
+        clearable &&
+        activeSessionKey === 'devinAcpSession' &&
+        session.devinAcpSession === acpSession
+      ) {
         session.devinAcpSession = undefined;
-      } else if (activeSessionKey === 'traeAcpSession' && session.traeAcpSession === acpSession) {
+      } else if (
+        clearable &&
+        activeSessionKey === 'traeAcpSession' &&
+        session.traeAcpSession === acpSession
+      ) {
         session.traeAcpSession = undefined;
       } else if (
+        clearable &&
         activeSessionKey === 'standardAcpSession' &&
         session.standardAcpSession === acpSession
       ) {
@@ -1817,6 +1844,13 @@ export default class HeterogeneousAgentCtr {
     params: SendPromptParams,
     session: AgentSession,
   ): Promise<void> {
+    // A previous turn's cache keep-alive may still hold the old child warm —
+    // retire it so this prompt spawns fresh; the new process's session/load
+    // replays the same prefix against the still-warm provider cache.
+    if (session.standardAcpSession?.keepaliveArmed) {
+      session.standardAcpSession.close();
+      session.standardAcpSession = undefined;
+    }
     const agentType = session.agentType;
     const spec = getAcpAgentRuntime(agentType);
     const transport: HeterogeneousAgentRuntimeStatus['transport'] = spec?.transport ?? 'acp-stdio';
@@ -1897,6 +1931,7 @@ export default class HeterogeneousAgentCtr {
       env: target.env,
       initialCumulativeUsage,
       initialModel: session.model ?? selectors.initialModel,
+      initialPermission: session.permission,
       mcpServers: intervention.mcpServers,
       onEvents: async (events) => {
         for (const event of events) {
@@ -1940,6 +1975,20 @@ export default class HeterogeneousAgentCtr {
   async getSessionInfo(params: GetSessionInfoParams): Promise<SessionInfo> {
     const session = this.sessions.get(params.sessionId);
     return { agentSessionId: session?.agentSessionId };
+  }
+
+  async listPermissions(
+    params: ListHeterogeneousAgentPermissionsParams,
+  ): Promise<HeterogeneousAgentPermissionCatalog[]> {
+    return listHeterogeneousAgentPermissions({
+      ...params,
+      cwd: params.cwd || electronApp.getPath('desktop'),
+      env: {
+        ...buildInheritedSpawnEnv(),
+        ...buildProxyEnv(this.app.storeManager.get('networkProxy')),
+        ...params.env,
+      },
+    });
   }
 
   /** Query a heterogeneous CLI's model catalog using the same rules as a real local session. */
@@ -2089,7 +2138,7 @@ export default class HeterogeneousAgentCtr {
   }
 
   private async waitForProcessTreeExit(
-    task: LhHeteroExecTask,
+    task: OrviloHeteroExecTask,
     timeoutMs: number,
   ): Promise<boolean> {
     if (process.platform === 'win32') {
@@ -2291,17 +2340,26 @@ export default class HeterogeneousAgentCtr {
    * failures such as an inaccessible cwd asynchronously through `error`, so an
    * eager accepted ack would strand the server operation without a producer.
    */
-  spawnLhHeteroExec(params: {
+  spawnOrviloHeteroExec(params: {
     agentType: string;
     assistantMessageId?: string;
-    /** Resolved `lh hetero exec` wrapper args. */
+    /** Resolved `orvilo hetero exec` wrapper args. */
     args?: string[];
     /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
     builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
+    /** Server-minted spawn env (e.g. BYOK credentials) merged into the exec env. */
+    env?: Record<string, string>;
     /** Image attachments (signed URLs) appended as image content blocks. */
     imageList?: HeteroExecImageRef[];
     jwt: string;
+    /**
+     * Prime device-run descriptor: when present, the dispatch's resolved
+     * harness is Prime (type 'orvilo') and this host launches `orvilo prime
+     * exec` instead of `hetero exec` — same child-process supervision, same
+     * kill contract. Carries the artifact pin + bound broker credential.
+     */
+    prime?: PrimeRunDescriptor;
     operationId: string;
     /**
      * The operation-scoped token from the dispatch (carries `hetero:tool:exec`
@@ -2313,7 +2371,7 @@ export default class HeterogeneousAgentCtr {
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;
-    /** Admission fence relayed to `lh hetero exec` via `ORVILO_RUN_GENERATION`. */
+    /** Admission fence relayed to `orvilo hetero exec` via `ORVILO_RUN_GENERATION`. */
     runGeneration?: number;
     serverUrl: string;
     systemContext?: string;
@@ -2338,6 +2396,7 @@ export default class HeterogeneousAgentCtr {
       operationId,
       operationJwt,
       onChildSpawned,
+      prime,
       prompt,
       resumeFallbackSystemContext,
       resumeSessionId,
@@ -2355,7 +2414,7 @@ export default class HeterogeneousAgentCtr {
     const spawnCwd = resolveHeteroSpawnCwd(workDir);
 
     // When CLI tracing is enabled (dev builds, or the Help-menu toggle in
-    // packaged builds), have `lh hetero exec` persist the agent process's RAW
+    // packaged builds), have `orvilo hetero exec` persist the agent process's RAW
     // ACP wire stream (pre-adapter) on this device. The remote-device path
     // otherwise leaves no local record — the CLI consumes stdout internally and
     // only POSTs adapted events to the server — so without this there's nothing
@@ -2365,32 +2424,58 @@ export default class HeterogeneousAgentCtr {
     const rawDumpDir =
       this.shouldTraceCliOutput && workDirUsable ? this.resolveTraceRootDir(workDir) : undefined;
 
-    const args = [
-      'hetero',
-      'exec',
-      '--type',
-      agentType,
-      '--operation-id',
-      operationId,
-      '--topic',
-      topicId,
-      '--render',
-      'none',
-      '--input-json',
-      '-',
-      '--cwd',
-      workDir,
-      ...(resumeSessionId ? ['--resume', resumeSessionId] : []),
-      ...(rawDumpDir ? ['--raw-dump', rawDumpDir] : []),
-      ...(extraArgs ?? []),
-    ];
+    // Prime launcher swap: the resolved adapter is Prime when the dispatch
+    // carries a descriptor — `orvilo prime exec` hosts the run instead of
+    // `hetero exec`. Everything else in this function (spawn, env, process
+    // group, registration, kill) is the shared device lifecycle.
+    const args = prime
+      ? [
+          'prime',
+          'exec',
+          '--operation-id',
+          operationId,
+          '--topic',
+          topicId,
+          '--cwd',
+          workDir,
+          '--input-json',
+          '-',
+          ...(workspaceId ? ['--workspace', workspaceId] : []),
+          ...(assistantMessageId ? ['--assistant-message-id', assistantMessageId] : []),
+          ...(runGeneration != null ? ['--run-generation', String(runGeneration)] : []),
+        ]
+      : [
+          'hetero',
+          'exec',
+          '--type',
+          agentType,
+          '--operation-id',
+          operationId,
+          '--topic',
+          topicId,
+          '--render',
+          'none',
+          '--input-json',
+          '-',
+          '--cwd',
+          workDir,
+          ...(resumeSessionId ? ['--resume', resumeSessionId] : []),
+          ...(rawDumpDir ? ['--raw-dump', rawDumpDir] : []),
+          ...(extraArgs ?? []),
+        ];
 
-    const stdinPayload = buildHeteroExecStdinPayload({
-      imageList,
-      prompt,
-      resumeFallbackSystemContext,
-      systemContext,
-    });
+    const stdinPayload = prime
+      ? JSON.stringify({
+          descriptor: prime,
+          prompt,
+          ...(systemContext ? { systemContext } : {}),
+        })
+      : buildHeteroExecStdinPayload({
+          imageList,
+          prompt,
+          resumeFallbackSystemContext,
+          systemContext,
+        });
     const cliScript = resolveCliScript();
     if (!existsSync(cliScript)) {
       return Promise.resolve({
@@ -2402,6 +2487,7 @@ export default class HeterogeneousAgentCtr {
     const env = {
       ...process.env,
       ...buildProxyEnv(this.app.storeManager.get('networkProxy')),
+      ...params.env,
       ELECTRON_RUN_AS_NODE: '1',
       [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
       ORVILO_JWT: jwt,
@@ -2424,9 +2510,9 @@ export default class HeterogeneousAgentCtr {
       ...(workspaceId ? { ORVILO_WORKSPACE_ID: workspaceId } : {}),
     };
 
-    logger.info('spawnLhHeteroExec: type=%s op=%s topic=%s', agentType, operationId, topicId);
+    logger.info('spawnOrviloHeteroExec: type=%s op=%s topic=%s', agentType, operationId, topicId);
 
-    // Execute the CLI shipped with this desktop build. A bare `lh` would prefer
+    // Execute the CLI shipped with this desktop build. A bare `orvilo` would prefer
     // an older global install earlier on PATH, letting model discovery report a
     // capability that the actual execution runtime does not support.
     // `detached: true` puts the CLI in its own process group so
@@ -2449,18 +2535,23 @@ export default class HeterogeneousAgentCtr {
       child.once('exit', () => resolve());
       child.once('error', () => resolve());
     });
-    this.lhHeteroExecTasks.set(operationId, { exit, process: child });
+    this.orviloHeteroExecTasks.set(operationId, { exit, process: child });
 
     child.on('exit', (code, signal) => {
-      logger.info('spawnLhHeteroExec: exited — op=%s code=%s signal=%s', operationId, code, signal);
-      if (this.lhHeteroExecTasks.get(operationId)?.process === child) {
-        this.lhHeteroExecTasks.delete(operationId);
+      logger.info(
+        'spawnOrviloHeteroExec: exited — op=%s code=%s signal=%s',
+        operationId,
+        code,
+        signal,
+      );
+      if (this.orviloHeteroExecTasks.get(operationId)?.process === child) {
+        this.orviloHeteroExecTasks.delete(operationId);
       }
     });
 
     child.on('error', () => {
-      if (this.lhHeteroExecTasks.get(operationId)?.process === child) {
-        this.lhHeteroExecTasks.delete(operationId);
+      if (this.orviloHeteroExecTasks.get(operationId)?.process === child) {
+        this.orviloHeteroExecTasks.delete(operationId);
       }
     });
 
@@ -2474,7 +2565,7 @@ export default class HeterogeneousAgentCtr {
 
       child.stdin.once('error', (err) => {
         logger.error(
-          'spawnLhHeteroExec: stdin write failed — op=%s error=%s',
+          'spawnOrviloHeteroExec: stdin write failed — op=%s error=%s',
           operationId,
           err.message,
         );
@@ -2495,7 +2586,7 @@ export default class HeterogeneousAgentCtr {
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           logger.error(
-            'spawnLhHeteroExec: stdin write threw — op=%s error=%s',
+            'spawnOrviloHeteroExec: stdin write threw — op=%s error=%s',
             operationId,
             reason,
           );
@@ -2504,14 +2595,14 @@ export default class HeterogeneousAgentCtr {
       });
 
       child.once('error', (err) => {
-        logger.error('spawnLhHeteroExec: spawn failed — %s', err.message);
+        logger.error('spawnOrviloHeteroExec: spawn failed — %s', err.message);
         settle({ reason: err.message, status: 'rejected' });
       });
     });
   }
 
   /**
-   * Cancels a device-gateway `lh hetero exec` wrapper and waits for its native
+   * Cancels a device-gateway `orvilo hetero exec` wrapper and waits for its native
    * writer to exit.
    *
    * Use when:
@@ -2519,17 +2610,17 @@ export default class HeterogeneousAgentCtr {
    * - A replacement turn must not resume the same native thread concurrently.
    *
    * Expects:
-   * - `operationId` is the id supplied to {@link spawnLhHeteroExec}.
+   * - `operationId` is the id supplied to {@link spawnOrviloHeteroExec}.
    *
    * Returns:
    * - Process details when a live wrapper was found; otherwise `undefined`.
    */
-  async cancelLhHeteroExec(params: {
+  async cancelOrviloHeteroExec(params: {
     operationId: string;
     signal?: HeterogeneousAgentCancellationSignal;
-  }): Promise<LhHeteroExecCancellationResult | undefined> {
+  }): Promise<OrviloHeteroExecCancellationResult | undefined> {
     const { operationId, signal = 'SIGINT' } = params;
-    const task = this.lhHeteroExecTasks.get(operationId);
+    const task = this.orviloHeteroExecTasks.get(operationId);
     if (!task) return;
     if (task.cancellation) return task.cancellation;
 

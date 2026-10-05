@@ -22,12 +22,12 @@ vi.mock('@/database/repositories/aiInfra', () => {
     return {
       getAiProviderRuntimeState: aiInfraMocks.getAiProviderRuntimeState,
     };
-  }) as unknown as typeof AiInfraReposModule.AiInfraRepos;
+  }) as unknown as typeof AiInfraReposModule.AiInfraCatalogRepos;
 
   (AiInfraRepos as any).tryMatchingModelFrom = aiInfraMocks.tryMatchingModelFrom;
   (AiInfraRepos as any).tryMatchingProviderFrom = aiInfraMocks.tryMatchingProviderFrom;
 
-  return { AiInfraRepos };
+  return { AiInfraCatalogRepos: AiInfraRepos };
 });
 
 vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({

@@ -2,6 +2,7 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { seedPrimeRuntime } from '../../../fixtures/seedPrimeRuntime';
 import { projectWorks, topics, works, workspaces } from '../../../schemas';
 import { AgentDocumentModel } from '../../agentDocuments';
 import { ProjectModel } from '../../project';
@@ -19,7 +20,12 @@ import {
   userId2,
 } from './_fixtures';
 
-beforeEach(seedWorkTestData);
+beforeEach(async () => {
+  await seedWorkTestData();
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId });
+  await seedPrimeRuntime(serverDB, { userId: userId2 });
+});
 afterEach(cleanupWorkTestData);
 
 /**

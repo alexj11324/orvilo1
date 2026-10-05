@@ -38,7 +38,7 @@ export class VerifyEvidenceModel {
    * `files` table through the generic `file.createFile` procedure, which every
    * CLI version and every capturer shares. Tagging at the moment the artifact
    * becomes evidence is the one funnel all of them pass through, so an outdated
-   * `lh` binary can't keep seeding untagged files into the library.
+   * `orvilo` binary can't keep seeding untagged files into the library.
    *
    * Scoped like any other read: workspace mode covers all member files, personal
    * mode only the caller's. `source IS NULL` keeps a generation-sourced file

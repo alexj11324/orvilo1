@@ -1,9 +1,13 @@
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox, TooltipGroup } from '@lobehub/ui';
-import { type CSSProperties, type ReactNode } from 'react';
+import { cx } from 'antd-style';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
-export interface NavHeaderProps extends Omit<FlexboxProps, 'children'> {
+import { TooltipProvider } from '@/components/ui/tooltip';
+import ToggleLeftPanelButton, { isMacDesktop } from '@/features/NavPanel/ToggleLeftPanelButton';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
+
+export interface NavHeaderProps extends Omit<ComponentProps<'div'>, 'children'> {
   children?: ReactNode;
   left?: ReactNode;
   right?: ReactNode;
@@ -22,7 +26,7 @@ export interface NavHeaderProps extends Omit<FlexboxProps, 'children'> {
 
 const NavHeader = memo<NavHeaderProps>(
   ({
-    showTogglePanelButton: _showTogglePanelButton,
+    showTogglePanelButton = true,
     style,
     children,
     left,
@@ -31,51 +35,44 @@ const NavHeader = memo<NavHeaderProps>(
     styles,
     ...rest
   }) => {
+    const [expand, drawerMode] = useGlobalStore((state) => [
+      systemStatusSelectors.showLeftPanel(state),
+      state.leftPanelDrawerMode,
+    ]);
+    const showToggle = showTogglePanelButton && !isMacDesktop && (drawerMode || !expand);
     const noContent = !left && !right && !children;
-    if (noContent) return;
+    if (noContent && !showToggle) return;
 
     return (
-      <Flexbox
-        allowShrink
-        horizontal
-        align={'center'}
-        flex={'none'}
-        gap={4}
-        height={44}
-        justify={'space-between'}
-        padding={8}
-        style={style}
+      <div
+        className="flex h-[44px] flex-none items-center justify-between gap-1 p-2"
+        style={{ minWidth: 0, ...style }}
         {...rest}
       >
-        <TooltipGroup>
-          <Flexbox
-            allowShrink
-            horizontal
-            align={'center'}
-            className={slotClassNames?.left}
-            gap={2}
-            justify={'flex-start'}
-            style={styles?.left}
+        <TooltipProvider>
+          <div
+            className={cx(slotClassNames?.left, 'flex items-center gap-0.5 justify-start')}
+            style={{ minWidth: 0, ...styles?.left }}
           >
+            {showToggle && <ToggleLeftPanelButton />}
             {left}
-          </Flexbox>
+          </div>
           {children && (
-            <Flexbox className={slotClassNames?.center} flex={1} style={styles?.center}>
+            <div
+              className={cx(slotClassNames?.center, 'flex flex-col flex-1')}
+              style={{ ...styles?.center }}
+            >
               {children}
-            </Flexbox>
+            </div>
           )}
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={slotClassNames?.right}
-            gap={2}
-            justify={'flex-end'}
-            style={styles?.right}
+          <div
+            className={cx(slotClassNames?.right, 'flex items-center gap-0.5 justify-end')}
+            style={{ ...styles?.right }}
           >
             {right}
-          </Flexbox>
-        </TooltipGroup>
-      </Flexbox>
+          </div>
+        </TooltipProvider>
+      </div>
     );
   },
 );

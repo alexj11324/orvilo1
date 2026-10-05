@@ -1,8 +1,10 @@
-import { Alert, Button, Skeleton } from '@lobehub/ui/base-ui';
 import { RotateCcw } from 'lucide-react';
 import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import ErrorAlert from '@/features/Conversation/components/ErrorAlert';
 import {
   dataSelectors,
   messageStateSelectors,
@@ -37,27 +39,26 @@ const ErrorContent = memo<ErrorContentProps>(({ customErrorRender, error, id, on
   if (!error) return;
 
   if (customErrorRender) {
-    return <Suspense fallback={<Skeleton height={36} />}>{customErrorRender(error)}</Suspense>;
+    return (
+      <Suspense fallback={<Skeleton style={{ height: 36 }} />}>{customErrorRender(error)}</Suspense>
+    );
   }
 
   return (
-    <Alert
+    <ErrorAlert
       closable
-      extraDefaultExpand
       showIcon
-      extraIsolate={false}
       type={'secondary'}
       action={
         onRegenerate && (
           <Button
             disabled={retrying}
-            icon={<RotateCcw size={14} />}
             loading={retrying}
-            size="small"
-            type="fill"
+            size="sm"
+            variant="secondary"
             onClick={onRegenerate}
           >
-            {t('regenerate')}
+            <RotateCcw size={14} /> {t('regenerate')}
           </Button>
         )
       }

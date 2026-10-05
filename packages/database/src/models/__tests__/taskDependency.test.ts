@@ -3,11 +3,13 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   linearExternalRelations,
   linearInstallations,
   linearSyncOutbox,
   taskDependencies,
+  taskDispatches,
   taskDomainEvents,
   tasks,
   users,
@@ -168,6 +170,15 @@ describe('task prerequisite invariants', () => {
     });
   });
 
+  it('lets the blocking issue remove the edge from its own detail', async () => {
+    const upstream = await create('upstream');
+    const dependent = await create('dependent');
+    await model.addDependency(dependent.id, upstream.id, 'blocks');
+    const [edge] = await model.getDependencies(dependent.id);
+    await model.removeDependencyByRelationId(upstream.id, edge.id);
+    expect(await model.getDependencies(dependent.id)).toEqual([]);
+  });
+
   it('shows one ordinary relation from both issues and removes it from either side', async () => {
     const a = await create('A');
     const b = await create('B');
@@ -239,6 +250,8 @@ describe('task prerequisite invariants', () => {
       organizationId: 'linear-related-org',
       workspaceId,
     });
+    // Project creation provisions a coordinator through Prime inheritance.
+    await seedPrimeRuntime(db, { userId, workspaceId });
     const project = await new ProjectModel(db, userId, workspaceId).create({
       identifier: 'REL',
       name: 'Related sync',
@@ -312,7 +325,24 @@ describe('task prerequisite invariants', () => {
     const a = await create('A');
     const b = await create('B');
     for (const status of ['running', 'completed']) {
-      await model.updateStatus(b.id, status);
+      if (status === 'running') {
+        // A live dispatch is the only canonical way to be running —
+        // `updateStatus` cannot synthesize one.
+        await db.insert(taskDispatches).values({
+          generation: 1,
+          id: 'dispatch-dep-running',
+          idempotencyKey: 'manual:dep:running',
+          phase: 'running',
+          policyRevision: 1,
+          requestedBy: `user:${userId}`,
+          requirementRevision: 1,
+          taskId: b.id,
+          taskRevision: 1,
+          workspaceId: null,
+        });
+      } else {
+        await model.updateStatus(b.id, status);
+      }
       await expect(model.addDependency(b.id, a.id)).rejects.toMatchObject({
         code: 'PRECONDITION_FAILED',
       });

@@ -139,6 +139,17 @@ describe('mapFeatureFlagsEnvToState', () => {
     expect(mappedState.enableOnboardingV2).toBe(false);
   });
 
+  it('keeps cloud sandbox disabled until explicitly enabled for the user', () => {
+    expect(mapFeatureFlagsEnvToState(DEFAULT_FEATURE_FLAGS).enableCloudSandbox).toBe(false);
+    expect(mapFeatureFlagsEnvToState({ cloud_sandbox: true }).enableCloudSandbox).toBe(true);
+    expect(
+      mapFeatureFlagsEnvToState({ cloud_sandbox: ['allowed'] }, 'allowed').enableCloudSandbox,
+    ).toBe(true);
+    expect(
+      mapFeatureFlagsEnvToState({ cloud_sandbox: ['allowed'] }, 'other').enableCloudSandbox,
+    ).toBe(false);
+  });
+
   it('should map the onboarding v2 allowlist flag by user ID', () => {
     const config = {
       onboarding_v2: ['user-123'],

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
@@ -78,10 +77,10 @@ export const VentInspector = memo<BuiltinInspectorProps<VentParams, VentState>>(
         {isSettled &&
           pluginState &&
           (pluginState.recorded ? (
-            <Icon className={styles.iconRecorded} icon={CheckCircle2} size={14} />
+            <CheckCircle2 className={styles.iconRecorded} size={14} />
           ) : (
             <>
-              <Icon className={styles.iconRejected} icon={CircleAlert} size={14} />
+              <CircleAlert className={styles.iconRejected} size={14} />
               <span className={styles.meta}>
                 {t('builtins.orvilo-agent.apiName.vent.rejected')}
               </span>

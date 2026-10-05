@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Maximize2, Minimize2, XIcon } from 'lucide-react';
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import { BAR_HEIGHT, BAR_OVERLAP } from './const';
 import PanelErrorBoundary from './PanelErrorBoundary';
@@ -121,7 +121,7 @@ const PanelHost = memo(() => {
   return (
     <section className={styles.host} style={{ height }}>
       {!maximized && <div className={styles.resizeHandle} onPointerDown={handleDragStart} />}
-      <Flexbox horizontal align={'center'} className={styles.header} gap={6}>
+      <div className={cx(styles.header, 'flex items-center gap-1.5')}>
         <Icon size={12} />
         <span>{item.label}</span>
         <span style={{ flex: 1 }} />
@@ -137,7 +137,7 @@ const PanelHost = memo(() => {
           title={'Close panel'}
           onClick={() => togglePanel(item.id)}
         />
-      </Flexbox>
+      </div>
       <div className={styles.content}>
         <PanelErrorBoundary key={item.id}>
           <Suspense fallback={null}>

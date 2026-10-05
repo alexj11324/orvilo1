@@ -1,5 +1,3 @@
-import { Icon } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -82,7 +80,7 @@ interface AgentItemProps {
 }
 
 const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, secondaryLabel }) => {
-  const { id, avatar, backgroundColor, pinned, slug, userId, visibility } = item;
+  const { avatar, backgroundColor, id, heterogeneousType, pinned, slug, userId, visibility } = item;
   // Unread count is server-computed (topics.status === 'unread') and carried on
   // the sidebar list item, so it stays accurate across agents whose topics
   // aren't loaded into the chat store on this client.
@@ -138,32 +136,24 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
   // Memoize pin icon
   const pinIcon = useMemo(
     () =>
-      pinned ? (
-        <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
-      ) : undefined,
+      pinned ? <PinIcon size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} /> : undefined,
     [pinned],
   );
 
   // Memoize avatar icon (show loader when updating, running spinner or unread badge at bottom-right)
   const avatarIcon = useMemo(() => {
     if (isUpdating) {
-      return <Icon spin color={cssVar.colorTextDescription} icon={Loader2} size={18} />;
+      return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
     }
 
-    const avatarNode = (
-      <Avatar
-        avatar={typeof avatar === 'string' ? avatar : undefined}
-        avatarBackground={backgroundColor || undefined}
-        title={displayTitle}
-      />
-    );
+    const avatarNode = <Avatar type={heterogeneousType} />;
 
     if (isLoading) {
       return (
         <span className={styles.wrapper}>
           {avatarNode}
           <span className={styles.runningBadge}>
-            <Icon spin icon={Loader2} size={9} />
+            <Loader2 className="animate-spin" size={9} />
           </span>
         </span>
       );
@@ -179,7 +169,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
     }
 
     return avatarNode;
-  }, [isUpdating, isLoading, avatar, backgroundColor, displayTitle, unreadCount]);
+  }, [isUpdating, isLoading, heterogeneousType, unreadCount]);
 
   const dropdownMenu = useAgentDropdownMenu({
     anchor,

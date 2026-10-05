@@ -4,19 +4,28 @@
  * The in-process agent runtime is retired: every web send resolves an
  * execution plan, and a hetero agent without a bound device lands on the
  * "No device bound" pending stub. The fake agent gateway emulates a connected
- * device (`POST /api/device/agent/run` → synthesized `lh hetero exec` turn via
+ * device (`POST /api/device/agent/run` → synthesized `orvilo hetero exec` turn via
  * `aiAgent.heteroIngest`/`heteroFinish`); this module seeds the other half —
  * a `devices` row plus `executionTarget: 'device'` + `boundDeviceId` on the
  * agent's `agency_config` — so dispatch resolves the real device path.
+ *
+ * The builtin `type:'orvilo'` agent resolves this device like every other
+ * agent — resolution still runs server-side and the run records the
+ * resolved deviceId — but its execution is fenced to the embedded fork
+ * (device-execution-contract.md §transitional-fence) until the device-side
+ * Prime adapter ships. The fake gateway device stays seeded so external
+ * hetero journeys keep exercising the real device path.
  *
  * Both scopes are bound (personal/unfiled and workspace copy) because the
  * inbox agent mints per-scope at first use.
  */
 import type { APIRequestContext } from 'playwright';
 
+import { E2E_PRIME_MODEL } from './seedOrviloProviderBinding';
 import { TEST_USER } from './seedTestUser';
 
 export const E2E_DEVICE_ID = 'e2e-mock-device';
+let primeAgentId: string | undefined;
 
 interface TrpcData<T> {
   result?: { data?: { json?: T } };
@@ -40,6 +49,27 @@ const lambdaCall = async <T>(
   }
   const body = (await res.json()) as TrpcData<T>;
   return body.result?.data?.json;
+};
+
+/** A completed account needs a real agent, not only its virtual inbox singleton. */
+export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Promise<string> => {
+  if (primeAgentId) return primeAgentId;
+  const created = await lambdaCall<{ agentId: string }>(request, 'agent.createAgent', {
+    config: {
+      agencyConfig: {
+        boundDeviceId: E2E_DEVICE_ID,
+        executionTarget: 'device',
+        heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+      },
+      model: E2E_PRIME_MODEL,
+      provider: 'deepseek',
+      title: 'Orvilo AI',
+    },
+    visibility: 'private',
+  });
+  if (!created?.agentId) throw new Error('E2E Prime agent creation returned no agentId');
+  primeAgentId = created.agentId;
+  return primeAgentId;
 };
 
 /**

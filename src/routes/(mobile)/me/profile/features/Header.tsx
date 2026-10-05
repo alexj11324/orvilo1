@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,11 +17,7 @@ const Header = memo(() => {
       style={mobileHeaderSticky}
       center={
         <ChatHeader.Title
-          title={
-            <Flexbox horizontal align={'center'} gap={4}>
-              {t('userPanel.profile')}
-            </Flexbox>
-          }
+          title={<div className="flex items-center gap-1">{t('userPanel.profile')}</div>}
         />
       }
       onBackClick={() => navigate('/me')}

@@ -1,7 +1,5 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -61,24 +59,27 @@ const ProjectConversation = memo(() => {
   }
   if (detailSWR.isLoading || !coordinatorAgentId) {
     return (
-      <Center height="100%" width="100%">
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{ height: '100%', width: '100%' }}
+      >
         <NeuralNetworkLoading />
-      </Center>
+      </div>
     );
   }
 
   return (
-    <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
+    <div className="flex flex-col" style={{ flex: 1, height: '100%', minHeight: 0, minWidth: 0 }}>
       <NavHeader
         left={
-          <Text ellipsis weight={600}>
+          <span className="text-sm truncate" style={{ fontWeight: 600 }}>
             {topicTitle || t('sidebar.newConversation')}
-          </Text>
+          </span>
         }
       />
       <ChatHydration getConversationPath={getConversationPath} getTopicPath={getTopicPath} />
       <ChatConversation />
-    </Flexbox>
+    </div>
   );
 });
 

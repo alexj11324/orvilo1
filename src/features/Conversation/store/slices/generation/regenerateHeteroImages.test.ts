@@ -5,28 +5,17 @@ import { type ConversationContext } from '../../../types';
 import { createStore } from '../../index';
 
 // ── Mock the hetero runtime seam ──
-// regenerate (hetero) re-creates an assistant row, then delegates to
-// `executeHeterogeneousAgent`. We spy on that boundary and assert the original
-// user message's `imageList` is forwarded — the regression this guards against
-// is regenerate silently dropping image attachments (the send path forwards
-// them; this path must too).
+// FIX-C: regenerate of a heterogeneous-provider turn no longer re-runs the
+// local CLI via `executeHeterogeneousAgent` — it re-enters through
+// `selectRuntimeType` → `gateway` like every other entry. The original user
+// message (with its imageList) stays persisted, so the server-admitted run
+// sees the same attachments the send path did; nothing is forwarded or
+// dropped client-side. The executor mock proves the spawn count is 0.
 const mockExecuteHeterogeneousAgent = vi.fn();
 vi.mock(
   '@/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor',
   () => ({
     executeHeterogeneousAgent: (...args: any[]) => mockExecuteHeterogeneousAgent(...args),
-  }),
-);
-
-vi.mock('@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher', () => ({
-  selectRuntimeType: () => 'hetero',
-}));
-
-vi.mock(
-  '@/store/chat/slices/agentRun/actions/transports/hetero/heteroResume',
-  async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    resolveHeteroResume: () => ({ cwdChanged: false, resumeSessionId: 'sess-1' }),
   }),
 );
 
@@ -43,8 +32,9 @@ vi.mock('@/store/chat/slices/operation/selectors', () => ({
   },
 }));
 
+const mockCreateMessage = vi.fn(async () => ({ id: 'assistant-new' }));
 vi.mock('@/services/message', () => ({
-  messageService: { createMessage: vi.fn(async () => ({ id: 'assistant-new' })) },
+  messageService: { createMessage: (...args: any[]) => mockCreateMessage(...(args as [])) },
 }));
 
 vi.mock('@/store/agent', () => ({
@@ -79,6 +69,8 @@ vi.mock('@/store/electron', () => ({
   getElectronStoreState: () => ({ gatewayDeviceInfo: { deviceId: 'device-1' } }),
 }));
 
+const mockExecuteGatewayAgent = vi.fn(async () => {});
+const mockStartOperation = vi.fn(() => ({ operationId: 'regen-op-id' }));
 const noop = vi.fn();
 vi.mock('@/store/chat', () => ({
   useChatStore: {
@@ -90,22 +82,23 @@ vi.mock('@/store/chat', () => ({
 
       associateMessageWithOperation: noop,
       completeOperation: noop,
+      executeGatewayAgent: (...args: any[]) => mockExecuteGatewayAgent(...(args as [])),
       failOperation: noop,
       isGatewayModeEnabled: () => false,
       refreshMessages: vi.fn(async () => {}),
-      startOperation: vi.fn(() => ({ operationId: 'hetero-op-id' })),
+      startOperation: (...args: any[]) => mockStartOperation(...(args as [])),
       switchMessageBranch: vi.fn(async () => {}),
     })),
     setState: vi.fn(),
   },
 }));
 
-describe('regenerateUserMessage (hetero) — image forwarding', () => {
+describe('regenerateUserMessage (hetero provider) — FIX-C unified admission', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('forwards the original user message imageList to executeHeterogeneousAgent', async () => {
+  it('regenerates a turn with images through gateway — the persisted imageList is untouched', async () => {
     const context: ConversationContext = {
       agentId: 'agent-1',
       topicId: 'topic-1',
@@ -118,7 +111,7 @@ describe('regenerateUserMessage (hetero) — image forwarding', () => {
     act(() => {
       store.setState({
         displayMessages: [{ content: 'describe this', id: 'msg-1', imageList, role: 'user' }],
-        dbMessages: [{ content: 'describe this', id: 'msg-1', role: 'user' }],
+        dbMessages: [{ content: 'describe this', id: 'msg-1', imageList, role: 'user' }],
       } as any);
     });
 
@@ -126,16 +119,20 @@ describe('regenerateUserMessage (hetero) — image forwarding', () => {
       await store.getState().regenerateUserMessage('msg-1');
     });
 
-    expect(mockExecuteHeterogeneousAgent).toHaveBeenCalledTimes(1);
-    const [, params] = mockExecuteHeterogeneousAgent.mock.calls[0];
-    expect(params).toMatchObject({
-      assistantMessageId: 'assistant-new',
-      imageList,
-      message: 'describe this',
-    });
+    // The server-admitted run resumes the persisted user message — images and
+    // all — rather than a locally re-created prompt.
+    expect(mockExecuteGatewayAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'describe this',
+        parentMessageId: 'msg-1',
+        parentOperationId: 'regen-op-id',
+      }),
+    );
+    expect(mockExecuteHeterogeneousAgent).not.toHaveBeenCalled();
+    expect(mockCreateMessage).not.toHaveBeenCalled();
   });
 
-  it('passes undefined imageList when the original message had no images', async () => {
+  it('regenerates a text-only turn through the same gateway path — no IPC spawn', async () => {
     const context: ConversationContext = {
       agentId: 'agent-1',
       topicId: 'topic-1',
@@ -154,8 +151,10 @@ describe('regenerateUserMessage (hetero) — image forwarding', () => {
       await store.getState().regenerateUserMessage('msg-1');
     });
 
-    expect(mockExecuteHeterogeneousAgent).toHaveBeenCalledTimes(1);
-    const [, params] = mockExecuteHeterogeneousAgent.mock.calls[0];
-    expect(params.imageList).toBeUndefined();
+    expect(mockExecuteGatewayAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'hello', parentMessageId: 'msg-1' }),
+    );
+    expect(mockExecuteHeterogeneousAgent).not.toHaveBeenCalled();
+    expect(mockCreateMessage).not.toHaveBeenCalled();
   });
 });

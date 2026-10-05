@@ -1,8 +1,8 @@
-import { Icon } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { BadgeCheck, CircleUser, Package } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
 
 import MCPTag from './MCPTag';
 
@@ -21,9 +21,10 @@ const PluginTag = memo<PluginTagProps>(
     const isOfficial = author === 'Orvilo';
 
     const customTag = (
-      <Tag color={'warning'} icon={showIcon && <Icon icon={Package} />} size={'small'}>
+      <Badge size="sm" variant="warning">
+        {showIcon && createElement(Package, { size: 16 })}
         {t('store.customPlugin')}
-      </Tag>
+      </Badge>
     );
 
     if (isMCP) {
@@ -38,13 +39,10 @@ const PluginTag = memo<PluginTagProps>(
     if (isCustom) return customTag;
 
     return (
-      <Tag
-        color={isOfficial ? 'success' : undefined}
-        icon={showIcon && <Icon icon={isOfficial ? BadgeCheck : CircleUser} />}
-        size={'small'}
-      >
+      <Badge size="sm" variant={isOfficial ? 'success' : 'secondary'}>
+        {showIcon && createElement(isOfficial ? BadgeCheck : CircleUser, { size: 16 })}
         {showText && (author || t('store.communityPlugin'))}
-      </Tag>
+      </Badge>
     );
   },
 );

@@ -3,5 +3,7 @@ import type { OrviloDatabase } from '@/database/type';
 
 /** Explicit disposable-test installer. Never called by a runtime or production startup. */
 export async function installCandidateExecutionSchema(db: OrviloDatabase) {
-  await installTaskExecutionControlCandidate(db);
+  for (const statement of TASK_EXECUTION_CONTROL_CANDIDATE_SQL) {
+    await db.execute(sql.raw(statement));
+  }
 }

@@ -1,16 +1,11 @@
-import { toast } from '@lobehub/ui/base-ui';
-import { HETERO_CONTINUE_PROMPT, LOADING_FLAT } from '@orvilo/const';
+import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { shouldDropUnsupportedClaudeAssistantPrefill } from '@orvilo/model-runtime/providers/anthropic/modelId';
-import type {
-  ChatImageItem,
-  ChatTTS,
-  ConversationContext,
-  HeterogeneousProviderConfig,
-} from '@orvilo/types';
-import { applyTopicModelToHeterogeneousProvider, resolveAgentAgencyConfig } from '@orvilo/types';
+import type { ChatTTS, ConversationContext } from '@orvilo/types';
+import { resolveAgentAgencyConfig } from '@orvilo/types';
 import { t } from 'i18next';
 import { type StateCreator } from 'zustand';
 
+import { toast } from '@/components/toast';
 import { MESSAGE_CANCEL_FLAT } from '@/const/index';
 import { saveDraft } from '@/features/ChatInput/draftStorage';
 import { isHeterogeneousAgentStatusGuideError } from '@/features/Conversation/Error/heterogeneous';
@@ -19,41 +14,66 @@ import {
   ensureAgentManagementAccess,
   getRuntimeCanManageAgent,
 } from '@/helpers/agentManagementAccess';
-import { resolveAgentWorkingDirectory } from '@/helpers/agentWorkingDirectory';
 import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
-import { globalAgentContextManager } from '@/helpers/GlobalAgentContextManager';
 import {
   getTopicAgencyConfig,
   getTopicWorkspaceScoped,
   resolveIsGroupSupervisor,
 } from '@/helpers/topicExecutionConfig';
-import { messageService } from '@/services/message';
 import { getAgentStoreState } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import {
-  AGENT_BINDING_REQUIRED_ERROR,
   type AgentRuntimeType,
   selectRuntimeType,
 } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
 import {
   parseMentionedAgentsFromEditorData,
+  parseSelectedSkillsFromEditorData,
   parseSelectedToolsFromEditorData,
-} from '@/store/chat/slices/agentRun/actions/entries/commandBus/parseCommands';
-import {
-  getHeteroProviderSessionBindingKey,
-  resolveHeteroResume,
-} from '@/store/chat/slices/agentRun/actions/transports/hetero/heteroResume';
+} from '@/store/chat/slices/agentRun/actions/entries/commandBus';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import { INPUT_LOADING_OPERATION_TYPES } from '@/store/chat/slices/operation/types';
+import {
+  mergeAgentRuntimeInitialContexts,
+  resolveActiveTopicDocumentInitialContext,
+} from '@/store/chat/utils/activeTopicDocumentContext';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { getElectronStoreState } from '@/store/electron';
 import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import { type Store as ConversationStore } from '../../action';
 import { MAX_HETERO_AUTO_RETRIES } from './heteroRetryConfig';
+
+const buildRetryInitialContext = (editorData: Record<string, any> | null | undefined) => {
+  const normalizedEditorData = editorData ?? undefined;
+  const selectedSkills = parseSelectedSkillsFromEditorData(normalizedEditorData);
+  const selectedTools = parseSelectedToolsFromEditorData(normalizedEditorData);
+  const mentionedAgents = parseMentionedAgentsFromEditorData(normalizedEditorData);
+
+  const effectiveSelectedTools =
+    mentionedAgents.length > 0 &&
+    !selectedTools.some((tool) => tool.identifier === AgentManagementIdentifier)
+      ? [...selectedTools, { identifier: AgentManagementIdentifier, name: 'Agent Management' }]
+      : selectedTools;
+
+  const hasInitialContext =
+    effectiveSelectedTools.length > 0 || selectedSkills.length > 0 || mentionedAgents.length > 0;
+
+  if (!hasInitialContext) return undefined;
+
+  return {
+    initialContext: {
+      ...(selectedSkills.length > 0 ? { selectedSkills } : undefined),
+      ...(effectiveSelectedTools.length > 0
+        ? { selectedTools: effectiveSelectedTools }
+        : undefined),
+      ...(mentionedAgents.length > 0 ? { mentionedAgents } : undefined),
+    },
+    phase: 'init' as const,
+  };
+};
 
 /**
  * Settle a regenerate / continue entry's OUTER tracking operation and fire its
@@ -63,9 +83,9 @@ import { MAX_HETERO_AUTO_RETRIES } from './heteroRetryConfig';
  * run op (`${messageKey}/${parentMessageId}`). The unified run lifecycle
  * (`buildRunLifecycle`, inside the executor) already drove the run-level terminal
  * side effects — title / queue drain / notification / complete signal — so the
- * entry only retires its own tracking op and broadcasts the UI hook. The runtime
- * branches (regenerate × gateway/hetero, continue × gateway) shared this
- * identical two-line tail; centralized here so they converge on one adapter
+ * entry only retires its own tracking op and broadcasts the UI hook. Five runtime
+ * branches (regenerate × client/gateway/hetero, continue × client/gateway) shared
+ * this identical two-line tail; centralized here so they converge on one adapter
  * instead of hand-rolling completion at each call site.
  */
 const settleGenerationEntry = (
@@ -136,149 +156,6 @@ const getEffectiveAgencyConfig = (agentId: string, topicId?: string | null) => {
       resolveWorkspaceScoped(usesWorkspaceMemberSelection, deviceOverride),
     ),
   };
-};
-
-/**
- * Prompt that resumes an interrupted hetero run instead of restarting it.
- *
- * Neither CLI exposes a "keep going, no new input" primitive — `claude --resume`
- * and `codex exec resume` both require a prompt — so continuing necessarily adds
- * one user turn to the CLI's own transcript. That transcript already holds every
- * completed step (we resume the same session id), so the instruction only has to
- * stop the model from redoing them. Not localized: it is model input, not UI.
- */
-/**
- * Where a hetero (Claude Code / Codex) run should execute, and whether it can
- * pick up the topic's existing CLI session.
- *
- * `workingDirectory`: the topic-level pin (set when bound to a project) wins
- * over the agent-level default, so regenerate/continue stay on the same project
- * as the original turn.
- */
-const resolveHeteroRunContext = (
-  chatStore: ReturnType<typeof useChatStore.getState>,
-  context: ConversationContext,
-  agentId: string,
-) => {
-  const topic = context.topicId
-    ? topicSelectors.getTopicById(context.topicId)(chatStore)
-    : undefined;
-  const currentDeviceId = getElectronStoreState().gatewayDeviceInfo?.deviceId;
-  const agentState = getAgentStoreState();
-  const desktopContext = globalAgentContextManager.getContext();
-  const { agencyConfig, workspaceScoped } = getEffectiveAgencyConfig(agentId, context.topicId);
-  const agentWorkingDirectory = resolveAgentWorkingDirectory({
-    agencyConfig,
-    currentDeviceId,
-    fallback: desktopContext?.desktopPath ?? desktopContext?.homePath,
-    legacyAgentWorkingDirectory: agentState.localAgentWorkingDirectoryMap[agentId],
-    workspaceScoped,
-  });
-  const workingDirectory = topic?.metadata?.workingDirectory || agentWorkingDirectory;
-  const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
-
-  // Drops the saved sessionId when its bound cwd disagrees with the current
-  // one — without this CC emits "No conversation found with session ID".
-  const { cwdChanged, reason, resumeSessionId } = resolveHeteroResume(
-    topic?.metadata,
-    workingDirectory,
-    {
-      currentBindingKey: heterogeneousProvider
-        ? getHeteroProviderSessionBindingKey(heterogeneousProvider)
-        : undefined,
-    },
-  );
-
-  return { cwdChanged, reason, resumeSessionId, workingDirectory };
-};
-
-/**
- * Branch a hetero (Claude Code / Codex) turn off an existing message.
- *
- * Used by regenerate (parent = user msg, prompt = original user content) and by
- * continue-after-error (parent = the run's chain tail, prompt = a continuation
- * instruction). Pre-creates the assistant row so `executeHeterogeneousAgent` has
- * a stable `assistantMessageId` to stream into, then runs an
- * `execHeterogeneousAgent` op as a child of the caller's parent op so Stop
- * cancels the executor without killing the parent op early.
- */
-const runHeterogeneousFromExistingMessage = async (
-  chatStore: ReturnType<typeof useChatStore.getState>,
-  params: {
-    context: ConversationContext;
-    heterogeneousProvider: HeterogeneousProviderConfig;
-    /** Image attachments from the original user message — forwarded to the CLI for vision support */
-    imageList?: ChatImageItem[];
-    parentMessageId: string;
-    parentOperationId: string;
-    prompt: string;
-  },
-): Promise<string> => {
-  const { context, heterogeneousProvider, imageList, parentMessageId, parentOperationId, prompt } =
-    params;
-  const agentId = context.agentId;
-  if (!agentId) throw new Error('agentId is required for heterogeneous agent');
-
-  await ensureEffectiveAgencyAccess(agentId);
-  const { cwdChanged, reason, resumeSessionId, workingDirectory } = resolveHeteroRunContext(
-    chatStore,
-    context,
-    agentId,
-  );
-  if (cwdChanged) toast.info(t('heteroAgent.resumeReset.cwdChanged', { ns: 'chat' }));
-  else if (reason === 'binding_changed')
-    toast.info(t('heteroAgent.resumeReset.bindingChanged', { ns: 'chat' }));
-
-  const topicPin = context.topicId
-    ? topicSelectors.getTopicHeteroPinById(context.topicId)(chatStore)
-    : undefined;
-  const effectiveHeterogeneousProvider = applyTopicModelToHeterogeneousProvider(
-    heterogeneousProvider,
-    topicPin,
-  );
-
-  const assistantMsg = await messageService.createMessage({
-    agentId,
-    content: LOADING_FLAT,
-    parentId: parentMessageId,
-    // External CLIs own model selection; persist only the runtime provider up
-    // front. The adapter backfills the actual model later if the CLI reports it.
-    provider: heterogeneousProvider.type,
-    role: 'assistant',
-    threadId: context.threadId ?? undefined,
-    topicId: context.topicId ?? undefined,
-  });
-
-  // Pull the new row into the store so the loading bubble is visible while
-  // the executor runs (the executor only dispatches updates, not creates).
-  await chatStore.refreshMessages();
-
-  const { operationId: heteroOpId } = chatStore.startOperation({
-    context,
-    label: 'Heterogeneous Agent Execution',
-    metadata: { heterogeneousType: heterogeneousProvider.type },
-    parentOperationId,
-    type: 'execHeterogeneousAgent',
-  });
-  chatStore.associateMessageWithOperation(assistantMsg.id, heteroOpId);
-
-  const { executeHeterogeneousAgent } =
-    await import('@/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor');
-  await executeHeterogeneousAgent(() => useChatStore.getState(), {
-    // The builtin Orvilo harness injects the agent's persona into the run's
-    // system context — without it a regenerated/continued turn runs identity-less.
-    agentSystemRole: agentSelectors.getAgentConfigById(agentId)(getAgentStoreState())?.systemRole,
-    assistantMessageId: assistantMsg.id,
-    context,
-    heterogeneousProvider: effectiveHeterogeneousProvider,
-    imageList: imageList?.length ? imageList : undefined,
-    message: prompt,
-    operationId: heteroOpId,
-    resumeSessionId,
-    workingDirectory,
-  });
-
-  return assistantMsg.id;
 };
 
 export interface HeteroContinuationScheduleParams {
@@ -352,6 +229,11 @@ const regenerateUserMessageFromSource = async (
   });
 
   try {
+    const initialContext = mergeAgentRuntimeInitialContexts(
+      await resolveActiveTopicDocumentInitialContext(context),
+      buildRetryInitialContext(item.editorData),
+    );
+
     // Get context messages up to and including the target message
     const contextMessages = displayMessages.slice(0, currentIndex + 1);
     if (contextMessages.length <= 0) {
@@ -430,23 +312,8 @@ const regenerateUserMessageFromSource = async (
       // actually aborts the request instead of being swallowed.
       // `onComplete` still fires at session end for the UI hook; re-completing
       // the already-settled wrapper is an idempotent no-op.
-      // Re-derive @-mentions from the persisted user message and forward them:
-      // the retired client runtime rebuilt `initialContext` (mentionedAgents +
-      // selectedTools) from `editorData` on regenerate, and the server only
-      // reads mentions from exec params — it does not re-parse the anchored
-      // user message. Without this a regenerated @-mention turn silently loses
-      // its tool/agent routing.
-      const regenerateMentionedAgents = parseMentionedAgentsFromEditorData(
-        item.editorData ?? undefined,
-      );
-      const regenerateSelectedTools = parseSelectedToolsFromEditorData(
-        item.editorData ?? undefined,
-      );
-
       await chatStore.executeGatewayAgent({
         context,
-        mentionedAgents:
-          regenerateMentionedAgents.length > 0 ? regenerateMentionedAgents : undefined,
         message: item.content,
         onComplete: () =>
           settleGenerationEntry(chatStore, operationId, () =>
@@ -454,40 +321,26 @@ const regenerateUserMessageFromSource = async (
           ),
         parentMessageId: messageId,
         parentOperationId: operationId,
-        selectedToolIds:
-          regenerateSelectedTools.length > 0
-            ? regenerateSelectedTools.map((tool) => tool.identifier)
-            : undefined,
       });
 
       return;
     }
 
-    // ── Hetero mode: re-run the local CLI against the original user prompt ──
-    // Creates a fresh assistant row branched off the existing user message so
-    // the CC / Codex turn replaces the previous attempt without rewriting
-    // history, and resumes the same session id (when the cwd still matches)
-    // so prior context is preserved.
-    if (runtimeType === 'hetero' && heterogeneousProvider) {
-      await runHeterogeneousFromExistingMessage(chatStore, {
-        context,
-        heterogeneousProvider,
-        // Forward the original user message's images so regenerate re-runs
-        // the CLI with the same vision input as the first attempt. Without
-        // this, regenerate silently drops attachments (the send path reads
-        // imageList off the persisted user message; this path must too).
-        imageList: item.imageList,
-        parentMessageId: messageId,
-        parentOperationId: operationId,
-        prompt: item.content,
-      });
-      settleGenerationEntry(chatStore, operationId, () => hooks.onRegenerateComplete?.(messageId));
-      return;
-    }
+    // ── Client mode: run agent locally ──
+    // There is no hetero branch: `selectRuntimeType` routes every heterogeneous
+    // provider to `gateway`, so a Claude Code / Codex regenerate re-enters the
+    // server-dispatched run above (same admission, same device spawn). The
+    // retired renderer-IPC re-run is never a fallback.
+    await chatStore.executeClientAgent({
+      context,
+      initialContext,
+      messages: contextMessages,
+      parentMessageId: messageId,
+      parentMessageType: 'user',
+      parentOperationId: operationId,
+    });
 
-    // Unreachable: `selectRuntimeType` only returns 'gateway' | 'hetero' (both
-    // handled above) and throws AGENT_BINDING_REQUIRED for unbound agents.
-    throw new Error(AGENT_BINDING_REQUIRED_ERROR);
+    settleGenerationEntry(chatStore, operationId, () => hooks.onRegenerateComplete?.(messageId));
   } catch (error) {
     chatStore.failOperation(operationId, {
       message: error instanceof Error ? error.message : String(error),
@@ -827,12 +680,6 @@ export const generationSlice: StateCreator<
       return false;
     }
 
-    // Hetero CLIs (CC / Codex) have no "continue a cut-off response" primitive
-    // — each prompt is a fresh user turn from their perspective. Bail out
-    // rather than synthesize a fake "please continue" turn that would pollute
-    // the session and confuse the model. The button is a no-op in this mode.
-    if (runtimeType === 'hetero') return false;
-
     // Claude 4.6+/5 removed assistant prefill: a payload ending with an
     // assistant turn is rejected (400), and the model runtime strips trailing
     // assistant messages for these models — so "continue" would silently
@@ -869,10 +716,20 @@ export const generationSlice: StateCreator<
         return true;
       }
 
-      // Unreachable: `selectRuntimeType` only returns 'gateway' | 'hetero'
-      // (both handled above) and throws AGENT_BINDING_REQUIRED for unbound
-      // agents. Fail explicitly rather than silently skipping the continue.
-      throw new Error(AGENT_BINDING_REQUIRED_ERROR);
+      // ── Client mode: run agent locally ──
+      await chatStore.executeClientAgent({
+        context,
+        messages: displayMessages,
+        parentMessageId: dbMessageId,
+        parentMessageType: message.role as 'assistant' | 'tool' | 'user',
+        parentOperationId: operationId,
+      });
+
+      settleGenerationEntry(chatStore, operationId, () =>
+        hooks.onContinueComplete?.(displayMessageId),
+      );
+
+      return true;
     } catch (error) {
       chatStore.failOperation(operationId, {
         message: error instanceof Error ? error.message : String(error),
@@ -883,7 +740,7 @@ export const generationSlice: StateCreator<
   },
 
   continueHeteroAfterError: async (groupMessageId: string) => {
-    const { context, dbMessages, displayMessages, hooks } = get();
+    const { context, displayMessages } = get();
     const chatStore = useChatStore.getState();
 
     const group = displayMessages.find((m) => m.id === groupMessageId);
@@ -900,13 +757,11 @@ export const generationSlice: StateCreator<
       context.agentId,
       context.topicId,
     );
-    const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
-    let runtimeType: AgentRuntimeType;
     try {
-      runtimeType = selectRuntimeType({
+      selectRuntimeType({
         boundDeviceId: agencyConfig?.boundDeviceId,
         executionTarget: agencyConfig?.executionTarget,
-        heterogeneousProvider,
+        heterogeneousProvider: agencyConfig?.heterogeneousProvider,
         isGatewayMode: chatStore.isGatewayModeEnabled(context.agentId),
         isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
         isWorkspaceAgent,
@@ -918,74 +773,13 @@ export const generationSlice: StateCreator<
       toast.error(t('agentBindingRequired', { ns: 'chat' }));
       return;
     }
-    const agentId = context.agentId;
 
-    const resumeSessionId = agentId
-      ? resolveHeteroRunContext(chatStore, context, agentId).resumeSessionId
-      : undefined;
-
-    // Nothing to continue from: the failed step IS the group's head (the run
-    // died before producing a second step, so no work was preserved anyway), or
-    // the topic has no CLI session left to resume (never started, or its cwd
-    // moved). Both degrade to replacing the whole turn.
-    const hasEarlierSteps = erroredStep.id !== groupMessageId;
-    if (
-      runtimeType !== 'hetero' ||
-      !heterogeneousProvider ||
-      !hasEarlierSteps ||
-      !resumeSessionId
-    ) {
-      await get().delAndRegenerateMessage(groupMessageId);
-      return;
-    }
-
-    // A step that streamed content or landed tool calls before dying is worth
-    // keeping: clear its error and chain the continuation onto it. A step that
-    // carries nothing but the error (its content echo was suppressed) would
-    // render as an empty block, so drop it and chain onto its parent instead.
-    const hasSalvageableWork =
-      !!erroredStep.tools?.length ||
-      (!!erroredStep.content && erroredStep.content !== LOADING_FLAT);
-
-    const continueParentId = hasSalvageableWork
-      ? erroredStep.id
-      : dbMessages.find((m) => m.id === erroredStep.id)?.parentId;
-    if (!continueParentId) {
-      await get().delAndRegenerateMessage(groupMessageId);
-      return;
-    }
-
-    const { operationId } = chatStore.startOperation({
-      context: { ...context, messageId: groupMessageId },
-      type: 'regenerate',
-    });
-
-    try {
-      if (hasSalvageableWork) await get().updateMessageError(erroredStep.id, null);
-      else await get().deleteAssistantMessage(erroredStep.id);
-
-      // Chaining off the run's tail (not off the user message) keeps the new
-      // steps inside the same assistantGroup, so the bubble grows instead of
-      // being replaced.
-      await runHeterogeneousFromExistingMessage(chatStore, {
-        context,
-        heterogeneousProvider,
-        parentMessageId: continueParentId,
-        parentOperationId: operationId,
-        prompt: HETERO_CONTINUE_PROMPT,
-      });
-
-      settleGenerationEntry(chatStore, operationId, () =>
-        hooks.onRegenerateComplete?.(groupMessageId),
-      );
-    } catch (error) {
-      // Settle the wrapper op on failure — see delAndRegenerateMessage.
-      chatStore.failOperation(operationId, {
-        message: error instanceof Error ? error.message : String(error),
-        type: 'RegenerateError',
-      });
-      throw error;
-    }
+    // A resumable hetero failure used to chain a fresh `orvilo hetero exec`
+    // turn onto the run's tail over renderer IPC. That private lifecycle is
+    // gone: `delAndRegenerateMessage` re-enters through `selectRuntimeType` →
+    // `gateway`, so the server's admission decides whether (and on which
+    // device) the replacement run executes — never a silent local respawn.
+    await get().delAndRegenerateMessage(groupMessageId);
   },
 
   scheduleHeteroContinuation: async ({ failedAssistantMessageId, rateLimit }) => {

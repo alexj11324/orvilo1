@@ -1,7 +1,8 @@
 'use client';
-
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
+
+import type { ModalInstance } from '@/components/Modal';
+import { createModal } from '@/components/Modal';
 
 import ApiKeyModalContent, { type ApiKeyModalContentProps } from './Content';
 

@@ -11,8 +11,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: mocks.useFetchAgentList }));
 
-vi.mock('@/services/electron/tray', () => ({
-  desktopTrayService: { updateNavigationSnapshot: mocks.updateNavigationSnapshot },
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({
+    tray: { updateNavigationSnapshot: mocks.updateNavigationSnapshot },
+  }),
 }));
 
 vi.mock('@/store/home', () => ({

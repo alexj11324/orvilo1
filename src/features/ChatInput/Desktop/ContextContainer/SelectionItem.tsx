@@ -1,12 +1,14 @@
-import { Tooltip } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import type { ChatContextContent } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Code2Icon, TextIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import ClosableBadge from '@/components/ClosableBadge';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
+
+import { SimpleTooltip } from '../../SimpleTooltip';
 
 const styles = createStaticStyles(({ css }) => ({
   codeLine: css`
@@ -106,6 +108,7 @@ const getLocationText = ({
 
 const SelectionItem = memo<ChatContextContent>(
   ({ content, filePath, id, lineRange, preview, source, title }) => {
+    const { t } = useTranslation('common');
     const contextSelectionKey = useChatInputStore((s) => s.contextSelectionKey);
     const [removeSelection] = useFileStore((s) => [s.removeChatContextSelection]);
 
@@ -148,18 +151,23 @@ const SelectionItem = memo<ChatContextContent>(
     }, [content, filePath, isCodeSelection, lineRange, preview, title]);
 
     return (
-      <Tag
-        closable
-        icon={isCodeSelection ? <Code2Icon size={16} /> : <TextIcon size={16} />}
-        size={'large'}
+      <ClosableBadge
+        closeLabel={t('close')}
+        size={'lg'}
+        variant="secondary"
         onClose={() => {
           if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
         }}
       >
-        <Tooltip title={tooltip}>
+        {isCodeSelection ? (
+          <Code2Icon data-icon="inline-start" size={16} />
+        ) : (
+          <TextIcon data-icon="inline-start" size={16} />
+        )}
+        <SimpleTooltip title={tooltip}>
           <span className={styles.name}>{displayText}</span>
-        </Tooltip>
-      </Tag>
+        </SimpleTooltip>
+      </ClosableBadge>
     );
   },
 );

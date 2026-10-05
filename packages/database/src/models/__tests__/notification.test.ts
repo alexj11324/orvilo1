@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
 import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
@@ -11,7 +12,11 @@ import { projectMembers } from '../../schemas/projectMember';
 import { tasks as tasksTable } from '../../schemas/task';
 import { teamMembers, teams } from '../../schemas/team';
 import { users } from '../../schemas/user';
-import { notificationBulkSnapshots, notificationFeedState } from '../../schemas/workAttention';
+import {
+  notificationBulkSnapshots,
+  notificationFeedState,
+  taskSubscriptions,
+} from '../../schemas/workAttention';
 import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 
@@ -1277,6 +1282,8 @@ describe('NotificationModel (integration)', () => {
         { role: 'owner', userId, workspaceId },
         { role: 'member', userId: otherUserId, workspaceId },
       ]);
+      // Project creation provisions a coordinator through Prime inheritance.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'SEC06',
         name: 'Secret Project',
@@ -1309,6 +1316,8 @@ describe('NotificationModel (integration)', () => {
         { role: 'owner', userId, workspaceId },
         { role: 'member', userId: otherUserId, workspaceId },
       ]);
+      // Project creation provisions a coordinator through Prime inheritance.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'GRANT',
         name: 'Granted Project',
@@ -1338,6 +1347,226 @@ describe('NotificationModel (integration)', () => {
 
       expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
       expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+    });
+  });
+
+  // Plane's view params (`docs/research/plane/inbox/BEHAVIORS.md`): `mentioned`
+  // is the tab, `unreadOnly` layers onto archived/snoozed, `types` ORs the
+  // task-resource relationships.
+  describe('plane view params', () => {
+    it('counts a live mention (type=mention under category=workspace) as a mention', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          category: 'workspace',
+          dedupeKey: 'live-mention',
+          title: 'Mentioned you',
+          type: 'mention',
+        }),
+      );
+      await model.create(baseNotification({ dedupeKey: 'plain', title: 'Plain update' }));
+
+      expect((await model.listFeed({ mentioned: true })).map((r) => r.title)).toEqual([
+        'Mentioned you',
+      ]);
+      expect((await model.listFeed({ mentioned: false })).map((r) => r.title)).toEqual([
+        'Plain update',
+      ]);
+      expect((await model.getFeedSummary()).unreadMentionCount).toBe(1);
+    });
+
+    it('layers unreadOnly on top of the archived base', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const unreadArchived = await model.create(
+        baseNotification({ dedupeKey: 'unread-archived', title: 'Unread archived' }),
+      );
+      const readArchived = await model.create(
+        baseNotification({ dedupeKey: 'read-archived', title: 'Read archived' }),
+      );
+      await model.archive(unreadArchived!.id);
+      await model.markReadObserved(readArchived!.id, readArchived!.activityVersion);
+      await model.archive(readArchived!.id);
+
+      expect(
+        (await model.listFeed({ filter: 'archived', unreadOnly: true })).map((r) => r.title),
+      ).toEqual(['Unread archived']);
+      expect((await model.listFeed({ filter: 'archived' })).map((r) => r.title).sort()).toEqual([
+        'Read archived',
+        'Unread archived',
+      ]);
+    });
+
+    it('ORs the task relationship filters and excludes stake from subscribed', async () => {
+      const workspaceId = 'notification-type-filter-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Type Filter WS',
+        primaryOwnerId: userId,
+        slug: 'type-filter-ws',
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const taskModel = new TaskModel(serverDB, userId, workspaceId);
+      const assigned = await taskModel.create({
+        assigneeUserId: otherUserId,
+        instruction: 'Assigned',
+        name: 'Assigned',
+        visibility: 'public',
+      });
+      const created = await taskModel.create({
+        instruction: 'Created',
+        name: 'Created',
+        visibility: 'public',
+      });
+      const subscribed = await taskModel.create({
+        instruction: 'Subscribed',
+        name: 'Subscribed',
+        visibility: 'public',
+      });
+      const stakedSubscribed = await taskModel.create({
+        instruction: 'Subscribed but mine',
+        name: 'Subscribed but mine',
+        visibility: 'public',
+      });
+      // TaskModel.create stamps the caller as creator — flip these two so the
+      // viewer owns them and the `created`/`subscribed` filters can tell the
+      // direct-stake exclusion apart.
+      await serverDB
+        .update(tasksTable)
+        .set({ createdByUserId: otherUserId })
+        .where(eq(tasksTable.id, created.id));
+      await serverDB
+        .update(tasksTable)
+        .set({ createdByUserId: otherUserId })
+        .where(eq(tasksTable.id, stakedSubscribed.id));
+      await serverDB.insert(taskSubscriptions).values([
+        { taskId: subscribed.id, userId: otherUserId, workspaceId },
+        { taskId: stakedSubscribed.id, userId: otherUserId, workspaceId },
+      ]);
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      for (const [key, task, title] of [
+        ['tf-assigned', assigned, 'Assigned card'],
+        ['tf-created', created, 'Created card'],
+        ['tf-subscribed', subscribed, 'Subscribed card'],
+        ['tf-staked', stakedSubscribed, 'Subscribed but created'],
+      ] as const) {
+        await viewer.create(
+          baseNotification({
+            dedupeKey: key,
+            resourceId: task.id,
+            resourceType: 'task',
+            title,
+            workspaceId,
+          }),
+        );
+      }
+
+      expect((await viewer.listFeed({ types: ['assigned'] })).map((r) => r.title)).toEqual([
+        'Assigned card',
+      ]);
+      expect((await viewer.listFeed({ types: ['created'] })).map((r) => r.title).sort()).toEqual([
+        'Created card',
+        'Subscribed but created',
+      ]);
+      // `subscribed` excludes tasks the viewer created or is assigned to,
+      // even though the subscription row exists.
+      expect((await viewer.listFeed({ types: ['subscribed'] })).map((r) => r.title)).toEqual([
+        'Subscribed card',
+      ]);
+      expect(
+        (await viewer.listFeed({ types: ['assigned', 'subscribed'] })).map((r) => r.title).sort(),
+      ).toEqual(['Assigned card', 'Subscribed card']);
+    });
+
+    it('drops a subscription from the filter once unsubscribedAt is set', async () => {
+      const workspaceId = 'notification-unsub-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Unsub WS',
+        primaryOwnerId: userId,
+        slug: 'unsub-ws',
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const task = await new TaskModel(serverDB, userId, workspaceId).create({
+        instruction: 'Watched',
+        name: 'Watched',
+        visibility: 'public',
+      });
+      await serverDB.insert(taskSubscriptions).values({
+        taskId: task.id,
+        userId: otherUserId,
+        workspaceId,
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'unsub-card',
+          resourceId: task.id,
+          resourceType: 'task',
+          title: 'Watched card',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed({ types: ['subscribed'] })).map((r) => r.title)).toEqual([
+        'Watched card',
+      ]);
+
+      await serverDB
+        .update(taskSubscriptions)
+        .set({ unsubscribedAt: new Date() })
+        .where(eq(taskSubscriptions.taskId, task.id));
+
+      expect(await viewer.listFeed({ types: ['subscribed'] })).toEqual([]);
+    });
+  });
+
+  describe('unarchive and unsnooze', () => {
+    it('unarchiveObserved returns an archived row to the feed', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const row = await model.create(baseNotification({ title: 'Archived' }));
+      await model.archive(row!.id);
+      expect(await model.listFeed()).toHaveLength(0);
+
+      await model.unarchiveObserved(row!.id, row!.activityVersion);
+
+      expect((await model.listFeed()).map((r) => r.title)).toEqual(['Archived']);
+    });
+
+    it('unarchiveObserved rejects a stale expectedVersion', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const row = await model.create(baseNotification({ title: 'Archived' }));
+      await model.archive(row!.id);
+
+      await model.unarchiveObserved(row!.id, row!.activityVersion + 99);
+
+      expect(await model.listFeed()).toHaveLength(0);
+      const [persisted] = await serverDB
+        .select()
+        .from(notifications)
+        .where(eq(notifications.id, row!.id));
+      expect(persisted.isArchived).toBe(true);
+    });
+
+    it('unsnoozeObserved wakes a snoozed row back into the feed', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const row = await model.create(baseNotification({ title: 'Snoozed' }));
+      await model.snooze(row!.id, new Date(Date.now() + 86_400_000), row!.activityVersion);
+      expect(await model.listFeed()).toHaveLength(0);
+
+      await model.unsnoozeObserved(row!.id, row!.activityVersion);
+
+      expect((await model.listFeed()).map((r) => r.title)).toEqual(['Snoozed']);
+      const [persisted] = await serverDB
+        .select()
+        .from(notifications)
+        .where(eq(notifications.id, row!.id));
+      expect(persisted.snoozedUntil).toBeNull();
     });
   });
 });

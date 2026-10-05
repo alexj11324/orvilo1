@@ -1,7 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import React, { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -17,20 +17,20 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const ReadFileSkeleton = memo(() => {
   return (
-    <Flexbox className={styles.container} gap={2}>
-      <Flexbox horizontal align={'center'} gap={24} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ overflow: 'hidden' }}>
-          <Skeleton height={16} style={{ flex: 1 }} width={20} />
+    <div className={cx('flex flex-col gap-0.5', styles.container)}>
+      <div className="flex flex-row items-center gap-6 justify-between">
+        <div className="flex flex-row items-center flex-1 gap-2" style={{ overflow: 'hidden' }}>
+          <Skeleton style={{ flex: 1, height: 16, width: 20 }} />
 
-          <Skeleton height={16} style={{ flex: 1, minWidth: 100 }} />
-        </Flexbox>
-        <Flexbox align={'center'} className={styles.meta} gap={16}>
-          <Skeleton height={16} style={{ maxWidth: 40 }} />
-        </Flexbox>
-      </Flexbox>
+          <Skeleton style={{ flex: 1, minWidth: 100, height: 16 }} />
+        </div>
+        <div className={cx('flex flex-col items-center gap-4', styles.meta)}>
+          <Skeleton style={{ maxWidth: 40, height: 16 }} />
+        </div>
+      </div>
 
-      <Skeleton height={16} />
-    </Flexbox>
+      <Skeleton style={{ height: 16 }} />
+    </div>
   );
 });
 

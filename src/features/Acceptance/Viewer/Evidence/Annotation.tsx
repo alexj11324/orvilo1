@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Trash2 } from 'lucide-react';
@@ -169,7 +167,7 @@ export const AnnotatedImage = memo<AnnotatedImageProps>(
     const numbered = annotations.length > 1 || annotations.some((item) => item.label !== undefined);
 
     return (
-      <Flexbox gap={6} style={{ maxWidth: '100%', width: 'fit-content' }}>
+      <div className="flex flex-col gap-1.5" style={{ maxWidth: '100%', width: 'fit-content' }}>
         <div className={styles.frame}>
           <img alt={''} className={styles.image} src={src} style={imageStyle} />
           {annotations.map((annotation, index) => (
@@ -193,20 +191,20 @@ export const AnnotatedImage = memo<AnnotatedImageProps>(
           ))}
         </div>
         {showComments && (
-          <Flexbox gap={2}>
+          <div className="flex flex-col gap-0.5">
             {annotations.map(
               (annotation, index) =>
                 annotation.comment && (
-                  <Text fontSize={12} key={index} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground" key={index}>
                     {numbered ? `${annotation.label ?? index + 1}. ` : ''}
                     {annotation.authorName ? `${annotation.authorName}: ` : ''}
                     {annotation.comment}
-                  </Text>
+                  </div>
                 ),
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -286,7 +284,7 @@ export const AnnotationCanvas = memo<AnnotationCanvasProps>(
                 onRemove(index);
               }}
             >
-              <Icon icon={Trash2} size={11} />
+              <Trash2 size={11} />
             </button>
             <span
               className={styles.resizeHandle}

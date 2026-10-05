@@ -1,15 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  DropdownMenu,
-  Pagination,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
@@ -19,6 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import AsyncError from '@/components/AsyncError';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { PriorityIcon } from '@/components/PriorityIcon';
+import TablePagination from '@/components/TablePagination';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import {
@@ -36,12 +31,14 @@ import {
 import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPage';
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
+import { MY_WORK_PRIORITY_LABEL_KEYS } from '@/features/MyWork/myWorkDisplay';
+import { workQueryBoardGroups, workQuerySourceKeysForKanbanColumn } from '@/features/MyWork/workQueryBoard';
+import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import IssueDetailPane from '@/features/Projects/Issues/IssueDetailPane';
 import IssueFilterChips from '@/features/Projects/Issues/IssueFilterChips';
 import type { ProjectIssueFilter } from '@/features/Projects/Issues/issueFilters';
 import {
-  filterProjectIssueList,
   projectIssuesViewFilterSeed,
   readProjectIssueFilters,
   removeProjectIssueFilter,
@@ -49,6 +46,13 @@ import {
   writeProjectIssueFilters,
 } from '@/features/Projects/Issues/issueFilters';
 import ProjectIssuesControls from '@/features/Projects/Issues/ProjectIssuesControls';
+import {
+  projectIssueBoardGroupBy,
+  projectIssueListAxes,
+  projectIssueListSort,
+  projectIssueWorkQuery,
+} from '@/features/Projects/Issues/projectIssueWorkQuery';
+import { useProjectIssuePages } from '@/features/Projects/Issues/useProjectIssuePages';
 import { ProjectToolbarContext } from '@/features/Projects/Layout/ProjectToolbarContext';
 import {
   filterTasksByMilestone,
@@ -56,12 +60,14 @@ import {
   readProjectMilestoneFilter,
   type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { usePermission } from '@/hooks/usePermission';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
@@ -77,12 +83,18 @@ import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
 import { createTaskModal } from '../CreateTaskModal';
+import AssigneeAvatar from '../features/AssigneeAvatar';
+import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import Breadcrumb from '../shared/Breadcrumb';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import CreateTaskInlineEntry from './CreateTaskInlineEntry';
 import KanbanBoard from './KanbanBoard';
 import type { TaskListViewOptions } from './listViewOptions';
-import { getVisibleTaskStatuses, normalizeTaskListViewOptions } from './listViewOptions';
+import {
+  collapseSubTasks,
+  getVisibleTaskStatuses,
+  normalizeTaskListViewOptions,
+} from './listViewOptions';
 import { shouldRenderTaskAgentPanelToggle } from './taskAgentPanelToggle';
 import TaskList from './TaskList';
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
@@ -412,8 +424,17 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   // only while a filter clause actually references them.
   const isLogin = useUserStore(authSelectors.isLogin);
   const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const rosterViewOptions = normalizeTaskListViewOptions(
+    useGlobalStore(systemStatusSelectors.taskListViewOptions),
+  );
+  const rosterAxes = projectIssueListAxes(rosterViewOptions.groupBy, rosterViewOptions.subGroupBy);
   const membersSWR = useWorkspaceMembersQuery({
-    enabled: !!projectId && hasIssueFilters && !!activeWorkspaceId,
+    enabled:
+      !!projectId &&
+      !!activeWorkspaceId &&
+      (hasIssueFilters ||
+        rosterAxes?.groupBy === 'assignee' ||
+        rosterAxes?.subGroupBy === 'assignee'),
   });
   const { data: issueLabelsData } = useClientDataSWR(
     projectId && hasIssueFilters && isLogin ? taskLabelKeys.list(isLogin, activeWorkspaceId) : null,
@@ -434,16 +455,6 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
     (id: string) => issueLabelsData?.find((label) => label.id === id)?.name ?? id,
     [issueLabelsData],
   );
-
-  // Every field the menu offers rides the task row (labels included — the
-  // list route batches them on), so applied filters narrow client-side over
-  // the complete project fetch, exactly like the milestone cut. With no
-  // filter applied `items` stays undefined and TaskList reads the store
-  // itself (its truncation note only makes sense unfiltered).
-  const filteredIssueTasks = useMemo(() => {
-    if (!projectId || !isOrdinaryCollection || issueFilters.length === 0) return milestoneTasks;
-    return filterProjectIssueList(milestoneTasks ?? storeTasks, issueFilters);
-  }, [isOrdinaryCollection, issueFilters, milestoneTasks, projectId, storeTasks]);
 
   /* --------------------- selection + peek ("Open details") ------------- */
 
@@ -483,6 +494,146 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   });
   const rawViewOptions = useGlobalStore(systemStatusSelectors.taskListViewOptions);
   const viewOptions = useMemo(() => normalizeTaskListViewOptions(rawViewOptions), [rawViewOptions]);
+  // Filters and the milestone param page a work query (50 rows, then load
+  // more). An unfiltered list keeps the store. Milestone has no board axis,
+  // so a milestone-grouped board still uses status columns.
+  const issueQueryActive = Boolean(
+    projectId && isOrdinaryCollection && (issueFilters.length > 0 || milestoneFilterId),
+  );
+  const issueListAxes = useMemo(
+    () =>
+      issueQueryActive && ordinarySurface === 'list'
+        ? projectIssueListAxes(viewOptions.groupBy, viewOptions.subGroupBy)
+        : undefined,
+    [issueQueryActive, ordinarySurface, viewOptions.groupBy, viewOptions.subGroupBy],
+  );
+  const issueListQuery = useMemo(
+    () =>
+      issueQueryActive && ordinarySurface === 'list' && projectId
+        ? projectIssueWorkQuery({
+            filters: issueFilters,
+            groupBy: issueListAxes?.groupBy,
+            hideCompleted: viewOptions.hideCompleted,
+            layout: 'list',
+            milestoneId: milestoneFilterId,
+            projectId,
+            showSubTasks: viewOptions.showSubTasks,
+            sort: projectIssueListSort(viewOptions.orderBy, viewOptions.orderDirection),
+            subGroupBy: issueListAxes?.subGroupBy,
+          })
+        : null,
+    [
+      issueFilters,
+      issueListAxes?.groupBy,
+      issueListAxes?.subGroupBy,
+      issueQueryActive,
+      milestoneFilterId,
+      ordinarySurface,
+      projectId,
+      viewOptions.hideCompleted,
+      viewOptions.orderBy,
+      viewOptions.orderDirection,
+      viewOptions.showSubTasks,
+    ],
+  );
+  const {
+    loadMoreGroupErrors: issueListGroupErrors,
+    resetLoadMoreError: resetIssueListPaging,
+    retryLoadMoreGroup: retryIssueListGroup,
+    runLoadMoreGroup: runIssueListGroup,
+  } = usePagedLoadMore();
+  useEffect(() => {
+    resetIssueListPaging();
+  }, [issueListQuery, resetIssueListPaging]);
+  const issueBoardAxis = projectIssueBoardGroupBy(viewOptions.groupBy);
+  const issueBoardQuery = useMemo(
+    () =>
+      issueQueryActive && ordinarySurface === 'board' && projectId
+        ? projectIssueWorkQuery({
+            filters: issueFilters,
+            groupBy: issueBoardAxis,
+            hideCompleted: viewOptions.hideCompleted,
+            layout: 'board',
+            milestoneId: milestoneFilterId,
+            projectId,
+            showSubTasks: viewOptions.showSubTasks,
+          })
+        : null,
+    [
+      issueBoardAxis,
+      issueFilters,
+      issueQueryActive,
+      milestoneFilterId,
+      ordinarySurface,
+      projectId,
+      viewOptions.hideCompleted,
+      viewOptions.showSubTasks,
+    ],
+  );
+  const issueListPages = useProjectIssuePages(issueListQuery);
+  const issueBoardPages = useProjectIssuePages(issueBoardQuery);
+  const filteredIssueTasks = issueListQuery ? issueListPages.tasks : milestoneTasks;
+  const serverGroupedList = Boolean(issueListQuery && issueListQuery.groupBy !== 'none');
+  const issueListGroups = useMemo(() => {
+    const groups = issueListPages.groups;
+    if (viewOptions.showSubTasks) return groups;
+    const visibleIds = new Set(
+      collapseSubTasks(
+        groups.flatMap((group) =>
+          group.tasks.map((task) => ({ ...task, participants: task.participants ?? [] })),
+        ),
+      ).map((task) => task.id),
+    );
+    return groups.map((group) => ({
+      ...group,
+      tasks: group.tasks.filter((task) => visibleIds.has(task.id)),
+    }));
+  }, [issueListPages.groups, viewOptions.showSubTasks]);
+  const issueGroupTitle = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        const label = MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        return t(label as never);
+      }
+      if (axis === 'assignee') {
+        if (key === 'none') return t('taskList.unassigned');
+        return memberName(key);
+      }
+      if (axis === 'agent') {
+        if (key === 'none') return t('taskList.unassigned');
+        return agentName(key);
+      }
+      if (axis === 'milestone') {
+        if (key === 'none') return t('taskList.noMilestone');
+        return projectMilestones?.find((milestone) => milestone.id === key)?.name;
+      }
+      return undefined;
+    },
+    [agentName, memberName, projectMilestones, t],
+  );
+  const issueGroupRank = useCallback(
+    (axis: string, key: string) => {
+      if (axis !== 'milestone') return undefined;
+      if (key === 'none') return Number.MAX_SAFE_INTEGER;
+      const index = projectMilestones?.findIndex((milestone) => milestone.id === key) ?? -1;
+      return index >= 0 ? index : Number.MAX_SAFE_INTEGER - 1;
+    },
+    [projectMilestones],
+  );
+  const issueGroupIcon = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
+      }
+      if (axis === 'milestone') return <MilestoneIcon muted={key === 'none'} size={14} />;
+      if (axis === 'agent') {
+        if (key === 'none') return <UnassignedAssigneeIcon kind={'human'} size={14} />;
+        return <AssigneeAvatar agentId={key} size={18} />;
+      }
+      return undefined;
+    },
+    [],
+  );
   const useFetchMyTaskList = useTaskStore((s) => s.useFetchMyTaskList);
   const mineSWR = useFetchMyTaskList({
     enabled: isMineCollection && !isMineBoard,
@@ -627,24 +778,24 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   });
 
   const headerLeft = (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2">
       {headerVisibility.showBreadcrumb && <Breadcrumb />}
-      <TabsRoot size={'small'} value={collection} onValueChange={handleCollectionChange}>
+      <Tabs value={collection} onValueChange={handleCollectionChange}>
         <TabsList>
-          <TabsIndicator />
-          <TabsTab value={'tasks'}>{t('taskList.title')}</TabsTab>
-          <TabsTab value={'scheduled'}>{t('taskList.scheduled.title')}</TabsTab>
-          {showMineCollection && <TabsTab value={'mine'}>{t('taskList.mine.title')}</TabsTab>}
+          <TabsTrigger value={'tasks'}>{t('taskList.title')}</TabsTrigger>
+          <TabsTrigger value={'scheduled'}>{t('taskList.scheduled.title')}</TabsTrigger>
+          {showMineCollection && (
+            <TabsTrigger value={'mine'}>{t('taskList.mine.title')}</TabsTrigger>
+          )}
         </TabsList>
-      </TabsRoot>
+      </Tabs>
       {isMineCollection && (
-        <TabsRoot size={'small'} value={myTaskScope} onValueChange={handleMyTaskScopeChange}>
+        <Tabs value={myTaskScope} onValueChange={handleMyTaskScopeChange}>
           <TabsList>
-            <TabsIndicator />
-            <TabsTab value={'assigned'}>{t('taskList.mine.assigned')}</TabsTab>
-            <TabsTab value={'created'}>{t('taskList.mine.created')}</TabsTab>
+            <TabsTrigger value={'assigned'}>{t('taskList.mine.assigned')}</TabsTrigger>
+            <TabsTrigger value={'created'}>{t('taskList.mine.created')}</TabsTrigger>
           </TabsList>
-        </TabsRoot>
+        </Tabs>
       )}
       {isScheduledCollection && (
         <>
@@ -655,26 +806,26 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
           />
         </>
       )}
-    </Flexbox>
+    </div>
   );
 
   const pageHeader = (
     <NavHeader
       left={projectId ? undefined : headerLeft}
       right={
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {milestoneFilterName && (
-            <Flexbox horizontal align={'center'} gap={2}>
-              <Text fontSize={12} type={'secondary'}>
+            <div className="flex items-center gap-0.5">
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskList.milestoneFilter', { name: milestoneFilterName })}
-              </Text>
+              </div>
               <ActionIcon
                 icon={XIcon}
                 size={'small'}
                 title={t('taskList.milestoneFilterClear')}
                 onClick={clearMilestoneFilter}
               />
-            </Flexbox>
+            </div>
           )}
           {projectId && (
             <DropdownMenu
@@ -691,7 +842,8 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 },
               ]}
             >
-              <Button icon={ChevronDownIcon} shape={'round'} size={'small'} type={'text'}>
+              <Button className="rounded-full" size="sm" variant="ghost">
+                <ChevronDownIcon data-icon="inline-start" />
                 {t(isScheduledCollection ? 'taskList.scheduled.title' : 'taskList.title')}
               </Button>
             </DropdownMenu>
@@ -738,7 +890,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onToggle={() => toggleTaskAgentPanel()}
             />
           )}
-        </Flexbox>
+        </div>
       }
       styles={{
         left: {
@@ -768,10 +920,13 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             : undefined
         }
       >
-        <Flexbox flex={1} height={'100%'}>
+        <div className="flex h-full flex-1 flex-col">
           {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
-            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+            <div
+              className="flex flex-1 flex-col"
+              style={{ overflowX: 'auto', overflowY: 'hidden' }}
+            >
               <KanbanBoard
                 myTaskScope={myTaskScope}
                 options={viewOptions}
@@ -785,125 +940,204 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                   updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
                 }
               />
-            </Flexbox>
+            </div>
           ) : isScheduledCollection ? (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              <AutomationScheduleList
-                error={collectionSWR.error}
-                hasSettled={isCollectionListInit}
-                isFiltered={automationStatusFilter !== 'all'}
-                isLoading={!isCollectionListInit && !collectionSWR.error}
-                page={collectionPage}
-                tasks={collectionTasks}
-                total={collectionTasksTotal}
-                emptyContent={
-                  <Flexbox align={'center'} paddingBlock={48}>
-                    <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
-                  </Flexbox>
-                }
-                onPageChange={setCollectionPage}
-                onRefetch={() => collectionSWR.mutate()}
-              />
+            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-4 px-4 py-4">
+                <AutomationScheduleList
+                  error={collectionSWR.error}
+                  hasSettled={isCollectionListInit}
+                  isFiltered={automationStatusFilter !== 'all'}
+                  isLoading={!isCollectionListInit && !collectionSWR.error}
+                  page={collectionPage}
+                  tasks={collectionTasks}
+                  total={collectionTasksTotal}
+                  emptyContent={
+                    <div className="flex flex-col items-center py-12">
+                      <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
+                    </div>
+                  }
+                  onPageChange={setCollectionPage}
+                  onRefetch={() => collectionSWR.mutate()}
+                />
+              </div>
             </WideScreenContainer>
           ) : isMineCollection ? (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              <TaskList
-                data={isCollectionListInit || undefined}
-                error={collectionSWR.error}
-                items={collectionTasks}
-                options={myTaskViewOptions}
-                routeScope={routeScope}
-                emptyDescription={t(
-                  myTaskScope === 'created'
-                    ? 'taskList.mine.emptyCreated'
-                    : 'taskList.mine.emptyAssigned',
+            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-4 px-4 py-4">
+                <TaskList
+                  data={isCollectionListInit || undefined}
+                  error={collectionSWR.error}
+                  items={collectionTasks}
+                  options={myTaskViewOptions}
+                  routeScope={routeScope}
+                  emptyDescription={t(
+                    myTaskScope === 'created'
+                      ? 'taskList.mine.emptyCreated'
+                      : 'taskList.mine.emptyAssigned',
+                  )}
+                  isLoading={
+                    collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                  }
+                  onRetry={() => collectionSWR.mutate()}
+                />
+                {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
+                  <div className="flex justify-center py-2">
+                    <TablePagination
+                      current={collectionPage}
+                      pageSize={COLLECTION_PAGE_SIZE}
+                      pageSizeOptions={[COLLECTION_PAGE_SIZE]}
+                      total={collectionTasksTotal}
+                      onChange={(page) => setCollectionPage(page)}
+                    />
+                  </div>
                 )}
-                isLoading={
-                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
-                }
-                onRetry={() => collectionSWR.mutate()}
-              />
-              {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-                <Flexbox horizontal justify={'center'} paddingBlock={8}>
-                  <Pagination
-                    current={collectionPage}
-                    pageSize={COLLECTION_PAGE_SIZE}
-                    showSizeChanger={false}
-                    total={collectionTasksTotal}
-                    onChange={setCollectionPage}
-                  />
-                </Flexbox>
-              )}
+              </div>
             </WideScreenContainer>
           ) : ordinarySurface === 'board' ? (
-            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+            <div
+              className="flex flex-1 flex-col"
+              style={{ overflowX: 'auto', overflowY: 'hidden' }}
+            >
               <KanbanBoard
                 agentId={agentId}
                 options={viewOptions}
                 projectId={projectId}
                 routeScope={routeScope}
+                external={
+                  issueBoardQuery
+                    ? {
+                        error: issueBoardPages.error,
+                        groups: workQueryBoardGroups(issueBoardPages.groups, issueBoardAxis),
+                        isLoading: issueBoardPages.isLoading,
+                        onLoadMoreGroup: (columnKey) => {
+                          const key = workQuerySourceKeysForKanbanColumn(
+                            issueBoardAxis,
+                            columnKey,
+                          )[0];
+                          if (key) void issueBoardPages.loadMoreGroup(key);
+                        },
+                        onRefresh: () => issueBoardPages.refresh(),
+                        queryGroupBy: issueBoardAxis,
+                        settled: issueBoardPages.settled || Boolean(issueBoardPages.error),
+                      }
+                    : undefined
+                }
                 onViewAll={() =>
                   updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
                 }
               />
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox horizontal flex={1} style={{ minHeight: 0, minWidth: 0 }}>
-              <WideScreenContainer
-                fullWidth
-                gap={16}
-                paddingBlock={16}
-                paddingInline={16}
-                wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-              >
-                {projectId && (
-                  <IssueFilterChips
-                    agentName={agentName}
-                    filters={issueFilters}
-                    labelName={labelName}
-                    memberName={memberName}
-                    onClearAll={() => updateIssueFilters([])}
-                    onRemove={(key) =>
-                      updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
-                    }
-                  />
-                )}
-                {!inlineCollapsed && (
-                  <CreateTaskInlineEntry
-                    agentId={agentId}
-                    lockAssignee={!!agentId}
-                    projectId={projectId}
-                  />
-                )}
-                <TaskList
-                  data={isTaskListInit || undefined}
-                  error={error}
-                  isLoading={isLoading || (!isTaskListInit && !error)}
-                  items={filteredIssueTasks}
-                  milestones={projectId ? projectMilestones : undefined}
-                  options={viewOptions}
-                  peekOnSelect={peekOnSelect}
-                  routeScope={routeScope}
-                  selectedIdentifier={selectedIdentifier ?? undefined}
-                  onRetry={() => mutate()}
-                  onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                  onShowHiddenCompleted={handleShowHiddenCompleted}
-                  onOpenTask={(task) =>
-                    navigate(taskDetailPath(task.identifier, undefined, task.name))
-                  }
-                />
+            <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+              <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+                <div className="flex flex-col gap-4 px-4 py-4">
+                  {projectId && (
+                    <IssueFilterChips
+                      agentName={agentName}
+                      filters={issueFilters}
+                      labelName={labelName}
+                      memberName={memberName}
+                      onClearAll={() => updateIssueFilters([])}
+                      onRemove={(key) =>
+                        updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+                      }
+                    />
+                  )}
+                  {!inlineCollapsed && (
+                    <CreateTaskInlineEntry
+                      agentId={agentId}
+                      lockAssignee={!!agentId}
+                      projectId={projectId}
+                    />
+                  )}
+                  {serverGroupedList ? (
+                    issueListPages.error && issueListGroups.length === 0 ? (
+                      <AsyncError
+                        error={issueListPages.error}
+                        variant={'block'}
+                        onRetry={() => issueListPages.refresh()}
+                      />
+                    ) : (
+                      <WorkQueryResults
+                        nestInGroups
+                        axisKeyRank={issueGroupRank}
+                        emptyLabel={t('taskList.empty')}
+                        flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
+                        groupBy={issueListQuery?.groupBy}
+                        groupIcon={issueGroupIcon}
+                        groupTitle={issueGroupTitle}
+                        groups={issueListGroups}
+                        layout={'list'}
+                        loadMoreGroupErrors={issueListGroupErrors}
+                        loadMoreLabel={t('topicComment.loadMore')}
+                        loadingLabel={t('taskList.filter.loading')}
+                        peekOnSelect={peekOnSelect}
+                        selectedTaskId={selectedIdentifier ?? undefined}
+                        subGroupBy={issueListQuery?.subGroupBy}
+                        tasks={issueListPages.tasks}
+                        total={issueListPages.total}
+                        loading={
+                          issueListPages.isLoading ||
+                          (!issueListPages.settled && !issueListPages.error)
+                        }
+                        milestoneFor={(task) =>
+                          viewOptions.showMilestone && task.projectMilestoneId
+                            ? projectMilestones?.find(
+                                (milestone) => milestone.id === task.projectMilestoneId,
+                              )
+                            : undefined
+                        }
+                        onRetryLoadMoreGroup={retryIssueListGroup}
+                        onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                        onLoadMoreGroup={(key) =>
+                          runIssueListGroup(key, () => issueListPages.loadMoreGroup(key))
+                        }
+                        onOpenTask={(task) =>
+                          navigate(taskDetailPath(task.identifier, undefined, task.name))
+                        }
+                      />
+                    )
+                  ) : (
+                    <TaskList
+                      error={issueListQuery ? issueListPages.error : error}
+                      items={filteredIssueTasks}
+                      milestones={projectId ? projectMilestones : undefined}
+                      options={viewOptions}
+                      peekOnSelect={peekOnSelect}
+                      routeScope={routeScope}
+                      selectedIdentifier={selectedIdentifier ?? undefined}
+                      data={
+                        issueListQuery
+                          ? issueListPages.settled || undefined
+                          : isTaskListInit || undefined
+                      }
+                      isLoading={
+                        issueListQuery
+                          ? issueListPages.isLoading ||
+                            (!issueListPages.settled && !issueListPages.error)
+                          : isLoading || (!isTaskListInit && !error)
+                      }
+                      onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
+                      onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                      onShowHiddenCompleted={handleShowHiddenCompleted}
+                      onOpenTask={(task) =>
+                        navigate(taskDetailPath(task.identifier, undefined, task.name))
+                      }
+                    />
+                  )}
+                  {issueListQuery && !serverGroupedList && issueListPages.hasMore ? (
+                    <div className="flex justify-center py-2">
+                      <Button
+                        disabled={issueListPages.loadingMore}
+                        variant="outline"
+                        onClick={() => void issueListPages.loadMore()}
+                      >
+                        {t('topicComment.loadMore')}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               </WideScreenContainer>
               {peekOnSelect && (
                 <div className={styles.detailPane}>
@@ -914,7 +1148,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                   />
                 </div>
               )}
-            </Flexbox>
+            </div>
           )}
           <CollaborationOverlay />
           {projectId && viewFilterSeed && (
@@ -925,7 +1159,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onClose={() => setAdvancedFilterOpen(false)}
             />
           )}
-        </Flexbox>
+        </div>
       </LinearTaskSyncProvider>
     </CollaborationProvider>
   );

@@ -1,9 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { ExternalLink, RotateCcw, Settings2 } from 'lucide-react';
 
-import { electronSystemService } from '@/services/electron/system';
+import { Button } from '@/components/ui/button';
+import { getHostPort } from '@/platform';
 
 interface GuideActionsProps {
   docsUrl?: string;
@@ -33,39 +32,33 @@ const GuideActions = ({
   if (!showDocsButton && !showSystemToolsButton && !showRetryButton) return null;
 
   return (
-    <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
+    <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
       {showRetryButton && (
-        <Button
-          icon={<RotateCcw size={14} />}
-          size="small"
-          type={retryPrimary ? 'primary' : undefined}
-          onClick={onRetry}
-        >
-          {retryLabel}
+        <Button size="sm" variant={retryPrimary ? 'default' : 'outline'} onClick={onRetry}>
+          <RotateCcw size={14} /> {retryLabel}
         </Button>
       )}
       {showSystemToolsButton && (
-        <Button icon={<Settings2 size={14} />} size="small" onClick={onOpenSystemTools}>
-          {openSystemToolsLabel}
+        <Button size="sm" onClick={onOpenSystemTools}>
+          <Settings2 size={14} /> {openSystemToolsLabel}
         </Button>
       )}
       {showDocsButton && docsUrl && openDocsLabel && (
         <Button
-          icon={<ExternalLink size={14} />}
-          size="small"
-          type="primary"
+          size="sm"
+          variant="default"
           onClick={() => {
             const openLink = isDesktop
-              ? electronSystemService.openExternalLink(docsUrl)
+              ? getHostPort().openExternal(docsUrl)
               : Promise.resolve(window.open(docsUrl, '_blank', 'noopener,noreferrer'));
 
             openLink.catch(console.error);
           }}
         >
-          {openDocsLabel}
+          <ExternalLink size={14} /> {openDocsLabel}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

@@ -100,8 +100,10 @@ describe('SETTINGS_CAPABILITIES', () => {
 
 describe('resolveSettingsCapability', () => {
   it('redirects a withdrawn tab that has a live equivalent', () => {
-    expect(resolveSettingsCapability('service-model', BASE_CONTEXT)).toEqual({
-      redirectTo: 'profile',
+    // `agent` / `tts` / `image` were the legacy model surfaces; with the
+    // restored P30 provider surface they land on `service-model` again.
+    expect(resolveSettingsCapability('agent', BASE_CONTEXT)).toEqual({
+      redirectTo: 'service-model',
       status: 'retired',
     });
   });
@@ -186,7 +188,10 @@ describe('WORKSPACE_SETTINGS_ALIASES', () => {
     const aliases = WORKSPACE_SETTINGS_ALIASES.map((entry) => entry.alias);
 
     expect(new Set(aliases).size).toBe(aliases.length);
-    expect(aliases).toContain('provider');
-    expect(aliases).toContain('service-model');
+    // `provider` and `service-model` are live workspace tabs (restored P30
+    // provider surface) — they resolve through the leaves registry, so an
+    // alias here would shadow the real pages.
+    expect(aliases).not.toContain('provider');
+    expect(aliases).not.toContain('service-model');
   });
 });

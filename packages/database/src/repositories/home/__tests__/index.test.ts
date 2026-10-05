@@ -803,6 +803,27 @@ describe('HomeRepository', () => {
       expect(result.ungrouped[0].heterogeneousType).toBe('claude-code');
     });
 
+    it.each([
+      { agencyConfig: { heterogeneousProvider: { command: 'codex' } }, model: null },
+      { agencyConfig: null, model: 'codex' },
+    ])(
+      'projects persisted legacy Codex runtime without exposing its config: %j',
+      async (legacy) => {
+        await clientDB.insert(Schema.agents).values({
+          id: 'legacy-codex',
+          userId,
+          title: 'Renamed Agent',
+          pinned: false,
+          virtual: false,
+          ...legacy,
+        } as any);
+        const result = await homeRepo.getSidebarAgentList();
+        expect(result.ungrouped[0].heterogeneousType).toBe('codex');
+        expect(result.ungrouped[0]).not.toHaveProperty('model');
+        expect(result.ungrouped[0]).not.toHaveProperty('agencyConfig');
+      },
+    );
+
     it('should leave heterogeneousType unset when agencyConfig has no heterogeneousProvider', async () => {
       await clientDB.insert(Schema.agents).values({
         id: 'no-hetero-agent',

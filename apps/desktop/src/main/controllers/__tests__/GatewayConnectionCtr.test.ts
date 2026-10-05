@@ -5,7 +5,8 @@ import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { deriveDeviceId, deriveScopedFallbackId } from '@orvilo/device-identity';
+import type * as DeviceIdentityModule from '@orvilo/device-identity';
+import { resolvePersistentDeviceIdentity } from '@orvilo/device-identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
@@ -209,6 +210,14 @@ vi.mock('@orvilo/device-gateway-client', () => ({
 vi.mock('fast-glob', () => ({ default: vi.fn().mockResolvedValue([]) }));
 vi.mock('fflate', () => ({ unzipSync: vi.fn() }));
 
+vi.mock('@orvilo/device-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof DeviceIdentityModule>()),
+  resolvePersistentDeviceIdentity: vi.fn(async (principal: string) => ({
+    deviceId: `canonical-${principal}`,
+    identitySource: 'machine-id' as const,
+  })),
+}));
+
 // ─── Mock Controllers ───
 
 const mockLocalFileCtr = {
@@ -242,9 +251,9 @@ const mockShellCommandCtr = {
 } as unknown as ShellCommandCtr;
 
 const mockHeterogeneousAgentCtr = {
-  cancelLhHeteroExec: vi.fn().mockResolvedValue(undefined),
+  cancelOrviloHeteroExec: vi.fn().mockResolvedValue(undefined),
   sendPrompt: vi.fn().mockResolvedValue(undefined),
-  spawnLhHeteroExec: vi.fn().mockResolvedValue({ status: 'accepted' }),
+  spawnOrviloHeteroExec: vi.fn().mockResolvedValue({ status: 'accepted' }),
   startSession: vi.fn().mockResolvedValue({ sessionId: 'mock-session-id' }),
 } as unknown as HeterogeneousAgentCtr;
 
@@ -444,9 +453,7 @@ describe('GatewayConnectionCtr', () => {
       await vi.advanceTimersByTimeAsync(0);
       mockStoreSet.mockClear();
 
-      const workspaceDevice = deriveDeviceId(`workspace:${workspaceId}`, {
-        fallbackId: deriveScopedFallbackId(fallbackId, `workspace:${workspaceId}`),
-      });
+      const workspaceDevice = await resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
       const result = await ctr.reconnectFromProtocol({ deviceId: workspaceDevice.deviceId });
 
       expect(result).toBe(true);
@@ -854,7 +861,7 @@ describe('GatewayConnectionCtr', () => {
       // The server can only observe the whole dispatch round trip, so this
       // number is the only way to tell a slow tool from slow transport. Desktop
       // is where most device tool calls happen — omitting it here would bias
-      // the measurement toward calls made through `lh connect`.
+      // the measurement toward calls made through `orvilo connect`.
       const { result } = client.sendToolCallResponse.mock.calls.at(-1)![0];
       expect(typeof result.executionTimeMs).toBe('number');
       expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
@@ -935,8 +942,8 @@ describe('GatewayConnectionCtr', () => {
     }
 
     beforeEach(() => {
-      vi.mocked(mockHeterogeneousAgentCtr.cancelLhHeteroExec).mockClear();
-      vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockClear();
+      vi.mocked(mockHeterogeneousAgentCtr.cancelOrviloHeteroExec).mockClear();
+      vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockClear();
     });
 
     it.each([
@@ -948,17 +955,17 @@ describe('GatewayConnectionCtr', () => {
       'cursor',
       'kimi-code',
       'opencode',
-    ] as const)('forwards agentType "%s" to spawnLhHeteroExec', async (agentType) => {
+    ] as const)('forwards agentType "%s" to spawnOrviloHeteroExec', async (agentType) => {
       const client = await connectAndOpen();
       client.simulateAgentRunRequest(agentType);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({ agentType }),
       );
     });
 
-    it('forwards cwd and primary/fallback context from the request to spawnLhHeteroExec', async () => {
+    it('forwards cwd and primary/fallback context from the request to spawnOrviloHeteroExec', async () => {
       const client = await connectAndOpen();
       client.simulateAgentRunRequest('claude-code', 'op-ctx', 'hi', 'mock-jwt', {
         cwd: '/Users/alice/repo',
@@ -967,7 +974,7 @@ describe('GatewayConnectionCtr', () => {
       });
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({
           cwd: '/Users/alice/repo',
           resumeFallbackSystemContext: 'RECOVERY CONTEXT',
@@ -983,38 +990,38 @@ describe('GatewayConnectionCtr', () => {
       });
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({ assistantMessageId: 'asst-1' }),
       );
     });
 
-    it('forwards resolved selector args from the request to spawnLhHeteroExec', async () => {
+    it('forwards resolved selector args from the request to spawnOrviloHeteroExec', async () => {
       const client = await connectAndOpen();
       client.simulateAgentRunRequest('claude-code', 'op-args', 'hi', 'mock-jwt', {
         args: ['--model', 'opus', '--effort', 'high'],
       });
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({
           args: ['--model', 'opus', '--effort', 'high'],
         }),
       );
     });
 
-    it('forwards ingestWorkspaceId to spawnLhHeteroExec as workspaceId', async () => {
+    it('forwards ingestWorkspaceId to spawnOrviloHeteroExec as workspaceId', async () => {
       const client = await connectAndOpen();
       client.simulateAgentRunRequest('grok-build', 'op-ws', 'hi', 'mock-jwt', {
         ingestWorkspaceId: 'ws-orvilo',
       });
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceId: 'ws-orvilo' }),
       );
     });
 
-    it('sends accepted ack and spawns lh hetero exec', async () => {
+    it('sends accepted ack and spawns orvilo hetero exec', async () => {
       const client = await connectAndOpen();
       client.simulateAgentRunRequest('openclaw', 'op-xyz');
       await vi.advanceTimersByTimeAsync(0);
@@ -1023,7 +1030,7 @@ describe('GatewayConnectionCtr', () => {
         operationId: 'op-xyz',
         status: 'accepted',
       });
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({
           agentType: 'openclaw',
           // Reuses the device's own session token as the run identity, not the
@@ -1042,7 +1049,7 @@ describe('GatewayConnectionCtr', () => {
       client.simulateAgentRunRequest('claude-code', 'op-auth', 'hi', 'dispatched-operation-jwt');
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({ jwt: 'mock-access-token' }),
       );
     });
@@ -1060,7 +1067,7 @@ describe('GatewayConnectionCtr', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledWith(
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({ jwt: 'dispatched-operation-jwt' }),
       );
     });
@@ -1077,11 +1084,11 @@ describe('GatewayConnectionCtr', () => {
         reason: 'Remote server URL not configured',
         status: 'rejected',
       });
-      expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).not.toHaveBeenCalled();
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).not.toHaveBeenCalled();
     });
 
-    it('sends rejected ack when spawnLhHeteroExec throws', async () => {
-      vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(() => {
+    it('sends rejected ack when spawnOrviloHeteroExec throws', async () => {
+      vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockImplementationOnce(() => {
         throw new Error('binary not found');
       });
 
@@ -1097,7 +1104,7 @@ describe('GatewayConnectionCtr', () => {
     });
 
     it('forwards an asynchronous spawn rejection instead of acknowledging accepted', async () => {
-      vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockResolvedValueOnce({
+      vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockResolvedValueOnce({
         reason: 'spawn EACCES',
         status: 'rejected',
       });
@@ -1113,14 +1120,14 @@ describe('GatewayConnectionCtr', () => {
       });
     });
 
-    // Regression: spawnLhHeteroExec must register its child process into
+    // Regression: spawnOrviloHeteroExec must register its child process into
     // platformTasks so cancelHeteroTask (sent by the server's interruptTask
     // when the user clicks Stop) can find and kill it by operationId.
     // Without this the CLI keeps running after the user cancels.
     describe('agent run process registration', () => {
       it('registers the spawned child in platformTasks via onChildSpawned', async () => {
         let capturedOnChildSpawned: ((child: any) => void) | undefined;
-        vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(
+        vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockImplementationOnce(
           (params: any) => {
             capturedOnChildSpawned = params.onChildSpawned;
             return Promise.resolve({ status: 'accepted' });
@@ -1151,7 +1158,7 @@ describe('GatewayConnectionCtr', () => {
 
       it('cleans up platformTasks when the child exits', async () => {
         let capturedOnChildSpawned: ((child: any) => void) | undefined;
-        vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(
+        vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockImplementationOnce(
           (params: any) => {
             capturedOnChildSpawned = params.onChildSpawned;
             return Promise.resolve({ status: 'accepted' });
@@ -1182,7 +1189,7 @@ describe('GatewayConnectionCtr', () => {
       it('keeps the process-group escalation after the wrapper exits', async () => {
         const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
         let capturedOnChildSpawned: ((child: any) => void) | undefined;
-        vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(
+        vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockImplementationOnce(
           (params: any) => {
             capturedOnChildSpawned = params.onChildSpawned;
             return Promise.resolve({ status: 'accepted' });
@@ -1218,7 +1225,7 @@ describe('GatewayConnectionCtr', () => {
     describe('agent run redelivery dedupe', () => {
       const spawnOnce = async (operationId: string, runGeneration = 1) => {
         let capturedOnChildSpawned: ((child: any) => void) | undefined;
-        vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(
+        vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockImplementationOnce(
           (params: any) => {
             capturedOnChildSpawned = params.onChildSpawned;
             return Promise.resolve({ status: 'accepted' });
@@ -1239,14 +1246,14 @@ describe('GatewayConnectionCtr', () => {
 
       it('acks a retried request for a live run without respawning', async () => {
         const client = await spawnOnce('op-dedupe');
-        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+        expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledTimes(1);
 
         client.simulateAgentRunRequest('claude-code', 'op-dedupe', 'hi', 'mock-jwt', {
           runGeneration: 1,
         });
         await vi.advanceTimersByTimeAsync(0);
 
-        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+        expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledTimes(1);
         expect(client.sendAgentRunAck).toHaveBeenLastCalledWith({
           operationId: 'op-dedupe',
           status: 'accepted',
@@ -1256,7 +1263,7 @@ describe('GatewayConnectionCtr', () => {
       it('stops the stale writer and respawns on a newer runGeneration', async () => {
         const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
         const client = await spawnOnce('op-supersede', 1);
-        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+        expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledTimes(1);
 
         client.simulateAgentRunRequest('claude-code', 'op-supersede', 'hi', 'mock-jwt', {
           runGeneration: 2,
@@ -1265,7 +1272,7 @@ describe('GatewayConnectionCtr', () => {
         await vi.advanceTimersByTimeAsync(10_000);
 
         expect(killSpy).toHaveBeenCalledWith(-31337, 'SIGKILL');
-        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(2);
+        expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledTimes(2);
         killSpy.mockRestore();
       });
     });
@@ -1308,7 +1315,7 @@ describe('GatewayConnectionCtr', () => {
     }
 
     beforeEach(() => {
-      execFileSyncMock.mockReturnValue('/usr/local/bin/lh\n');
+      execFileSyncMock.mockReturnValue('/usr/local/bin/orvilo\n');
       spawnMock.mockReset();
     });
 
@@ -1341,7 +1348,7 @@ describe('GatewayConnectionCtr', () => {
       expect(spawnOptions.env.ORVILO_OPERATION_ID).toBe('op-1');
       const messageArg = spawnArgs[spawnArgs.indexOf('--message') + 1];
       expect(messageArg).toContain('hello');
-      expect(messageArg).toContain('lh notify');
+      expect(messageArg).toContain('orvilo notify');
     });
 
     it('reports a failed child process as a terminal error', async () => {
@@ -1558,10 +1565,10 @@ describe('GatewayConnectionCtr', () => {
     });
 
     /**
-     * @example Cancelling `op-codex` reaches the registered `lh hetero exec` wrapper.
+     * @example Cancelling `op-codex` reaches the registered `orvilo hetero exec` wrapper.
      */
     it('cancels a device local hetero wrapper before checking platform tasks', async () => {
-      vi.mocked(mockHeterogeneousAgentCtr.cancelLhHeteroExec).mockResolvedValueOnce({
+      vi.mocked(mockHeterogeneousAgentCtr.cancelOrviloHeteroExec).mockResolvedValueOnce({
         exited: true,
         pid: 7777,
         signal: 'SIGINT',
@@ -1575,7 +1582,7 @@ describe('GatewayConnectionCtr', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockHeterogeneousAgentCtr.cancelLhHeteroExec).toHaveBeenCalledWith({
+      expect(mockHeterogeneousAgentCtr.cancelOrviloHeteroExec).toHaveBeenCalledWith({
         operationId: 'op-codex',
         signal: 'SIGINT',
       });
@@ -2050,6 +2057,86 @@ describe('GatewayConnectionCtr', () => {
   });
 
   describe('getDeviceInfo', () => {
+    it('keeps a connecting account identity stable during another account lookup', async () => {
+      mockStoreGet.mockImplementation((key: string) =>
+        key === 'gatewayEnabled' ? false : undefined,
+      );
+      ctr.afterFirstFrame();
+      const token = (sub: string) =>
+        `header.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.signature`;
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token('owner-a'));
+      let release!: () => void;
+      let registered!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const registrationStarted = new Promise<void>((resolve) => {
+        registered = resolve;
+      });
+      mockGatewayConnectionSrv.setDeviceRegistrar(async () => {
+        registered();
+        await held;
+      });
+      const connecting = ctr.connect();
+      await registrationStarted;
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken)
+        .mockResolvedValueOnce(token('owner-b'))
+        .mockResolvedValueOnce(token('owner-b'));
+      expect(await ctr.getDeviceInfo()).toMatchObject({
+        deviceId: 'canonical-owner-b',
+        userId: 'owner-b',
+      });
+      expect(mockGatewayConnectionSrv.getDeviceId()).toBe('canonical-owner-a');
+      // Another legitimate resolver can update service state while registration is pending.
+      await mockGatewayConnectionSrv.matchesDeviceId('canonical-owner-b');
+      release();
+      await connecting;
+      expect(MockGatewayClient.lastOptions).toMatchObject({
+        deviceId: 'canonical-owner-a',
+        userId: 'owner-a',
+      });
+    });
+
+    it('resolves authenticated identity before any disabled gateway socket starts', async () => {
+      mockStoreGet.mockImplementation((key: string) => {
+        if (key === 'gatewayEnabled') return false;
+        if (key === 'gatewayDeviceId') return 'connection-only';
+        return undefined;
+      });
+      const token = `header.${Buffer.from(JSON.stringify({ sub: 'owner-disabled' })).toString('base64url')}.signature`;
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token);
+      const infoPromise = ctr.getDeviceInfo();
+      let settled = false;
+      void infoPromise.then(() => {
+        settled = true;
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      ctr.afterFirstFrame();
+      expect((await infoPromise).deviceId).toBe('canonical-owner-disabled');
+      expect(MockGatewayClient.lastInstance).toBeNull();
+    });
+
+    it('refreshes identity for the current account while preserving the connection UUID', async () => {
+      mockStoreGet.mockImplementation((key: string) => {
+        if (key === 'gatewayEnabled') return false;
+        if (key === 'gatewayDeviceId') return 'connection-only';
+        return undefined;
+      });
+      const token = (sub: string) =>
+        `header.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.signature`;
+      ctr.afterFirstFrame();
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token('owner-a'));
+      expect((await ctr.getDeviceInfo()).deviceId).toBe('canonical-owner-a');
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token('owner-b'));
+      expect((await ctr.getDeviceInfo()).deviceId).toBe('canonical-owner-b');
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(null);
+      expect((await ctr.getDeviceInfo()).deviceId).toBe('connection-only');
+      expect(mockGatewayConnectionSrv.getConnectionId()).toBe('connection-only');
+      expect(MockGatewayClient.lastInstance).toBeNull();
+    });
+
     it('should return device information', async () => {
       mockStoreGet.mockImplementation((key: string) => {
         if (key === 'gatewayEnabled') return true;
@@ -2064,6 +2151,7 @@ describe('GatewayConnectionCtr', () => {
         deviceId: 'my-device',
         hostname: 'mock-hostname',
         platform: process.platform,
+        userId: undefined,
       });
     });
   });

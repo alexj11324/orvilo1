@@ -1,7 +1,6 @@
-import { Block, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ClockIcon } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +9,8 @@ import {
   formatScheduleDescription,
   formatTimezoneName,
 } from '@/features/AgentTasks/AgentTaskDetail/scheduler/helpers';
+
+import { SimpleTooltip } from './SimpleTooltip';
 
 interface TaskTriggerTagProps {
   automationMode?: 'heartbeat' | 'schedule' | null;
@@ -20,7 +21,17 @@ interface TaskTriggerTagProps {
 }
 
 const FLEX_MIN_WIDTH_0 = { minWidth: 0 };
-const PILL_STYLE = { borderRadius: 24, minWidth: 0 };
+const PILL_STYLE: CSSProperties = {
+  alignItems: 'center',
+  background: cssVar.colorBgContainer,
+  border: `1px solid ${cssVar.colorBorderSecondary}`,
+  borderRadius: 24,
+  display: 'flex',
+  gap: 4,
+  height: 24,
+  minWidth: 0,
+  paddingInline: '4px 8px',
+};
 
 const TaskTriggerTag = memo<TaskTriggerTagProps>(
   ({ automationMode, heartbeatInterval, mode = 'tag', schedulePattern, scheduleTimezone }) => {
@@ -61,24 +72,24 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
     }, [automationMode, heartbeatInterval, schedulePattern, scheduleTimezone, t, i18n.language]);
 
     if (mode === 'inline') {
-      // Single-line row regardless of mode/content length — long primaries
-      // (e.g. "Every Mon/Tue/Wed/Thu/Fri/Sat at HH:MM") used to wrap to two
-      // lines and shift the rows below. Tooltip still surfaces the full text
-      // plus timezone on hover, so no information is lost.
+      // The property row already draws the clock in its label column. This is
+      // only the value: 13px regular, placeholder when empty. Long primaries
+      // stay on one line; the tooltip still has the full text and timezone.
       return (
-        <Tooltip title={data?.tooltip}>
-          <Flexbox horizontal align="center" gap={10} style={FLEX_MIN_WIDTH_0}>
-            <Icon color={cssVar.colorTextDescription} icon={ClockIcon} size={16} />
-            <Text
-              ellipsis
-              style={FLEX_MIN_WIDTH_0}
-              type={data ? undefined : 'secondary'}
-              weight={data ? 500 : undefined}
-            >
-              {data?.primary ?? t('taskSchedule.tag.add')}
-            </Text>
-          </Flexbox>
-        </Tooltip>
+        <SimpleTooltip title={data?.tooltip}>
+          <div
+            className="block truncate"
+            style={{
+              ...FLEX_MIN_WIDTH_0,
+              color: data ? undefined : cssVar.colorTextPlaceholder,
+              fontSize: 12,
+              fontWeight: 400,
+              lineHeight: 1.4,
+            }}
+          >
+            {data?.primary ?? t('taskSchedule.tag.add')}
+          </div>
+        </SimpleTooltip>
       );
     }
 
@@ -87,22 +98,17 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
     // Pill height (24px) only fits one line — drop the timezone here; the
     // tooltip surfaces it on hover.
     return (
-      <Tooltip title={data.tooltip}>
-        <Block
-          horizontal
-          align={'center'}
-          gap={4}
-          height={24}
-          paddingInline={'4px 8px'}
-          style={PILL_STYLE}
-          variant={'outlined'}
-        >
-          <Icon color={cssVar.colorTextDescription} icon={ClockIcon} size={16} />
-          <Text ellipsis fontSize={12} style={FLEX_MIN_WIDTH_0} type={'secondary'}>
+      <SimpleTooltip title={data.tooltip}>
+        <div style={PILL_STYLE}>
+          <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
+          <div
+            className="truncate block text-[12px] text-muted-foreground"
+            style={FLEX_MIN_WIDTH_0}
+          >
             {data.primary}
-          </Text>
-        </Block>
-      </Tooltip>
+          </div>
+        </div>
+      </SimpleTooltip>
     );
   },
 );

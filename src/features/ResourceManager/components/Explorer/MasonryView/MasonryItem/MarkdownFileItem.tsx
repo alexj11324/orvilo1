@@ -1,5 +1,3 @@
-import { stopPropagation, Tooltip } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
@@ -7,6 +5,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Button } from '@/components/ui/button';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
 import { formatSize } from '@/utils/format';
@@ -172,7 +172,7 @@ const MarkdownFileItem = memo<MarkdownFileItemProps>(
         {!isNull(chunkingStatus) && chunkingStatus ? (
           <div
             className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
-            onClick={stopPropagation}
+            onClick={(event) => event.stopPropagation()}
           >
             <ChunksBadge
               chunkCount={chunkCount}
@@ -186,7 +186,7 @@ const MarkdownFileItem = memo<MarkdownFileItemProps>(
           </div>
         ) : (
           isSupportedForChunking && (
-            <Tooltip title={t('FileManager.actions.chunkingTooltip')}>
+            <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
               <div
                 className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
                 style={{ cursor: 'pointer' }}
@@ -197,14 +197,11 @@ const MarkdownFileItem = memo<MarkdownFileItemProps>(
                   }
                 }}
               >
-                <Button
-                  icon={FileBoxIcon}
-                  loading={isCreatingFileParseTask}
-                  size={'small'}
-                  type={'text'}
-                />
+                <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                  <FileBoxIcon data-icon="inline-start" />
+                </Button>
               </div>
-            </Tooltip>
+            </SimpleTooltip>
           )
         )}
       </>

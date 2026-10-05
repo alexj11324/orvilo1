@@ -7,15 +7,23 @@ import { expect, it } from 'vitest';
 
 import { SqlMcpEventBindingRepository, SqlMcpEventInbox } from './inbox';
 
-it('replays the generated migration and commits receipts using its real unique indexes', async () => {
+it('replays the shipped migration and commits receipts using its real unique indexes', async () => {
   const database = new PGlite();
   try {
+    // Parent tables the consolidated migration references; their columns beyond
+    // the FK targets are irrelevant to the event tables being exercised.
+    await database.exec(`
+      CREATE TABLE users (id text PRIMARY KEY);
+      CREATE TABLE tasks (id text PRIMARY KEY);
+      CREATE TABLE task_topics (id uuid PRIMARY KEY);
+    `);
     const migration = await readFile(
-      path.resolve('packages/database/migrations/0198_mcp_events.sql'),
+      path.resolve('packages/database/migrations/0197_cloud_control_plane.sql'),
       'utf8',
     );
-    await database.exec(migration);
-    await database.exec(migration);
+    const sql = migration.replaceAll('--> statement-breakpoint', ';');
+    await database.exec(sql);
+    await database.exec(sql);
     const bindings = new SqlMcpEventBindingRepository(database);
     const scope = { tenantId: 'tenant', connectorId: 'connector' };
     await bindings.createPending({

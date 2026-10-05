@@ -88,3 +88,17 @@ export const VERIFICATION_UNJUDGEABLE_ERROR =
  */
 export const ACCEPTANCE_REVIEW_ERRORED_ERROR =
   'Acceptance review could not run; the delivery passed its verifiers but was never reviewed.';
+/**
+ * The delivery passed verification, but the agent was configured for the
+ * Aegis method pack and its completion evidence is missing, malformed or
+ * low-confidence — so the run must not auto-complete.
+ *
+ * Deliberately has NO recovery branch: it falls through to the human
+ * decision gate, which is the advisory "requires review" downgrade. The
+ * verify verdict itself is unchanged — server-side verification stays
+ * authoritative; this only withholds auto-accept. A retry could produce the
+ * same missing evidence again, so retrying automatically would just spend
+ * the attempt budget.
+ */
+export const AEGIS_EVIDENCE_REQUIRED_ERROR =
+  'Delivery passed verification, but the Aegis completion evidence is missing or low-confidence; requires human review.';

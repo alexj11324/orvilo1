@@ -1,7 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
-import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import { type ErrorShape, type ImportFileUploadState } from '@orvilo/types';
 import { ImportStage } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -11,6 +9,9 @@ import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import DataStyleModal from '@/components/DataStyleModal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Upload } from '@/components/Upload';
 import { importService } from '@/services/import';
 import { useChatStore } from '@/store/chat';
 import { useHomeStore } from '@/store/home';
@@ -126,46 +127,46 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
     switch (importState) {
       case ImportStage.Preparing: {
         return (
-          <Center gap={24} padding={40}>
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <DataLoading />
             <p>{t('importModal.preparing')}</p>
-          </Center>
+          </div>
         );
       }
 
       case ImportStage.Importing: {
         return (
-          <Center gap={24} padding={40}>
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <DataLoading />
             <p>{t('importModal.loading')}</p>
-          </Center>
+          </div>
         );
       }
 
       case ImportStage.Uploading: {
         return (
-          <Center gap={24} padding={40}>
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <FileUploading
               progress={fileUploadingState?.progress}
               restTime={fileUploadingState?.restTime}
               speed={fileUploadingState?.speed}
             />
-          </Center>
+          </div>
         );
       }
 
       case ImportStage.Success: {
         return (
-          <Center gap={24} paddingInline={16}>
+          <div className="flex flex-col items-center justify-center gap-6 px-4">
             <SuccessResult dataSource={dataSource} duration={duration} onClickFinish={closeModal} />
-          </Center>
+          </div>
         );
       }
       case ImportStage.Error: {
         return (
-          <Center gap={24} paddingBlock={24} paddingInline={0}>
+          <div className="flex flex-col items-center justify-center gap-6 py-6 px-0">
             <ImportError error={importError} onClick={closeModal} />
-          </Center>
+          </div>
         );
       }
 
@@ -190,7 +191,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
         }}
       >
         {hasConfigError ? (
-          <Center gap={24} padding={40}>
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <Upload
               accept={'application/json'}
               beforeUpload={handleBeforeUpload}
@@ -199,7 +200,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
             >
               <Button>{t('importModal.error.selectAnotherFile')}</Button>
             </Upload>
-          </Center>
+          </div>
         ) : (
           content
         )}

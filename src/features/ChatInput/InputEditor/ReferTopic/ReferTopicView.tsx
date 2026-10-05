@@ -1,8 +1,7 @@
-import { Tag } from '@lobehub/ui/base-ui';
-import { MessageSquareQuoteIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 
@@ -38,9 +37,9 @@ export const ReferTopicView = memo<ReferTopicViewProps>(({ topicId, fallbackTitl
       }}
       onClick={handleClick}
     >
-      <Tag color="blue" icon={<MessageSquareQuoteIcon size={12} />} variant="borderless">
+      <Badge data-icon="inline-start" variant="secondary">
         {title || t('defaultTitle')}
-      </Tag>
+      </Badge>
     </span>
   );
 });

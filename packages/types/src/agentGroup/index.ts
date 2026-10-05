@@ -96,6 +96,8 @@ export interface NewChatGroup {
   pinned?: boolean | null;
   title?: string | null;
   userId: string;
+  /** Workspace visibility; absent only on legacy/personal group payloads. */
+  visibility?: 'private' | 'public';
 }
 
 // Chat Group Item type (independent from schema)

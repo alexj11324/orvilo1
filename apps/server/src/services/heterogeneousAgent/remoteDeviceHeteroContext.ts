@@ -2,7 +2,7 @@ import type { ConversationHistoryEntry } from './cloudHeteroContext';
 
 /**
  * Builds the system context injected before every user prompt for hetero runs
- * dispatched to a **remote device** (`lh connect`), as opposed to a cloud
+ * dispatched to a **remote device** (`orvilo connect`), as opposed to a cloud
  * sandbox.
  *
  * Unlike {@link buildCloudHeteroContext}, this deliberately strips all the

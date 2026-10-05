@@ -1,5 +1,3 @@
-import { Block, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Collapsible, Text } from '@lobehub/ui/base-ui';
 import type {
   BriefType,
   TaskAutomationSnapshot,
@@ -19,12 +17,15 @@ import {
   UserRoundCog,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -35,6 +36,7 @@ import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selecto
 import { PRIORITY_META } from '../features/TaskPriorityTag';
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
+import { type ActivityFeedFilter, matchesActivityFilter } from './activityFeedFilter';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
@@ -157,13 +159,16 @@ const RelativeTime = memo<{ time?: string }>(({ time }) => {
  */
 const FeedLine = memo<{ children: ReactNode; mark: ReactNode; time?: string }>(
   ({ children, mark, time }) => (
-    <Flexbox horizontal align={'center'} className={styles.activityLine} gap={8}>
+    <div className={`flex items-center gap-2 ${styles.activityLine}`}>
       <div className={styles.activityMark}>{mark}</div>
-      <Text ellipsis style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}>
+      <div
+        className="truncate block"
+        style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
+      >
         {children}
         <RelativeTime time={time} />
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   ),
 );
 
@@ -181,7 +186,7 @@ const RowMark = ({
   author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
   ) : (
-    <Icon color={cssVar.colorTextTertiary} icon={icon} size={14} />
+    createElement(icon, { color: cssVar.colorTextTertiary, size: 14 })
   );
 
 /** Compact one-line row for created / topic / comment bookkeeping. */
@@ -393,6 +398,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const activeTaskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [feedFilter, setFeedFilter] = useState<ActivityFeedFilter>('all');
 
   const refreshActiveTask = useCallback(async () => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
@@ -401,13 +407,14 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const items = useMemo(
     () =>
       activities
+        .filter((act) => matchesActivityFilter(act.type, feedFilter))
         .map((act, i) => ({
           activity: act,
           brief: act.type === 'brief' ? toBriefItem(act) : null,
           key: act.id ?? `activity-${i}`,
         }))
         .reverse(),
-    [activities],
+    [activities, feedFilter],
   );
 
   const commentInput = activeTaskId ? (
@@ -425,9 +432,9 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     const flush = () => {
       if (run.length === 0) return;
       out.push(
-        <Flexbox className={styles.activityTimeline} key={`rail-${out.length}`}>
+        <div className={`flex flex-col ${styles.activityTimeline}`} key={`rail-${out.length}`}>
           {run}
-        </Flexbox>,
+        </div>,
       );
       run = [];
     };
@@ -488,7 +495,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         }),
       )
     ) : (
-      <Empty
+      <SimpleEmpty
         description={t('taskDetail.activitiesEmpty')}
         icon={BotMessageSquare}
         style={{ marginTop: 8 }}
@@ -504,40 +511,52 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   // report.
   if (variant === 'result') {
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         {rows}
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={8}>
-      <Block
-        clickable
-        horizontal
-        align="center"
-        gap={8}
-        paddingBlock={4}
-        paddingInline={8}
+    <div className="flex flex-col gap-2">
+      <div
+        className="flex items-center gap-2 px-2 py-1"
         style={{ cursor: 'pointer', width: 'fit-content' }}
-        variant="borderless"
         onClick={() => setIsExpanded((prev) => !prev)}
       >
-        <Icon color={cssVar.colorTextDescription} icon={BotMessageSquare} size={16} />
-        <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+        <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
+        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.activities')}
-        </Text>
+        </div>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-      </Block>
+        {(['all', 'comments', 'updates'] as const).map((filter) => (
+          <button
+            aria-pressed={feedFilter === filter}
+            className="text-xs"
+            key={filter}
+            type="button"
+            style={{
+              color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
+              fontWeight: feedFilter === filter ? 600 : 400,
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              setFeedFilter(filter);
+            }}
+          >
+            {t(`taskDetail.activities.filter.${filter}`)}
+          </button>
+        ))}
+      </div>
+      {commentInput}
       <Collapsible open={isExpanded}>
-        <Flexbox gap={12} paddingBlock={4} paddingInline={12}>
-          {commentInput}
-          {rows}
-        </Flexbox>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-3 px-3 py-1">{rows}</div>
+        </CollapsibleContent>
       </Collapsible>
-    </Flexbox>
+    </div>
   );
 });
 

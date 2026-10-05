@@ -1,12 +1,17 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Accordion, type AccordionItemType, Tag, Text } from '@lobehub/ui/base-ui';
 import { experimentOwner } from '@orvilo/utils/goalGraph';
 import { createStaticStyles } from 'antd-style';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { usePermission } from '@/hooks/usePermission';
 import { goalService } from '@/services/goal';
 import { useChatStore } from '@/store/chat';
@@ -140,9 +145,9 @@ const ProcessControl = memo<ProcessControlProps>(
     );
 
     return (
-      <Flexbox gap={20}>
+      <div className="flex flex-col gap-5">
         {hasExperiments && map}
-        <Flexbox gap={12}>
+        <div className="flex flex-col gap-3">
           <Frontier
             actions={actions}
             canEdit={canAct}
@@ -150,37 +155,35 @@ const ProcessControl = memo<ProcessControlProps>(
             planning={planning}
             onSelect={select}
           />
-        </Flexbox>
+        </div>
 
         {!hasExperiments && map}
 
-        <Accordion
-          defaultValue={['deliverables', 'findings', 'activity']}
-          gap={0}
-          indicatorPlacement="inline"
-          styles={{ header: { paddingBlock: 6, paddingInline: 0 } }}
-          items={
+        <Accordion defaultValue={['deliverables', 'findings', 'activity']}>
+          {(
             [
               // The structured acceptance standard the terminal goal acceptance is
               // gated on. Collapsed by default — reference material, like the task
               // detail's 交付验收 section. Prose-only legacy goals have none.
               !!acceptanceConfig && {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <GoalAcceptanceCriteria criteriaIds={criteriaIds} goalId={goalId} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'acceptance',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text fontSize={14} weight={600}>
-                      {t('goalAcceptance.title')}
-                    </Text>
-                    {criteriaIds.length > 0 && <Tag size={'small'}>{criteriaIds.length}</Tag>}
-                    <Text fontSize={12} type={'secondary'}>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[14px] font-semibold">{t('goalAcceptance.title')}</div>
+                    {criteriaIds.length > 0 && (
+                      <Badge size="sm" variant="secondary">
+                        {criteriaIds.length}
+                      </Badge>
+                    )}
+                    <div className="text-[12px] text-muted-foreground">
                       {t('goalAcceptance.gateHint')}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                 ),
               },
               // Between the standard and the conclusions on purpose: 验收标准 says
@@ -188,57 +191,68 @@ const ProcessControl = memo<ProcessControlProps>(
               // believes about it. Findings routinely cite these artifacts.
               {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <Deliverables graph={graph} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'deliverables',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text fontSize={14} weight={600}>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[14px] font-semibold">
                       {t('goalProcess.deliverables.title')}
-                    </Text>
+                    </div>
                     {graph.artifacts.length > 0 && (
-                      <Tag size={'small'}>{graph.artifacts.length}</Tag>
+                      <Badge size="sm" variant="secondary">
+                        {graph.artifacts.length}
+                      </Badge>
                     )}
-                  </Flexbox>
+                  </div>
                 ),
               },
               {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <Findings graph={graph} onSelect={select} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'findings',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text fontSize={14} weight={600}>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[14px] font-semibold">
                       {t('goalProcess.findings.title')}
-                    </Text>
-                    {graph.findings.length > 0 && <Tag size={'small'}>{graph.findings.length}</Tag>}
-                  </Flexbox>
+                    </div>
+                    {graph.findings.length > 0 && (
+                      <Badge size="sm" variant="secondary">
+                        {graph.findings.length}
+                      </Badge>
+                    )}
+                  </div>
                 ),
               },
               {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <Activity graph={graph} onSelect={select} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'activity',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text fontSize={14} weight={600}>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[14px] font-semibold">
                       {t('goalProcess.activity.title')}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                 ),
               },
-            ].filter(Boolean) as AccordionItemType[]
-          }
-        />
-      </Flexbox>
+            ] as { children: ReactNode; key: string; title: ReactNode }[]
+          ).map((item) => (
+            <AccordionItem key={item.key} value={item.key}>
+              <AccordionTrigger>{item.title}</AccordionTrigger>
+              <AccordionContent>{item.children}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
     );
   },
 );

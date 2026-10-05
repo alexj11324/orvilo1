@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -143,28 +142,28 @@ const ContentLoading = memo<ContentLoadingProps>(({ id, startTime: startTimeOver
 
   if (operationType === 'contextCompression') {
     return (
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex items-center gap-2">
         <NeuralNetworkLoading size={16} />
         <span className={shinyTextStyles.shinyText}>{t('operation.contextCompression')}</span>
-      </Flexbox>
+      </div>
     );
   }
 
   if (operationLabel) {
     return (
-      <Flexbox horizontal align={'center'} gap={4}>
+      <div className="flex items-center gap-1">
         <span className={operationLabelClassName}>{operationLabel}...</span>
         {showElapsedTime && (
           <span className={elapsedTimeStyles.elapsedTime}>({elapsedSeconds}s)</span>
         )}
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox horizontal align={'center'}>
+    <div className="flex items-center">
       <BubblesLoading />
-    </Flexbox>
+    </div>
   );
 });
 

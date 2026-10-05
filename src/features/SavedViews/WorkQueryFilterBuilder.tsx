@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Select, Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryEntityType, WorkQueryValue } from '@orvilo/types';
 import { workQueryFieldSpec, workQueryFieldSpecs } from '@orvilo/types';
 import { PlusIcon, XIcon } from 'lucide-react';
@@ -9,17 +7,23 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { Badge as Tag } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 import { taskLabelService } from '@/services/taskLabel';
 import { workAttentionService } from '@/services/workAttention';
+import { useHomeStore } from '@/store/home';
+import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
 import type { BuilderState, FilterRow } from './workQueryBuilder';
-import { defaultRowValue, newFilterRow } from './workQueryBuilder';
+import { defaultRowValue, isRowComplete, newFilterRow } from './workQueryBuilder';
 
 const SELF_VALUE = '$currentUser';
 
@@ -145,7 +149,7 @@ ProjectValueSelect.displayName = 'ProjectValueSelect';
  * the filter already pins (a `teamId = …` row); without one it lists cycles
  * across the caller's readable teams in one call — never a per-team fan-out.
  */
-const useCycleOptions = (
+export const useCycleOptions = (
   teamId: string | undefined,
   needed: boolean,
   workspaceId: string | null,
@@ -194,6 +198,15 @@ const FilterRowEditor = memo<{
   const memberOptions = useWorkspaceMembersQuery({
     enabled: spec?.valueKind === 'user',
   });
+  const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const agentOptions = useMemo(
+    () =>
+      agents.map((agent) => ({
+        label: agent.title || agent.id,
+        value: agent.id,
+      })),
+    [agents],
+  );
   const { data: teamsData } = useClientDataSWR(
     workspaceId ? workAttentionKeys.teams(workspaceId) : null,
     () => lambdaClient.team.teams.query(),
@@ -234,10 +247,12 @@ const FilterRowEditor = memo<{
     spec?.valueKind === 'cycle' && typeof row.value === 'string' ? row.value : undefined,
   );
 
-  const fieldOptions = workQueryFieldSpecs(entityType).map((item) => ({
-    label: t(`savedViews.fields.${item.field}`, { defaultValue: item.field }),
-    value: item.field,
-  }));
+  const fieldOptions = workQueryFieldSpecs(entityType)
+    .filter((item) => !item.deprecated)
+    .map((item) => ({
+      label: t(`savedViews.fields.${item.field}`, { defaultValue: item.field }),
+      value: item.field,
+    }));
 
   const changeField = (field: string) => {
     const nextSpec = workQueryFieldSpec(entityType, field);
@@ -343,6 +358,81 @@ const FilterRowEditor = memo<{
           />
         );
       }
+      case 'date': {
+        if (row.op === 'between') {
+          const range =
+            row.value && typeof row.value === 'object' && 'from' in row.value
+              ? row.value
+              : { from: '', to: '' };
+          return (
+            <div className="flex items-center gap-1">
+              <input
+                className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+                type="date"
+                value={range.from.slice(0, 10)}
+                onChange={(event) =>
+                  onChange({
+                    ...row,
+                    value: {
+                      from: event.target.value ? new Date(event.target.value).toISOString() : '',
+                      to: range.to,
+                    },
+                  })
+                }
+              />
+              <input
+                className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+                type="date"
+                value={range.to.slice(0, 10)}
+                onChange={(event) =>
+                  onChange({
+                    ...row,
+                    value: {
+                      from: range.from,
+                      to: event.target.value ? new Date(event.target.value).toISOString() : '',
+                    },
+                  })
+                }
+              />
+            </div>
+          );
+        }
+        return (
+          <input
+            className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+            type="date"
+            value={typeof row.value === 'string' ? row.value.slice(0, 10) : ''}
+            onChange={(event) =>
+              onChange({
+                ...row,
+                value: event.target.value ? new Date(event.target.value).toISOString() : '',
+              })
+            }
+          />
+        );
+      }
+      case 'text': {
+        return (
+          <input
+            className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+            placeholder={t('savedViews.filters.textPlaceholder')}
+            value={typeof row.value === 'string' ? row.value : ''}
+            onChange={(event) => onChange({ ...row, value: event.target.value })}
+          />
+        );
+      }
+      case 'agent': {
+        return (
+          <Select
+            options={agentOptions}
+            placeholder={t('savedViews.filters.valuePlaceholder')}
+            size="small"
+            style={{ minWidth: 160 }}
+            value={typeof row.value === 'string' ? row.value : undefined}
+            onChange={(next) => typeof next === 'string' && onChange({ ...row, value: next })}
+          />
+        );
+      }
       default: {
         return null;
       }
@@ -350,13 +440,13 @@ const FilterRowEditor = memo<{
   })();
 
   return (
-    <Flexbox horizontal align="center" gap={8}>
+    <div className="flex items-center gap-2">
       <Select
         options={fieldOptions}
         size="small"
         style={{ minWidth: 140 }}
         value={row.field}
-        onChange={changeField}
+        onChange={(value) => typeof value === 'string' && changeField(value)}
       />
       <Select
         size="small"
@@ -367,11 +457,18 @@ const FilterRowEditor = memo<{
           value: op,
         }))}
         onChange={(next) => {
+          if (typeof next !== 'string') return;
+          const keepInItem = (
+            item: WorkQueryValue,
+          ): item is number | string | { ref: 'currentUser' } =>
+            typeof item === 'string' ||
+            typeof item === 'number' ||
+            (typeof item === 'object' && item !== null && 'ref' in item);
           const nextValue =
             next === 'in' || next === 'notIn'
               ? Array.isArray(row.value)
-                ? row.value.filter((v): v is string => typeof v === 'string')
-                : typeof row.value === 'string'
+                ? row.value.filter(keepInItem)
+                : typeof row.value === 'string' || typeof row.value === 'number'
                   ? [row.value]
                   : []
               : row.value;
@@ -385,7 +482,7 @@ const FilterRowEditor = memo<{
         title={t('savedViews.filters.remove')}
         onClick={onRemove}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -436,20 +533,30 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
     )?.value as string | undefined;
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {value.rows.map((row) => (
-          <FilterRowEditor
-            cycleTeamId={cycleTeamId}
-            entityType={entityType}
+          <div
+            className="flex flex-col gap-1"
+            data-filter-incomplete={isRowComplete(row) ? undefined : 'true'}
             key={row.id}
-            row={row}
-            onChange={(next) => updateRow(row.id, next)}
-            onRemove={() => removeRow(row.id)}
-          />
+          >
+            <FilterRowEditor
+              cycleTeamId={cycleTeamId}
+              entityType={entityType}
+              row={row}
+              onChange={(next) => updateRow(row.id, next)}
+              onRemove={() => removeRow(row.id)}
+            />
+            {isRowComplete(row) ? null : (
+              <span className="text-[12px] text-muted-foreground">
+                {t('savedViews.filters.incomplete')}
+              </span>
+            )}
+          </div>
         ))}
         {value.slots.map((slot, index) =>
           slot.type === 'node' ? (
-            <Flexbox horizontal align="center" gap={8} key={`slot-${index}`}>
+            <div className="flex items-center gap-2" key={`slot-${index}`}>
               <Tag>
                 {t('savedViews.filters.advancedNode', {
                   field: 'field' in slot.node ? slot.node.field : 'any',
@@ -461,11 +568,11 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
                 title={t('savedViews.filters.remove')}
                 onClick={() => removeSlot(index)}
               />
-            </Flexbox>
+            </div>
           ) : null,
         )}
         {value.any.length > 0 ? (
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             <Tag>{t('savedViews.filters.advancedNode', { field: 'any' })}</Tag>
             <ActionIcon
               icon={XIcon}
@@ -473,26 +580,24 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
               title={t('savedViews.filters.remove')}
               onClick={() => onChange({ ...value, any: [] })}
             />
-          </Flexbox>
+          </div>
         ) : null}
-        <Flexbox horizontal>
+        <div className="flex">
           <Button
-            icon={PlusIcon}
-            size="small"
-            type="text"
+            size="sm"
+            variant="ghost"
             onClick={() => onChange({ ...value, rows: [...value.rows, newFilterRow(entityType)] })}
           >
+            <PlusIcon data-icon="inline-start" />
             {t('savedViews.filters.add')}
           </Button>
-        </Flexbox>
+        </div>
         {value.rows.length === 0 &&
         !value.slots.some((slot) => slot.type === 'node') &&
         value.any.length === 0 ? (
-          <Text fontSize={12} type="secondary">
-            {t('savedViews.filters.empty')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('savedViews.filters.empty')}</div>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

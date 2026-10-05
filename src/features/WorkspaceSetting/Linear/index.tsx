@@ -1,7 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button, Select, Switch, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type {
   LinearInstallationRecoveryState,
   LinearProjectBindingSettings,
@@ -16,17 +14,32 @@ import {
   CircleCheck,
   CircleDashed,
   GitBranch,
+  Info,
   Link2,
   ListChecks,
+  Loader2,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
+  TriangleAlert,
   Upload,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   getInstallationTone,
   getLinearRecoverySummary,
@@ -466,9 +479,24 @@ const InstallationStatusTag = memo<{ installation: LinearInstallationView }>(({ 
   const { t } = useTranslation('setting');
   const tone = getInstallationTone(installation.status);
   return (
-    <Tag icon={<Icon icon={installation.status === 'active' ? CircleCheck : CircleAlert} />}>
-      <Text type={tone}>{t(`workspaceSetting.linear.status.${installation.status}` as never)}</Text>
-    </Tag>
+    <Badge
+      variant={
+        tone === 'danger'
+          ? 'destructive-light'
+          : tone === 'success'
+            ? 'success-light'
+            : tone === 'warning'
+              ? 'warning-light'
+              : 'secondary'
+      }
+    >
+      {installation.status === 'active' ? (
+        <CircleCheck aria-hidden size={16} />
+      ) : (
+        <CircleAlert aria-hidden size={16} />
+      )}
+      {t(`workspaceSetting.linear.status.${installation.status}` as never)}
+    </Badge>
   );
 });
 
@@ -482,20 +510,20 @@ interface StepCardProps {
 }
 
 const StepCard = ({ action, children, description, title }: StepCardProps) => (
-  <Block className={styles.card} variant={'outlined'}>
-    <Flexbox gap={16} padding={20}>
+  <div className={'rounded-lg border border-border bg-background' + ' ' + styles.card}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
       <div className={styles.cardHeader}>
-        <Flexbox gap={4}>
-          <Text strong as={'h2'} className={styles.cardTitle} style={{ margin: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <h2 className={styles.cardTitle} style={{ fontWeight: 600, margin: 0 }}>
             {title}
-          </Text>
-          <Text className={styles.description}>{description}</Text>
-        </Flexbox>
+          </h2>
+          <span className={styles.description}>{description}</span>
+        </div>
         {action}
       </div>
       {children}
-    </Flexbox>
-  </Block>
+    </div>
+  </div>
 );
 
 const LinearWorkspaceSettings = memo(() => {
@@ -1163,96 +1191,111 @@ const LinearWorkspaceSettings = memo(() => {
         action={
           selectedInstallationRecovery?.reauthRequired ? (
             <Button
-              disabled={!canManage}
-              icon={Link2}
-              loading={action === 'connect'}
+              aria-busy={action === 'connect'}
+              disabled={!canManage || action === 'connect'}
+              variant="outline"
               onClick={connect}
             >
+              {action === 'connect' && <Loader2 aria-hidden className="size-4 animate-spin" />}
+              <Link2 aria-hidden size={16} />
               {t('workspaceSetting.linear.operations.reconnect')}
             </Button>
           ) : undefined
         }
       >
-        <Flexbox gap={12}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className={styles.statusGrid}>
             <div className={styles.statusCell}>
-              <Text type={'secondary'}>{t('workspaceSetting.linear.operations.status')}</Text>
-              <Text>
+              <span style={{ color: 'var(--muted-foreground)' }}>
+                {t('workspaceSetting.linear.operations.status')}
+              </span>
+              <span>
                 {selectedInstallationRecovery
                   ? t(
                       `workspaceSetting.linear.status.${selectedInstallationRecovery.status}` as never,
                     )
                   : '—'}
-              </Text>
+              </span>
             </div>
             <div className={styles.statusCell}>
-              <Text type={'secondary'}>{t('workspaceSetting.linear.operations.failed')}</Text>
-              <Text>{recoverySummary.failed}</Text>
+              <span style={{ color: 'var(--muted-foreground)' }}>
+                {t('workspaceSetting.linear.operations.failed')}
+              </span>
+              <span>{recoverySummary.failed}</span>
             </div>
             <div className={styles.statusCell}>
-              <Text type={'secondary'}>{t('workspaceSetting.linear.operations.deadLetter')}</Text>
-              <Text>{recoverySummary.deadLetter}</Text>
+              <span style={{ color: 'var(--muted-foreground)' }}>
+                {t('workspaceSetting.linear.operations.deadLetter')}
+              </span>
+              <span>{recoverySummary.deadLetter}</span>
             </div>
             <div className={styles.statusCell}>
-              <Text type={'secondary'}>
+              <span style={{ color: 'var(--muted-foreground)' }}>
                 {t('workspaceSetting.linear.operations.outcomeUnknown')}
-              </Text>
-              <Text>{recoverySummary.outcomeUnknown}</Text>
+              </span>
+              <span>{recoverySummary.outcomeUnknown}</span>
             </div>
           </div>
           {selectedInstallationRecovery?.lastError && (
-            <Alert
-              showIcon
-              description={selectedInstallationRecovery.lastError}
-              title={t('workspaceSetting.linear.operations.lastSafeError')}
-              type={'error'}
-            />
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden className="size-4" />
+              <AlertTitle>{t('workspaceSetting.linear.operations.lastSafeError')}</AlertTitle>
+              <AlertDescription>{selectedInstallationRecovery.lastError}</AlertDescription>
+            </Alert>
           )}
           {recoveryRows.length === 0 ? (
-            <Text className={styles.muted}>{t('workspaceSetting.linear.operations.empty')}</Text>
+            <span className={styles.muted}>{t('workspaceSetting.linear.operations.empty')}</span>
           ) : (
             <div>
               {recoveryRows.map((row) => (
                 <div className={styles.operationRow} key={`${row.kind}-${row.id}`}>
-                  <Tag size={'small'}>
+                  <Badge size="sm" variant="secondary">
                     {t(`workspaceSetting.linear.operations.kind.${row.kind}` as never)}
-                  </Tag>
-                  <Text type={'secondary'}>{row.status}</Text>
-                  <Text type={'secondary'}>
+                  </Badge>
+                  <span style={{ color: 'var(--muted-foreground)' }}>{row.status}</span>
+                  <span style={{ color: 'var(--muted-foreground)' }}>
                     {t('workspaceSetting.linear.operations.attempts', { count: row.attempts })}
-                  </Text>
-                  <Text className={styles.operationError} title={row.lastError ?? undefined}>
+                  </span>
+                  <span className={styles.operationError} title={row.lastError ?? undefined}>
                     {row.lastError ?? t('workspaceSetting.linear.operations.noError')}
-                  </Text>
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text className={styles.muted} fontSize={12}>
+                  </span>
+                  <div
+                    style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
+                    <span className={styles.muted} style={{ fontSize: 12 }}>
                       {t('workspaceSetting.linear.operations.age', {
                         time: dateLabel(row.createdAt, i18n.language),
                       })}
-                    </Text>
+                    </span>
                     <Button
-                      disabled={!canManage}
-                      loading={action === 'retry'}
-                      size={'small'}
+                      aria-busy={action === 'retry'}
+                      disabled={!canManage || action === 'retry'}
+                      size="sm"
+                      variant="outline"
                       onClick={() => void retryRecoveryRow(row)}
                     >
+                      {action === 'retry' && (
+                        <Loader2 aria-hidden className="size-4 animate-spin" />
+                      )}
                       {t('workspaceSetting.linear.operations.retry')}
                     </Button>
-                  </Flexbox>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-          <Flexbox gap={8}>
-            <Text strong>{t('workspaceSetting.linear.conflicts.title')}</Text>
-            <Text type={'secondary'}>{t('workspaceSetting.linear.conflicts.description')}</Text>
-          </Flexbox>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontWeight: 600 }}>{t('workspaceSetting.linear.conflicts.title')}</span>
+            <span style={{ color: 'var(--muted-foreground)' }}>
+              {t('workspaceSetting.linear.conflicts.description')}
+            </span>
+          </div>
           {conflicts.length === 0 ? (
-            <Text className={styles.muted}>
+            <span className={styles.muted}>
               {t('workspaceSetting.linear.conflicts.emptyState')}
-            </Text>
+            </span>
           ) : (
-            <Flexbox gap={12}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {conflicts.map((link) => {
                 const conflict = link.conflict!;
                 const selections = conflictChoices[link.id] ?? {};
@@ -1261,40 +1304,52 @@ const LinearWorkspaceSettings = memo(() => {
                   conflict.fields.every((field) => Boolean(selections[field]));
                 return (
                   <div className={styles.conflictCard} key={link.id}>
-                    <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-                      <Flexbox gap={2} style={{ minWidth: 0 }}>
-                        <Text strong>{link.linearIdentifier}</Text>
-                        <Text className={styles.muted} fontSize={12}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}
+                    >
+                      <div
+                        style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}
+                      >
+                        <span style={{ fontWeight: 600 }}>{link.linearIdentifier}</span>
+                        <span className={styles.muted} style={{ fontSize: 12 }}>
                           {t('workspaceSetting.linear.conflicts.detectedAt', {
                             time: dateLabel(conflict.detectedAt, i18n.language),
                           })}
-                        </Text>
-                      </Flexbox>
-                      <Tag size={'small'}>{t('workspaceSetting.linear.import.conflict')}</Tag>
-                    </Flexbox>
+                        </span>
+                      </div>
+                      <Badge size="sm" variant="secondary">
+                        {t('workspaceSetting.linear.import.conflict')}
+                      </Badge>
+                    </div>
                     {conflict.fields.map((field) => (
                       <div className={styles.conflictField} key={field}>
-                        <Text weight={500}>{field}</Text>
-                        <Text
+                        <span style={{ fontWeight: 500 }}>{field}</span>
+                        <span
                           className={styles.conflictValue}
                           title={valueLabel(conflict.local[field])}
                         >
                           {t('workspaceSetting.linear.conflicts.localValue', {
                             value: valueLabel(conflict.local[field]),
                           })}
-                        </Text>
-                        <Text
+                        </span>
+                        <span
                           className={styles.conflictValue}
                           title={valueLabel(conflict.remote[field])}
                         >
                           {t('workspaceSetting.linear.conflicts.linearValue', {
                             value: valueLabel(conflict.remote[field]),
                           })}
-                        </Text>
+                        </span>
                         <Select
-                          placeholder={t('workspaceSetting.linear.conflicts.chooseField')}
-                          value={selections[field]}
-                          options={[
+                          disabled={false}
+                          value={selections[field] ?? null}
+                          items={[
                             {
                               label: t('workspaceSetting.linear.conflicts.chooseLocal'),
                               value: 'local',
@@ -1304,53 +1359,96 @@ const LinearWorkspaceSettings = memo(() => {
                               value: 'linear',
                             },
                           ]}
-                          onChange={(value) =>
-                            updateConflictChoice(link.id, field, value as 'linear' | 'local')
-                          }
-                        />
+                          onValueChange={(value) => {
+                            if (value === null) return;
+                            updateConflictChoice(link.id, field, value as 'linear' | 'local');
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder={t('workspaceSetting.linear.conflicts.chooseField')}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[
+                              {
+                                label: t('workspaceSetting.linear.conflicts.chooseLocal'),
+                                value: 'local',
+                              },
+                              {
+                                label: t('workspaceSetting.linear.conflicts.chooseLinear'),
+                                value: 'linear',
+                              },
+                            ].map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                     {conflict.localRevision === undefined ? (
-                      <Alert
-                        showIcon
-                        description={t('workspaceSetting.linear.conflicts.refreshRequired')}
-                        type={'warning'}
-                      />
+                      <Alert variant="warning">
+                        <TriangleAlert aria-hidden className="size-4" />
+                        <AlertDescription>
+                          {t('workspaceSetting.linear.conflicts.refreshRequired')}
+                        </AlertDescription>
+                      </Alert>
                     ) : (
-                      <Flexbox horizontal gap={8} justify={'flex-end'} wrap={'wrap'}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          justifyContent: 'flex-end',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
                         <Button
-                          disabled={!canManage}
-                          loading={resolvingConflictId === link.id}
-                          size={'small'}
+                          aria-busy={resolvingConflictId === link.id}
+                          disabled={!canManage || resolvingConflictId === link.id}
+                          size="sm"
+                          variant="outline"
                           onClick={() => void resolveConflict(link, 'keep_local')}
                         >
+                          {resolvingConflictId === link.id && (
+                            <Loader2 aria-hidden className="size-4 animate-spin" />
+                          )}
                           {t('workspaceSetting.linear.conflicts.keepLocal')}
                         </Button>
                         <Button
-                          disabled={!canManage}
-                          loading={resolvingConflictId === link.id}
-                          size={'small'}
+                          aria-busy={resolvingConflictId === link.id}
+                          disabled={!canManage || resolvingConflictId === link.id}
+                          size="sm"
+                          variant="outline"
                           onClick={() => void resolveConflict(link, 'keep_linear')}
                         >
+                          {resolvingConflictId === link.id && (
+                            <Loader2 aria-hidden className="size-4 animate-spin" />
+                          )}
                           {t('workspaceSetting.linear.conflicts.keepLinear')}
                         </Button>
                         <Button
-                          disabled={!canManage || !mergeReady}
-                          loading={resolvingConflictId === link.id}
-                          size={'small'}
-                          type={'primary'}
+                          aria-busy={resolvingConflictId === link.id}
+                          disabled={!canManage || !mergeReady || resolvingConflictId === link.id}
+                          size="sm"
+                          variant="default"
                           onClick={() => void resolveConflict(link, 'merge')}
                         >
+                          {resolvingConflictId === link.id && (
+                            <Loader2 aria-hidden className="size-4 animate-spin" />
+                          )}
                           {t('workspaceSetting.linear.conflicts.merge')}
                         </Button>
-                      </Flexbox>
+                      </div>
                     )}
                   </div>
                 );
               })}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       </StepCard>
     );
   };
@@ -1361,82 +1459,101 @@ const LinearWorkspaceSettings = memo(() => {
       title={t(STEP_COPY.installation.title as never)}
       action={
         <Button
-          disabled={!canManage}
-          icon={Link2}
-          loading={action === 'connect'}
+          aria-busy={action === 'connect'}
+          disabled={!canManage || action === 'connect'}
           title={!canManage ? reason : undefined}
+          variant="outline"
           onClick={connect}
         >
+          {action === 'connect' && <Loader2 aria-hidden className="size-4 animate-spin" />}
+          <Link2 aria-hidden size={16} />
           {isConnected
             ? t('workspaceSetting.linear.reconnect')
             : t('workspaceSetting.linear.connect')}
         </Button>
       }
     >
-      <Flexbox gap={12}>
-        <Text className={styles.description}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <span className={styles.description}>
           {isConnected
             ? t('workspaceSetting.linear.connectedAccount')
             : t('workspaceSetting.linear.connectionDescription')}
-        </Text>
+        </span>
         {!isConnected ? (
-          <Alert
-            showIcon
-            description={t('workspaceSetting.linear.wizard.installationRequired')}
-            type={'info'}
-          />
+          <Alert variant="info">
+            <Info aria-hidden className="size-4" />
+            <AlertDescription>
+              {t('workspaceSetting.linear.wizard.installationRequired')}
+            </AlertDescription>
+          </Alert>
         ) : catalogError ? (
-          <Alert
-            showIcon
-            description={catalogError}
-            title={t('workspaceSetting.linear.loadFailed')}
-            type={'error'}
-            action={
-              <Button loading={action === 'load'} onClick={() => void loadCatalog()}>
-                {t('workspaceSetting.linear.retryLoad')}
-              </Button>
-            }
-          />
+          <Alert variant="destructive">
+            <CircleAlert aria-hidden className="size-4" />
+            <AlertTitle>{t('workspaceSetting.linear.loadFailed')}</AlertTitle>
+            <AlertDescription>{catalogError}</AlertDescription>
+            <AlertAction>
+              {
+                <Button
+                  aria-busy={action === 'load'}
+                  disabled={action === 'load'}
+                  variant="outline"
+                  onClick={() => void loadCatalog()}
+                >
+                  {action === 'load' && <Loader2 aria-hidden className="size-4 animate-spin" />}
+                  {t('workspaceSetting.linear.retryLoad')}
+                </Button>
+              }
+            </AlertAction>
+          </Alert>
         ) : (
           <>
             <div className={styles.row}>
-              <Text type={'secondary'}>{t('workspaceSetting.linear.installationIdentity')}</Text>
-              <Text type={'secondary'}>
+              <span style={{ color: 'var(--muted-foreground)' }}>
+                {t('workspaceSetting.linear.installationIdentity')}
+              </span>
+              <span style={{ color: 'var(--muted-foreground)' }}>
                 {selectedInstallation?.organizationName || selectedInstallation?.organizationId}
-              </Text>
+              </span>
             </div>
             {selectedInstallation && (
               <div className={styles.statusPanel}>
                 <InstallationStatusTag installation={selectedInstallation} />
-                <Text type={'secondary'}>
+                <span style={{ color: 'var(--muted-foreground)' }}>
                   {selectedInstallation.organizationName || selectedInstallation.organizationId}
-                </Text>
+                </span>
                 {selectedInstallation.lastSyncAt && (
-                  <Text className={styles.muted} fontSize={12}>
+                  <span className={styles.muted} style={{ fontSize: 12 }}>
                     {t('workspaceSetting.linear.lastSync', {
                       time: dateLabel(selectedInstallation.lastSyncAt, i18n.language),
                     })}
-                  </Text>
+                  </span>
                 )}
                 {selectedInstallationRecovery?.lastError && (
-                  <Text style={{ flexBasis: '100%' }} type={'danger'}>
+                  <span style={{ color: 'var(--destructive)', flexBasis: '100%' }}>
                     {selectedInstallationRecovery.lastError}
-                  </Text>
+                  </span>
                 )}
                 {selectedInstallation.status !== 'active' && (
                   <Alert
-                    showIcon
-                    type={selectedInstallation.status === 'paused' ? 'warning' : 'error'}
-                    description={t(
-                      `workspaceSetting.linear.installationAction.${selectedInstallation.status}` as never,
+                    variant={selectedInstallation.status === 'paused' ? 'warning' : 'destructive'}
+                  >
+                    {selectedInstallation.status === 'paused' ? (
+                      <TriangleAlert aria-hidden className="size-4" />
+                    ) : (
+                      <CircleAlert aria-hidden className="size-4" />
                     )}
-                  />
+                    <AlertDescription>
+                      {t(
+                        `workspaceSetting.linear.installationAction.${selectedInstallation.status}` as never,
+                      )}
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
             )}
           </>
         )}
-      </Flexbox>
+      </div>
     </StepCard>
   );
 
@@ -1460,119 +1577,171 @@ const LinearWorkspaceSettings = memo(() => {
     };
     const linkedTeamIds = new Set(teamLinks.map((link) => link.linearTeamId));
     return (
-      <Flexbox className={styles.scopePanel} gap={12}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <Text weight={600}>{t('workspaceSetting.linear.workspaceScopeTitle')}</Text>
+      <div
+        className={styles.scopePanel}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>
+            {t('workspaceSetting.linear.workspaceScopeTitle')}
+          </span>
           <Button
-            disabled={!canManage || remoteTeams.length === 0}
-            icon={Upload}
-            loading={action === 'scopeImport' || importing}
-            type={'primary'}
+            aria-busy={action === 'scopeImport' || importing}
+            variant="default"
+            disabled={
+              !canManage || remoteTeams.length === 0 || action === 'scopeImport' || importing
+            }
             onClick={() => void startWorkspaceImport()}
           >
+            {action === 'scopeImport' ||
+              (importing && <Loader2 aria-hidden className="size-4 animate-spin" />)}
+            <Upload aria-hidden size={16} />
             {importing
               ? t('workspaceSetting.linear.workspaceImporting')
               : syncScope?.importCompletedAt
                 ? t('workspaceSetting.linear.workspaceReimport')
                 : t('workspaceSetting.linear.workspaceImportStart')}
           </Button>
-        </Flexbox>
-        <Text className={styles.description} fontSize={12}>
+        </div>
+        <span className={styles.description} style={{ fontSize: 12 }}>
           {t('workspaceSetting.linear.workspaceScopeDescription')}
-        </Text>
-        <Flexbox gap={8}>
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {remoteTeams.map((team) => (
-            <Flexbox horizontal align={'center'} gap={8} key={team.id}>
+            <div
+              key={team.id}
+              style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}
+            >
               <input
                 checked={approved(team.id)}
                 disabled={!canManage || importing}
                 type={'checkbox'}
                 onChange={(event) => toggleTeam(team.id, event.target.checked)}
               />
-              <Text>
+              <span>
                 {team.name} ({team.key})
-              </Text>
+              </span>
               {linkedTeamIds.has(team.id) && (
-                <Tag>{t('workspaceSetting.linear.workspaceScopeLinked')}</Tag>
+                <Badge variant="secondary">
+                  {t('workspaceSetting.linear.workspaceScopeLinked')}
+                </Badge>
               )}
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
-        <Flexbox horizontal gap={24} wrap={'wrap'}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <input
               checked={scopeIncludeProjectless}
               disabled={!canManage || importing}
               type={'checkbox'}
               onChange={(event) => setScopeIncludeProjectless(event.target.checked)}
             />
-            <Text type={'secondary'}>{t('workspaceSetting.linear.includeProjectlessIssues')}</Text>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Text type={'secondary'}>{t('workspaceSetting.linear.privateTeamPolicy')}</Text>
+            <span style={{ color: 'var(--muted-foreground)' }}>
+              {t('workspaceSetting.linear.includeProjectlessIssues')}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--muted-foreground)' }}>
+              {t('workspaceSetting.linear.privateTeamPolicy')}
+            </span>
             <Select
               disabled={!canManage || importing}
-              size={'small'}
-              value={scopePrivateTeamPolicy}
-              options={[
+              value={scopePrivateTeamPolicy ?? null}
+              items={[
                 {
                   label: t('workspaceSetting.linear.privateTeamImportRestricted'),
                   value: 'import_restricted',
                 },
                 { label: t('workspaceSetting.linear.privateTeamSkip'), value: 'skip' },
               ]}
-              onChange={(value) => setScopePrivateTeamPolicy(value as 'import_restricted' | 'skip')}
-            />
-          </Flexbox>
-        </Flexbox>
+              onValueChange={(value) => {
+                if (value === null) return;
+                setScopePrivateTeamPolicy(value as 'import_restricted' | 'skip');
+              }}
+            >
+              <SelectTrigger className="w-full" size="sm">
+                <SelectValue placeholder={undefined} />
+              </SelectTrigger>
+              <SelectContent>
+                {[
+                  {
+                    label: t('workspaceSetting.linear.privateTeamImportRestricted'),
+                    value: 'import_restricted',
+                  },
+                  { label: t('workspaceSetting.linear.privateTeamSkip'), value: 'skip' },
+                ].map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         {syncScope && (
           <div className={styles.statusPanel}>
-            <Tag
-              icon={
-                <Icon
-                  spin={syncScope.status === 'importing'}
-                  icon={
+            <Badge variant="secondary">
+              {
+                <span className="inline-flex">
+                  {createElement(
                     syncScope.status === 'importing'
                       ? RefreshCw
                       : syncScope.status === 'failed'
                         ? CircleAlert
-                        : CircleCheck
-                  }
-                />
+                        : CircleCheck,
+                    {
+                      size: 16,
+                      className: syncScope.status === 'importing' ? 'animate-spin' : undefined,
+                    },
+                  )}
+                </span>
               }
-            >
-              <Text type={syncScope.status === 'failed' ? 'danger' : undefined}>
+              <span
+                style={{
+                  color: syncScope.status === 'failed' ? 'var(--destructive)' : undefined,
+                }}
+              >
                 {t(`workspaceSetting.linear.scopeStatus.${syncScope.status}` as never)}
-              </Text>
-            </Tag>
+              </span>
+            </Badge>
             {syncScope.importPhase && (
-              <Text type={'secondary'}>
+              <span style={{ color: 'var(--muted-foreground)' }}>
                 {t('workspaceSetting.linear.scopePhase', {
                   phase: t(
                     `workspaceSetting.linear.scopePhaseName.${syncScope.importPhase}` as never,
                   ),
                 })}
-              </Text>
+              </span>
             )}
-            <Text className={styles.muted} fontSize={12}>
+            <span className={styles.muted} style={{ fontSize: 12 }}>
               {t('workspaceSetting.linear.scopeCounters', {
                 issues: syncScope.issuesImported,
                 issuesFailed: syncScope.issuesFailed,
                 projects: syncScope.projectsLinked,
                 teams: syncScope.teamsLinked,
               })}
-            </Text>
-            {syncScope.lastError && <Text type={'danger'}>{syncScope.lastError}</Text>}
+            </span>
+            {syncScope.lastError && (
+              <span style={{ color: 'var(--destructive)' }}>{syncScope.lastError}</span>
+            )}
             {syncScope.importCompletedAt && (
-              <Text className={styles.muted} fontSize={12}>
+              <span className={styles.muted} style={{ fontSize: 12 }}>
                 {t('workspaceSetting.linear.scopeCompletedAt', {
                   time: dateLabel(syncScope.importCompletedAt, i18n.language),
                 })}
-              </Text>
+              </span>
             )}
           </div>
         )}
-      </Flexbox>
+      </div>
     );
   };
 
@@ -1581,38 +1750,40 @@ const LinearWorkspaceSettings = memo(() => {
       description={t(STEP_COPY.scope.description as never)}
       title={t(STEP_COPY.scope.title as never)}
       action={
-        <Button disabled={!hasScope} icon={ChevronRight} onClick={() => setActiveStep('binding')}>
+        <Button disabled={!hasScope} variant="outline" onClick={() => setActiveStep('binding')}>
+          <ChevronRight aria-hidden size={16} />
           {t('workspaceSetting.linear.continue')}
         </Button>
       }
     >
       {!selectedInstallation || selectedInstallation.status !== 'active' ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeInstallation')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>
+            {t('workspaceSetting.linear.wizard.completeInstallation')}
+          </AlertDescription>
+        </Alert>
       ) : (
-        <Flexbox gap={16}>
-          <Text type={'secondary'}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <span style={{ color: 'var(--muted-foreground)' }}>
             {t('workspaceSetting.linear.organizationScopedTo', {
               organization:
                 selectedInstallation.organizationName || selectedInstallation.organizationId,
             })}
-          </Text>
+          </span>
           {renderWorkspaceScope()}
           <div className={styles.grid}>
             <div className={styles.field}>
-              <Text className={styles.fieldLabel}>{t('workspaceSetting.linear.teamTitle')}</Text>
+              <span className={styles.fieldLabel}>{t('workspaceSetting.linear.teamTitle')}</span>
               <Select
                 disabled={!canManage}
-                placeholder={t('workspaceSetting.linear.teamPlaceholder')}
-                value={selectedTeamId || undefined}
-                options={(catalog?.teams ?? []).map((team) => ({
+                value={(selectedTeamId || undefined) ?? null}
+                items={(catalog?.teams ?? []).map((team) => ({
                   label: `${team.name} (${team.key})`,
                   value: team.id,
                 }))}
-                onChange={(value) => {
+                onValueChange={(value) => {
+                  if (value === null) return;
                   setSelectedTeamId(value);
                   if (
                     selectedLinearProjectId &&
@@ -1623,38 +1794,71 @@ const LinearWorkspaceSettings = memo(() => {
                     setSelectedLinearProjectId('');
                   }
                 }}
-              />
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('workspaceSetting.linear.teamPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(catalog?.teams ?? [])
+                    .map((team) => ({
+                      label: `${team.name} (${team.key})`,
+                      value: team.id,
+                    }))
+                    .map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className={styles.field}>
-              <Text className={styles.fieldLabel}>
+              <span className={styles.fieldLabel}>
                 {t('workspaceSetting.linear.remoteProjectTitle')}
-              </Text>
+              </span>
               <Select
                 disabled={!canManage || !selectedTeamId}
-                placeholder={t('workspaceSetting.linear.remoteProjectPlaceholder')}
-                value={selectedLinearProjectId || undefined}
-                options={scopedRemoteProjects.map((project) => ({
+                value={(selectedLinearProjectId || undefined) ?? null}
+                items={scopedRemoteProjects.map((project) => ({
                   label: project.name,
                   value: project.id,
                 }))}
-                onChange={(value) => {
+                onValueChange={(value) => {
+                  if (value === null) return;
                   setSelectedLinearProjectId(value);
                   const project = catalog?.projects.find((item) => item.id === value);
                   if (project && !project.teamIds.includes(selectedTeamId)) {
                     setSelectedTeamId(project.teamIds[0] ?? '');
                   }
                 }}
-              />
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={t('workspaceSetting.linear.remoteProjectPlaceholder')}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {scopedRemoteProjects
+                    .map((project) => ({
+                      label: project.name,
+                      value: project.id,
+                    }))
+                    .map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           {!catalog?.teams.length || !scopedRemoteProjects.length ? (
-            <Alert
-              showIcon
-              description={t('workspaceSetting.linear.scopeCatalogEmpty')}
-              type={'warning'}
-            />
+            <Alert variant="warning">
+              <TriangleAlert aria-hidden className="size-4" />
+              <AlertDescription>{t('workspaceSetting.linear.scopeCatalogEmpty')}</AlertDescription>
+            </Alert>
           ) : null}
-        </Flexbox>
+        </div>
       )}
     </StepCard>
   );
@@ -1665,91 +1869,121 @@ const LinearWorkspaceSettings = memo(() => {
       title={t(STEP_COPY.binding.title as never)}
       action={
         <Button
-          disabled={!canManage || !hasScope || !selectedProjectId || !selectedRemoteProject}
-          loading={action === 'binding'}
+          aria-busy={action === 'binding'}
+          variant="outline"
+          disabled={
+            !canManage ||
+            !hasScope ||
+            !selectedProjectId ||
+            !selectedRemoteProject ||
+            action === 'binding'
+          }
           onClick={() => void saveBinding()}
         >
+          {action === 'binding' && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {t('workspaceSetting.linear.saveBinding')}
         </Button>
       }
     >
       {!hasScope ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeScope')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.completeScope')}</AlertDescription>
+        </Alert>
       ) : (
-        <Flexbox gap={16}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className={styles.field}>
-            <Text className={styles.fieldLabel}>
+            <span className={styles.fieldLabel}>
               {t('workspaceSetting.linear.localProjectTitle')}
-            </Text>
+            </span>
             <Select
               disabled={!canManage}
-              placeholder={t('workspaceSetting.linear.localProjectPlaceholder')}
-              value={selectedProjectId || undefined}
-              options={localProjects.map((project) => ({
+              value={(selectedProjectId || undefined) ?? null}
+              items={localProjects.map((project) => ({
                 label: `${project.name} (${project.identifier})`,
                 value: project.id,
               }))}
-              onChange={(value) => setSelectedProjectId(value)}
-            />
+              onValueChange={(value) => {
+                if (value === null) return;
+                setSelectedProjectId(value);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('workspaceSetting.linear.localProjectPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                {localProjects
+                  .map((project) => ({
+                    label: `${project.name} (${project.identifier})`,
+                    value: project.id,
+                  }))
+                  .map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className={styles.statusPanel}>
             <GitBranch size={16} />
-            <Text>
+            <span>
               {catalog?.projects.find((project) => project.id === selectedLinearProjectId)?.name}
-            </Text>
-            <Text type={'secondary'}>·</Text>
-            <Text type={'secondary'}>
+            </span>
+            <span style={{ color: 'var(--muted-foreground)' }}>·</span>
+            <span style={{ color: 'var(--muted-foreground)' }}>
               {catalog?.teams.find((team) => team.id === selectedTeamId)?.name}
-            </Text>
+            </span>
             {hasBinding && (
-              <Tag icon={<Check size={12} />} size={'small'}>
+              <Badge size="sm" variant="secondary">
+                {<Check size={12} />}
                 {t('workspaceSetting.linear.bindingSaved')}
-              </Tag>
+              </Badge>
             )}
           </div>
-          <Flexbox gap={12}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div className={styles.gate}>
               <div className={styles.row}>
-                <Flexbox gap={4}>
-                  <Text strong>{t('workspaceSetting.linear.inboundReadTitle')}</Text>
-                  <Text className={styles.description} fontSize={12}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontWeight: 600 }}>
+                    {t('workspaceSetting.linear.inboundReadTitle')}
+                  </span>
+                  <span className={styles.description} style={{ fontSize: 12 }}>
                     {t('workspaceSetting.linear.inboundReadDescription')}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
                 <Switch
                   checked={readEnabled}
                   disabled={!canManage}
-                  onChange={(value) => void persistRolloutControl('read', value)}
+                  onCheckedChange={(value) => void persistRolloutControl('read', value)}
                 />
               </div>
             </div>
             <div className={styles.gate}>
               <div className={styles.row}>
-                <Flexbox gap={4}>
-                  <Text strong>{t('workspaceSetting.linear.outboundWriteTitle')}</Text>
-                  <Text className={styles.description} fontSize={12}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontWeight: 600 }}>
+                    {t('workspaceSetting.linear.outboundWriteTitle')}
+                  </span>
+                  <span className={styles.description} style={{ fontSize: 12 }}>
                     {t('workspaceSetting.linear.outboundWriteDescription')}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
                 <Switch
                   checked={writeEnabled}
                   disabled={!canManage}
-                  onChange={(value) => void persistRolloutControl('write', value)}
+                  onCheckedChange={(value) => void persistRolloutControl('write', value)}
                 />
               </div>
             </div>
-          </Flexbox>
-          <Text className={styles.muted} fontSize={12}>
+          </div>
+          <span className={styles.muted} style={{ fontSize: 12 }}>
             {t('workspaceSetting.linear.rolloutCompatibilityNote')}
-          </Text>
-          <Text className={styles.muted} fontSize={12}>
+          </span>
+          <span className={styles.muted} style={{ fontSize: 12 }}>
             {t('workspaceSetting.linear.bindingSyncDisabledUntilStep')}
-          </Text>
-        </Flexbox>
+          </span>
+        </div>
       )}
     </StepCard>
   );
@@ -1759,28 +1993,31 @@ const LinearWorkspaceSettings = memo(() => {
       description={t(STEP_COPY.mapping.description as never)}
       title={t(STEP_COPY.mapping.title as never)}
       action={
-        <Button disabled={!hasBinding} icon={ChevronRight} onClick={() => setActiveStep('import')}>
+        <Button disabled={!hasBinding} variant="outline" onClick={() => setActiveStep('import')}>
+          <ChevronRight aria-hidden size={16} />
           {t('workspaceSetting.linear.continue')}
         </Button>
       }
     >
       {!hasBinding || !selectedBinding ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeBinding')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.completeBinding')}</AlertDescription>
+        </Alert>
       ) : (
-        <Flexbox gap={16}>
-          <Alert
-            showIcon
-            description={t('workspaceSetting.linear.mappingCatalogUnavailable')}
-            title={t('workspaceSetting.linear.mappingReadOnlyTitle')}
-            type={'info'}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Alert variant="info">
+            <Info aria-hidden className="size-4" />
+            <AlertTitle>{t('workspaceSetting.linear.mappingReadOnlyTitle')}</AlertTitle>
+            <AlertDescription>
+              {t('workspaceSetting.linear.mappingCatalogUnavailable')}
+            </AlertDescription>
+          </Alert>
           {mappingStateIds.length > 0 && (
-            <Flexbox gap={4}>
-              <Text strong>{t('workspaceSetting.linear.statusMappingsTitle')}</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontWeight: 600 }}>
+                {t('workspaceSetting.linear.statusMappingsTitle')}
+              </span>
               <div>
                 {mappingStateIds.map((stateId) => {
                   const mapping = selectedBinding.settings.statusMappings?.find(
@@ -1788,22 +2025,30 @@ const LinearWorkspaceSettings = memo(() => {
                   );
                   return (
                     <div className={styles.mappingRow} key={stateId}>
-                      <Text style={{ wordBreak: 'break-all' }}>
+                      <span style={{ wordBreak: 'break-all' }}>
                         {catalogWorkflowStatesById.get(stateId)?.name ?? stateId}
                         {catalogWorkflowStatesById.has(stateId) ? ` (${stateId})` : ''}
-                      </Text>
-                      <Text type={mapping ? undefined : 'secondary'}>
-                        {mapping?.localStatus ?? t('workspaceSetting.linear.unmapped')}
-                      </Text>
+                      </span>
+                      <span
+                        style={{
+                          color: mapping ? undefined : 'var(--muted-foreground)',
+                        }}
+                      >
+                        {mapping?.workflowCategory ??
+                          mapping?.localStatus ??
+                          t('workspaceSetting.linear.unmapped')}
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            </Flexbox>
+            </div>
           )}
           {mappingAssigneeIds.length > 0 && (
-            <Flexbox gap={4}>
-              <Text strong>{t('workspaceSetting.linear.assigneeMappingsTitle')}</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontWeight: 600 }}>
+                {t('workspaceSetting.linear.assigneeMappingsTitle')}
+              </span>
               <div>
                 {mappingAssigneeIds.map((linearUserId) => {
                   const mapping = selectedBinding.settings.assignmentMappings?.find(
@@ -1812,23 +2057,27 @@ const LinearWorkspaceSettings = memo(() => {
                   const target = mapping?.orviloAgentId || mapping?.orviloUserId;
                   return (
                     <div className={styles.mappingRow} key={linearUserId}>
-                      <Text style={{ wordBreak: 'break-all' }}>
+                      <span style={{ wordBreak: 'break-all' }}>
                         {catalogMembersById.get(linearUserId)?.name ?? linearUserId}
                         {catalogMembersById.has(linearUserId) ? ` (${linearUserId})` : ''}
-                      </Text>
-                      <Text type={target ? undefined : 'secondary'}>
+                      </span>
+                      <span
+                        style={{
+                          color: target ? undefined : 'var(--muted-foreground)',
+                        }}
+                      >
                         {target ?? t('workspaceSetting.linear.unmapped')}
-                      </Text>
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            </Flexbox>
+            </div>
           )}
           {mappingStateIds.length === 0 && mappingAssigneeIds.length === 0 && (
-            <Text className={styles.muted}>{t('workspaceSetting.linear.noMappingsYet')}</Text>
+            <span className={styles.muted}>{t('workspaceSetting.linear.noMappingsYet')}</span>
           )}
-        </Flexbox>
+        </div>
       )}
     </StepCard>
   );
@@ -1844,59 +2093,67 @@ const LinearWorkspaceSettings = memo(() => {
         title={t(STEP_COPY.import.title as never)}
         action={
           <Button
-            disabled={!canManage || !hasBinding || issueLinksLoading}
-            icon={Upload}
-            loading={action === 'import'}
+            aria-busy={action === 'import'}
+            disabled={!canManage || !hasBinding || issueLinksLoading || action === 'import'}
+            variant="outline"
             onClick={() => void importProject()}
           >
+            {action === 'import' && <Loader2 aria-hidden className="size-4 animate-spin" />}
+            <Upload aria-hidden size={16} />
             {t('workspaceSetting.linear.importProject')}
           </Button>
         }
       >
         {!hasBinding || !selectedBinding ? (
-          <Alert
-            showIcon
-            description={t('workspaceSetting.linear.wizard.completeBinding')}
-            type={'warning'}
-          />
+          <Alert variant="warning">
+            <TriangleAlert aria-hidden className="size-4" />
+            <AlertDescription>
+              {t('workspaceSetting.linear.wizard.completeBinding')}
+            </AlertDescription>
+          </Alert>
         ) : (
-          <Flexbox gap={16}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className={styles.statusPanel}>
-              <Tag icon={<Upload size={12} />} size={'small'}>
+              <Badge size="sm" variant="secondary">
+                {<Upload size={12} />}
                 {selectedBinding.importCompletedAt || selectedBinding.importPhase === 'completed'
                   ? t('workspaceSetting.linear.importComplete')
                   : importInProgress
                     ? t('workspaceSetting.linear.importInProgress')
                     : t('workspaceSetting.linear.importReady')}
-              </Tag>
-              <Text type={'secondary'}>
+              </Badge>
+              <span style={{ color: 'var(--muted-foreground)' }}>
                 {selectedBinding.importCompletedAt || selectedBinding.importPhase === 'completed'
                   ? dateLabel(selectedBinding.importCompletedAt, i18n.language)
                   : importInProgress
                     ? t('workspaceSetting.linear.importInProgress')
                     : t('workspaceSetting.linear.importNotRun')}
-              </Text>
+              </span>
               {lastImport && (
-                <Text className={styles.muted} fontSize={12}>
+                <span className={styles.muted} style={{ fontSize: 12 }}>
                   {t('workspaceSetting.linear.importBatch', {
                     failed: lastImport.failed,
                     imported: lastImport.imported,
                   })}
-                </Text>
+                </span>
               )}
             </div>
             {issueLinksError && (
-              <Alert
-                showIcon
-                description={issueLinksError}
-                title={t('workspaceSetting.linear.issueLinksLoadFailed')}
-                type={'error'}
-                action={
-                  <Button onClick={() => void loadIssueLinks(selectedBinding.id)}>
-                    {t('workspaceSetting.linear.retryLoad')}
-                  </Button>
-                }
-              />
+              <Alert variant="destructive">
+                <CircleAlert aria-hidden className="size-4" />
+                <AlertTitle>{t('workspaceSetting.linear.issueLinksLoadFailed')}</AlertTitle>
+                <AlertDescription>{issueLinksError}</AlertDescription>
+                <AlertAction>
+                  {
+                    <Button
+                      variant="outline"
+                      onClick={() => void loadIssueLinks(selectedBinding.id)}
+                    >
+                      {t('workspaceSetting.linear.retryLoad')}
+                    </Button>
+                  }
+                </AlertAction>
+              </Alert>
             )}
             <div className={styles.statusGrid}>
               {(
@@ -1910,37 +2167,42 @@ const LinearWorkspaceSettings = memo(() => {
                 ] as const
               ).map(([key, count]) => (
                 <div className={styles.statusCell} key={key}>
-                  <Text fontSize={12} type={'secondary'}>
+                  <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>
                     {t(`workspaceSetting.linear.import.${key}` as never)}
-                  </Text>
-                  <Text strong>{count}</Text>
+                  </span>
+                  <span style={{ fontWeight: 600 }}>{count}</span>
                 </div>
               ))}
             </div>
             {issueLinksLoading ? (
-              <Text className={styles.muted}>{t('workspaceSetting.linear.loadingIssueLinks')}</Text>
+              <span className={styles.muted}>{t('workspaceSetting.linear.loadingIssueLinks')}</span>
             ) : issueLinks.length > 0 ? (
               <div className={styles.previewList}>
                 {issueLinks.slice(0, 8).map((link) => (
                   <div className={styles.previewItem} key={link.id}>
-                    <Flexbox gap={2} style={{ minWidth: 0 }}>
-                      <Text ellipsis weight={500}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                      <span className="block min-w-0 truncate" style={{ fontWeight: 500 }}>
                         {link.linearIdentifier}
-                      </Text>
-                      <Text ellipsis className={styles.muted} fontSize={12}>
+                      </span>
+                      <span
+                        className={'block min-w-0 truncate' + ' ' + styles.muted}
+                        style={{ fontSize: 12 }}
+                      >
                         {link.remoteSnapshot?.title ?? link.lastConfirmedSnapshot.title}
-                      </Text>
-                    </Flexbox>
-                    <Tag size={'small'}>{link.syncState}</Tag>
+                      </span>
+                    </div>
+                    <Badge size="sm" variant="secondary">
+                      {link.syncState}
+                    </Badge>
                   </div>
                 ))}
               </div>
             ) : (
-              <Text className={styles.muted}>
+              <span className={styles.muted}>
                 {t('workspaceSetting.linear.importPreviewEmpty')}
-              </Text>
+              </span>
             )}
-          </Flexbox>
+          </div>
         )}
       </StepCard>
     );
@@ -1952,10 +2214,12 @@ const LinearWorkspaceSettings = memo(() => {
       title={t(STEP_COPY.sync.title as never)}
       action={
         <Button
-          disabled={!canManage || !hasBinding}
-          loading={action === 'sync'}
+          aria-busy={action === 'sync'}
+          disabled={!canManage || !hasBinding || action === 'sync'}
+          variant="outline"
           onClick={() => void persistBinding({ action: 'sync', syncEnabled: !syncEnabled })}
         >
+          {action === 'sync' && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {syncEnabled
             ? t('workspaceSetting.linear.disableSync')
             : t('workspaceSetting.linear.enableSync')}
@@ -1963,39 +2227,46 @@ const LinearWorkspaceSettings = memo(() => {
       }
     >
       {!hasBinding || !selectedBinding ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeBinding')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.completeBinding')}</AlertDescription>
+        </Alert>
       ) : (
-        <Flexbox gap={16}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className={styles.statusPanel}>
-            <Tag icon={syncEnabled ? <CircleCheck size={12} /> : <CircleDashed size={12} />}>
+            <Badge variant="secondary">
+              {syncEnabled ? <CircleCheck size={12} /> : <CircleDashed size={12} />}
               {syncEnabled
                 ? t('workspaceSetting.linear.syncEnabled')
                 : t('workspaceSetting.linear.syncDisabled')}
-            </Tag>
-            <Text type={'secondary'}>
+            </Badge>
+            <span style={{ color: 'var(--muted-foreground)' }}>
               {selectedInstallation?.lastSyncAt
                 ? t('workspaceSetting.linear.lastSync', {
                     time: dateLabel(selectedInstallation.lastSyncAt, i18n.language),
                   })
                 : t('workspaceSetting.linear.noSyncRecorded')}
-            </Text>
+            </span>
           </div>
-          <Text className={styles.muted} fontSize={12}>
+          <span className={styles.muted} style={{ fontSize: 12 }}>
             {t('workspaceSetting.linear.syncEnableNote')}
-          </Text>
+          </span>
           <Button
-            disabled={!canManage || !syncEnabled || selectedInstallation?.status !== 'active'}
-            icon={RefreshCw}
-            loading={action === 'worker'}
+            aria-busy={action === 'worker'}
+            variant="outline"
+            disabled={
+              !canManage ||
+              !syncEnabled ||
+              selectedInstallation?.status !== 'active' ||
+              action === 'worker'
+            }
             onClick={() => void runWorker()}
           >
+            {action === 'worker' && <Loader2 aria-hidden className="size-4 animate-spin" />}
+            <RefreshCw aria-hidden size={16} />
             {t('workspaceSetting.linear.runWorker')}
           </Button>
-        </Flexbox>
+        </div>
       )}
     </StepCard>
   );
@@ -2006,97 +2277,134 @@ const LinearWorkspaceSettings = memo(() => {
       title={t(STEP_COPY.automation.title as never)}
     >
       {!hasBinding || !selectedBinding || !syncEnabled ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.enableSyncFirst')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.enableSyncFirst')}</AlertDescription>
+        </Alert>
       ) : (
-        <Flexbox gap={12}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className={styles.gate}>
-            <Flexbox gap={12}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className={styles.row}>
-                <Flexbox gap={4}>
-                  <Text strong>{t('workspaceSetting.linear.replanningGateTitle')}</Text>
-                  <Text className={styles.description} fontSize={12}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontWeight: 600 }}>
+                    {t('workspaceSetting.linear.replanningGateTitle')}
+                  </span>
+                  <span className={styles.description} style={{ fontSize: 12 }}>
                     {t('workspaceSetting.linear.replanningGateDescription')}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
                 <Switch
                   checked={replanningEnabled}
                   disabled={!canManage}
-                  onChange={setReplanningEnabled}
+                  onCheckedChange={setReplanningEnabled}
                 />
               </div>
               <Button
-                disabled={!canManage || replanningEnabled === selectedBinding.replanningEnabled}
-                loading={action === 'replanning'}
+                aria-busy={action === 'replanning'}
+                variant="outline"
+                disabled={
+                  !canManage ||
+                  replanningEnabled === selectedBinding.replanningEnabled ||
+                  action === 'replanning'
+                }
                 onClick={() => void persistBinding({ action: 'replanning', replanningEnabled })}
               >
+                {action === 'replanning' && <Loader2 aria-hidden className="size-4 animate-spin" />}
                 {t('workspaceSetting.linear.saveReplanning')}
               </Button>
-            </Flexbox>
+            </div>
           </div>
           <div className={styles.gate}>
-            <Flexbox gap={12}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className={styles.row}>
-                <Flexbox gap={4}>
-                  <Text strong>{t('workspaceSetting.linear.autoExecutionGateTitle')}</Text>
-                  <Text className={styles.description} fontSize={12}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontWeight: 600 }}>
+                    {t('workspaceSetting.linear.autoExecutionGateTitle')}
+                  </span>
+                  <span className={styles.description} style={{ fontSize: 12 }}>
                     {t('workspaceSetting.linear.autoExecutionGateDescription')}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
                 <Switch
                   checked={autoExecutionEnabled}
                   disabled={!canManage}
-                  onChange={setAutoExecutionEnabled}
+                  onCheckedChange={setAutoExecutionEnabled}
                 />
               </div>
               <Button
-                loading={action === 'autoExecution'}
+                aria-busy={action === 'autoExecution'}
+                variant="outline"
                 disabled={
-                  !canManage || autoExecutionEnabled === selectedBinding.autoExecutionEnabled
+                  !canManage ||
+                  autoExecutionEnabled === selectedBinding.autoExecutionEnabled ||
+                  action === 'autoExecution'
                 }
                 onClick={() =>
                   void persistBinding({ action: 'autoExecution', autoExecutionEnabled })
                 }
               >
+                {action === 'autoExecution' && (
+                  <Loader2 aria-hidden className="size-4 animate-spin" />
+                )}
                 {t('workspaceSetting.linear.saveAutoExecution')}
               </Button>
-            </Flexbox>
+            </div>
           </div>
           {selectedPlanningScope && (
-            <Block variant={'outlined'}>
-              <Flexbox gap={12} padding={16}>
-                <Text strong>{t('workspaceSetting.linear.planningTitle')}</Text>
+            <div className="rounded-lg border border-border bg-background">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+                <span style={{ fontWeight: 600 }}>
+                  {t('workspaceSetting.linear.planningTitle')}
+                </span>
                 {latestProposalRevision?.proposal ? (
                   <Alert
-                    title={latestProposalRevision.proposal.explanation}
-                    type={latestProposalRevision.proposal.requiresApproval ? 'warning' : 'info'}
-                    description={
-                      <Flexbox gap={4}>
-                        {latestProposalRevision.proposal.actions.map((proposalAction, index) => (
-                          <Text key={`${latestProposalRevision.id}-${index}`} type={'secondary'}>
-                            {proposalAction.action}: {proposalAction.reason}
-                          </Text>
-                        ))}
-                      </Flexbox>
-                    }
-                  />
+                    variant={latestProposalRevision.proposal.requiresApproval ? 'warning' : 'info'}
+                  >
+                    {latestProposalRevision.proposal.requiresApproval ? (
+                      <TriangleAlert aria-hidden className="size-4" />
+                    ) : (
+                      <Info aria-hidden className="size-4" />
+                    )}
+                    <AlertTitle>{latestProposalRevision.proposal.explanation}</AlertTitle>
+                    <AlertDescription>
+                      {
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {latestProposalRevision.proposal.actions.map((proposalAction, index) => (
+                            <span
+                              key={`${latestProposalRevision.id}-${index}`}
+                              style={{ color: 'var(--muted-foreground)' }}
+                            >
+                              {proposalAction.action}: {proposalAction.reason}
+                            </span>
+                          ))}
+                        </div>
+                      }
+                    </AlertDescription>
+                  </Alert>
                 ) : (
-                  <Text type={'secondary'}>{t('workspaceSetting.linear.noProposal')}</Text>
+                  <span style={{ color: 'var(--muted-foreground)' }}>
+                    {t('workspaceSetting.linear.noProposal')}
+                  </span>
                 )}
                 <Button
-                  disabled={!canManage || !replanningEnabled || !latestProposalRevision?.proposal}
-                  loading={action === 'proposal'}
+                  aria-busy={action === 'proposal'}
+                  variant="outline"
+                  disabled={
+                    !canManage ||
+                    !replanningEnabled ||
+                    !latestProposalRevision?.proposal ||
+                    action === 'proposal'
+                  }
                   onClick={() => void applyProposal()}
                 >
+                  {action === 'proposal' && <Loader2 aria-hidden className="size-4 animate-spin" />}
                   {t('workspaceSetting.linear.applyProposal')}
                 </Button>
-              </Flexbox>
-            </Block>
+              </div>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
     </StepCard>
   );
@@ -2113,13 +2421,13 @@ const LinearWorkspaceSettings = memo(() => {
 
   return (
     <div className={styles.container}>
-      <Flexbox className={styles.inner} gap={20}>
-        <Flexbox gap={4}>
-          <Text strong as={'h1'} style={{ fontSize: 24, margin: 0 }}>
+      <div className={styles.inner} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <h1 style={{ fontWeight: 600, fontSize: 24, margin: 0 }}>
             {t('workspaceSetting.linear.title')}
-          </Text>
-          <Text className={styles.description}>{t('workspaceSetting.linear.description')}</Text>
-        </Flexbox>
+          </h1>
+          <span className={styles.description}>{t('workspaceSetting.linear.description')}</span>
+        </div>
 
         <div aria-label={t('workspaceSetting.linear.wizard.progress')} className={styles.steps}>
           {STEP_ORDER.map((step, index) => {
@@ -2159,12 +2467,12 @@ const LinearWorkspaceSettings = memo(() => {
 
         {renderOperations()}
 
-        <Alert
-          description={t('workspaceSetting.linear.wizard.scopeBoundary')}
-          title={t('workspaceSetting.linear.wizard.scopeBoundaryTitle')}
-          type={'info'}
-        />
-      </Flexbox>
+        <Alert variant="info">
+          <Info aria-hidden className="size-4" />
+          <AlertTitle>{t('workspaceSetting.linear.wizard.scopeBoundaryTitle')}</AlertTitle>
+          <AlertDescription>{t('workspaceSetting.linear.wizard.scopeBoundary')}</AlertDescription>
+        </Alert>
+      </div>
     </div>
   );
 });

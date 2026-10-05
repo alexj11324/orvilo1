@@ -3,7 +3,7 @@ import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
 import { BatchIngester, type IngestSink } from './BatchIngester';
 
 /**
- * Server ingester for `lh hetero exec`: coalesces main-agent text and
+ * Server ingester for `orvilo hetero exec`: coalesces main-agent text and
  * reasoning deltas into `replace` snapshots, then ships every event through
  * `BatchIngester` (≤50 events/batch, lazy-splice worker, 5-retry back-off)
  * instead of one serial tRPC round-trip per event.

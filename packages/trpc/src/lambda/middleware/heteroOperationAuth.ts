@@ -14,7 +14,7 @@ const STRICT_OPERATION_CLAIMS = ['aud', 'capabilities', 'iss', 'jti', 'operation
  * - A legacy `hetero-operation` token minted before operation-bound claims were
  *   deployed — accepted temporarily so an already-running job can finish.
  * - A normal user OIDC token — a logged-in desktop reusing its own session for a
- *   remote run dispatched to it, so the spawned `lh hetero exec` can stream
+ *   remote run dispatched to it, so the spawned `orvilo hetero exec` can stream
  *   results back without a server round-trip to mint a dedicated token.
  *
  * The handlers resolve the target topic and require this subject to own its

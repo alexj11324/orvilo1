@@ -81,7 +81,10 @@ const allowedByFile = new Map([
     'src/features/Portal/LocalFile/xlsx/SheetGrid.tsx',
     [/^`"\$\{style\.ff\}", var\(--font-family, sans-serif\)`$/],
   ], // spreadsheet cell
-  ['src/features/Settings/appearance/features/Font/FallbackFontList.tsx', [/^item\.id$/]], // font preview
+  [
+    'src/features/Settings/appearance/features/Font/FallbackFontList.tsx',
+    [/^(?:item\.id|fallbackFont)$/],
+  ], // font preview
   ['src/features/Settings/appearance/features/Font/index.tsx', [/^joinFontStack\(stack\)$/]], // saved preference
   ['src/spa/router/authRouter.config.tsx', [/^sans-serif$/]], // fallback before theme mounts
 ]);

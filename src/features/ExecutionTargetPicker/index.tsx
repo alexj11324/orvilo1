@@ -1,12 +1,18 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { DeviceExecutionTarget, DeviceListItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { BoxIcon, LaptopIcon, MonitorOffIcon, SparklesIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
+
+// The grouping/candidate derivations live in the shared helper so settings,
+// chat, connect and repair surfaces all read ONE pool definition.
+export {
+  executionTargetDeviceCandidates,
+  groupExecutionTargetDevices,
+} from '@/helpers/executionTarget';
 
 const styles = createStaticStyles(({ css }) => ({
   dotOffline: css`
@@ -96,19 +102,6 @@ export const resolveExecutionTargetSelection = ({
   return configuredTarget === undefined && !isHeterogeneous ? { target: 'none' } : undefined;
 };
 
-export const groupExecutionTargetDevices = (devices: DeviceListItem[] | undefined) => ({
-  personal: (devices ?? []).filter((device) => device.scope === 'personal'),
-  privateWorkspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility === 'private',
-  ),
-  publicWorkspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility === 'public',
-  ),
-  workspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility !== 'private',
-  ),
-});
-
 interface ExecutionTargetIconProps {
   devicePlatform?: string | null;
   size?: number;
@@ -119,19 +112,19 @@ export const ExecutionTargetIcon = memo<ExecutionTargetIconProps>(
   ({ devicePlatform, size = 14, target }) => {
     switch (target) {
       case 'auto': {
-        return <Icon icon={SparklesIcon} size={size} />;
+        return <SparklesIcon size={size} />;
       }
       case 'device': {
         return <>{getDeviceIcon(devicePlatform, size)}</>;
       }
       case 'local': {
-        return <Icon icon={LaptopIcon} size={size} />;
+        return <LaptopIcon size={size} />;
       }
       case 'none': {
-        return <Icon icon={MonitorOffIcon} size={size} />;
+        return <MonitorOffIcon size={size} />;
       }
       case 'sandbox': {
-        return <Icon icon={BoxIcon} size={size} />;
+        return <BoxIcon size={size} />;
       }
     }
   },

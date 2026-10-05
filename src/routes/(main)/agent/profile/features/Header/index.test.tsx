@@ -95,9 +95,8 @@ const renderMenuItems = (items: MockDropdownItem[]) =>
 
 const getLatestExportedBlob = () => vi.mocked(URL.createObjectURL).mock.calls.at(-1)?.[0] as Blob;
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  DropdownMenu: ({
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({
     children,
     items = [],
   }: PropsWithChildren<{
@@ -145,6 +144,7 @@ vi.mock('lucide-react', async (importOriginal) => ({
 }));
 
 vi.mock('react-router', () => ({
+  useLocation: () => ({ pathname: '/agent/agt_1' }),
   useNavigate: () => mocks.navigate,
 }));
 

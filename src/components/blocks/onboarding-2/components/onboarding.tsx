@@ -1,5 +1,6 @@
 'use client';
 
+import { WORKSPACE_SLUG_MAX, WORKSPACE_SLUG_MIN } from '@orvilo/const';
 import type { TFunction } from 'i18next';
 import { CheckIcon, CircleCheckIcon, PlusIcon, RocketIcon } from 'lucide-react';
 import { AnimatePresence, useReducedMotion } from 'motion/react';
@@ -27,6 +28,7 @@ import {
   Field,
   FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -358,6 +360,7 @@ function SourceStep({
 function WorkspaceStep({
   workspaceName,
   workspaceSlug,
+  workspaceSlugError,
   teamSize,
   onWorkspaceNameChange,
   onWorkspaceSlugChange,
@@ -365,12 +368,14 @@ function WorkspaceStep({
 }: {
   workspaceName: string;
   workspaceSlug: string;
+  workspaceSlugError: ReturnType<typeof useWorkspaceSlug>['workspaceSlugError'];
   teamSize: TeamSizeValue;
   onWorkspaceNameChange: (value: string) => void;
   onWorkspaceSlugChange: (value: string) => void;
   onTeamSizeChange: (value: TeamSizeValue) => void;
 }) {
   const { t } = useTranslation('onboarding');
+  const { t: tSetting } = useTranslation('setting');
   const { teamSizeOptions } = createOnboardingData(t);
 
   return (
@@ -395,6 +400,8 @@ function WorkspaceStep({
               {t('reui.workspace.url')} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
+              aria-describedby={workspaceSlugError ? 'onboarding-2-url-error' : undefined}
+              aria-invalid={!!workspaceSlugError}
               autoComplete="off"
               id="onboarding-2-url"
               value={workspaceSlug}
@@ -405,6 +412,14 @@ function WorkspaceStep({
                 slug: workspaceSlug.trim() || 'workspace',
               })}
             </FieldDescription>
+            {workspaceSlugError && (
+              <FieldError id="onboarding-2-url-error">
+                {tSetting(`workspace.wizard.step1.slug.${workspaceSlugError}`, {
+                  min: WORKSPACE_SLUG_MIN,
+                  max: WORKSPACE_SLUG_MAX,
+                })}
+              </FieldError>
+            )}
           </Field>
         </FieldGroup>
 
@@ -689,6 +704,8 @@ export function Onboarding({
   initialFullName = '',
   initialTelemetry = true,
   initialTimezone = '',
+  initialWorkspaceName = '',
+  initialWorkspaceSlug = '',
   onComplete,
   onOpen,
 }: {
@@ -696,10 +713,12 @@ export function Onboarding({
   initialTelemetry?: boolean;
   /** Existing IANA timezone from user settings; the picker keeps it unless changed. */
   initialTimezone?: string;
+  initialWorkspaceName?: string;
+  initialWorkspaceSlug?: string;
   onComplete?: (values: OnboardingFormValues) => Promise<OnboardingCompletion | void>;
   onOpen?: () => void;
 } = {}) {
-  const { t } = useTranslation('onboarding');
+  const { t, ready } = useTranslation('onboarding');
   const onboardingData = useMemo(() => createOnboardingData(t), [t]);
   const onboardingSteps = onboardingData.steps;
   const totalSteps = onboardingSteps.length;
@@ -710,8 +729,13 @@ export function Onboarding({
   const [role, setRole] = useState<RoleValue>('developer');
   const [discoverySource, setDiscoverySource] = useState<DiscoverySourceValue>('linkedin');
   const [discoveryOther, setDiscoveryOther] = useState('');
-  const { onWorkspaceNameChange, onWorkspaceSlugChange, workspaceName, workspaceSlug } =
-    useWorkspaceSlug();
+  const {
+    onWorkspaceNameChange,
+    onWorkspaceSlugChange,
+    workspaceName,
+    workspaceSlug,
+    workspaceSlugError,
+  } = useWorkspaceSlug(initialWorkspaceName, initialWorkspaceSlug);
   const [teamSize, setTeamSize] = useState<TeamSizeValue>('team');
   const [goals, setGoals] = useState<GoalValue[]>(['roadmaps', 'sprints']);
   const [invites, setInvites] = useState<InviteRow[]>(DEFAULT_INVITES);
@@ -741,11 +765,16 @@ export function Onboarding({
 
   const currentStepMeta = onboardingSteps[currentStep - 1];
   const isFinalStep = currentStep === totalSteps;
-  const canSkip = currentStep > 1 && currentStep < totalSteps;
+  const canSkip =
+    currentStep > 1 &&
+    currentStep < totalSteps &&
+    (currentStepMeta.id !== 'workspace' || !workspaceSlugError);
   const canContinue =
     (currentStepMeta.id !== 'profile' || fullName.trim().length > 0) &&
     (currentStepMeta.id !== 'workspace' ||
-      (workspaceName.trim().length > 0 && workspaceSlug.trim().length > 0)) &&
+      (workspaceName.trim().length > 0 &&
+        workspaceSlug.trim().length > 0 &&
+        !workspaceSlugError)) &&
     (currentStepMeta.id !== 'goals' || goals.length > 0);
 
   function goToStep(step: number) {
@@ -807,6 +836,10 @@ export function Onboarding({
 
   async function completeOnboarding() {
     if (isSubmitting) {
+      return;
+    }
+    if (workspaceSlugError) {
+      goToStep(onboardingSteps.findIndex((step) => step.id === 'workspace') + 1);
       return;
     }
 
@@ -885,6 +918,13 @@ export function Onboarding({
 
     void completeOnboarding();
   }
+
+  if (!ready)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner />
+      </div>
+    );
 
   return (
     <main className="orvilo-entry-surface bg-background text-foreground relative min-h-[var(--onboarding-viewport-height,100svh)] w-full overflow-x-hidden">
@@ -1034,6 +1074,7 @@ export function Onboarding({
                           teamSize={teamSize}
                           workspaceName={workspaceName}
                           workspaceSlug={workspaceSlug}
+                          workspaceSlugError={workspaceSlugError}
                           onTeamSizeChange={setTeamSize}
                           onWorkspaceNameChange={onWorkspaceNameChange}
                           onWorkspaceSlugChange={onWorkspaceSlugChange}

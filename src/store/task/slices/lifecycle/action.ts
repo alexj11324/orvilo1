@@ -18,18 +18,18 @@ const log = debug('orvilo-store:task-lifecycle');
 
 type Setter = StoreSetter<TaskStore>;
 
-const taskGroupKeyByStatus: Record<TaskStatus, string> = {
-  backlog: 'backlog',
-  canceled: 'canceled',
-  completed: 'done',
-  failed: 'needsInput',
-  paused: 'needsInput',
-  running: 'running',
-  scheduled: 'running',
-};
+const TASK_STATUS_SET = new Set<TaskStatus>([
+  'backlog',
+  'canceled',
+  'completed',
+  'failed',
+  'paused',
+  'running',
+  'scheduled',
+]);
 
 const isTaskStatus = (status: string | undefined): status is TaskStatus =>
-  status !== undefined && status in taskGroupKeyByStatus;
+  status !== undefined && TASK_STATUS_SET.has(status as TaskStatus);
 
 export const createTaskLifecycleSlice = (set: Setter, get: () => TaskStore, _api?: unknown) =>
   new TaskLifecycleSliceActionImpl(set, get, _api);
@@ -257,35 +257,24 @@ export class TaskLifecycleSliceActionImpl {
   };
 
   #patchTaskCollectionsStatus = (id: string, status: TaskStatus): void => {
-    const { listGroupBy, taskGroups, tasks } = this.#get();
+    const { taskGroups, tasks } = this.#get();
     const listTask = tasks.find((task) => task.identifier === id);
     const groupedTask = taskGroups
       .flatMap((group) => group.tasks)
       .find((task) => task.identifier === id);
     if (!listTask && !groupedTask) return;
 
+    // `status` is the execution projection — it never moves a task across
+    // Issue-status groups (workflowCategory does, through moveBoard + the
+    // post-move refetch), so the row is patched in place.
     const nextTasks = listTask
       ? tasks.map((item) => (item.identifier === id ? { ...item, status } : item))
       : tasks;
     const nextTaskGroups = groupedTask
-      ? listGroupBy === 'status'
-        ? taskGroups.map((group) => {
-            const targetGroupKey = taskGroupKeyByStatus[status];
-            const containsTask = group.tasks.some((item) => item.identifier === id);
-            const belongsToTarget = group.key === targetGroupKey;
-            const filteredTasks = group.tasks.filter((item) => item.identifier !== id);
-            const patchedGroupedTask = { ...groupedTask, status };
-
-            return {
-              ...group,
-              tasks: belongsToTarget ? [...filteredTasks, patchedGroupedTask] : filteredTasks,
-              total: group.total - (containsTask ? 1 : 0) + (belongsToTarget ? 1 : 0),
-            };
-          })
-        : taskGroups.map((group) => ({
-            ...group,
-            tasks: group.tasks.map((item) => (item.identifier === id ? { ...item, status } : item)),
-          }))
+      ? taskGroups.map((group) => ({
+          ...group,
+          tasks: group.tasks.map((item) => (item.identifier === id ? { ...item, status } : item)),
+        }))
       : taskGroups;
 
     this.#set(

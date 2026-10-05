@@ -1,21 +1,16 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Skeleton,
-  Tag,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { t as translate } from 'i18next';
 import { BookOpen, LibraryBigIcon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, type ModalInstance } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { projectService } from '@/services/project';
 import { useKnowledgeBaseStore } from '@/store/library';
 import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
@@ -81,55 +76,61 @@ export const AddResourceContent = memo<AddResourceContentProps>(
 
     if (showSkeleton)
       return (
-        <Flexbox>
-          <Skeleton.Text rows={8} />
-        </Flexbox>
+        <div className="flex flex-col">
+          <div aria-busy="true" className="flex flex-col gap-2" role="status">
+            {Array.from({ length: 8 }, (_, index) => (
+              <Skeleton className="h-4 w-full" key={index} />
+            ))}
+          </div>
+        </div>
       );
 
     if (isEmpty)
       return (
-        <Center padding={32}>
-          <Empty
-            description={t('resources.addModal.empty')}
-            descriptionProps={{ fontSize: 14 }}
-            icon={BookOpen}
-          />
-        </Center>
+        <div className="flex flex-col items-center justify-center" style={{ padding: 32 }}>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            {createElement(BookOpen, { 'size': 40, 'aria-hidden': true })}
+            <div>{t('resources.addModal.empty')}</div>
+          </div>
+        </div>
       );
 
     return (
-      <Flexbox gap={2} style={{ maxHeight: 420, overflowY: 'auto' }}>
+      <div className="flex flex-col" style={{ gap: 2, maxHeight: 420, overflowY: 'auto' }}>
         {(data ?? []).map((library) => {
           const linked = linkedIds.has(library.id) || justAdded.has(library.id);
 
           return (
             <div className={styles.row} key={library.id}>
-              <Icon icon={LibraryBigIcon} size={18} />
-              <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                <Text ellipsis weight={500}>
+              <LibraryBigIcon size={18} />
+              <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
+                <span className="text-sm truncate" style={{ fontWeight: 500 }}>
                   {library.name}
-                </Text>
+                </span>
                 {library.description && (
-                  <Text ellipsis fontSize={12} type={'secondary'}>
+                  <span className="text-sm text-muted-foreground truncate" style={{ fontSize: 12 }}>
                     {library.description}
-                  </Text>
+                  </span>
                 )}
-              </Flexbox>
+              </div>
               {linked ? (
-                <Tag>{t('resources.addModal.added')}</Tag>
+                <Badge variant="secondary">{t('resources.addModal.added')}</Badge>
               ) : (
                 <Button
-                  loading={pendingId === library.id}
-                  size={'small'}
+                  aria-busy={pendingId === library.id}
+                  disabled={pendingId === library.id}
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleAdd(library.id)}
                 >
+                  {pendingId === library.id && <Spinner />}
                   {t('resources.add')}
                 </Button>
               )}
             </div>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

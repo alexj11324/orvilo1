@@ -1,7 +1,6 @@
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
-import { Skeleton, Tag, Text } from '@lobehub/ui/base-ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
-import type { ChatTopicMetadata, ChatTopicStatus } from '@orvilo/types';
+import { type ChatTopicMetadata, type ChatTopicStatus } from '@orvilo/types';
 import { formatElapsedClockTime } from '@orvilo/utils';
 import {
   getTopicMetadataWorkingDirectoryEffectivePath,
@@ -10,20 +9,23 @@ import {
 import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
-import { MessageSquareDashed } from 'lucide-react';
-import type { CSSProperties, DragEvent, RefObject } from 'react';
+import type { DragEvent, RefObject } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import DotsLoading from '@/components/DotsLoading';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import { Badge } from '@/components/reui/badge';
 import RingLoadingIcon from '@/components/RingLoading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import UnreadDot from '@/components/UnreadDot';
 import { isDesktop } from '@/const/version';
 import { TopicMigrationIndicator } from '@/features/AgentTransferMigration';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
-import { useHasDraft } from '@/features/ChatInput/draftStorage';
+import { newTopicDraftKey, topicDraftKey, useHasDraft } from '@/features/ChatInput/draftStorage';
 import { startTopicDrag } from '@/features/ChatInput/InputEditor/ReferTopic/topicDragData';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import TopicCreatorAvatar, { useTopicCreator } from '@/features/TopicCreatorAvatar';
@@ -33,7 +35,6 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
-import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useElectronStore } from '@/store/electron';
 
 import { useTopicNavigation } from '../../hooks/useTopicNavigation';
@@ -47,19 +48,6 @@ import {
   PR_STATE_VISUAL,
 } from './metaCardData';
 import MetaHoverCard from './MetaHoverCard';
-
-// Base UI Popover plays an opacity/scale enter+exit transition driven by these
-// CSS vars on the positioner. Zero them so the meta hover card appears instantly
-// instead of easing in — the hover-intent delay (`mouseEnterDelay`) still gates
-// when it shows. `styles.root` maps to the positioner (inline style → wins over
-// the library's default without a specificity fight).
-const META_HOVER_CARD_STYLES = {
-  content: { padding: 12 },
-  root: {
-    '--lobe-popover-animation-duration': '0ms',
-    '--lobe-popover-animation-duration-exit': '0ms',
-  } as CSSProperties,
-};
 
 const styles = createStaticStyles(({ css }) => ({
   ciBadge: css`
@@ -92,6 +80,23 @@ const styles = createStaticStyles(({ css }) => ({
     position: relative;
     display: inline-flex;
     flex: none;
+  `,
+  row: css`
+    .nav-item-content {
+      mask-image: none !important;
+    }
+
+    .nav-item-content > .truncate {
+      font-size: ${cssVar.fontSize};
+      font-weight: 400;
+    }
+
+    .nav-item-actions {
+      position: static;
+      flex: none;
+      inline-size: 52px;
+      padding-inline-end: 0;
+    }
   `,
   runningElapsedTime: css`
     flex: none;
@@ -170,6 +175,13 @@ const RunningElapsedTime = memo<RunningElapsedTimeProps>(({ agentId, topicId }) 
 RunningElapsedTime.displayName = 'RunningElapsedTime';
 
 interface TopicItemProps {
+  /**
+   * Agent the topic is bound to (`ChatTopic.agentId`). Drives the row's
+   * agent-scoped reads — deep link, runtime buckets, message prefetch — not a
+   * visible attribution: the bound agent shows in the composer's agent
+   * picker, so the row carries no agent name.
+   */
+  agentId?: string | null;
   fav?: boolean;
   id?: string;
   metadata?: ChatTopicMetadata;
@@ -202,6 +214,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     id,
     title,
     fav,
+    agentId: topicAgentId,
     metadata,
     status,
     showWorkingDirectory,
@@ -225,30 +238,35 @@ const TopicItemRow = memo<TopicItemRowProps>(
     // the identity-first icon layout below.
     const author = useTopicCreator(isSharedAgent ? userId : undefined);
 
+    // The workspace feed mixes topics from many agents — every agent-scoped
+    // read (runtime buckets, message prefetch, draft key, deep link) binds the
+    // row's owning agent, not the room's.
+    const rowAgentId = topicAgentId ?? activeAgentId;
+
     const loadingRingColor = isDarkMode
       ? cssVar.colorWarningBorder
       : `color-mix(in srgb, ${cssVar.colorWarning} 45%, transparent)`;
 
     // Construct href for cmd+click support
     const href = useMemo(() => {
-      if (!activeAgentId || !id) return undefined;
-      return buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(activeAgentId, id), activeWorkspaceSlug);
-    }, [activeAgentId, activeWorkspaceSlug, id]);
+      if (!rowAgentId || !id) return undefined;
+      return buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(rowAgentId, id), activeWorkspaceSlug);
+    }, [rowAgentId, activeWorkspaceSlug, id]);
 
     const [isLoading, isUnreadCompleted, hasLocalRunningRuntime, isRuntimeVisiblyRunning] =
       useChatStore((s) => [
         !!id && operationSelectors.isTopicVisiblyRunning(id)(s),
         !!id && operationSelectors.isTopicUnreadCompleted(id)(s),
         !!id &&
-          !!activeAgentId &&
+          !!rowAgentId &&
           operationSelectors.isAgentRuntimeRunningByContext({
-            agentId: activeAgentId,
+            agentId: rowAgentId,
             topicId: id,
           })(s),
         !!id &&
-          !!activeAgentId &&
+          !!rowAgentId &&
           operationSelectors.isAgentRuntimeVisiblyRunningByContext({
-            agentId: activeAgentId,
+            agentId: rowAgentId,
             topicId: id,
           })(s),
       ]);
@@ -275,7 +293,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     }, [id, navRef]);
 
     const handleDoubleClick = useCallback(async () => {
-      if (!id || !activeAgentId || !isDesktop) return;
+      if (!id || !rowAgentId || !isDesktop) return;
       cancelPendingSingleClick();
       if (await navRef.current.focusTopicPopup(id)) {
         void navRef.current.navigateToTopic(id, { skipPopupFocus: true });
@@ -283,11 +301,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       useElectronStore
         .getState()
-        .addTab(
-          buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(activeAgentId, id), activeWorkspaceSlug),
-        );
+        .addTab(buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(rowAgentId, id), activeWorkspaceSlug));
       void navRef.current.navigateToTopic(id);
-    }, [id, activeAgentId, activeWorkspaceSlug, navRef]);
+    }, [id, rowAgentId, activeWorkspaceSlug, navRef]);
 
     const isFailed = status === 'failed';
     const isRunning = status === 'running';
@@ -308,13 +324,15 @@ const TopicItemRow = memo<TopicItemRowProps>(
       [metadata, showWorkingDirectory],
     );
     const workingDirectoryNode = workingDirectoryDisplay ? (
-      <Flexbox horizontal align={'center'} gap={4} style={{ overflow: 'hidden' }}>
+      <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
         <DirIcon repoType={workingDirectoryDisplay.repoType} size={13} />
-        <Text ellipsis fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
           {workingDirectoryDisplay.label}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     ) : undefined;
+
+    const descriptionNode = workingDirectoryNode;
 
     // Surface the unread dot right away during the masked tail instead of a
     // blank icon gap until markTopicUnread's persisted 'unread' lands. Skipped
@@ -324,26 +342,23 @@ const TopicItemRow = memo<TopicItemRowProps>(
     const hasUnread = id && (isUnreadCompleted || isRunningTailUnread);
 
     useEffect(() => {
-      if (!activeAgentId || !id || !isUnreadCompleted || hasLocalRunningRuntime) return;
+      if (!rowAgentId || !id || !isUnreadCompleted || hasLocalRunningRuntime) return;
 
       void useChatStore
         .getState()
-        .prefetchMessages({ agentId: activeAgentId, scope: 'main', topicId: id });
-    }, [activeAgentId, hasLocalRunningRuntime, id, isUnreadCompleted]);
+        .prefetchMessages({ agentId: rowAgentId, scope: 'main', topicId: id });
+    }, [rowAgentId, hasLocalRunningRuntime, id, isUnreadCompleted]);
 
     // Surface a WeChat-style red "[Draft]" hint when this topic holds unsent
-    // input. Drafts live in localStorage keyed by messageMapKey; the default
-    // topic (no id) maps to the new-topic draft. `useHasDraft` re-renders the
+    // input. Drafts live in localStorage keyed by topic id; the default
+    // topic (no id) maps to the workspace new-topic draft. `useHasDraft` re-renders the
     // row only when the draft appears or clears.
-    const draftKey = useMemo(
-      () => (activeAgentId ? messageMapKey({ agentId: activeAgentId, topicId: id }) : undefined),
-      [activeAgentId, id],
-    );
+    const draftKey = useMemo(() => (id ? topicDraftKey(id) : newTopicDraftKey), [id]);
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
-      <Text fontSize={12} style={{ color: cssVar.colorError, flex: 'none' }}>
+      <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
         {t('draft')}
-      </Text>
+      </div>
     ) : undefined;
 
     // Codex-style hover detail card: when the topic carries git context, hovering
@@ -358,48 +373,50 @@ const TopicItemRow = memo<TopicItemRowProps>(
           active={defaultTopicActive}
           slots={{ titlePrefix: draftPrefix }}
           titleColor={cssVar.colorText}
-          icon={
+          // Same no-leading-icon rule as a real topic row; the only state it
+          // ever showed there was the running ring, which trails instead.
+          extra={
             isLoading ? (
               <RingLoadingIcon
                 ringColor={loadingRingColor}
                 size={14}
                 style={{ color: cssVar.colorWarning }}
               />
-            ) : (
-              <Icon color={cssVar.colorTextDescription} icon={MessageSquareDashed} size={'small'} />
-            )
+            ) : undefined
           }
           title={
-            <Flexbox horizontal align={'center'} flex={1} gap={6}>
+            <div className="flex items-center flex-1 gap-1.5">
               {t('defaultTitle')}
-              <Tag
-                size={'small'}
-                style={{
-                  color: cssVar.colorTextDescription,
-                  fontSize: 10,
-                }}
+              <Badge
+                size="sm"
+                style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
+                variant="secondary"
               >
                 {t('temp')}
-              </Tag>
-            </Flexbox>
+              </Badge>
+            </div>
           }
           onClick={handleClick}
         />
       );
     }
 
-    // Execution / attention state. In workspace mode this moves to the row's
-    // trailing side so the leading slot can carry the creator identity.
+    // Execution / attention state. This trails the row (see `ownIconNode`
+    // below), sharing one slot with the identity-flavored PR marker so a given
+    // topic reads the same way in every mode.
     const statusIconNode = (() => {
       // A scheduled topic hasn't run yet — nothing else can be true of it,
       // so its clock outranks the other states.
       if (isScheduled) {
         const visual = TOPIC_STATUS_VISUALS.scheduled;
         const runAt = metadata?.scheduledRun?.runAt;
-        const icon = <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+        const icon = <visual.icon size={14} style={{ color: visual.color }} />;
         return runAt ? (
-          <Tooltip title={t('scheduledStatusTip', { time: dayjs(runAt).format('MM-DD HH:mm') })}>
-            {icon}
+          <Tooltip>
+            <TooltipTrigger render={<span>{icon}</span>} />
+            <TooltipContent>
+              {t('scheduledStatusTip', { time: dayjs(runAt).format('MM-DD HH:mm') })}
+            </TooltipContent>
           </Tooltip>
         ) : (
           icon
@@ -407,7 +424,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       if (isWaitingForHuman) {
         const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-        return <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+        return <visual.icon size={14} style={{ color: visual.color }} />;
       }
       if (shouldShowRunningIcon) {
         return (
@@ -421,8 +438,15 @@ const TopicItemRow = memo<TopicItemRowProps>(
       if (isFailed) {
         const visual = TOPIC_STATUS_VISUALS.failed;
         return (
-          <Tooltip title={t('failedStatusTip')}>
-            <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span>
+                  <visual.icon size={14} style={{ color: visual.color }} />
+                </span>
+              }
+            />
+            <TooltipContent>{t('failedStatusTip')}</TooltipContent>
           </Tooltip>
         );
       }
@@ -437,18 +461,17 @@ const TopicItemRow = memo<TopicItemRowProps>(
       // the masked post-output tail cannot fall back to a static running icon.
       if (status && status !== 'active' && status !== 'running') {
         const visual = TOPIC_STATUS_VISUALS[status];
-        return <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+        return <visual.icon size={14} style={{ color: visual.color }} />;
       }
       return null;
     })();
 
-    // Identity-flavored icons the row owns (bot platform, PR marker) — these
-    // keep the leading slot even in workspace mode, with the creator shrunk to
-    // a corner badge.
+    // Identity-flavored icon the row owns (the PR marker). It shares the
+    // trailing slot with the execution status and only shows on an idle topic,
+    // which is where its secondary metadata ranks.
     const identityIconNode = (() => {
       // GitHub PR state marker (open=green, merged=purple, closed=red),
-      // like Codex. It is secondary metadata, so only an idle topic uses it
-      // as the leading icon.
+      // like Codex.
       if (metaCard?.pullRequest) {
         const prVisual = PR_STATE_VISUAL[getPullRequestState(metaCard.pullRequest)];
         const ciStatus = metaCard.pullRequest.ciStatus;
@@ -458,39 +481,43 @@ const TopicItemRow = memo<TopicItemRowProps>(
           ? `${t(prVisual.labelKey)} · ${t(ciVisual.labelKey)}`
           : t(prVisual.labelKey);
         return (
-          <Tooltip title={tooltip}>
-            <span className={styles.prIcon}>
-              <Icon icon={prVisual.icon} size={'small'} style={{ color: prVisual.color }} />
-              {showCiBadge && (
-                <span className={styles.ciBadge}>
-                  <Icon
-                    className={ciStatus === 'pending' ? styles.ciPending : undefined}
-                    icon={ciVisual.icon}
-                    size={9}
-                    style={{ color: ciVisual.color }}
-                  />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span>
+                  <span className={styles.prIcon}>
+                    <prVisual.icon size={14} style={{ color: prVisual.color }} />
+                    {showCiBadge && (
+                      <span className={styles.ciBadge}>
+                        <ciVisual.icon
+                          className={ciStatus === 'pending' ? styles.ciPending : undefined}
+                          size={9}
+                          style={{ color: ciVisual.color }}
+                        />
+                      </span>
+                    )}
+                  </span>
                 </span>
-              )}
-            </span>
+              }
+            />
+            <TooltipContent>{tooltip}</TooltipContent>
           </Tooltip>
         );
       }
       return null;
     })();
 
-    const idleIconPlaceholder = <span aria-hidden style={{ flex: 'none', width: 16 }} />;
-
-    // Workspace mode (creator resolvable): the creator's round avatar is the
-    // primary visual and always leads the row; the row's own icon — execution
-    // status first, then the identity-flavored PR marker —
-    // shrinks into a bottom-right corner badge. Personal mode keeps the
-    // original layout untouched.
+    // Topic rows carry NO leading icon: the title starts at the row's text
+    // inset (x=16) instead of behind a 28px gutter, which read as a blank
+    // column on the many idle rows whose only occupant was a placeholder. Every
+    // icon a row owns — execution status first, then the identity-flavored PR
+    // marker — rides the trailing `extra` slot instead, so a status is always
+    // in the same place regardless of which state it represents. The one
+    // exception is the workspace creator avatar: real content, not a
+    // placeholder, so it still leads (and no longer needs a corner badge, since
+    // the status it used to carry now lives on the trailing side).
     const ownIconNode = statusIconNode ?? identityIconNode;
-    const leadingIconNode = author ? (
-      <TopicCreatorAvatar corner={ownIconNode} userId={userId} />
-    ) : (
-      (ownIconNode ?? idleIconPlaceholder)
-    );
+    const leadingIconNode = author ? <TopicCreatorAvatar userId={userId} /> : undefined;
 
     const navItem = (
       <TopicItemContextMenu fav={fav} id={id} status={status} title={title}>
@@ -498,7 +525,8 @@ const TopicItemRow = memo<TopicItemRowProps>(
           draggable
           actions={() => <Actions fav={fav} id={id} status={status} title={title} />}
           active={isTopicActive}
-          description={workingDirectoryNode}
+          className={styles.row}
+          description={descriptionNode}
           href={href}
           icon={leadingIconNode}
           slots={{ titlePrefix: draftPrefix }}
@@ -506,8 +534,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
           titleColor={cssVar.colorText}
           extra={
             <>
-              <TopicMigrationIndicator agentId={activeAgentId} topicId={id} />
-              <RunningElapsedTime agentId={activeAgentId} topicId={id} />
+              {ownIconNode}
+              <TopicMigrationIndicator agentId={rowAgentId} topicId={id} />
+              <RunningElapsedTime agentId={rowAgentId} topicId={id} />
             </>
           }
           onClick={handleClick}
@@ -518,34 +547,46 @@ const TopicItemRow = memo<TopicItemRowProps>(
     );
 
     return (
-      <Flexbox data-testid="topic-item" data-topic-id={id} style={{ position: 'relative' }}>
+      <div
+        className="flex flex-col"
+        data-testid="topic-item"
+        data-topic-id={id}
+        style={{ position: 'relative' }}
+      >
         {metaCard ? (
-          <Popover
-            arrow={false}
-            content={<MetaHoverCard metadata={metadata} title={title} topicId={id} />}
-            mouseEnterDelay={0.8}
-            placement={'right'}
-            styles={META_HOVER_CARD_STYLES}
-            trigger={'hover'}
-          >
-            <div>{navItem}</div>
-          </Popover>
+          <PreviewCard.Root>
+            <PreviewCard.Trigger delay={800} render={<div>{navItem}</div>} />
+            <PreviewCard.Portal>
+              <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'right'} sideOffset={4}>
+                <PreviewCard.Popup
+                  className={
+                    'rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                  }
+                >
+                  <MetaHoverCard metadata={metadata} title={title} topicId={id} />
+                </PreviewCard.Popup>
+              </PreviewCard.Positioner>
+            </PreviewCard.Portal>
+          </PreviewCard.Root>
         ) : (
           navItem
         )}
         {showThreadList && (
           <Suspense
             fallback={
-              <Flexbox gap={8} paddingBlock={8} paddingInline={24} width={'100%'}>
-                <Skeleton height={18} width={'100%'} />
-                <Skeleton height={18} width={'100%'} />
-              </Flexbox>
+              <div
+                className="flex flex-col gap-2 w-full"
+                style={{ paddingBlock: 8, paddingInline: 24 }}
+              >
+                <Skeleton style={{ height: 18, width: '100%' }} />
+                <Skeleton style={{ height: 18, width: '100%' }} />
+              </div>
             }
           >
             <ThreadList topicId={id} />
           </Suspense>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

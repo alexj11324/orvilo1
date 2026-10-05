@@ -1,10 +1,15 @@
 'use client';
 
-import { Block, Flexbox, FluentEmoji } from '@lobehub/ui';
-import { Accordion, Button } from '@lobehub/ui/base-ui';
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { MAX_WIDTH } from '@/const/layoutTokens';
 
 const Highlighter = lazy(() => import('@lobehub/ui/es/Highlighter/index'));
@@ -22,10 +27,12 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
   const hasStack = !!error?.stack;
   const defaultExpandedKeys: string[] = typeof __CI__ !== 'undefined' && __CI__ ? ['stack'] : [];
   const [expandedKeys, setExpandedKeys] = useState<string[]>(defaultExpandedKeys);
-  const isExpanded = expandedKeys.includes('stack');
 
   return (
-    <Flexbox align={'center'} justify={'center'} style={{ minHeight: '100dvh', width: '100%' }}>
+    <div
+      className={'flex flex-col items-center justify-center'}
+      style={{ minHeight: '100dvh', width: '100%' }}
+    >
       <h1
         style={{
           filter: 'blur(8px)',
@@ -39,20 +46,24 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
       >
         ERROR
       </h1>
-      <FluentEmoji emoji={'🤧'} size={64} />
+      <span style={{ fontSize: 64, lineHeight: 1 }}>🤧</span>
       <h2 style={{ fontWeight: 'bold', marginTop: '1em', textAlign: 'center' }}>
         {t('error.title')}
       </h2>
       <p style={{ marginBottom: '2em' }}>{t('error.desc')}</p>
-      <Flexbox horizontal gap={12} style={{ marginBottom: '2em' }}>
-        <Button onClick={() => window.location.reload()}>{t('error.retry')}</Button>
-        <Button type={'primary'} onClick={() => (window.location.href = resetPath)}>
-          {t('error.backHome')}
+      <div className={'flex gap-3'} style={{ marginBottom: '2em' }}>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          {t('error.retry')}
         </Button>
-      </Flexbox>
+        <Button onClick={() => (window.location.href = resetPath)}>{t('error.backHome')}</Button>
+      </div>
       {hasStack && (
-        <Block
-          variant={isExpanded ? 'outlined' : 'filled'}
+        <div
+          className={
+            expandedKeys.includes('stack')
+              ? 'rounded-lg border border-border'
+              : 'rounded-lg bg-secondary'
+          }
           style={{
             marginBottom: '1em',
             maxWidth: '90vw',
@@ -61,28 +72,21 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
             width: 560,
           }}
         >
-          <Accordion
-            indicatorPlacement={'inline'}
-            value={expandedKeys}
-            variant={'borderless'}
-            items={[
-              {
-                key: 'stack',
-                title: t('error.stack'),
-                children: (
-                  <Suspense fallback={null}>
-                    <Highlighter language={'plaintext'} padding={12} variant={'borderless'}>
-                      {error.stack!}
-                    </Highlighter>
-                  </Suspense>
-                ),
-              },
-            ]}
-            onValueChange={setExpandedKeys}
-          />
-        </Block>
+          <Accordion value={expandedKeys} onValueChange={setExpandedKeys}>
+            <AccordionItem value="stack">
+              <AccordionTrigger>{t('error.stack')}</AccordionTrigger>
+              <AccordionContent>
+                <Suspense fallback={null}>
+                  <Highlighter language={'plaintext'} padding={12} variant={'borderless'}>
+                    {error.stack!}
+                  </Highlighter>
+                </Suspense>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

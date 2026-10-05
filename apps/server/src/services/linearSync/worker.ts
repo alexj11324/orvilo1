@@ -228,6 +228,31 @@ const remoteTaskPatch = (
   return patch;
 };
 
+/**
+ * Inbound Linear sync never writes execution state (`tasks.status`,
+ * `run_state`, `task_dispatch.phase`). Applying a remote assignee change to
+ * a RUNNING task would fence its live dispatch through the ownership
+ * transfer, so the assignee write is deferred instead: the issue link
+ * records an `assigneeId` conflict and a human resolves it (`keep_linear`
+ * applies the remote assignee through the ownership handoff; `keep_local`
+ * pushes the local assignee back to Linear).
+ */
+const deferRunningTaskAssignee = (
+  taskIsRunning: boolean,
+  task: TaskItem,
+  patch: Parameters<TaskModel['update']>[1],
+): { deferred: boolean; patch: Parameters<TaskModel['update']>[1] } => {
+  if (
+    !taskIsRunning ||
+    patch.assigneeAgentId === undefined ||
+    patch.assigneeAgentId === task.assigneeAgentId
+  ) {
+    return { deferred: false, patch };
+  }
+  const { assigneeAgentId: _agentId, assigneeUserId: _userId, ...rest } = patch;
+  return { deferred: true, patch: rest };
+};
+
 const leaseForRow = (row: { leaseFence: number; leaseOwner: string | null }): LinearSyncLease => {
   if (!row.leaseOwner) throw new LinearSyncLeaseLostError();
   return { fence: row.leaseFence, owner: row.leaseOwner };
@@ -2824,15 +2849,24 @@ export class LinearSyncWorker {
       if (task.cycleRefId !== cycleRefId) {
         patch.cycleRefId = cycleRefId;
       }
+      const assigneeDeferral = deferRunningTaskAssignee(
+        await integrationTasks.isTaskExecutionLive(task.id),
+        task,
+        patch,
+      );
       let taskAfterRemote = task;
-      if (Object.keys(patch).length > 0) {
-        const updatedTask = await integrationTasks.updatePublicTask(task.id, patch, {
-          eventId: row.id,
-          idempotencyKey: `linear:task-update:${row.id}`,
-          source: 'linear',
-          suppressDomainEvent: historicalImport,
-          suppressLinearOutbox: true,
-        });
+      if (Object.keys(assigneeDeferral.patch).length > 0) {
+        const updatedTask = await integrationTasks.updatePublicTask(
+          task.id,
+          assigneeDeferral.patch,
+          {
+            eventId: row.id,
+            idempotencyKey: `linear:task-update:${row.id}`,
+            source: 'linear',
+            suppressDomainEvent: historicalImport,
+            suppressLinearOutbox: true,
+          },
+        );
         if (!updatedTask) throw new Error('Linear task update did not return a task');
         taskAfterRemote = updatedTask;
       }
@@ -2894,15 +2928,33 @@ export class LinearSyncWorker {
         // When the remote issue left its Linear project, the link must not
         // keep a stale binding — it falls back to pure team scope.
         bindingId: issue.projectId ? (binding?.id ?? existingLink.bindingId) : null,
-        conflict: null,
-        lastConfirmedSnapshot: issue,
+        conflict: assigneeDeferral.deferred
+          ? {
+              base: { assigneeId: existingLink.lastConfirmedSnapshot.assigneeId },
+              detectedAt: new Date().toISOString(),
+              fields: ['assigneeId'],
+              local: { assigneeId: local.assigneeId },
+              localRevision: taskAfterRemote.domainRevision,
+              remote: { assigneeId: issue.assigneeId },
+              remoteUpdatedAt: issue.updatedAt ?? null,
+            }
+          : null,
+        // A deferred assignee keeps the last confirmed base so the unresolved
+        // field still diffs for the resolution flow.
+        lastConfirmedSnapshot: assigneeDeferral.deferred
+          ? existingLink.lastConfirmedSnapshot
+          : issue,
         lastInboundDeliveryId: row.id,
         aliasIdentifiers,
         linearIdentifier: issue.identifier || existingLink.linearIdentifier,
         linearTeamId: issue.teamId ?? existingLink.linearTeamId,
         remoteSnapshot: issue,
         remoteUpdatedAt: incomingUpdatedAt,
-        syncState: localChanged.length > 0 && !historicalImport ? 'pending' : 'synced',
+        syncState: assigneeDeferral.deferred
+          ? 'conflict'
+          : localChanged.length > 0 && !historicalImport
+            ? 'pending'
+            : 'synced',
       });
       await this.reconcileRelationsForIssue(
         model,
@@ -3354,9 +3406,14 @@ export class LinearSyncWorker {
         : null;
       if (task.cycleRefId !== cycleRef) patch.cycleRefId = cycleRef;
     }
+    const assigneeDeferral = deferRunningTaskAssignee(
+      await integrationTasks.isTaskExecutionLive(task.id),
+      task,
+      patch,
+    );
     let taskAfterRemote = task;
-    if (Object.keys(patch).length > 0) {
-      const updatedTask = await integrationTasks.updatePublicTask(task.id, patch, {
+    if (Object.keys(assigneeDeferral.patch).length > 0) {
+      const updatedTask = await integrationTasks.updatePublicTask(task.id, assigneeDeferral.patch, {
         eventId: row.id,
         idempotencyKey: `linear:task-update:${row.id}`,
         source: 'linear',
@@ -3412,13 +3469,29 @@ export class LinearSyncWorker {
 
     await model.updateIssueLink(existingLink.id, {
       bindingId: binding.id,
-      conflict: null,
-      lastConfirmedSnapshot: issue,
+      conflict: assigneeDeferral.deferred
+        ? {
+            base: { assigneeId: existingLink.lastConfirmedSnapshot.assigneeId },
+            detectedAt: new Date().toISOString(),
+            fields: ['assigneeId'],
+            local: { assigneeId: local.assigneeId },
+            localRevision: taskAfterRemote.domainRevision,
+            remote: { assigneeId: issue.assigneeId },
+            remoteUpdatedAt: issue.updatedAt ?? null,
+          }
+        : null,
+      // A deferred assignee keeps the last confirmed base so the unresolved
+      // field still diffs for the resolution flow.
+      lastConfirmedSnapshot: assigneeDeferral.deferred ? existingLink.lastConfirmedSnapshot : issue,
       lastInboundDeliveryId: row.id,
       linearTeamId: issue.teamId ?? existingLink.linearTeamId,
       remoteSnapshot: issue,
       remoteUpdatedAt: incomingUpdatedAt,
-      syncState: localChanged.length > 0 ? 'pending' : 'synced',
+      syncState: assigneeDeferral.deferred
+        ? 'conflict'
+        : localChanged.length > 0
+          ? 'pending'
+          : 'synced',
     });
     await this.reconcileRelationsForIssue(
       model,

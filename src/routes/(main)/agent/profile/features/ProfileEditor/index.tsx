@@ -1,46 +1,27 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import type { TabsItem } from '@lobehub/ui/base-ui';
-import { Tabs } from '@lobehub/ui/base-ui';
-import { isDesktop } from '@orvilo/const';
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
-import { Wrench } from 'lucide-react';
 import React, { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
+import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
+import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSettings';
+import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
+import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
+import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
+import ExternalAgentConnectionSettings from '@/features/AgentSettings/ExternalAgentConnectionSettings';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import RunPriorityHint from '@/features/ProfileEditor/AgentUserTools/RunPriorityHint';
-import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
+import { agentSelectors } from '@/store/agent/selectors';
 
 import EditorCanvas from '../EditorCanvas';
 import AgentHeader from './AgentHeader';
-import AgentTool from './AgentTool';
-import CloudHeterogeneousConfig from './CloudHeterogeneousConfig';
-import EngineConfigCard from './EngineConfigCard';
-import HeterogeneousAgentStatusCard from './HeterogeneousAgentStatusCard';
-import RemoteAgentConfigCard from './RemoteAgentConfigCard';
-import WorkspaceAgentDevicePolicy from './WorkspaceAgentDevicePolicy';
-import { WorkspaceAgentPolicyCard } from './WorkspaceAgentPolicyCard';
 
 const styles = createStaticStyles(({ css }) => ({
-  configLabel: css`
-    font-size: 12px;
-    line-height: 1;
-    color: ${cssVar.colorTextTertiary};
-  `,
   configStack: css`
     container-type: inline-size;
-  `,
-  configPanel: css`
-    padding: 24px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
   `,
   topArea: css`
     cursor: default;
@@ -49,148 +30,58 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const ProfileEditor = memo(() => {
-  const { t } = useTranslation('setting');
-  const { allowed: canEdit } = usePermission('edit_own_content');
   const agentId = useAgentStore((s) => s.activeAgentId || '');
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
-  const isWorkspaceAgent = useAgentStore(agentByIdSelectors.isWorkspaceAgentById(agentId));
-  const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const heterogeneousProvider = config?.agencyConfig?.heterogeneousProvider;
-
-  const updateHeterogeneousCommand = async (command: string) => {
-    if (!canEdit) return;
-    if (!heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, command },
-      },
-    });
-  };
-
-  const updateHeterogeneousEnv = async (env: Record<string, string>) => {
-    if (!canEdit) return;
-    if (!heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, env },
-      },
-    });
-  };
-
-  const updateBoundDeviceId = async (boundDeviceId: string) => {
-    await updateAgentConfigById(agentId, {
-      agencyConfig: { ...config?.agencyConfig, boundDeviceId, executionTarget: 'device' },
-    });
-  };
 
   const isRemoteHetero =
     isHeterogeneous &&
     !!heterogeneousProvider &&
     isRemoteHeterogeneousType(heterogeneousProvider.type);
-  // The builtin Orvilo harness shares the local-CLI status card (engine binary
-  // detection, command override) but has no Cloud tab — the cloud runner only
-  // wraps the claude-code CLI.
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
-  const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
-  const heterogeneousTabItems: TabsItem[] = heterogeneousProvider
-    ? [
-        ...(showCloudHeterogeneousTab
-          ? [
-              {
-                key: 'cloud',
-                label: t('heterogeneousStatus.cloud.tabLabel'),
-                children: (
-                  <CloudHeterogeneousConfig
-                    provider={heterogeneousProvider}
-                    onEnvChange={updateHeterogeneousEnv}
-                  />
-                ),
-              },
-            ]
-          : []),
-        {
-          key: 'desktop',
-          label: t('heterogeneousStatus.desktop.tabLabel'),
-          disabled: !isDesktop,
-          children: (
-            <HeterogeneousAgentStatusCard
-              provider={heterogeneousProvider}
-              onCommandChange={updateHeterogeneousCommand}
-            />
-          ),
-        },
-      ]
-    : [];
+  // External harnesses (local CLIs + remote platforms) get the Connection
+  // group; builtin/legacy runtimes get the General tools group. Both share
+  // the same Device and Access groups — the execution contract's single
+  // device component and one write path per setting.
+  const externalAgent = isHeterogeneous && !!heterogeneousProvider && !isBuiltinEngine;
 
   return (
     <>
-      <Flexbox
-        className={styles.topArea}
+      <div
+        className={cn('flex flex-col', styles.topArea)}
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
         {/* Header: Avatar + Name + Description */}
         <AgentHeader />
-        <Flexbox
-          className={styles.configStack}
-          gap={8}
-          paddingBlock={isRemoteHetero ? '8px 0' : undefined}
+        <div
+          className={cn('flex flex-col gap-2', styles.configStack)}
+          style={{ paddingBlock: isRemoteHetero ? '8px 0' : undefined }}
         >
-          {/* Engine: harness / builtin engine / per-harness model + effort /
-              execution target. Also the upgrade surface for legacy agents —
-              the first pick materializes `agencyConfig.heterogeneousProvider`. */}
-          <EngineConfigCard agentId={agentId} />
-          {isRemoteHetero && heterogeneousProvider ? (
-            // Remote platform agents (openclaw / hermes): show device config panel
-            <RemoteAgentConfigCard
-              provider={heterogeneousProvider}
-              onBoundDeviceChange={updateBoundDeviceId}
-            />
-          ) : isBuiltinEngine && heterogeneousProvider ? (
-            // Builtin Orvilo harness: engine-CLI detection + command override,
-            // no cloud/desktop tab split.
-            <HeterogeneousAgentStatusCard
-              provider={heterogeneousProvider}
-              onCommandChange={updateHeterogeneousCommand}
-            />
-          ) : isHeterogeneous && heterogeneousProvider ? (
-            // Local CLI agents: Claude Code supports cloud config; Codex is desktop-only for now.
-            <Tabs
-              defaultActiveKey={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}
-              items={heterogeneousTabItems}
-              size="small"
-            />
-          ) : isWorkspaceAgent ? (
+          {externalAgent ? (
             <>
-              <Flexbox horizontal gap={8} wrap={'wrap'}>
-                <WorkspaceAgentDevicePolicy agentId={agentId} />
-              </Flexbox>
-              <WorkspaceAgentPolicyCard
-                fullWidth
-                action={<RunPriorityHint agentId={agentId} />}
-                icon={Wrench}
-                title={t('settingAgent.toolsConfig.title')}
-              >
-                <AgentTool />
-              </WorkspaceAgentPolicyCard>
+              <ExternalAgentConnectionSettings agentId={agentId} />
+              {/* Remote platforms carry no local model rows — model/effort is
+                  a local-CLI concept. */}
+              {isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
+              <AgentDeviceSettings agentId={agentId} />
+              <AgentAccessSettings agentId={agentId} />
+              <AgentAdvancedSettings agentId={agentId} />
             </>
           ) : (
-            <Flexbox className={styles.configPanel} gap={10}>
-              <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-                <div className={styles.configLabel}>{t('settingAgent.runtimeConfig.title')}</div>
-                <RunPriorityHint agentId={agentId} />
-              </Flexbox>
-              <AgentTool />
-            </Flexbox>
+            <>
+              <AgentGeneralSettings agentId={agentId} />
+              <AgentModelSettings agentId={agentId} />
+              <AgentDeviceSettings agentId={agentId} />
+              <AgentAccessSettings agentId={agentId} />
+              <AgentAdvancedSettings agentId={agentId} />
+            </>
           )}
-          {isHeterogeneous ? (
-            <WorkspaceAgentDevicePolicy agentId={agentId} showDevicePicker={!isRemoteHetero} />
-          ) : null}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {/* Main Content: Prompt Editor — built-in model runtime only. Hetero agents
           (Claude Code / Codex + remote platforms) run an external CLI with its own
           system prompt, so the agent's systemRole never reaches them. Hide the

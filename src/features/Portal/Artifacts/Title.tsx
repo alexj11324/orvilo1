@@ -1,12 +1,12 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Tabs, Text } from '@lobehub/ui/base-ui';
 import { ArtifactType } from '@orvilo/types';
-import { ConfigProvider } from 'antd';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowLeft, CodeIcon, EyeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import ArtifactDeploymentActions from '@/business/client/features/ArtifactDeploymentActions';
+import ActionIcon from '@/components/ActionIcon';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { ArtifactDisplayMode } from '@/store/chat/slices/portal/initialState';
@@ -44,56 +44,47 @@ const Title = () => {
   const showSwitch = isArtifactTagClosed && artifactType !== ArtifactType.Code;
 
   return (
-    <Flexbox horizontal align={'center'} flex={1} gap={12} justify={'space-between'} width={'100%'}>
-      <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
+      <div className="flex flex-row items-center gap-1">
         <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeArtifact()} />
-        <Text className={cx(oneLineEllipsis)} type={'secondary'}>
-          {artifactTitle}
-        </Text>
-      </Flexbox>
-      <ConfigProvider
-        theme={{
-          token: {
-            borderRadiusSM: 16,
-            borderRadiusXS: 16,
-            fontSize: 12,
-          },
-        }}
-      >
-        <Flexbox horizontal align={'center'} gap={4}>
-          <ArtifactDeploymentActions
-            artifactIdentifier={artifactIdentifier}
-            artifactTitle={artifactTitle}
-            artifactType={artifactType}
-            displayMode={displayMode}
-            isArtifactTagClosed={isArtifactTagClosed}
-            messageId={messageId}
-            topicId={topicId}
-          />
-          {showSwitch && (
-            <Tabs
-              activeKey={displayMode}
-              size={'small'}
-              items={[
-                {
-                  icon: <Icon icon={EyeIcon} />,
-                  key: ArtifactDisplayMode.Preview,
-                  label: t('artifacts.display.preview'),
-                },
-                {
-                  icon: <Icon icon={CodeIcon} />,
-                  key: ArtifactDisplayMode.Code,
-                  label: t('artifacts.display.code'),
-                },
-              ]}
-              onChange={(key) => {
-                useChatStore.setState({ portalArtifactDisplayMode: key as ArtifactDisplayMode });
-              }}
-            />
-          )}
-        </Flexbox>
-      </ConfigProvider>
-    </Flexbox>
+        <div className={cn('text-muted-foreground', cx(oneLineEllipsis))}>{artifactTitle}</div>
+      </div>
+
+      <div className="flex flex-row items-center gap-1">
+        <ArtifactDeploymentActions
+          artifactIdentifier={artifactIdentifier}
+          artifactTitle={artifactTitle}
+          artifactType={artifactType}
+          displayMode={displayMode}
+          isArtifactTagClosed={isArtifactTagClosed}
+          messageId={messageId}
+          topicId={topicId}
+        />
+        {showSwitch && (
+          <Tabs
+            value={displayMode}
+            onValueChange={(key) => {
+              useChatStore.setState({ portalArtifactDisplayMode: key as ArtifactDisplayMode });
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value={ArtifactDisplayMode.Preview}>
+                <span className="anticon" role="img">
+                  <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+                {t('artifacts.display.preview')}
+              </TabsTrigger>
+              <TabsTrigger value={ArtifactDisplayMode.Code}>
+                <span className="anticon" role="img">
+                  <CodeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+                {t('artifacts.display.code')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+      </div>
+    </div>
   );
 };
 

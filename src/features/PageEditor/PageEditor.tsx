@@ -1,8 +1,8 @@
 'use client';
 
 import { DEFAULT_BLOCK_ANCHOR_PADDING, EditorProvider } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { CSSProperties, FC, ReactNode, UIEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 
@@ -277,11 +277,10 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
   const headerSlot = header === undefined ? <Header /> : header;
 
   const editorPane = (
-    <Flexbox
-      flex={1}
-      height={'100%'}
+    <div
+      className="flex flex-col flex-1"
       ref={editorPaneRef}
-      style={styles.editorContainer}
+      style={{ height: '100%', ...styles.editorContainer }}
       onPointerEnter={() => {
         isPointerInsideEditorPaneRef.current = true;
       }}
@@ -290,12 +289,10 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
       }}
     >
       {!fullWidthHeader && headerSlot}
-      <Flexbox
-        horizontal
-        height={'100%'}
+      <div
+        className="flex"
         ref={contentWrapperRef}
-        style={styles.contentWrapper}
-        width={'100%'}
+        style={{ height: '100%', width: '100%', ...styles.contentWrapper }}
         onScroll={handleEditorScroll}
       >
         <WideScreenContainer
@@ -307,7 +304,10 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
             editor?.focus();
           }}
         >
-          <Flexbox className={overrideStyles.editorContent} flex={1} style={editorContentStyle}>
+          <div
+            className={cn('flex flex-col flex-1', overrideStyles.editorContent)}
+            style={editorContentStyle}
+          >
             <TitleSection />
             <PageMetaBar />
             {/* Surfaces local heartbeat health (unstable/lost) for the holder.
@@ -319,35 +319,36 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
             <EditorCanvas askCopilotTarget={askCopilotTarget} />
             {documentId && <DocumentLikes documentId={documentId} key={documentId} />}
             {documentId && <DocumentComments documentId={documentId} />}
-          </Flexbox>
+          </div>
         </WideScreenContainer>
-      </Flexbox>
+      </div>
       {documentId && <DiffAllToolbar documentId={documentId} editor={editor} />}
-    </Flexbox>
+    </div>
   );
 
   if (fullWidthHeader) {
     return (
-      <Flexbox height={'100%'} style={{ backgroundColor: cssVar.colorBgContainer }} width={'100%'}>
+      <div
+        className="flex flex-col"
+        style={{ height: '100%', width: '100%', backgroundColor: cssVar.colorBgContainer }}
+      >
         {headerSlot}
-        <Flexbox horizontal flex={1} style={{ minHeight: 0 }} width={'100%'}>
+        <div className="flex flex-1" style={{ width: '100%', minHeight: 0 }}>
           {editorPane}
           {showRightPanel && <RightPanel />}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox
-      horizontal
-      height={'100%'}
-      style={{ backgroundColor: cssVar.colorBgContainer }}
-      width={'100%'}
+    <div
+      className="flex"
+      style={{ height: '100%', width: '100%', backgroundColor: cssVar.colorBgContainer }}
     >
       {editorPane}
       {showRightPanel && <RightPanel />}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { Checkbox, confirmModal, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PRIVACY_URL, TERMS_URL } from '@/const/url';
 
 /**
@@ -147,23 +148,22 @@ export const useAuthAgreement = (requestConfirmation?: RequestAgreementConfirmat
 const AuthAgreement = memo<AuthAgreementProps>(({ checked, onChange }) => {
   if (checked === undefined || onChange === undefined) {
     return (
-      <Text fontSize={13} style={{ display: 'block', marginBlockStart: 8 }} type={'secondary'}>
+      <div
+        className="text-[13px] text-muted-foreground"
+        style={{ display: 'block', marginBlockStart: 8 }}
+      >
         <AgreementText i18nKey={'footer.agreement'} />
-      </Text>
+      </div>
     );
   }
 
   return (
-    <Checkbox
-      checked={checked}
-      size={16}
-      style={{ alignItems: 'flex-start', marginBlockEnd: 12, width: '100%' }}
-      styles={{ checkbox: { marginBlockStart: 2 } }}
-      textProps={{ fontSize: 13, type: 'secondary' }}
-      onChange={onChange}
-    >
-      <AgreementText i18nKey={'agreement.checkbox'} />
-    </Checkbox>
+    <label className="flex items-start gap-2" style={{ marginBlockEnd: 12, width: '100%' }}>
+      <Checkbox checked={checked} style={{ marginBlockStart: 2 }} onCheckedChange={onChange} />
+      <span className="text-[13px] text-muted-foreground">
+        <AgreementText i18nKey={'agreement.checkbox'} />
+      </span>
+    </label>
   );
 });
 

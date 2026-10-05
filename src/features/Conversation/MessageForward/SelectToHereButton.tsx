@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownToLine } from 'lucide-react';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { messageStateSelectors, useConversationStore } from '../store';
 
@@ -67,26 +68,13 @@ const SelectToHereButton = memo(() => {
   if (!isSelectionMode) return null;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.wrap}
-      gap={12}
-      paddingInline={16}
-      ref={wrapRef}
-    >
+    <div className={cn('flex items-center gap-3 px-4', styles.wrap)} ref={wrapRef}>
       <div className={styles.line} />
-      <Button
-        className={styles.button}
-        icon={<Icon icon={ArrowDownToLine} />}
-        shape={'round'}
-        size={'small'}
-        onClick={handleClick}
-      >
-        {t('messageForward.bar.selectToHere')}
+      <Button className={cn(styles.button, 'rounded-full')} size="sm" onClick={handleClick}>
+        <ArrowDownToLine /> {t('messageForward.bar.selectToHere')}
       </Button>
       <div className={styles.line} />
-    </Flexbox>
+    </div>
   );
 });
 

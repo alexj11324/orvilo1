@@ -26,6 +26,7 @@ import { generateCliWrapper, getCliWrapperDir } from '@/modules/cliEmbedding';
 import { ScreenCaptureManager } from '@/modules/screenCapture/ScreenCaptureManager';
 import type { IServiceModule, ServiceLifecycle, ServiceModule } from '@/services';
 import LocalDatabaseService from '@/services/LocalDatabaseSrv';
+import { isAppShellSender } from '@/utils/ipc/base';
 import { createLogger } from '@/utils/logger';
 import * as electronIs from '@/utils/platform';
 import { refreshShellPath } from '@/utils/shellPath';
@@ -102,7 +103,7 @@ export class App {
     logger.info('Starting Orvilo...');
 
     // Append the CLI wrapper directory to PATH so spawned shells can resolve
-    // `orvilo` / `lh` / `orvilo`. Managed binary dirs (e.g. agent-browser) are
+    // `orvilo` / `orvilo` / `orvilo`. Managed binary dirs (e.g. agent-browser) are
     // augmented separately by `binaryManager.augmentPath()` during bootstrap.
     const pathSep = process.platform === 'win32' ? ';' : ':';
     process.env.PATH = `${process.env.PATH}${pathSep}${getCliWrapperDir()}`;
@@ -556,6 +557,10 @@ export class App {
 
   private initializeBootstrapIpc() {
     ipcMain.on('desktop:get-bootstrap-identity', (event) => {
+      if (!isAppShellSender(event.sender)) {
+        event.returnValue = { isIdentityResolved: false };
+        return;
+      }
       const controller = this.getController(RemoteServerConfigCtr);
       event.returnValue = controller?.getDesktopBootstrapIdentity() ?? {
         isIdentityResolved: false,
@@ -564,7 +569,8 @@ export class App {
   }
 
   private initializeBootProfileIpc() {
-    ipcMain.on('desktop:boot-profile-ready', (_event, payload: DesktopBootProfilePayload) => {
+    ipcMain.on('desktop:boot-profile-ready', (event, payload: DesktopBootProfilePayload) => {
+      if (!isAppShellSender(event.sender)) return;
       if (process.env.ORVILO_DESKTOP_BOOT_PROFILE !== '1') return;
 
       const values = [

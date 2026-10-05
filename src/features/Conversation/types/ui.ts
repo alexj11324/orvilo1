@@ -1,7 +1,8 @@
-import { type ActionIconGroupItemType } from '@lobehub/ui';
 import { type ChatItemProps } from '@lobehub/ui/chat';
 import { type LLMRoleType, type UIChatMessage } from '@orvilo/types';
 import { type FC, type ReactNode } from 'react';
+
+import { type ActionIconGroupItemType } from '@/components/ItemsMenu';
 
 export type RenderRole = LLMRoleType | 'default' | 'history' | string;
 export type RenderMessage = FC<UIChatMessage & { editableContent: ReactNode }>;

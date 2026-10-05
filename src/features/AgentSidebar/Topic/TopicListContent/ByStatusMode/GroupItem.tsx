@@ -1,11 +1,3 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -14,7 +6,9 @@ import {
   TOPIC_GROUP_VISUALS,
   TOPIC_STATUS_VISUALS,
 } from '@/components/ExecutionStatus';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+import { accordionStyles } from '../../accordionStyles';
 import TopicItem from '../../List/Item';
 import { type GroupItemComponentProps } from '../GroupedAccordion';
 
@@ -31,26 +25,31 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
   const statusIcon = STATUS_ICON[id];
 
   return (
-    <AccordionItem value={id}>
-      <AccordionHeader>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Flexbox horizontal align="center" gap={6} height={24} style={{ overflow: 'hidden' }}>
-            {statusIcon && (
-              <Center flex={'none'} height={16} width={16}>
-                <Icon color={statusIcon.color} icon={statusIcon.icon} size={{ size: 13 }} />
-              </Center>
-            )}
-            <Text ellipsis fontSize={12} style={{ flex: 1 }} type={'secondary'} weight={500}>
-              {title}
-            </Text>
-          </Flexbox>
-        </AccordionTrigger>
-      </AccordionHeader>
-      <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+    <AccordionItem className={accordionStyles.item} value={id}>
+      <AccordionTrigger
+        className={accordionStyles.trigger}
+        style={{ paddingBlock: 4, paddingInline: 8 }}
+      >
+        <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
+          {statusIcon && (
+            <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
+              <statusIcon.icon color={statusIcon.color} size={13} />
+            </div>
+          )}
+          <div
+            className="truncate text-[12px] text-muted-foreground font-medium"
+            style={{ flex: 1 }}
+          >
+            {title}
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="p-0">
+        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               showWorkingDirectory
+              agentId={topic.agentId}
               fav={topic.favorite}
               id={topic.id}
               key={topic.id}
@@ -60,8 +59,8 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
               userId={topic.userId}
             />
           ))}
-        </Flexbox>
-      </AccordionPanel>
+        </div>
+      </AccordionContent>
     </AccordionItem>
   );
 }, isEqual);

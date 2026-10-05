@@ -21,16 +21,22 @@ import {
 } from '@/utils/client/topic';
 
 import { type ChatStoreState } from '../../initialState';
-import { topicMapKey } from '../../utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '../../utils/topicMapKey';
 import { operationSelectors } from '../operation/selectors';
 import { type TopicData } from './initialState';
 
 // Helper selector: get current topic data based on session context
 const currentTopicData = (s: ChatStoreState): TopicData | undefined => {
-  const key = topicMapKey({
-    agentId: s.activeAgentId,
-    groupId: s.activeGroupId,
-  });
+  // Conversation-first navigation: outside a group session the sidebar reads
+  // the single workspace-wide conversation feed — every visible non-group
+  // topic, whatever agent owns it. Agent identity degrades to weak row
+  // metadata on each row. Group sessions keep their container-scoped bucket.
+  const key = s.activeGroupId
+    ? topicMapKey({
+        agentId: s.activeAgentId,
+        groupId: s.activeGroupId,
+      })
+    : WORKSPACE_TOPIC_MAP_KEY;
   return s.topicDataMap[key];
 };
 
@@ -48,19 +54,22 @@ const currentTopics = (s: ChatStoreState): ChatTopic[] | undefined => currentTop
 const currentTopicsWithoutSystemTriggers = (s: ChatStoreState): ChatTopic[] | undefined => {
   const topics = currentTopics(s);
   if (!topics) return undefined;
+  // `archived` repeats the fetch's `excludeStatuses` for the same belt-and-braces
+  // reason: archiving is the only status that removes a row from the feed — a
+  // `completed` conversation stays listed (completion is metadata, not archive).
   return topics.filter(
-    (topic) => !topic.trigger || !MAIN_SIDEBAR_EXCLUDE_TRIGGERS.includes(topic.trigger),
+    (topic) =>
+      topic.status !== 'archived' &&
+      (!topic.trigger || !MAIN_SIDEBAR_EXCLUDE_TRIGGERS.includes(topic.trigger)),
   );
 };
 
-const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined => {
-  const inList = currentTopics(s)?.find((topic) => topic.id === s.activeTopicId);
-  if (inList) return inList;
-  // The active topic can be absent from the list bucket — archived (completed)
-  // topics are excluded by the sidebar fetch's `excludeStatuses`. Fall back to
-  // the by-id detail cache so consumers keep real data (title, metadata, …).
-  return s.activeTopicId ? s.topicDetailMap?.[s.activeTopicId] : undefined;
-};
+const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined =>
+  // The active topic can be absent from the list bucket — archived topics are
+  // excluded by the sidebar fetch's `excludeStatuses`, and the workspace feed
+  // may simply not have paged it in yet. getTopicById already falls back
+  // through every loaded bucket to the by-id detail cache.
+  s.activeTopicId ? getTopicById(s.activeTopicId)(s) : undefined;
 const searchTopics = (s: ChatStoreState): ChatTopic[] => s.searchTopics;
 
 const displayTopics = (s: ChatStoreState): ChatTopic[] | undefined =>
@@ -90,6 +99,18 @@ const getTopicById =
     }
 
     return s.topicDetailMap?.[id];
+  };
+
+/** An open conversation's loaded owner outranks a stale route agent. */
+const activeTopicIdForAgent =
+  (agentId?: string) =>
+  (s: ChatStoreState): string | undefined => {
+    if (!s.activeTopicId) return undefined;
+    const topic = getTopicById(s.activeTopicId)(s);
+    const owner = !s.activeGroupId ? topic?.agentId : undefined;
+    return (owner != null ? owner === agentId : s.activeAgentId === agentId)
+      ? s.activeTopicId
+      : undefined;
   };
 
 /**
@@ -302,18 +323,14 @@ const sortTopics = (topics: ChatTopic[], sortBy: TopicSortBy): ChatTopic[] => {
 
 // Limit topics for sidebar display based on user's page size preference
 const displayTopicsForSidebar =
-  (pageSize: number, sortBy: TopicSortBy = 'updatedAt', includeCompleted = true) =>
+  (pageSize: number, sortBy: TopicSortBy = 'updatedAt') =>
   (s: ChatStoreState): ChatTopic[] | undefined => {
     const topics = currentTopicsWithoutSystemTriggers(s);
     if (!topics) return undefined;
 
-    const visibleTopics = includeCompleted
-      ? topics
-      : topics.filter((topic) => topic.status !== 'completed');
-
     // Favorites first, then sorted by the chosen timestamp, then page-sliced
-    const favTopics = visibleTopics.filter((t) => t.favorite);
-    const rest = visibleTopics.filter((t) => !t.favorite);
+    const favTopics = topics.filter((t) => t.favorite);
+    const rest = topics.filter((t) => !t.favorite);
     const pagedTopics = [...sortTopics(favTopics, sortBy), ...sortTopics(rest, sortBy)].slice(
       0,
       pageSize,
@@ -321,7 +338,7 @@ const displayTopicsForSidebar =
     const activeTopic = currentActiveTopic(s);
 
     // A search result or direct URL can open a topic outside the sidebar's
-    // first page (or an archived topic excluded by the completed filter). Keep
+    // first page (or an archived topic excluded by the fetch). Keep
     // the configured page intact and add that one active row so selection never
     // disappears merely because the route target was filtered out. An injected
     // favorite stays in the favorite prefix instead of falling below regular rows.
@@ -401,14 +418,9 @@ const groupedTopicsSelector =
   };
 
 const groupedTopicsForSidebar =
-  (
-    pageSize: number,
-    sortBy: TopicSortBy = 'updatedAt',
-    groupMode: TopicGroupMode = 'byTime',
-    includeCompleted = true,
-  ) =>
+  (pageSize: number, sortBy: TopicSortBy = 'updatedAt', groupMode: TopicGroupMode = 'byTime') =>
   (s: ChatStoreState): GroupedTopic[] => {
-    const limitedTopics = displayTopicsForSidebar(pageSize, sortBy, includeCompleted)(s);
+    const limitedTopics = displayTopicsForSidebar(pageSize, sortBy)(s);
     if (!limitedTopics) return [];
     // Topics actively streaming on this client surface under "running" even
     // though their persisted status says otherwise — that's the one client-only
@@ -441,7 +453,18 @@ const loadMoreTopicsError = (s: ChatStoreState): unknown => currentTopicData(s)?
 const isExpandingPageSize = (s: ChatStoreState): boolean =>
   currentTopicData(s)?.isExpandingPageSize ?? false;
 
+/**
+ * The by-id detail fetch settled on `null` — the topic doesn't exist or the
+ * viewer lost access (a deleted conversation on a stale list row or deep
+ * link). Render a 404 card, not an empty conversation / raw fetch error.
+ */
+const isTopicNotFoundById =
+  (topicId?: string) =>
+  (s: ChatStoreState): boolean =>
+    !!topicId && !!s.topicNotFoundMap[topicId];
+
 export const topicSelectors = {
+  activeTopicIdForAgent,
   activeTopicHeteroPin,
   activeTopicModel,
   currentActiveTopic,
@@ -474,6 +497,7 @@ export const topicSelectors = {
   isLoadingMoreTopics,
   isNewTopicSendInFlight,
   isSearchingTopic,
+  isTopicNotFoundById,
   isUndefinedTopics,
   loadMoreTopicsError,
   searchTopics,

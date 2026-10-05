@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Commitment, ControlResult, DurableReceipt } from '@orvilo/agent-execution';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
+import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import {
   acceptances,
   taskDependencies,
@@ -99,6 +100,10 @@ export class CanonicalSessionSnapshots {
     run: CanonicalRunSnapshot,
     input: CanonicalSessionEvidence,
   ) {
+    // Session snapshots are task-scoped (verify plan, acceptance, task
+    // dependencies) — a conversation subject never reaches them.
+    if (binding.subject.kind !== 'task') fail('Run subject is not a task execution');
+    const taskId = binding.subject.taskId;
     if (input.historyContentHash !== undefined && !/^[a-f0-9]{64}$/.test(input.historyContentHash))
       fail('Invalid history content hash');
     const commitments = structuredClone(input.commitments).sort((a, b) => a.id.localeCompare(b.id));
@@ -109,8 +114,7 @@ export class CanonicalSessionSnapshots {
       !commitments.length ||
       new Set(commitments.map((c) => c.id)).size !== commitments.length ||
       commitments.some(
-        (c) =>
-          !c.id || c.taskId !== binding.taskId || !c.actionKinds.length || !c.postconditions.length,
+        (c) => !c.id || c.taskId !== taskId || !c.actionKinds.length || !c.postconditions.length,
       )
     )
       fail('Trusted commitments unavailable');
@@ -150,7 +154,7 @@ export class CanonicalSessionSnapshots {
       verify.acceptanceId &&
       (!acceptance ||
         !(
-          (acceptance.subjectType === 'task' && acceptance.subjectId === binding.taskId) ||
+          (acceptance.subjectType === 'task' && acceptance.subjectId === taskId) ||
           (acceptance.subjectType === 'topic' && acceptance.subjectId === binding.topicId)
         ))
     )
@@ -196,7 +200,7 @@ export class CanonicalSessionSnapshots {
       .from(taskDependencies)
       .where(
         and(
-          eq(taskDependencies.taskId, binding.taskId),
+          eq(taskDependencies.taskId, taskId),
           eq(taskDependencies.workspaceId, binding.workspaceId),
         ),
       )
@@ -206,7 +210,7 @@ export class CanonicalSessionSnapshots {
       ? await tx
           .select({
             id: tasks.id,
-            status: tasks.status,
+            status: sql<string>`${legacyStatusExpr}`,
             domainRevision: tasks.domainRevision,
             requirementRevision: tasks.requirementRevision,
             policyRevision: tasks.policyRevision,
@@ -220,7 +224,7 @@ export class CanonicalSessionSnapshots {
       : [];
     if (prerequisites.length !== dependencyIds.length)
       fail('Dependency unavailable in canonical scope');
-    const ids = [binding.taskId, binding.topicId, ...dependencyIds];
+    const ids = [taskId, binding.topicId, ...dependencyIds];
     const tombstones = await tx
       .select({
         id: trashItems.id,
@@ -311,6 +315,9 @@ export class CanonicalSessionSnapshots {
     };
     return this.observe(binding, async (run, tx) => {
       const authority = await this.collect(tx, binding, run, evidence);
+      // Narrowed in `collect` — the snapshot's task_id never stores a placeholder.
+      const snapshotTaskId =
+        binding.subject.kind === 'task' ? binding.subject.taskId : 'unreachable';
       const snapshot: CanonicalSessionSnapshot = {
         schemaVersion: 1,
         id: randomUUID(),
@@ -320,7 +327,7 @@ export class CanonicalSessionSnapshots {
         ...(evidence.historyContentHash ? { historyContentHash: evidence.historyContentHash } : {}),
       };
       await tx.execute(
-        sql`INSERT INTO core_session_snapshots(id,workspace_id,user_id,task_id,topic_id,registration_id,epoch,captured_at,digest,snapshot) VALUES (${snapshot.id},${binding.workspaceId},${binding.userId},${binding.taskId},${binding.topicId},${binding.runtimeRegistrationId},${binding.executionEpoch},${snapshot.capturedAt},${snapshot.digest},${JSON.stringify(snapshot)}::jsonb)`,
+        sql`INSERT INTO core_session_snapshots(id,workspace_id,user_id,task_id,topic_id,registration_id,epoch,captured_at,digest,snapshot) VALUES (${snapshot.id},${binding.workspaceId},${binding.userId},${snapshotTaskId},${binding.topicId},${binding.runtimeRegistrationId},${binding.executionEpoch},${snapshot.capturedAt},${snapshot.digest},${JSON.stringify(snapshot)}::jsonb)`,
       );
       return snapshot;
     });
@@ -339,8 +346,11 @@ export class CanonicalSessionSnapshots {
       completionMappings: structuredClone(evidence.completionMappings),
     };
     return this.observe(binding, async (run, tx) => {
+      // Narrowed: the canonical task admission already rejected non-task subjects.
+      const snapshotTaskId =
+        binding.subject.kind === 'task' ? binding.subject.taskId : 'unreachable';
       const result = await tx.execute(
-        sql`SELECT snapshot FROM core_session_snapshots WHERE id=${snapshotId} AND workspace_id=${binding.workspaceId} AND user_id=${binding.userId} AND task_id=${binding.taskId} AND topic_id=${binding.topicId} AND registration_id=${binding.runtimeRegistrationId} AND epoch=${binding.executionEpoch}`,
+        sql`SELECT snapshot FROM core_session_snapshots WHERE id=${snapshotId} AND workspace_id=${binding.workspaceId} AND user_id=${binding.userId} AND task_id=${snapshotTaskId} AND topic_id=${binding.topicId} AND registration_id=${binding.runtimeRegistrationId} AND epoch=${binding.executionEpoch}`,
       );
       const saved = result.rows[0]?.snapshot as CanonicalSessionSnapshot | undefined;
       if (

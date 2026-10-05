@@ -23,8 +23,14 @@ import {
   reduceMainAgent,
   rehydrateSubagentRunsState,
 } from '@orvilo/heterogeneous-agents';
-import { type ChatToolPayload, ThreadStatus, ThreadType } from '@orvilo/types';
+import {
+  type ChatToolPayload,
+  getWorkingDirEffectivePath,
+  ThreadStatus,
+  ThreadType,
+} from '@orvilo/types';
 import { createNanoId } from '@orvilo/utils';
+import { pickString, toRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import {
@@ -38,9 +44,14 @@ import {
   notifyAgentInterventionRequired,
   type NotifyAgentInterventionRequiredParams,
 } from '@/business/server/agent-run/agentInterventionReview';
+import type { AgentOperationModel } from '@/database/models/agentOperation';
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
 import type { TopicModel } from '@/database/models/topic';
+import {
+  setHeteroSessionBindingKeyForWorkingDirectory,
+  setHeteroSessionIdForWorkingDirectory,
+} from '@/helpers/heteroSessionByWorkingDirectory';
 import { formatErrorForState } from '@/server/modules/AgentExecution/formatErrorForState';
 
 const log = debug('orvilo-server:hetero-agent:persistence');
@@ -169,6 +180,8 @@ interface OperationState {
    */
   toolMsgIdByCallId: Map<string, string>;
   topicId: string;
+  /** Actual admitted cwd, captured once for session persistence. */
+  workingDirectory?: string;
 }
 
 /**
@@ -191,6 +204,7 @@ export class StaleHeteroOperationError extends Error {
 }
 
 export interface HeterogeneousPersistenceHandlerDeps {
+  agentOperationModel?: Pick<AgentOperationModel, 'findById'>;
   messageModel: MessageModel;
   threadModel: ThreadModel;
   topicModel: TopicModel;
@@ -316,7 +330,7 @@ const INTERVENTION_PROVIDERS = new Set<AgentInterventionProvider>([
 ]);
 
 /**
- * Server-side persistence for `lh hetero exec` event streams. Mirrors the
+ * Server-side persistence for `orvilo hetero exec` event streams. Mirrors the
  * desktop renderer's `executeHeterogeneousAgent` (1.8k lines) for the DB
  * concerns only — IPC, store dispatch, notifications, refresh hooks all
  * live host-side and are intentionally absent here.
@@ -510,7 +524,30 @@ export class HeterogeneousPersistenceHandler {
    */
   private async persistSessionId(state: OperationState, sessionId: string): Promise<void> {
     try {
+      const topic =
+        state.workingDirectory === undefined
+          ? undefined
+          : await this.deps.topicModel.findById(state.topicId);
       await this.deps.topicModel.updateMetadata(state.topicId, {
+        ...(state.workingDirectory === undefined
+          ? {}
+          : {
+              heteroSessionIdByWorkingDirectory: setHeteroSessionIdForWorkingDirectory(
+                topic?.metadata,
+                state.workingDirectory,
+                sessionId,
+              ),
+              ...(state.agentType
+                ? {
+                    heteroSessionBindingKeyByWorkingDirectory:
+                      setHeteroSessionBindingKeyForWorkingDirectory(
+                        topic?.metadata,
+                        state.workingDirectory,
+                        getNativeHeteroSessionBindingKey(state.agentType),
+                      ),
+                  }
+                : {}),
+            }),
         ...(state.agentType
           ? { heteroSessionBindingKey: getNativeHeteroSessionBindingKey(state.agentType) }
           : {}),
@@ -574,6 +611,10 @@ export class HeterogeneousPersistenceHandler {
       throw new Error(`runningOperation on topic ${topicId} is missing assistantMessageId`);
     }
 
+    const operation = await this.deps.agentOperationModel?.findById(operationId);
+    const admittedCwd = pickString(
+      toRecord(toRecord(operation?.metadata)?.executionPlan)?.workingDirectoryBinding,
+    );
     const baseAssistantMessage = await this.deps.messageModel.findById(baseAssistantMessageId);
 
     if (seedAssistantMessageId) {
@@ -609,6 +650,10 @@ export class HeterogeneousPersistenceHandler {
       // Legacy/finish-only callers may not have a readable assistant row; keep
       // the historical topic-owner fallback for those paths.
       agentId: baseAssistantMessage?.agentId ?? topic?.agentId ?? null,
+      workingDirectory:
+        admittedCwd ??
+        getWorkingDirEffectivePath(topic?.metadata?.workingDirectoryConfig) ??
+        topic?.metadata?.workingDirectory,
       // Left undefined until the run's own stream_start reports it (or a cold
       // replica recovers it from a stamped message). NOT seeded from
       // topic.metadata.heteroSessionId: that holds the id we ASKED CC to resume,

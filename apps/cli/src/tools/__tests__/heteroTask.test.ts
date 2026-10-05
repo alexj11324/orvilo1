@@ -124,7 +124,7 @@ describe('runHeteroTask (openclaw)', () => {
     vi.clearAllMocks();
     // Clear task store
     for (const key of Object.keys(taskStore)) delete taskStore[key];
-    execFileSyncMock.mockReturnValue('/usr/local/bin/lh\n');
+    execFileSyncMock.mockReturnValue('/usr/local/bin/orvilo\n');
     resetTrpcClientMock();
   });
 
@@ -151,7 +151,7 @@ describe('runHeteroTask (openclaw)', () => {
     const messageArg = spawnArgs[msgIdx + 1];
 
     expect(messageArg).toContain('what time is it');
-    expect(messageArg).toContain('lh notify');
+    expect(messageArg).toContain('orvilo notify');
     expect(messageArg).toContain('MSG_ID');
   });
 
@@ -221,7 +221,7 @@ describe('runHeteroTask (openclaw)', () => {
     for (const call of spawnMock.mock.calls) {
       const args = call[1] as string[];
       const msg = args[args.indexOf('--message') + 1];
-      expect(msg).toContain('lh notify');
+      expect(msg).toContain('orvilo notify');
     }
   });
 
@@ -499,7 +499,7 @@ describe('runHeteroTask retry ownership', () => {
     vi.clearAllMocks();
     fsState.content = undefined;
     for (const key of Object.keys(taskStore)) delete taskStore[key];
-    execFileSyncMock.mockReturnValue('/usr/local/bin/lh\n');
+    execFileSyncMock.mockReturnValue('/usr/local/bin/orvilo\n');
     resetTrpcClientMock();
   });
 
@@ -589,7 +589,7 @@ describe('runHeteroTask (hermes)', () => {
     vi.clearAllMocks();
     fsState.content = undefined;
     for (const key of Object.keys(taskStore)) delete taskStore[key];
-    execFileSyncMock.mockReturnValue('/usr/local/bin/lh\n');
+    execFileSyncMock.mockReturnValue('/usr/local/bin/orvilo\n');
     resetTrpcClientMock();
   });
 
@@ -735,7 +735,7 @@ describe('runHeteroTask (hermes)', () => {
 
 // ─── cancelHeteroTask: process-group kill regression ───
 // When a local CLI agent (devin/claude-code/codex/…) is dispatched through
-// `lh connect`, the spawned child runs in its own process group. The cancel
+// `orvilo connect`, the spawned child runs in its own process group. The cancel
 // handler must signal the whole group (negative PID) so the CLI wrapper, the
 // ACP client, and any agent subprocesses all receive the signal — not just
 // the top-level node wrapper.

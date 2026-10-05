@@ -1,12 +1,12 @@
-import { Flexbox, Form, Markdown } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
-import { Form as AForm } from 'antd';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import * as m from 'motion/react-m';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import ItemRender from '@/components/JSONSchemaConfig/ItemRender';
+import { Button } from '@/components/ui/button';
 import { transformPluginSettings } from '@/features/PluginSettings';
 import { useToolStore } from '@/store/tool';
 
@@ -44,7 +44,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCancel }) => {
   const { t } = useTranslation(['plugin', 'common']);
-  const [form] = AForm.useForm();
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
   const { installMCPPlugin } = useToolStore();
@@ -83,12 +83,12 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
         initial={{ opacity: 0, y: 4 }}
         transition={{ delay: 0.15, duration: 0.2 }}
       >
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <strong>{t('mcpInstall.configurationRequired')}</strong>
           <span style={{ fontSize: 12, opacity: 0.7 }}>
             {t('mcpInstall.configurationDescription')}
           </span>
-        </Flexbox>
+        </div>
       </m.div>
 
       <m.div
@@ -136,10 +136,10 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
         initial={{ opacity: 0, y: 4 }}
         transition={{ delay: 0.25, duration: 0.2 }}
       >
-        <Button size="small" onClick={handleCancel}>
+        <Button size="sm" onClick={handleCancel}>
           {t('common:cancel')}
         </Button>
-        <Button loading={loading} size="small" type="primary" onClick={() => form.submit()}>
+        <Button loading={loading} size="sm" variant="default" onClick={() => form.submit()}>
           {t('mcpInstall.continueInstall')}
         </Button>
       </m.div>

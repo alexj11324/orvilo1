@@ -9,6 +9,7 @@ import {
   LayoutPanelTopIcon,
   LibraryBigIcon,
   Mic2,
+  Settings,
   SquarePlay,
 } from 'lucide-react';
 import {
@@ -20,12 +21,14 @@ import {
   Suspense,
 } from 'react';
 import type { RouteObject } from 'react-router';
+import { Navigate, useLocation, useParams } from 'react-router';
 
 import {
   BusinessDesktopRoutesWithMainLayout,
   BusinessDesktopRoutesWithoutMainLayout,
   BusinessResourceRoutes,
 } from '@/business/client/BusinessDesktopRoutes';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
@@ -62,12 +65,14 @@ import {
   agentStatisticsRouteMeta,
 } from '@/routes/(main)/agent/features/routeMeta';
 import {
+  groupIndexRouteMeta,
   groupPermissionRouteMeta,
   groupProfileRouteMeta,
   groupRouteMeta,
 } from '@/routes/(main)/group/features/routeMeta';
 import AppShellSkeleton, { APP_SHELL_FALLBACK_ID } from '@/spa/BootShell/AppShellSkeleton';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
+import { legacyAgentTopicTarget } from '@/spa/router/legacyAgentTopic';
 import { NoRouteSkeleton, routeMeta, type RouteSkeletonProps } from '@/spa/router/routeMeta';
 import {
   leafChildRoute,
@@ -88,6 +93,17 @@ import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@
 
 const LazyResourceCategorySkeleton = lazy(() => import('@/features/ResourceHome/Skeleton'));
 
+/**
+ * `/agent/:aid/profile` → `/settings/agents/:aid`. The profile surface moved
+ * under Settings → Agents (config exile); deep links and the sidebar agent
+ * switcher keep landing on it. `redirectElement` can't interpolate the `:aid`
+ * param, so this reads it explicitly.
+ */
+const AgentProfileRedirect = () => {
+  const { aid } = useParams();
+  return <Navigate replace to={`/settings/agents/${aid ?? ''}`} />;
+};
+
 export const ResourceCategorySkeleton = (props: RouteSkeletonProps) => (
   <Suspense fallback={null}>
     <LazyResourceCategorySkeleton {...props} />
@@ -99,6 +115,41 @@ const agentChatElement = dynamicElement(
   'Desktop > Chat',
   { fallback: delayed(<ConversationSegmentSkeleton />), preloadId: 'agent' },
 );
+
+const conversationChatElement = dynamicElement(
+  () => loadRouteWithBuiltinToolSurfaces(() => import('@/routes/(main)/chat')),
+  'Desktop > Conversation',
+  { fallback: delayed(<ConversationSegmentSkeleton />), preloadId: 'agent' },
+);
+
+const chatLayoutElement = dynamicLayout(
+  () => import('@/routes/(main)/agent/(chat)/_layout'),
+  'Desktop > Chat > ChatLayout',
+  { fallback: delayed(<ConversationLayoutSkeleton />), preloadId: 'agent' },
+);
+
+/**
+ * `/agent/:aid/:topicId` is the legacy conversation URL — the topic is the
+ * navigation unit now, so deep links redirect to the canonical
+ * `/chat/:topicId`, preserving `?thread=` queries and `#` anchors.
+ */
+const LegacyAgentTopicRedirect = () => {
+  const { topicId } = useParams();
+  const location = useLocation();
+  const activeWorkspaceSlug = useActiveWorkspaceSlug();
+
+  return (
+    <Navigate
+      replace
+      to={legacyAgentTopicTarget({
+        topicId: topicId ?? '',
+        workspaceSlug: activeWorkspaceSlug,
+        search: location.search,
+        hash: location.hash,
+      })}
+    />
+  );
+};
 
 const groupChatElement = dynamicElement(
   () => loadRouteWithBuiltinToolSurfaces(() => import('@/routes/(main)/group')),
@@ -183,16 +234,12 @@ export const sharedMainAreaChildren: RouteObject[] = [
                 index: true,
               },
               {
-                element: agentChatElement,
+                element: <LegacyAgentTopicRedirect />,
                 handle: { meta: agentRouteMeta },
                 path: ':topicId',
               },
             ],
-            element: dynamicLayout(
-              () => import('@/routes/(main)/agent/(chat)/_layout'),
-              'Desktop > Chat > ChatLayout',
-              { fallback: delayed(<ConversationLayoutSkeleton />), preloadId: 'agent' },
-            ),
+            element: chatLayoutElement,
           },
           {
             children: [
@@ -236,10 +283,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
             path: 'goal/:goalId',
           },
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/profile'),
-              'Desktop > Chat > Profile',
-            ),
+            element: <AgentProfileRedirect />,
             handle: { meta: agentProfileRouteMeta },
             path: 'profile',
           },
@@ -378,11 +422,47 @@ export const sharedMainAreaChildren: RouteObject[] = [
     path: 'agent',
   },
 
+  // Canonical conversation routes — the conversation is the navigation unit,
+  // so `/chat/:topicId` keys on the topic alone and the route resolves the
+  // owner agent. `/chat` alone lands on the blank composer (`/chat/new`).
+  {
+    children: [
+      {
+        element: redirectElement('new'),
+        index: true,
+      },
+      {
+        children: [
+          {
+            element: conversationChatElement,
+            handle: { meta: agentRouteMeta },
+            path: 'new',
+          },
+          {
+            element: conversationChatElement,
+            handle: { meta: agentRouteMeta },
+            path: ':topicId',
+          },
+        ],
+        element: chatLayoutElement,
+      },
+    ],
+    path: 'chat',
+  },
+
   // Group chat routes
   {
     children: [
       {
-        element: redirectElement('..'),
+        // `/group` is the top-level Groups destination: it resolves to the
+        // most recent group's conversation, or a create entry when the account
+        // has none.
+        element: dynamicElement(
+          () => import('@/routes/(main)/group/features/GroupIndex'),
+          'Desktop > Group > Index',
+          { preloadId: 'group' },
+        ),
+        handle: { meta: groupIndexRouteMeta },
         index: true,
       },
       {
@@ -829,12 +909,31 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         element: redirectElement('/settings/profile'),
         index: true,
       },
+      // Provider routes with nested structure
       {
+        children: [
+          {
+            element: redirectElement('/settings/provider/all'),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
+              'Desktop > Settings > Provider > Detail',
+            ),
+            handle: {
+              meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+            },
+            path: ':providerId',
+          },
+        ],
         element: dynamicElement(
-          () => import('@/routes/(main)/settings'),
-          'Desktop > Settings > Provider Bindings',
+          () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderLayout),
+          'Desktop > Settings > Provider > Layout',
         ),
-        handle: { meta: settingsRouteMeta, settingsTab: SettingsTabs.Provider },
+        handle: {
+          meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+        },
         path: 'provider',
       },
       {
@@ -852,6 +951,17 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
       {
         element: redirectElement('/settings/credential'),
         path: 'creds',
+      },
+      // Literal `agents` index — required because `/:workspaceSlug/agents`
+      // (plus its index-route bonus) out-scores `settings/:tab`, which would
+      // otherwise parse "settings" as a workspace slug and 404 the section.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/settings'),
+          'Desktop > Settings > Agents',
+        ),
+        handle: { meta: settingsRouteMeta, settingsTab: SettingsTabs.Agents },
+        path: 'agents',
       },
       // Other settings tabs
       {

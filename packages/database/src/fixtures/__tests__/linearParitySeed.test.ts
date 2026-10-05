@@ -3,13 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { ProjectModel } from '../../models/project';
+import { TaskModel } from '../../models/task';
 import { applyWorkQueryLayout, myWorkQueryForMode, WorkQueryModel } from '../../models/workQuery';
 import { WorkspaceModel } from '../../models/workspace';
 import { projects } from '../../schemas/project';
 import { taskDependencies, tasks } from '../../schemas/task';
 import { projectTeams, teamMembers, teams, teamWorkflowStates } from '../../schemas/team';
 import { users } from '../../schemas/user';
-import { workspaceMembers } from '../../schemas/workspace';
+import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 import {
   LINEAR_PARITY_MILESTONES,
@@ -18,6 +19,7 @@ import {
   LINEAR_PARITY_TEAM,
   seedLinearParity,
 } from '../linearParitySeed';
+import { seedPrimeRuntime } from '../seedPrimeRuntime';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'linear-parity-seed-test-user';
@@ -32,7 +34,22 @@ const seedUsers = async () => {
   ]);
 };
 
-const seedFixture = () => seedLinearParity(db, { target: 'test', userId });
+const seedFixture = async () => {
+  // The seed provisions a project through Prime inheritance, which needs an
+  // owned orvilo runtime bound to a host filed to the target workspace. The
+  // 'agent-testing' slug is the resolution path the seeder uses when no
+  // explicit workspace id is given.
+  const [existing] = await db
+    .select()
+    .from(workspaces)
+    .where(eq(workspaces.slug, 'agent-testing'))
+    .limit(1);
+  const workspace =
+    existing ??
+    (await new WorkspaceModel(db, userId).create({ name: 'Agent Testing', slug: 'agent-testing' }));
+  await seedPrimeRuntime(db, { userId, workspaceId: workspace.id });
+  return seedLinearParity(db, { target: 'test', userId, workspaceId: workspace.id });
+};
 
 beforeEach(async () => {
   await seedUsers();
@@ -94,7 +111,11 @@ describe('linear parity seed', () => {
     const fixtureTasks = await db.select().from(tasks).where(eq(tasks.projectId, result.projectId));
     expect(fixtureTasks).toHaveLength(16);
     expect(fixtureTasks.every((task) => task.teamId === result.teamId)).toBe(true);
-    expect(fixtureTasks.every((task) => task.status === 'completed')).toBe(true);
+    const derivedStatuses = await new TaskModel(db, userId, result.workspaceId).derivedStatusByIds(
+      fixtureTasks.map((task) => task.id),
+    );
+    // `task.status` is the derived label — the retired column stays 'backlog'.
+    expect(fixtureTasks.every((task) => derivedStatuses[task.id] === 'completed')).toBe(true);
     expect(fixtureTasks.every((task) => task.workflowCategory === 'done')).toBe(true);
     expect(fixtureTasks.every((task) => task.workflowStateRefId)).toBe(true);
 
@@ -221,6 +242,7 @@ describe('linear parity seed', () => {
       userId: foreignUserId,
       workspaceId: workspace.id,
     });
+    await seedPrimeRuntime(db, { userId: foreignUserId, workspaceId: workspace.id });
     await new ProjectModel(db, foreignUserId, workspace.id).create({
       identifier: 'FPR',
       name: LINEAR_PARITY_PROJECT.name,

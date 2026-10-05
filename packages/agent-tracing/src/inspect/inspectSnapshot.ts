@@ -77,7 +77,7 @@ const json = (value: unknown) => JSON.stringify(value ?? null, null, 2);
 /**
  * Render one view of a snapshot. Resolution (local store / remote cache /
  * download / server) belongs to the caller, so `agent-tracing inspect` and
- * `lh trace op inspect` render identically off whatever they managed to load.
+ * `orvilo trace op inspect` render identically off whatever they managed to load.
  */
 export function inspectSnapshot(snapshot: ExecutionSnapshot, opts: InspectOptions = {}): string {
   if (opts.agentSignal) {

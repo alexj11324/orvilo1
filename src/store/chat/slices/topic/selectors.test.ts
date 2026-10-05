@@ -2,8 +2,9 @@ import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 
 import { type ChatStore } from '@/store/chat';
+import { createMockStore } from '@/store/chat/agents/__tests__/clientRuntimeExecutors/fixtures/mockStore';
 import { initialState } from '@/store/chat/initialState';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { merge } from '@/utils/merge';
 
 import { topicSelectors } from './selectors';
@@ -20,9 +21,11 @@ const topicItems = [
   { id: 'topic2', name: 'Topic 2' },
 ];
 
-// Helper to create topicDataMap with correct key format
+// Helper to create topicDataMap with correct key format. Outside a group
+// session the visible list lives in the workspace feed bucket; group sessions
+// keep their container-scoped key.
 const createTopicDataMap = (agentId: string, groupId?: string) => ({
-  [topicMapKey({ agentId, groupId })]: {
+  [groupId ? topicMapKey({ agentId, groupId }) : WORKSPACE_TOPIC_MAP_KEY]: {
     items: topicItems,
     total: topicItems.length,
     currentPage: 0,
@@ -35,22 +38,47 @@ const topicDataMap = createTopicDataMap('test');
 
 describe('topicSelectors', () => {
   describe('currentTopics', () => {
-    it('should return undefined if there are no topics with activeAgentId', () => {
+    it('should return undefined if the workspace feed bucket is empty', () => {
       const topics = topicSelectors.currentTopics(initialStore);
       expect(topics).toBeUndefined();
     });
 
-    it('should return all current topics from the store', () => {
+    it('should resolve the workspace feed outside a group session', () => {
       const state = merge(initialStore, { topicDataMap, activeAgentId: 'test' });
 
       const topics = topicSelectors.currentTopics(state);
       expect(topics).toEqual(topicItems);
     });
+
+    it('returns topics owned by different agents without filtering on the active agent', () => {
+      // Conversation identity is the navigation unit: every workspace topic
+      // appears in the one feed whatever agent owns it — a row's `agentId`
+      // stays on the item as weak metadata, never a filter.
+      const crossAgentItems = [
+        { agentId: 'agent-a', id: 'topic-a', title: 'Owned by A' },
+        { agentId: 'agent-b', id: 'topic-b', title: 'Owned by B' },
+        { agentId: 'agent-c', id: 'topic-c', title: 'Owned by C' },
+      ] as any;
+      const state = merge(initialStore, {
+        activeAgentId: 'agent-a',
+        topicDataMap: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
+            items: crossAgentItems,
+            total: crossAgentItems.length,
+            currentPage: 0,
+            hasMore: false,
+            pageSize: 20,
+          },
+        },
+      });
+
+      expect(topicSelectors.currentTopics(state)).toEqual(crossAgentItems);
+    });
   });
 
   describe('reasoning + hetero pins', () => {
     const pinTopicDataMap = createTopicDataMap('test');
-    pinTopicDataMap[topicMapKey({ agentId: 'test' })].items = [
+    pinTopicDataMap[WORKSPACE_TOPIC_MAP_KEY].items = [
       {
         id: 'pinned',
         metadata: { reasoningConfig: { reasoningEffort: 'high' } },
@@ -125,7 +153,7 @@ describe('topicSelectors', () => {
 
   describe('getTopicModelById / activeTopicModel', () => {
     const modelTopicDataMap = createTopicDataMap('test');
-    modelTopicDataMap[topicMapKey({ agentId: 'test' })].items = [
+    modelTopicDataMap[WORKSPACE_TOPIC_MAP_KEY].items = [
       // Pinned model lives in the top-level `model`/`provider` columns, not metadata.
       { id: 'withModel', name: 'With Model', model: 'gpt-5', provider: 'openai' },
       { id: 'noModel', name: 'No Model' },
@@ -183,7 +211,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: Array.from({ length: 20 }, (_, index) => ({ id: `topic-${index}` })),
@@ -201,7 +229,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 1,
             hasMore: false,
             items: Array.from({ length: 21 }, (_, index) => ({ id: `topic-${index}` })),
@@ -219,7 +247,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 1,
             hasMore: false,
             items: Array.from({ length: 21 }, (_, index) => ({ id: `topic-${index}` })),
@@ -327,7 +355,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: polluted,
@@ -394,7 +422,7 @@ describe('topicSelectors', () => {
       activeAgentId: 'test',
       activeTopicId: 'topicA',
       topicDataMap: {
-        [topicMapKey({ agentId: 'test' })]: {
+        [WORKSPACE_TOPIC_MAP_KEY]: {
           currentPage: 0,
           hasMore: false,
           items: wdTopics,
@@ -440,7 +468,7 @@ describe('topicSelectors', () => {
 
       const state = merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -465,7 +493,7 @@ describe('topicSelectors', () => {
 
       const state = merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -499,7 +527,7 @@ describe('topicSelectors', () => {
 
       const state = merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -631,28 +659,37 @@ describe('topicSelectors', () => {
   });
 
   describe('displayTopicsForSidebar', () => {
-    it('hides completed topics immediately when completed topics are excluded', () => {
+    it('keeps a completed conversation listed while an archived one drops out', () => {
+      // Completion is lifecycle metadata — a finished run stays in the feed.
+      // Archiving is the user's explicit hide: the only status the sidebar
+      // filters even when the row lands in the bucket (belt and braces for a
+      // looser overwrite of the container-keyed map).
       const now = Date.now();
       const state = merge(initialStore, {
         activeAgentId: 'agent-1',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: [
               { createdAt: now, id: 'active', status: 'active', updatedAt: now },
               { createdAt: now, id: 'completed', status: 'completed', updatedAt: now },
+              { createdAt: now, id: 'archived', status: 'archived', updatedAt: now },
             ],
             pageSize: 20,
-            total: 2,
+            total: 3,
           },
         },
       });
 
-      expect(topicSelectors.displayTopicsForSidebar(20, 'updatedAt', false)(state)).toEqual([
-        expect.objectContaining({ id: 'active' }),
-      ]);
-      expect(topicSelectors.displayTopicsForSidebar(20, 'updatedAt', true)(state)).toHaveLength(2);
+      expect(
+        topicSelectors
+          .displayTopicsForSidebar(
+            20,
+            'updatedAt',
+          )(state)
+          ?.map(({ id }) => id),
+      ).toEqual(['active', 'completed']);
     });
 
     it('keeps the active topic visible when it falls outside the configured page', () => {
@@ -660,7 +697,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'older-active',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: true,
             items: [
@@ -679,18 +716,17 @@ describe('topicSelectors', () => {
           .displayTopicsForSidebar(
             2,
             'updatedAt',
-            false,
           )(state)
           ?.map(({ id }) => id),
       ).toEqual(['newest', 'newer', 'older-active']);
     });
 
-    it('keeps an active completed topic from the detail cache visible', () => {
+    it('keeps an active archived topic from the detail cache visible', () => {
       const state = merge(initialStore, {
         activeAgentId: 'agent-1',
         activeTopicId: 'archived-active',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: true,
             items: [{ id: 'visible', status: 'active', updatedAt: 2 }],
@@ -699,7 +735,7 @@ describe('topicSelectors', () => {
           },
         },
         topicDetailMap: {
-          'archived-active': { id: 'archived-active', status: 'completed', updatedAt: 1 },
+          'archived-active': { id: 'archived-active', status: 'archived', updatedAt: 1 },
         },
       });
 
@@ -708,7 +744,6 @@ describe('topicSelectors', () => {
           .displayTopicsForSidebar(
             20,
             'updatedAt',
-            false,
           )(state)
           ?.map(({ id }) => id),
       ).toEqual(['visible', 'archived-active']);
@@ -719,7 +754,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'archived-favorite',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: true,
             items: [
@@ -734,7 +769,7 @@ describe('topicSelectors', () => {
           'archived-favorite': {
             favorite: true,
             id: 'archived-favorite',
-            status: 'completed',
+            status: 'archived',
             updatedAt: 1,
           },
         },
@@ -745,7 +780,6 @@ describe('topicSelectors', () => {
           .displayTopicsForSidebar(
             20,
             'updatedAt',
-            false,
           )(state)
           ?.map(({ id }) => id),
       ).toEqual(['visible-favorite', 'archived-favorite', 'regular']);
@@ -756,7 +790,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'active',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: [{ id: 'active', updatedAt: 1 }],
@@ -794,7 +828,7 @@ describe('topicSelectors', () => {
     const createStateWithTopics = (topics: any[]) =>
       merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -888,5 +922,40 @@ describe('topicSelectors', () => {
       expect(grouped.map((g) => g.id)).toEqual(['favorite', 'pending', 'active']);
       expect(grouped[1].children.map((t) => t.id)).toEqual(['failed']);
     });
+  });
+});
+
+describe('active topic ownership for composer controls', () => {
+  const state = createMockStore({
+    ...initialStore,
+    activeAgentId: 'route-a',
+    activeTopicId: 'topic-b',
+    topicDataMap: {},
+    topicDetailMap: {
+      'topic-b': {
+        agentId: 'composer-b',
+        createdAt: 0,
+        id: 'topic-b',
+        title: 'Topic B',
+        updatedAt: 0,
+      },
+    },
+  });
+  it('uses the loaded topic owner despite a stale route agent', () => {
+    expect(topicSelectors.activeTopicIdForAgent('composer-b')(state)).toBe('topic-b');
+    expect(topicSelectors.activeTopicIdForAgent('route-a')(state)).toBeUndefined();
+  });
+  it('does not give another agent control over the active topic', () => {
+    expect(topicSelectors.activeTopicIdForAgent('composer-c')(state)).toBeUndefined();
+  });
+  it('preserves legacy route ownership when topic owner is unavailable', () => {
+    const legacy = { ...state, topicDetailMap: {} };
+    expect(topicSelectors.activeTopicIdForAgent('route-a')(legacy)).toBe('topic-b');
+    expect(topicSelectors.activeTopicIdForAgent('composer-b')(legacy)).toBeUndefined();
+  });
+  it('keeps group member controls scoped to the active member', () => {
+    const group = { ...state, activeGroupId: 'group' };
+    expect(topicSelectors.activeTopicIdForAgent('route-a')(group)).toBe('topic-b');
+    expect(topicSelectors.activeTopicIdForAgent('composer-b')(group)).toBeUndefined();
   });
 });

@@ -31,6 +31,7 @@ vi.mock('@/store/agent/selectors', () => ({
 }));
 vi.mock('@/store/user', () => ({ useUserStore: vi.fn() }));
 vi.mock('@/store/user/selectors', () => ({
+  userProfileSelectors: { userId: (s: { user?: { id: string } }) => s.user?.id },
   workspaceUserSettingsSelectors: {
     agentDeviceOverrideById:
       (id: string) =>
@@ -51,6 +52,7 @@ const setupStores = ({
   override,
   visibility,
   workspaceId,
+  ownerId = 'caller',
 }: {
   agencyConfig?: unknown;
   /** SWR response data — `undefined` = not yet resolved, `null` = no server row. */
@@ -59,9 +61,13 @@ const setupStores = ({
   override?: unknown;
   visibility?: 'private' | 'public';
   workspaceId?: string;
+  ownerId?: string;
 } = {}) => {
-  const agentState = { agentMap: { 'agent-1': { agencyConfig, visibility, workspaceId } } };
+  const agentState = {
+    agentMap: { 'agent-1': { agencyConfig, visibility, workspaceId, userId: ownerId } },
+  };
   const userState = {
+    user: { id: 'caller' },
     useFetchWorkspaceUserPreference: () => ({ data: fetchedPreference, isLoading }),
     workspaceUserPreference: { agentDeviceOverrides: override ? { 'agent-1': override } : {} },
   };
@@ -70,6 +76,31 @@ const setupStores = ({
 };
 
 describe('useEffectiveAgencyConfig', () => {
+  it('offers caller-personal device repair only to the private owner or member-selectable caller', () => {
+    setupStores({ workspaceId: 'ws', visibility: 'private' });
+    const own = renderHook(() => useEffectiveAgencyConfig('agent-1'));
+    expect(own.result.current.canSelectPersonalDevice).toBe(true);
+    own.unmount();
+    setupStores({ workspaceId: 'ws', visibility: 'private', ownerId: 'other' });
+    const other = renderHook(() => useEffectiveAgencyConfig('agent-1'));
+    expect(other.result.current.canSelectPersonalDevice).toBe(false);
+    other.unmount();
+    setupStores({
+      workspaceId: 'ws',
+      visibility: 'public',
+      agencyConfig: { executionTargetSelectionPolicy: 'member' },
+    });
+    const member = renderHook(() => useEffectiveAgencyConfig('agent-1'));
+    expect(member.result.current.canSelectPersonalDevice).toBe(true);
+    member.unmount();
+    setupStores({
+      workspaceId: 'ws',
+      visibility: 'public',
+      agencyConfig: { executionTargetSelectionPolicy: 'fixed' },
+    });
+    const fixed = renderHook(() => useEffectiveAgencyConfig('agent-1'));
+    expect(fixed.result.current.canSelectPersonalDevice).toBe(false);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     managementAccess.canManageAgent = false;
@@ -107,6 +138,7 @@ describe('useEffectiveAgencyConfig', () => {
 
     expect(result.current.agencyConfig).toEqual(sharedConfig);
     expect(result.current.workspaceScoped).toBe(true);
+    expect(result.current.memberSelectedDeviceId).toBeUndefined();
   });
 
   // The owner's own `local` / this-machine pick also lives in the per-user
@@ -131,6 +163,7 @@ describe('useEffectiveAgencyConfig', () => {
       agencyConfig: { boundDeviceId: 'owner-desktop', executionTarget: 'local' },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: true,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -169,6 +202,7 @@ describe('useEffectiveAgencyConfig', () => {
       agencyConfig: { boundDeviceId: 'manager-desktop', executionTarget: 'local' },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -199,6 +233,7 @@ describe('useEffectiveAgencyConfig', () => {
     const { result } = renderHook(() => useEffectiveAgencyConfig('agent-1'));
 
     expect(result.current.agencyConfig?.boundDeviceId).toBe('my-device');
+    expect(result.current.memberSelectedDeviceId).toBeUndefined();
     expect(result.current.workspaceScoped).toBe(true);
   });
 
@@ -230,6 +265,7 @@ describe('useEffectiveAgencyConfig', () => {
     const { result } = renderHook(() => useEffectiveAgencyConfig('agent-1'));
 
     expect(result.current.agencyConfig?.boundDeviceId).toBe('my-device');
+    expect(result.current.memberSelectedDeviceId).toBe('my-device');
   });
 
   it('treats a null SWR response (no server row) as no override', () => {

@@ -9,7 +9,7 @@ describe('teamProjectsWorkQuery', () => {
     expect(teamProjectsWorkQuery('team_1')).toEqual({
       entityType: 'project',
       filter: { all: [{ field: 'teamId', op: 'eq', value: 'team_1' }] },
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
   });
 });

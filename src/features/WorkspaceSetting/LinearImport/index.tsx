@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
@@ -18,6 +17,7 @@ import {
   StepperTitle,
   StepperTrigger,
 } from '@/components/reui/stepper';
+import { Button } from '@/components/ui/button';
 import {
   Combobox,
   ComboboxContent,
@@ -30,7 +30,7 @@ import { newOAuthAttempt, waitForOAuthSession } from '@/features/Connectors/oaut
 import LinearIcon from '@/features/Work/icons/LinearIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 type Installation = { id: string; name?: string; status: string };
 type LocalProject = { id: string; identifier: string; name: string };
@@ -324,7 +324,7 @@ function SearchPicker({
           )}
         </ComboboxList>
         {hasMore && (
-          <Button block disabled={loadingMore} onClick={onLoadMore}>
+          <Button className="w-full" disabled={loadingMore} variant="outline" onClick={onLoadMore}>
             {loadingMore
               ? t('workspaceSetting.import.loading')
               : t('workspaceSetting.import.loadMore')}
@@ -578,7 +578,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
       });
       if (!response?.authorizationUrl) throw new Error(t('workspaceSetting.linear.connectFailed'));
       if (!popup) {
-        await electronSystemService.openExternalLink(response.authorizationUrl);
+        await getHostPort().openExternal(response.authorizationUrl);
         return;
       }
       popup.location.href = response.authorizationUrl;
@@ -755,12 +755,17 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                     </p>
                     {job.lastError && <p className={styles.error}>{job.lastError}</p>}
                     {job.status === 'failed' && (
-                      <Button disabled={busy} icon={RefreshCw} onClick={resume}>
+                      <Button disabled={busy} variant="outline" onClick={resume}>
+                        <RefreshCw aria-hidden size={16} />
                         {t('workspaceSetting.import.resume')}
                       </Button>
                     )}
                     {job.status !== 'completed' && (
-                      <Button disabled={busy} onClick={() => void pollJob(job.id)}>
+                      <Button
+                        disabled={busy}
+                        variant="outline"
+                        onClick={() => void pollJob(job.id)}
+                      >
                         {t('workspaceSetting.import.refresh')}
                       </Button>
                     )}
@@ -824,7 +829,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         else setTeams([]);
                       }}
                     />
-                    <Button disabled={busy} onClick={connect}>
+                    <Button disabled={busy} variant="outline" onClick={connect}>
                       {installationId
                         ? t('workspaceSetting.linear.reconnect')
                         : t('workspaceSetting.linear.connect')}
@@ -836,6 +841,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         </p>
                         <Button
                           disabled={busy || loading}
+                          variant="outline"
                           onClick={() => void refresh(installationId || undefined)}
                         >
                           {t('workspaceSetting.import.refreshConnections')}
@@ -930,20 +936,22 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                 ) : (
                   <Button
                     disabled={step === 0 || busy}
+                    variant="outline"
                     onClick={() => setStep((current) => current - 1)}
                   >
                     {t('workspaceSetting.import.back')}
                   </Button>
                 )}
                 {job && ['completed', 'failed'].includes(job.status) && (
-                  <Button disabled={busy} type="primary" onClick={newImport}>
+                  <Button disabled={busy} variant="default" onClick={newImport}>
                     {t('workspaceSetting.import.newImport')}
                   </Button>
                 )}
                 {!job && (
                   <Button
                     disabled={!canNext || loading || busy}
-                    type="primary"
+                    variant="default"
+
                     onClick={() => {
                       if (step === 3) void start();
                       else setStep((current) => current + 1);

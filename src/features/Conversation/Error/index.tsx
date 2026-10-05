@@ -1,5 +1,3 @@
-import { Block, Highlighter } from '@lobehub/ui';
-import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import { type IOrviloAgentRuntimeErrorType } from '@orvilo/model-runtime';
@@ -7,13 +5,18 @@ import { AgentRuntimeErrorType, getErrorCodeSpec } from '@orvilo/model-runtime';
 import { type ChatMessageError, type ErrorType, type IToolErrorType } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
+import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import useBusinessErrorAlertConfig from '@/business/client/hooks/useBusinessErrorAlertConfig';
 import useBusinessErrorContent from '@/business/client/hooks/useBusinessErrorContent';
 import useRenderBusinessChatErrorMessageExtra from '@/business/client/hooks/useRenderBusinessChatErrorMessageExtra';
+import { Button } from '@/components/ui/button';
+import { CodeBlock } from '@/components/ui/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
+import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 import { useConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { dataSelectors, useConversationStore } from '@/features/Conversation/store';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
@@ -21,6 +24,7 @@ import type { HeterogeneousAgentScheduleState } from '@/features/Electron/Hetero
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
+import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import dynamic from '@/libs/next/dynamic';
 import { binaryService } from '@/services/electron/binary';
 import { useChatStore } from '@/store/chat';
@@ -29,6 +33,7 @@ import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfi
 import { getRuntimeErrorMessage } from '@/utils/locale/runtimeErrorMessage';
 
 import ChatInvalidAPIKey from './ChatInvalidApiKey';
+import { isDeviceAdmissionErrorBody } from './deviceAdmission';
 import { isHeterogeneousAgentStatusGuideError } from './heterogeneous';
 import { useHeterogeneousAutoRetry } from './useHeterogeneousAutoRetry';
 
@@ -73,18 +78,19 @@ const getErrorDetails = (error?: ChatMessageError | null) => {
 };
 
 const loading = () => (
-  <Block
-    align={'center'}
-    padding={16}
-    variant={'outlined'}
+  <div
+    className="flex flex-col items-center p-4"
     style={{
+      border: `1px solid ${cssVar.colorBorder}`,
+      borderRadius: cssVar.borderRadiusLG,
+
       overflow: 'hidden',
       position: 'relative',
       width: '100%',
     }}
   >
-    <Skeleton height={36} />
-  </Block>
+    <Skeleton style={{ height: 36 }} />
+  </div>
 );
 
 const ExceededContextWindowError = dynamic(() => import('./ExceededContextWindowError'), {
@@ -107,6 +113,11 @@ const DeprecatedModelError = dynamic(() => import('./DeprecatedModelError'), {
 });
 
 const QuotaLimitError = dynamic(() => import('./QuotaLimitError'), { loading, ssr: false });
+
+const DeviceAdmissionError = dynamic(() => import('./DeviceAdmissionError'), {
+  loading,
+  ssr: false,
+});
 
 const TraceIdError = dynamic(() => import('./TraceIdError'), { loading, ssr: false });
 
@@ -174,7 +185,7 @@ const shouldShowTraceIdError = (
 // Config for the errorMessage display
 const getErrorAlertConfig = (
   errorType?: IToolErrorType | IOrviloAgentRuntimeErrorType | ErrorType,
-): AlertProps | undefined => {
+): ErrorAlertProps | undefined => {
   // OpenAIBizError / ZhipuBizError / GoogleBizError / ...
   if (typeof errorType === 'string' && (errorType.includes('Biz') || errorType.includes('Invalid')))
     return {
@@ -220,7 +231,7 @@ export const useErrorContent = (error: any) => {
     message: businessMessage,
   } = useBusinessErrorContent(error);
 
-  return useMemo<AlertProps | undefined>(() => {
+  return useMemo<ErrorAlertProps | undefined>(() => {
     if (!error) return;
     const messageError = error;
     const rawErrorMessage = getRawErrorMessage(messageError);
@@ -260,7 +271,7 @@ export const useErrorContent = (error: any) => {
 
 interface ErrorExtraProps {
   data: ErrorMessageData;
-  error?: AlertProps;
+  error?: ErrorAlertProps;
   onRegenerate?: () => void;
   /**
    * Stable scope key for the overloaded auto-retry counter (the parent user
@@ -274,6 +285,7 @@ interface ErrorExtraProps {
 const ErrorMessageExtra = memo<ErrorExtraProps>(
   ({ error: alertError, data, onRegenerate, retryScopeId }) => {
     const error = data.error;
+    const { t } = useTranslation('error');
     const navigate = useWorkspaceAwareNavigate();
     const enableBusinessFeatures = useServerConfigStore(
       serverConfigSelectors.enableBusinessFeatures,
@@ -284,6 +296,8 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
     const { canUseResource } = useConversationResourceAccess();
     const canCreate = canCreateContent && canUseResource;
     const isSharedTopic = useConversationStore((s) => !!s.context?.topicShareId);
+    const agentId = useConversationStore((s) => s.context?.agentId);
+    const { canSelectPersonalDevice } = useTopicAgencyConfig(agentId);
     const sessionErrorBody = error?.body;
     const rawErrorMessage = getRawErrorMessage(error);
     const errorDetails = getErrorDetails(error);
@@ -422,6 +436,48 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
         }
       : undefined;
 
+    // Existing persisted admission errors carry the contract code in detail,
+    // while their top-level type is the generic ServerAgentRuntimeError.
+    const admissionCode =
+      typeof sessionErrorBody?.detail === 'string'
+        ? /^(DEVICE_REQUIRED|DEVICE_SELECTION_REQUIRED|DEVICE_ACCESS_DENIED):/.exec(
+            sessionErrorBody.detail,
+          )?.[1]
+        : undefined;
+    if (admissionCode) {
+      const messageKey =
+        admissionCode === 'DEVICE_ACCESS_DENIED'
+          ? 'deviceAdmission.denied'
+          : admissionCode === 'DEVICE_SELECTION_REQUIRED'
+            ? 'deviceAdmission.selectionRequired'
+            : 'deviceAdmission.required';
+      return (
+        <ErrorContent
+          id={data.id}
+          error={{
+            message: t(messageKey),
+            action: !isSharedTopic && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  canSelectPersonalDevice
+                    ? navigate('/settings/devices', { escape: true })
+                    : navigate('/settings/devices')
+                }
+              >
+                {t('deviceAdmission.configure')}
+              </Button>
+            ),
+            extra:
+              !isSharedTopic && errorDetails ? (
+                <CodeBlock code={JSON.stringify(errorDetails, null, 2)} language="json" />
+              ) : undefined,
+          }}
+        />
+      );
+    }
+
     if (isHeterogeneousAgentStatusGuideError(sessionErrorBody)) {
       return (
         <HeterogeneousAgentStatusGuide
@@ -436,10 +492,26 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
               isDesktop
                 ? '/settings/system-tools'
                 : activeAgentId
-                  ? `/agent/${activeAgentId}/profile`
+                  ? `/settings/agents/${activeAgentId}`
                   : '/settings/credential',
             )
           }
+        />
+      );
+    }
+
+    // Device-execution admission errors (FIX-A `DeviceAdmissionErrorData`) get
+    // the structured card — the SAME `code` that came through API → stream →
+    // store decides the ONE true action; the human `detail` text is display
+    // only, never parsed. Placed before the generic error-type fallbacks so a
+    // ServerAgentRuntimeError body still reaches the admission surface.
+    if (isDeviceAdmissionErrorBody(sessionErrorBody)) {
+      return (
+        <DeviceAdmissionError
+          body={sessionErrorBody}
+          error={error ?? undefined}
+          id={data.id}
+          onRetry={handleRetryAgentMessage}
         />
       );
     }
@@ -531,14 +603,12 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
           message: displayMessage,
           extra:
             !isSharedTopic && errorDetails ? (
-              <Highlighter
-                actionIconSize={'small'}
-                language={'json'}
-                padding={8}
-                variant={'borderless'}
-              >
-                {JSON.stringify(errorDetails, null, 2)}
-              </Highlighter>
+              <CodeBlock
+                code={JSON.stringify(errorDetails, null, 2)}
+                language="json"
+                style={{ padding: 8 }}
+                variant="ghost"
+              />
             ) : undefined,
         }}
         onRegenerate={canRetry ? handleManualRetry : undefined}

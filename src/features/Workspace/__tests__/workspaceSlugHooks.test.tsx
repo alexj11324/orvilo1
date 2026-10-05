@@ -102,6 +102,22 @@ describe('useWorkspaceFromSlug', () => {
     expect(result.current).toEqual({ slug: 'missing', status: 'not-found' });
   });
 
+  it('keeps loading when the first fetch failed instead of rendering a false 404', () => {
+    mockWorkspaceStore(createState({ workspaces: [] }));
+    // A cold failure resolves with isLoading=false and data=undefined — the
+    // "resolved empty" state must not be mistaken for a real empty list.
+    vi.spyOn(useFetchWorkspacesModule, 'useFetchWorkspaces').mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
+
+    const { result } = renderHook(() => useWorkspaceFromSlug(), {
+      wrapper: createRouteWrapper('/missing/settings'),
+    });
+
+    expect(result.current).toEqual({ slug: 'missing', status: 'loading' });
+  });
+
   it('returns no-slug outside the workspace route tree', () => {
     mockWorkspaceStore(createState());
 

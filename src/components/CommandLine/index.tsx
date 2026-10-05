@@ -1,8 +1,12 @@
 'use client';
 
-import { CopyButton } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { CopyIcon } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const styles = createStaticStyles(({ css }) => ({
   codeBlock: css`
@@ -20,7 +24,7 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorFillQuaternary};
   `,
   command: css`
-    overflow: hidden;
+    overflow-x: auto;
     flex: 1;
 
     min-width: 0;
@@ -28,7 +32,6 @@ const styles = createStaticStyles(({ css }) => ({
     font-family: ${cssVar.fontFamilyCode};
     font-size: ${cssVar.fontSizeSM};
     color: ${cssVar.colorText};
-    text-overflow: ellipsis;
     white-space: nowrap;
   `,
 }));
@@ -37,12 +40,27 @@ interface CommandLineProps {
   command: string;
 }
 
-const CommandLine = memo<CommandLineProps>(({ command }) => (
-  <div className={styles.codeBlock}>
-    <code className={styles.command}>{command}</code>
-    <CopyButton content={command} size={'small'} />
-  </div>
-));
+const CommandLine = memo<CommandLineProps>(({ command }) => {
+  const { t } = useTranslation('common');
+  return (
+    <div className={styles.codeBlock}>
+      <code className={styles.command} tabIndex={0}>
+        {command}
+      </code>
+      <Button
+        aria-label={t('copy')}
+        className={'text-muted-foreground size-6'}
+        size={'icon'}
+        variant={'ghost'}
+        onClick={async () => {
+          await copyToClipboard(command);
+        }}
+      >
+        <CopyIcon size={12} />
+      </Button>
+    </div>
+  );
+});
 
 CommandLine.displayName = 'CommandLine';
 

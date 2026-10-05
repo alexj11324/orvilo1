@@ -45,6 +45,9 @@ class NotificationService {
       includeSnoozed?: boolean;
       kind?: 'action' | 'other' | 'priority' | 'update';
       limit?: number;
+      mentioned?: boolean;
+      types?: Array<'assigned' | 'created' | 'subscribed'>;
+      unreadOnly?: boolean;
     } = {},
   ) => {
     return lambdaClient.notification.feed.query(params);
@@ -64,6 +67,14 @@ class NotificationService {
 
   archive = (id: string, expectedVersion?: number) => {
     return lambdaClient.notification.archive.mutate({ expectedVersion, id });
+  };
+
+  unarchive = (id: string, expectedVersion: number) => {
+    return lambdaClient.notification.unarchive.mutate({ expectedVersion, id });
+  };
+
+  unsnooze = (id: string, expectedVersion: number) => {
+    return lambdaClient.notification.unsnooze.mutate({ expectedVersion, id });
   };
 
   archiveAll = () => {

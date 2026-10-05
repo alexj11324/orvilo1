@@ -183,7 +183,7 @@ describe('ClaudeCodeAdapter E2E', () => {
     expect(newStepStarts.length).toBe(2);
 
     // 5. This fixture has no `stream_event` records — i.e. BATCH mode, like the
-    // `lh hetero exec` device / sandbox path. There is no `message_delta` to
+    // `orvilo hetero exec` device / sandbox path. There is no `message_delta` to
     // own per-turn usage, so the adapter emits turn_metadata from each
     // `assistant` event that carries `message.usage` (authoritative in batch
     // mode, not a stale echo). The fixture has 5 such assistant events.

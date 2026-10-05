@@ -1,14 +1,12 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
-import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Loader2 } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { resolveInboxAgentRouteId } from '@/features/AgentRoute/useResolvedAgentRouteId';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -62,15 +60,12 @@ const InboxItem = memo<InboxItemProps>(({ className, style }) => {
   );
   const prefetchAgent = usePrefetchAgent();
   const inboxAgentTitle = agentDisplayName(inboxMeta, 'Orvilo AI');
-  const inboxAgentAvatar = inboxMeta.avatar || DEFAULT_INBOX_AVATAR;
   const inboxUrl = usePreservedAgentUrl(inboxRouteAgentId);
 
   // Prefetch agent layout chunk and data eagerly since Orvilo AI is almost always clicked
   if (inboxAgentId) prefetchAgent(inboxAgentId);
 
-  const avatarNode = (
-    <Avatar emojiScaleWithBackground avatar={inboxAgentAvatar} shape={'square'} size={24} />
-  );
+  const avatarNode = <AgentRuntimeIcon size={24} type="orvilo" />;
 
   return (
     <WorkspaceLink aria-label={inboxAgentTitle} to={inboxUrl}>
@@ -83,7 +78,7 @@ const InboxItem = memo<InboxItemProps>(({ className, style }) => {
             <span className={styles.wrapper}>
               {avatarNode}
               <span className={styles.runningBadge}>
-                <Icon spin icon={Loader2} size={9} />
+                <Loader2 className="animate-spin" size={9} />
               </span>
             </span>
           ) : (

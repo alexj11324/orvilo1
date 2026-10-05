@@ -1,17 +1,18 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
-import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import type { TaskWorkflowCategory } from '@orvilo/types';
 import { WORKFLOW_STATE_REQUIRED } from '@orvilo/types';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import {
   type KanbanColumnDefinition,
-  kanbanColumnForSelectableStatus,
   type TaskStatusChoice,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
-import { createTaskStatusCascadeModal } from '@/features/AgentTasks/features/TaskStatusCascadeModal';
-import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
+import {
+  createTaskStatusCascadeModal,
+  getOpenSubtasks,
+} from '@/features/AgentTasks/features/TaskStatusCascadeModal';
 import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
@@ -22,18 +23,6 @@ import {
   workQueryMovePlan,
   workQueryTargetKeyFromKanbanColumn,
 } from './workQueryBoard';
-
-/** Linear-linked store-kanban drops use moveBoard + exact-state picker. */
-export const storeKanbanUsesWorkflowMove = (
-  groupBy: string,
-  task: Pick<WorkQueryBoardTask, 'workflowStateId'>,
-): boolean => groupBy === 'status' && Boolean(task.workflowStateId);
-
-export const workQueryMoveGroupBy = (
-  groupBy: 'status' | 'workflowCategory',
-  task: Pick<WorkQueryBoardTask, 'workflowStateId'>,
-): 'status' | 'workflowCategory' =>
-  storeKanbanUsesWorkflowMove(groupBy, task) ? 'workflowCategory' : groupBy;
 
 export const moveBoardMaybePickingState = async (input: {
   expectedDomainRevision: number;
@@ -130,10 +119,11 @@ const toastWorkQueryBoardMoveError = (error: unknown) => {
 };
 
 /**
- * Persist a drop on a work-query board (Saved View / Team) or a Linear-linked
- * store-kanban card. Unlinked store cards keep `task.update`. Linear cards
- * with `workflowStateId` promote a status-grouped drop onto the VIEW08
- * `moveBoard` CAS + exact-state picker.
+ * Persist a drop on a work-query board (Saved View / Team) or an Issue-board
+ * card. Every cross-column write goes through `moveBoard` — the CAS plus
+ * exact-state picker — because Issue Status is workflow state everywhere;
+ * the `status` axis remains only for execution Runs views (work-query `st:`
+ * columns).
  */
 export const commitWorkQueryBoardMove = async (input: {
   column: Pick<KanbanColumnDefinition, 'key' | 'targetStatus' | 'targetWorkflowCategory'>;
@@ -142,7 +132,7 @@ export const commitWorkQueryBoardMove = async (input: {
   targetWorkflowStateRefId?: string;
   task: WorkQueryBoardTask;
 }): Promise<boolean> => {
-  const groupBy = workQueryMoveGroupBy(input.groupBy, input.task);
+  const groupBy = input.groupBy;
   const targetKey = workQueryTargetKeyFromKanbanColumn(groupBy, input.column);
   if (!targetKey) return false;
   const plan = workQueryMovePlan({
@@ -173,6 +163,7 @@ export const commitWorkQueryBoardMove = async (input: {
         teamId: plan.task.teamId,
       });
     }
+    if (plan.groupBy !== 'status' && plan.groupBy !== 'workflowCategory') return false;
     return moveBoardMaybePickingState({
       expectedDomainRevision: plan.expectedDomainRevision,
       groupBy: plan.groupBy,
@@ -187,65 +178,14 @@ export const commitWorkQueryBoardMove = async (input: {
   }
 };
 
-export type WorkQueryListStatusResult = 'cancelled' | 'local' | 'moved';
-
 /**
- * List glyph/context-menu status on a work-query row. Linear-linked cards
- * go through `moveBoard` (VIEW08 picker); unlinked cards stay on `task.update`.
- */
-export const commitWorkQueryListStatus = async (input: {
-  groupBy: 'status' | 'workflowCategory';
-  status: TaskStatus;
-  task: WorkQueryBoardTask;
-}): Promise<WorkQueryListStatusResult> => {
-  if (!input.task.workflowStateId) return 'local';
-  const column = kanbanColumnForSelectableStatus(input.status);
-  if (!column) return 'local';
-  const moved = await commitWorkQueryBoardMove({
-    column,
-    groupBy: input.groupBy,
-    task: input.task,
-  });
-  return moved ? 'moved' : 'cancelled';
-};
-
-/**
- * Store boards never group by workflow category; Saved View / Team boards
- * pass the work-query grouping via `queryGroupBy`.
- */
-export const kanbanStatusMoveGroupBy = (
-  queryGroupBy?: 'status' | 'workflowCategory',
-): 'status' | 'workflowCategory' => queryGroupBy ?? 'status';
-
-/**
- * List rows and board-card context menus share this: Linear → `moveBoard`,
- * unlinked → caller `task.update`, picker cancel → do not fall through.
- */
-export const applyWorkQueryStatusChange = async (input: {
-  changeLocal: (identifier: string, status: TaskStatus) => Promise<boolean>;
-  groupBy: 'status' | 'workflowCategory';
-  status: TaskStatus;
-  task: WorkQueryBoardTask;
-}): Promise<boolean> => {
-  const result = await commitWorkQueryListStatus({
-    groupBy: input.groupBy,
-    status: input.status,
-    task: input.task,
-  });
-  if (result === 'cancelled') return false;
-  if (result === 'local') return input.changeLocal(input.task.identifier, input.status);
-  return true;
-};
-
-/**
- * A pick from the board-driven status menu (list glyph, card context menu):
- * a workflow column routes through the board's own drop path — `moveBoard`
- * CAS + exact-state picker; a status column keeps the status write.
+ * A pick from the Issue-status menu (list glyph, board card, context menu):
+ * every row is a workflow move routed through the board's own drop path —
+ * `moveBoard` CAS + exact-state picker. Status choices no longer carry raw
+ * execution statuses.
  */
 export const applyWorkQueryStatusChoice = async (input: {
-  changeLocal: (identifier: string, status: TaskStatus) => Promise<boolean>;
   choice: TaskStatusChoice;
-  groupBy: 'status' | 'workflowCategory';
   task: WorkQueryBoardTask;
 }): Promise<boolean> => {
   // An exact-state row commits the precise ref through the same CAS write —
@@ -258,18 +198,10 @@ export const applyWorkQueryStatusChoice = async (input: {
       task: input.task,
     });
   }
-  if (input.choice.workflowCategory) {
-    return commitWorkQueryBoardMove({
-      column: input.choice.column,
-      groupBy: 'workflowCategory',
-      task: input.task,
-    });
-  }
-  if (!input.choice.status) return false;
-  return applyWorkQueryStatusChange({
-    changeLocal: input.changeLocal,
-    groupBy: input.groupBy,
-    status: input.choice.status,
+  if (!input.choice.workflowCategory) return false;
+  return commitWorkQueryBoardMove({
+    column: input.choice.column,
+    groupBy: 'workflowCategory',
     task: input.task,
   });
 };

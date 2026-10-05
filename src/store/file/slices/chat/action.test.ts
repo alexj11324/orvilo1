@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type { ChatContextContent } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import { fileService } from '@/services/file';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
@@ -22,7 +22,7 @@ const mockAgentMode = ({
   vi.spyOn(agentByIdSelectors, 'isAgentHeterogeneousById').mockReturnValue(() => heterogeneous);
 };
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));

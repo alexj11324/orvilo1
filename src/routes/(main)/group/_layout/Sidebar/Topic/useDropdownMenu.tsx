@@ -1,7 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal, toast, Upload } from '@lobehub/ui/base-ui';
-import { App } from 'antd';
 import { css, cx } from 'antd-style';
 import { Archive, Hash, Import, LucideCheck, Trash } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
@@ -9,6 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useIsWorkspaceOwner } from '@/business/client/hooks/useIsWorkspaceOwner';
+import { confirmModal, createModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
@@ -35,9 +35,8 @@ type TopicMaintenanceScope = 'own' | 'workspace';
 
 export const useTopicActionsDropdownMenu = (
   options: UseTopicActionsDropdownMenuOptions = {},
-): MenuProps['items'] => {
+): SidebarMenuItems => {
   const { t } = useTranslation(['topic', 'common']);
-  const { modal } = App.useApp();
   const { onUploadClose } = options;
   const activeWorkspaceId = useActiveWorkspaceId();
   const isWorkspaceOwner = useIsWorkspaceOwner();
@@ -98,7 +97,7 @@ export const useTopicActionsDropdownMenu = (
       }
 
       await Promise.all(
-        mergedTopics.map(({ id }) => updateTopicStatus({ status: 'completed', topicId: id })),
+        mergedTopics.map(({ id }) => updateTopicStatus({ status: 'archived', topicId: id })),
       );
       await refreshTopic();
       toast.success(t('actions.archiveMergedPullRequestsSuccess', { count: mergedTopics.length }));
@@ -115,14 +114,15 @@ export const useTopicActionsDropdownMenu = (
         JSON.parse(text);
         await importTopic(text);
       } catch {
-        modal.error({
+        createModal({
           content: t('importInvalidFormat'),
+          footer: null,
           title: t('importError'),
         });
       }
       return false; // Prevent default upload behavior
     },
-    [importTopic, modal, onUploadClose, t],
+    [importTopic, onUploadClose, t],
   );
 
   const [topicPageSize, updateSystemStatus] = useGlobalStore((s) => [
@@ -133,7 +133,7 @@ export const useTopicActionsDropdownMenu = (
   return useMemo(() => {
     const pageSizeOptions = [20, 40, 60, 100];
     const pageSizeItems = pageSizeOptions.map((size) => ({
-      icon: topicPageSize === size ? <Icon icon={LucideCheck} /> : <div />,
+      icon: topicPageSize === size ? <LucideCheck /> : <div />,
       key: `pageSize-${size}`,
       label: t('pageSizeItem', { count: size, ns: 'common' }),
       onClick: () => {
@@ -145,7 +145,7 @@ export const useTopicActionsDropdownMenu = (
       {
         children: pageSizeItems,
         extra: topicPageSize,
-        icon: <Icon icon={Hash} />,
+        icon: <Hash />,
         key: 'displayItems',
         label: t('displayItems'),
       },
@@ -154,7 +154,7 @@ export const useTopicActionsDropdownMenu = (
       },
       {
         disabled: !canCreateTopic,
-        icon: <Icon icon={Import} />,
+        icon: <Import />,
         key: 'import',
         label: (
           <Upload accept=".json" beforeUpload={handleImport} disabled={!canCreateTopic}>
@@ -168,7 +168,7 @@ export const useTopicActionsDropdownMenu = (
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Archive} />,
+        icon: <Archive />,
         key: 'archiveMergedPullRequests',
         label: t(
           activeWorkspaceId
@@ -182,7 +182,7 @@ export const useTopicActionsDropdownMenu = (
             { type: 'divider' as const },
             {
               disabled: !canEditTopic,
-              icon: <Icon icon={Archive} />,
+              icon: <Archive />,
               key: 'archiveMergedPullRequestsWorkspace',
               label: t('actions.archiveMergedPullRequestsWorkspace'),
               onClick: () => {
@@ -197,7 +197,7 @@ export const useTopicActionsDropdownMenu = (
             {
               danger: true,
               disabled: !canEditTopic,
-              icon: <Icon icon={Trash} />,
+              icon: <Trash />,
               key: 'deleteUnstarredWorkspace',
               label: t('actions.removeUnstarredWorkspace'),
               onClick: () => {
@@ -214,7 +214,7 @@ export const useTopicActionsDropdownMenu = (
             {
               danger: true,
               disabled: !canEditTopic,
-              icon: <Icon icon={Trash} />,
+              icon: <Trash />,
               key: 'deleteAllWorkspace',
               label: t('actions.removeAllWorkspace'),
               onClick: () => {
@@ -230,7 +230,7 @@ export const useTopicActionsDropdownMenu = (
             },
           ]
         : []),
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     topicPageSize,
     updateSystemStatus,

@@ -1,4 +1,5 @@
 import type {
+  AgentTier,
   ProjectCompletionDecision,
   ProjectDatePrecision,
   ProjectHealth,
@@ -312,6 +313,13 @@ export const projectAgents = pgTable(
 
     /** Project-specific role, for example lead, researcher, implementer, or reviewer. */
     role: text('role'),
+    /**
+     * Model-intelligence band used by tiered orchestration ('low' | 'mid' |
+     * 'high'). `role` stays free-form semantics (lead/implementer/…) while
+     * `tier` is the ordered capability signal the intake matcher routes on;
+     * NULL rows satisfy no tier requirement and remain the graceful fallback.
+     */
+    tier: text('tier').$type<AgentTier>(),
     /** Project-specific responsibility beyond the short role label. */
     responsibility: text('responsibility'),
     enabled: boolean('enabled').notNull().default(true),

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -9,7 +7,10 @@ import { CircleCheck } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -123,7 +124,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
 
   if (step === 'pick') {
     return (
-      <Flexbox>
+      <div className="flex flex-col">
         <input
           autoFocus
           className={styles.searchInput}
@@ -134,15 +135,12 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
         {!isAgentListInit ? (
           <SkeletonList rows={6} />
         ) : filteredAgents.length === 0 ? (
-          <Flexbox align={'center'} justify={'center'} padding={24}>
-            <Text fontSize={12} type={'secondary'}>
-              {t('moveModal.empty')}
-            </Text>
-          </Flexbox>
+          <div className="flex flex-col items-center justify-center p-6">
+            <span className="text-[12px] text-muted-foreground">{t('moveModal.empty')}</span>
+          </div>
         ) : (
-          <Flexbox
-            gap={4}
-            padding={8}
+          <div
+            className="flex flex-col gap-1 p-2"
             style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
           >
             {filteredAgents.map((agent) => (
@@ -151,7 +149,6 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
                 agent={agent}
                 agentId={agent.id}
                 agentTitle={agentDisplayName(agent, t('untitledAgent', { ns: 'chat' }))}
-                avatar={agent.avatar}
                 key={agent.id}
                 onClose={() => {}}
                 onAgentChange={() => {
@@ -163,47 +160,51 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
                 }}
               />
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   }
 
   if (step === 'confirm') {
     return (
-      <Flexbox gap={20} padding={24}>
-        <Text>{t('moveModal.confirmContent', { count, title: target?.title })}</Text>
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
-          <Button onClick={() => setStep('pick')}>{t('moveModal.back')}</Button>
-          <Button type={'primary'} onClick={handleConfirm}>
+      <div className="flex flex-col gap-5 p-6">
+        <span>{t('moveModal.confirmContent', { count, title: target?.title })}</span>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" onClick={() => setStep('pick')}>
+            {t('moveModal.back')}
+          </Button>
+          <Button variant="default" onClick={handleConfirm}>
             {t('moveModal.confirmOk')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   if (step === 'moving') {
     return (
-      <Flexbox align={'center'} gap={16} justify={'center'} padding={48}>
+      <div className="flex flex-col items-center gap-4 justify-center p-12">
         <NeuralNetworkLoading size={48} />
-        <Text type={'secondary'}>{t('moveModal.moving')}</Text>
-      </Flexbox>
+        <span className="text-muted-foreground">{t('moveModal.moving')}</span>
+      </div>
     );
   }
 
   // done
   return (
-    <Flexbox align={'center'} gap={20} justify={'center'} padding={48}>
-      <Flexbox align={'center'} gap={12}>
-        <Icon color={cssVar.colorSuccess} icon={CircleCheck} size={32} />
-        <Text weight={500}>{t('moveModal.done', { count })}</Text>
-      </Flexbox>
-      <Flexbox horizontal gap={8}>
-        <Button onClick={close}>{t('moveModal.doneOk')}</Button>
+    <div className="flex flex-col items-center gap-5 justify-center p-12">
+      <div className="flex flex-col items-center gap-3">
+        <CircleCheck color={cssVar.colorSuccess} size={32} />
+        <span className="font-medium">{t('moveModal.done', { count })}</span>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={close}>
+          {t('moveModal.doneOk')}
+        </Button>
         {target && (
           <Button
-            type={'primary'}
+            variant="default"
             onClick={() => {
               navigate(AGENT_CHAT_URL(target.id));
               close();
@@ -212,8 +213,8 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
             {t('moveModal.goToTarget', { title: target.title })}
           </Button>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

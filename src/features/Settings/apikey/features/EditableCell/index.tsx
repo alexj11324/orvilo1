@@ -1,14 +1,13 @@
 'use client';
-
-import { Input } from '@lobehub/ui';
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
-import { createStaticStyles, cx } from 'antd-style';
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Check, Edit, X } from 'lucide-react';
 import React, { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 import ApiKeyDatePicker from '../ApiKeyDatePicker';
 
@@ -30,52 +29,6 @@ export interface EditableCellProps {
 }
 
 // Style definitions
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionButtons: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 4px;
-  `,
-  container: css`
-    position: relative;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-height: 32px;
-
-    &:hover .edit-button {
-      opacity: 1;
-    }
-  `,
-  content: css`
-    min-width: 0;
-    line-height: 1.5;
-    color: ${cssVar.colorText};
-    word-break: break-all;
-  `,
-  editButton: css`
-    opacity: 0;
-    transition: opacity 0.2s ease;
-
-    &.edit-button {
-      opacity: 0;
-    }
-  `,
-  editingContainer: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    width: 100%;
-  `,
-  inputWrapper: css`
-    flex: 1;
-  `,
-  textareaWrapper: css`
-    flex: 1;
-  `,
-}));
 
 // Main component implementation
 const EditableCell = memo<EditableCellProps>(
@@ -86,7 +39,7 @@ const EditableCell = memo<EditableCellProps>(
     const [isEditing, setIsEditing] = useState(false);
 
     // Ref for the Input element
-    const inputRef = useRef<InputRef>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // Format display value
     const formatDisplayValue = (val: string | null) => {
@@ -109,7 +62,7 @@ const EditableCell = memo<EditableCellProps>(
     // Submit edit
     const handleSubmit = () => {
       if (type === 'text') {
-        const inputValue = inputRef.current?.input?.value;
+        const inputValue = inputRef.current?.value;
 
         if (!inputValue) {
           toast.warning(t('apikey.validation.required'));
@@ -129,7 +82,7 @@ const EditableCell = memo<EditableCellProps>(
 
     // Keyboard event handler for the input component
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
         e.preventDefault();
         handleSubmit();
       } else if (e.key === 'Escape') {
@@ -150,7 +103,7 @@ const EditableCell = memo<EditableCellProps>(
       switch (type) {
         case 'text': {
           return (
-            <div className={styles.inputWrapper}>
+            <div className="flex-1">
               <Input
                 autoFocus
                 defaultValue={value as string}
@@ -188,11 +141,27 @@ const EditableCell = memo<EditableCellProps>(
     // Text type editing mode, showing save and cancel buttons
     if (type === 'text' && isEditing) {
       return (
-        <div className={styles.editingContainer}>
+        <div className="flex w-full items-center gap-2">
           {renderEditMode()}
-          <div className={styles.actionButtons}>
-            <ActionIcon icon={Check} size="small" onClick={handleSubmit} />
-            <ActionIcon icon={X} size="small" onClick={handleCancel} />
+          <div className="flex shrink-0 gap-1">
+            <Button
+              aria-label={t('apikey.detail.permissions.save')}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+              onClick={handleSubmit}
+            >
+              <Check />
+            </Button>
+            <Button
+              aria-label={t('cancel', { ns: 'common' })}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+              onClick={handleCancel}
+            >
+              <X />
+            </Button>
           </div>
         </div>
       );
@@ -205,14 +174,18 @@ const EditableCell = memo<EditableCellProps>(
 
     // Display mode
     return (
-      <div className={styles.container}>
-        <div className={styles.content}>{formatDisplayValue(value)}</div>
-        <ActionIcon
-          className={cx(styles.editButton, 'edit-button')}
-          icon={Edit}
-          size="small"
+      <div className="group relative flex min-h-8 items-center gap-2">
+        <div className="min-w-0 break-all leading-normal">{formatDisplayValue(value)}</div>
+        <Button
+          aria-label={t('apikey.detail.permissions.edit')}
+          className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          size="icon-sm"
+          type="button"
+          variant="ghost"
           onClick={handleEdit}
-        />
+        >
+          <Edit />
+        </Button>
       </div>
     );
   },

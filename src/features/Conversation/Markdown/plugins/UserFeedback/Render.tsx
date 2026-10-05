@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { MessageSquareText } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
@@ -71,10 +70,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 const Comment = memo<{ comment: ParsedUserFeedbackComment }>(({ comment }) => (
-  <Flexbox gap={2}>
+  <div className="flex flex-col gap-0.5">
     {comment.time && <span className={styles.time}>{comment.time}</span>}
     <div className={styles.comment}>{comment.content}</div>
-  </Flexbox>
+  </div>
 ));
 
 Comment.displayName = 'UserFeedbackComment';
@@ -90,23 +89,21 @@ const Render = memo<MarkdownElementProps>(({ children }) => {
   return (
     <details className={styles.root}>
       <summary className={styles.summary}>
-        <Flexbox horizontal align={'center'} gap={12}>
+        <div className="flex items-center gap-3">
           <span className={styles.headerIcon}>
             <MessageSquareText size={16} />
           </span>
-          <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
-            <Text ellipsis weight={500}>
-              User feedback
-            </Text>
+          <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
+            <div className="truncate font-medium">User feedback</div>
             <span className={styles.countBadge}>{countLabel}</span>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </summary>
-      <Flexbox className={styles.body} gap={12}>
+      <div className={cn('flex flex-col gap-3', styles.body)}>
         {comments.map((comment, idx) => (
           <Comment comment={comment} key={comment.id ?? idx} />
         ))}
-      </Flexbox>
+      </div>
     </details>
   );
 });

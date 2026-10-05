@@ -1,8 +1,9 @@
-import { Block, Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
+import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/ui/code-block';
+import { Separator } from '@/components/ui/separator';
 
 import Arguments from '../Arguments';
 
@@ -32,29 +33,35 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
 
     // Default render: show arguments and result
     return (
-      <Block id={toolCallId} variant={'outlined'} width={'100%'}>
+      <div
+        className="flex flex-col"
+        id={toolCallId}
+        style={{
+          border: `1px solid ${cssVar.colorBorder}`,
+          borderRadius: cssVar.borderRadiusLG,
+          width: '100%',
+        }}
+      >
         <Arguments arguments={requestArgs} />
         {content && (
           <>
-            <Divider style={{ marginBlock: 0 }} />
-            <Flexbox paddingBlock={'8px 0'} paddingInline={16}>
-              <Text>{t('debug.response')}</Text>
-            </Flexbox>
-            <Highlighter
+            <Separator style={{ marginBlock: 0 }} />
+            <div className="flex flex-col px-4" style={{ paddingBlock: '8px 0' }}>
+              <div>{t('debug.response')}</div>
+            </div>
+            <CodeBlock
+              code={data}
               language={language}
-              variant={'filled'}
               style={{
                 background: 'transparent',
                 borderRadius: 0,
                 maxHeight: 300,
                 overflow: 'auto',
               }}
-            >
-              {data}
-            </Highlighter>
+            />
           </>
         )}
-      </Block>
+      </div>
     );
   },
 );

@@ -11,6 +11,7 @@ import {
   projectMembers,
   projects,
   savedViews,
+  taskDispatches,
   tasks,
   teamMembers,
   teams,
@@ -457,9 +458,20 @@ describe('RecentModel', () => {
           assigneeAgentId: 'agent-assignee',
           identifier: 'T-1',
           name: 'Active Task',
-          status: 'running',
           updatedAt: now(),
           ...baseTaskFields,
+        });
+        // `tasks.status` is retired — a live run is an active dispatch row.
+        await serverDB.insert(taskDispatches).values({
+          generation: 1,
+          id: 'disp_task-active_running',
+          idempotencyKey: 'idem_task-active_running',
+          phase: 'running',
+          policyRevision: 1,
+          requestedBy: 'recent-test',
+          requirementRevision: 1,
+          taskId: 'task-active',
+          taskRevision: 1,
         });
 
         const result = await recentModel.queryRecent();
@@ -477,10 +489,10 @@ describe('RecentModel', () => {
       it('surfaces task status so home can render the icon without a second task.detail call', async () => {
         await serverDB.insert(tasks).values([
           {
+            context: { execution: { parked: { at: '2026-05-02T00:00:00.000Z' } } },
             id: 'task-paused',
             createdByUserId: userId,
             identifier: 'T-P',
-            status: 'paused',
             updatedAt: minutesAgo(2),
             ...baseTaskFields,
           },
@@ -488,7 +500,6 @@ describe('RecentModel', () => {
             id: 'task-pending',
             createdByUserId: userId,
             identifier: 'T-Q',
-            status: 'pending',
             updatedAt: minutesAgo(1),
             ...baseTaskFields,
           },
@@ -497,7 +508,7 @@ describe('RecentModel', () => {
         const result = await recentModel.queryRecent();
         const byId = Object.fromEntries(result.map((r) => [r.id, r.status]));
         expect(byId['task-paused']).toBe('paused');
-        expect(byId['task-pending']).toBe('pending');
+        expect(byId['task-pending']).toBe('backlog');
       });
 
       it('excludes completed and canceled tasks', async () => {
@@ -506,23 +517,22 @@ describe('RecentModel', () => {
             id: 'task-done',
             createdByUserId: userId,
             identifier: 'T-2',
-            status: 'completed',
             updatedAt: now(),
+            workflowCategory: 'done',
             ...baseTaskFields,
           },
           {
             id: 'task-canceled',
             createdByUserId: userId,
             identifier: 'T-3',
-            status: 'canceled',
             updatedAt: now(),
+            workflowCategory: 'canceled',
             ...baseTaskFields,
           },
           {
             id: 'task-running',
             createdByUserId: userId,
             identifier: 'T-4',
-            status: 'running',
             updatedAt: now(),
             ...baseTaskFields,
           },

@@ -2,7 +2,11 @@ import type { HeterogeneousAgentModel } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
 import type { AskUserBridge, InterventionAnswer } from '../askUser/AskUserBridge';
-import type { UsageData } from '../types';
+import type {
+  HeterogeneousAgentPermission,
+  HeterogeneousAgentPermissionCatalog,
+  UsageData,
+} from '../types';
 import type { AcpAgentSessionOptions } from './acpAgentSession';
 import {
   ACP_PROTOCOL_VERSION,
@@ -13,7 +17,12 @@ import type { AcpAgentRuntimeSpec } from './acpRuntime';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpRpcResponseError, AcpServerRequestError } from './acpStdioClient';
 import type { UploadHeterogeneousImage } from './agentStreamPipeline';
+import {
+  resolveCacheKeepalive as resolveAgentCacheKeepalive,
+  type ResolvedCacheKeepalive,
+} from './cachePolicy';
 import type { AgentPromptInput, BuildAgentInputOptions } from './input';
+import { parseStandardAcpPermissionCatalogs } from './standardAcpPermissions';
 import {
   buildTraeAcpPrompt,
   parseTraeAcpModelCatalog,
@@ -46,6 +55,7 @@ interface StandardAcpInitializeResult {
 interface StandardAcpSessionResult {
   configOptions?: unknown;
   models?: { availableModels?: unknown; currentModelId?: unknown };
+  modes?: unknown;
   sessionId?: string;
 }
 
@@ -67,8 +77,7 @@ export interface StandardAcpConfigOption {
    * session's advertised `configOptions` lack the configId (or constrain the
    * value to a different set), and a rejected application is logged and
    * dropped instead of failing the run — bridge vocabularies drift across
-   * versions. The factory's permission presets omit the flag and stay
-   * required, since they encode the headless run posture.
+   * versions. Explicit required options propagate application failures.
    */
   optional?: boolean;
   value: boolean | string;
@@ -84,7 +93,7 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   commandArgs?: string[];
   /**
    * Caller-supplied `session/set_config_option` applications, applied after
-   * the factory's per-agent defaults (so callers may override them — e.g.
+   * session setup (e.g.
    * `--effort` → `reasoning_effort`, `service_tier` → `fast-mode`).
    */
   configOptions?: StandardAcpConfigOption[];
@@ -96,6 +105,8 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   initialCumulativeUsage?: UsageData;
   /** Model id selected through `session/set_config_option` after session setup. */
   initialModel?: string;
+  /** Exact advertised permission selection, required to apply successfully before prompting. */
+  initialPermission?: HeterogeneousAgentPermission;
   inputOptions?: BuildAgentInputOptions;
   /** `session/new` `mcpServers` entries forwarded verbatim (ACP shape). */
   mcpServers?: Record<string, unknown>[];
@@ -225,6 +236,7 @@ export class StandardAcpSession extends AcpAgentSession<
   StandardAcpSessionOptions
 > {
   private acceptUpdates = false;
+  private resolvedCacheKeepalive?: ResolvedCacheKeepalive;
   /**
    * Latest `configId → allowed values` snapshot the agent advertised — seeded
    * from `session/new`/`session/load` and refreshed by every
@@ -233,6 +245,8 @@ export class StandardAcpSession extends AcpAgentSession<
    */
   private advertisedConfigOptions = new Map<string, Set<string> | undefined>();
   private modelDiscovery?: StandardAcpSession;
+  private permissionCatalogs: HeterogeneousAgentPermissionCatalog[] = [];
+  private permissionUsesSessionMode = false;
   private resolvedPrompt: StandardAcpPromptBlock[] = [];
 
   constructor(
@@ -278,6 +292,26 @@ export class StandardAcpSession extends AcpAgentSession<
         await this.client.request('session/close', { sessionId: sessionResult.sessionId });
       }
       return catalog.models;
+    } finally {
+      this.client.close();
+    }
+  }
+
+  /** Read the session's advertised permissions without applying any selection. */
+  async discoverPermissions(): Promise<HeterogeneousAgentPermissionCatalog[]> {
+    try {
+      const initialized = await this.initializeConnection();
+      const result = await this.client.request<StandardAcpSessionResult>('session/new', {
+        cwd: this.options.cwd,
+        mcpServers: [],
+      });
+      if (!result?.sessionId)
+        throw new Error(`${this.sessionConfig.spec.label} returned no session id`);
+      const catalogs = parseStandardAcpPermissionCatalogs(result);
+      if (initialized?.agentCapabilities?.sessionCapabilities?.close) {
+        await this.client.request('session/close', { sessionId: result.sessionId });
+      }
+      return catalogs;
     } finally {
       this.client.close();
     }
@@ -347,9 +381,15 @@ export class StandardAcpSession extends AcpAgentSession<
     if (!sessionId) throw new Error(`${spec.label} returned no session id`);
     this.options.onSessionId(sessionId);
 
+    this.permissionCatalogs = parseStandardAcpPermissionCatalogs(sessionResult);
+    this.permissionUsesSessionMode =
+      parseStandardAcpPermissionCatalogs({ configOptions: sessionResult.configOptions }).length ===
+      0;
     this.mergeAdvertisedConfigOptions(sessionResult.configOptions);
     const model = await this.applyInitialModel(sessionId, sessionResult);
     await this.applySessionConfigOptions(sessionId);
+    await this.applyInitialPermission(sessionId);
+    await this.applyPromptCacheKey(sessionId);
     if (model) {
       this.pipeline.configureSession({ model });
       this.options.onModel?.(model);
@@ -366,6 +406,15 @@ export class StandardAcpSession extends AcpAgentSession<
 
   protected buildPromptParams(sessionId: string): unknown {
     return { prompt: this.resolvedPrompt, sessionId };
+  }
+
+  protected override resolveCacheKeepalive(): ResolvedCacheKeepalive | undefined {
+    this.resolvedCacheKeepalive ??= resolveAgentCacheKeepalive(
+      this.sessionConfig.agentType,
+      this.options.env,
+      this.options.cacheKeepalive,
+    );
+    return this.resolvedCacheKeepalive;
   }
 
   protected override async settlePrompt(result: unknown): Promise<void> {
@@ -391,6 +440,8 @@ export class StandardAcpSession extends AcpAgentSession<
   }
 
   protected async handleAgentMessage(message: AcpRpcMessage): Promise<void> {
+    // Inert keep-alive turns must not leak updates into the run's event stream.
+    if (this.inInertTurn) return;
     if (message.method !== 'session/update' || !this.acceptUpdates) return;
     const params = isRecord(message.params) ? message.params : undefined;
     if (!isRecord(params?.update)) return;
@@ -411,9 +462,13 @@ export class StandardAcpSession extends AcpAgentSession<
   protected async handleServerRequest(message: AcpRpcMessage): Promise<unknown> {
     switch (message.method) {
       case 'session/request_permission': {
+        // Fail closed during an inert turn: a keep-alive ping never invokes
+        // tools, so a permission ask means the agent misbehaved — cancel it.
+        if (this.inInertTurn) return { outcome: { outcome: 'cancelled' } };
         return this.respondToPermissionRequest(message);
       }
       case 'elicitation/create': {
+        if (this.inInertTurn) return { action: 'cancel' };
         return this.respondToElicitation(message);
       }
       default: {
@@ -478,11 +533,54 @@ export class StandardAcpSession extends AcpAgentSession<
     return value;
   }
 
+  private async applyInitialPermission(sessionId: string): Promise<void> {
+    const selected = this.options.initialPermission;
+    if (!selected) return;
+    const catalog = this.permissionCatalogs.find(({ configId }) => configId === selected.configId);
+    if (!catalog?.options.some(({ value }) => value === selected.value)) {
+      throw new Error(
+        `${this.sessionConfig.spec.label} permission is unavailable: ${selected.configId}=${selected.value}`,
+      );
+    }
+    if (this.permissionUsesSessionMode) {
+      await this.client.request('session/set_mode', { modeId: selected.value, sessionId });
+    } else {
+      const response = await this.client.request<StandardAcpSetConfigOptionResult>(
+        'session/set_config_option',
+        { configId: selected.configId, sessionId, value: selected.value },
+      );
+      this.mergeAdvertisedConfigOptions(response?.configOptions);
+    }
+  }
+
+  /**
+   * Pin provider prompt-cache routing (`prompt_cache_key`) to the ACP
+   * session id so a fresh process resuming this session lands on the same
+   * cache chain — only when the engine's policy declares the configId AND
+   * the env opt-in is on (codex-rs support pending verification). Applied
+   * as an optional config option: skipped/tolerated when unadvertised.
+   */
+  private async applyPromptCacheKey(sessionId: string): Promise<void> {
+    const configId = this.resolveCacheKeepalive()?.promptCacheKey;
+    if (!configId) return;
+    try {
+      const response = await this.client.request<StandardAcpSetConfigOptionResult>(
+        'session/set_config_option',
+        { configId, sessionId, value: sessionId },
+      );
+      this.mergeAdvertisedConfigOptions(response?.configOptions);
+    } catch (error) {
+      this.noteSkippedConfigOption(
+        { configId, value: sessionId },
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
   /**
    * Apply the queued `session/set_config_option` applications in order.
    *
-   * Required options (the factory's permission presets) apply unconditionally —
-   * a rejection fails the run because they encode the headless posture.
+   * Required options apply unconditionally; a rejection fails the run.
    * `optional` selector-derived options are gated on what the agent actually
    * advertised: skipped when a non-empty `configOptions` list lacks the
    * configId or constrains the value elsewhere, attempted-and-tolerated when
@@ -533,6 +631,11 @@ export class StandardAcpSession extends AcpAgentSession<
   private mergeAdvertisedConfigOptions(value: unknown): void {
     const parsed = parseAdvertisedConfigOptions(value);
     if (parsed.size > 0) this.advertisedConfigOptions = parsed;
+    if (Array.isArray(value)) {
+      const permissions = parseStandardAcpPermissionCatalogs({ configOptions: value });
+      if (permissions.length > 0 || !this.permissionUsesSessionMode)
+        this.permissionCatalogs = permissions;
+    }
   }
 
   /** Drop a diagnostic line into the stderr sink; the run's trace records why a selector no-oped. */
@@ -588,6 +691,9 @@ export class StandardAcpSession extends AcpAgentSession<
   // ------------------------------------------------------------- permission
 
   private async respondToPermissionRequest(message: AcpRpcMessage): Promise<unknown> {
+    if (this.options.initialPermission && !this.options.askUserBridge) {
+      return { outcome: { outcome: 'cancelled' } };
+    }
     const request = this.parsePermissionRequest(message.params, String(message.id));
     if (!request) {
       const optionId = selectAcpPermissionOption(message.params, AUTO_PERMISSION_PREFERENCES);

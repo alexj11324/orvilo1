@@ -1,6 +1,6 @@
 import debug from 'debug';
 
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 const log = debug('orvilo-desktop:chat-terminal');
 
@@ -23,7 +23,9 @@ export const openTerminalLink = (uri: string) => {
     return;
   }
 
-  void electronSystemService.openExternalLink(parsed.href).catch((error) => {
-    log('failed to open terminal link %s: %O', parsed.href, error);
-  });
+  void getHostPort()
+    .openExternal(parsed.href)
+    .catch((error) => {
+      log('failed to open terminal link %s: %O', parsed.href, error);
+    });
 };

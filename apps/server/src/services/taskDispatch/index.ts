@@ -10,6 +10,9 @@ import type {
 } from '@orvilo/types';
 
 import {
+  type EventDispatchEvidence,
+  type EventDispatchEvidenceCode,
+  TaskDispatchEventEvidenceError,
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
   TaskDispatchSettlementGrantError,
@@ -17,8 +20,27 @@ import {
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
+import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
+
+/**
+ * Admission contention codes: a lock-kill (`40P01` deadlock) or serialization
+ * failure (`40001`) on the single-active-dispatch path is the same outcome
+ * class as the `busy` branch — a concurrent claim won. Surface it as the
+ * typed conflict (TRPC `CONFLICT` upstream) instead of a raw driver error,
+ * so callers can retry idempotently.
+ */
+const asAdmissionConflict = (error: unknown, dispatchId: string) => {
+  const pg = unwrapPgError(error);
+  if (pg?.code === '40P01' || pg?.code === '40001') {
+    return new TaskDispatchConflictError(
+      `Dispatch admission ${dispatchId} collided with a concurrent claim (${pg.code})`,
+      dispatchId,
+    );
+  }
+  return error;
+};
 
 export class TaskDispatchConflictError extends Error {
   constructor(
@@ -47,6 +69,7 @@ export class TaskDispatchWaitingError extends Error {
  * persisted column; re-exported here for the service's existing consumers.
  */
 export type { TaskDispatchOrigin, TaskDispatchSettlementGrant } from '@orvilo/types';
+export type { EventDispatchEvidence, EventDispatchEvidenceCode };
 
 export interface PreparedTaskDispatch {
   dispatch: TaskDispatchItem;
@@ -86,6 +109,8 @@ export class TaskDispatchService {
   }
 
   async prepare(input: {
+    /** Server-verified admission evidence when `trigger === 'event'`. */
+    eventEvidence?: EventDispatchEvidence;
     idempotencyKey: string;
     /** Raw actor identity persisted separately from `requestedBy`. */
     initiator?: string;
@@ -101,6 +126,7 @@ export class TaskDispatchService {
     let requested;
     try {
       requested = await this.model.request({
+        eventEvidence: input.eventEvidence,
         idempotencyKey: input.idempotencyKey,
         initiator: input.initiator,
         origin: input.origin,
@@ -115,13 +141,20 @@ export class TaskDispatchService {
       if (error instanceof TaskDispatchIdempotencyConflictError) {
         throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
       }
+      if (error instanceof TaskDispatchEventEvidenceError) {
+        // Stale event admission evidence is a hard rejection — the caller
+        // must re-enter through durable event admission rather than inherit
+        // an event claim it can no longer prove. Keep the typed error so the
+        // denial code survives to the admission boundary.
+        throw error;
+      }
       if (error instanceof TaskDispatchSettlementGrantError) {
         // A stale settlement grant is a hard rejection — the run must
         // re-enter as `external` (facing normal admission) rather than
         // inherit an internal claim it can no longer prove (SB09).
         throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
       }
-      throw error;
+      throw asAdmissionConflict(error, input.idempotencyKey);
     }
     if (requested.state === 'busy') {
       throw new TaskDispatchConflictError(
@@ -181,7 +214,11 @@ export class TaskDispatchService {
     }
 
     const owner = `task-runner:${randomUUID()}`;
-    const lease = await this.model.claimForProvisioning(dispatch.id, owner, DEFAULT_LEASE_MS);
+    const lease = await this.model
+      .claimForProvisioning(dispatch.id, owner, DEFAULT_LEASE_MS)
+      .catch((error) => {
+        throw asAdmissionConflict(error, dispatch.id);
+      });
     if (!lease) {
       throw new TaskDispatchConflictError(
         `Dispatch ${dispatch.id} could not be claimed`,
@@ -192,24 +229,28 @@ export class TaskDispatchService {
   }
 
   async transition(prepared: PreparedTaskDispatch, input: TaskDispatchTransitionInput) {
-    const updated = await this.model.transition({
-      ...input,
-      // Final host-admission re-check (SA05-B): before the runtime starts,
-      // the persisted origin must still pass the CAID gate — a rollout
-      // flip after prepare parks the claim `waiting` instead of starting
-      // a new orchestrated writer.
-      admissionRecheck:
-        input.phase === 'dispatched'
-          ? (dispatch) =>
-              isCaidDispatchAllowed({
-                userId: dispatch.initiator ?? undefined,
-                workspaceId: dispatch.workspaceId ?? this.workspaceId,
-              })
-          : undefined,
-      dispatchId: prepared.dispatch.id,
-      fence: prepared.fence,
-      owner: prepared.owner,
-    });
+    const updated = await this.model
+      .transition({
+        ...input,
+        // Final host-admission re-check (SA05-B): before the runtime starts,
+        // the persisted origin must still pass the CAID gate — a rollout
+        // flip after prepare parks the claim `waiting` instead of starting
+        // a new orchestrated writer.
+        admissionRecheck:
+          input.phase === 'dispatched'
+            ? (dispatch) =>
+                isCaidDispatchAllowed({
+                  userId: dispatch.initiator ?? undefined,
+                  workspaceId: dispatch.workspaceId ?? this.workspaceId,
+                })
+            : undefined,
+        dispatchId: prepared.dispatch.id,
+        fence: prepared.fence,
+        owner: prepared.owner,
+      })
+      .catch((error) => {
+        throw asAdmissionConflict(error, prepared.dispatch.id);
+      });
     if (!updated) {
       throw new TaskDispatchConflictError(
         `Dispatch ${prepared.dispatch.id} lost its lease or changed phase`,

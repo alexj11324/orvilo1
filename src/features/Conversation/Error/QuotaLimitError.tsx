@@ -1,9 +1,8 @@
-import { Icon } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { AlertTriangle, RotateCw } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import BaseErrorForm from '@/features/Conversation/Error/BaseErrorForm';
 
 import { useRetryParentMessage } from './useRetryParentMessage';
@@ -24,18 +23,17 @@ const QuotaLimitError = memo<QuotaLimitErrorProps>(({ id, onRetry }) => {
 
   return (
     <BaseErrorForm
-      avatar={<Icon icon={AlertTriangle} size={24} />}
+      avatar={<AlertTriangle size={24} />}
       title={t('response.QuotaLimitReachedCloud')}
       action={
         <Button
           disabled={onRetry ? false : disabled}
-          icon={<Icon icon={RotateCw} />}
           loading={loading}
-          size={'small'}
-          type={'primary'}
+          size="sm"
+          variant="default"
           onClick={() => (onRetry ? onRetry() : retryParentMessage())}
         >
-          {t('unknownError.retry')}
+          <RotateCw /> {t('unknownError.retry')}
         </Button>
       }
     />

@@ -18,8 +18,27 @@ export interface HeterogeneousAgentRuntimeTask {
   type?: string;
 }
 
+/** Prompt-cache keep-alive telemetry attached to terminal session states. */
+export interface HeterogeneousAgentCacheKeepaliveStatus {
+  /**
+   * Why warming stopped: 'activity' (a real turn retired the keeper),
+   * 'breakeven' (ping spend reached one rewrite), 'window' (residency cap),
+   * 'ping_failed', 'closed', or 'error'.
+   */
+  disarmReason?: string;
+  /**
+   * Usage reported by the last inert turn — provider cache_read/cache_write
+   * counters when the adapter surfaces them (verification telemetry).
+   */
+  lastUsage?: Record<string, unknown>;
+  /** Inert keep-alive turns sent while the session idled. */
+  pings: number;
+}
+
 export interface HeterogeneousAgentRuntimeStatus {
   activeTasks: HeterogeneousAgentRuntimeTask[];
+  /** Cache keep-alive stats; present on 'idle'/'closed' when a keeper armed. */
+  cacheKeepalive?: HeterogeneousAgentCacheKeepaliveStatus;
   idleDeadlineAt?: number;
   lastEventAt: number;
   operationId?: string;

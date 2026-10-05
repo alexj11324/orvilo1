@@ -1,12 +1,11 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import TaskExecutionBadge from '@/features/AgentTasks/features/TaskExecutionBadge';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
-import TaskStatusTag from '@/features/AgentTasks/features/TaskStatusTag';
 import { getWorkTypeDescriptor, isSafeExternalUrl } from '@/features/Work/descriptors';
 import { useResourceDeletedPrompt } from '@/features/Work/useResourceDeletedPrompt';
 import { useChatStore } from '@/store/chat';
@@ -106,30 +105,26 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
   })();
 
   return (
-    <Flexbox className={styles.workCard}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        gap={8}
+    <div className={cn('flex flex-col', styles.workCard)}>
+      <div
+        className={cn('flex items-center gap-2', styles.header)}
         onClick={() => setExpanded((value) => !value)}
       >
         <ToggleIcon className={styles.toggle} size={16} />
         {work.type === 'task' ? (
           <>
             <TaskPriorityTag disableDropdown priority={work.task.priority} size={14} />
-            <TaskStatusTag disableDropdown size={14} status={toTaskStatus(work.task.status)} />
+            <TaskExecutionBadge size={14} status={toTaskStatus(work.task.status)} />
           </>
         ) : (
           <TypeIcon className={styles.context} size={16} />
         )}
-        <Text className={styles.context} style={{ flexShrink: 0 }}>
+        <div className={styles.context} style={{ flexShrink: 0 }}>
           {label}
-        </Text>
+        </div>
         {title && (
-          <Text
-            ellipsis
-            className={styles.title}
+          <div
+            className={cn('truncate', styles.title)}
             onClick={
               handleTitleClick &&
               ((event) => {
@@ -139,11 +134,11 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
             }
           >
             {title}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
       {expanded && <VersionList workId={work.id} />}
-    </Flexbox>
+    </div>
   );
 });
 

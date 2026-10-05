@@ -4,7 +4,13 @@ import { type AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { LOADING_FLAT } from '@orvilo/const';
 import { isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
 import { parse } from '@orvilo/conversation-flow';
-import type { ExecAgentResult, TaskCurrentActivity, TaskStatusResult } from '@orvilo/types';
+import type {
+  AgentMarketplaceRuntimeConfig,
+  ExecAgentResult,
+  HeterogeneousReasoningEffort,
+  TaskCurrentActivity,
+  TaskStatusResult,
+} from '@orvilo/types';
 import {
   CreateThreadWithMessageSchema,
   entityIdPattern,
@@ -55,6 +61,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -65,6 +72,10 @@ import {
 } from '@/libs/trpc/utils/internalJwt';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
+import {
+  getServerDefaultHeterogeneousModels,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
+} from '@/server/modules/ModelRuntime';
 import { mapAgentInterventionTRPCError } from '@/server/routers/lambda/_helpers/agentInterventionError';
 import { mapAgentStartTRPCError } from '@/server/routers/lambda/_helpers/agentStartError';
 import {
@@ -526,6 +537,16 @@ const dispatchClaimedAgentIntervention = async (
       switch (runtimeAction.type) {
         case 'execute_custom_interaction': {
           const customAction = runtimeAction.input.action;
+          if (customAction.type === 'submitted') {
+            await assertAgentRuntimeCreation(
+              ctx.serverDB,
+              {
+                userId: resolution.ownerUserId,
+                workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+              },
+              customAction.runtimeConfig,
+            );
+          }
           const customResult = await executeAgentMarketplaceIntervention({
             action: customAction,
             actorUserId: ctx.userId,
@@ -1015,6 +1036,24 @@ const ExecAgentSchema = z
     existingMessageIds: z.array(z.string()).optional().default([]),
     /** File IDs of already-uploaded attachments to attach to the new user message */
     fileIds: z.array(z.string()).optional(),
+    /**
+     * Model / provider / reasoning effort picked in a blank composer before the
+     * conversation existed (`composerModelSelection` / `composerHeteroEffort`
+     * client-side). Written onto the topic THIS run creates and never onto the
+     * agent row — a chat-side pick is conversation-scoped
+     * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
+     * an existing topic; absent for every non-composer caller, which leaves the
+     * agent-config topic snapshot exactly as before.
+     */
+    newTopicPins: z
+      .object({
+        effort: z
+          .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
+          .optional(),
+        model: z.string().optional(),
+        provider: z.string().optional(),
+      })
+      .optional(),
     /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
     parentMessageId: z.string().optional(),
     /** Existing gateway operation this fresh turn atomically supersedes. */
@@ -1382,7 +1421,7 @@ const InterruptTaskSchema = z
   });
 
 /**
- * Wire shape of an `AgentStreamEvent` produced by `lh hetero exec`. Mirrors
+ * Wire shape of an `AgentStreamEvent` produced by `orvilo hetero exec`. Mirrors
  * `AgentStreamEvent` in `@orvilo/agent-gateway-client` (kept here as a Zod
  * schema for tRPC input validation; tRPC's type inference takes care of the
  * client-side typing). Republished verbatim through `StreamEventManager` so
@@ -1416,11 +1455,14 @@ const AgentStreamEventSchema = z.object({
 
 /**
  * Schema for `aiAgent.heteroIngest` — accepts a batch of producer-side
- * `AgentStreamEvent`s from `lh hetero exec`. `topicId` is required (operationId
+ * `AgentStreamEvent`s from `orvilo hetero exec`. `topicId` is required (operationId
  * → topic reverse-lookup is unreliable per design decision).
  */
 const HeteroIngestSchema = z.object({
-  agentType: LocalHeterogeneousAgentTypeSchema,
+  // 'orvilo' is deliberately outside LOCAL_HETEROGENEOUS_AGENT_TYPES (no
+  // binary to scan), but a device-hosted Prime run produces ingest under
+  // that honest label — admit it here without widening the scan enum.
+  agentType: z.union([LocalHeterogeneousAgentTypeSchema, z.literal('orvilo')]),
   /** Initial assistant placeholder message id forwarded from the sandbox env var.
    * When present, `loadOrCreateState` uses it directly and skips the DB read of
    * topic.metadata.runningOperation, eliminating the replica-lag race condition. */
@@ -1440,7 +1482,27 @@ const HeteroIngestSchema = z.object({
  * (CC's per-cwd id), kept here so the server can resume next time.
  */
 const HeteroFinishSchema = z.object({
-  agentType: LocalHeterogeneousAgentTypeSchema,
+  /**
+   * Aegis method-pack report, present iff the run opted in
+   * (`ORVILO_AEGIS_PACK=1` / `--aegis`). Bounded: the CLI collector already
+   * caps count/size; the schema re-caps so a hostile or confused producer
+   * cannot bloat the operation row. `{ enabled: true, files: [] }` is
+   * meaningful — "opted in, produced nothing".
+   */
+  aegis: z
+    .object({
+      enabled: z.literal(true),
+      files: z
+        .array(
+          z.object({
+            content: z.string().max(128 * 1024),
+            path: z.string().min(1).max(512),
+          }),
+        )
+        .max(64),
+    })
+    .optional(),
+  agentType: z.union([LocalHeterogeneousAgentTypeSchema, z.literal('orvilo')]),
   /** Initial assistant placeholder forwarded by the producer. Unlike the live
    * ingest path, finish may arrive after gateway session completion has already
    * cleared topic.metadata.runningOperation, so this is the durable fallback
@@ -1474,7 +1536,7 @@ const HeteroFinishSchema = z.object({
 
 /**
  * Schema for `aiAgent.waitInterventionResponse` — the exec-side long-poll. The
- * `lh hetero exec` producer calls this in a loop while an `AskUserBridge`
+ * `orvilo hetero exec` producer calls this in a loop while an `AskUserBridge`
  * pending is in flight, draining `agent_intervention_response` events off the
  * op's Redis stream (which the sandbox can't read directly). `lastEventId`
  * threads the cursor forward across polls; `'$'` on the first call means
@@ -1787,7 +1849,45 @@ const authorizeOperationCallback = async (
   }
 };
 
+export const resolveServerDefaultHeterogeneousCapability = async () => {
+  const base = {
+    model: 'orvilo-default' as const,
+  };
+  if (process.env.ENABLE_SERVER_DEFAULT_HETEROGENEOUS_AGENT === '0') {
+    return { ...base, agents: [], enabled: false as const, reason: 'disabled' as const };
+  }
+
+  try {
+    const models = await getServerDefaultHeterogeneousModels();
+    const agents = SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES.filter(
+      (agentType) => models[agentType].length > 0,
+    );
+    if (agents.length === 0) {
+      return {
+        ...base,
+        agents,
+        enabled: false as const,
+        models,
+        reason: 'invalidConfiguration' as const,
+      };
+    }
+    return { ...base, agents, enabled: true as const, models };
+  } catch (error) {
+    log('Server-default heterogeneous capability is unavailable: %O', error);
+    return {
+      ...base,
+      agents: [],
+      enabled: false as const,
+      reason: 'invalidConfiguration' as const,
+    };
+  }
+};
+
 export const aiAgentRouter = router({
+  getServerDefaultHeterogeneousCapability: aiAgentBaseProcedure.query(() =>
+    resolveServerDefaultHeterogeneousCapability(),
+  ),
+
   /**
    * Create Thread for client-side task execution in Group mode
    *
@@ -2033,6 +2133,7 @@ export const aiAgentRouter = router({
       existingMessageIds = [],
       fileIds,
       mentionedAgents,
+      newTopicPins,
       parentMessageId,
       resumeApproval,
       resumeApprovals,
@@ -2116,6 +2217,7 @@ export const aiAgentRouter = router({
                 | {
                     askUserAnswers?: Record<string, unknown>;
                     selectedAgentIds?: unknown;
+                    runtimeConfig?: AgentMarketplaceRuntimeConfig;
                   }
                 | undefined;
               const answers = pluginState?.askUserAnswers;
@@ -2138,10 +2240,21 @@ export const aiAgentRouter = router({
                 Array.isArray(pluginState?.selectedAgentIds) &&
                 pluginState.selectedAgentIds.every((id) => typeof id === 'string')
               ) {
+                if (!pluginState.runtimeConfig)
+                  throw new TRPCError({
+                    code: 'PRECONDITION_FAILED',
+                    message: 'AGENT_RUNTIME_REQUIRED',
+                  });
+                await assertAgentRuntimeCreation(
+                  ctx.serverDB,
+                  { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+                  pluginState.runtimeConfig,
+                );
                 sourceAction = {
                   result: {
                     kind: 'agent_marketplace',
                     selectedTemplateIds: pluginState.selectedAgentIds as string[],
+                    runtimeConfig: pluginState.runtimeConfig,
                   },
                   type: 'submit_custom',
                 };
@@ -2224,6 +2337,7 @@ export const aiAgentRouter = router({
         existingMessageIds,
         fileIds,
         mentionedAgents,
+        newTopicPins,
         parentMessageId,
         prompt,
         // When parentMessageId is provided, this is a regeneration/continue or a
@@ -2997,7 +3111,7 @@ export const aiAgentRouter = router({
     }),
 
   /**
-   * Ingest a batch of `AgentStreamEvent`s from a `lh hetero exec` producer
+   * Ingest a batch of `AgentStreamEvent`s from a `orvilo hetero exec` producer
    * (CLI standalone, sandboxed CC, etc.) and republish them through the
    * existing stream fanout so renderer-side gateway WS subscribers see them
    * unchanged. Phase 2a: pub/sub only — no DB persistence (phase 2b adds it).
@@ -3005,7 +3119,16 @@ export const aiAgentRouter = router({
   heteroIngest: heteroAgentProcedure.input(HeteroIngestSchema).mutation(async ({ input, ctx }) => {
     const { agentType, assistantMessageId, events, operationId, runGeneration, topicId } = input;
 
-    await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
+    try {
+      await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
+    } catch (error) {
+      // Batches arriving after the operation settled are dropped by the service
+      // anyway; a late duplicate is a no-op ack, not a producer error.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { ack: true as const };
+      }
+      throw error;
+    }
 
     log(
       'heteroIngest: topic=%s op=%s type=%s count=%d',
@@ -3052,7 +3175,7 @@ export const aiAgentRouter = router({
   }),
 
   /**
-   * Re-mint the operation token a long `lh hetero exec` run authenticates with.
+   * Re-mint the operation token a long `orvilo hetero exec` run authenticates with.
    *
    * The token is signed for four hours, and a Goal Task can run far longer. Past
    * the expiry every heteroIngest is rejected, the run's heartbeats stop renewing
@@ -3088,13 +3211,14 @@ export const aiAgentRouter = router({
     }),
 
   /**
-   * Terminal handshake from a `lh hetero exec` producer: signals process exit
+   * Terminal handshake from a `orvilo hetero exec` producer: signals process exit
    * and carries the run's high-level outcome. Always emits a final
    * `agent_runtime_end` so renderer subscribers can shut down even when the
    * CLI's own end-event was lost mid-flight.
    */
   heteroFinish: heteroAgentProcedure.input(HeteroFinishSchema).mutation(async ({ input, ctx }) => {
     const {
+      aegis,
       agentType,
       assistantMessageId,
       error,
@@ -3106,7 +3230,17 @@ export const aiAgentRouter = router({
       topicId,
     } = input;
 
-    await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
+    try {
+      await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
+    } catch (error) {
+      // A finish landing after the operation already settled is a no-op, not a
+      // conflict: the durable row holds the first-wins outcome, so the
+      // producer's bounded retry must ack instead of reporting the run failed.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { ack: true as const };
+      }
+      throw error;
+    }
 
     log('heteroFinish: topic=%s op=%s type=%s result=%s', topicId, operationId, agentType, result);
 
@@ -3127,6 +3261,7 @@ export const aiAgentRouter = router({
       // the same mechanism the normal LLM runtime uses. No bespoke lifecycle call
       // here anymore; this is just the server-to-server ack endpoint.
       await heteroService.heteroFinish({
+        aegis,
         agentType,
         assistantMessageId,
         error,
@@ -3154,7 +3289,7 @@ export const aiAgentRouter = router({
 
   /**
    * Exec-side long-poll for remote Human-in-the-loop (op-JWT auth, same as
-   * `heteroIngest`). The `lh hetero exec` producer — which holds only an
+   * `heteroIngest`). The `orvilo hetero exec` producer — which holds only an
    * op-scoped JWT + tRPC and never the server's Redis — pulls
    * `agent_intervention_response` events off the op's Redis stream through this
    * server-mediated read, then resolves its in-process `AskUserBridge`. One
@@ -3402,6 +3537,14 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
+      if (input.action.type === 'submit_custom') {
+        await assertAgentRuntimeCreation(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          input.action.result.runtimeConfig,
+        );
+      }
+
       // A rejected resolution describes the submitted response, not a server
       // fault, so map the contract failure instead of letting it become a 500.
       const resolution = await resolveAgentInterventionBySource({
@@ -3453,6 +3596,13 @@ export const aiAgentRouter = router({
   resolveAgentIntervention: aiAgentWriteProcedure
     .input(ResolveAgentInterventionSchema)
     .mutation(async ({ input, ctx }) => {
+      if (input.action.type === 'submit_custom') {
+        await assertAgentRuntimeCreation(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          input.action.result.runtimeConfig,
+        );
+      }
       const resolution = await resolveAgentIntervention({
         action: input.action,
         expectedBatchVersion: input.expectedBatchVersion,

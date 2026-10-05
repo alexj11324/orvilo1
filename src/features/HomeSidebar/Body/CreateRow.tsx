@@ -1,13 +1,13 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
-import { DropdownMenu, Icon } from '@lobehub/ui';
 import { LayersIcon, PlusIcon, SquarePenIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
@@ -22,22 +22,22 @@ const CreateRow = memo(() => {
   const { t } = useTranslation(['common', 'project']);
   const [creatingView, setCreatingView] = useState(false);
 
-  const items = useMemo<MenuProps['items']>(
+  const items = useMemo<SidebarMenuItems>(
     () => [
       {
-        icon: <Icon icon={SquarePenIcon} />,
+        icon: <SquarePenIcon />,
         key: 'task',
         label: t('navPanel.newTask'),
         onClick: () => createTaskModal(),
       },
       {
-        icon: <Icon icon={LayersIcon} />,
+        icon: <LayersIcon />,
         key: 'view',
         label: t('savedViews.newView'),
         onClick: () => setCreatingView(true),
       },
       {
-        icon: <Icon icon={PROJECT_ENTITY_ICON} />,
+        icon: <PROJECT_ENTITY_ICON />,
         key: 'project',
         label: t('project:create.action'),
         onClick: () => openCreateProjectModal(),
@@ -48,11 +48,13 @@ const CreateRow = memo(() => {
 
   return (
     <>
-      <DropdownMenu items={items}>
-        <div>
-          <NavItem aria-label={t('navPanel.create')} icon={PlusIcon} title={null} />
-        </div>
-      </DropdownMenu>
+      <SidebarMenuItem>
+        <SidebarDropdownMenu items={items}>
+          <SidebarMenuButton aria-label={t('navPanel.create')} tooltip={t('navPanel.create')}>
+            <PlusIcon />
+          </SidebarMenuButton>
+        </SidebarDropdownMenu>
+      </SidebarMenuItem>
       <NewViewModal open={creatingView} onClose={() => setCreatingView(false)} />
     </>
   );

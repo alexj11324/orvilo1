@@ -1,4 +1,5 @@
 @import 'tailwindcss' source('../..');
+@import 'antd/dist/reset.css' layer(base);
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
@@ -47,6 +48,14 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --color-invert-foreground: var(--invert-foreground);
+    --color-invert: var(--invert);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning: var(--warning);
+    --color-info-foreground: var(--info-foreground);
+    --color-info: var(--info);
+    --color-success-foreground: var(--success-foreground);
+    --color-destructive-foreground: var(--destructive-foreground);
 }
 
 :root {
@@ -83,6 +92,14 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    --destructive-foreground: var(--color-red-800);
+    --success-foreground: var(--color-emerald-900);
+    --info: var(--color-violet-500);
+    --info-foreground: var(--color-violet-900);
+    --warning: var(--color-yellow-500);
+    --warning-foreground: var(--color-yellow-900);
+    --invert: var(--color-zinc-900);
+    --invert-foreground: var(--color-zinc-50);
 }
 
 .dark,
@@ -121,6 +138,15 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ReUI menu utilities shipped by the base-nova registry components.
+   cn-menu-target is a marker class for ReUI's menu animations — left
+   undefined on purpose. */
+@utility cn-menu-translucent {
+    background-color: color-mix(in oklab, var(--popover) 80%, transparent);
+    backdrop-filter: blur(12px) saturate(1.5);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
@@ -138,4 +164,96 @@
    ReUI primary-action contrast within the login and onboarding surfaces. */
 .orvilo-entry-surface [data-slot='button'].text-primary-foreground {
     color: var(--primary-foreground);
+}
+
+.dark {
+    --destructive-foreground: var(--color-red-600);
+    --success: var(--color-emerald-500);
+    --success-foreground: var(--color-emerald-600);
+    --info: var(--color-violet-500);
+    --info-foreground: var(--color-violet-600);
+    --warning: var(--color-yellow-500);
+    --warning-foreground: var(--color-yellow-600);
+    --invert: var(--color-zinc-700);
+    --invert-foreground: var(--color-zinc-50);
+}
+
+/* Shimmer sweep for "generating"-style labels (ported from lobehub Text `shiny`). */
+@keyframes text-shiny-sweep {
+    0% {
+        background-position: 100%;
+    }
+
+    100% {
+        background-position: -100%;
+    }
+}
+
+@keyframes text-shiny-sweep-transform {
+    0% {
+        translate: -100% 0;
+    }
+
+    100% {
+        translate: 100% 0;
+    }
+}
+
+.text-shiny {
+    --shiny-duration: 1.5s;
+
+    /* The sweep peaks at this color. Override it to match the static text the
+       shimmering label sits next to. currentColor cannot serve here: the dimmed
+       color declared below would feed back into the sweep overlay. */
+    --shiny-color: var(--foreground);
+
+    user-select: none;
+
+    color: color-mix(in srgb, var(--shiny-color) 28%, transparent);
+
+    background: linear-gradient(120deg, transparent 25%, var(--shiny-color) 50%, transparent 75%);
+    background-clip: text;
+    background-size: 200% 100%;
+
+    animation: text-shiny-sweep var(--shiny-duration) linear infinite;
+}
+
+/* Animating background-position repaints every glyph each frame. Where
+   mask-clip: text is supported, clip a transform-animated overlay to the glyphs
+   instead so the sweep stays on the compositor. The mask clips every descendant
+   too, so rows that also render icons or chips keep the background-clip path. */
+@supports (-webkit-mask-clip: text) {
+    .text-shiny:not(:has(*)) {
+        position: var(--shiny-origin, relative);
+
+        background: none;
+
+        animation: none;
+
+        mask-clip: text;
+        mask-image: linear-gradient(#fff, #fff);
+    }
+
+    .text-shiny:not(:has(*))::after {
+        pointer-events: none;
+        will-change: transform;
+        content: '';
+
+        position: absolute;
+        inset: 0;
+
+        background: linear-gradient(90deg, transparent 25%, var(--shiny-color) 50%, transparent 75%);
+
+        animation: text-shiny-sweep-transform var(--shiny-duration) linear infinite;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .text-shiny {
+        animation: none;
+    }
+
+    .text-shiny::after {
+        display: none;
+    }
 }

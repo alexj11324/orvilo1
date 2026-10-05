@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
+import { isHostUnsupportedResult } from '@orvilo/types';
 import { PinIcon, PinOffIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { electronSystemService } from '@/services/electron/system';
+import ActionIcon from '@/components/ActionIcon';
+import { getHostPort, hostResultOr } from '@/platform';
 import { electronStylish } from '@/styles/electron';
 
 const PinOnTopButton = memo(() => {
@@ -14,9 +15,11 @@ const PinOnTopButton = memo(() => {
 
   useEffect(() => {
     let mounted = true;
-    void electronSystemService.isWindowAlwaysOnTop().then((value) => {
-      if (mounted) setPinned(value);
-    });
+    void getHostPort()
+      .window.isAlwaysOnTop()
+      .then((value) => {
+        if (mounted) setPinned(hostResultOr(value, false));
+      });
     return () => {
       mounted = false;
     };
@@ -24,8 +27,8 @@ const PinOnTopButton = memo(() => {
 
   const toggle = async () => {
     const next = !pinned;
-    await electronSystemService.setWindowAlwaysOnTop(next);
-    setPinned(next);
+    const result = await getHostPort().window.setAlwaysOnTop(next);
+    if (!isHostUnsupportedResult(result)) setPinned(next);
   };
 
   return (

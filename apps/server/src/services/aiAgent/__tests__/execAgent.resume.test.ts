@@ -3,10 +3,12 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 // Under ACP a resume/regenerate run still prunes the anchor's old answer
 // branch — but the pruning now happens inside `dispatchHeteroAgent` (topic
@@ -15,6 +17,15 @@ import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 // a model-loop `initialMessages` array. These tests delegate to the real
 // dispatch (stubs around the persistence/device/sandbox edges) and assert on
 // the serialized history the host receives.
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
+
 const {
   mockDispatchHeteroAgent,
   mockFindById,
@@ -68,7 +79,12 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
-        agencyConfig: { executionTarget: 'sandbox' },
+        agencyConfig: {
+          // External-agent binding — the builtin orvilo agent's harness is
+          // fixed to Prime; routing is exercised on the external adapter.
+          executionTarget: 'sandbox',
+          heterogeneousProvider: { type: 'claude-code' },
+        },
         chatConfig: {},
         id: 'agent-1',
         knowledgeBases: [],
@@ -193,6 +209,11 @@ vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
   return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
 });
 
+vi.mock('@/server/services/providerBinding/execution', () => ({
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
@@ -262,6 +283,7 @@ describe('AiAgentService.execAgent - resume mode', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
 
     vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
@@ -286,7 +308,7 @@ describe('AiAgentService.execAgent - resume mode', () => {
     mockMessageCreate.mockResolvedValue({ id: 'assistant-msg-new' });
     mockQueryTree.mockResolvedValue([]);
 
-    service = new AiAgentService({} as any, 'user-1');
+    service = new AiAgentService(createDispatchTestDb() as any, 'user-1');
   });
 
   afterEach(() => {

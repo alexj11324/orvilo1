@@ -217,7 +217,7 @@ export interface IStreamEventManager {
    * re-poll from it without a gap. Unlike `subscribeStreamEvents` this does NOT
    * loop — one request, one bounded wait.
    *
-   * Used by the heterogeneous `lh hetero exec` producer (which holds only an
+   * Used by the heterogeneous `orvilo hetero exec` producer (which holds only an
    * op-scoped JWT + tRPC, never Redis) to pull `agent_intervention_response`
    * back into its in-process `AskUserBridge`. See `aiAgent.waitInterventionResponse`.
    */

@@ -1,7 +1,4 @@
 'use client';
-
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { InboxIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,9 +7,9 @@ import { useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
+import { Skeleton } from '@/components/ui/skeleton';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
 import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
@@ -81,7 +78,7 @@ const TeamPage = memo(() => {
         query: {
           entityType: 'project',
           filter: { all: [{ field: 'teamId', op: 'eq', value: teamId! }] },
-          schemaVersion: 1,
+          schemaVersion: 2,
         },
       }),
   );
@@ -133,14 +130,17 @@ const TeamPage = memo(() => {
         <WorkSurface>
           <NavHeader
             left={
-              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+              <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
                 {t('tab.views')}
-              </Text>
+              </span>
             }
           />
-          <Center flex={1}>
-            <Empty description={t('teams.personal')} icon={UsersIcon} />
-          </Center>
+          <div className="flex flex-col items-center justify-center flex-1">
+            <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+              <UsersIcon aria-hidden className="size-8" />
+              <p>{t('teams.personal')}</p>
+            </div>
+          </div>
         </WorkSurface>
       );
     if (teamError || !teamData)
@@ -148,16 +148,20 @@ const TeamPage = memo(() => {
         <WorkSurface>
           <NavHeader
             left={
-              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+              <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
                 {t('tab.views')}
-              </Text>
+              </span>
             }
           />
           <WorkSurfaceCollection>
             {teamError ? (
               <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
             ) : (
-              <SkeletonList aria-label={t('teams.loading')} rows={4} />
+              <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
+              </div>
             )}
           </WorkSurfaceCollection>
         </WorkSurface>
@@ -185,30 +189,33 @@ const TeamPage = memo(() => {
       <NavHeader
         left={
           wantsTriage && teamData ? (
-            <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+            <div className="flex flex-row items-center gap-2" style={{ paddingInlineStart: 4 }}>
               <TeamIdentity
                 color={teamData.data.team.color}
                 id={teamData.data.team.id}
                 letter={(teamData.data.team.key || teamData.data.team.name).slice(0, 1)}
               />
-              <Text weight={500}>{t('teams.triage')}</Text>
-            </Flexbox>
+              <span className="text-sm font-medium">{t('teams.triage')}</span>
+            </div>
           ) : (
-            <Text style={{ paddingInlineStart: 4 }} weight={500}>
+            <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
               {teamData?.data.team.name ?? t('tab.teams')}
-            </Text>
+            </span>
           )
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
-          </Flexbox>
+          </div>
         }
       />
       {!workspaceId ? (
-        <Center flex={1}>
-          <Empty description={t('teams.personal')} icon={UsersIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center flex-1">
+          <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+            <UsersIcon aria-hidden className="size-8" />
+            <p>{t('teams.personal')}</p>
+          </div>
+        </div>
       ) : (
         <WorkSurfaceCollection>
           {/* The team fetch gates every tab — a failed team response never
@@ -226,9 +233,12 @@ const TeamPage = memo(() => {
                 />
               ) : null}
               {teamTab === 'triage' && !triageCapable ? (
-                <Center flex={1} padding={48}>
-                  <Empty description={t('teams.triageDisabled')} icon={InboxIcon} />
-                </Center>
+                <div className="flex flex-col items-center justify-center flex-1 p-12">
+                  <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                    <InboxIcon aria-hidden className="size-8" />
+                    <p>{t('teams.triageDisabled')}</p>
+                  </div>
+                </div>
               ) : null}
               {wantsTriage && teamId ? (
                 <TeamTriageSurface
@@ -245,15 +255,22 @@ const TeamPage = memo(() => {
 
               {teamTab === 'projects' ? (
                 isTeamProjectsLoading ? (
-                  <SkeletonList aria-label={t('teams.loading')} rows={4} />
+                  <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+                    {Array.from({ length: 4 }, (_, index) => (
+                      <Skeleton className="h-10 w-full" key={index} />
+                    ))}
+                  </div>
                 ) : teamProjectsError && teamProjects.length === 0 ? (
                   <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
                 ) : teamProjects.length === 0 ? (
-                  <Center flex={1} padding={48}>
-                    <Empty description={t('teams.projectsEmpty')} icon={PROJECT_ENTITY_ICON} />
-                  </Center>
+                  <div className="flex flex-col items-center justify-center flex-1 p-12">
+                    <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                      <PROJECT_ENTITY_ICON aria-hidden className="size-8" />
+                      <p>{t('teams.projectsEmpty')}</p>
+                    </div>
+                  </div>
                 ) : (
-                  <Flexbox gap={2}>
+                  <div className="flex flex-col" style={{ gap: 2 }}>
                     {teamProjectsError ? (
                       <AsyncError
                         error={teamProjectsError}
@@ -264,7 +281,7 @@ const TeamPage = memo(() => {
                     {teamProjects.map((project) => (
                       <SavedViewProjectRow key={project.id} project={project} />
                     ))}
-                  </Flexbox>
+                  </div>
                 )
               ) : null}
             </>

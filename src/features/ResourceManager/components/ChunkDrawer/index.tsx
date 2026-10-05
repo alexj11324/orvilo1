@@ -1,8 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Drawer } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import dynamic from '@/libs/next/dynamic';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 
@@ -22,28 +21,26 @@ const ChunkDrawer = memo(() => {
   const file = useFileStore(fileManagerSelectors.getFileByChunkTargetId(fileId));
 
   return (
-    <Drawer
-      open={open}
-      title={file?.name}
-      width={736}
-      styles={{
-        bodyContent: { height: '100%', padding: 0 },
-      }}
-      onClose={() => {
-        closeChunkDrawer();
-      }}
-    >
-      <Flexbox horizontal height={'100%'} style={{ overflow: 'hidden' }}>
-        {file && (
-          <Flexbox flex={2} style={{ overflow: 'scroll' }}>
-            <FileViewer {...file} id={file.fileId ?? file.id} />
-          </Flexbox>
-        )}
-        <Flexbox flex={1} style={{ borderInlineStart: `1px solid ${cssVar.colorSplit}` }}>
-          <Content />
-        </Flexbox>
-      </Flexbox>
-    </Drawer>
+    <Sheet open={open} onOpenChange={(o) => !o && closeChunkDrawer()}>
+      <SheetContent className="h-full w-[736px] gap-0 p-0 sm:max-w-[736px]" side={'right'}>
+        <SheetHeader className="p-4">
+          <SheetTitle>{file?.name}</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-row h-[100%]" style={{ overflow: 'hidden' }}>
+          {file && (
+            <div className="flex flex-col" style={{ overflow: 'scroll', flex: 2 }}>
+              <FileViewer {...file} id={file.fileId ?? file.id} />
+            </div>
+          )}
+          <div
+            className="flex flex-col flex-1"
+            style={{ borderInlineStart: `1px solid ${cssVar.colorSplit}` }}
+          >
+            <Content />
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 });
 

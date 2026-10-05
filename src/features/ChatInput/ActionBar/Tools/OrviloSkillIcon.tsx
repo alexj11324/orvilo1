@@ -1,7 +1,6 @@
-import { Icon } from '@lobehub/ui';
 import { type OrviloSkillProviderType } from '@orvilo/const';
 import { cssVar } from 'antd-style';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 export const SKILL_ICON_SIZE = 20;
 
@@ -20,7 +19,11 @@ const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'> & {
       );
     }
 
-    return <Icon fill={cssVar.colorText} icon={icon} size={size} />;
+    return (
+      <span className="anticon" role="img">
+        {createElement(icon, { size, width: size, height: size, fill: cssVar.colorText })}
+      </span>
+    );
   },
 );
 

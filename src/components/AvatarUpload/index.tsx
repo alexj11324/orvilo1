@@ -1,11 +1,12 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Avatar, Spin, Upload } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2, PencilIcon, X } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { PencilIcon, X } from 'lucide-react';
+import { createElement, memo, useMemo } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Spinner } from '@/components/ui/spinner';
+import { Upload } from '@/components/Upload';
 import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
 
@@ -111,15 +112,14 @@ const AvatarUpload = memo<AvatarUploadProps>(
 
     return (
       <Upload beforeUpload={handleUpload} maxCount={1}>
-        <Spin indicator={<Icon spin icon={Loader2} />} spinning={!!loading}>
+        <div className="relative">
           <div className={styles.wrapper}>
             <Avatar avatar={value} shape={shape} size={size} title={title} />
             <div className={`${styles.overlay} avatar-edit-overlay`}>
-              <Icon
-                color={cssVar.colorTextLightSolid}
-                icon={PencilIcon}
-                size={Math.round(size / 3)}
-              />
+              {createElement(PencilIcon, {
+                size: 16,
+                style: { color: cssVar.colorTextLightSolid },
+              })}
             </div>
             {allowDelete && (
               <div
@@ -129,11 +129,16 @@ const AvatarUpload = memo<AvatarUploadProps>(
                   onDelete?.();
                 }}
               >
-                <Icon icon={X} size={12} />
+                {createElement(X, { size: 12 })}
               </div>
             )}
           </div>
-        </Spin>
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
+              <Spinner />
+            </div>
+          )}
+        </div>
       </Upload>
     );
   },

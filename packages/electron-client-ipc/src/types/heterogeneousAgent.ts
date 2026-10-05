@@ -55,7 +55,7 @@ export interface HeterogeneousAgentRateLimitInfo {
 }
 
 // The Claude quota snapshot shapes are shared with the device RPC path
-// (`lh connect` samples the same snapshot), so they live in the
+// (`orvilo connect` samples the same snapshot), so they live in the
 // heterogeneous-agents quota entry; re-export them for existing IPC callers.
 export type {
   ClaudeCodeAccountIdentity,

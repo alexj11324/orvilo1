@@ -7,3 +7,4 @@ export {
   parsePiModelCatalog,
   parseQoderModelCatalog,
 } from './listHeterogeneousAgentModels';
+export { listHeterogeneousAgentPermissions } from './listHeterogeneousAgentPermissions';

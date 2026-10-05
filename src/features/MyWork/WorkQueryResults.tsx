@@ -1,15 +1,16 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, Checkbox, Text } from '@lobehub/ui/base-ui';
-import type {
-  TaskWorkflowCategory,
-  WorkQueryExternalReview,
-  WorkQueryGroupBy,
-  WorkQueryLayout,
-  WorkQuerySortMode,
+import {
+  normalizeWorkQuerySubGroupBy,
+  type TaskWorkflowCategory,
+  type WorkQuery,
+  type WorkQueryExternalReview,
+  type WorkQueryGroupBy,
+  type WorkQueryLayout,
+  type WorkQuerySortMode,
 } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import {
   BellOffIcon,
   BellPlusIcon,
@@ -19,24 +20,25 @@ import {
   PlusIcon,
 } from 'lucide-react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
 import {
   COLUMN_I18N_KEYS,
   type TaskStatusChoice,
-  workQueryKeyForKanbanColumn,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
-import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { issueIdColumnStyle } from '@/features/AgentTasks/shared/issueIdColumn';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
 import {
@@ -45,11 +47,15 @@ import {
   type BulkSelectGesture,
 } from './bulkSelection';
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
-import { isInteractiveRowClick, type MyWorkRowProperty } from './myWorkDisplay';
+import {
+  activityBucketRank,
+  isInteractiveRowClick,
+  myWorkPriorityGroupRank,
+  type MyWorkRowProperty,
+} from './myWorkDisplay';
 import {
   workQueryBoardGroups,
   workQueryListGroupBy,
-  workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
 import { applyWorkQueryStatusChoice } from './workQueryBoardMove';
@@ -59,197 +65,11 @@ import {
   workQueryHasMore,
   type WorkQueryResultTask,
 } from './workQueryPaging';
+import WorkQueryVirtualList from './WorkQueryVirtualList';
 
 export type { WorkQueryResultTask } from './workQueryPaging';
 
-/** Row inset after the 33px selection gutter — puts the priority mark at 42px. */
-const BULK_ROW_INSET = 9;
-
 const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    flex: none;
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationFast};
-
-    @media (hover: none) {
-      opacity: 1;
-    }
-  `,
-  identifier: css`
-    flex: none;
-
-    min-width: 64px;
-
-    font-weight: 450;
-    color: ${cssVar.colorTextDescription};
-    text-align: end;
-  `,
-  /* A PR row shares the issue row's 12px inset, so its glyph sits in the
-     priority column and its title on the issue titles' line. */
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    padding-inline: 12px;
-
-    color: inherit;
-    text-decoration: none;
-  `,
-  reviewBlockTitle: css`
-    padding-inline: 12px;
-  `,
-  chevron: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-    transition: transform ${cssVar.motionDurationFast};
-  `,
-  chevronCollapsed: css`
-    transform: rotate(-90deg);
-  `,
-  /**
-   * The header is a row wrapper (background + hover reveal for the create
-   * `+`) around a real `<button>` — nesting an ActionIcon inside the toggle
-   * button would be invalid HTML and would swallow its click.
-   *
-   * It pins to the top of the collection scrollport like Linear's group
-   * dividers (`position: sticky; top: -1px; z-index: 2`), so the section the
-   * rows belong to stays visible while scrolling. The translucent fill is
-   * composited over the surface base — sticky chrome must be opaque or the
-   * rows passing underneath would ghost through it.
-   */
-  groupHeaderRow: css`
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-inline-end: 4px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background:
-      linear-gradient(0deg, ${cssVar.colorFillQuaternary}, ${cssVar.colorFillQuaternary}),
-      ${cssVar.colorBgContainer};
-
-    &:hover .work-query-group-actions,
-    &:focus-within .work-query-group-actions {
-      opacity: 1;
-    }
-  `,
-  attentionGroupHeaderRow: css`
-    padding-inline-end: 8px;
-    border-radius: 0;
-    background: ${cssVar.colorBgContainer};
-  `,
-  groupHeader: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    min-height: 36px;
-    padding-block: 4px;
-    padding-inline: 12px;
-    border: none;
-
-    color: inherit;
-    text-align: start;
-
-    background: transparent;
-  `,
-  attentionGroupHeader: css`
-    padding-inline: 16px;
-  `,
-  row: css`
-    position: relative;
-
-    min-height: 44px;
-    padding-inline-end: 8px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: inherit;
-
-    &:hover .work-query-row-actions,
-    &:focus-within .work-query-row-actions,
-    &:hover .work-query-bulk-check,
-    &:focus-within .work-query-bulk-check {
-      opacity: 1;
-    }
-  `,
-  rowSelected: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  rowBulkSelected: css`
-    background: ${cssVar.colorPrimaryBg};
-  `,
-  /**
-   * Linear's hover checkbox: an overlay at the row's leading edge so rows
-   * keep their geometry whether or not multi-select is armed. Solid chip —
-   * it slides over whatever sits in the row's left padding.
-   */
-  /**
-   * Linear's selection gutter, measured: the 14px checkbox starts 19px in and
-   * the priority mark 42px in. The gutter holds the whole checkbox (33px) and
-   * the row trims its own inset to 9px (`BULK_ROW_INSET`), so the two never
-   * overlap — a click on the checkbox's edge must not open the issue.
-   */
-  bulkGutter: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-
-    box-sizing: border-box;
-    inline-size: 33px;
-    padding-inline-start: 19px;
-  `,
-  bulkCheck: css`
-    display: flex;
-    align-items: center;
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationFast};
-
-    @media (hover: none) {
-      opacity: 1;
-    }
-  `,
-  bulkCheckActive: css`
-    opacity: 1;
-  `,
-  /**
-   * Second-level group header (Linear's Sub-grouping) — transparent chrome,
-   * indented under its primary group instead of repeating the filled pill.
-   * It does not pin: the primary header already holds the sticky line, and a
-   * second pinned row at the same offset would slide over it.
-   */
-  subGroupHeaderRow: css`
-    position: static;
-    padding-inline-end: 8px;
-    border-radius: 0;
-    background: transparent;
-  `,
-  subGroupHeader: css`
-    min-height: 28px;
-    padding-inline: 28px 16px;
-  `,
-  /**
-   * Display-property toggles hide their chip inside the shared task row.
-   * `AgentTaskItem` owns the chip DOM, so hiding rides on its stable collab
-   * hooks (`data-collab-id` slots) and data attributes rather than forking
-   * the component. The trailing date is the trailing
-   * flex's last child when it renders; the `:not` guard keeps the assignee
-   * slot alive if the date ever comes back empty.
-   */
   rowHideAssignee: css`
     & [data-collab-id$=':assignee'] {
       display: none;
@@ -310,10 +130,22 @@ export interface WorkQuerySubSection {
 
 interface WorkQueryResultsProps {
   /**
+   * Override the default rank for one axis. Milestone lists pass catalog
+   * order; other axes keep their built-in rank.
+   */
+  axisKeyRank?: (axis: string, key: string) => number | undefined;
+  /**
    * Multi-selected task ids — rows paint checked + highlight and reveal
    * their checkbox without waiting for hover. Absent = no bulk affordance.
    */
   bulkSelectedIds?: ReadonlySet<string>;
+  /** Work-query board columns the user collapsed. Persisted by the caller. */
+  collapsedColumns?: readonly string[];
+  /**
+   * List groups the user collapsed. When `onCollapsedGroupsChange` is set the
+   * list is controlled; otherwise collapse lasts for the session.
+   */
+  collapsedGroups?: readonly string[];
   /**
    * Where the board's create entry should file a new card. `teamId` files it
    * directly; `teamOptions` makes the create modal ask the one ambiguous
@@ -323,8 +155,9 @@ interface WorkQueryResultsProps {
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
   /**
-   * Flat lists nest children under parents already in the set — Linear's
-   * "nested sub-issues: Show matching" for Created/Subscribed/Activity.
+   * Nest children under parents already in the set. On My Work this is the
+   * flat list and the attention groups. `nestInGroups` also nests inside a
+   * server group, which the project issue list does.
    */
   flatNested?: boolean;
   /**
@@ -335,7 +168,13 @@ interface WorkQueryResultsProps {
    */
   flatSections?: { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[];
   groupBy?: WorkQueryGroupBy;
+  /** Optional header glyph for a server group (assignee avatar, priority icon). */
+  groupIcon?: (axis: string, key: string) => ReactNode;
+  /** Primary-group order. Activity date uses its own recency rank. */
+  groupRank?: (key: string) => number;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
+  /** Header label for a server group. Status and workflow fall back to their marks. */
+  groupTitle?: (axis: string, key: string) => string | undefined;
   /**
    * Display-property toggles — the set of row chips to hide. Project and
    * milestone chips are caller-supplied (`rowExtras`/`milestoneFor`), so the
@@ -370,6 +209,7 @@ interface WorkQueryResultsProps {
    */
   milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
   movable?: boolean;
+  nestInGroups?: boolean;
   /**
    * Multi-select row gesture: cmd/ctrl-click `toggle`, shift-click `range`.
    * The row passes the rendered `data-bulk-row-id` order so ranges follow
@@ -380,6 +220,8 @@ interface WorkQueryResultsProps {
     gesture: BulkSelectGesture,
     orderedRowIds: string[],
   ) => void;
+  onCollapsedColumnsChange?: (keys: string[]) => void;
+  onCollapsedGroupsChange?: (keys: string[]) => void;
   /**
    * Hover `+` on caller-computed (`flatSections`) headers. Only supplied when
    * the bucket key is a real create preset (e.g. a project id) — day/priority
@@ -411,6 +253,8 @@ interface WorkQueryResultsProps {
   selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
+  /** Second axis. A board draws it as swimlanes; a list draws it as nested headers. */
+  subGroupBy?: WorkQuery['subGroupBy'];
   /**
    * Second-level grouping inside each list section — Linear's "Sub-grouping"
    * nested headers. Called with a section's tasks; `undefined` renders the
@@ -421,11 +265,10 @@ interface WorkQueryResultsProps {
   total?: number;
 }
 
-const WorkQueryTaskRow = memo(
+export const WorkQueryTaskRow = memo(
   ({
     followed,
     depth = 0,
-    groupBy,
     bulkSelected,
     bulkSelectionActive,
     hiddenProperties,
@@ -436,6 +279,7 @@ const WorkQueryTaskRow = memo(
     onSelectTask,
     onToggleFollow,
     peekOnSelect,
+    rangeIds,
     rowExtras,
     selected,
     task,
@@ -443,7 +287,6 @@ const WorkQueryTaskRow = memo(
   }: {
     followed?: boolean;
     depth?: number;
-    groupBy: 'status' | 'workflowCategory';
     bulkSelected?: boolean;
     /** Any selection — every row's checkbox stays revealed (Linear). */
     bulkSelectionActive?: boolean;
@@ -461,24 +304,20 @@ const WorkQueryTaskRow = memo(
     onSelectTask?: (task: WorkQueryResultTask) => void;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
     peekOnSelect?: boolean;
+    /** In-memory row order for shift-range. Windowed lists pass this because off-screen rows are not in the DOM. */
+    rangeIds?: readonly string[];
     rowExtras?: (task: WorkQueryResultTask) => ReactNode;
     selected?: boolean;
     task: WorkQueryResultTask;
     muted?: boolean;
   }) => {
     const { t } = useTranslation('common');
-    const changeTaskStatus = useTaskStatusChange();
     const handleStatusChange = useCallback(
       async (choice: TaskStatusChoice) => {
-        const applied = await applyWorkQueryStatusChoice({
-          changeLocal: changeTaskStatus,
-          choice,
-          groupBy,
-          task,
-        });
+        const applied = await applyWorkQueryStatusChoice({ choice, task });
         if (applied) onMoved?.();
       },
-      [changeTaskStatus, groupBy, onMoved, task],
+      [onMoved, task],
     );
 
     /**
@@ -501,7 +340,9 @@ const WorkQueryTaskRow = memo(
           onBulkSelectTask(
             task,
             gesture,
-            gesture === 'range' && list ? bulkOrderedRowIds(list) : [task.id],
+            gesture === 'range'
+              ? [...(rangeIds ?? (list ? bulkOrderedRowIds(list) : [task.id]))]
+              : [task.id],
           );
           return;
         }
@@ -510,7 +351,7 @@ const WorkQueryTaskRow = memo(
         event.stopPropagation();
         onSelectTask(task);
       },
-      [onBulkSelectTask, onSelectTask, peekOnSelect, task],
+      [onBulkSelectTask, onSelectTask, peekOnSelect, rangeIds, task],
     );
 
     const handleDoubleClick = useCallback(
@@ -525,21 +366,18 @@ const WorkQueryTaskRow = memo(
 
     // The same rich row /tasks renders — identifier, status glyph, title,
     // chips, assignee, date — instead of a second, thinner task row.
-    // Linear keeps the selection checkbox in a fixed left gutter, outside the
-    // nesting indent: every row's checkbox shares one x, and it never sits on
-    // top of the priority mark.
+    // The default checkbox's 40px hit area stays inside the 48px gutter,
+    // leaving 8px before the task background and its own interactive controls.
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
+      <div
         aria-current={selected ? 'true' : undefined}
         aria-selected={bulkSelected ? 'true' : undefined}
         data-bulk-row-id={onBulkSelectTask ? task.id : undefined}
         data-bulk-selected={bulkSelected || undefined}
-        className={cx(
-          styles.row,
-          selected && styles.rowSelected,
-          bulkSelected && styles.rowBulkSelected,
+        className={cn(
+          'group/work-row relative flex items-center rounded-lg pe-2',
+          selected && 'bg-accent',
+          bulkSelected && 'bg-primary/10',
           ...rowPropertyClassNames(hiddenProperties),
         )}
         onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
@@ -548,28 +386,26 @@ const WorkQueryTaskRow = memo(
         }
       >
         {onBulkSelectTask ? (
-          <span data-row-interactive className={styles.bulkGutter}>
+          <span data-row-interactive className="flex w-12 shrink-0 items-center ps-3">
             <span
               data-row-control={'select'}
-              className={cx(
-                styles.bulkCheck,
-                'work-query-bulk-check',
-                (bulkSelected || bulkSelectionActive) && styles.bulkCheckActive,
+              className={cn(
+                'work-query-bulk-check flex items-center opacity-0 transition-opacity group-hover/work-row:opacity-100 group-focus-within/work-row:opacity-100 [@media(hover:none)]:opacity-100',
+                (bulkSelected || bulkSelectionActive) && 'opacity-100',
               )}
             >
               <Checkbox
                 aria-label={t('myWork.bulk.selectRow')}
                 checked={Boolean(bulkSelected)}
-                size={14}
-                onChange={() => onBulkSelectTask(task, 'toggle', [task.id])}
+                className="data-unchecked:border-muted-foreground data-unchecked:hover:border-foreground"
+                onCheckedChange={() => onBulkSelectTask(task, 'toggle', [task.id])}
               />
             </span>
           </span>
         ) : null}
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
+        <div className="min-w-0 flex-1">
           <TaskRowIndent depth={depth} muted={muted}>
             <AgentTaskItem
-              insetStart={onBulkSelectTask ? BULK_ROW_INSET : undefined}
               milestone={milestoneFor?.(task)}
               routeScope={'global'}
               showParent={depth === 0}
@@ -578,18 +414,29 @@ const WorkQueryTaskRow = memo(
               onStatusChange={handleStatusChange}
             />
           </TaskRowIndent>
-        </Flexbox>
+        </div>
         {onToggleFollow ? (
-          <span className={`${styles.actions} work-query-row-actions`}>
-            <ActionIcon
-              icon={followed ? BellOffIcon : BellPlusIcon}
-              size={'small'}
-              title={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
-              onClick={() => onToggleFollow(task.id, Boolean(followed))}
-            />
+          <span className="work-query-row-actions shrink-0 opacity-0 transition-opacity group-hover/work-row:opacity-100 group-focus-within/work-row:opacity-100 [@media(hover:none)]:opacity-100">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onToggleFollow(task.id, Boolean(followed))}
+                  />
+                }
+              >
+                {followed ? <BellOffIcon /> : <BellPlusIcon />}
+              </TooltipTrigger>
+              <TooltipContent>
+                {followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
+              </TooltipContent>
+            </Tooltip>
           </span>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -709,61 +556,65 @@ const WorkQueryStatusGroup = memo<{
       : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
 
     return (
-      <Flexbox>
+      <div className="flex flex-col">
         <div
-          className={cx(
-            styles.groupHeaderRow,
-            (attention || subGroup) && styles.attentionGroupHeaderRow,
-            subGroup && styles.subGroupHeaderRow,
+          className={cn(
+            'group/work-group sticky top-0 z-2 flex items-center gap-1 bg-background pe-1',
+            subGroup && 'static ps-4',
           )}
         >
-          <button
+          <Button
             aria-expanded={!collapsed}
-            type="button"
-            className={cx(
-              styles.groupHeader,
-              attention && styles.attentionGroupHeader,
-              subGroup && styles.subGroupHeader,
-            )}
+            className="min-w-0 flex-1 justify-start"
+            variant="ghost"
             onClick={() => setCollapsed((current) => !current)}
           >
             <ChevronDownIcon
-              className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
-              size={14}
+              className={cn(
+                'shrink-0 text-muted-foreground transition-transform',
+                collapsed && '-rotate-90',
+              )}
             />
-            {visual && !attention && !label && !icon ? (
-              <Icon color={visual.color} icon={visual.icon} size={14} />
-            ) : null}
+            {visual && !attention && !label && !icon
+              ? createElement(visual.icon, { className: 'size-4 shrink-0', color: visual.color })
+              : null}
             {icon}
-            <Text ellipsis fontSize={attention ? 13 : 12} weight={500}>
+            <span className="truncate">
               {label ?? (labelKey ? t(labelKey as never) : columnKey)}
-            </Text>
-            <Text fontSize={attention ? 13 : 12} type={'secondary'}>
-              {total ?? tasks.length}
-            </Text>
-          </button>
+            </span>
+            <span className="text-muted-foreground">{total ?? tasks.length}</span>
+          </Button>
           {onCreateInGroup ? (
-            <span className={`${styles.actions} work-query-group-actions`}>
-              <ActionIcon
-                icon={PlusIcon}
-                size={'small'}
-                title={createLabel ?? t('taskList.kanban.addTask')}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onCreateInGroup(columnKey);
-                }}
-              />
+            <span className="work-query-group-actions shrink-0 opacity-0 transition-opacity group-hover/work-group:opacity-100 group-focus-within/work-group:opacity-100 [@media(hover:none)]:opacity-100">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      aria-label={createLabel ?? t('taskList.kanban.addTask')}
+                      size="icon"
+                      variant="ghost"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onCreateInGroup(columnKey);
+                      }}
+                    />
+                  }
+                >
+                  <PlusIcon />
+                </TooltipTrigger>
+                <TooltipContent>{createLabel ?? t('taskList.kanban.addTask')}</TooltipContent>
+              </Tooltip>
             </span>
           ) : null}
         </div>
         {collapsed ? null : (
-          <Flexbox>
+          <div className="flex flex-col">
             {subSections && subSections.length > 0 ? (
               /* Linear's nested sub-headers: the second level groups the
                  section's rows under its own collapsible headers. Sub-groups
                  never nest further, and the primary group keeps its create
                  `+` and load-more footer. */
-              <Flexbox gap={4}>
+              <div className="flex flex-col gap-1">
                 {subSections.map((section) => (
                   <WorkQueryStatusGroup
                     subGroup
@@ -796,13 +647,13 @@ const WorkQueryStatusGroup = memo<{
                 {loadMoreError ? (
                   <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
                 ) : hasMore && onLoadMore && loadMoreLabel ? (
-                  <Flexbox horizontal justify={'center'}>
-                    <Button size="small" onClick={() => void onLoadMore()}>
+                  <div className="flex justify-center">
+                    <Button variant="outline" onClick={() => void onLoadMore()}>
                       {loadMoreLabel}
                     </Button>
-                  </Flexbox>
+                  </div>
                 ) : null}
-              </Flexbox>
+              </div>
             ) : (
               <>
                 {hierarchyRows.map((row) => (
@@ -811,7 +662,6 @@ const WorkQueryStatusGroup = memo<{
                     bulkSelectionActive={bulkSelectionActive}
                     depth={row.depth}
                     followed={isFollowed?.(row.task.id)}
-                    groupBy={groupBy}
                     hiddenProperties={hiddenProperties}
                     key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
                     milestoneFor={milestoneFor}
@@ -834,17 +684,17 @@ const WorkQueryStatusGroup = memo<{
                 {loadMoreError ? (
                   <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
                 ) : hasMore && onLoadMore && loadMoreLabel ? (
-                  <Flexbox horizontal justify={'center'}>
-                    <Button size="small" onClick={() => void onLoadMore()}>
+                  <div className="flex justify-center">
+                    <Button variant="outline" onClick={() => void onLoadMore()}>
                       {loadMoreLabel}
                     </Button>
-                  </Flexbox>
+                  </div>
                 ) : null}
               </>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -857,30 +707,33 @@ const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ 
   const body = (
     <>
       {/* Every queued review is an open PR — Linear draws open PRs green. */}
-      <Icon color={cssVar.colorSuccess} icon={GitPullRequestIcon} size={14} />
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
-        <Text ellipsis fontSize={13} weight={500}>
-          {review.title}
-        </Text>
-      </Flexbox>
+      <GitPullRequestIcon className="size-4 shrink-0 text-green-600 dark:text-green-500" />
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{review.title}</span>
+      </div>
       {identifier ? (
-        <Text className={styles.identifier} fontSize={12}>
+        <span className="min-w-16 shrink-0 text-end text-sm text-muted-foreground">
           {identifier}
-        </Text>
+        </span>
       ) : null}
     </>
   );
 
   return (
-    <Flexbox horizontal align="center" className={styles.row}>
+    <div className="flex items-center rounded-lg">
       {href ? (
-        <a className={styles.link} href={href} rel="noopener noreferrer" target="_blank">
+        <a
+          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-inherit no-underline"
+          href={href}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
           {body}
         </a>
       ) : (
-        <div className={styles.link}>{body}</div>
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5">{body}</div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -899,10 +752,17 @@ const WORK_QUERY_BOARD_OPTIONS = {
 const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
+    collapsedColumns,
+    collapsedGroups,
+    axisKeyRank,
+    groupIcon,
+    groupRank,
+    groupTitle,
     externalReviews,
     bulkSelectedIds,
     createContext,
     flatNested,
+    nestInGroups,
     flatSections,
     groupBy,
     groups,
@@ -923,6 +783,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onLoadMore,
     onLoadMoreGroup,
     onMoved,
+    onCollapsedColumnsChange,
+    onCollapsedGroupsChange,
     onRetryLoadMore,
     onRetryLoadMoreGroup,
     onOpenTask,
@@ -932,22 +794,45 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     rowExtras,
     selectedTaskId,
     sortMode,
+    subGroupBy,
     subSectionsFor,
     tasks,
     total,
   }) => {
     const { t } = useTranslation(['common', 'chat']);
-    const boardGroupBy = groupBy === 'status' ? 'status' : 'workflowCategory';
+    const boardGroupBy =
+      groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
+        ? groupBy
+        : 'workflowCategory';
+    const requestedLane =
+      layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
+    // Milestone groups a list. A board lane has no milestone columns.
+    const laneAxis = requestedLane === 'milestone' ? undefined : requestedLane;
     const listGroupBy = workQueryListGroupBy(groupBy);
-    const listSections =
-      listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
-    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
+    const listLane =
+      layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;
+    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
-    // Flat lists nest children under in-list parents only when the caller opts
-    // in — Linear's "nested sub-issues: Show matching" vs "Hide" per tab.
-    const flatRows = flatNested
-      ? workQueryHierarchyRows(tasks, tasks)
-      : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
+    const nestRows =
+      Boolean(flatNested) &&
+      (Boolean(nestInGroups) || listGroupBy === 'none' || listGroupBy === 'attention');
+    const axisRank = (axis: string | undefined): ((key: string) => number) | undefined => {
+      if (!axis) return undefined;
+      const builtin = (): ((key: string) => number) | undefined => {
+        if (axis === 'activityDate') return activityBucketRank;
+        if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
+        if (axis === 'agent' || axis === 'assignee' || axis === 'milestone' || axis === 'project') {
+          return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
+        }
+        if (axis === 'cycle' && groupRank) return groupRank;
+        return undefined;
+      };
+      const base = builtin();
+      if (!axisKeyRank) return base;
+      return (key) => axisKeyRank(axis, key) ?? base?.(key) ?? 0;
+    };
+    const serverGroupKey = (columnKey: string) =>
+      workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)[0];
 
     // While any selection exists every row keeps its checkbox revealed —
     // Linear's signal that multi-select is armed.
@@ -968,31 +853,38 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       selectedTaskId !== undefined && task.identifier === selectedTaskId;
 
     const reviewBlock = externalReviews ? (
-      <Flexbox gap={8}>
-        <Text className={styles.reviewBlockTitle} fontSize={12} type={'secondary'} weight={500}>
+      <div className="flex flex-col gap-2">
+        <span className="px-3 text-sm font-medium text-muted-foreground">
           {t('myWork.externalReviews')}
-        </Text>
+        </span>
         {externalReviews.length === 0 ? (
-          <Center flex={1} padding={48}>
-            <Empty description={t('myWork.externalReviewsEmpty')} icon={GitPullRequestIcon} />
-          </Center>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
+            <GitPullRequestIcon aria-hidden className="size-8" />
+            <p>{t('myWork.externalReviewsEmpty')}</p>
+          </div>
         ) : (
-          <Flexbox gap={2}>
+          <div className="flex flex-col gap-0.5">
             {externalReviews.map((review) => (
               <WorkQueryExternalReviewRow key={review.id} review={review} />
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     ) : null;
 
     if (loading) {
-      return <SkeletonList aria-label={loadingLabel} rows={8} />;
+      return (
+        <div aria-busy aria-label={loadingLabel} className="flex flex-col gap-2" role="status">
+          {Array.from({ length: 8 }, (_, index) => (
+            <Skeleton className="h-10 w-full" key={index} />
+          ))}
+        </div>
+      );
     }
 
     if (layout === 'board') {
       return (
-        <Flexbox gap={16} style={{ flex: 1, minHeight: 0 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {reviewBlock}
           {/* One board component everywhere — this surface only supplies
               groups it already fetched through the work query. */}
@@ -1002,12 +894,18 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             options={WORK_QUERY_BOARD_OPTIONS}
             routeScope={'global'}
             external={{
-              groups: workQueryBoardGroups(groups, boardGroupBy),
+              groups: workQueryBoardGroups(groups, boardGroupBy, laneAxis),
+              hiddenColumnKeys: collapsedColumns,
+              hiddenProperties: hiddenRowProperties,
               hideEmptyColumns,
+              laneAxis,
               movable,
               sortMode,
               loadMoreGroupError: loadMoreGroupErrors
-                ? (columnKey) => loadMoreGroupErrors[workQueryKeyForKanbanColumn(columnKey)]
+                ? (columnKey) => {
+                    const key = serverGroupKey(columnKey);
+                    return key ? loadMoreGroupErrors[key] : undefined;
+                  }
                 : undefined,
               onLoadMoreGroup: onLoadMoreGroup
                 ? (columnKey) => {
@@ -1016,9 +914,13 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                     }
                   }
                 : undefined,
+              onHiddenColumnKeysChange: onCollapsedColumnsChange,
               onRefresh: onMoved,
               onRetryLoadMoreGroup: onRetryLoadMoreGroup
-                ? (columnKey) => onRetryLoadMoreGroup(workQueryKeyForKanbanColumn(columnKey))
+                ? (columnKey) => {
+                    const key = serverGroupKey(columnKey);
+                    if (key) onRetryLoadMoreGroup(key);
+                  }
                 : undefined,
               queryGroupBy: boardGroupBy,
               settled: true,
@@ -1027,35 +929,23 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           {loadMoreError ? (
             <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
           ) : null}
-        </Flexbox>
+        </div>
       );
     }
 
     return (
       // `data-bulk-list` scopes the rendered-order read shift-range
       // selection makes at click time.
-      <Flexbox
-        data-bulk-list={onBulkSelectTask ? '' : undefined}
-        gap={16}
-        style={issueIdColumnStyle(allTasks.map((task) => task.identifier))}
-      >
-        {reviewBlock}
-        {listGroupBy === 'none' ? (
-          /* `none` grouping stays a flat list in the query's own sort order —
-             no status headers are re-imposed. `flatSections` overlays caller-
-             computed groupings (activity day buckets) without re-bucketing. */
-          tasks.length === 0 ? (
-            <Center flex={1} padding={48}>
-              <Empty description={emptyLabel} icon={ListTodoIcon} />
-            </Center>
-          ) : flatSections && flatSections.length > 0 ? (
-            <Flexbox gap={8}>
+      <TooltipProvider>
+        <div
+          className="flex flex-col gap-4"
+          data-bulk-list={onBulkSelectTask ? '' : undefined}
+          style={issueIdColumnStyle(allTasks.map((task) => task.identifier))}
+        >
+          {reviewBlock}
+          {flatSections && flatSections.length > 0 ? (
+            <div className="flex flex-col gap-2">
               {flatSections.map((section) => (
-                /* Client-bucketed sections borrow the banner header
-                   (`attention`) — the filled status pill would be wrong chrome
-                   for a field label. `+` only appears when the caller's
-                   `onCreateInFlatSection` says the key presets a real field
-                   (a day or a priority rank presets nothing). */
                 <WorkQueryStatusGroup
                   attention
                   allTasks={allTasks}
@@ -1075,82 +965,63 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   {...rowProps}
                 />
               ))}
-            </Flexbox>
+            </div>
+          ) : tasks.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
+              <ListTodoIcon aria-hidden className="size-8" />
+              <p>{emptyLabel}</p>
+            </div>
           ) : (
-            <Flexbox gap={2}>
-              {flatRows.map((row) => (
+            <WorkQueryVirtualList
+              allTasks={allTasks}
+              collapsedGroups={collapsedGroups}
+              createLabel={t('chat:taskList.kanban.addTask')}
+              groupIcon={groupIcon}
+              groupTitle={groupTitle}
+              groups={groups}
+              laneAxis={listLane}
+              laneRankOf={axisRank(listLane)}
+              listGroupBy={listGroupBy}
+              loadMoreGroupErrors={loadMoreGroupErrors}
+              loadMoreLabel={loadMoreLabel}
+              nestRows={nestRows}
+              primaryAxis={listGroupBy}
+              rankOf={axisRank(listGroupBy)}
+              tasks={tasks}
+              renderRow={(task, item, orderedIds) => (
                 <WorkQueryTaskRow
-                  bulkSelected={bulkSelectedIds?.has(row.task.id)}
-                  depth={row.depth}
-                  followed={isFollowed?.(row.task.id)}
-                  groupBy={'status'}
-                  key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
-                  muted={row.isParentContext}
-                  selected={rowSelected(row.task)}
-                  task={row.task}
+                  bulkSelected={bulkSelectedIds?.has(task.id)}
+                  depth={item.rowDepth}
+                  followed={isFollowed?.(task.id)}
+                  muted={item.parentContext}
+                  rangeIds={orderedIds}
+                  selected={rowSelected(task)}
+                  task={task}
                   {...rowProps}
                 />
-              ))}
-            </Flexbox>
-          )
-        ) : listSections.length === 0 ? (
-          <Center flex={1} padding={48}>
-            <Empty description={emptyLabel} icon={ListTodoIcon} />
-          </Center>
-        ) : (
-          <Flexbox gap={8}>
-            {listSections.map((group) => (
-              // `nested` honours the caller's sub-issues toggle — `flatNested`
-              // === false disables attention nesting too (Linear's option is
-              // list-wide).
-              <WorkQueryStatusGroup
-                allTasks={allTasks}
-                bulkSelectedIds={bulkSelectedIds}
-                columnKey={group.key}
-                groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
-                // Attention buckets aren't a writable status dimension — a
-                // status change inside them still writes `status` — but the
-                // tail keys are workflow states and take that axis's marks.
-                hasMore={pageGroupPaging ? group.hasMore : false}
-                isFollowed={isFollowed}
-                key={group.key}
-                keyAxis={listGroupBy === 'attention' ? 'workflowCategory' : undefined}
-                loadMoreError={loadMoreGroupErrors?.[group.key]}
-                loadMoreLabel={loadMoreLabel}
-                nested={listGroupBy === 'attention' && flatNested !== false}
-                selectedTaskId={selectedTaskId}
-                subSections={subSectionsFor?.(group.tasks)}
-                tasks={group.tasks}
-                total={group.total}
-                attention={
-                  listGroupBy === 'attention' &&
-                  (group.key === 'urgent' || group.key === 'blocking')
-                }
-                onCreateInGroup={onCreateInGroup}
-                onLoadMore={
-                  pageGroupPaging && onLoadMoreGroup ? () => onLoadMoreGroup(group.key) : undefined
-                }
-                onRetryLoadMore={
-                  onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
-                }
-                {...rowProps}
-              />
-            ))}
-          </Flexbox>
-        )}
-        {/* A failed tail page keeps the loaded rows — the retry sits under
+              )}
+              onCollapsedGroupsChange={onCollapsedGroupsChange}
+              onCreateInGroup={onCreateInGroup}
+              onRetryLoadMoreGroup={onRetryLoadMoreGroup}
+              onLoadMoreGroup={
+                pageGroupPaging && onLoadMoreGroup ? (key) => onLoadMoreGroup(key) : undefined
+              }
+            />
+          )}
+          {/* A failed tail page keeps the loaded rows — the retry sits under
             the list where the load-more footer lives (flat or grouped). */}
-        {loadMoreError ? (
-          <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
-        ) : null}
-        {onLoadMore && !pageGroupPaging && workQueryHasMore(tasks.length, total) ? (
-          <Flexbox horizontal justify={'center'}>
-            <Button size="small" onClick={() => void onLoadMore()}>
-              {loadMoreLabel}
-            </Button>
-          </Flexbox>
-        ) : null}
-      </Flexbox>
+          {loadMoreError ? (
+            <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
+          ) : null}
+          {onLoadMore && !pageGroupPaging && workQueryHasMore(tasks.length, total) ? (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={() => void onLoadMore()}>
+                {loadMoreLabel}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      </TooltipProvider>
     );
   },
 );

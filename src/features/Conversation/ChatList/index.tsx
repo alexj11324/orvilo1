@@ -1,17 +1,17 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { UIChatMessage } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo } from 'react';
 
 import AsyncError from '@/components/AsyncError';
+import { TopicNotFoundRedirect } from '@/features/TopicNotFound';
 import { useFetchTopicMemories } from '@/hooks/useFetchMemoryForTopic';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
 import { getMessageListCacheIdentity } from '@/services/message/cache';
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
-import { operationSelectors } from '@/store/chat/selectors';
+import { operationSelectors, topicSelectors } from '@/store/chat/selectors';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { authSelectors, settingsSelectors } from '@/store/user/selectors';
@@ -22,6 +22,7 @@ import MessageItem from '../Messages';
 import type { WorkflowExpandLevelDefault } from '../Messages/AssistantGroup/components/WorkflowCollapse';
 import { MessageActionProvider } from '../Messages/Contexts/MessageActionProvider';
 import { dataSelectors, inputSelectors, useConversationStore } from '../store';
+import AgentHandoffMarker from './components/AgentHandoffMarker';
 import AgentSignalReceiptList from './components/AgentSignalReceiptList';
 import { RefreshError } from './components/RefreshError';
 import VirtualizedList from './components/VirtualizedList';
@@ -149,9 +150,16 @@ const ChatList = memo<ChatListProps>(
     const displayMessageIds = useMemo(() => displayMessages.map((m) => m.id), [displayMessages]);
     // Steered follow-up turns fold into the turn they interrupted. Custom item
     // renderers address messages by id, so they keep the flat list.
+    // Agent-handoff markers come from the topic's metadata — persisted user-
+    // visible record of mid-conversation agent switches.
+    const agentHandoffs = useChatStore((s) =>
+      context.topicId
+        ? topicSelectors.getTopicById(context.topicId)(s)?.metadata?.agentHandoffs
+        : undefined,
+    );
     const rows = useMemo(
-      () => (itemContent ? undefined : buildChatRows(displayMessages)),
-      [displayMessages, itemContent],
+      () => (itemContent ? undefined : buildChatRows(displayMessages, agentHandoffs)),
+      [displayMessages, itemContent, agentHandoffs],
     );
     const rowIds = useMemo(
       () => rows?.map((row) => row.id) ?? displayMessageIds,
@@ -216,6 +224,9 @@ const ChatList = memo<ChatListProps>(
       (index: number, id: string) => {
         const isLatestItem = rowIds.length === index + 1;
         const row = rowById.get(id);
+        if (row?.marker?.kind === 'agentHandoff') {
+          return <AgentHandoffMarker toAgentId={row.marker.toAgentId} />;
+        }
         const anchoredReceipts = receiptsByAnchor.get(id) ?? [];
         const receiptRender =
           anchoredReceipts.length > 0 ? (
@@ -250,6 +261,10 @@ const ChatList = memo<ChatListProps>(
     // `messagesInit` is the settled-data signal: [] is a valid loaded result.
     // A first-load failure owns the whole surface, while a background failure
     // must preserve either the messages or the welcome state below.
+    if (feedback.showNotFound) {
+      return <TopicNotFoundRedirect topicId={context.topicId ?? undefined} />;
+    }
+
     if (feedback.showFirstLoadError) {
       return (
         <AsyncError
@@ -265,10 +280,10 @@ const ChatList = memo<ChatListProps>(
       // The header is chrome, not async content: dropping it here blanks a
       // server-rendered title the moment the list mounts to fetch.
       return (
-        <Flexbox height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
           {headerSlot && <WideScreenContainer>{headerSlot}</WideScreenContainer>}
           <SkeletonList />
-        </Flexbox>
+        </div>
       );
     }
 
@@ -300,7 +315,7 @@ const ChatList = memo<ChatListProps>(
       );
 
     return (
-      <Flexbox style={{ height: '100%', minHeight: 0 }}>
+      <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
         {messageAuthorAgentIds.map((agentId) => (
           <MessageAuthorConfigLoader
             agentId={agentId}
@@ -308,9 +323,9 @@ const ChatList = memo<ChatListProps>(
             key={agentId}
           />
         ))}
-        <Flexbox flex={1} style={{ minHeight: 0 }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
           {content}
-        </Flexbox>
+        </div>
         {feedback.showBackgroundError && (
           <RefreshError
             error={refreshError.error}
@@ -318,7 +333,7 @@ const ChatList = memo<ChatListProps>(
             onRetry={refreshError.retry}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

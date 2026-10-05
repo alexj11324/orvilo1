@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,14 +40,14 @@ const SectionTitle = memo<SectionTitleProps>(({ title, viewAllUrl }) => {
   const navigate = useWorkspaceAwareNavigate();
 
   return (
-    <Flexbox horizontal align={'center'} justify={'space-between'}>
+    <div className="flex flex-row items-center justify-between">
       <h2 className={styles.title}>{title}</h2>
       {viewAllUrl && (
         <button className={styles.viewAll} type={'button'} onClick={() => navigate(viewAllUrl)}>
           {t('home.viewAll')}
         </button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

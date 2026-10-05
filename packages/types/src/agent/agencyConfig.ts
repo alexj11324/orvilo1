@@ -87,84 +87,109 @@ export interface HeterogeneousAgentModelCatalogFailure {
 export type HeterogeneousAgentModelCatalog =
   HeterogeneousAgentModelCatalogFailure | HeterogeneousAgentModelCatalogSuccess;
 
-/**
- * Inner engine driving a builtin Orvilo harness session
- * (`HeterogeneousProviderConfig.type === 'orvilo'`).
- *
- * - `'claude-sdk'`: in-process Claude Agent SDK session over the local `claude` binary.
- * - `'codex-app-server'`: Codex app-server thread session over the local `codex` binary.
- */
-export type OrviloEngineKind = 'claude-sdk' | 'codex-app-server';
-
-export const ORVILO_ENGINE_KINDS = [
-  'claude-sdk',
-  'codex-app-server',
-] as const satisfies readonly OrviloEngineKind[];
+/** Authentication source used by a heterogeneous agent CLI. */
+export type HeterogeneousAuthMode = 'api' | 'subscription';
 
 /**
- * Engine used when `engine` is missing or carries an unrecognized value. The
- * Claude Agent SDK engine is the default Orvilo runtime.
+ * Reference-only user-provider API binding for a heterogeneous agent.
+ * Provider credentials are resolved at launch and are never persisted here.
  */
-export const DEFAULT_ORVILO_ENGINE: OrviloEngineKind = 'claude-sdk';
-
-export interface OrviloEngineCapabilities {
-  builtinTools: boolean;
-  userQuestions: boolean;
+export interface HeterogeneousProviderApiConfig {
+  /** Primary model used by the CLI. */
+  model: string;
+  /** User provider whose runtime credentials are resolved locally. */
+  providerId: string;
+  /** Optional model used for fast/background work. Defaults to the primary model. */
+  smallFastModel?: string | null;
+  /** Omitted by existing records; any omitted source is a user-provider binding. */
+  source?: 'provider';
 }
 
-/** Capabilities implemented by this repository's managed desktop transports. */
-export const ORVILO_ENGINE_CAPABILITIES = {
-  'claude-sdk': { builtinTools: true, userQuestions: true },
-  'codex-app-server': { builtinTools: false, userQuestions: false },
-} as const satisfies Record<OrviloEngineKind, OrviloEngineCapabilities>;
+/** Legacy Claude Code request alias. Current CLIs send `aspectlylabs/${catalogId}`. */
+export const SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS = 'orvilo-default';
 
-export const isOrviloEngineKind = (engine: unknown): engine is OrviloEngineKind =>
-  typeof engine === 'string' && (ORVILO_ENGINE_KINDS as readonly string[]).includes(engine);
+const SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE = 'aspectlylabs/';
+
+export const formatServerDefaultHeterogeneousModel = (model: string): string =>
+  `${SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE}${model}`;
+
+export const isServerDefaultHeterogeneousModel = (
+  requestModel: unknown,
+  operationModel: string,
+): boolean => requestModel === formatServerDefaultHeterogeneousModel(operationModel);
+
+export interface ServerDefaultHeterogeneousRelayInvocation {
+  acceptedAt: string;
+  agentType: string;
+  ingress: 'anthropic-messages' | 'openai-responses';
+  model: string;
+  operationId: string;
+  provider: string;
+}
+
+/** Durable proof written only after the official relay accepts a model invocation. */
+export const isServerDefaultHeterogeneousRelayInvocation = (
+  value: unknown,
+): value is ServerDefaultHeterogeneousRelayInvocation => {
+  if (!value || typeof value !== 'object') return false;
+  const invocation = value as Partial<ServerDefaultHeterogeneousRelayInvocation>;
+  return (
+    typeof invocation.acceptedAt === 'string' &&
+    typeof invocation.agentType === 'string' &&
+    ['anthropic-messages', 'openai-responses'].includes(invocation.ingress ?? '') &&
+    typeof invocation.model === 'string' &&
+    typeof invocation.operationId === 'string' &&
+    typeof invocation.provider === 'string'
+  );
+};
 
 /**
- * Resolve the effective Orvilo engine, defaulting to the Claude Agent SDK
- * engine. Unknown persisted values degrade to the default rather than failing
- * the run — the engine field is a preference, not an identity.
+ * Map a CLI-reported server-default model back to the catalog id.
+ *
+ * Supported CLIs request `aspectlylabs/${catalogId}`. Older Claude Code sessions used
+ * {@link SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS}. Neither is the catalog id
+ * the user picked.
  */
-export const resolveOrviloEngine = (
-  engine: OrviloEngineKind | string | null | undefined,
-): OrviloEngineKind => (isOrviloEngineKind(engine) ? engine : DEFAULT_ORVILO_ENGINE);
+export const unwrapServerDefaultHeterogeneousModel = (
+  reportedModel: string | undefined,
+  configuredModel?: string,
+): string | undefined => {
+  const configured = configuredModel?.trim() || undefined;
 
-export const getOrviloEngineCapabilities = (
-  engine: OrviloEngineKind | string | null | undefined,
-): OrviloEngineCapabilities => ORVILO_ENGINE_CAPABILITIES[resolveOrviloEngine(engine)];
+  if (!reportedModel) return configured;
+
+  if (reportedModel === SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS) {
+    return configured ?? reportedModel;
+  }
+
+  if (reportedModel.startsWith(SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE)) {
+    const unwrapped = reportedModel.slice(SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE.length);
+    return unwrapped || reportedModel;
+  }
+
+  return reportedModel;
+};
+
+/** Deployment-owned API binding whose provider and credentials stay on the server. */
+export interface HeterogeneousServerDefaultApiConfig {
+  /** Model id from the deployment's enabled model catalog. */
+  model: string;
+  source: 'server-default';
+}
+
+export type HeterogeneousApiConfig =
+  HeterogeneousProviderApiConfig | HeterogeneousServerDefaultApiConfig;
 
 /**
- * Local CLI family each Orvilo engine executes through — the managed transport
- * binary on desktop (`claude` / `codex`) and the CLI fallback family on
- * connected devices and cloud sandboxes.
- */
-export const ORVILO_ENGINE_CLI_AGENT_TYPES = {
-  'claude-sdk': 'claude-code',
-  'codex-app-server': 'codex',
-} as const satisfies Record<OrviloEngineKind, LocalHeterogeneousAgentType>;
-
-/**
- * The local CLI family an Orvilo engine resolves to. Every gate that only
- * understands local CLI types (command resolution, adapters, auth/error
- * classification, resume identity) must see THIS type — `orvilo` has no
- * executable or adapter of its own.
- */
-export const resolveOrviloCliAgentType = (
-  engine: OrviloEngineKind | string | null | undefined,
-): (typeof ORVILO_ENGINE_CLI_AGENT_TYPES)[OrviloEngineKind] =>
-  ORVILO_ENGINE_CLI_AGENT_TYPES[resolveOrviloEngine(engine)];
-
-/**
- * Resolve the local CLI family that actually executes a heterogeneous
- * provider: for the builtin `'orvilo'` harness it is the selected engine's
- * family; for every other declared type it is the type unchanged (remote
- * platform types pass through — callers gate them out separately).
+ * The agent family that executes a heterogeneous provider — the declared
+ * `type`. The builtin `'orvilo'` agent IS its own runtime (the embedded
+ * Prime harness); it has no selectable engine and no CLI executable, so it
+ * returns `'orvilo'`. External CLI types return themselves; remote platform
+ * types pass through — callers gate them out separately.
  */
 export const resolveHeteroCliAgentType = (
-  provider: { engine?: OrviloEngineKind | string | null; type: string } | null | undefined,
-): string | undefined =>
-  provider?.type === 'orvilo' ? resolveOrviloCliAgentType(provider.engine) : provider?.type;
+  provider: { type: string } | null | undefined,
+): string | undefined => provider?.type;
 
 /**
  * Resolve the agent-level system context handed to a heterogeneous run:
@@ -200,19 +225,22 @@ export const resolveHeteroAgentSystemContext = (
  *   `command`, `args`, `env`, `systemContext`.
  *
  * - **Platform task** (`openclaw` | `hermes`): runs on this desktop when
- *   `executionTarget` is `local`, or on a machine connected via `lh connect`
+ *   `executionTarget` is `local`, or on a machine connected via `orvilo connect`
  *   when it is `device`. `platformAgentId` selects the named platform agent.
  *
- * - **Builtin engine** (`orvilo`): a managed session driven by the local
- *   engine selected by `engine`; `command` overrides the engine binary path.
+ * - **Builtin** (`orvilo`): the Prime harness, fixed — resolves a device
+ *   like every agent type (docs/development/device-execution-contract.md)
+ *   and runs Prime's own NDJSON protocol there, not a CLI binary, so
+ *   `command`/`args`/`env` do not apply.
  */
 export interface HeterogeneousProviderConfig {
+  /** Credential-free API binding used when `authMode` is `api`. */
+  apiConfig?: HeterogeneousApiConfig;
   /** Additional CLI arguments for the agent command (local CLI only). */
   args?: string[];
-  /**
-   * Command to spawn the agent (e.g. 'claude') (local CLI only). For the
-   * builtin Orvilo engine this overrides the binary resolved from `engine`.
-   */
+  /** Defaults to `subscription` for backwards compatibility. */
+  authMode?: HeterogeneousAuthMode;
+  /** Command to spawn the agent (e.g. 'claude') (local CLI only). */
   command?: string;
   /**
    * Reasoning effort, surfaced through the chat-input model selector and
@@ -223,18 +251,26 @@ export interface HeterogeneousProviderConfig {
    */
   effort?: HeterogeneousReasoningEffort;
   /**
-   * Inner engine for the builtin Orvilo harness (`type === 'orvilo'` only).
-   * Defaults to `'claude-sdk'`; when the preferred engine's binary is not
-   * installed on the execution device, the runtime may fall back to another
-   * detected engine.
+   * Retired field: rows persisted before the Prime cutover may still carry
+   * an `engine` (`'claude-sdk'`/`'codex-app-server'`) value. It is stripped
+   * by `normalizeHeterogeneousProviderConfig` and ignored by every read —
+   * the builtin agent is bound to Prime, fixed.
    */
-  engine?: OrviloEngineKind;
+  engine?: never;
   /** Custom environment variables (local CLI only). */
   env?: Record<string, string>;
   /**
-   * Amp agent mode, surfaced through the chat-input selector and translated
-   * into `--mode <mode>` at spawn time. Omitted or `'default'` values leave
-   * Amp's own account and environment defaults in control.
+   * Opt-in method packs installed into the spawned workspace. `aegis: true`
+   * sets `ORVILO_AEGIS_PACK=1` on the spawned `orvilo hetero exec`, which writes
+   * the vendored Aegis skills into the run workspace and opts the agent into
+   * the `.aegis/` evidence contract — never default-on; local CLI types only.
+   */
+  methodPacks?: { aegis?: boolean };
+  /**
+   * Amp agent mode, surfaced through the chat-input model selector and
+   * translated into the provider-specific CLI flags/config at spawn time.
+   * Omitted or `'default'` values leave Amp's own account and environment
+   * defaults in control.
    */
   mode?: HeterogeneousAgentMode;
   /**
@@ -244,6 +280,8 @@ export interface HeterogeneousProviderConfig {
    * so the CLI can keep its own settings, env vars, and account defaults.
    */
   model?: string;
+  /** Exact ACP permission selection advertised by the executing harness. */
+  permission?: { configId: string; value: string };
   /**
    * Platform-side agent identifier used by remote device runtimes.
    * - openclaw: selects the named agent (defaults to `'main'`)
@@ -272,9 +310,9 @@ export interface HeterogeneousProviderConfig {
 export interface HeterogeneousTopicModel {
   model: string;
   /**
-   * Provider identity used by the topic pin. For the builtin Orvilo harness,
-   * this is the resolved CLI family (`claude-code` or `codex`) rather than the
-   * declared `orvilo` wrapper type so the pin remains engine-scoped.
+   * Provider identity used by the topic pin — the declared provider type.
+   * For the builtin Orvilo agent this is `'orvilo'` itself: Prime is its
+   * runtime, so the pin is provider-scoped.
    */
   provider: string;
 }
@@ -290,38 +328,43 @@ export interface HeterogeneousTopicPin extends Partial<HeterogeneousTopicModel> 
   effort?: HeterogeneousReasoningEffort;
 }
 
-/** Resolve the topic-level model snapshot for a heterogeneous provider. */
+/**
+ * Resolve the topic-level model snapshot for a heterogeneous provider.
+ *
+ * Server-default API models intentionally remain Agent-scoped: unlike a user-provider
+ * binding, their deployment-owned provider identity cannot be represented by the topic's
+ * model/provider pair. Their topic execution therefore ignores any stale pin from another
+ * auth mode and follows the current Agent config.
+ */
 export const resolveHeterogeneousProviderTopicModel = (
   config: HeterogeneousProviderConfig,
 ): HeterogeneousTopicModel | undefined => {
-  // Selector capabilities are keyed by CLI family. Persist that family as the
-  // Orvilo topic identity so a Claude pin cannot be replayed by Codex later.
-  const family = resolveHeteroCliAgentType(config);
-  const model = getHeteroSelectorCapability(family)?.model?.resolve(config);
-  return model ? { model, provider: family ?? config.type } : undefined;
+  if (config.authMode === 'api') {
+    if (!config.apiConfig || config.apiConfig.source === 'server-default') return undefined;
+    return { model: config.apiConfig.model, provider: config.apiConfig.providerId };
+  }
+
+  // The builtin Orvilo agent has no CLI selector catalog — its model is the
+  // Prime model route held on the config itself.
+  if (config.type === 'orvilo') {
+    const model = config.model?.trim();
+    return model ? { model, provider: 'orvilo' } : undefined;
+  }
+
+  const model = getHeteroSelectorCapability(config.type)?.model?.resolve(config);
+  return model ? { model, provider: config.type } : undefined;
 };
 
 /**
  * Check whether a topic model pin belongs to the provider that will execute it.
- *
- * Before Orvilo engines were selectable, its topics were persisted with the
- * wrapper type (`provider: 'orvilo'`). Those pins are compatible with the old
- * Claude default, but their origin cannot be recovered once an Agent is using
- * Codex. Keep the legacy Claude behavior while refusing to carry an unknown
- * model across the engine boundary.
+ * A pin carries its provider type verbatim — a pin minted under another
+ * provider never replays across the boundary. The builtin Orvilo pin is
+ * `provider: 'orvilo'`, matching the declared type directly.
  */
 const isCompatibleHeterogeneousTopicModelPin = (
   config: HeterogeneousProviderConfig,
   topicModel: HeterogeneousTopicPin,
-): boolean => {
-  const family = resolveHeteroCliAgentType(config);
-
-  if (config.type === 'orvilo' && topicModel.provider === config.type) {
-    return family === resolveOrviloCliAgentType(DEFAULT_ORVILO_ENGINE);
-  }
-
-  return topicModel.provider === config.type || topicModel.provider === family;
-};
+): boolean => topicModel.provider === config.type;
 
 const applyTopicModelPin = (
   config: HeterogeneousProviderConfig,
@@ -329,12 +372,29 @@ const applyTopicModelPin = (
 ): HeterogeneousProviderConfig => {
   if (!topicModel?.model) return config;
 
+  if (config.authMode === 'api') {
+    const apiConfig = config.apiConfig;
+    // Server-default is Agent-scoped. In particular, do not turn it back into a
+    // user-provider binding when this topic retains a pin from an earlier auth mode.
+    if (apiConfig?.source === 'server-default') return config;
+    if (!topicModel.provider || topicModel.provider === config.type) return config;
+    return {
+      ...config,
+      apiConfig: {
+        model: topicModel.model,
+        providerId: topicModel.provider,
+        ...(apiConfig?.providerId === topicModel.provider
+          ? { smallFastModel: apiConfig.smallFastModel }
+          : {}),
+      },
+    };
+  }
+
   if (!isCompatibleHeterogeneousTopicModelPin(config, topicModel)) return config;
 
-  const family = resolveHeteroCliAgentType(config);
   return {
     ...config,
-    ...applyHeteroSelection({ ...config, type: family }, { model: topicModel.model }),
+    ...applyHeteroSelection(config, { model: topicModel.model }),
   };
 };
 
@@ -350,7 +410,11 @@ export const applyTopicModelToHeterogeneousProvider = (
   config: HeterogeneousProviderConfig,
   topicModel: HeterogeneousTopicPin | undefined,
 ): HeterogeneousProviderConfig => {
-  if (topicModel?.model && !isCompatibleHeterogeneousTopicModelPin(config, topicModel)) {
+  if (
+    config.authMode !== 'api' &&
+    topicModel?.model &&
+    !isCompatibleHeterogeneousTopicModelPin(config, topicModel)
+  ) {
     return config;
   }
 
@@ -359,8 +423,11 @@ export const applyTopicModelToHeterogeneousProvider = (
   if (effort === undefined) return withModel;
   const capability = getHeteroSelectorCapability(resolveHeteroCliAgentType(withModel));
   if (!capability?.effort) return withModel;
-  const model = capability.model?.resolve(withModel);
-  /** A rejected topic model pin can leave its old effort behind. */
+  const model =
+    withModel.authMode === 'api'
+      ? withModel.apiConfig?.model
+      : capability.model?.resolve(withModel);
+  /** Auth-mode changes can reject the topic model while leaving its old effort behind. */
   if (effort !== 'default' && !capability.effort.levels(model ?? 'default').includes(effort)) {
     effort = 'default';
   }
@@ -384,9 +451,15 @@ const LEGACY_COMMAND_INFERENCE_TYPES = new Set<LocalHeterogeneousAgentType>([
   'codex',
 ]);
 
-interface LegacyHeterogeneousProviderConfig extends HeterogeneousProviderConfig {
+type LegacyHeterogeneousProviderConfig = Omit<HeterogeneousProviderConfig, 'engine'> & {
   adapterType?: unknown;
-}
+  /**
+   * Retired Orvilo engine key (`'claude-sdk'`/`'codex-app-server'`). Rows
+   * written before the Prime cutover may still carry it; normalization strips
+   * it here so no reader observes a dead preference.
+   */
+  engine?: unknown;
+};
 
 const resolveKnownHeterogeneousAgentType = (value: unknown): HeterogeneousAgentType | undefined => {
   if (typeof value !== 'string' || !value) return;
@@ -409,7 +482,9 @@ export const normalizeHeterogeneousProviderConfig = (
 ): HeterogeneousProviderConfig => {
   const legacyConfig = config as LegacyHeterogeneousProviderConfig;
   const explicitType = resolveKnownHeterogeneousAgentType(legacyConfig.type);
-  if (explicitType && legacyConfig.adapterType === undefined) return config;
+  if (explicitType && legacyConfig.adapterType === undefined && legacyConfig.engine === undefined) {
+    return config;
+  }
 
   const adapterType = explicitType
     ? undefined
@@ -425,8 +500,11 @@ export const normalizeHeterogeneousProviderConfig = (
   const type = explicitType ?? adapterType ?? inferredType ?? 'claude-code';
   const normalizedConfig = { ...legacyConfig };
   delete normalizedConfig.adapterType;
+  delete normalizedConfig.engine;
+  const normalized: Omit<LegacyHeterogeneousProviderConfig, 'adapterType' | 'engine'> =
+    normalizedConfig;
 
-  return { ...normalizedConfig, type };
+  return { ...normalized, type };
 };
 
 const normalizeAgencyConfigHeterogeneousProvider = (
@@ -440,6 +518,45 @@ const normalizeAgencyConfigHeterogeneousProvider = (
     ? base
     : { ...base, heterogeneousProvider };
 };
+
+/**
+ * Provider-config keys that rows persisted before the Prime cutover may still
+ * carry but that new writes must never set again. `normalizeHeterogeneousProviderConfig`
+ * deletes them at read time; the write path refuses them outright so a client
+ * cannot keep the retired preference alive by re-saving a stale row.
+ */
+const RETIRED_HETEROGENEOUS_PROVIDER_WRITE_FIELDS = ['adapterType', 'engine'] as const;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+/**
+ * Retired fields present on an `agencyConfig`-shaped value, as dotted paths
+ * (`heterogeneousProvider.engine`). Used by request-schema superRefines to
+ * refuse writes carrying dead fields — the stored-row compat path lives in
+ * `normalizeHeterogeneousProviderConfig`, which strips them on read.
+ */
+export const findRetiredAgencyConfigFields = (value: unknown): string[] => {
+  if (!isRecord(value)) return [];
+  const provider = value.heterogeneousProvider;
+  if (!isRecord(provider)) return [];
+  return RETIRED_HETEROGENEOUS_PROVIDER_WRITE_FIELDS.filter(
+    (field) => provider[field] !== undefined,
+  ).map((field) => `heterogeneousProvider.${field}`);
+};
+
+/**
+ * Strip retired provider fields before persisting a caller-supplied
+ * `agencyConfig`. The request schema refuses them for client writes, but
+ * internal callers (server-side copies, transfers, migrations) reach the
+ * model without schema validation — same smallest-correct-normalization
+ * decision as the read path: the retired value is meaningless, so it is
+ * dropped rather than carried forward.
+ */
+export const normalizeAgencyConfigForWrite = <T>(agencyConfig: T): T =>
+  normalizeAgencyConfigHeterogeneousProvider(
+    agencyConfig as OrviloAgentAgencyConfig | null | undefined,
+  ) as T;
 
 interface ClaudeCodeSelectionSource {
   args?: string[];
@@ -564,15 +681,6 @@ export const buildHeteroSpawnArgs = (
   provider: HeterogeneousProviderConfig | undefined | null,
 ): string[] | undefined => {
   if (!provider) return undefined;
-  // The builtin Orvilo harness has no argv of its own — the selected engine's
-  // CLI family owns model/effort/speed translation (`--model`/`--effort` for
-  // claude-sdk, codex `-c` config for codex-app-server).
-  if (provider.type === 'orvilo') {
-    return buildHeteroSpawnArgs({
-      ...provider,
-      type: resolveOrviloCliAgentType(provider.engine),
-    });
-  }
   if (
     provider.type !== 'amp' &&
     provider.type !== 'claude-code' &&
@@ -695,13 +803,13 @@ export const buildHeteroSpawnArgs = (
 };
 
 /**
- * Resolve args for the `lh hetero exec` wrapper.
+ * Resolve args for the `orvilo hetero exec` wrapper.
  *
  * Unlike `buildHeteroSpawnArgs`, these args are consumed by the Orvilo CLI
  * wrapper first, not by the native agent binary. Native provider args are
  * encoded with `--agent-arg=<arg>` so wrapper flags such as `-c, --command`
  * never collide with provider flags. Keep selector overrides in the wrapper's
- * structured `--model` / `--effort` form; `lh hetero exec` translates them
+ * structured `--model` / `--effort` form; `orvilo hetero exec` translates them
  * into native provider arguments immediately before `spawnAgent`. Amp mode is
  * encoded as a native argument because older device CLIs predate the wrapper's
  * structured `--mode` option but already support `--agent-arg`.
@@ -710,18 +818,6 @@ export const buildHeteroExecArgs = (
   provider: HeterogeneousProviderConfig | undefined | null,
 ): string[] | undefined => {
   if (!provider) return undefined;
-  // Builtin Orvilo harness: the device/sandbox-side `lh hetero exec` still
-  // needs the resolved engine to pick the engine's CLI family — it travels as
-  // the wrapper-level `--engine` option; model/effort/speed use the family's
-  // structured encodings.
-  if (provider.type === 'orvilo') {
-    const engine = resolveOrviloEngine(provider.engine);
-    const execArgs = buildHeteroExecArgs({
-      ...provider,
-      type: resolveOrviloCliAgentType(engine),
-    });
-    return ['--engine', engine, ...(execArgs ?? [])];
-  }
   if (
     provider.type !== 'amp' &&
     provider.type !== 'claude-code' &&
@@ -743,6 +839,14 @@ export const buildHeteroExecArgs = (
   const baseArgs = provider.args ?? [];
   const wrapperArgs = baseArgs.map((arg) => `${HETERO_EXEC_AGENT_ARG_FLAG}=${arg}`);
   const selectorArgs: string[] = [];
+  if (provider.permission) {
+    selectorArgs.push(
+      '--acp-permission-id',
+      provider.permission.configId,
+      '--acp-permission-value',
+      provider.permission.value,
+    );
+  }
 
   if (provider.type === 'amp') {
     const mode = getExplicitAmpAgentMode(provider);
@@ -878,7 +982,7 @@ export const buildHeteroExecArgs = (
  *               remote-device tool. The ONLY mode that touches a device the user
  *               did not explicitly select. Opt-in: never a silent default.
  * - `local`   : run on the user's Electron desktop (desktop only)
- * - `device`  : dispatched to an `lh connect` device identified by `boundDeviceId`
+ * - `device`  : dispatched to an `orvilo connect` device identified by `boundDeviceId`
  * - `sandbox` : server-spawned cloud sandbox
  *
  * Platform task agents (`openclaw` | `hermes`) support `local` and `device` targets.
@@ -967,7 +1071,7 @@ export type AgentTopicSharePolicy = 'member' | 'restricted';
  */
 export interface OrviloAgentAgencyConfig {
   /**
-   * Device ID of the machine connected via `lh connect`.
+   * Device ID of the machine connected via `orvilo connect`.
    * Required when `executionTarget === 'device'`.
    */
   boundDeviceId?: string;

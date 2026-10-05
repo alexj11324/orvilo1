@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
@@ -24,7 +23,7 @@ export const ProjectStatusIcon = memo<{
   const visual = PROJECT_STATUS_VISUALS[resolved];
   if (resolved === 'active')
     return <ProjectActiveStatusIcon color={visual.color} percent={percent ?? 0} size={size} />;
-  return <Icon aria-hidden color={visual.color} icon={visual.icon} size={size} />;
+  return <visual.icon aria-hidden color={visual.color} size={size} />;
 });
 
 ProjectStatusIcon.displayName = 'ProjectStatusIcon';

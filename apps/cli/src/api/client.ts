@@ -87,7 +87,7 @@ export async function getTrpcClient(workspaceId?: string): Promise<TrpcClient> {
 /**
  * Build a Lambda tRPC client from an already-resolved auth context, without
  * re-running credential discovery. Use this when the caller already holds a
- * token (e.g. `lh connect --token <jwt>`) — `getTrpcClient` would re-resolve
+ * token (e.g. `orvilo connect --token <jwt>`) — `getTrpcClient` would re-resolve
  * via env/stored creds and `process.exit(1)` when none exist, which would
  * abort an otherwise-valid explicit-token session.
  */

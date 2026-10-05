@@ -1,25 +1,17 @@
 'use client';
-
-import { Button } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input } from 'antd';
-import { createStaticStyles } from 'antd-style';
+import { Loader2 } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 
 import { type CredsApi } from '../useCredsApi';
-
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 24px;
-  `,
-}));
 
 interface EditMetaFormProps {
   cred: OwnCredSummary;
@@ -60,7 +52,7 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
   };
 
   return (
-    <Form<FormValues>
+    <Form
       form={form}
       layout="vertical"
       initialValues={{
@@ -78,21 +70,23 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
-        <Input.TextArea
+        <Textarea
           disabled={!canManageCredentials}
           placeholder={t('creds.form.descriptionPlaceholder')}
           rows={2}
         />
       </Form.Item>
 
-      <div className={styles.footer}>
-        <Button onClick={onCancel}>{t('creds.form.cancel')}</Button>
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          {t('creds.form.cancel')}
+        </Button>
         <Button
-          disabled={!canManageCredentials}
-          htmlType="submit"
-          loading={updateMutation.isPending}
-          type="primary"
+          disabled={updateMutation.isPending || !canManageCredentials}
+          type="submit"
+          variant="default"
         >
+          {updateMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.save')}
         </Button>
       </div>

@@ -40,6 +40,11 @@ jobs:
           # do_not_skip gives the pair a deterministic owner: the push run
           # always executes, the PR run always mirrors it.
           do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+          # `do_not_skip` only stops THIS run from self-skipping — the action
+          # still cancels the older sibling run (the push-run owner) when the
+          # newer PR run proceeds. `cancel_others: false` keeps sibling runs
+          # alive so the owner verdict always lands.
+          cancel_others: 'false'
 
   # Path triage — one cheap job diffs the PR and reports which test areas
   # actually need to run. Leaf jobs skip when their area is untouched, and the
@@ -214,6 +219,76 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
+  # Product-surface controls gate — fails when product .tsx files use raw HTML
+  # form controls or ad-hoc control-kit imports instead of the repo design
+  # system (ReUI). Exemptions live in scripts/ci/nativeControlsAllowlist.json.
+  # Pure Node script: no dependency install needed.
+  native-controls:
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    name: Native Controls
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Scan product surfaces for native/ad-hoc controls
+        run: |
+          node scripts/ci/checkNativeControls.mjs
+          node --test scripts/ci/checkNativeControls.test.mjs
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
+  # Pure Node import-graph gate: shared product code must not reach native
+  # impls, the web entry closure must not pull exec builtins, server/CLI must
+  # not reach apps/desktop. See scripts/ci/checkHostDeviceBoundaries.mjs.
+  host-device-boundaries:
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    name: Host Device Boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Install typescript for module resolution
+        # The gate resolves real module edges with ts.resolveModuleName; install
+        # the repo's pinned typescript into a scratch prefix (no repo install).
+        run: |
+          TS_VER=$(node -p "require('./package.json').devDependencies.typescript.replace(/^[~^]/, '')")
+          npm install --prefix /tmp/hdb-ts --no-save --no-audit --no-fund --loglevel=error "typescript@${TS_VER}"
+
+      - name: Check host/device import boundaries
+        env:
+          HOST_BOUNDARY_TS_PATH: /tmp/hdb-ts/node_modules/typescript
+        run: |
+          node scripts/ci/checkHostDeviceBoundaries.mjs
+          node --test scripts/ci/checkHostDeviceBoundaries.test.mjs
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   # Package tests - all packages in single job to save runner resources
 
       - name: Fail fast — cancel sibling jobs
@@ -231,7 +306,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test Packages
     env:
-      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-execution @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
+      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-execution @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/device-prime-host @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
 
     steps:
       - name: Checkout
@@ -707,6 +782,8 @@ jobs:
       - changes
       - typecheck
       - slimming-boundary
+      - native-controls
+      - host-device-boundaries
       - test-packages
       - test-app
       - test-windows-shell
@@ -805,6 +882,8 @@ jobs:
           required=(
             typecheck
             slimming-boundary
+            native-controls
+            host-device-boundaries
             test-packages
             test-app
             test-windows-shell
@@ -817,7 +896,7 @@ jobs:
           # A job skipped because its area filter did not match is a pass —
           # any other non-success keeps the gate red.
           declare -A area_of=(
-            [typecheck]=code [slimming-boundary]=code [test-packages]=packages [test-app]=app
+            [typecheck]=code [slimming-boundary]=code [native-controls]=code [host-device-boundaries]=code [test-packages]=packages [test-app]=app
             [merge-app-coverage]=app [test-windows-shell]=windows_shell
             [test-desktop]=desktop [test-server]=server
             [merge-server-coverage]=server [test-database]=database

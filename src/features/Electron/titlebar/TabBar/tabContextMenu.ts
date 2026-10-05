@@ -1,4 +1,6 @@
-import type { GenericItemType } from '@lobehub/ui';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+
+type TabMenuItem = NativeContextMenuItem;
 
 type TabContextMenuLabelKey =
   | 'tab.closeCurrentTab'
@@ -47,7 +49,7 @@ export const buildTabContextMenuItems = ({
   splitViewEnabled,
   t,
   totalCount,
-}: TabContextMenuParams): GenericItemType[] => {
+}: TabContextMenuParams): TabMenuItem[] => {
   const closableLeft = Math.max(0, index - pinnedCount);
   const closableRight = Math.max(0, totalCount - Math.max(index + 1, pinnedCount));
   const closableOthers = totalCount - pinnedCount - (pinned ? 0 : 1);

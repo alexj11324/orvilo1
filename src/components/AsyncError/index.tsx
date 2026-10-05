@@ -1,13 +1,13 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { RotateCwIcon, TriangleAlertIcon } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Link from '@/components/Link';
+import { Button } from '@/components/ui/button';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 
 import { recoverAuthentication } from './recoverAuthentication';
@@ -100,7 +100,7 @@ const AsyncError = memo<AsyncErrorProps>(
     const recoveryAction =
       action ??
       (status === 401 ? (
-        <Button size={'small'} onClick={recoverAuthentication}>
+        <Button size="sm" onClick={recoverAuthentication}>
           {t('asyncState.signIn')}
         </Button>
       ) : status === 403 ? (
@@ -109,13 +109,11 @@ const AsyncError = memo<AsyncErrorProps>(
         <Button
           disabled={retrying}
           loading={retrying}
-          size={'small'}
-          type={variant === 'inline' || variant === 'metric' ? 'text' : undefined}
-          icon={
-            variant === 'block' || variant === 'page' ? <Icon icon={RotateCwIcon} /> : undefined
-          }
+          size="sm"
+          variant={variant === 'inline' || variant === 'metric' ? 'ghost' : 'default'}
           onClick={onRetry}
         >
+          {(variant === 'block' || variant === 'page') && <RotateCwIcon size={16} />}
           {t('error.retry')}
         </Button>
       ) : null);
@@ -123,52 +121,51 @@ const AsyncError = memo<AsyncErrorProps>(
     // ─── metric: a failed marker where a number would render (never a fake $0) ───
     if (variant === 'metric') {
       return (
-        <Flexbox horizontal align={'center'} className={styles.metric} gap={6}>
-          <Icon icon={TriangleAlertIcon} size={14} />
-          <Text color={cssVar.colorTextQuaternary} fontSize={13}>
+        <div className={cn('flex items-center', styles.metric)} style={{ gap: 6 }}>
+          {createElement(TriangleAlertIcon, { size: 14 })}
+          <div className="text-[13px]" style={{ color: cssVar.colorTextQuaternary }}>
             {t('asyncState.metricLabel')}
-          </Text>
+          </div>
           {recoveryAction}
-        </Flexbox>
+        </div>
       );
     }
 
     // ─── inline: single-line row failure with a retry link ───
     if (variant === 'inline') {
       return (
-        <Flexbox horizontal align={'center'} className={styles.inline} gap={8} justify={'center'}>
-          <Icon className={styles.icon} icon={TriangleAlertIcon} size={14} />
-          <Text color={cssVar.colorTextSecondary} fontSize={13}>
+        <div className={cn('inline-flex gap-2 items-center justify-center', styles.inline)}>
+          {createElement(TriangleAlertIcon, { size: 14 })}
+          <div className="text-[13px]" style={{ color: cssVar.colorTextSecondary }}>
             {heading}
-          </Text>
+          </div>
           {recoveryAction}
-        </Flexbox>
+        </div>
       );
     }
 
     // ─── page / block: centered hero, sized by variant ───
     return (
-      <Center className={variant === 'page' ? styles.page : styles.block} gap={12}>
-        <Icon
-          className={styles.icon}
-          icon={TriangleAlertIcon}
-          size={variant === 'page' ? 32 : 24}
-        />
-        <Flexbox align={'center'} gap={4}>
-          <Text fontSize={variant === 'page' ? 16 : 15} weight={600}>
+      <div
+        className={cn(
+          'flex items-center justify-center gap-3',
+          variant === 'page' ? styles.page : styles.block,
+        )}
+      >
+        {createElement(TriangleAlertIcon, { size: 16 })}
+        <div className={'flex flex-col gap-1 items-center'}>
+          <div className="font-semibold" style={{ fontSize: variant === 'page' ? 16 : 15 }}>
             {heading}
-          </Text>
-          <Text
-            align={'center'}
-            color={cssVar.colorTextTertiary}
-            fontSize={13}
-            style={{ maxWidth: 360 }}
+          </div>
+          <div
+            className="text-center text-[13px]"
+            style={{ color: cssVar.colorTextTertiary, maxWidth: 360 }}
           >
             {reason}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
         {recoveryAction}
-      </Center>
+      </div>
     );
   },
 );

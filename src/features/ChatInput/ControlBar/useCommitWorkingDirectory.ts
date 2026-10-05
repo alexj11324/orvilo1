@@ -1,17 +1,22 @@
-import { confirmModal } from '@lobehub/ui/base-ui';
 import type {
   OrviloAgentConfig,
   WorkingDirConfig,
   WorkingDirConfigValue,
   WorkingDirEntry,
 } from '@orvilo/types';
-import { getWorkingDirEffectivePath, getWorkingDirSourcePath } from '@orvilo/types';
+import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
+import { confirmModal } from '@/components/Modal';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
-import { getHeteroSessionIdForWorkingDirectory } from '@/helpers/heteroSessionByWorkingDirectory';
+import {
+  getHeteroSessionBindingKeyForWorkingDirectory,
+  getHeteroSessionIdForWorkingDirectory,
+  setHeteroSessionBindingKeyForWorkingDirectory,
+  setHeteroSessionIdForWorkingDirectory,
+} from '@/helpers/heteroSessionByWorkingDirectory';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
@@ -88,27 +93,40 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
   // device override (spreading the merged config would leak the override's
   // executionTarget/boundDeviceId into the workspace-shared row).
   const agencyConfig = useAgentStore(agentByIdSelectors.getAgencyConfigById(agentId));
+  const globalActiveTopicId = useChatStore((s) => s.activeTopicId);
+  const activeTopicId = routeTopicId === undefined ? globalActiveTopicId : routeTopicId;
   // The EFFECTIVE config (override merged) — only for resolving
   // which device the cwd write should target, keeping it on the same machine
   // the picker/GitStatus/`useEffectiveWorkingDirectory` operate on.
-  const { agencyConfig: effectiveAgencyConfig, workspaceScoped } = useTopicAgencyConfig(agentId);
-  // Heterogeneous CLI agents (Claude Code, Codex, …) store sessions per-cwd, so
-  // their session cwd anchors to the SOURCE repo — a worktree switch (same repo,
-  // different activeWorktree) must NOT change the session cwd or reset the
-  // session. Non-hetero agents keep running in the effective (worktree) cwd.
-  const isHetero = !!agencyConfig?.heterogeneousProvider;
+  const { agencyConfig: effectiveAgencyConfig, workspaceScoped } = useTopicAgencyConfig(
+    agentId,
+    activeTopicId,
+  );
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const updateAgentRuntimeEnvConfigById = useAgentStore((s) => s.updateAgentRuntimeEnvConfigById);
   const legacyAgentWorkingDirectory = useAgentStore(
     (s) => s.localAgentWorkingDirectoryMap[agentId],
   );
 
-  const globalActiveTopicId = useChatStore((s) => s.activeTopicId);
-  const activeTopicId = routeTopicId === undefined ? globalActiveTopicId : routeTopicId;
   const activeTopic = useChatStore((s) =>
     activeTopicId ? topicSelectors.getTopicById(activeTopicId)(s) : undefined,
   );
   const updateTopicMetadata = useChatStore((s) => s.updateTopicMetadata);
+
+  const isDirectoryLocked = useCallback(() => {
+    const state = useChatStore.getState();
+    const topic = activeTopicId ? topicSelectors.getTopicById(activeTopicId)(state) : undefined;
+    if (topic?.metadata?.runningOperation) return true;
+    return Object.values(state.operations ?? {}).some(
+      (operation) =>
+        (['pending', 'running', 'paused'].includes(operation.status) ||
+          operation.metadata?.isAborting) &&
+        operation.context.agentId === agentId &&
+        (operation.context.topicId ?? null) === (activeTopicId ?? null),
+    );
+  }, [activeTopicId, agentId]);
+  // Includes cancellation bookkeeping: an abort request is not confirmed exit.
+  const isLocked = useChatStore(() => isDirectoryLocked());
 
   const updateDeviceCwd = useDeviceStore((s) => s.updateDeviceCwd);
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
@@ -137,6 +155,7 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
 
   const writeCwd = useCallback(
     async (entry?: WorkingDirEntry, options?: CommitWorkingDirectoryOptions) => {
+      if (isDirectoryLocked()) return;
       // A caller that is *about to* select the local target cannot rely on the
       // resolved config yet: this callback closes over the config as it is now,
       // and selecting first would not re-render in time either. `localTarget`
@@ -150,39 +169,55 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
         ? isWorkspaceAgent && !!currentDeviceId
         : isPersonalDeviceTarget;
       const effectivePath = getWorkingDirEffectivePath(entry);
-      // The session cwd anchors to the source repo for hetero (stable across
-      // worktree switches) and to the effective/worktree path otherwise.
-      const sessionCwd = isHetero ? getWorkingDirSourcePath(entry) : effectivePath;
+      const sessionCwd = effectivePath;
       // Topic override wins once a conversation exists; otherwise persist the
       // agent's per-device choice so a new topic inherits it.
       if (activeTopicId) {
-        const priorSessionCwd = isHetero
-          ? (getWorkingDirSourcePath(activeTopic?.metadata?.workingDirectoryConfig) ??
-            activeTopic?.metadata?.workingDirectory)
-          : activeTopic?.metadata?.workingDirectory;
-        const scopedHeteroSessionId = getHeteroSessionIdForWorkingDirectory(
-          activeTopic?.metadata,
-          sessionCwd,
-        );
-        // Only a change of session cwd (repo for hetero) invalidates the session;
-        // a worktree switch within the same repo keeps it.
+        const metadata = topicSelectors.getTopicById(activeTopicId)(
+          useChatStore.getState(),
+        )?.metadata;
+        const priorSessionCwd = metadata?.workingDirectory;
+        const scopedHeteroSessionId = getHeteroSessionIdForWorkingDirectory(metadata, sessionCwd);
+        // Resume only the session created in the selected effective directory.
         const shouldUpdateHeteroSession =
           priorSessionCwd !== sessionCwd &&
-          (!!activeTopic?.metadata?.heteroSessionId || !!scopedHeteroSessionId);
+          (!!metadata?.heteroSessionId || !!scopedHeteroSessionId);
         await updateTopicMetadata(activeTopicId, {
-          ...(shouldUpdateHeteroSession ? { heteroSessionId: scopedHeteroSessionId } : {}),
+          ...(shouldUpdateHeteroSession
+            ? {
+                heteroSessionId: scopedHeteroSessionId,
+                heteroSessionBindingKey: getHeteroSessionBindingKeyForWorkingDirectory(
+                  metadata,
+                  sessionCwd,
+                ),
+                ...(metadata?.heteroSessionId && priorSessionCwd !== undefined
+                  ? {
+                      heteroSessionIdByWorkingDirectory: setHeteroSessionIdForWorkingDirectory(
+                        metadata,
+                        priorSessionCwd,
+                        metadata.heteroSessionId,
+                      ),
+                      ...(metadata.heteroSessionBindingKey
+                        ? {
+                            heteroSessionBindingKeyByWorkingDirectory:
+                              setHeteroSessionBindingKeyForWorkingDirectory(
+                                metadata,
+                                priorSessionCwd,
+                                metadata.heteroSessionBindingKey,
+                              ),
+                          }
+                        : {}),
+                    }
+                  : {}),
+              }
+            : {}),
           workingDirectory: sessionCwd,
           workingDirectoryConfig: entry ? toAgentWorkingDirConfig(entry) : undefined,
         });
       } else {
         if (writeDeviceId && writePersonalSlot) {
           // Per-user slot (see `isPersonalDeviceTarget`) — never the shared row.
-          // The legacy slot stores a plain path, so persist the SESSION cwd
-          // (source repo for hetero — anchoring a CLI session to a worktree
-          // path would break resume; effective path otherwise). The worktree
-          // pick itself is carried by topic metadata once a conversation
-          // starts; full-fidelity pre-topic persistence needs a per-user
-          // server-side slot (deferred).
+          // The legacy personal slot stores the effective checkout path.
           await updateAgentRuntimeEnvConfigById(agentId, {
             workingDirectory: sessionCwd || undefined,
           });
@@ -218,9 +253,8 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
     [
       agentId,
       agencyConfig,
-      activeTopic,
       activeTopicId,
-      isHetero,
+      isDirectoryLocked,
       isPersonalDeviceTarget,
       targetDeviceId,
       legacyAgentWorkingDirectory,
@@ -234,11 +268,32 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
   // Clear whichever precedence level currently supplies the cwd, so the picker
   // falls back to the next level (agent default → device default → "not set").
   const clearCwd = useCallback(async () => {
+    if (isDirectoryLocked()) return;
     // A topic override (when present) is the effective source — drop it first so
     // we fall back to the agent default rather than nuking everything.
     if (activeTopicId && activeTopic?.metadata?.workingDirectory) {
       await updateTopicMetadata(activeTopicId, {
-        ...(activeTopic.metadata.heteroSessionId ? { heteroSessionId: undefined } : {}),
+        ...(activeTopic.metadata.heteroSessionId
+          ? {
+              heteroSessionId: undefined,
+              heteroSessionBindingKey: undefined,
+              heteroSessionIdByWorkingDirectory: setHeteroSessionIdForWorkingDirectory(
+                activeTopic.metadata,
+                activeTopic.metadata.workingDirectory,
+                activeTopic.metadata.heteroSessionId,
+              ),
+              ...(activeTopic.metadata.heteroSessionBindingKey
+                ? {
+                    heteroSessionBindingKeyByWorkingDirectory:
+                      setHeteroSessionBindingKeyForWorkingDirectory(
+                        activeTopic.metadata,
+                        activeTopic.metadata.workingDirectory,
+                        activeTopic.metadata.heteroSessionBindingKey,
+                      ),
+                  }
+                : {}),
+            }
+          : {}),
         workingDirectory: undefined,
         workingDirectoryConfig: undefined,
       });
@@ -270,6 +325,7 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
     agencyConfig,
     activeTopic,
     activeTopicId,
+    isDirectoryLocked,
     targetDeviceId,
     legacyAgentWorkingDirectory,
     updateAgentConfigById,
@@ -280,22 +336,18 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
   /** Pick a directory (with the CC-session-reset guard). */
   const commit = useCallback(
     async (entry: WorkingDirEntry, options?: CommitWorkingDirectoryOptions) => {
+      if (isDirectoryLocked()) return;
       const normalizedEntry = normalizeWorkingDirEntry(entry);
       const effectivePath = getWorkingDirEffectivePath(normalizedEntry);
       if (!normalizedEntry || !effectivePath) return;
 
       const run = () => writeCwd(normalizedEntry, options);
 
-      // Warn about losing the CLI session only when the SESSION cwd changes.
-      // For hetero that's the source repo — a worktree switch within the same
-      // repo keeps the session, so it must not trigger the reset warning.
+      // A worktree move changes the native session's cwd just like a repo move.
       const priorSessionId = activeTopic?.metadata?.heteroSessionId;
-      const sessionCwd = isHetero ? getWorkingDirSourcePath(normalizedEntry) : effectivePath;
-      const priorSessionCwd = isHetero
-        ? (getWorkingDirSourcePath(activeTopic?.metadata?.workingDirectoryConfig) ??
-          activeTopic?.metadata?.workingDirectory)
-        : activeTopic?.metadata?.workingDirectory;
-      if (priorSessionId && priorSessionCwd && priorSessionCwd !== sessionCwd) {
+      const sessionCwd = effectivePath;
+      const priorSessionCwd = activeTopic?.metadata?.workingDirectory;
+      if (priorSessionId && priorSessionCwd !== sessionCwd) {
         confirmModal({
           cancelText: t('heteroAgent.switchCwd.cancel', { ns: 'chat' }),
           content: t('heteroAgent.switchCwd.content', { ns: 'chat' }),
@@ -307,7 +359,7 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
       }
       await run();
     },
-    [activeTopic, isHetero, t, writeCwd],
+    [activeTopic, isDirectoryLocked, t, writeCwd],
   );
 
   /**
@@ -350,11 +402,11 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
 
   /** Clear the current selection (falls back to the next precedence level). */
   const clear = useCallback(async () => {
+    if (isDirectoryLocked()) return;
     const run = () => clearCwd();
 
     const priorSessionId = activeTopic?.metadata?.heteroSessionId;
-    const priorCwd = activeTopic?.metadata?.workingDirectory;
-    if (priorSessionId && priorCwd) {
+    if (priorSessionId) {
       confirmModal({
         cancelText: t('heteroAgent.switchCwd.cancel', { ns: 'chat' }),
         content: t('heteroAgent.switchCwd.content', { ns: 'chat' }),
@@ -365,7 +417,7 @@ export const useCommitWorkingDirectory = (agentId: string, routeTopicId?: string
       return;
     }
     await run();
-  }, [activeTopic, t, clearCwd]);
+  }, [activeTopic, isDirectoryLocked, t, clearCwd]);
 
-  return { clear, commit, commitAgentDefault };
+  return { clear, commit, commitAgentDefault, isLocked };
 };

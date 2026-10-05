@@ -18,8 +18,9 @@ import { useSingleton } from '@/hooks/useSingleton';
  */
 export interface InboxFeedScope {
   filter?: string;
-  kind: string;
-  snoozed?: boolean;
+  mentioned?: boolean;
+  types?: string;
+  unreadOnly?: boolean;
   userId?: string;
   workspaceId: string | null;
 }
@@ -29,9 +30,10 @@ export const inboxFeedScopeKey = (scope: InboxFeedScope): string =>
   JSON.stringify([
     scope.userId ?? 'anonymous',
     scope.workspaceId ?? 'personal',
-    scope.kind,
+    scope.mentioned ?? false,
     scope.filter ?? 'all',
-    scope.snoozed ?? false,
+    scope.unreadOnly ?? false,
+    scope.types ?? '',
   ]);
 
 export interface InboxFeedTail {

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -16,11 +15,11 @@ const ReadKnowledge = memo<BuiltinRenderProps<ReadKnowledgeArgs, ReadKnowledgeSt
     }
 
     return (
-      <Flexbox horizontal gap={12} style={{ flexWrap: 'wrap' }}>
+      <div className="flex flex-row gap-3" style={{ flexWrap: 'wrap' }}>
         {files.map((file) => (
           <FileCard file={file} key={file.fileId} />
         ))}
-      </Flexbox>
+      </div>
     );
   },
 );

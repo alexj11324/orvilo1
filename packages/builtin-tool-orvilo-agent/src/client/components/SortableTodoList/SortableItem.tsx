@@ -1,7 +1,8 @@
 'use client';
 
-import { SortableList } from '@lobehub/ui';
 import { memo } from 'react';
+
+import { SortableItem as ReuiSortableItem } from '@/components/reui/sortable';
 
 import TodoItemRow from './TodoItemRow';
 
@@ -12,9 +13,9 @@ interface SortableItemProps {
 
 const SortableItem = memo<SortableItemProps>(({ id, placeholder }) => {
   return (
-    <SortableList.Item id={id} style={{ padding: 0 }}>
+    <ReuiSortableItem style={{ padding: 0 }} value={id}>
       <TodoItemRow id={id} placeholder={placeholder} />
-    </SortableList.Item>
+    </ReuiSortableItem>
   );
 });
 

@@ -3,9 +3,10 @@ import {
   type AgentOperationLaunchStatus,
   type AgentOperationStatus,
   LIVE_AGENT_OPERATION_LAUNCH_STATUSES,
+  TERMINAL_AGENT_OPERATION_STATUSES,
   type VerifyRunStatus,
 } from '@orvilo/types';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 
 import { today } from '@/utils/time';
 
@@ -299,6 +300,23 @@ export class AgentOperationModel {
     return Boolean(row);
   }
 
+  /**
+   * Deep-merge into `metadata.aegis` (not the whole `metadata` object): the
+   * dispatch stamps `aegis.enabled` at `recordStart` and `heteroFinish` adds
+   * `aegis.artifacts`/`aegis.collectedAt` at run end — a shallow top-level
+   * `||` merge would drop whichever half arrived first.
+   */
+  async recordAegisMetadata(operationId: string, patch: Record<string, unknown>): Promise<boolean> {
+    const [row] = await this.db
+      .update(agentOperations)
+      .set({
+        metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || jsonb_build_object('aegis', coalesce(${agentOperations.metadata}->'aegis', '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb)`,
+      })
+      .where(and(eq(agentOperations.id, operationId), this.ownership()))
+      .returning({ id: agentOperations.id });
+    return Boolean(row);
+  }
+
   /** Idempotently settle a running operation without rewriting an existing terminal outcome. */
   async settleRunning(
     operationId: string,
@@ -375,6 +393,26 @@ export class AgentOperationModel {
       .returning({ id: agentOperations.id });
 
     return Boolean(row);
+  }
+
+  /**
+   * Whether a non-terminal child operation still produces for a parked parent
+   * (`callSubAgent` children). A `waiting_for_async_tool` parent with no live
+   * child has no producer left to fulfil its barrier — the wait is orphaned.
+   */
+  async hasLiveChildOperation(parentOperationId: string): Promise<boolean> {
+    const [child] = await this.db
+      .select({ id: agentOperations.id })
+      .from(agentOperations)
+      .where(
+        and(
+          eq(agentOperations.parentOperationId, parentOperationId),
+          notInArray(agentOperations.status, [...TERMINAL_AGENT_OPERATION_STATUSES]),
+          this.ownership(),
+        ),
+      )
+      .limit(1);
+    return Boolean(child);
   }
 
   /**

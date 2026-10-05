@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import {
   AGENT_CHAT_TOPIC_PAGE_URL,
   AGENT_CHAT_TOPIC_URL,
@@ -12,6 +11,7 @@ import { Fragment, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { localFileService } from '@/services/electron/localFileService';
@@ -71,6 +71,7 @@ const Header = memo(() => {
           <ActionIcon
             icon={X}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            title={t('close', { ns: 'common' })}
             onClick={() => {
               if (params.aid && params.topicId && isTopicPageRoute) {
                 navigate(AGENT_CHAT_TOPIC_URL(params.aid, params.topicId));

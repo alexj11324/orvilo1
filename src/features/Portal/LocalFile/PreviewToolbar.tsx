@@ -1,9 +1,9 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Loader2Icon, type LucideIcon } from 'lucide-react';
 import type { MouseEventHandler, ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import PathBreadcrumb from './PathBreadcrumb';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -125,12 +125,19 @@ export const ToolbarActionButton = memo<ToolbarActionButtonProps>(
         type={'button'}
         onClick={onClick}
       >
-        <Icon icon={loading ? Loader2Icon : icon} size={14} spin={loading} />
+        <span className={cx('anticon', loading && 'animate-spin')} role="img">
+          {createElement(loading ? Loader2Icon : icon, {
+            size: 14,
+            width: 14,
+            height: 14,
+            fill: 'transparent',
+          })}
+        </span>
         {label && <span className={styles.actionLabel}>{label}</span>}
       </button>
     );
 
-    return title ? <Tooltip title={title}>{button}</Tooltip> : button;
+    return title ? <SimpleTooltip title={title}>{button}</SimpleTooltip> : button;
   },
 );
 
@@ -146,26 +153,22 @@ interface PreviewToolbarProps {
 }
 
 const PreviewToolbar = memo<PreviewToolbarProps>(({ actions, deviceId, path, rootPath }) => (
-  <Flexbox horizontal align={'center'} className={styles.bar} gap={8} justify={'space-between'}>
-    <Tooltip title={path}>
-      <Flexbox horizontal align={'center'} className={styles.path} flex={1}>
+  <div className={cx('flex flex-row items-center gap-2 justify-between', styles.bar)}>
+    <SimpleTooltip title={path}>
+      <div className={cx('flex flex-row items-center flex-1', styles.path)}>
         <PathBreadcrumb deviceId={deviceId} path={path} rootPath={rootPath} />
-      </Flexbox>
-    </Tooltip>
+      </div>
+    </SimpleTooltip>
     {actions && (
-      <Flexbox
+      <div
         data-toolbar-actions
-        horizontal
-        align={'center'}
-        className={styles.actions}
-        flex={'none'}
-        gap={2}
+        className={cx('flex flex-row items-center flex-none gap-0.5', styles.actions)}
         style={{ marginInlineStart: 'auto' }}
       >
         {actions}
-      </Flexbox>
+      </div>
     )}
-  </Flexbox>
+  </div>
 ));
 
 PreviewToolbar.displayName = 'PreviewToolbar';

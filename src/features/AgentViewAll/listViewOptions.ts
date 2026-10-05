@@ -1,6 +1,17 @@
 export type AgentGroupBy = 'author' | 'label' | 'none';
 export type AgentOrderBy = 'author' | 'title' | 'updatedAt';
 export type AgentOrderDirection = 'asc' | 'desc';
+export type AgentListViewMode = 'card' | 'list';
+
+/**
+ * The row layout is a desktop table — its fixed columns cannot fit a mobile
+ * viewport (the table itself overflows, forcing horizontal scroll). Small
+ * viewports fall back to the card grid, which already stacks to one column.
+ */
+export const resolveAgentViewMode = (
+  viewMode: AgentListViewMode | undefined,
+  isMobileViewport: boolean,
+): AgentListViewMode => (isMobileViewport ? 'card' : (viewMode ?? 'list'));
 
 export interface AgentListViewOptions {
   groupBy: AgentGroupBy;

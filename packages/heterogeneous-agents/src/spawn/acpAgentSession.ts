@@ -5,7 +5,17 @@ import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpStdioClient } from './acpStdioClient';
 import type { AgentStreamPipelineOptions } from './agentStreamPipeline';
 import { AgentStreamPipeline } from './agentStreamPipeline';
-import type { HeterogeneousAgentRuntimeStatus } from './runtimeStatus';
+import {
+  CACHE_KEEPALIVE_PROMPT_TEXT,
+  CACHE_KEEPALIVE_PROMPT_TIMEOUT_MS,
+  CacheKeepaliveController,
+  type CacheKeepaliveDisarmReason,
+} from './cacheKeepalive';
+import type { CacheKeepaliveOverrides, ResolvedCacheKeepalive } from './cachePolicy';
+import type {
+  HeterogeneousAgentCacheKeepaliveStatus,
+  HeterogeneousAgentRuntimeStatus,
+} from './runtimeStatus';
 
 /** The ACP major protocol version this client speaks (https://agentclientprotocol.com). */
 export const ACP_PROTOCOL_VERSION = 1;
@@ -47,6 +57,11 @@ export const selectAcpPermissionOption = (
 /** Options shared by every ACP agent session, independent of the vendor. */
 export interface AcpAgentSessionOptions {
   args: string[];
+  /**
+   * Cache keep-alive overrides for this session (tests / per-spawn tuning),
+   * merged over the env-derived per-engine policy; `clock` drives all timers.
+   */
+  cacheKeepalive?: CacheKeepaliveOverrides;
   clientVersion: string;
   commandPath: string;
   cwd: string;
@@ -97,7 +112,10 @@ export abstract class AcpAgentSession<
   /** The agent-native session id, set as soon as session setup resolves it. */
   protected acpSessionId?: string;
 
+  private cacheKeepalive?: CacheKeepaliveController;
+  private cacheKeepaliveStats?: HeterogeneousAgentCacheKeepaliveStatus;
   private readonly cancelGraceMs: number;
+  private inInertTurnActive = false;
   private readonly transport: HeterogeneousAgentRuntimeStatus['transport'];
   private hostClosed = false;
   private lastStatus?: HeterogeneousAgentRuntimeStatus['state'];
@@ -131,8 +149,24 @@ export abstract class AcpAgentSession<
     return this.client.pid;
   }
 
+  /** True while the keep-alive scheduler holds the child alive post-turn. */
+  get keepaliveArmed(): boolean {
+    return this.cacheKeepalive?.armed === true;
+  }
+
+  /** Keep-alive counters for run metadata; undefined when never armed. */
+  get cacheKeepaliveTelemetry(): HeterogeneousAgentCacheKeepaliveStatus | undefined {
+    if (this.cacheKeepaliveStats) return this.cacheKeepaliveStats;
+    return this.cacheKeepalive ? { pings: this.cacheKeepalive.pings } : undefined;
+  }
+
   protected get closedByHost(): boolean {
     return this.hostClosed;
+  }
+
+  /** True while an inert keep-alive `session/prompt` turn is in flight. */
+  protected get inInertTurn(): boolean {
+    return this.inInertTurnActive;
   }
 
   /** Run one full prompt turn. Resolves silently when the host closed the session mid-run. */
@@ -154,7 +188,13 @@ export abstract class AcpAgentSession<
       if (this.hostClosed) return;
       await this.emitEvents(await this.pipeline.flush());
       if (this.hostClosed) return;
-      this.emitStatus('idle');
+      const keepalive = this.armCacheKeepalive();
+      this.emitStatus(
+        'idle',
+        keepalive?.windowEndsAt === undefined
+          ? undefined
+          : { idleDeadlineAt: keepalive.windowEndsAt },
+      );
     } catch (cause) {
       if (this.hostClosed) return;
       const error = cause instanceof Error ? cause : new Error(String(cause));
@@ -162,8 +202,12 @@ export abstract class AcpAgentSession<
       this.emitStatus('error');
       throw error;
     } finally {
-      this.client.close();
-      this.emitStatus('closed');
+      // An armed keeper owns the child from here on — it disposes the client
+      // itself when the scheduler disarms.
+      if (!this.keepaliveArmed) {
+        this.client.close();
+        this.emitStatus('closed');
+      }
     }
   }
 
@@ -179,6 +223,14 @@ export abstract class AcpAgentSession<
    * survived SIGKILL and the caller should surface the cancel as unconfirmed.
    */
   async interrupt(): Promise<boolean> {
+    if (this.cacheKeepalive) {
+      // No turn is in flight while the keeper holds the child — skip
+      // session/cancel and go straight to the kill escalation.
+      this.cacheKeepalive.dispose('closed');
+      if (await this.waitForExit(this.cancelGraceMs)) return true;
+      this.client.signal('SIGKILL');
+      return this.waitForExit(this.cancelGraceMs);
+    }
     const sessionId = this.acpSessionId;
     if (!sessionId) {
       this.close();
@@ -208,9 +260,85 @@ export abstract class AcpAgentSession<
   close(signal: NodeJS.Signals = 'SIGTERM'): void {
     if (this.hostClosed) return;
     this.hostClosed = true;
+    this.cacheKeepalive?.dispose('closed');
     this.onHostClose?.();
     this.client.close(signal);
     this.emitStatus('closed');
+  }
+
+  /**
+   * Arm per-engine cache keep-alive after a settled turn: the child stays
+   * alive past `run()` resolution and receives inert `session/prompt` turns
+   * on the same ACP session until a disarm condition is hit. Engines with no
+   * provider cache worth warming resolve no config and exit at turn end as
+   * before.
+   */
+  private armCacheKeepalive(): CacheKeepaliveController | undefined {
+    if (this.hostClosed || this.cacheKeepalive) return undefined;
+    const resolved = this.resolveCacheKeepalive?.();
+    if (!resolved?.enabled) return undefined;
+
+    const controller = new CacheKeepaliveController({
+      clock: resolved.clock,
+      maxPings: resolved.maxPings,
+      maxWindowMs: resolved.maxWindowMs,
+      onDisarm: (reason) => this.handleKeepaliveDisarm(controller, reason),
+      pingIntervalMs: resolved.pingIntervalMs,
+      sendPing: () => this.sendKeepalivePing(),
+    });
+    this.cacheKeepalive = controller;
+    controller.arm();
+    return controller;
+  }
+
+  private handleKeepaliveDisarm(
+    controller: CacheKeepaliveController,
+    reason: CacheKeepaliveDisarmReason,
+  ): void {
+    if (this.cacheKeepalive !== controller) return;
+    this.cacheKeepalive = undefined;
+    this.cacheKeepaliveStats = {
+      ...this.cacheKeepaliveStats,
+      disarmReason: reason,
+      pings: controller.pings,
+    };
+    this.hostClosed = true;
+    this.client.close();
+    this.emitStatus('closed', { cacheKeepalive: this.cacheKeepaliveStats });
+  }
+
+  /**
+   * One inert turn through the same `session/prompt` path — refreshes the
+   * provider cache chain of this session's prefix. Subclasses suppress
+   * `session/update` emission and answer reverse requests non-interactively
+   * while `inInertTurn` is set. Resolves false on any failure so the
+   * scheduler disarms instead of burning retries on a dead session.
+   */
+  private async sendKeepalivePing(): Promise<boolean> {
+    const sessionId = this.acpSessionId;
+    if (!sessionId || this.hostClosed) return false;
+    this.inInertTurnActive = true;
+    try {
+      const result = await this.client.request<unknown>(
+        'session/prompt',
+        await this.buildKeepalivePromptParams(sessionId),
+        CACHE_KEEPALIVE_PROMPT_TIMEOUT_MS,
+      );
+      const usage = isRecord(result) ? result.usage : undefined;
+      if (isRecord(usage)) {
+        this.cacheKeepaliveStats = {
+          ...this.cacheKeepaliveStats,
+          lastUsage: usage,
+          pings: this.cacheKeepalive?.pings ?? 0,
+        };
+      }
+      await this.client.drain();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      this.inInertTurnActive = false;
+    }
   }
 
   /** Start the child (idempotent), send `initialize`, and validate the result. */
@@ -246,14 +374,20 @@ export abstract class AcpAgentSession<
   }
 
   protected async emitEvents(events: AgentStreamEvent[]): Promise<void> {
-    if (!this.hostClosed && events.length > 0) await this.options.onEvents(events);
+    if (!this.hostClosed && !this.cacheKeepalive && events.length > 0) {
+      await this.options.onEvents(events);
+    }
   }
 
-  protected emitStatus(state: HeterogeneousAgentRuntimeStatus['state']): void {
+  protected emitStatus(
+    state: HeterogeneousAgentRuntimeStatus['state'],
+    extra?: Pick<HeterogeneousAgentRuntimeStatus, 'cacheKeepalive' | 'idleDeadlineAt'>,
+  ): void {
     if (this.lastStatus === 'closed' || state === this.lastStatus) return;
     this.lastStatus = state;
     this.options.onRuntimeStatus({
       activeTasks: [],
+      ...extra,
       lastEventAt: Date.now(),
       operationId: this.options.operationId,
       sessionId: this.options.sessionId,
@@ -281,6 +415,22 @@ export abstract class AcpAgentSession<
 
   /** `session/prompt` request params. */
   protected abstract buildPromptParams(sessionId: string): Promise<unknown> | unknown;
+
+  /**
+   * `session/prompt` params for an inert keep-alive turn — same session,
+   * same prefix chain. The default is the text-block shape every ACP
+   * adapter shares; subclasses override when their prompt shape differs.
+   */
+  protected buildKeepalivePromptParams(sessionId: string): Promise<unknown> | unknown {
+    return { prompt: [{ text: CACHE_KEEPALIVE_PROMPT_TEXT, type: 'text' }], sessionId };
+  }
+
+  /**
+   * Per-engine cache keep-alive configuration resolved from the policy
+   * table + env + per-session overrides. Sessions that cannot warm a
+   * provider cache leave this undefined and exit at turn end as before.
+   */
+  protected resolveCacheKeepalive?(): ResolvedCacheKeepalive | undefined;
 
   /** Route an agent-initiated message (notification or response) into the pipeline. */
   protected abstract handleAgentMessage(message: AcpRpcMessage): Promise<void> | void;

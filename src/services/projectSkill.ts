@@ -2,6 +2,7 @@ import type { ListProjectSkillsResult } from '@orvilo/electron-client-ipc';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { localFileService } from '@/services/electron/localFileService';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 /**
@@ -20,7 +21,11 @@ class ProjectSkillService {
     deviceId?: string;
     scope: string;
   }): Promise<ListProjectSkillsResult | undefined> {
-    requireLocalExecutionTransport(deviceId, 'listProjectSkills');
+    requireLocalExecutionTransport(
+      deviceId,
+      'listProjectSkills',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.listProjectSkills.query({ deviceId, scope })) ?? undefined)
       : localFileService.listProjectSkills({ scope });

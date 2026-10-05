@@ -1,17 +1,20 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { AccordionRoot, ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { EyeOffIcon, MoreHorizontalIcon, SlidersHorizontalIcon } from 'lucide-react';
 import type { Key, ReactElement } from 'react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import NavItem from '@/features/NavPanel/components/NavItem';
-import { useTaskCreateDrafts } from '@/features/TaskDrafts/taskCreateDrafts';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuAction,
+} from '@/components/ui/sidebar';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
@@ -20,12 +23,10 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
-import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
 import { useUserStore } from '@/store/user';
-import { isModifierClick } from '@/utils/navigation';
 
 import { useInboxUnreadCount } from '../Header/components/useInboxUnreadCount';
 import CreateRow from './CreateRow';
@@ -42,21 +43,15 @@ export enum GroupKey {
   Workspace = 'workspace',
 }
 
-const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, GroupKey.Teams]);
+const SECTION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, GroupKey.Teams]);
 
 /** Core entries can never be hidden — the fixed IA keeps them always mounted.
  * `create` is the standalone quick-create row (Linear's `+`). */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'drafts', 'create']);
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'group', 'create']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
 const HEADER_KEYS = new Set<string>(['home', 'search']);
-
-const accordionComponents: Record<string, (key: string) => ReactElement> = {
-  [GroupKey.Favorites]: (key) => <WorkFavorites itemKey={key} key={key} />,
-  [GroupKey.Teams]: (key) => <TeamsSection itemKey={key} key={key} />,
-  [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
-};
 
 /** Rewrite the group keys of `sidebarExpandedKeys` to exactly the accordions the
  * user left open. Keys outside `accordionKeys` pass through untouched — the
@@ -81,7 +76,6 @@ export const mergeSidebarExpandedKeys = (
 const Body = memo(() => {
   const { t } = useTranslation('common');
   const tab = useActiveTabKey();
-  const navigate = useWorkspaceAwareNavigate();
   const { topNavItems, bottomMenuItems } = useNavLayout();
   const activeWorkspaceId = useActiveWorkspaceId();
   // The section layout syncs per-member via the workspace user preference, so
@@ -108,19 +102,6 @@ const Body = memo(() => {
     { revalidateOnFocus: false },
   );
   const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
-  // Drafts badge = server-side comment drafts + local issue drafts (Linear
-  // counts both kinds on the Drafts nav item).
-  const commentDraftCount =
-    useClientDataSWR(
-      taskDraftKeys.count(activeWorkspaceId),
-      () => taskDraftService.count(activeWorkspaceId),
-      {
-        revalidateOnFocus: true,
-      },
-    ).data?.data ?? 0;
-  const issueDraftCount = useTaskCreateDrafts(activeWorkspaceId).length;
-  const draftCount = commentDraftCount + issueDraftCount;
-
   const hideSection = useCallback(
     (key: string) => {
       updateSystemStatus({ hiddenSidebarSections: [...hiddenSections, key] });
@@ -129,14 +110,14 @@ const Body = memo(() => {
   );
 
   const getContextMenuItems = useCallback(
-    (key: string): MenuProps['items'] => {
+    (key: string): SidebarMenuItems => {
       const items: NativeContextMenuItem[] = [
         // Core destinations are part of the fixed IA — no hide affordance.
         ...(CORE_KEYS.has(key)
           ? []
           : [
               {
-                icon: <Icon icon={EyeOffIcon} />,
+                icon: <EyeOffIcon />,
                 key: 'hideSection' as const,
                 label: t('navPanel.hideSection'),
                 onClick: () => hideSection(key),
@@ -145,14 +126,14 @@ const Body = memo(() => {
               { type: 'divider' as const },
             ]),
         {
-          icon: <Icon icon={SlidersHorizontalIcon} />,
+          icon: <SlidersHorizontalIcon />,
           key: 'customizeSidebar',
           label: t('navPanel.customizeSidebar'),
           onClick: () => openCustomizeSidebarModal(),
           sfSymbol: 'gearshape',
         },
       ];
-      return items as MenuProps['items'];
+      return items as SidebarMenuItems;
     },
     [t, hideSection],
   );
@@ -191,97 +172,65 @@ const Body = memo(() => {
             ? tab === 'agent' || tab === 'agents'
             : tab === key;
       return (
-        <WorkspaceLink
+        <SidebarNavItem
+          active={active}
+          contextMenuItems={getContextMenuItems(key)}
+          icon={navItem.icon}
           key={key}
-          to={navItem.url!}
-          onClick={(e) => {
-            if (isModifierClick(e)) return;
-            e.preventDefault();
-            navigate(navItem.url!);
-          }}
-        >
-          <NavItem
-            active={active}
-            contextMenuItems={getContextMenuItems(key)}
-            icon={navItem.icon}
-            title={navItem.title}
-            actions={
-              <DropdownMenu items={getContextMenuItems(key)}>
-                <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
-              </DropdownMenu>
-            }
-            extra={
-              key === 'inbox' && inboxUnreadCount > 0 ? (
-                <Text fontSize={12} type={'secondary'}>
-                  {inboxUnreadCount}
-                </Text>
-              ) : key === 'reviews' && reviewsPendingCount > 0 ? (
-                <Text fontSize={12} type={'secondary'}>
-                  {reviewsPendingCount}
-                </Text>
-              ) : key === 'drafts' && draftCount > 0 ? (
-                <Text fontSize={12} type={'secondary'}>
-                  {draftCount}
-                </Text>
-              ) : undefined
-            }
-          />
-        </WorkspaceLink>
+          render={<WorkspaceLink to={navItem.url!} />}
+          title={navItem.title}
+          actions={
+            <SidebarDropdownMenu items={getContextMenuItems(key)}>
+              <SidebarMenuAction showOnHover aria-label={t('navPanel.more')}>
+                <MoreHorizontalIcon />
+              </SidebarMenuAction>
+            </SidebarDropdownMenu>
+          }
+          extra={
+            key === 'inbox'
+              ? inboxUnreadCount || undefined
+              : key === 'reviews'
+                ? reviewsPendingCount || undefined
+                : undefined
+          }
+        />
       );
     },
-    [
-      navLinkItems,
-      tab,
-      getContextMenuItems,
-      navigate,
-      inboxUnreadCount,
-      reviewsPendingCount,
-      draftCount,
-    ],
+    [navLinkItems, tab, getContextMenuItems, inboxUnreadCount, reviewsPendingCount, t],
   );
 
-  const handleAccordionExpandedChange = useCallback(
-    (accordionKeys: string[], expandedKeys: Key[]) => {
+  const handleSectionExpandedChange = useCallback(
+    (key: string, open: boolean) => {
       updateSystemStatus({
         sidebarExpandedKeys: mergeSidebarExpandedKeys(
           sidebarExpandedKeys,
-          accordionKeys,
-          expandedKeys,
+          [key],
+          open ? [key] : [],
         ),
       });
     },
     [sidebarExpandedKeys, updateSystemStatus],
   );
 
-  // Render the flat list in `sidebarItems` order: group consecutive accordion
-  // items into an Accordion, interleave non-accordion keys as nav links, and
-  // emit a flex spacer wherever the spacer sentinel appears.
+  // Preserve the user's saved order while rendering Shell 9 groups and menus.
   const content = useMemo(() => {
     const elements: ReactElement[] = [];
-    let accGroup: { element: ReactElement; key: string }[] = [];
-
-    const flushAccordion = () => {
-      if (accGroup.length > 0) {
-        const accordionKeys = accGroup.map((item) => item.key);
-
-        elements.push(
-          <AccordionRoot
-            indicatorPlacement="inline"
-            key={`acc-${elements.length}`}
-            style={{ gap: 8 }}
-            value={sidebarExpandedKeys}
-            onValueChange={(keys) => handleAccordionExpandedChange(accordionKeys, keys as string[])}
-          >
-            {accGroup.map((item) => item.element)}
-          </AccordionRoot>,
-        );
-        accGroup = [];
-      }
+    let rows: ReactElement[] = [];
+    const flushRows = () => {
+      if (!rows.length) return;
+      elements.push(
+        <SidebarGroup key={`nav-${elements.length}`}>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.25">{rows}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>,
+      );
+      rows = [];
     };
 
     for (const key of visibleKeys) {
       if (key === SIDEBAR_SPACER_ID) {
-        flushAccordion();
+        flushRows();
         elements.push(
           <div
             aria-hidden
@@ -291,26 +240,37 @@ const Body = memo(() => {
           />,
         );
       } else if (key === 'create') {
-        flushAccordion();
-        elements.push(<CreateRow key={key} />);
-      } else if (ACCORDION_KEYS.has(key)) {
-        const comp = accordionComponents[key]?.(key);
-        if (comp) accGroup.push({ element: comp, key });
+        rows.push(<CreateRow key={key} />);
+      } else if (SECTION_KEYS.has(key)) {
+        flushRows();
+        const open = sidebarExpandedKeys.includes(key);
+        const onOpenChange = (next: boolean) => handleSectionExpandedChange(key, next);
+        if (key === GroupKey.Workspace)
+          elements.push(
+            <WorkspaceSection itemKey={key} key={key} open={open} onOpenChange={onOpenChange} />,
+          );
+        if (key === GroupKey.Favorites)
+          elements.push(
+            <WorkFavorites itemKey={key} key={key} open={open} onOpenChange={onOpenChange} />,
+          );
+        if (key === GroupKey.Teams)
+          elements.push(
+            <TeamsSection itemKey={key} key={key} open={open} onOpenChange={onOpenChange} />,
+          );
       } else {
-        flushAccordion();
         const link = renderNavLink(key);
-        if (link) elements.push(link);
+        if (link) rows.push(link);
       }
     }
-    flushAccordion();
+    flushRows();
 
     return elements;
-  }, [visibleKeys, renderNavLink, sidebarExpandedKeys, handleAccordionExpandedChange]);
+  }, [visibleKeys, renderNavLink, sidebarExpandedKeys, handleSectionExpandedChange]);
 
   return (
-    <Flexbox flex={1} gap={1} paddingInline={4} style={{ minHeight: '100%' }}>
+    <div className="flex min-h-full flex-col" data-testid="sidebar-body">
       {content}
-    </Flexbox>
+    </div>
   );
 });
 

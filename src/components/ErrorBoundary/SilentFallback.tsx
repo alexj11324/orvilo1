@@ -1,9 +1,8 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { useTheme } from 'antd-style';
 import { TriangleAlert } from 'lucide-react';
-import { type CSSProperties, memo } from 'react';
+import { createElement, type CSSProperties, memo } from 'react';
 
 interface SilentFallbackProps {
   minHeight?: number;
@@ -28,7 +27,7 @@ const SilentFallback = memo<SilentFallbackProps>(({ minHeight = 36, style }) => 
         ...style,
       }}
     >
-      <Icon icon={TriangleAlert} size={'small'} />
+      {createElement(TriangleAlert, { size: 14 })}
       <span>Render Error</span>
     </div>
   );

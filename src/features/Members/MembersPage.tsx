@@ -1,7 +1,5 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, DropdownMenu, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -10,9 +8,17 @@ import { useNavigate } from 'react-router';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import DropdownMenu from '@/components/ItemsMenu';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
+import { Badge } from '@/components/reui/badge';
+import SearchBar from '@/components/SearchBar';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -100,11 +106,11 @@ const normalize = (value: string | null | undefined) => (value ?? '').toLowerCas
 
 // Mirrors the role badge palette on /settings/members so the same role reads
 // the same color on both member surfaces.
-const roleColor: Record<string, string> = {
-  admin: 'purple',
-  member: 'blue',
-  owner: 'gold',
-  viewer: 'default',
+const roleColor: Record<string, 'info-light' | 'primary-light' | 'secondary' | 'warning-light'> = {
+  admin: 'primary-light',
+  member: 'info-light',
+  owner: 'warning-light',
+  viewer: 'secondary',
 };
 
 /**
@@ -241,9 +247,9 @@ const MembersPage = memo(() => {
                 ? row.value.email
                 : null;
           return (
-            <Text fontSize={13} type={'secondary'}>
+            <span className="text-[13px] text-muted-foreground">
               <span className={styles.ellipsis}>{email || '—'}</span>
-            </Text>
+            </span>
           );
         },
         title: t('members.column.email', { ns: 'common' }),
@@ -259,32 +265,42 @@ const MembersPage = memo(() => {
           if (row.kind === 'person') {
             const status = memberStatus(row.value);
             if (status === 'suspended') {
-              return <Tag color="orange">{t('members.statusSuspended', { ns: 'common' })}</Tag>;
+              return (
+                <Badge variant="warning-light">
+                  {t('members.statusSuspended', { ns: 'common' })}
+                </Badge>
+              );
             }
             if (status === 'removed') {
-              return <Tag>{t('members.statusRemoved', { ns: 'common' })}</Tag>;
+              return (
+                <Badge variant="secondary">{t('members.statusRemoved', { ns: 'common' })}</Badge>
+              );
             }
             return (
-              <Tag color={roleColor[row.value.role]}>
+              <Badge variant={roleColor[row.value.role]}>
                 {t(`workspaceSetting.members.role.${row.value.role}`, {
                   defaultValue: row.value.role,
                   ns: 'setting',
                 })}
-              </Tag>
+              </Badge>
             );
           }
           if (row.kind === 'agent') {
             return row.value.status === 'disabled' ? (
-              <Tag color="orange">{t('members.statusDisabled', { ns: 'common' })}</Tag>
+              <Badge variant="warning-light">{t('members.statusDisabled', { ns: 'common' })}</Badge>
             ) : (
-              <Text type={'secondary'}>{t('members.agentLabel', { ns: 'common' })}</Text>
+              <span className="text-muted-foreground">
+                {t('members.agentLabel', { ns: 'common' })}
+              </span>
             );
           }
           if (row.value.status === 'expired') {
-            return <Tag color="orange">{t('members.statusExpired', { ns: 'common' })}</Tag>;
+            return (
+              <Badge variant="warning-light">{t('members.statusExpired', { ns: 'common' })}</Badge>
+            );
           }
           return (
-            <Tag color={roleColor[row.value.role]}>
+            <Badge variant={roleColor[row.value.role]}>
               {t('members.roleInvited', {
                 ns: 'common',
                 role: t(`workspaceSetting.members.role.${row.value.role}`, {
@@ -292,7 +308,7 @@ const MembersPage = memo(() => {
                   ns: 'setting',
                 }),
               })}
-            </Tag>
+            </Badge>
           );
         },
         title: t('members.column.status', { ns: 'common' }),
@@ -312,9 +328,9 @@ const MembersPage = memo(() => {
                 ? row.value.projects?.length
                 : undefined;
           return (
-            <Text fontSize={13} type={'secondary'}>
+            <span className="text-[13px] text-muted-foreground">
               {count === undefined ? '—' : t('members.projectCount', { count, ns: 'common' })}
-            </Text>
+            </span>
           );
         },
         title: t('members.column.projects', { ns: 'common' }),
@@ -323,7 +339,7 @@ const MembersPage = memo(() => {
       {
         key: 'joined',
         render: (row) => (
-          <Text fontSize={13} type={'secondary'}>
+          <span className="text-[13px] text-muted-foreground">
             {formatMemberDate(
               row.kind === 'person'
                 ? row.value.joinedAt
@@ -331,7 +347,7 @@ const MembersPage = memo(() => {
                   ? row.value.createdAt
                   : undefined,
             )}
-          </Text>
+          </span>
         ),
         title: t('members.column.joined', { ns: 'common' }),
         width: 110,
@@ -339,7 +355,7 @@ const MembersPage = memo(() => {
       {
         // No presence source exists; `—` rather than a fake "Online".
         key: 'lastSeen',
-        render: () => <Text type={'secondary'}>—</Text>,
+        render: () => <span className="text-muted-foreground">—</span>,
         title: t('members.column.lastSeen', { ns: 'common' }),
         width: 110,
       },
@@ -353,7 +369,11 @@ const MembersPage = memo(() => {
               <DropdownMenu
                 items={[
                   {
-                    icon: <Icon icon={Settings2} size={14} />,
+                    icon: (
+                      <span className="anticon" role="img">
+                        <Settings2 fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    ),
                     key: 'manage',
                     label: t('members.manageInSettings', { ns: 'common' }),
                     onClick: () => navigate(settingsPath),
@@ -373,14 +393,22 @@ const MembersPage = memo(() => {
               <DropdownMenu
                 items={[
                   {
-                    icon: <Icon icon={RefreshCw} size={14} />,
+                    icon: (
+                      <span className="anticon" role="img">
+                        <RefreshCw fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    ),
                     key: 'resend',
                     label: t('members.resendInvitation', { ns: 'common' }),
                     onClick: () => void resendInvitation(row.value.id),
                   },
                   {
                     danger: true,
-                    icon: <Icon icon={Trash2} size={14} />,
+                    icon: (
+                      <span className="anticon" role="img">
+                        <Trash2 fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    ),
                     key: 'revoke',
                     label: t('members.revokeInvitation', { ns: 'common' }),
                     onClick: () => void revokeInvitation(row.value.id),
@@ -412,33 +440,29 @@ const MembersPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <span className="font-medium" style={{ paddingInlineStart: 4 }}>
             {t('members.title', { ns: 'common' })}
-          </Text>
+          </span>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2">
             {capabilities.canManageMembers ? (
-              <Tooltip title={t('members.manageInSettings', { ns: 'common' })}>
+              <SimpleTooltip title={t('members.manageInSettings', { ns: 'common' })}>
                 <ActionIcon
                   aria-label={t('members.manageInSettings', { ns: 'common' })}
                   icon={Settings2}
                   size={'small'}
                   onClick={() => navigate(settingsPath)}
                 />
-              </Tooltip>
+              </SimpleTooltip>
             ) : null}
             {capabilities.canInvite ? (
-              <Button
-                icon={<Icon icon={UserPlus} size={16} />}
-                size={'small'}
-                type="primary"
-                onClick={() => openInviteTeammateModal()}
-              >
+              <Button size="sm" variant="default" onClick={() => openInviteTeammateModal()}>
+                <UserPlus data-icon="inline-start" />
                 {t('workspaceSetting.members.inviteButton', { ns: 'setting' })}
               </Button>
             ) : null}
-          </Flexbox>
+          </div>
         }
       />
       <WorkSurfaceCollection
@@ -446,22 +470,28 @@ const MembersPage = memo(() => {
           <WorkSurfaceToolbar
             asideLabel={t('members.filter', { ns: 'common' })}
             aside={
-              <Segmented
-                block
-                size={'small'}
-                value={groupFilter}
-                options={[
-                  { label: t('members.filterAll', { ns: 'common' }), value: 'all' },
-                  { label: t('members.groupPeople', { ns: 'common' }), value: 'person' },
-                  { label: t('members.groupAgents', { ns: 'common' }), value: 'agent' },
-                  { label: t('members.groupInvitations', { ns: 'common' }), value: 'invitation' },
-                ]}
-                onChange={(value) => setGroupFilter(value as DirectoryFilter)}
-              />
+              <ToggleGroup
+                className="w-full"
+                size="sm"
+                value={[groupFilter]}
+                onValueChange={(value) => value[0] && setGroupFilter(value[0] as DirectoryFilter)}
+              >
+                <ToggleGroupItem value="all">
+                  {t('members.filterAll', { ns: 'common' })}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="person">
+                  {t('members.groupPeople', { ns: 'common' })}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="agent">
+                  {t('members.groupAgents', { ns: 'common' })}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="invitation">
+                  {t('members.groupInvitations', { ns: 'common' })}
+                </ToggleGroupItem>
+              </ToggleGroup>
             }
           >
             <SearchBar
-              allowClear
               placeholder={t('members.searchPlaceholder', { ns: 'common' })}
               style={{ maxWidth: 280 }}
               value={query}
@@ -471,13 +501,15 @@ const MembersPage = memo(() => {
         }
       >
         {!workspace ? (
-          <Center padding={48}>
-            <Empty description={t('workspaceSetting.members.noWorkspace', { ns: 'setting' })} />
-          </Center>
+          <div className="flex flex-col items-center justify-center p-12">
+            <SimpleEmpty
+              description={t('workspaceSetting.members.noWorkspace', { ns: 'setting' })}
+            />
+          </div>
         ) : loadError ? (
           /* The directory joins three queries — retry revalidates all of them,
              matching every other surface's AsyncError+retry contract. */
-          <Center padding={48}>
+          <div className="flex flex-col items-center justify-center p-12">
             <AsyncError
               error={loadError}
               onRetry={() => {
@@ -486,19 +518,19 @@ const MembersPage = memo(() => {
                 void invitationsQuery.mutate();
               }}
             />
-          </Center>
+          </div>
         ) : loading ? (
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : sections.length === 0 ? (
-          <Center padding={48}>
-            <Empty
+          <div className="flex flex-col items-center justify-center p-12">
+            <SimpleEmpty
               description={
                 needle || groupFilter !== 'all'
                   ? t('members.emptySearch', { ns: 'common' })
                   : t('workspaceSetting.members.empty', { ns: 'setting' })
               }
             />
-          </Center>
+          </div>
         ) : (
           <LiteTable
             className={styles.directoryTable}

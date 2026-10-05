@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   ClipboardListIcon,
   FilesIcon,
@@ -116,9 +115,9 @@ const CategoryMenu = memo(() => {
   );
 
   return (
-    <Flexbox gap={12} paddingInline={4}>
+    <div className="flex flex-col gap-3 px-1">
       {groups.map((group, groupIndex) => (
-        <Flexbox gap={1} key={groupIndex}>
+        <div className="flex flex-col gap-[1px]" key={groupIndex}>
           {group.map((item) => {
             const isActive =
               item.key === 'works'
@@ -139,9 +138,9 @@ const CategoryMenu = memo(() => {
               </Link>
             );
           })}
-        </Flexbox>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

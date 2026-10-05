@@ -105,16 +105,17 @@ describe('desktop router shared definition', () => {
     '%s exposes personal provider configuration without restoring workspace BYOK',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
-      expect(matchRoutes(routes, '/settings/provider')?.at(-1)?.route.handle).toMatchObject({
-        settingsTab: 'provider',
-      });
+      // `/settings/provider` mounts the provider layout; its index child
+      // redirects to the `all` detail view.
       expect(
         (
-          matchRoutes(routes, '/settings/provider/legacy')?.at(-1)?.route.element as ReactElement<{
+          matchRoutes(routes, '/settings/provider')?.at(-1)?.route.element as ReactElement<{
             to: string;
           }>
         ).props.to,
-      ).toBe('/settings/provider');
+      ).toBe('/settings/provider/all');
+      const detail = matchRoutes(routes, '/settings/provider/legacy')?.at(-1)?.route;
+      expect(detail?.path).toBe(':providerId');
     },
   );
 
@@ -556,10 +557,10 @@ describe('desktop router shared definition', () => {
     '%s selects the closest conversation segment feedback for each pending boundary',
     (_, createRuntimeRoutes) => {
       for (const [pathname, expectedFallbacks] of [
-        [
-          '/agent/agent-1/topic-1',
-          [RouteSegmentSkeleton, ConversationLayoutSkeleton, ConversationSegmentSkeleton],
-        ],
+        // `/agent/:aid/:topicId` is a redirect to `/chat/:topicId` — the chat
+        // layout's fallbacks still mount while the redirect resolves, but no
+        // page-level Suspense wraps the redirect element.
+        ['/agent/agent-1/topic-1', [RouteSegmentSkeleton, ConversationLayoutSkeleton]],
         ['/group/group-1/topic-1', [RouteSegmentSkeleton, ConversationLayoutSkeleton]],
       ] as const) {
         const matches = matchRoutes(createRuntimeRoutes(pathname), pathname);
@@ -612,6 +613,7 @@ describe('desktop router shared definition', () => {
       ['/agent/agent-1/goal/goal-1', GoalDetailSkeleton],
       ['/agent/agent-1/profile', ProfileSkeleton],
       ['/agent/agent-1/topic-1', ConversationLayoutSkeleton],
+      ['/group', createSurfaceSkeleton('list')],
       ['/group/group-1/profile', GroupProfileRouteSkeleton],
       ['/group/group-1/topic-1', ConversationLayoutSkeleton],
       ['/settings/profile', SettingsPageSkeleton],
@@ -775,19 +777,20 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
-    '%s redirects retired workspace provider deep-links inside the workspace',
+    '%s keeps workspace provider deep-links inside the workspace',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
       const listMatches = matchRoutes(routes, '/acme/settings/provider');
-      const detailMatches = matchRoutes(routes, '/acme/settings/provider/lobehub');
-      const serviceModelMatches = matchRoutes(routes, '/acme/settings/service-model');
+      const detailMatches = matchRoutes(routes, '/acme/settings/provider/orvilo');
 
-      // The provider/service-model pages are retired — deep-links must land on
-      // the workspace settings root instead of the `*` catch-all.
-      for (const matches of [listMatches, detailMatches, serviceModelMatches]) {
-        const leaf = matches?.at(-1)?.route;
-        expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('..');
-      }
+      expect(listMatches?.at(-1)?.route.path).toBe('provider');
+      // Before the redirect route existed, the detail path fell through to the
+      // root catch-all (`*`) and kicked the user out of the workspace.
+      expect(detailMatches?.at(-1)?.route.path).toBe('provider/:providerId');
+      expect(detailMatches?.at(-1)?.params).toMatchObject({
+        providerId: 'orvilo',
+        workspaceSlug: 'acme',
+      });
     },
   );
 

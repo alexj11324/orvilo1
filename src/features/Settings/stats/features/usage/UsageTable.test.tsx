@@ -1,7 +1,6 @@
 /**
  * @vitest-environment happy-dom
  */
-import { TooltipGroup } from '@lobehub/ui';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
@@ -10,6 +9,7 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import spend from '@/locales/default/spend';
 
 import zhSpend from '../../../../../../locales/zh-CN/spend.json';
@@ -105,11 +105,11 @@ describe('UsageTable', () => {
     });
     render(
       <I18nextProvider i18n={i18n}>
-        <TooltipGroup popupContainer={document.body}>
+        <TooltipProvider>
           <MemoryRouter>
             <UsageTable />
           </MemoryRouter>
-        </TooltipGroup>
+        </TooltipProvider>
       </I18nextProvider>,
     );
 

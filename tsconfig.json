@@ -43,10 +43,14 @@
     "apps/mobile/**",
     "apps/share/**",
     "apps/workbench/**",
+    // vendored upstream sources — upstream's own code, not typechecked here
+    "packages/heterogeneous-agents/vendor/**",
     "tmp",
     "temp",
     ".temp",
     "e2e/**",
+    "tests/ui-alignment/alignment.spec.ts",
+    "tests/ui-alignment/playwright.config.ts",
     "knip.ts"
   ],
   "include": [

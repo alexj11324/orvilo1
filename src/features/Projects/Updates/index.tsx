@@ -1,17 +1,23 @@
 'use client';
-
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Button, confirmModal, DropdownMenu, Tabs, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
@@ -258,12 +264,15 @@ export const ProjectUpdateComposer = memo<{
             .join(' ')}
           onClick={() => (onExpand ? onExpand() : setExpanded(true))}
         >
-          <Icon icon={CircleDotIcon} size={14} style={{ opacity: 0.5 }} />
-          <Text fontSize={13} type={'secondary'} weight={emptyState ? 500 : undefined}>
+          <CircleDotIcon size={14} style={{ opacity: 0.5 }} />
+          <span
+            className="text-sm text-muted-foreground"
+            style={{ fontSize: 13, fontWeight: emptyState ? 500 : undefined }}
+          >
             {emptyState
               ? t('overview.firstUpdate', { defaultValue: 'Write first project update' })
               : t('overview.updatePlaceholder', { defaultValue: 'Write a project update…' })}
-          </Text>
+          </span>
         </button>
       );
 
@@ -278,25 +287,30 @@ export const ProjectUpdateComposer = memo<{
     }
 
     return (
-      <Flexbox className={styles.composer}>
+      <div className={cn('flex flex-col', styles.composer)}>
         {/* A posted row keeps its kind — edit mode drops the Comment/Update tabs.
           Editing a comment leaves the header empty, so it is skipped entirely. */}
         {(!editing || mode === 'update') && (
-          <Flexbox horizontal align={'center'} gap={4} padding={8}>
+          <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, padding: 8 }}>
             {!editing && (
               <Tabs
-                activeKey={mode}
                 className={styles.modeTabs}
-                classNames={{ tab: styles.modeTab }}
-                size="small"
-                items={[
-                  { key: 'comment', label: t('overview.updateModeComment') },
-                  { key: 'update', label: t('overview.updateModeUpdate') },
-                ]}
-                onChange={(key) => {
+                value={mode}
+                onValueChange={(key) => {
                   if (key === 'comment' || key === 'update') setMode(key);
                 }}
-              />
+              >
+                <TabsList className="w-full">
+                  {[
+                    { key: 'comment', label: t('overview.updateModeComment') },
+                    { key: 'update', label: t('overview.updateModeUpdate') },
+                  ].map((item) => (
+                    <TabsTrigger key={item.key} value={item.key}>
+                      {item.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             )}
             {mode === 'update' && (
               <DropdownMenu
@@ -307,16 +321,13 @@ export const ProjectUpdateComposer = memo<{
                   onClick: () => setHealth(state),
                 }))}
               >
-                <Button
-                  className={styles.modeTab}
-                  icon={<ProjectHealthIcon health={health} size={12} />}
-                  size={'small'}
-                >
+                <Button size="sm" variant="outline">
+                  <ProjectHealthIcon health={health} size={12} />
                   {t(`overview.health.${health}`, { defaultValue: health })}
                 </Button>
               </DropdownMenu>
             )}
-          </Flexbox>
+          </div>
         )}
         <ProjectUpdateEditor
           disabled={posting}
@@ -329,31 +340,28 @@ export const ProjectUpdateComposer = memo<{
           onChange={setBody}
           onSubmit={() => void post()}
         />
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.composerFooter}
-          gap={8}
-          justify={'flex-end'}
+        <div
+          className={cn('flex flex-row', styles.composerFooter)}
+          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
         >
           {editing && (
-            <Button className={styles.modeTab} disabled={posting} onClick={onCancelEdit}>
+            <Button disabled={posting} variant="outline" onClick={onCancelEdit}>
               {t('common:cancel')}
             </Button>
           )}
           <Button
-            className={styles.modeTab}
-            disabled={!body.trim()}
-            loading={posting}
-            type={'primary'}
+            aria-busy={posting}
+            disabled={!body.trim() || posting}
+            variant="default"
             onClick={() => void post()}
           >
+            {posting && <Spinner />}
             {editing
               ? t('common:save')
               : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -396,37 +404,39 @@ export const ProjectUpdateRow = memo<{
       },
     });
   return (
-    <Flexbox
-      horizontal
-      align={'flex-start'}
-      className={cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen)}
-      gap={10}
+    <div
+      className={cn('flex flex-row', cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen))}
+      style={{ alignItems: 'flex-start', gap: 10 }}
     >
       <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
-      <Flexbox gap={4} style={{ flex: 1, minWidth: 0 }}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Text fontSize={13} weight={500}>
+      <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
+        <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
+          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
             {update.authorName || t('overview.updateAnonymous', { defaultValue: 'Member' })}
-          </Text>
+          </span>
           {meta && update.health && (
-            <Tag
-              color={meta.tag}
-              icon={<ProjectHealthIcon health={update.health} size={12} />}
-              shape={'round'}
-              size={'small'}
+            <Badge
+              radius="full"
+              size="sm"
+              variant={
+                meta.tag === 'error'
+                  ? 'destructive-light'
+                  : meta.tag === 'warning'
+                    ? 'warning-light'
+                    : 'success-light'
+              }
             >
+              <ProjectHealthIcon health={update.health} size={12} />
               {t(`overview.health.${update.health}`, { defaultValue: update.health })}
-            </Tag>
+            </Badge>
           )}
-          <Text fontSize={12} type={'secondary'}>
+          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             {dayjs(update.createdAt).format('MMM D')}
-          </Text>
+          </span>
           {canEdit && (
-            <Flexbox
-              horizontal
-              className={cx(UPDATE_ACTIONS_CLASS, styles.updateActions)}
-              flex={1}
-              justify={'flex-end'}
+            <div
+              className={cn('flex flex-row', cx(UPDATE_ACTIONS_CLASS, styles.updateActions))}
+              style={{ justifyContent: 'flex-end', flex: 1 }}
             >
               <DropdownMenu
                 items={[
@@ -447,19 +457,16 @@ export const ProjectUpdateRow = memo<{
                 ]}
                 onOpenChange={setMenuOpen}
               >
-                <Button
-                  aria-label={t('overview.updateMenu')}
-                  icon={EllipsisIcon}
-                  size="small"
-                  type="text"
-                />
+                <Button aria-label={t('overview.updateMenu')} size="icon-sm" variant="ghost">
+                  {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
+                </Button>
               </DropdownMenu>
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
         <Markdown fontSize={15}>{update.body}</Markdown>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

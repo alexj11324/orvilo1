@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { MarkdownPatchHunk } from '@orvilo/markdown-patch';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -31,11 +30,11 @@ const UpdateDocument = memo<UpdateDocumentRenderProps>(({ args }) => {
   });
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {hunks.map((hunk, i) => (
         <HunkBlock countLabel={i === 0 ? totalLabel : undefined} hunk={hunk} key={i} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

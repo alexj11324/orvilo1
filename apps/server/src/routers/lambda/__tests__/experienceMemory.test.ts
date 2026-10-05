@@ -108,4 +108,52 @@ describe('experienceMemory actual router and SQL', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect((await caller().list({})).items).toEqual([]);
   });
+  it('denies re-deletion and keeps legacy rows read-only through this surface', async () => {
+    const row = await caller().create({ kind: 'experience', content: 'mine' });
+    await caller().delete({ id: row.id, revision: 1 });
+    // The tombstone revision cannot resurrect or repeat the deletion.
+    await expect(caller().delete({ id: row.id, revision: 2 })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    await expect(
+      caller().update({ id: row.id, revision: 2, content: 'resurrect' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    // Legacy items listed as 'legacy:<id>' are owned by the legacy writer —
+    // this surface rejects them as malformed rather than touching the store.
+    await expect(caller().delete({ id: 'legacy:a', revision: 1 })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    await expect(
+      caller().update({ id: 'legacy:a', revision: 1, content: 'forged' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+  it('admits user-scoped API keys, rejects workspace scope and foreign writes', async () => {
+    // The namespace mirrors userMemory: user:read lists, user:write mutates.
+    await expect(caller('alice', { apiKeyScopes: ['user:read'] }).list({})).resolves.toMatchObject({
+      items: [],
+    });
+    await expect(
+      caller('alice', { apiKeyScopes: ['user:read'] }).create({
+        kind: 'experience',
+        content: 'read key cannot write',
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const row = await caller('alice', { apiKeyScopes: ['user:write'] }).create({
+      kind: 'experience',
+      content: 'scoped write',
+    });
+    expect(row.content).toBe('scoped write');
+    // A workspace selector is rejected on mutations the same as on reads.
+    await expect(
+      caller('alice', {
+        workspaceId: 'ws',
+        membership: { userId: 'alice', workspaceId: 'ws', role: 'owner' },
+      }).delete({ id: row.id, revision: 1 }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    // Another caller holding full-access scopes still cannot touch alice's row.
+    await expect(
+      caller('bob', { apiKeyScopes: ['*'] }).delete({ id: row.id, revision: 1 }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect((await caller('bob', { apiKeyScopes: ['*'] }).list({})).items).toEqual([]);
+  });
 });

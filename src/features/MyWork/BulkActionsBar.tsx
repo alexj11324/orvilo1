@@ -1,21 +1,24 @@
 'use client';
-
-import { type DropdownItem, DropdownMenu, Flexbox, Icon, type MenuInfo } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { BarChart3Icon, Trash2Icon, UserRoundIcon, XIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
+import { STATUS_PROPERTY_ICON, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
+import {
+  COLUMN_I18N_KEYS,
+  issueStatusChoices,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { useAssigneeMenuItems } from '@/features/AgentTasks/features/assigneeMenuItems';
 import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
-import {
-  STATUS_META,
-  USER_SELECTABLE_STATUSES,
-} from '@/features/AgentTasks/features/taskStatusMeta';
+import DropdownMenu, {
+  type SidebarMenuInfo,
+  type SidebarMenuItemData,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 const styles = createStaticStyles(({ css }) => ({
   /**
@@ -65,7 +68,7 @@ interface BulkActionsBarProps {
   onClear: () => void;
   onDelete: () => void;
   onSetPriority: (priority: number) => void;
-  onSetStatus: (status: TaskStatus) => void;
+  onSetStatus: (category: TaskWorkflowCategory) => void;
 }
 
 /**
@@ -96,26 +99,27 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       disabled: busy,
     });
 
-    const statusItems = useMemo<DropdownItem[]>(
+    // The Issue board's columns — workflow categories only; execution
+    // statuses are never a user pick.
+    const statusItems = useMemo<SidebarMenuItemData[]>(
       () =>
-        USER_SELECTABLE_STATUSES.map((status) => {
-          const meta = STATUS_META[status];
+        issueStatusChoices().map((choice) => {
+          const category = choice.workflowCategory ?? 'backlog';
+          const visual = WORKFLOW_CATEGORY_VISUALS[category];
           return {
-            icon: <Icon color={meta.color} icon={meta.icon} size={16} />,
-            key: status,
-            label: t(`chat:taskDetail.${meta.labelKey}` as never, {
-              defaultValue: meta.label,
-            }),
-            onClick: ({ domEvent }: MenuInfo) => {
+            icon: createElement(visual.icon, { className: 'size-4 shrink-0', color: visual.color }),
+            key: category,
+            label: t(COLUMN_I18N_KEYS[choice.column.key] as never),
+            onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
-              onSetStatus(status);
+              onSetStatus(category);
             },
           };
         }),
       [onSetStatus, t],
     );
 
-    const priorityItems = useMemo<DropdownItem[]>(
+    const priorityItems = useMemo<SidebarMenuItemData[]>(
       () =>
         PRIORITY_LEVELS.map((level) => {
           const meta = PRIORITY_META[level];
@@ -126,7 +130,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
             label: t(`chat:taskDetail.${meta.labelKey}` as never, {
               defaultValue: meta.label,
             }),
-            onClick: ({ domEvent }: MenuInfo) => {
+            onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
               onSetPriority(level);
             },
@@ -135,7 +139,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       [onSetPriority, t],
     );
 
-    const actionItems = useMemo<DropdownItem[]>(
+    const actionItems = useMemo<SidebarMenuItemData[]>(
       () => [
         {
           children: statusItems,
@@ -168,7 +172,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
           icon: Trash2Icon,
           key: 'delete',
           label: t('delete'),
-          onClick: ({ domEvent }: MenuInfo) => {
+          onClick: ({ domEvent }: SidebarMenuInfo) => {
             domEvent.stopPropagation();
             onDelete();
           },
@@ -182,22 +186,25 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       // selection when the pointer lands on the bar's own chrome; the
       // `data-row-interactive` marker does the same for row-level guards.
       <div data-bulk-actions data-row-interactive className={styles.bar}>
-        <Text className={styles.count} fontSize={12} weight={500}>
+        <span className={cn('text-sm font-medium', styles.count)}>
           {t('myWork.bulk.selected', { count })}
-        </Text>
+        </span>
         <DropdownMenu items={actionItems} placement={'top'}>
-          <Button disabled={busy} size={'small'}>
+          <Button disabled={busy} variant="outline">
             {t('myWork.bulk.actions')}
           </Button>
         </DropdownMenu>
-        <Flexbox flex={'none'}>
-          <ActionIcon
-            icon={XIcon}
-            size={'small'}
+        <div className="flex flex-col" style={{ flex: 'none' }}>
+          <Button
+            aria-label={t('myWork.bulk.clear')}
+            size="icon"
             title={t('myWork.bulk.clear')}
+            variant="ghost"
             onClick={onClear}
-          />
-        </Flexbox>
+          >
+            {createElement(XIcon, { className: 'size-4 shrink-0' })}
+          </Button>
+        </div>
       </div>
     );
   },

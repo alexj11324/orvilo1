@@ -1,4 +1,4 @@
-import type { OrviloAgentAgencyConfig } from '@orvilo/types';
+import type { DeviceListItem, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
@@ -6,6 +6,7 @@ import {
   canExecutionTargetReadLocalPaths,
   type ExecutionPlan,
   executionPlanToManifestExecutionEnv,
+  executionTargetDeviceCandidates,
   executionTargetToRuntimeMode,
   isDeviceLockedPlan,
   isHeterogeneousSandboxExecutionAvailable,
@@ -129,6 +130,58 @@ describe('resolveExecutionTarget', () => {
     expect(
       resolveExecutionTarget(cfg({ executionTarget: 'local' }), { clientExecutionAvailable: true }),
     ).toBe('local');
+  });
+
+  describe('migration — retired target spellings resolve to a device or wait', () => {
+    const legacyTarget = (spelling: string) =>
+      spelling as OrviloAgentAgencyConfig['executionTarget'];
+
+    it('maps `embedded` onto the explicitly bound device', () => {
+      for (const clientExecutionAvailable of [true, false]) {
+        expect(
+          resolveExecutionTarget(
+            cfg({ boundDeviceId: 'device-a', executionTarget: legacyTarget('embedded') }),
+            { clientExecutionAvailable },
+          ),
+        ).toBe('device');
+      }
+    });
+
+    it('leaves unbound `embedded` unresolved — a pending state, never a guess', () => {
+      for (const clientExecutionAvailable of [true, false]) {
+        expect(
+          resolveExecutionTarget(cfg({ executionTarget: legacyTarget('embedded') }), {
+            clientExecutionAvailable,
+          }),
+        ).toBe('none');
+      }
+    });
+
+    it('maps every other retired spelling the same way', () => {
+      for (const spelling of ['remote', 'managed', 'cloud']) {
+        expect(
+          resolveExecutionTarget(
+            cfg({ boundDeviceId: 'device-a', executionTarget: legacyTarget(spelling) }),
+            { clientExecutionAvailable: true },
+          ),
+        ).toBe('device');
+        expect(
+          resolveExecutionTarget(cfg({ executionTarget: legacyTarget(spelling) }), {
+            clientExecutionAvailable: true,
+          }),
+        ).toBe('none');
+      }
+    });
+
+    it('keeps `local` / `device` rows on their stored device — the stable spellings', () => {
+      for (const target of ['local', 'device'] as const) {
+        expect(
+          resolveExecutionTarget(cfg({ boundDeviceId: 'device-a', executionTarget: target }), {
+            clientExecutionAvailable: true,
+          }),
+        ).toBe(target);
+      }
+    });
   });
 
   it('routes a bound desktop-local selection to the bound device on web when device routing is available (plain and hetero)', () => {
@@ -366,14 +419,16 @@ describe('resolveExecutionTarget', () => {
     });
   });
 
-  describe('trigger=bot — upgrades a local target (bound → device, unbound → auto)', () => {
-    it('coerces an UNBOUND `local` to auto; an unset target stays pending', () => {
+  describe('trigger=bot — `local` resolves through its device pin or stays unrouted', () => {
+    it('keeps an UNBOUND `local` unrouted; an unset target stays pending', () => {
+      // The old unbound→auto promotion guessed whichever device was online —
+      // the migration contract leaves the row unresolved instead.
       expect(
         resolveExecutionTarget(cfg({ executionTarget: 'local' }), {
           clientExecutionAvailable: true,
           trigger: RequestTrigger.Bot,
         }),
-      ).toBe('auto');
+      ).toBe('local');
       // unset resolves to `none` — there is no stored local intent to upgrade,
       // and a bot may not infer a machine the user never chose
       expect(
@@ -406,17 +461,17 @@ describe('resolveExecutionTarget', () => {
       }
     });
 
-    it('still upgrades `local` on a client-less host — the pin survives the coercion order', () => {
-      // the bot upgrade runs BEFORE the no-client `local`→`none` coercion, so
-      // a bot server without in-process execution honours the stored intent
-      // (bound → device, unbound → auto) instead of silently dropping to chat
-      // or the cloud sandbox.
+    it('still resolves `local` on a client-less host — the pin survives the coercion order', () => {
+      // the bot branch runs BEFORE the no-client `local`→`none` coercion, so
+      // a bot server without in-process execution surfaces the stored intent
+      // (bound → device, unbound → unrouted `local`) instead of silently
+      // dropping to chat or the cloud sandbox.
       expect(
         resolveExecutionTarget(cfg({ executionTarget: 'local' }), {
           clientExecutionAvailable: false,
           trigger: RequestTrigger.Bot,
         }),
-      ).toBe('auto');
+      ).toBe('local');
       expect(
         resolveExecutionTarget(cfg({ boundDeviceId: 'device-a', executionTarget: 'local' }), {
           clientExecutionAvailable: false,
@@ -758,6 +813,38 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
     });
 
+    it('migration — a stored `local` binds only the device identity it saved', () => {
+      // Regression: `localDeviceId ||` let the machine RUNNING the resolution
+      // bind itself — a row opened on a different desktop migrated execution
+      // to that desktop, violating "no guessing the current machine". Unbound
+      // stays unrouted even on a device-capable host; a stored `boundDeviceId`
+      // still wins over the rendering machine.
+      expect(
+        resolveExecutionPlan({
+          agencyConfig: cfg({ executionTarget: 'local' }),
+          clientExecutionAvailable: true,
+          localDeviceId: 'this-desktop',
+        }),
+      ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
+      expect(
+        resolveExecutionPlan({
+          agencyConfig: cfg({ boundDeviceId: 'saved-device', executionTarget: 'local' }),
+          clientExecutionAvailable: true,
+          localDeviceId: 'this-desktop',
+        }),
+      ).toEqual({ deviceId: 'saved-device', kind: 'device', target: 'local' });
+      // Platform-task `local` keeps its own semantic — the locally registered
+      // runtime IS the provable node.
+      expect(
+        resolveExecutionPlan({
+          agencyConfig: openClawCfg({ executionTarget: 'local' }),
+          clientExecutionAvailable: true,
+          isHetero: true,
+          localDeviceId: 'this-desktop',
+        }),
+      ).toEqual({ deviceId: 'this-desktop', kind: 'device', target: 'local' });
+    });
+
     it('keeps an unset target pending on every client — no implicit routing', () => {
       // unset → `none` everywhere: the run never claims a device the user did
       // not explicitly select, whichever client sent it
@@ -873,10 +960,12 @@ describe('resolveExecutionPlan', () => {
     });
   });
 
-  describe('trigger=bot — upgrades a local target to auto', () => {
-    it('upgrades a stored `local` target to auto and activates the single online device', () => {
-      // a bot conversation can't pick a device, and `local` in-process IPC is
-      // unreachable from the cloud bot server — so `local` auto-activates.
+  describe('trigger=bot — `local` resolves through its device pin or stays unrouted', () => {
+    it('leaves an unbound `local` unrouted — a migrated row never guesses the machine', () => {
+      // a bot conversation can't pick a device and `local` in-process IPC is
+      // unreachable from the cloud bot server. The old auto-promotion would
+      // silently grab whichever device was online; the migration contract
+      // leaves an unbound `local` unresolved instead.
       expect(
         resolveExecutionPlan({
           agencyConfig: cfg({ executionTarget: 'local' }),
@@ -884,7 +973,7 @@ describe('resolveExecutionPlan', () => {
           onlineDeviceIds: ONLINE_A,
           trigger: RequestTrigger.Bot,
         }),
-      ).toEqual({ deviceId: 'device-a', kind: 'device', target: 'auto' });
+      ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
     });
 
     it('keeps an unset target pending for a bot — no machine inferred', () => {
@@ -898,7 +987,7 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ kind: 'none', target: 'none' });
     });
 
-    it('stays unrouted (model picks) when several devices are online', () => {
+    it('stays unrouted for an unbound `local` no matter how many devices are online', () => {
       expect(
         resolveExecutionPlan({
           agencyConfig: cfg({ executionTarget: 'local' }),
@@ -906,7 +995,7 @@ describe('resolveExecutionPlan', () => {
           onlineDeviceIds: ONLINE_AB,
           trigger: RequestTrigger.Bot,
         }),
-      ).toEqual({ kind: 'device-unrouted', reason: 'ambiguous-online-devices', target: 'auto' });
+      ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
     });
 
     it('routes a BOUND `local` to its pinned device, even with several online (no auto-grab)', () => {
@@ -967,11 +1056,10 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
     });
 
-    it('still routes a requestedDeviceId-pinned local run to that device (now under auto)', () => {
-      // the local→auto coercion lives in resolveExecutionTarget, so it applies
-      // before requestedDeviceId is considered. The explicit device still wins
-      // the routing; only the target label is `auto` (gateway routing) rather
-      // than `local` (in-process) — correct for a server-side bot run.
+    it('still routes a requestedDeviceId-pinned local run to that device', () => {
+      // An explicit per-request device always wins over the stored target —
+      // the request IS the provable selection. The plan keeps the `local`
+      // label (the stored spelling) while routing to the requested device.
       expect(
         resolveExecutionPlan({
           agencyConfig: cfg({ executionTarget: 'local' }),
@@ -980,7 +1068,7 @@ describe('resolveExecutionPlan', () => {
           requestedDeviceId: 'device-b',
           trigger: RequestTrigger.Bot,
         }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'auto' });
+      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'local' });
     });
 
     it('still honours chat mode — a bot on a chat-mode agent stays plain chat', () => {
@@ -1351,5 +1439,54 @@ describe('canExecutionTargetReadLocalPaths', () => {
     expect(canExecutionTargetReadLocalPaths('sandbox', config, 'device-1')).toBe(false);
     expect(canExecutionTargetReadLocalPaths('auto', config, 'device-1')).toBe(false);
     expect(canExecutionTargetReadLocalPaths('none', config, 'device-1')).toBe(false);
+  });
+});
+
+describe('executionTargetDeviceCandidates — the ONE pool every surface judges', () => {
+  const dev = (
+    deviceId: string,
+    scope: 'personal' | 'workspace',
+    visibility?: 'private' | 'public' | null,
+    online = true,
+  ) =>
+    ({
+      deviceId,
+      online,
+      scope,
+      visibility: visibility ?? null,
+    }) as DeviceListItem;
+
+  it('personal scope returns personal devices only', () => {
+    const pool = executionTargetDeviceCandidates(
+      [dev('p1', 'personal'), dev('w1', 'workspace', 'public'), dev('wp', 'workspace', 'private')],
+      'personal',
+    );
+    expect(pool.map((d) => d.deviceId)).toEqual(['p1']);
+  });
+
+  it('workspace scope includes private + shared enrollments (F07)', () => {
+    const pool = executionTargetDeviceCandidates(
+      [
+        dev('p1', 'personal'),
+        dev('w1', 'workspace', 'public'),
+        dev('wp', 'workspace', 'private'),
+        dev('wu', 'workspace', null),
+      ],
+      'workspace',
+    );
+    expect(pool.map((d) => d.deviceId)).toEqual(['wp', 'w1', 'wu']);
+  });
+
+  it('offline devices stay candidates — online gates launch, not membership', () => {
+    const pool = executionTargetDeviceCandidates(
+      [dev('a', 'personal', null, false), dev('b', 'personal', null, true)],
+      'personal',
+    );
+    expect(pool.map((d) => d.deviceId)).toEqual(['a', 'b']);
+  });
+
+  it('empty / undefined inventory is zero candidates, not an error', () => {
+    expect(executionTargetDeviceCandidates(undefined, 'workspace')).toEqual([]);
+    expect(executionTargetDeviceCandidates([], 'personal')).toEqual([]);
   });
 });

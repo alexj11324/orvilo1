@@ -1,8 +1,9 @@
 'use client';
 
-import { useModalContext } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { type FC } from 'react';
+
+import { useModalContext } from '@/components/Modal';
 
 import { type CredsApi } from '../useCredsApi';
 import EditKVForm from './EditKVForm';

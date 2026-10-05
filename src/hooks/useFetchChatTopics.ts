@@ -8,10 +8,11 @@ import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
-import { useUserStore } from '@/store/user';
-import { preferenceSelectors } from '@/store/user/selectors';
 
-const EXCLUDE_STATUSES_COMPLETED = ['completed'];
+// Only user-archived conversations leave the feed: a finished (`completed`)
+// conversation stays listed exactly where it was — completion is lifecycle
+// metadata, not an implicit archive. Hiding is the archive action's job.
+const EXCLUDE_STATUSES_ARCHIVED = ['archived'];
 
 /**
  * The one query shape a `topicDataMap` bucket is allowed to hold. The bucket is
@@ -24,7 +25,6 @@ const EXCLUDE_STATUSES_COMPLETED = ['completed'];
  * the same SWR key, which means SWR dedupes them into a single request.
  */
 const useChatTopicListQuery = () => {
-  const includeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
   const activeGroupId = useChatStore((s) => s.activeGroupId);
   const { topicGroupMode } = useAgentTopicGroupMode();
 
@@ -37,7 +37,7 @@ const useChatTopicListQuery = () => {
     !activeGroupId && topicGroupMode === 'byStatus' ? 'status' : undefined;
 
   return {
-    excludeStatuses: includeCompleted ? undefined : EXCLUDE_STATUSES_COMPLETED,
+    excludeStatuses: EXCLUDE_STATUSES_ARCHIVED,
     excludeTriggers: MAIN_SIDEBAR_EXCLUDE_TRIGGERS,
     sortBy,
   };
@@ -52,6 +52,33 @@ const useChatTopicListQuery = () => {
  * params; don't spread them across individual components.
  */
 export const useFetchChatTopics = () => useFetchTopics(useChatTopicListQuery());
+
+/**
+ * The conversation-first sidebar feed: one workspace-wide list containing
+ * every visible non-group conversation, whatever agent owns it. Agent
+ * identity degrades to weak row metadata on each item (`topic.agentId`),
+ * never a fetch filter — the topic is the navigation unit.
+ *
+ * Feeds the `topicDataMap.workspace` bucket that the sidebar selectors read
+ * outside a group session. `pageSize` bounds the page for now; cursor
+ * pagination replaces it in a later PR.
+ */
+export const useWorkspaceConversationFeed = () => {
+  const query = useChatTopicListQuery();
+  const pageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
+  const useFetchTopicsHook = useChatStore((s) => s.useFetchTopics);
+
+  const { isValidating, data } = useFetchTopicsHook(true, {
+    ...query,
+    pageSize,
+    scope: 'workspace',
+  });
+
+  return {
+    // isRevalidating: has cached data, updating in background
+    isRevalidating: isValidating && !!data,
+  };
+};
 
 /**
  * Same canonical list, for the secondary conversation panels that carry their

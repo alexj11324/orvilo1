@@ -1,10 +1,7 @@
 'use client';
 
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, type ModalInstance } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { useTheme } from 'antd-style';
-import { MoreHorizontalIcon, PlayIcon, Settings2Icon, UsersIcon } from 'lucide-react';
+import { MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -13,13 +10,17 @@ import urlJoin from 'url-join';
 import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentGroupTransferMenuItem';
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
+import ActionIcon from '@/components/ActionIcon';
+import { type ModalInstance } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
 import { EditorCanvas } from '@/features/EditorCanvas';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import AccessLevelTag from '@/features/ResourcePermission/AccessLevelTag';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
@@ -47,7 +48,6 @@ const GroupProfile = memo(() => {
   const hasActiveWorkspace = useHasActiveWorkspace();
   const currentGroup = useAgentGroupStore((s) => agentGroupSelectors.getGroupById(gid ?? '')(s));
   const updateGroup = useAgentGroupStore((s) => s.updateGroup);
-  const router = useQueryRoute();
   // The profile page keeps its active tab in `?tab=`; the permission page has no
   // tabs, so navigate without carrying the query over (unlike `router.push`).
   const navigate = useWorkspaceAwareNavigate();
@@ -73,7 +73,7 @@ const GroupProfile = memo(() => {
           // so an enabled entry here is a click into a dead end. Disabled, not
           // hidden — the member can still see the action exists.
           disabled: !canEdit,
-          icon: <Icon icon={UsersIcon} />,
+          icon: <UsersIcon />,
           key: 'permission',
           label: t('permission.page.entry', { ns: 'setting' }),
           onClick: () => {
@@ -114,9 +114,13 @@ const GroupProfile = memo(() => {
   // when another member is editing; acquired implicitly on the first edit.
   const [edited, setEdited] = useState(false);
   const groupIdRef = useRef(groupId);
+  // The description canvas only mounts on demand — a fresh group renders a
+  // compact affordance instead of a page-high empty editor.
+  const [contentRevealed, setContentRevealed] = useState(false);
   if (groupIdRef.current !== groupId) {
     groupIdRef.current = groupId;
     setEdited(false);
+    setContentRevealed(false);
   }
   const lock = useEditLock({
     client: groupLockClient,
@@ -169,6 +173,8 @@ const GroupProfile = memo(() => {
     if (!editor || !agentBuilderContentUpdate || !groupId) return;
     if (agentBuilderContentUpdate.entityId !== groupId) return;
 
+    // The builder is writing the description — surface the canvas for it.
+    setContentRevealed(true);
     // Directly set the editor content
     editor.setDocument('markdown', agentBuilderContentUpdate.content);
 
@@ -178,14 +184,15 @@ const GroupProfile = memo(() => {
 
   return (
     <>
-      <Flexbox
+      <div
+        className="flex flex-col"
         style={{ cursor: 'default', marginBottom: 12 }}
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
-        <Flexbox height={66} width={'100%'}>
-          <Flexbox horizontal align={'center'} gap={8} paddingBlock={12}>
+        <div className="flex flex-col" style={{ height: 66, width: '100%' }}>
+          <div className="flex items-center gap-2 py-3">
             <AutoSaveHint />
             <AccessLevelTag
               resourceType={'agentGroup'}
@@ -195,43 +202,25 @@ const GroupProfile = memo(() => {
                   : undefined
               }
             />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {/* Header: Group Avatar + Title */}
         <GroupHeader />
-        {/* Start Conversation Button */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          justify={'flex-start'}
-          style={{ marginTop: 16 }}
-        >
-          <Button
-            icon={PlayIcon}
-            type={'primary'}
-            onClick={() => {
-              if (!groupId) return;
-              router.push(urlJoin('/group', groupId));
-            }}
-          >
-            {t('startConversation')}
-          </Button>
+        <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
           {moreMenuItems.length > 0 && (
-            <DropdownMenu items={moreMenuItems}>
+            <SidebarDropdownMenu items={moreMenuItems}>
               <ActionIcon
                 icon={MoreHorizontalIcon}
                 size={'small'}
                 style={{ color: theme.colorTextSecondary }}
               />
-            </DropdownMenu>
+            </SidebarDropdownMenu>
           )}
           <Button
             disabled={!canEdit}
-            icon={Settings2Icon}
-            size={'small'}
+            size="sm"
             style={{ color: theme.colorTextSecondary }}
-            type={'text'}
+            variant="ghost"
             onClick={() => {
               if (!canEdit) return;
 
@@ -241,23 +230,37 @@ const GroupProfile = memo(() => {
           >
             {t('advancedSettings')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-      <Divider />
-      {/* Group Content Editor */}
+        </div>
+      </div>
+      <Separator />
+      {/* Group Content Editor — hidden until the group actually has a
+          description or the user asks for one, so the column never renders a
+          large empty editor. */}
       <EditingIndicator
         holderId={lock.lockedByOther ? lock.holderId : null}
         pending={canEdit && lock.pending}
       />
-      <EditorCanvas
-        disabled={!canEdit}
-        editable={!lock.lockedByOther && !lock.pending}
-        editor={editor}
-        editorData={editorData}
-        entityId={groupId}
-        placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
-        onContentChange={onContentChange}
-      />
+      {currentGroup?.content?.trim() || contentRevealed ? (
+        <EditorCanvas
+          disabled={!canEdit}
+          editable={!lock.lockedByOther && !lock.pending}
+          editor={editor}
+          editorData={editorData}
+          entityId={groupId}
+          placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
+          onContentChange={onContentChange}
+        />
+      ) : canEdit ? (
+        <Button
+          className="w-full justify-start"
+          style={{ borderStyle: 'dashed', color: theme.colorTextSecondary }}
+          variant="outline"
+          onClick={() => setContentRevealed(true)}
+        >
+          <PlusIcon data-icon="inline-start" />
+          {t('group.profile.addInstructions', { ns: 'chat' })}
+        </Button>
+      ) : null}
     </>
   );
 });

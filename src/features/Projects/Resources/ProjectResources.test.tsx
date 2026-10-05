@@ -1,5 +1,4 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
@@ -27,39 +26,15 @@ const mocks = vi.hoisted(() => ({
 // Spelled out rather than spread from `importOriginal`: the real `Button` needs
 // the app-level motion provider, so pulling it back in would trade one mock for
 // a provider this test never mounts.
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
-  Flexbox: ({ children, className }: { children?: ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  Icon: () => null,
-}));
-
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useModalContext: () => ({ close: mocks.close, setCanDismissByClickOutside: vi.fn() }),
-  Button: ({
-    children,
-    disabled,
-    loading,
-    onClick,
-  }: {
-    children?: ReactNode;
-    disabled?: boolean;
-    loading?: boolean;
-    onClick?: () => void;
-  }) => (
-    <button disabled={disabled || loading} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   confirmModal: (config: { onOk?: () => unknown }) => {
     mocks.onOk = config.onOk;
   },
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: { error: mocks.toastError },
 }));
 

@@ -249,7 +249,7 @@ made in a real Orvilo round.
 
 > **Publishing to a standalone acceptance site was retired** with the platform
 > (`docs/development/hidden-surface-retirement.md`, HS-01 … HS-13). There is no
-> `lh acceptance run ingest`, no `lh acceptance view`, and no
+> `orvilo acceptance run ingest`, no `orvilo acceptance view`, and no
 > `https://orvilo.aspectlylabs.com/acceptance/<id>` URL any more. The report
 > schema and the round rules that used to live in the skill's
 > `references/report.md` went with it — **this section is now the whole

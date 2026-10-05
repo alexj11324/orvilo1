@@ -2847,7 +2847,7 @@ describe('HeterogeneousAgentCtr', () => {
     );
   });
 
-  describe('spawnLhHeteroExec', () => {
+  describe('spawnOrviloHeteroExec', () => {
     const params = {
       agentType: 'opencode',
       assistantMessageId: 'asst-gateway',
@@ -2875,7 +2875,7 @@ describe('HeterogeneousAgentCtr', () => {
       nextFakeProc = null;
     });
 
-    it('uses the self-contained embedded CLI instead of a global lh from PATH', async () => {
+    it('uses the self-contained embedded CLI instead of a global orvilo from PATH', async () => {
       const proc = createGatewayCliProc();
       nextFakeProc = proc;
       const ctr = new HeterogeneousAgentCtr({
@@ -2883,7 +2883,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec(params);
+      const ack = ctr.spawnOrviloHeteroExec(params);
 
       expect(spawnCalls).toHaveLength(1);
       const [spawnCall] = spawnCalls;
@@ -2926,7 +2926,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec({ ...params, workspaceId: 'ws-orvilo' });
+      const ack = ctr.spawnOrviloHeteroExec({ ...params, workspaceId: 'ws-orvilo' });
       proc.emit('spawn');
       await expect(ack).resolves.toEqual({ status: 'accepted' });
 
@@ -2943,7 +2943,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec({
+      const ack = ctr.spawnOrviloHeteroExec({
         ...params,
         resumeFallbackSystemContext: 'workspace rules\n\nprevious conversation',
         resumeSessionId: 'session-1',
@@ -2974,7 +2974,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec(params);
+      const ack = ctr.spawnOrviloHeteroExec(params);
       proc.emit('error', new Error('spawn EACCES'));
 
       await expect(ack).resolves.toEqual({ reason: 'spawn EACCES', status: 'rejected' });
@@ -2991,7 +2991,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec({ ...params, cwd: missingCwd });
+      const ack = ctr.spawnOrviloHeteroExec({ ...params, cwd: missingCwd });
 
       expect(spawnCalls).toHaveLength(1);
       const [spawnCall] = spawnCalls;
@@ -3014,7 +3014,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      await expect(ctr.spawnLhHeteroExec(params)).resolves.toEqual({
+      await expect(ctr.spawnOrviloHeteroExec(params)).resolves.toEqual({
         reason: 'Embedded CLI not found at /fake/cli/dist/index.js',
         status: 'rejected',
       });
@@ -3032,7 +3032,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec(params);
+      const ack = ctr.spawnOrviloHeteroExec(params);
       expect(() => proc.emit('spawn')).not.toThrow();
 
       await expect(ack).resolves.toEqual({ reason: 'write EPIPE', status: 'rejected' });
@@ -3046,7 +3046,7 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
 
-      const ack = ctr.spawnLhHeteroExec(params);
+      const ack = ctr.spawnOrviloHeteroExec(params);
       proc.emit('spawn');
       await expect(ack).resolves.toEqual({ status: 'accepted' });
 
@@ -3063,8 +3063,8 @@ describe('HeterogeneousAgentCtr', () => {
       // server cancellation returned while the native thread still had an active
       // writer. A replacement resume then failed with `already has an active writer`.
       //
-      // Before: spawnLhHeteroExec acknowledged the child and discarded its handle.
-      // After: cancelLhHeteroExec signals the wrapper-owned process group and
+      // Before: spawnOrviloHeteroExec acknowledged the child and discarded its handle.
+      // After: cancelOrviloHeteroExec signals the wrapper-owned process group and
       // resolves only after the complete group disappears.
       vi.useFakeTimers();
       let groupAlive = true;
@@ -3083,13 +3083,13 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
 
       try {
-        const ack = ctr.spawnLhHeteroExec(params);
+        const ack = ctr.spawnOrviloHeteroExec(params);
         proc.emit('spawn');
         await ack;
 
         let cancellationSettled = false;
         const cancellation = ctr
-          .cancelLhHeteroExec({ operationId: params.operationId })
+          .cancelOrviloHeteroExec({ operationId: params.operationId })
           .then((result) => {
             cancellationSettled = true;
             return result;

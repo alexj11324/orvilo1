@@ -1,5 +1,3 @@
-import { copyToClipboard, Icon } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import { Command } from 'cmdk';
 import {
@@ -10,17 +8,27 @@ import {
   LinkIcon,
   UserRoundPlusIcon,
 } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  createElement,
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
-import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
+import { toast } from '@/components/toast';
 import {
-  STATUS_META,
-  USER_SELECTABLE_STATUSES,
-} from '@/features/AgentTasks/features/taskStatusMeta';
-import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
+  COLUMN_I18N_KEYS,
+  issueStatusChoices,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
+import { useIssueStatusMove } from '@/features/AgentTasks/features/useIssueStatusMove';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -30,6 +38,7 @@ import { projectService } from '@/services/project';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { styles } from './styles';
@@ -67,7 +76,7 @@ const ResultActionsMenu = memo(() => {
   const { allowed: canEdit } = usePermission('create_content');
   const selfUserId = useUserStore(userProfileSelectors.userId);
   const updateTask = useTaskStore((s) => s.updateTask);
-  const changeTaskStatus = useTaskStatusChange();
+  const moveWorkflow = useIssueStatusMove();
 
   // Close first: mutations surface toasts and the status cascade modal mounts
   // outside the palette, so the overlay must not linger over them (same
@@ -92,7 +101,7 @@ const ResultActionsMenu = memo(() => {
     if (detailPath) {
       entries.push(
         {
-          icon: <Icon icon={CornerDownLeftIcon} />,
+          icon: <CornerDownLeftIcon />,
           key: 'open',
           label: t('cmdk.resultActions.open'),
           run: () => {
@@ -101,7 +110,7 @@ const ResultActionsMenu = memo(() => {
           },
         },
         {
-          icon: <Icon icon={LinkIcon} />,
+          icon: <LinkIcon />,
           key: 'copy-link',
           label: t('cmdk.resultActions.copyLink'),
           run: () => {
@@ -122,7 +131,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'task') {
       entries.push(
         {
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <CircleDashedIcon />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -130,14 +139,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <Icon icon={UserRoundPlusIcon} />,
+          icon: <UserRoundPlusIcon />,
           key: 'assign-to-me',
           label: t('cmdk.resultActions.assignToMe'),
           run: () =>
             runMutation(() => updateTask(actionTarget.id, { assigneeUserId: selfUserId! })),
         },
         {
-          icon: <Icon icon={BarChart3Icon} />,
+          icon: <BarChart3Icon />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -147,7 +156,7 @@ const ResultActionsMenu = memo(() => {
     } else if (actionTarget.type === 'project') {
       entries.push(
         {
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <CircleDashedIcon />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -155,14 +164,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <Icon icon={UserRoundPlusIcon} />,
+          icon: <UserRoundPlusIcon />,
           key: 'lead-to-me',
           label: t('cmdk.resultActions.setLeadToMe'),
           run: () =>
             runMutation(() => projectService.update(actionTarget.id, { leadUserId: selfUserId! })),
         },
         {
-          icon: <Icon icon={BarChart3Icon} />,
+          icon: <BarChart3Icon />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -188,16 +197,25 @@ const ResultActionsMenu = memo(() => {
   const statusEntries = useMemo<ActionEntry[]>(() => {
     if (!actionTarget) return [];
     if (actionTarget.type === 'task') {
-      return USER_SELECTABLE_STATUSES.map((status) => ({
-        disabled: !canEdit,
-        icon: <Icon color={STATUS_META[status].color} icon={STATUS_META[status].icon} />,
-        key: `status-${status}`,
-        label: t(`taskDetail.status.${status}`, { ns: 'chat' }),
-        run: () =>
-          runMutation(async () => {
-            await changeTaskStatus(actionTarget.id, status);
-          }),
-      }));
+      // Issue status picks are workflow moves — execution statuses are
+      // never a user pick on a task.
+      return issueStatusChoices().map((choice) => {
+        const category = choice.workflowCategory ?? 'backlog';
+        const visual = WORKFLOW_CATEGORY_VISUALS[category];
+        return {
+          disabled: !canEdit,
+          icon: createElement(visual.icon, { color: visual.color }),
+          key: `status-${category}`,
+          label: t(COLUMN_I18N_KEYS[choice.column.key] as never, { ns: 'chat' }),
+          run: () =>
+            runMutation(async () => {
+              await moveWorkflow({
+                taskIdentifier: actionTarget.id,
+                target: { category },
+              });
+            }),
+        };
+      });
     }
     if (actionTarget.type === 'project') {
       return PROJECT_CREATABLE_STATUSES.map((status) => ({
@@ -209,7 +227,7 @@ const ResultActionsMenu = memo(() => {
       }));
     }
     return [];
-  }, [actionTarget, canEdit, changeTaskStatus, runMutation, t]);
+  }, [actionTarget, canEdit, moveWorkflow, runMutation, t]);
 
   const priorityEntries = useMemo<ActionEntry[]>(() => {
     if (!actionTarget) return [];

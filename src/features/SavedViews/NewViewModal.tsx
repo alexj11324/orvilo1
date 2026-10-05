@@ -1,17 +1,24 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button, Modal, Text, toast } from '@lobehub/ui/base-ui';
-import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
+import {
+  normalizeWorkQuerySubGroupBy,
+  type WorkQuery,
+  type WorkQueryEntityType,
+  type WorkQueryFilter,
+} from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Modal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
+import { workQueryWithViewerTimeZone } from './savedViewDisplay';
 import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
 import { builderToFilter, filterToBuilder } from './workQueryBuilder';
 
@@ -37,9 +44,13 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   filter: builderToFilter(state.entityType, state.builder),
   groupBy: state.groupBy === 'none' ? undefined : state.groupBy,
   layout: state.layout,
-  schemaVersion: 1,
+  schemaVersion: 2,
   sort: state.sort,
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
+  subGroupBy:
+    state.entityType === 'task' && state.groupBy !== 'none'
+      ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
+      : undefined,
 });
 
 /**
@@ -84,12 +95,20 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
   }, [defaultEntityType, defaultTeamId, open, seedBuilder]);
 
   const query = useMemo(() => draftQuery(state), [state]);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
+  const previewQuery = useMemo(
+    () => workQueryWithViewerTimeZone(query, viewerTimeZone),
+    [query, viewerTimeZone],
+  );
 
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
       void workAttentionService
-        .query({ limit: 5, query })
+        .query({ limit: 5, query: previewQuery })
         .then((result) => {
           const data = result?.data;
           if (!data) {
@@ -108,7 +127,7 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
         .catch(() => setPreview(null));
     }, 300);
     return () => clearTimeout(timer);
-  }, [open, query]);
+  }, [open, previewQuery]);
 
   const ready =
     state.name.trim().length > 0 && (state.visibility !== 'team' || Boolean(state.teamId));
@@ -137,21 +156,20 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
 
   return (
     <Modal
-      destroyOnHidden
       open={open}
       title={t('savedViews.newView')}
       width={640}
       footer={
-        <Flexbox horizontal gap={8} justify="flex-end">
+        <div className="flex justify-end gap-2">
           <Button onClick={onClose}>{t('cancel')}</Button>
-          <Button disabled={!ready} loading={saving} type="primary" onClick={() => void save()}>
+          <Button disabled={!ready} loading={saving} variant="default" onClick={() => void save()}>
             {t('savedViews.createView')}
           </Button>
-        </Flexbox>
+        </div>
       }
       onCancel={onClose}
     >
-      <Flexbox gap={16} paddingBlock={8}>
+      <div className="flex flex-col gap-4 py-2">
         <ViewDefinitionEditor
           showEntityPicker
           showName
@@ -159,26 +177,25 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
           value={state}
           onChange={setState}
         />
-        <Flexbox
-          gap={4}
-          padding={12}
+        <div
+          className="flex flex-col gap-1 p-3"
           style={{
             background: 'var(--ant-color-fill-quaternary, rgba(0,0,0,0.02))',
             borderRadius: 8,
           }}
         >
-          <Text fontSize={12} type="secondary">
+          <div className="text-[12px] text-muted-foreground">
             {preview
               ? t('savedViews.previewCount', { count: preview.total })
               : t('savedViews.previewPending')}
-          </Text>
+          </div>
           {preview?.titles.map((title) => (
-            <Text ellipsis fontSize={12} key={title}>
+            <div className="truncate block text-[12px]" key={title}>
               · {title}
-            </Text>
+            </div>
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </Modal>
   );
 });

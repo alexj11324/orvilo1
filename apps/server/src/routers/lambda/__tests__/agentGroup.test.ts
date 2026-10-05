@@ -8,6 +8,7 @@ import * as ResourcePermissionModelModule from '@/database/models/resourcePermis
 import * as ResourceTransferRequestModelModule from '@/database/models/resourceTransferRequest';
 import { TRANSFER_REQUEST_ALREADY_PENDING } from '@/database/models/resourceTransferRequest';
 import * as UserModelModule from '@/database/models/user';
+import type * as WorkspaceModule from '@/database/models/workspace';
 import * as AgentGroupRepoModule from '@/database/repositories/agentGroup';
 import * as ChatGroupServiceModule from '@/server/services/agentGroup';
 import { EditLockService } from '@/server/services/editLock';
@@ -25,10 +26,18 @@ import {
 import { agentGroupRouter } from '../agentGroup';
 
 vi.mock('@/server/services/resourceEvents', () => ({ publishResourceEvent: vi.fn() }));
+// The admission check is a DB-backed contract verified by its own model tests;
+// this router suite runs against a bare `serverDB` object, so stub the seam and
+// assert on the runtime the router hands it.
+vi.mock('@/database/utils/agentRuntimeCreation', () => ({
+  assertAgentRuntimeCreation: vi.fn(
+    async (_db: any, _actor: any, config: any) => config.agencyConfig,
+  ),
+}));
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 // Both read the DB directly; `mockCtx.serverDB` is a bare object.
@@ -88,6 +97,15 @@ describe('agentGroupRouter', () => {
 
     agentModelMock = {
       batchCreate: vi.fn(),
+      getPrimeRuntimeForCreation: vi.fn().mockResolvedValue({
+        agencyConfig: {
+          boundDeviceId: 'prime-host',
+          executionTarget: 'device',
+          heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' },
+        },
+        model: 'gpt-4',
+        provider: 'openai',
+      }),
     };
 
     chatGroupModelMock = {
@@ -196,10 +214,14 @@ describe('agentGroupRouter', () => {
       const caller = agentGroupRouter.createCaller(mockCtx);
       const result = await caller.createGroup(mockInput);
 
-      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith({
-        ...mockInput,
-        config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
-      });
+      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
+        {
+          ...mockInput,
+          config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
+        },
+        [],
+        undefined,
+      );
       expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
     });
 
@@ -221,10 +243,14 @@ describe('agentGroupRouter', () => {
       const caller = agentGroupRouter.createCaller(mockCtx);
       const result = await caller.createGroup(mockInput);
 
-      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith({
-        ...mockInput,
-        config: undefined,
-      });
+      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
+        {
+          ...mockInput,
+          config: undefined,
+        },
+        [],
+        undefined,
+      );
       expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
     });
   });
@@ -264,7 +290,7 @@ describe('agentGroupRouter', () => {
           config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
         },
         ['agent-1', 'agent-2'],
-        undefined,
+        await agentModelMock.getPrimeRuntimeForCreation.mock.results[0]?.value,
       );
       expect(result).toEqual({
         agentIds: ['agent-1', 'agent-2'],
@@ -591,6 +617,44 @@ describe('agentGroupRouter', () => {
         'agent-2',
       ]);
       expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('member input — retired heterogeneousProvider fields refused', () => {
+    // Contract §migration: group member creates funnel through the same
+    // `agencyConfig` column — the schema rejects retired `engine`/`adapterType`
+    // writes here too, not only on the single-agent endpoints.
+    it('rejects batchCreateAgentsInGroup carrying a retired engine write', async () => {
+      const caller = agentGroupRouter.createCaller(mockCtx);
+
+      await expect(
+        caller.batchCreateAgentsInGroup({
+          agents: [
+            {
+              agencyConfig: { heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' } },
+              title: 'member',
+            } as any,
+          ],
+          groupId: 'group-1',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+    });
+
+    it('rejects createGroupWithMembers carrying a retired adapterType write', async () => {
+      const caller = agentGroupRouter.createCaller(mockCtx);
+
+      await expect(
+        caller.createGroupWithMembers({
+          groupConfig: { title: 'Group' },
+          members: [
+            {
+              agencyConfig: { heterogeneousProvider: { adapterType: 'cli', type: 'orvilo' } },
+              title: 'member',
+            } as any,
+          ],
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
   });
 

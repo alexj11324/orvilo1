@@ -1,9 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
-import { Progress } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Progress, ProgressValue } from '@/components/ui/progress';
 import { formatSpeed, formatTime } from '@/utils/format';
 
 import DataLoading from './Loading';
@@ -20,13 +19,17 @@ export const FileUploading = memo<FileUploadingProps>(({ progress = 0, speed = 0
   return (
     <>
       <DataLoading />
-      <Flexbox align={'center'} gap={8} width={'100%'}>
+      <div className="flex flex-col items-center gap-2 w-full">
         {t('importModal.uploading.desc')}
-        <Flexbox flex={1} gap={8} width={'100%'}>
-          <Progress showInfo percent={progress} strokeColor={cssVar.colorSuccess} />
-          <Flexbox
-            horizontal
-            distribution={'space-between'}
+        <div className="flex flex-col flex-1 gap-2 w-full">
+          <Progress
+            className="flex flex-row-reverse items-center gap-2 [&_[data-slot=progress-indicator]]:!bg-success"
+            value={progress}
+          >
+            <ProgressValue />
+          </Progress>
+          <div
+            className="flex justify-between"
             style={{ color: cssVar.colorTextDescription, fontSize: 12 }}
           >
             <span>
@@ -35,9 +38,9 @@ export const FileUploading = memo<FileUploadingProps>(({ progress = 0, speed = 0
             <span>
               {t('importModal.uploading.speed')}: {formatSpeed(speed * 1024)}
             </span>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
     </>
   );
 });

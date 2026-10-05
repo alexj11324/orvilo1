@@ -1,9 +1,9 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { FileImage, FileText, FileUpIcon, FolderIcon } from 'lucide-react';
-import { type CSSProperties, type ReactNode } from 'react';
+import { createElement, type CSSProperties, type ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,7 +11,6 @@ import { useDragUploadContext } from './DragUploadProvider';
 import { type DroppedLocalPath, useLocalDragUpload } from './useLocalDragUpload';
 
 const BLOCK_SIZE = 48;
-const ICON_SIZE = { size: 28, strokeWidth: 1.5 };
 const OVERLAY_INSET = 28;
 const OVERLAY_BORDER_INSET = 10;
 
@@ -224,51 +223,53 @@ const DragUploadZone = memo<DragUploadZoneProps>(
                 isLocalPathReferenceOverlay && styles.overlayContentLocalPath,
               )}
             >
-              <Center className={styles.content} gap={8}>
-                <Flexbox horizontal className={styles.iconGroup}>
-                  <Center
-                    className={styles.icon}
-                    height={BLOCK_SIZE * 1.2}
-                    width={BLOCK_SIZE}
+              <div
+                className={cn('flex flex-col items-center justify-center gap-2', styles.content)}
+              >
+                <div className={cn('flex', styles.iconGroup)}>
+                  <div
+                    className={cn('flex flex-col items-center justify-center', styles.icon)}
                     style={{
                       background: tone.iconSoftBg,
                       color: tone.iconColor,
                       transform: 'rotateZ(-20deg) translateX(8px)',
+                      height: BLOCK_SIZE * 1.2,
+                      width: BLOCK_SIZE,
                     }}
                   >
-                    <Icon icon={overlayIcons[0]} size={ICON_SIZE} />
-                  </Center>
-                  <Center
-                    className={styles.icon}
-                    height={BLOCK_SIZE * 1.2}
-                    width={BLOCK_SIZE}
+                    {createElement(overlayIcons[0], { size: 28, strokeWidth: 1.5 })}
+                  </div>
+                  <div
+                    className={cn('flex flex-col items-center justify-center', styles.icon)}
                     style={{
                       background: tone.iconStrongBg,
                       color: tone.iconColor,
                       transform: 'translateY(-10px)',
                       zIndex: 1,
+                      height: BLOCK_SIZE * 1.2,
+                      width: BLOCK_SIZE,
                     }}
                   >
-                    <Icon icon={overlayIcons[1]} size={ICON_SIZE} />
-                  </Center>
-                  <Center
-                    className={styles.icon}
-                    height={BLOCK_SIZE * 1.2}
-                    width={BLOCK_SIZE}
+                    {createElement(overlayIcons[1], { size: 28, strokeWidth: 1.5 })}
+                  </div>
+                  <div
+                    className={cn('flex flex-col items-center justify-center', styles.icon)}
                     style={{
                       background: tone.iconSoftBg,
                       color: tone.iconColor,
                       transform: 'rotateZ(20deg) translateX(-8px)',
+                      height: BLOCK_SIZE * 1.2,
+                      width: BLOCK_SIZE,
                     }}
                   >
-                    <Icon icon={overlayIcons[2]} size={ICON_SIZE} />
-                  </Center>
-                </Flexbox>
-                <Flexbox align={'center'} gap={4} style={{ textAlign: 'center' }}>
-                  <Flexbox className={styles.title}>{overlayCopy.title}</Flexbox>
-                  <Flexbox className={styles.desc}>{overlayCopy.desc}</Flexbox>
-                </Flexbox>
-              </Center>
+                    {createElement(overlayIcons[2], { size: 28, strokeWidth: 1.5 })}
+                  </div>
+                </div>
+                <div className={'flex flex-col gap-1 items-center'} style={{ textAlign: 'center' }}>
+                  <div className={cn('flex flex-col', styles.title)}>{overlayCopy.title}</div>
+                  <div className={cn('flex flex-col', styles.desc)}>{overlayCopy.desc}</div>
+                </div>
+              </div>
             </div>
           </div>
         )}

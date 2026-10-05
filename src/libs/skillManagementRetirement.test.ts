@@ -14,7 +14,7 @@
  *
  *   must be gone — the skill settings pages, the market/store features, the
  *                  create / import / update / delete procedures, the market
- *                  read queries, the `?skill=` deep link, `lh skill`
+ *                  read queries, the `?skill=` deep link, `orvilo skill`
  *   must stay    — the whole Connector chain (which used to share the same
  *                  page), the builtin skills the runtime injects, and the
  *                  read-only skill APIs the agent runtime still resolves
@@ -201,7 +201,7 @@ describe('the platform Skill management chain stays retired', () => {
       expect(exists('src/store/tool/slices/builtin/executors/orvilo-skill-store.ts')).toBe(false);
     });
 
-    it('no longer ships the lh skill command group', () => {
+    it('no longer ships the orvilo skill command group', () => {
       expect(exists('apps/cli/src/commands/skill.ts')).toBe(false);
       expect(exists('apps/cli/src/commands/skill.test.ts')).toBe(false);
     });

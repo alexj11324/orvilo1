@@ -1,5 +1,3 @@
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, confirmModal, type ModalInstance, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { getActivePluginIds, type OrviloAgentConfig } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -17,6 +15,7 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 
 import { useAgentTransferMenuItem } from '@/business/client/hooks/useAgentTransferMenuItem';
 import { useAgentTransferToMemberMenuItem } from '@/business/client/hooks/useAgentTransferToMemberMenuItem';
@@ -24,10 +23,16 @@ import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import { useBusinessAgentImportMenuItem } from '@/business/client/hooks/useBusinessAgentImportMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { type ModalInstance } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
+import { shouldShowAgentBreadcrumb } from '@/features/AgentBreadcrumb/shouldShowAgentBreadcrumb';
 import AgentProfileTabs, { AGENT_PROFILE_TABS_CENTER_STYLE } from '@/features/AgentProfileTabs';
 import NavHeader from '@/features/NavHeader';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { formatPageEditorInfoTime } from '@/features/PageEditor/formatPageEditorInfoTime';
 import AccessLevelTag from '@/features/ResourcePermission/AccessLevelTag';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
@@ -103,6 +108,7 @@ const Header = memo(() => {
   const { i18n, t } = useTranslation(['setting', 'chat', 'file', 'common', 'agent']);
   const dateLocale = i18n?.resolvedLanguage || i18n?.language;
   const navigate = useWorkspaceAwareNavigate();
+  const location = useLocation();
 
   const meta = useAgentStore(agentSelectors.currentAgentMeta, isEqual);
   // `currentAgentConfig` is typed non-nullable but reads straight out of
@@ -265,7 +271,7 @@ const Header = memo(() => {
         // View/use-level members can't edit the agent config — keep the entry
         // visible but disabled (project convention: disabled, not hidden).
         disabled: !canConfigure,
-        icon: <Icon icon={Settings2Icon} />,
+        icon: <Settings2Icon />,
         key: 'advanced-settings',
         label: t('advancedSettings', { ns: 'setting' }),
         onClick: () => {
@@ -281,7 +287,7 @@ const Header = memo(() => {
             // toast, so an enabled entry here is a click into a dead end.
             // Disabled, not hidden — the member can still see the action exists.
             disabled: !canConfigure,
-            icon: <Icon icon={UsersIcon} />,
+            icon: <UsersIcon />,
             key: 'permission',
             label: t('permission.page.entry', { ns: 'setting' }),
             onClick: () => {
@@ -299,7 +305,7 @@ const Header = memo(() => {
             onClick: handleExportMarkdown,
           },
         ],
-        icon: <Icon icon={Download} />,
+        icon: <Download />,
         key: 'export',
         label: t('pageEditor.menu.export', { ns: 'file' }),
       },
@@ -314,7 +320,7 @@ const Header = memo(() => {
       canManage
         ? {
             danger: true,
-            icon: <Icon icon={Trash} />,
+            icon: <Trash />,
             key: 'delete',
             label: t('delete', { ns: 'common' }),
             onClick: handleDelete,
@@ -326,7 +332,7 @@ const Header = memo(() => {
             { type: 'divider' as const },
             {
               disabled: true,
-              icon: authorName ? <Icon icon={UserRound} /> : undefined,
+              icon: authorName ? <UserRound /> : undefined,
               key: 'agent-info',
               label: (
                 <span style={{ color: cssVar.colorTextTertiary, fontSize: 12, lineHeight: 1.6 }}>
@@ -370,17 +376,19 @@ const Header = memo(() => {
     <NavHeader
       style={{ position: 'relative' }}
       left={
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           {/* No section title — the Segmented beside it names the current tab. */}
-          {activeAgentId && <AgentBreadcrumb agentId={activeAgentId} />}
+          {activeAgentId && shouldShowAgentBreadcrumb(location.pathname) && (
+            <AgentBreadcrumb agentId={activeAgentId} />
+          )}
           <AccessLevelTag
             resourceId={showPermissionsEntry ? (activeAgentId ?? undefined) : undefined}
             resourceType={'agent'}
           />
-        </Flexbox>
+        </div>
       }
       right={
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {canShareAgent && (
             <ActionIcon
               icon={Share2Icon}
@@ -390,9 +398,9 @@ const Header = memo(() => {
               onClick={handleOpenShare}
             />
           )}
-          <DropdownMenu items={menuItems}>
+          <SidebarDropdownMenu items={menuItems} placement="bottomRight">
             <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
-          </DropdownMenu>
+          </SidebarDropdownMenu>
           {!isHeterogeneous && isStatusInit && !lockedByOther && !lockPending && (
             <ToggleRightPanelButton
               expand={showAgentBuilderPanel}
@@ -401,7 +409,7 @@ const Header = memo(() => {
               onToggle={() => toggleAgentBuilderPanel()}
             />
           )}
-        </Flexbox>
+        </div>
       }
       styles={{
         // Center the switcher on the *header* midpoint, not within the leftover

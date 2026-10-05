@@ -3,7 +3,7 @@ import {
   BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   getHeterogeneousAgentConfig,
 } from '@orvilo/heterogeneous-agents';
-import { ChatErrorType, type ErrorType, resolveOrviloCliAgentType } from '@orvilo/types';
+import { ChatErrorType, type ErrorType } from '@orvilo/types';
 
 /**
  * Turn a raw device-gateway dispatch error code into a human-readable headline.
@@ -19,7 +19,7 @@ import { ChatErrorType, type ErrorType, resolveOrviloCliAgentType } from '@orvil
  */
 export const HETERO_DISPATCH_ERROR_HEADLINES: Record<string, string> = {
   DEVICE_CHANNEL_UNAVAILABLE:
-    "The device this agent runs on isn't reachable right now — it went offline, went to sleep, or is reconnecting. Check that the Orvilo desktop app (or the `lh` CLI) is running and connected, then try again.",
+    "The device this agent runs on isn't reachable right now — it went offline, went to sleep, or is reconnecting. Check that the Orvilo desktop app (or the `orvilo` CLI) is running and connected, then try again.",
   DEVICE_GATEWAY_ERROR:
     'The device connection service hit an error while starting this run. Nothing started on the device. This is usually temporary — try again in a moment.',
   DEVICE_GATEWAY_RATE_LIMITED:
@@ -28,10 +28,12 @@ export const HETERO_DISPATCH_ERROR_HEADLINES: Record<string, string> = {
     "The device connection service rejected this run's credentials. This is a server configuration problem — retrying won't help.",
   DEVICE_GATEWAY_UNREACHABLE:
     "Couldn't reach the device connection service, so this run never started. Check the network, then try again.",
+  DEVICE_NOT_CONNECTED:
+    "The device this agent runs on isn't reachable right now — it went offline, went to sleep, or is reconnecting. Check that the Orvilo desktop app (or the `orvilo` CLI) is running and connected, then try again.",
   DEVICE_NOT_FOUND:
     'The device this agent is bound to is no longer registered with the connection service. Reconnect the device, or bind this agent to another online device.',
   DEVICE_OFFLINE:
-    "The device this agent runs on is offline, so the run couldn't start. Check that the Orvilo desktop app (or the `lh` CLI) is running and connected, then try again.",
+    "The device this agent runs on is offline, so the run couldn't start. Check that the Orvilo desktop app (or the `orvilo` CLI) is running and connected, then try again.",
   DEVICE_RESPONSE_TIMEOUT:
     "The device didn't answer in time, so we can't tell whether this run started. Check the device before starting it again.",
   GATEWAY_NOT_CONFIGURED:
@@ -65,6 +67,7 @@ const HETERO_DISPATCH_ERROR_TYPES: Record<string, ErrorType> = {
   // device") is the same whether the gateway is unconfigured, the device is
   // offline, or its registration is gone.
   DEVICE_CHANNEL_UNAVAILABLE: ChatErrorType.DeviceGatewayNotConfigured,
+  DEVICE_NOT_CONNECTED: ChatErrorType.DeviceGatewayNotConfigured,
   DEVICE_NOT_FOUND: ChatErrorType.DeviceGatewayNotConfigured,
   DEVICE_OFFLINE: ChatErrorType.DeviceGatewayNotConfigured,
   GATEWAY_NOT_CONFIGURED: ChatErrorType.DeviceGatewayNotConfigured,
@@ -77,18 +80,14 @@ export const resolveHeteroDispatchErrorType = (raw?: string): ErrorType => {
 };
 
 /**
- * Whether the type can run in the cloud sandbox. The builtin `'orvilo'`
- * harness resolves through its selected engine's CLI family (`claude` /
- * `codex`), both of which are sandbox-capable; `engine` is only read when
- * `type === 'orvilo'`.
+ * Whether the type can run server-side in the cloud. `claude-code`/`codex`
+ * spawn their CLI inside the cloud sandbox; the builtin `'orvilo'` agent's
+ * Prime harness runs on the embedded control-plane host — it counts as
+ * cloud-capable, but the dispatch seam routes a sandbox plan to the
+ * embedded host instead of a sandbox spawn.
  */
-export const supportsCloudHeterogeneousSandbox = (
-  type: HeterogeneousAgentType,
-  engine?: string | null,
-): boolean => {
-  const family = type === 'orvilo' ? resolveOrviloCliAgentType(engine) : type;
-  return family === 'claude-code' || family === 'codex';
-};
+export const supportsCloudHeterogeneousSandbox = (type: HeterogeneousAgentType): boolean =>
+  type === 'orvilo' || type === 'claude-code' || type === 'codex';
 
 export const getHeterogeneousAgentTitle = (type: HeterogeneousAgentType): string =>
   getHeterogeneousAgentConfig(type)?.title ??

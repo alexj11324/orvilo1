@@ -1,6 +1,5 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import type { TreeDataNode } from '@lobehub/ui/base-ui';
-import { ActionIcon, Collapsible, confirmModal, Text, toast, Tree } from '@lobehub/ui/base-ui';
+import { type TreeDataNode } from '@lobehub/ui/base-ui';
+import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { ListTodoIcon, PlayCircle, Plus } from 'lucide-react';
@@ -9,9 +8,15 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { SidebarContextMenuPopup } from '@/features/NavPanel/components/SidebarContextMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { showContextMenu } from '@/libs/contextMenu';
+import { showContextMenuWithFallback } from '@/libs/contextMenu';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -21,8 +26,9 @@ import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import IssueStatusPicker from '../features/IssueStatusPicker';
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskStatusTag from '../features/TaskStatusTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
@@ -33,7 +39,6 @@ import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import RunSubtasksPreview from './RunSubtasksPreview';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import TopicStatusIcon from './TopicStatusIcon';
 
 type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
 
@@ -69,13 +74,7 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
   const activeWorkspaceId = useActiveWorkspaceId();
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      gap={8}
-      justify="space-between"
-      style={{ minWidth: 0, width: '100%' }}
-    >
+    <div className="flex items-center justify-between gap-2" style={{ minWidth: 0, width: '100%' }}>
       <span
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
@@ -86,24 +85,22 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TaskStatusTag
+        <IssueStatusPicker
           size={14}
-          status={status}
           taskIdentifier={task.identifier}
           workflowCategory={task.workflowCategory}
           workflowStateId={task.workflowStateId}
-        >
-          {hasRunningTopic ? <TopicStatusIcon size={14} status="running" /> : undefined}
-        </TaskStatusTag>
+        />
+        {hasRunningTopic ? <TaskExecutionBadge size={14} status="running" /> : undefined}
       </span>
       {hasName && (
-        <Text fontSize={13} style={{ flex: 'none' }} type={'secondary'}>
+        <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>
           {task.identifier}
-        </Text>
+        </div>
       )}
-      <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
+      <div className="truncate block text-sm" style={{ flex: 1, minWidth: 0 }}>
         {task.name || task.identifier}
-      </Text>
+      </div>
       {task.automationMode ? (
         <span
           style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
@@ -117,7 +114,7 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
           />
         </span>
       ) : null}
-      <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+      <div className="flex flex-none items-center gap-1">
         {shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
           <AssigneeMemberSelector
             currentUserId={task.assigneeUserId ?? null}
@@ -159,8 +156,8 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
             <AssigneeAvatar agentId={task.assignee?.id} size={18} />
           </span>
         </AssigneeAgentSelector>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -191,6 +188,10 @@ const TaskSubtasks = memo(() => {
   const [isCreating, setIsCreating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const [isPlanning, setIsPlanning] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    anchor: { getBoundingClientRect: () => DOMRect };
+    items: NativeContextMenuItem[];
+  } | null>(null);
 
   const subtaskMap = useMemo(() => {
     const map = new Map<string, TaskDetailSubtask>();
@@ -223,26 +224,34 @@ const TaskSubtasks = memo(() => {
       const subtask = subtaskMap.get(node.key);
       if (!subtask) return;
       event.preventDefault();
-      showContextMenu(
-        buildItems({
-          assigneeAgentId: subtask.assignee?.id,
-          assigneeUserId: subtask.assigneeUserId,
-          identifier: subtask.identifier,
-          priority: subtask.priority,
-          status: subtask.status,
-          workflowCategory: subtask.workflowCategory,
-          workflowStateId: subtask.workflowStateId,
-        }),
-      );
-      installKeyboardHandlers({
+      const target = {
         assigneeAgentId: subtask.assignee?.id,
         assigneeUserId: subtask.assigneeUserId,
+        createdByUserId: subtask.createdByUserId,
         identifier: subtask.identifier,
+        name: subtask.name,
         priority: subtask.priority,
         status: subtask.status,
+        visibility: subtask.visibility,
         workflowCategory: subtask.workflowCategory,
         workflowStateId: subtask.workflowStateId,
+      };
+      const items = buildItems(target);
+      // The tree's right-click channel is not a DOM trigger: the native popup
+      // still wins on desktop, and the web fallback opens a ReUI menu anchored
+      // at the pointer.
+      let openedWebMenu = false;
+      showContextMenuWithFallback(items, undefined, () => {
+        openedWebMenu = true;
+        setContextMenu({
+          anchor: {
+            getBoundingClientRect: () =>
+              DOMRect.fromRect({ height: 0, width: 0, x: event.clientX, y: event.clientY }),
+          },
+          items,
+        });
       });
+      installKeyboardHandlers(target, openedWebMenu ? () => setContextMenu(null) : undefined);
     },
     [canEditTask, subtaskMap, buildItems, installKeyboardHandlers],
   );
@@ -310,38 +319,37 @@ const TaskSubtasks = memo(() => {
   const hasSubtasks = subtasks.length > 0;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {hasSubtasks ? (
         <>
-          <Flexbox horizontal align="center" justify="space-between">
-            <Flexbox horizontal align="center" gap={8}>
-              <Block
-                clickable
-                horizontal
-                align="center"
-                gap={8}
-                paddingBlock={4}
-                paddingInline={8}
-                style={{ cursor: 'pointer', width: 'fit-content' }}
-                variant="borderless"
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2"
+                style={{
+                  cursor: 'pointer',
+                  paddingBlock: 4,
+                  paddingInline: 8,
+                  width: 'fit-content',
+                }}
                 onClick={() => setIsExpanded((prev) => !prev)}
               >
-                <Icon color={cssVar.colorTextDescription} icon={ListTodoIcon} size={16} />
-                <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+                <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
+                <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
                   {t('taskDetail.subtasks')}
-                </Text>
+                </div>
                 <AccordionArrowIcon
                   isOpen={isExpanded}
                   style={{ color: cssVar.colorTextDescription }}
                 />
-              </Block>
+              </div>
               <TaskSubtaskProgressTag
                 currentIdentifier={taskId}
                 subtasks={subtasks}
                 onSubtaskClick={handleNavigate}
               />
-            </Flexbox>
-            <Flexbox horizontal align="center" gap={4}>
+            </div>
+            <div className="flex items-center gap-1">
               <ActionIcon
                 disabled={!canEditTask || isPlanning}
                 icon={PlayCircle}
@@ -357,55 +365,59 @@ const TaskSubtasks = memo(() => {
                 title={canEditTask ? t('taskDetail.addSubtask') : reason}
                 onClick={toggleCreating}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
           <Collapsible open={isExpanded}>
-            <Flexbox gap={8}>
-              {isCreating && (
-                <CreateTaskInlineEntry
-                  autoFocus
-                  agentId={agentId ?? undefined}
-                  defaultVisibility={parentVisibility}
-                  parentTaskId={taskId}
-                  placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-                  onCollapse={() => setIsCreating(false)}
-                  onCreated={() => setIsCreating(false)}
+            <CollapsibleContent>
+              <div className="flex flex-col gap-2">
+                {isCreating && (
+                  <CreateTaskInlineEntry
+                    autoFocus
+                    agentId={agentId ?? undefined}
+                    defaultVisibility={parentVisibility}
+                    parentTaskId={taskId}
+                    placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
+                    onCollapse={() => setIsCreating(false)}
+                    onCreated={() => setIsCreating(false)}
+                  />
+                )}
+                <Tree
+                  blockNode
+                  defaultExpandAll
+                  showLine
+                  classNames={{ title: styles.subtaskTreeTitle }}
+                  styles={{ node: { height: 36 } }}
+                  treeData={treeData}
+                  onRightClick={handleRightClick}
+                  onSelect={(keys) => {
+                    if (keys[0]) handleNavigate(keys[0]);
+                  }}
                 />
-              )}
-              <Tree
-                blockNode
-                defaultExpandAll
-                showLine
-                classNames={{ title: styles.subtaskTreeTitle }}
-                styles={{ node: { height: 36 } }}
-                treeData={treeData}
-                onRightClick={handleRightClick}
-                onSelect={(keys) => {
-                  if (keys[0]) handleNavigate(keys[0]);
-                }}
-              />
-            </Flexbox>
+                <SidebarContextMenuPopup
+                  anchor={contextMenu?.anchor}
+                  items={contextMenu?.items ?? []}
+                  open={Boolean(contextMenu)}
+                  onOpenChange={(open) => {
+                    if (!open) setContextMenu(null);
+                  }}
+                />
+              </div>
+            </CollapsibleContent>
           </Collapsible>
         </>
       ) : (
         <>
-          <Block
-            clickable
-            horizontal
-            align="center"
-            gap={8}
-            paddingBlock={4}
-            paddingInline={8}
-            style={{ width: 'fit-content' }}
+          <div
+            className="flex cursor-pointer items-center gap-2"
+            style={{ paddingBlock: 4, paddingInline: 8, width: 'fit-content' }}
             title={canEditTask ? undefined : reason}
-            variant="borderless"
             onClick={toggleCreating}
           >
-            <Icon color={cssVar.colorTextDescription} icon={Plus} size={16} />
-            <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+            <Plus color={cssVar.colorTextDescription} size={16} />
+            <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
               {t('taskDetail.addSubtask')}
-            </Text>
-          </Block>
+            </div>
+          </div>
           {isCreating && (
             <CreateTaskInlineEntry
               autoFocus
@@ -419,7 +431,7 @@ const TaskSubtasks = memo(() => {
           )}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

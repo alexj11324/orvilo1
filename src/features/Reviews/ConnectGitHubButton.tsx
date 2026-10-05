@@ -1,6 +1,7 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { useGitHubConnection } from './useGitHubConnection';
 

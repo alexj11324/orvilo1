@@ -1,18 +1,19 @@
 'use client';
 
-import { DropdownMenu, stopPropagation } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import type { ItemType } from 'antd/es/menu/interface';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 
 interface HierarchyNodeMenuButtonProps {
   /**
    * The same item list the row's right-click menu opens, so the two entry
    * points can never drift apart.
    */
-  menuItems: () => ItemType[];
+  menuItems: () => DropdownItem[];
 }
 
 /**
@@ -29,8 +30,8 @@ const HierarchyNodeMenuButton = memo<HierarchyNodeMenuButtonProps>(({ menuItems 
     <div
       className={'hierarchy-node-actions'}
       data-open={menuOpen}
-      onClick={stopPropagation}
-      onPointerDown={stopPropagation}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       <DropdownMenu
         items={menuItems}

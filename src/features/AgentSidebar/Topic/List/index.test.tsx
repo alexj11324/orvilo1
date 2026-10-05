@@ -2,6 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { fireEvent, render, screen } from '@testing-library/react';
+import { type ReactNode, Suspense } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TopicList from './index';
@@ -56,6 +57,7 @@ vi.mock('@/features/NavPanel/components/SkeletonList', () => ({
 
 vi.mock('@/hooks/useFetchChatTopics', () => ({
   useFetchChatTopics: vi.fn(),
+  useWorkspaceConversationFeed: vi.fn(),
 }));
 
 vi.mock('@/hooks/useFetchActiveTopicDetail', () => ({
@@ -102,23 +104,38 @@ vi.mock('@/store/global/selectors', () => ({
 }));
 
 vi.mock('@/store/user', () => ({
-  useUserStore: (
-    selector: (state: { topicIncludeCompleted: boolean; topicSortBy: string }) => unknown,
-  ) => selector({ topicIncludeCompleted: false, topicSortBy: 'updatedAt' }),
+  useUserStore: (selector: (state: { topicSortBy: string }) => unknown) =>
+    selector({ topicSortBy: 'updatedAt' }),
 }));
 
 vi.mock('@/store/user/selectors', () => ({
   preferenceSelectors: {
-    topicIncludeCompleted: (state: { topicIncludeCompleted: boolean }) =>
-      state.topicIncludeCompleted,
     topicSortBy: (state: { topicSortBy: string }) => state.topicSortBy,
   },
 }));
 
-vi.mock('../AllTopicsDrawer', () => ({
-  default: ({ open }: { open: boolean }) => (
-    <div data-open={String(open)} data-testid="all-topics-drawer" />
+vi.mock('../AllTopicsDrawer/Content', () => ({
+  default: ({ searchKeyword }: { searchKeyword: string }) => (
+    <div data-keyword={searchKeyword} data-testid="all-topics-content" />
   ),
+}));
+
+vi.mock('@/features/NavPanel/SideBarDrawer', () => ({
+  default: ({
+    children,
+    open,
+    subHeader,
+  }: {
+    children?: ReactNode;
+    open: boolean;
+    subHeader?: ReactNode;
+  }) =>
+    open ? (
+      <div data-testid="all-topics-drawer">
+        {subHeader}
+        <Suspense fallback={null}>{children}</Suspense>
+      </div>
+    ) : null,
 }));
 
 vi.mock('../hooks/useAgentTopicGroupMode', () => ({
@@ -147,6 +164,7 @@ describe('Agent topic list', () => {
     chatStoreStateMock.isExpandingPageSize = false;
     chatStoreStateMock.topicLength = 0;
     chatStoreStateMock.topics = [];
+    chatStoreStateMock.allTopicsDrawerOpen = false;
   });
 
   it('opens the agent chat route from the empty start topic entry', () => {
@@ -177,5 +195,34 @@ describe('Agent topic list', () => {
 
     expect(openAllTopicsDrawerMock).toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('applies the all-topics search keyword only after pressing Enter', async () => {
+    chatStoreStateMock.allTopicsDrawerOpen = true;
+    render(<TopicList />);
+
+    const content = await screen.findByTestId('all-topics-content');
+    const input = screen.getByPlaceholderText('searchPlaceholder');
+
+    fireEvent.change(input, { target: { value: 'abc' } });
+    expect(content).toHaveAttribute('data-keyword', '');
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(content).toHaveAttribute('data-keyword', 'abc');
+  });
+
+  it('resets the all-topics search keyword via the clear button', async () => {
+    chatStoreStateMock.allTopicsDrawerOpen = true;
+    render(<TopicList />);
+
+    const content = await screen.findByTestId('all-topics-content');
+    const input = screen.getByPlaceholderText('searchPlaceholder');
+
+    fireEvent.change(input, { target: { value: 'abc' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(content).toHaveAttribute('data-keyword', 'abc');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(content).toHaveAttribute('data-keyword', '');
   });
 });

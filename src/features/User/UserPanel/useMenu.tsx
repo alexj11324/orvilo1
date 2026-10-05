@@ -1,8 +1,5 @@
-import { Flexbox, Hotkey, Icon } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
-import type { ItemType } from 'antd/es/menu/interface';
 import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { memo } from 'react';
@@ -10,7 +7,9 @@ import { useTranslation } from 'react-i18next';
 
 import useBusinessMenuItems from '@/business/client/features/User/useBusinessMenuItems';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
-import { type MenuProps } from '@/components/Menu';
+import type { ItemType, MenuProps } from '@/components/Menu';
+import { Badge } from '@/components/reui/badge';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { DEFAULT_DESKTOP_HOTKEY_CONFIG } from '@/const/desktop';
 import { OFFICIAL_URL } from '@/const/url';
 import DataImporter from '@/features/DataImporter';
@@ -31,17 +30,17 @@ const NewVersionBadge = memo(
     const { t } = useTranslation('common');
     if (!showBadge)
       return (
-        <Flexbox flex={1} onClick={onClick}>
+        <div className="flex flex-col flex-1" onClick={onClick}>
           {children}
-        </Flexbox>
+        </div>
       );
     return (
-      <Flexbox horizontal align={'center'} flex={1} gap={8} width={'100%'} onClick={onClick}>
+      <div className="flex items-center flex-1 gap-2 w-full" onClick={onClick}>
         {children}
-        <Tag color={'info'} size={'small'} style={{ borderRadius: 16, paddingInline: 8 }}>
+        <Badge size="sm" style={{ borderRadius: 16, paddingInline: 8 }} variant="info">
           {t('upgradeVersion.hasNew')}
-        </Tag>
-      </Flexbox>
+        </Badge>
+      </div>
     );
   },
 );
@@ -62,10 +61,14 @@ export const useMenu = () => {
     {
       extra: isDesktop ? (
         <div>
-          <Hotkey keys={DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings} />
+          <KbdGroup>
+            {DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings.split('+').map((k) => (
+              <Kbd key={k}>{k}</Kbd>
+            ))}
+          </KbdGroup>
         </div>
       ) : undefined,
-      icon: <Icon icon={Settings2} />,
+      icon: <Settings2 />,
       key: 'setting',
       label: (
         <WorkspaceLink to="/settings">
@@ -79,7 +82,7 @@ export const useMenu = () => {
 
   const helps: MenuProps['items'] = [
     showCloudPromotion && {
-      icon: <Icon icon={Cloudy} />,
+      icon: <Cloudy />,
       key: 'cloud',
       label: (
         <a
@@ -95,7 +98,7 @@ export const useMenu = () => {
 
   const getApp: MenuProps['items'] = [
     {
-      icon: <Icon icon={Download} />,
+      icon: <Download />,
       key: 'get-app',
       label: <WorkspaceLink to="/settings/about">{t('getApp')}</WorkspaceLink>,
     },
@@ -111,7 +114,7 @@ export const useMenu = () => {
     ...(userPanel.showDataImporter && isLogin
       ? [
           {
-            icon: <Icon icon={HardDriveDownload} />,
+            icon: <HardDriveDownload />,
             key: 'import',
             label: <DataImporter>{t('importData')}</DataImporter>,
           },
@@ -134,7 +137,7 @@ export const useMenu = () => {
   const logoutItems: MenuProps['items'] = isLoginWithAuth
     ? [
         {
-          icon: <Icon icon={LogOut} />,
+          icon: <LogOut />,
           key: 'logout',
           label: <span>{t('signout', { ns: 'auth' })}</span>,
         },

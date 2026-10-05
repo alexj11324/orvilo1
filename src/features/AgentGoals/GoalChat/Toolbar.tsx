@@ -1,10 +1,11 @@
-import { Flexbox, Popover } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { Clock3Icon, PanelRightCloseIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import NavHeader from '@/features/NavHeader';
@@ -34,7 +35,9 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
   const [activeTopicId, switchTopic, topics] = useChatStore((s) => [
     s.activeTopicId,
     s.switchTopic,
-    topicSelectors.currentTopics(s),
+    // The panel names its own agent — `currentTopics` resolves the workspace
+    // conversation feed now, which is not this panel's list.
+    topicSelectors.getTopicsByAgentId(agentId)(s),
   ]);
   const currentTopic = useChatStore(topicSelectors.currentActiveTopic);
 
@@ -46,15 +49,21 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
     <NavHeader
       showTogglePanelButton={false}
       left={
-        <Text
-          style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
-          type={'secondary'}
-          ellipsis={{
-            tooltipWhenOverflow: true,
-          }}
-        >
-          {agentTitle ? `${agentTitle} · ${topicTitle}` : topicTitle}
-        </Text>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <div
+                className="truncate min-w-0 text-muted-foreground"
+                style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
+              />
+            }
+          >
+            {agentTitle ? `${agentTitle} · ${topicTitle}` : topicTitle}
+          </TooltipTrigger>
+          <TooltipContent>
+            {agentTitle ? `${agentTitle} · ${topicTitle}` : topicTitle}
+          </TooltipContent>
+        </Tooltip>
       }
       right={
         <>
@@ -66,18 +75,26 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
           />
           <Popover
             open={isLoadingTopics ? false : topicPopoverOpen}
-            placement="bottomRight"
-            trigger="click"
-            content={
-              hasTopics ? (
-                <Flexbox
-                  gap={4}
-                  padding={8}
-                  style={{
-                    maxHeight: '50vh',
-                    overflowY: 'auto',
-                    width: '100%',
-                  }}
+            onOpenChange={setTopicPopoverOpen}
+          >
+            <PopoverTrigger
+              render={
+                <span>
+                  <ActionIcon
+                    disabled={isLoadingTopics}
+                    icon={Clock3Icon}
+                    loading={isLoadingTopics}
+                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    title={t('actions.showTopics', { ns: 'topic' })}
+                  />
+                </span>
+              }
+            />
+            <PopoverContent align={'end'} className={'w-60 p-0'}>
+              {hasTopics ? (
+                <div
+                  className="flex flex-col gap-1"
+                  style={{ padding: 8, maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
                 >
                   {topics!.map((topic) => (
                     <TopicItem
@@ -89,31 +106,18 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
                       onTopicChange={(id) => switchTopic(id)}
                     />
                   ))}
-                </Flexbox>
+                </div>
               ) : (
-                <Flexbox padding={16}>
-                  <Text type={'secondary'}>{t('goalChat.noTopics')}</Text>
-                </Flexbox>
-              )
-            }
-            styles={{
-              content: {
-                padding: 0,
-                width: 240,
-              },
-            }}
-            onOpenChange={setTopicPopoverOpen}
-          >
-            <ActionIcon
-              disabled={isLoadingTopics}
-              icon={Clock3Icon}
-              loading={isLoadingTopics}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-            />
+                <div className="flex flex-col" style={{ padding: 16 }}>
+                  <div className="text-muted-foreground">{t('goalChat.noTopics')}</div>
+                </div>
+              )}
+            </PopoverContent>
           </Popover>
           <ActionIcon
             icon={PanelRightCloseIcon}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            title={t('workingPanel.tabs.closePanel')}
             onClick={onCollapse}
           />
         </>

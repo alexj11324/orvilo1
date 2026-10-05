@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import {
@@ -15,9 +13,10 @@ import {
   RefreshCw,
   RotateCcw,
 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 import type { AcceptanceBundle } from '@/services/verify';
 
@@ -116,14 +115,14 @@ const LedgerPanel = memo<LedgerPanelProps>(
     const latestIndex = rounds.at(-1)?.run.roundIndex;
 
     return (
-      <Flexbox gap={12} padding={16}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon color={cssVar.colorTextSecondary} icon={FileClock} size={16} />
-          <Text strong style={{ fontSize: 13 }}>
+      <div className="flex flex-col gap-3" style={{ padding: 16 }}>
+        <div className="flex items-center gap-2">
+          <FileClock color={cssVar.colorTextSecondary} size={16} />
+          <div className="font-semibold" style={{ fontSize: 13 }}>
             {t('acceptance.ledger.title')}
-          </Text>
+          </div>
           <span className={styles.countBadge}>{rounds.length}</span>
-          <Flexbox flex={1} />
+          <div className="flex flex-col flex-1" />
           {!hideCollapse && (
             <ActionIcon
               icon={PanelRightClose}
@@ -132,7 +131,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
               onClick={onCollapse}
             />
           )}
-        </Flexbox>
+        </div>
         {[...rounds].reverse().map((round) => {
           const running = isRunningRound(round);
           const runStatus = round.run.status ?? 'verifying';
@@ -186,63 +185,55 @@ const LedgerPanel = memo<LedgerPanelProps>(
           const openable = Boolean(round.report);
 
           return (
-            <Flexbox
+            <div
               aria-label={openable ? t('acceptance.ledger.viewReport') : undefined}
-              gap={6}
               key={round.run.id}
               role={openable ? 'button' : undefined}
-              className={cx(
+              className={`flex flex-col gap-1.5 ${cx(
                 styles.round,
                 openable && styles.roundClickable,
                 highlight === round.run.roundIndex && styles.roundActive,
-              )}
+              )}`}
               onClick={openable ? () => onOpenReport(round) : undefined}
             >
-              <Flexbox horizontal align={'center'} gap={8}>
-                <Text strong style={{ fontSize: 13 }}>
+              <div className="flex items-center gap-2">
+                <div className="font-semibold" style={{ fontSize: 13 }}>
                   {t('acceptance.round', { round: round.run.roundIndex })}
-                </Text>
+                </div>
                 {round.run.roundIndex === latestIndex && (
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('acceptance.ledger.latest')}
-                  </Text>
+                  </div>
                 )}
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  gap={4}
+                <div
+                  className="flex items-center gap-1"
                   style={{ color: stateColor, fontSize: 12 }}
                 >
-                  <Icon icon={stateIcon} size={13} spin={running} />
+                  {createElement(stateIcon, { className: 'animate-spin', size: 13 })}
                   {stateLabel}
-                </Flexbox>
-                <Flexbox flex={1} />
-                <Text fontSize={12} type={'secondary'}>
+                </div>
+                <div className="flex flex-col flex-1" />
+                <div className="text-[12px] text-muted-foreground">
                   {hydrated ? dayjs(round.run.createdAt).format('MM-DD HH:mm') : null}
-                </Text>
+                </div>
                 {openable && (
-                  <Icon
-                    className={'acceptance-round-open-hint'}
+                  <ChevronRight
+                    className="'acceptance-round-open-hint'"
                     color={cssVar.colorTextTertiary}
-                    icon={ChevronRight}
                     size={14}
                   />
                 )}
-              </Flexbox>
+              </div>
               {round.run.title && (
-                <Text fontSize={12} style={{ lineHeight: 1.5 }} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.5 }}>
                   {round.run.title}
-                </Text>
+                </div>
               )}
-              {stats && (
-                <Text fontSize={12} type={'secondary'}>
-                  {stats}
-                </Text>
-              )}
-            </Flexbox>
+              {stats && <div className="text-[12px] text-muted-foreground">{stats}</div>}
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

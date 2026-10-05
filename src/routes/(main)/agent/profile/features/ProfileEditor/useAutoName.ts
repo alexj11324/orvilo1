@@ -1,29 +1,29 @@
-import { toast } from '@lobehub/ui/base-ui';
-import { randomAgentName } from '@orvilo/const';
+import { numberedAgentName } from '@orvilo/const';
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useAgentStore } from '@/store/agent';
-import { useGlobalStore } from '@/store/global';
-import { globalGeneralSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+
+const BUILTIN_AGENT_NAME = 'Orvilo AI';
 
 /**
  * One-click naming for an agent that never got a personal name — agents created
  * before names existed, or through a path that doesn't seed one (REST, group
- * members). Draws from the same pool a fresh agent is seeded from, in the user's
- * language.
+ * members). Uses the same deterministic scheme as agent creation: the agent's
+ * own type name (product title for heterogeneous agents, its title when it has
+ * one, "Orvilo AI" for builtin agents), numbered when the sidebar already has
+ * one — "Claude Code", "Claude Code 2", ...
  *
- * Names already visible in the sidebar are excluded: the point of a name is to
- * tell two agents apart, so handing out a second "Alice" would defeat it. The
- * list is read at click time rather than subscribed to — it only matters at the
- * moment of the draw, and subscribing would re-render the header on every
+ * The list is read at click time rather than subscribed to — it only matters at
+ * the moment of the draw, and subscribing would re-render the header on every
  * sidebar change.
  */
 export const useAutoName = (agentId: string) => {
   const { t } = useTranslation('setting');
-  const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
   const updateMetaById = useAgentStore((s) => s.updateAgentMetaById);
   const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
   const [naming, setNaming] = useState(false);
@@ -31,13 +31,20 @@ export const useAutoName = (agentId: string) => {
   const autoName = useCallback(async () => {
     setNaming(true);
     try {
-      const takenNames = homeAgentListSelectors
-        .allAgents(useHomeStore.getState())
-        .filter((agent) => agent.id !== agentId)
-        .map((agent) => agent.name)
+      const agents = homeAgentListSelectors.allAgents(useHomeStore.getState());
+      const agent = agents.find((a) => a.id === agentId);
+      const takenNames = agents
+        .filter((a) => a.id !== agentId)
+        .map((a) => a.name)
         .filter((name): name is string => !!name);
+      const base =
+        agent?.title?.trim() ||
+        (agent?.heterogeneousType
+          ? getHeterogeneousTypeLabel(agent.heterogeneousType)
+          : undefined) ||
+        BUILTIN_AGENT_NAME;
 
-      await updateMetaById(agentId, { name: randomAgentName(locale, takenNames) });
+      await updateMetaById(agentId, { name: numberedAgentName(base, takenNames) });
       // The sidebar keeps its own copy of the label, so a rename that skips this
       // leaves the new name on the profile and the old one in the list until
       // something else revalidates. Refreshing here follows the same convention
@@ -48,7 +55,7 @@ export const useAutoName = (agentId: string) => {
     } finally {
       setNaming(false);
     }
-  }, [agentId, locale, refreshAgentList, t, updateMetaById]);
+  }, [agentId, refreshAgentList, t, updateMetaById]);
 
   return { autoName, naming };
 };

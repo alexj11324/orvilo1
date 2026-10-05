@@ -1,6 +1,8 @@
 import type {
+  AgentMarketplaceRuntimeConfig,
   ExecAgentAppContext,
   ExecAgentResult,
+  HeterogeneousTopicPin,
   RuntimeMentionedAgent,
   ScheduleAgentRunParams,
   ScheduleAgentRunResult,
@@ -68,7 +70,11 @@ export type AgentInterventionSourceAction =
   | { scope: 'operation'; type: 'stop' }
   | { result: Record<string, string | string[]>; type: 'submit_answers' }
   | {
-      result: { kind: 'agent_marketplace'; selectedTemplateIds: string[] };
+      result: {
+        kind: 'agent_marketplace';
+        runtimeConfig: AgentMarketplaceRuntimeConfig;
+        selectedTemplateIds: string[];
+      };
       type: 'submit_custom';
     }
   | { type: 'skip_interaction' }
@@ -119,6 +125,14 @@ export interface ExecAgentTaskParams {
    * context so the supervisor run delegates to them instead of answering itself.
    */
   mentionedAgents?: RuntimeMentionedAgent[];
+  /**
+   * Model / provider / reasoning effort picked in a blank composer, before the
+   * conversation had a topic to pin them to. The server writes them onto the
+   * topic this run creates — never onto the agent row
+   * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
+   * an existing topic.
+   */
+  newTopicPins?: HeterogeneousTopicPin;
   /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
   parentMessageId?: string;
   prompt: string;
@@ -241,6 +255,10 @@ export interface UpdateClientTaskThreadStatusParams {
 }
 
 class AiAgentService {
+  async getServerDefaultHeterogeneousCapability() {
+    return await lambdaClient.aiAgent.getServerDefaultHeterogeneousCapability.query();
+  }
+
   /**
    * Execute a single Agent task.
    * Returns the operationId needed to connect to the Agent Gateway.

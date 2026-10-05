@@ -1,10 +1,11 @@
-import { Block, Flexbox } from '@lobehub/ui';
-import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
 import { memo, type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
 import { homeType } from '@/features/Home/components/homeType';
@@ -51,61 +52,62 @@ export const RecommendationCard = memo<RecommendationCardProps>(
 
     if (compact)
       return (
-        <Button className={styles.compactRow} loading={loading} type={'text'} onClick={handleClick}>
-          <Flexbox horizontal align={'flex-start'} gap={10} style={{ width: '100%' }}>
-            <Flexbox flex={'none'} paddingBlock={2}>
+        <Button
+          className={styles.compactRow}
+          loading={loading}
+          variant="ghost"
+          onClick={handleClick}
+        >
+          <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
+            <div className="flex flex-col flex-none py-[2px]">
               {renderIcon(RECOMMENDATION_ICON_SIZE.compact)}
-            </Flexbox>
-            <Text className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>
+            </div>
+            <div className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>
               {title}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         </Button>
       );
 
     return (
-      <Block
-        className={cx(briefStyles.card, styles.card)}
-        gap={12}
-        padding={12}
+      <div
         style={{ borderRadius: cssVar.borderRadiusLG }}
-        variant={'outlined'}
+        className={cx(
+          briefStyles.card,
+          styles.card,
+          'rounded-md border bg-card flex flex-col gap-3 p-3',
+        )}
       >
-        <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={8}
+        <div className="flex flex-row items-center gap-4 justify-between">
+          <div
+            className="flex flex-row items-center gap-2"
             style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
           >
             {renderIcon(RECOMMENDATION_ICON_SIZE.regular)}
-            <Text ellipsis fontSize={16} weight={500}>
-              {title}
-            </Text>
-          </Flexbox>
-        </Flexbox>
-        <Divider dashed style={{ marginBlock: 0 }} />
+            <div className="truncate min-w-0 text-[16px] font-medium">{title}</div>
+          </div>
+        </div>
+        <Separator className="border-dashed" style={{ marginBlock: 0 }} />
         {description.trim().length > 0 ? <BriefCardSummary summary={description} /> : null}
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
+          <div className="flex flex-row items-center gap-2">
             {tagLabel ? (
-              <Tag size={'small'} variant={'outlined'}>
+              <Badge size="sm" variant="outline">
                 {tagLabel}
-              </Tag>
+              </Badge>
             ) : null}
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8}>
+          </div>
+          <div className="flex flex-row items-center gap-2">
             <Button
-              className={briefStyles.actionBtnPrimary}
+              className={cx(briefStyles.actionBtnPrimary, 'rounded-full')}
               loading={loading}
-              shape={'round'}
               onClick={handleClick}
             >
               {ctaLabel}
             </Button>
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+        </div>
+      </div>
     );
   },
 );

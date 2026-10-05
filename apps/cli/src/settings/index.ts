@@ -23,7 +23,7 @@ const CONNECTION_ID_FILE = path.join(SETTINGS_DIR, 'connection-id');
 // `enrollWorkspace` RPC. Persisted so a daemon/process restart can re-open the
 // workspace share connections without the user re-sharing from the web UI.
 const WORKSPACE_ENROLLMENTS_FILE = path.join(SETTINGS_DIR, 'workspace-enrollments.json');
-// The workspace scope every command runs under, set by `lh workspace use`. Kept
+// The workspace scope every command runs under, set by `orvilo workspace use`. Kept
 // out of settings.json for the same reason as connection-id: that file is
 // unlinked whenever all URLs are default, which would silently drop the scope.
 const ACTIVE_WORKSPACE_FILE = path.join(SETTINGS_DIR, 'active-workspace');
@@ -71,7 +71,7 @@ export function saveSettings(settings: StoredSettings): void {
 }
 
 /**
- * Stable per-install connection routing key for `lh connect`. Decoupled from
+ * Stable per-install connection routing key for `orvilo connect`. Decoupled from
  * the (machine-derived, shared-across-clients) deviceId so the gateway only
  * replaces this install's own stale socket — a co-running desktop app on the
  * same machine keeps its connection. Persisted under the CLI home dir, so a
@@ -139,7 +139,7 @@ export function removeWorkspaceEnrollment(workspaceId: string): void {
 }
 
 /**
- * The workspace scope persisted by `lh workspace use`, together with the server
+ * The workspace scope persisted by `orvilo workspace use`, together with the server
  * and account it was chosen under.
  *
  * The binding is the point: a bare workspace id survives `logout`, a login as a
@@ -211,7 +211,7 @@ export function loadSettings(): StoredSettings | null {
     return normalized;
   } catch {
     log.warn(
-      `Could not parse ${SETTINGS_FILE}. Please delete this file and run 'lh login' again if needed.`,
+      `Could not parse ${SETTINGS_FILE}. Please delete this file and run 'orvilo login' again if needed.`,
     );
     return null;
   }

@@ -1,8 +1,9 @@
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 import TeamsSection from './TeamsSection';
 
@@ -20,14 +21,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => children,
+vi.mock('@/features/NavPanel/components/SidebarContextMenu', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIcon: ({ title }: { title: string }) => <button type="button">{title}</button>,
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -38,8 +37,8 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
   useActiveWorkspaceSlug: () => null,
 }));
 
-vi.mock('@/features/NavPanel/components/NavItem', () => ({
-  default: ({ title }: { title: string }) => <span>{title}</span>,
+vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
+  default: ({ title }: { title: string }) => <li>{title}</li>,
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -92,9 +91,9 @@ describe('TeamsSection', () => {
   it('toggles the team by its name and leaves Home as navigation', () => {
     render(
       <MemoryRouter initialEntries={['/inbox']}>
-        <AccordionRoot value={['teams']}>
+        <SidebarProvider>
           <TeamsSection itemKey="teams" />
-        </AccordionRoot>
+        </SidebarProvider>
         <Routes>
           <Route element={<output data-testid="location">/inbox</output>} path="/inbox" />
           <Route
@@ -122,9 +121,9 @@ describe('TeamsSection', () => {
   it('shows a team-menu action on each team row', () => {
     render(
       <MemoryRouter initialEntries={['/inbox']}>
-        <AccordionRoot value={['teams']}>
+        <SidebarProvider>
           <TeamsSection itemKey="teams" />
-        </AccordionRoot>
+        </SidebarProvider>
       </MemoryRouter>,
     );
 

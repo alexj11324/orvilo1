@@ -6,11 +6,11 @@
  * it publishes — a verification report, an artifact, a trace — lands detached
  * from the conversation that asked for it. Echoing the ids into the child env
  * closes that loop for free: the CLI inherits them, so does every subprocess it
- * spawns (`lh`, a script, a test harness), and each one can attribute its output
+ * spawns (`orvilo`, a script, a test harness), and each one can attribute its output
  * back to this topic without the agent having to pass ids it cannot see.
  *
  * Read by the CLI commands that attribute their output back to this topic —
- * `lh notify`, `lh doc`, `lh goal` and `lh verify plan state` all resolve the
+ * `orvilo notify`, `orvilo doc`, `orvilo goal` and `orvilo verify plan state` all resolve the
  * conversation from these instead of asking the agent for ids it cannot see.
  */
 export interface OrviloSessionEnvIds {

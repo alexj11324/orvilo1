@@ -2,10 +2,10 @@
 
 import { type GroupAvatarProps } from '@lobehub/ui';
 import { GroupAvatar } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
@@ -41,7 +41,8 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
       ];
     }, [avatars, userAvatar, nickName, username]);
 
-    if (loading) return <Skeleton.Avatar shape={'square'} size={size} />;
+    if (loading)
+      return <Skeleton className="rounded-md shrink-0" style={{ width: size, height: size }} />;
 
     return (
       <GroupAvatar

@@ -1,17 +1,24 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Center, DropdownMenu, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { Check, ChevronDown, Hand, ListChecks, Zap } from 'lucide-react';
 import { type LucideIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
 import { useUserStore } from '@/store/user';
 import { toolInterventionSelectors } from '@/store/user/selectors';
 import { type ApprovalMode } from '@/store/user/slices/settings/selectors';
+
+import { SimpleTooltip } from '../SimpleTooltip';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   desc: css`
@@ -28,6 +35,20 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-size: ${cssVar.fontSizeSM};
     color: ${cssVar.colorTextSecondary};
   `,
+  selectedItem: css`
+    &&,
+    &&:hover,
+    &&:focus {
+      background: var(--muted);
+    }
+  `,
+  modeButtonOpen: css`
+    &&,
+    &&:hover {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+  `,
   modeButtonDisabled: css`
     cursor: not-allowed;
     opacity: 0.5;
@@ -38,23 +59,26 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     line-height: 1.4;
     color: ${cssVar.colorText};
   `,
-  trigger: css`
-    overflow: hidden;
-    border-radius: ${cssVar.borderRadius};
-  `,
 }));
 
 const ModeItemLabel = memo<{ desc: string; icon: LucideIcon; title: string }>(
   ({ desc, icon, title }) => (
-    <Flexbox horizontal align={'flex-start'} gap={12}>
-      <Center className={styles.icon} flex={'none'} height={32} width={32}>
-        <Icon icon={icon} />
-      </Center>
-      <Flexbox flex={1} style={{ minWidth: 120 }}>
+    <div className="flex flex-row items-start gap-3">
+      <div
+        className={cx(
+          'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
+          styles.icon,
+        )}
+      >
+        <span className="anticon" role="img">
+          {createElement(icon, { size: '1em', width: '1em', height: '1em', fill: 'transparent' })}
+        </span>
+      </div>
+      <div className="flex flex-col flex-1" style={{ minWidth: 120 }}>
         <div className={styles.title}>{title}</div>
         <div className={styles.desc}>{desc}</div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   ),
 );
 
@@ -97,9 +121,14 @@ const ModeSelector = memo(() => {
   );
 
   const menuItems = useCallback(
-    (): MenuProps['items'] => [
+    (): { extra?: ReactNode; key: string; label: ReactNode; onClick?: () => void }[] => [
       {
-        extra: approvalMode === 'auto-run' ? <Icon icon={Check} /> : undefined,
+        extra:
+          approvalMode === 'auto-run' ? (
+            <span aria-hidden className="anticon">
+              <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ) : undefined,
         key: 'auto-run',
         label: (
           <ModeItemLabel
@@ -111,7 +140,12 @@ const ModeSelector = memo(() => {
         onClick: () => handleModeChange('auto-run'),
       },
       {
-        extra: approvalMode === 'allow-list' ? <Icon icon={Check} /> : undefined,
+        extra:
+          approvalMode === 'allow-list' ? (
+            <span aria-hidden className="anticon">
+              <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ) : undefined,
         key: 'allow-list',
         label: (
           <ModeItemLabel
@@ -123,7 +157,12 @@ const ModeSelector = memo(() => {
         onClick: () => handleModeChange('allow-list'),
       },
       {
-        extra: approvalMode === 'manual' ? <Icon icon={Check} /> : undefined,
+        extra:
+          approvalMode === 'manual' ? (
+            <span aria-hidden className="anticon">
+              <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ) : undefined,
         key: 'manual',
         label: (
           <ModeItemLabel
@@ -140,20 +179,19 @@ const ModeSelector = memo(() => {
 
   const button = (
     <Button
-      className={styles.modeButton}
+      className={cx(styles.modeButton, dropdownOpen && styles.modeButtonOpen)}
       disabled={disabled}
-      icon={ChevronDown}
-      iconPosition="end"
-      size="small"
-      type={'text'}
+      size="sm"
+      variant="ghost"
     >
       {modeLabels[approvalMode]}
+      <ChevronDown data-icon="inline-end" />
     </Button>
   );
 
   if (disabled)
     return (
-      <Tooltip
+      <SimpleTooltip
         title={
           !canCreateContent
             ? reason
@@ -161,23 +199,29 @@ const ModeSelector = memo(() => {
         }
       >
         <div className={styles.modeButtonDisabled}>{button}</div>
-      </Tooltip>
+      </SimpleTooltip>
     );
 
   return (
-    <DropdownMenu
-      items={menuItems}
-      open={!disabled && dropdownOpen}
-      placement="bottomRight"
-      onOpenChange={handleOpenChange}
-    >
-      <div className={styles.trigger}>
-        {dropdownOpen ? (
-          button
-        ) : (
-          <Tooltip title={t('tool.intervention.approvalMode')}>{button}</Tooltip>
-        )}
-      </div>
+    <DropdownMenu open={!disabled && dropdownOpen} onOpenChange={handleOpenChange}>
+      <SimpleTooltip title={t('tool.intervention.approvalMode')}>
+        <DropdownMenuTrigger render={button} />
+      </SimpleTooltip>
+      <DropdownMenuContent align={'end'} className={'w-auto min-w-56'} side={'bottom'}>
+        {menuItems().map((item) => (
+          <DropdownMenuItem
+            aria-current={approvalMode === item.key ? 'true' : undefined}
+            className={approvalMode === item.key ? styles.selectedItem : undefined}
+            key={item.key}
+            onClick={item.onClick}
+          >
+            <div className="flex flex-1 flex-row items-center justify-between gap-2">
+              {item.label}
+              {item.extra}
+            </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 });

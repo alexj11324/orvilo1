@@ -1,5 +1,5 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { AlertTriangle, CornerUpRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,16 +38,16 @@ const RejectedResponse = memo<RejectedResponseProps>(({ apiName, reason, skipped
   const copyKey = resolveRejectedCopyKey({ apiName, reason, skipped });
 
   return (
-    <Flexbox className={styles.container} gap={8}>
-      <Flexbox horizontal align={'center'} gap={8}>
+    <div className={cn('flex flex-col gap-2', styles.container)}>
+      <div className="flex items-center gap-2">
         {skipped ? (
-          <Icon color={cssVar.colorTextTertiary} icon={CornerUpRight} size={16} />
+          <CornerUpRight color={cssVar.colorTextTertiary} size={16} />
         ) : (
-          <Icon color={cssVar.colorWarning} icon={AlertTriangle} size={16} />
+          <AlertTriangle color={cssVar.colorWarning} size={16} />
         )}
         <div className={styles.title}>{t(copyKey, { reason })}</div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

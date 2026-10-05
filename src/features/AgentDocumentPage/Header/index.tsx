@@ -1,14 +1,15 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ShareButton from '@/business/client/features/PageShare/ShareButton';
+import ActionIcon from '@/components/ActionIcon';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { AutoSaveHint } from '@/features/EditorCanvas';
 import NavHeader from '@/features/NavHeader';
@@ -50,42 +51,35 @@ const Header = memo<HeaderProps>(
     return (
       <NavHeader
         left={
-          <Flexbox horizontal align={'center'} gap={4} style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
             {/* Breadcrumb: agent → document. The agent label returns to chat. */}
-            <Flexbox
-              horizontal
-              align={'center'}
+            <div
+              className="flex items-center"
               style={{ cursor: 'pointer', flexShrink: 0 }}
               onClick={onBack}
             >
-              <Text style={{ color: cssVar.colorTextSecondary }}>
+              <div style={{ color: cssVar.colorTextSecondary }}>
                 {agentDisplayName(meta, t('untitledAgent', { ns: 'chat' }))}
-              </Text>
-            </Flexbox>
-            <Text style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>/</Text>
-            <Text
-              className={cx(oneLineEllipsis)}
+              </div>
+            </div>
+            <div style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>/</div>
+            <div
+              className={cn('font-medium', cx(oneLineEllipsis))}
               style={{ color: showTitleError ? cssVar.colorError : undefined, minWidth: 0 }}
-              weight={500}
             >
               {resolvedTitle}
-            </Text>
-            <DropdownMenu
-              iconSpaceMode={'group'}
-              items={menuItems}
-              placement={'bottomLeft'}
-              popupProps={{ style: { minWidth: 200 } }}
-            >
+            </div>
+            <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
               <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
             </DropdownMenu>
-          </Flexbox>
+          </div>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             {documentId && <AutoSaveHint documentId={documentId} />}
             {documentId && <ShareButton documentId={documentId} />}
             <ToggleRightPanelButton hideWhenExpanded />
-          </Flexbox>
+          </div>
         }
       />
     );

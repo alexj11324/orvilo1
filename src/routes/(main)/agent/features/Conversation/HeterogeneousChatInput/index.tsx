@@ -1,24 +1,27 @@
 'use client';
 
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
+import { TriangleAlertIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useHeteroAgentCloudConfig } from '@/business/client/hooks/useHeteroAgentCloudConfig';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { type ActionKeys } from '@/features/ChatInput';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
 import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
+import { useProviderBindingValidation } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import {
   isHeterogeneousSandboxExecutionAvailable,
   resolveExecutionTarget,
 } from '@/helpers/executionTarget';
+import { resolveProviderBindingGuard } from '@/helpers/providerBinding';
 import { useRemoteAgentDeviceGuard } from '@/hooks/useRemoteAgentDeviceGuard';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useChatStore } from '@/store/chat';
@@ -30,9 +33,10 @@ import ScheduledSendChip from './ScheduledSendChip';
 // so most Orvilo-side pickers don't apply — no built-in left action fits, and
 // the bar is composed entirely from `extraActionItems`: a hetero-only `+` menu
 // (formatting toolbar + "Send later") in the input's bottom-left corner.
-// Model + thinking effort are Engine config on the agent now, so the composer
-// carries the same agent chip as the standard input (next to Send) instead of
-// the CLI model selector.
+//
+// The right side carries the agent selector and nothing else: the CLI's model
+// and its thinking effort are the agent's own Engine config, not picks the
+// composer offers per conversation.
 const leftActions: ActionKeys[] = [];
 const rightActions: ActionKeys[] = ['agent'];
 
@@ -47,19 +51,18 @@ const rightActions: ActionKeys[] = ['agent'];
 const GuardBanner = memo<{ action?: ReactNode; hint?: string; title: string }>(
   ({ title, hint, action }) => (
     <WideScreenContainer>
-      <Flexbox align={'center'} paddingBlock={'0 8px'} paddingInline={12}>
-        <Alert
-          action={action}
-          style={{ maxWidth: 880, width: '100%' }}
-          type={'warning'}
-          title={
-            <Flexbox horizontal align={'baseline'} gap={6} style={{ flexWrap: 'wrap' }}>
+      <div className="flex flex-col items-center px-3" style={{ paddingBlock: '0 8px' }}>
+        <Alert style={{ maxWidth: 880, width: '100%' }} variant="warning">
+          <TriangleAlertIcon />
+          <AlertTitle>
+            <div className="flex items-baseline gap-1.5" style={{ flexWrap: 'wrap' }}>
               <span>{title}</span>
               {hint && <span style={{ fontWeight: 400, opacity: 0.75 }}>{hint}</span>}
-            </Flexbox>
-          }
-        />
-      </Flexbox>
+            </div>
+          </AlertTitle>
+          {action ? <AlertAction>{action}</AlertAction> : null}
+        </Alert>
+      </div>
     </WideScreenContainer>
   ),
 );
@@ -96,16 +99,35 @@ const HeterogeneousChatInput = memo(() => {
   const { agencyConfig, isPreferenceLoading, workspaceScoped } = useTopicAgencyConfig(agentId);
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
   const providerType = heterogeneousProvider?.type;
+  const isApiAuth = heterogeneousProvider?.authMode === 'api';
+  const providerApiConfig =
+    isApiAuth &&
+    heterogeneousProvider.apiConfig &&
+    heterogeneousProvider.apiConfig.source !== 'server-default'
+      ? heterogeneousProvider.apiConfig
+      : undefined;
+  const apiConfigMissing = isApiAuth && !heterogeneousProvider.apiConfig;
   const executionTarget = resolveExecutionTarget(agencyConfig, {
     isHetero: !!providerType,
     clientExecutionAvailable: isDesktop,
     workspaceScoped,
   });
+  const { error: apiBindingValidationError, isReady: isApiBindingStateReady } =
+    useProviderBindingValidation(providerType, providerApiConfig);
   const deviceSelectionRequired =
     !!providerType &&
     !isHeterogeneousSandboxExecutionAvailable(providerType) &&
     executionTarget === 'none';
 
+  const apiModeTargetUnsupported = isApiAuth && executionTarget !== 'local';
+  const validateProviderBinding =
+    (apiConfigMissing || !!providerApiConfig) && executionTarget === 'local';
+  const { blocked: apiModeBindingBlocked, error: apiModeBindingError } =
+    resolveProviderBindingGuard({
+      active: validateProviderBinding,
+      error: apiBindingValidationError,
+      isReady: isApiBindingStateReady,
+    });
   // The armed-schedule chip sits immediately after the `+` that armed it, so the
   // state and the control that produced it read as one unit.
   const extraActionItems = useMemo<ChatInputActionsProps['items']>(
@@ -116,7 +138,7 @@ const HeterogeneousChatInput = memo(() => {
     [],
   );
 
-  // A run goes to an `lh connect` device when its execution target resolves to a
+  // A run goes to an `orvilo connect` device when its execution target resolves to a
   // bound device (including desktop "local" opened from web). The
   // bound device must be online before we let the user send — guard it here
   // instead of failing at dispatch time.
@@ -125,7 +147,7 @@ const HeterogeneousChatInput = memo(() => {
   const { status, refresh } = useRemoteAgentDeviceGuard({ agentId, enabled: isDeviceExecution });
 
   const goToAgentProfile = () => {
-    if (agentId) navigate(`/agent/${agentId}/profile`);
+    if (agentId) navigate(`/settings/agents/${agentId}`);
   };
 
   const deviceBlocked =
@@ -157,14 +179,14 @@ const HeterogeneousChatInput = memo(() => {
         hint={desc}
         title={title}
         action={
-          <Flexbox horizontal gap={4}>
-            <Button size={'small'} type={'fill'} onClick={refresh}>
+          <div className="flex gap-1">
+            <Button size="sm" variant="secondary" onClick={refresh}>
               {t('platformAgent.deviceGuard.refresh')}
             </Button>
-            <Button size={'small'} type={'primary'} onClick={goToAgentProfile}>
+            <Button size="sm" onClick={goToAgentProfile}>
               {t('platformAgent.deviceGuard.configure')}
             </Button>
-          </Flexbox>
+          </div>
         }
       />
     );
@@ -182,8 +204,46 @@ const HeterogeneousChatInput = memo(() => {
         hint={t('heteroAgent.cloudNotConfigured.desc')}
         title={t('heteroAgent.cloudNotConfigured.title')}
         action={
-          <Button size={'small'} type={'primary'} onClick={goToConfig}>
+          <Button size="sm" onClick={goToConfig}>
             {t('heteroAgent.cloudNotConfigured.action')}
+          </Button>
+        }
+      />
+    );
+  };
+
+  const renderApiModeTargetGuard = () => {
+    if (!apiModeTargetUnsupported) return null;
+
+    return (
+      <GuardBanner
+        hint={t('heteroAgent.apiMode.localOnly.desc')}
+        title={t('heteroAgent.apiMode.localOnly.title')}
+        action={
+          <Button size="sm" onClick={goToAgentProfile}>
+            {t('platformAgent.deviceGuard.configure')}
+          </Button>
+        }
+      />
+    );
+  };
+
+  const renderApiModeBindingGuard = () => {
+    if (!apiModeBindingError) return null;
+
+    const title =
+      apiModeBindingError.code === 'configMissing'
+        ? t('heteroAgent.apiMode.configMissing')
+        : apiModeBindingError.code === 'agentUnsupported'
+          ? t('heteroAgent.apiMode.agentUnsupported', { name: providerType })
+          : t(`heteroAgent.apiMode.${apiModeBindingError.code}`, apiModeBindingError);
+
+    return (
+      <GuardBanner
+        title={title}
+        action={
+          <Button size="sm" onClick={goToAgentProfile}>
+            {t('platformAgent.deviceGuard.configure')}
           </Button>
         }
       />
@@ -213,19 +273,25 @@ const HeterogeneousChatInput = memo(() => {
     (!isConfigured && !isDeviceExecution) ||
     deviceBlocked;
   const hasGuard =
-    deviceSelectionRequired || deviceBlocked || (!isConfigured && !isDeviceExecution);
+    apiModeTargetUnsupported ||
+    !!apiModeBindingError ||
+    apiModeBindingBlocked ||
+    deviceSelectionRequired ||
+    deviceBlocked ||
+    (!isConfigured && !isDeviceExecution);
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
+      {renderApiModeTargetGuard()}
+      {renderApiModeBindingGuard()}
       {renderDeviceSelectionGuard()}
       {renderCloudConfigGuard()}
       {renderDeviceGuard()}
       <ChatInput
+        // Same composer parity as MainChatInput: the hetero control strip floats
+        // under the card rather than inside its footer, and the editor opens at
+        // one text row (~24px) instead of the shared two-row default.
         allowExpand={false}
-        // Same composer parity as MainChatInput: the hetero control strip
-        // renders inside the card footer, and the editor opens at one text
-        // row (~24px) instead of the shared two-row default.
-        controlBarInCard
         controlBarSlot={<HeteroControlBar />}
         editorDefaultRows={1}
         extraActionItems={extraActionItems}
@@ -238,7 +304,7 @@ const HeterogeneousChatInput = memo(() => {
           useChatStore.setState({ mainInputEditor: instance });
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

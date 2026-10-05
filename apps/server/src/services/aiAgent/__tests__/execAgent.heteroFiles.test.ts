@@ -1,9 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import {
+  openEmbeddedChatDispatchHost,
+  resolveEmbeddedChatDispatchRoute,
+} from '@/server/services/controlPlane/embeddedChatDispatch';
 
 import { AiAgentService } from '../index';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
+
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
 
 const {
   mockDeviceFindByDeviceId,
@@ -130,6 +145,10 @@ vi.mock('@/database/models/device', () => ({
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
       findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      // Unified admission's authorized candidate set — `device-1` is the
+      // registered personal device this suite routes to.
+      queryPersonal: vi.fn().mockResolvedValue([{ deviceId: 'device-1' }]),
+      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -203,6 +222,11 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
   spawnHeteroSandbox: mockSpawnHeteroSandbox,
 }));
 
+vi.mock('@/server/services/providerBinding/execution', () => ({
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/server/services/file/resolveAttachments', () => ({
   resolveAttachmentsByFileIds: mockResolveAttachmentsByFileIds,
 }));
@@ -255,14 +279,38 @@ vi.mock('@/server/services/heterogeneousAgent/remoteDeviceHeteroContext', () => 
   buildRemoteDeviceHeteroContext: mockBuildRemoteDeviceHeteroContext,
 }));
 
+// The chat-scoped embedded admission seam: the real route predicate runs
+// (pure — a valid chat plan always produces a context); the host open is
+// stubbed because `mockDb` is not a real database. A prepared-failure result
+// exercises the shared embedded-finalize funnel.
+vi.mock('@/server/services/controlPlane/embeddedChatDispatch', async () => {
+  const actual = await vi.importActual<{
+    openEmbeddedChatDispatchHost: typeof openEmbeddedChatDispatchHost;
+    resolveEmbeddedChatDispatchRoute: typeof resolveEmbeddedChatDispatchRoute;
+  }>('@/server/services/controlPlane/embeddedChatDispatch');
+  return {
+    ...actual,
+    openEmbeddedChatDispatchHost: vi.fn(async () => ({
+      error: {
+        code: 'stale_fence' as const,
+        message: 'Chat operation contract is not current',
+        retryable: false,
+      },
+      ok: false as const,
+    })),
+    resolveEmbeddedChatDispatchRoute: vi.fn(actual.resolveEmbeddedChatDispatchRoute),
+  };
+});
+
 describe('AiAgentService.execAgent - hetero early-exit file attachments', () => {
   let service: AiAgentService;
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
-  const mockDb = {} as any;
+  const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
     vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
     recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
@@ -511,7 +559,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
-  it('applies an Orvilo topic pin before resolving the CLI family for sandbox dispatch', async () => {
+  it('fails loudly instead of resolving a CLI family for an orvilo chat run', async () => {
+    // A pre-cutover row may still carry the dead `engine` stamp — nothing
+    // resolves a CLI family from it anymore, and the topic pin still applies.
     heteroAgentConfig.agencyConfig = {
       executionTarget: 'sandbox',
       heterogeneousProvider: {
@@ -527,18 +577,65 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       provider: 'orvilo',
     });
 
-    await service.execAgent({
+    const result = await service.execAgent({
       agentId: 'agent-1',
       appContext: { topicId: 'topic-existing' },
       prompt: 'Continue with the Orvilo topic model',
     } as any);
 
-    expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
+    // Chat admission IS wired: a valid chat plan routes to the embedded chat
+    // host — never the retired engine→CLI path. The stubbed compose failure
+    // exercises the same embedded-finalize funnel a real denial uses.
+    expect(openEmbeddedChatDispatchHost).toHaveBeenCalledWith(
+      expect.objectContaining({ userId }),
       expect.objectContaining({
-        agentType: 'claude-code',
-        args: ['--model', 'topic-model'],
+        agentId: 'agent-1',
+        model: 'topic-model',
+        topicId: 'topic-existing',
       }),
     );
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: 'Chat operation contract is not current',
+        message: 'Embedded dispatch is unavailable',
+        status: 'error',
+        success: false,
+      }),
+    );
+    expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+  });
+
+  it('still fails with EMBEDDED_CHAT_NOT_ADMITTED on a context-less orvilo plan', async () => {
+    heteroAgentConfig.agencyConfig = {
+      executionTarget: 'sandbox',
+      heterogeneousProvider: { model: 'agent-model', type: 'orvilo' },
+    } as any;
+    topicMock.findById.mockResolvedValue({
+      id: 'topic-existing',
+      metadata: undefined,
+      model: 'topic-model',
+      provider: 'orvilo',
+    });
+    // Only malformed/missing-context plans land here — the route declines.
+    vi.mocked(resolveEmbeddedChatDispatchRoute).mockReturnValueOnce(null);
+
+    const result = await service.execAgent({
+      agentId: 'agent-1',
+      appContext: { topicId: 'topic-existing' },
+      prompt: 'Continue with the Orvilo topic model',
+    } as any);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: 'EMBEDDED_CHAT_NOT_ADMITTED',
+        status: 'error',
+        success: false,
+      }),
+    );
+    expect(openEmbeddedChatDispatchHost).not.toHaveBeenCalled();
+    expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    expect(mockDispatchAgentRun).not.toHaveBeenCalled();
   });
 
   it('should pin the runtime type of a remote platform agent on a server-created topic', async () => {
@@ -750,7 +847,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(resumeFallbackSystemContext).not.toContain('Continue in cloud');
   });
 
-  it('should encode native Codex args before forwarding them to sandbox lh hetero exec', async () => {
+  it('should encode native Codex args before forwarding them to sandbox orvilo hetero exec', async () => {
     heteroAgentConfig.model = 'codex';
     heteroAgentConfig.provider = 'codex';
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {

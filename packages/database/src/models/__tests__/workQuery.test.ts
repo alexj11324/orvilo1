@@ -2,10 +2,11 @@
 import {
   applyDelegatedFilter,
   applyNoProjectFilter,
+  type TaskDispatchPhase,
   WORK_QUERY_MAX_IN_VALUES,
   type WorkQueryPredicate,
 } from '@orvilo/types';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -13,6 +14,7 @@ import type { tasks } from '../../schemas';
 import {
   agents,
   projectMembers,
+  projectMilestones,
   projects,
   projectTeams,
   teamCycles,
@@ -25,7 +27,12 @@ import {
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { notifications } from '../../schemas/notification';
-import { taskDependencies, tasks as tasksTable } from '../../schemas/task';
+import {
+  taskDependencies,
+  taskDispatches,
+  tasks as tasksTable,
+  taskTopics,
+} from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskLabelModel } from '../taskLabel';
@@ -64,6 +71,21 @@ const createTask = async (owner: string, values: Partial<typeof tasks.$inferInse
   return model.create({ instruction: values.instruction ?? 'Do the work', ...values });
 };
 
+// `tasks.status` is retired — a live run is an active dispatch row.
+const runDispatchFor = async (taskId: string, phase: TaskDispatchPhase = 'running') =>
+  serverDB.insert(taskDispatches).values({
+    generation: 1,
+    id: `wq-disp_${taskId}_${phase}`,
+    idempotencyKey: `wq:${taskId}:${phase}`,
+    phase,
+    policyRevision: 1,
+    requestedBy: `user:${userId}`,
+    requirementRevision: 1,
+    taskId,
+    taskRevision: 1,
+    workspaceId,
+  });
+
 describe('applyWorkQueryLayout', () => {
   it('defaults a list to server status groups and keeps an explicit none flat', () => {
     const assigned = myWorkQueryForMode('assigned');
@@ -84,6 +106,45 @@ describe('applyWorkQueryLayout', () => {
     expect(workQueryBoardGroupBy({ ...assigned, groupBy: 'none', layout: 'board' })).toBe(
       'workflowCategory',
     );
+    expect(applyWorkQueryLayout(assigned, 'list', 'priority')).toMatchObject({
+      groupBy: 'priority',
+      layout: 'list',
+    });
+    expect(
+      applyWorkQueryLayout({ ...assigned, subGroupBy: 'priority' }, 'board', 'assignee'),
+    ).toMatchObject({ groupBy: 'assignee', layout: 'board', subGroupBy: 'priority' });
+    expect(
+      applyWorkQueryLayout({ ...assigned, subGroupBy: 'status' }, 'board', 'workflowCategory')
+        .subGroupBy,
+    ).toBeUndefined();
+    expect(applyWorkQueryLayout({ ...assigned, subGroupBy: 'priority' }, 'list').subGroupBy).toBe(
+      'priority',
+    );
+    expect(applyWorkQueryLayout(assigned, 'list', 'activityDate')).toMatchObject({
+      groupBy: 'activityDate',
+      layout: 'list',
+    });
+    expect(applyWorkQueryLayout(assigned, 'list', 'project')).toMatchObject({ groupBy: 'project' });
+    expect(applyWorkQueryLayout(assigned, 'list', 'cycle')).toMatchObject({ groupBy: 'cycle' });
+    expect(applyWorkQueryLayout(assigned, 'board', 'activityDate').groupBy).toBe(
+      'workflowCategory',
+    );
+    expect(applyWorkQueryLayout(assigned, 'list', 'milestone').groupBy).toBe('milestone');
+    expect(applyWorkQueryLayout(assigned, 'list', 'agent').groupBy).toBe('agent');
+    expect(applyWorkQueryLayout(assigned, 'board', 'milestone').groupBy).toBe('workflowCategory');
+    expect(applyWorkQueryLayout(assigned, 'board', 'agent').groupBy).toBe('agent');
+    expect(
+      applyWorkQueryLayout(
+        { entityType: 'project', groupBy: 'none', layout: 'board', schemaVersion: 1 },
+        'board',
+      ).groupBy,
+    ).toBe('status');
+    expect(
+      applyWorkQueryLayout(
+        { entityType: 'project', groupBy: 'status', layout: 'list', schemaVersion: 1 },
+        'list',
+      ).groupBy,
+    ).toBe('status');
   });
 });
 
@@ -610,7 +671,348 @@ describe('WorkQueryModel', () => {
     expect(todoPage?.tasks).toHaveLength(1);
     expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[0]!.id);
     expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[1]!.id);
-    expect(second.groups?.find((group) => group.key === 'done')?.total).toBe(1);
+    expect(second.groups?.map((group) => group.key)).toEqual(['todo']);
+  });
+
+  it('does not offer another page when the last group page is full', async () => {
+    await createTask(userId, { name: 'Todo A', workflowCategory: 'todo' });
+    await createTask(userId, { name: 'Todo B', workflowCategory: 'todo' });
+    const query = {
+      entityType: 'task' as const,
+      groupBy: 'workflowCategory' as const,
+      layout: 'list' as const,
+      schemaVersion: 1 as const,
+    };
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const first = await model.queryTasks({ limit: 1, query });
+    const column = first.groups?.find((group) => group.key === 'todo');
+    expect(column?.total).toBe(2);
+    expect(column?.tasks).toHaveLength(1);
+    expect(column?.hasMore).toBe(true);
+
+    const second = await model.queryTasks({
+      afterId: column!.tasks[0]!.id,
+      groupKey: 'todo',
+      limit: 1,
+      query,
+      queryHash: first.queryHash,
+    });
+    const page = second.groups?.find((group) => group.key === 'todo');
+    expect(page?.tasks).toHaveLength(1);
+    expect(page?.hasMore).toBe(false);
+  });
+
+  it('keeps empty priority columns and pages assignee swimlanes as cells', async () => {
+    const mine = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Urgent mine',
+      priority: 1,
+    });
+    const theirs = await createTask(userId, {
+      assigneeUserId: otherUserId,
+      name: 'Urgent theirs',
+      priority: 1,
+    });
+    const unassigned = await createTask(userId, {
+      assigneeUserId: null,
+      name: 'Low unassigned',
+      priority: 4,
+    });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const columns = await model.queryTasks({
+      limit: 10,
+      query: {
+        entityType: 'task',
+        groupBy: 'priority',
+        layout: 'board',
+        schemaVersion: 1,
+      },
+    });
+    expect(columns.groups?.map((group) => group.key)).toEqual(['0', '1', '2', '3', '4']);
+    expect(columns.groups?.find((group) => group.key === '0')?.total).toBe(0);
+    expect(columns.groups?.find((group) => group.key === '1')?.total).toBe(2);
+    expect(columns.total).toBe(3);
+
+    const cells = await model.queryTasks({
+      limit: 10,
+      query: {
+        entityType: 'task',
+        groupBy: 'priority',
+        layout: 'board',
+        schemaVersion: 1,
+        subGroupBy: 'assignee',
+      },
+    });
+    const byKey = new Map(cells.groups?.map((group) => [group.key, group]));
+    const sep = '\u001F';
+    expect(byKey.get(`1${sep}${userId}`)?.tasks.map((row) => row.id)).toEqual([mine.id]);
+    expect(byKey.get(`1${sep}${otherUserId}`)?.tasks.map((row) => row.id)).toEqual([theirs.id]);
+    expect(byKey.get(`4${sep}none`)?.tasks.map((row) => row.id)).toEqual([unassigned.id]);
+    expect(byKey.has(`0${sep}none`)).toBe(false);
+    expect(cells.total).toBe(3);
+  });
+
+  it('compiles createdAt lt and between against the row clock', async () => {
+    const early = await createTask(userId, { name: 'Early' });
+    const late = await createTask(userId, { name: 'Late' });
+    await serverDB
+      .update(tasksTable)
+      .set({ createdAt: new Date('2026-01-01T00:00:00Z') })
+      .where(eq(tasksTable.id, early.id));
+    await serverDB
+      .update(tasksTable)
+      .set({ createdAt: new Date('2026-06-01T00:00:00Z') })
+      .where(eq(tasksTable.id, late.id));
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const beforeMarch = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'createdAt', op: 'lt', value: '2026-03-01T00:00:00.000Z' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(beforeMarch.tasks.map((row) => row.id)).toContain(early.id);
+    expect(beforeMarch.tasks.map((row) => row.id)).not.toContain(late.id);
+
+    const spring = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: {
+          all: [
+            {
+              field: 'createdAt',
+              op: 'between',
+              value: { from: '2026-05-01T00:00:00.000Z', to: '2026-07-01T00:00:00.000Z' },
+            },
+          ],
+        },
+        schemaVersion: 1,
+      },
+    });
+    expect(spring.tasks.map((row) => row.id)).toEqual([late.id]);
+  });
+
+  it('groups projects, hides sub-issues, and filters a milestone in the query', async () => {
+    await serverDB.insert(projects).values({
+      id: 'wq-grouped-project',
+      identifier: 'WQ02',
+      name: 'Grouped',
+      userId,
+      workspaceId,
+    });
+    const [milestone] = await serverDB
+      .insert(projectMilestones)
+      .values({ name: 'M1', projectId: 'wq-grouped-project' })
+      .returning();
+    const parent = await createTask(userId, { name: 'Parent', projectId: 'wq-grouped-project' });
+    const child = await createTask(userId, {
+      name: 'Child',
+      parentTaskId: parent.id,
+      projectId: 'wq-grouped-project',
+    });
+    const marked = await createTask(userId, {
+      name: 'Milestone',
+      projectId: 'wq-grouped-project',
+      projectMilestoneId: milestone!.id,
+    });
+    const loose = await createTask(userId, { name: 'Loose' });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    const byProject = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        groupBy: 'project',
+        layout: 'list',
+        schemaVersion: 1,
+      },
+    });
+    const projectKeys = byProject.groups?.map((group) => group.key).sort();
+    expect(projectKeys).toEqual(['none', 'wq-grouped-project'].sort());
+    expect(byProject.groups?.find((group) => group.key === 'wq-grouped-project')?.total).toBe(3);
+    expect(byProject.groups?.find((group) => group.key === 'none')?.total).toBe(1);
+
+    const roots = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'parentTaskId', op: 'isNull' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(roots.tasks.map((row) => row.id)).toContain(parent.id);
+    expect(roots.tasks.map((row) => row.id)).toContain(loose.id);
+    expect(roots.tasks.map((row) => row.id)).not.toContain(child.id);
+
+    const onMilestone = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'projectMilestoneId', op: 'eq', value: milestone!.id }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(onMilestone.tasks.map((row) => row.id)).toEqual([marked.id]);
+
+    const byMilestone = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'projectId', op: 'eq', value: 'wq-grouped-project' }] },
+        groupBy: 'milestone',
+        layout: 'list',
+        schemaVersion: 1,
+      },
+    });
+    expect(byMilestone.groupBy).toBe('milestone');
+    expect(byMilestone.groups?.find((group) => group.key === milestone!.id)?.total).toBe(1);
+    expect(byMilestone.groups?.find((group) => group.key === 'none')?.total).toBe(2);
+  });
+
+  it('groups a list by the agent assignee and keeps that axis on a board', async () => {
+    await serverDB.insert(agents).values({ id: 'agt_axis', slug: 'axis', userId });
+    const owned = await createTask(userId, { assigneeAgentId: 'agt_axis', name: 'Owned' });
+    await createTask(userId, { name: 'Open' });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const listed = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        groupBy: 'agent',
+        layout: 'list',
+        schemaVersion: 1,
+      },
+    });
+    expect(listed.groupBy).toBe('agent');
+    expect(
+      listed.groups?.find((group) => group.key === 'agt_axis')?.tasks.map((row) => row.id),
+    ).toEqual([owned.id]);
+    expect(listed.groups?.find((group) => group.key === 'none')?.total).toBe(1);
+
+    const board = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        groupBy: 'agent',
+        layout: 'board',
+        schemaVersion: 1,
+      },
+    });
+    expect(board.groupBy).toBe('agent');
+    expect(board.layout).toBe('board');
+  });
+
+  it('buckets activity dates in the caller time zone and pages list sub-groups', async () => {
+    const recent = await createTask(userId, { name: 'Recent' });
+    const older = await createTask(userId, { name: 'Older' });
+    await serverDB.execute(
+      sql`update tasks set updated_at = ${new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)} where id = ${older.id}`,
+    );
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const activity = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        groupBy: 'activityDate',
+        layout: 'list',
+        schemaVersion: 1,
+        timeZone: 'UTC',
+      },
+    });
+    const recentKey = activity.groups?.find((group) =>
+      group.tasks.some((task) => task.id === recent.id),
+    )?.key;
+    const olderKey = activity.groups?.find((group) =>
+      group.tasks.some((task) => task.id === older.id),
+    )?.key;
+    expect(recentKey).toMatch(/^day:/);
+    expect(olderKey).toMatch(/^week:|^month:/);
+    expect(recentKey).not.toBe(olderKey);
+
+    await expect(
+      model.queryTasks({
+        query: {
+          entityType: 'task',
+          groupBy: 'activityDate',
+          layout: 'list',
+          schemaVersion: 1,
+          timeZone: 'Not/AZone',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_QUERY' });
+
+    for (let index = 0; index < 26; index += 1) {
+      await createTask(userId, {
+        automationMode: 'schedule',
+        context: { scheduler: { tickToken: `tick-${index}` } },
+        name: `Lane ${index}`,
+        priority: 1,
+      });
+    }
+    const laned = await model.queryTasks({
+      limit: 100,
+      query: {
+        entityType: 'task',
+        groupBy: 'status',
+        layout: 'list',
+        schemaVersion: 1,
+        subGroupBy: 'priority',
+      },
+    });
+    const cell = laned.groups?.find((group) => group.key === `scheduled${'\u001F'}1`);
+    expect(cell?.tasks.length).toBeLessThanOrEqual(25);
+    expect(cell?.total).toBeGreaterThan(25);
+    expect(laned.groups?.some((group) => group.key === `canceled${'\u001F'}3`)).toBe(false);
+  });
+
+  it('pages an activity-date group by notification time, not updatedAt', async () => {
+    const notified = await createTask(userId, { name: 'Notified today' });
+    const edited = await createTask(userId, { name: 'Edited without a new ping' });
+    const recentPing = new Date('2026-09-20T15:00:00Z');
+    const olderPing = new Date('2026-09-20T10:00:00Z');
+    await serverDB.execute(
+      sql`update tasks set updated_at = ${new Date(Date.now() - 20 * 24 * 60 * 60 * 1000)} where id = ${notified.id}`,
+    );
+    await serverDB.insert(notifications).values([
+      {
+        category: 'work',
+        content: 'x',
+        lastActivityAt: recentPing,
+        resourceId: notified.id,
+        resourceType: 'task',
+        title: 'x',
+        type: 'task.assigned',
+        userId,
+        workspaceId,
+      },
+      {
+        category: 'work',
+        content: 'x',
+        lastActivityAt: olderPing,
+        resourceId: edited.id,
+        resourceType: 'task',
+        title: 'x',
+        type: 'task.assigned',
+        userId,
+        workspaceId,
+      },
+    ]);
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const query = {
+      entityType: 'task' as const,
+      groupBy: 'activityDate' as const,
+      layout: 'list' as const,
+      schemaVersion: 1 as const,
+      timeZone: 'UTC',
+    };
+    const first = await model.queryTasks({ limit: 1, mode: 'activity', query });
+    const today = first.groups?.find((group) => group.tasks.some((row) => row.id === notified.id));
+    expect(today?.tasks.map((row) => row.id)).toEqual([notified.id]);
+    expect((today?.tasks[0] as { activityAt?: Date } | undefined)?.activityAt).toEqual(recentPing);
+    const second = await model.queryTasks({
+      afterId: notified.id,
+      groupKey: today!.key,
+      limit: 1,
+      mode: 'activity',
+      query,
+      queryHash: first.queryHash,
+    });
+    expect(
+      second.groups?.find((group) => group.key === today!.key)?.tasks.map((row) => row.id),
+    ).toEqual([edited.id]);
   });
 
   it('groups a list in the database so status sections are not a page rearrange', async () => {
@@ -618,21 +1020,21 @@ describe('WorkQueryModel', () => {
     const parent = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Parent running',
-      status: 'running',
     });
     const child = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Child in review',
       parentTaskId: parent.id,
-      status: 'running',
       workflowCategory: 'in_review',
       workflowStateId: 'linear-state-review',
     });
     const extraRunning = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Another running',
-      status: 'running',
     });
+    for (const running of [parent.id, child.id, extraRunning.id]) {
+      await runDispatchFor(running);
+    }
     await serverDB
       .update(tasksTable)
       .set({ updatedAt: stamp })
@@ -1257,6 +1659,63 @@ describe('WorkQueryModel', () => {
     expect(result.projects).toHaveLength(3);
   });
 
+  it('pages a status-grouped project list by group and rejects a flat cursor', async () => {
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB.insert(projects).values([
+      {
+        id: 'wq-list-a',
+        identifier: 'WLA',
+        name: 'List alpha',
+        status: 'active',
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'wq-list-b',
+        identifier: 'WLB',
+        name: 'List beta',
+        status: 'active',
+        userId,
+        workspaceId,
+      },
+    ]);
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const query = {
+      entityType: 'project' as const,
+      groupBy: 'status' as const,
+      layout: 'list' as const,
+      schemaVersion: 1 as const,
+    };
+    const listed = await model.queryProjects({ limit: 1, query });
+    const active = listed.projectGroups?.find((group) => group.key === 'active');
+    expect(listed.layout).toBe('list');
+    expect(listed.groupBy).toBe('status');
+    expect(active?.total).toBe(2);
+    expect(active?.hasMore).toBe(true);
+    expect(active?.projects).toHaveLength(1);
+
+    await expect(
+      model.queryProjects({
+        afterId: active!.projects[0]!.id,
+        limit: 1,
+        query,
+        queryHash: listed.queryHash,
+      }),
+    ).rejects.toMatchObject({ code: 'CURSOR_INVALID' });
+
+    const next = await model.queryProjects({
+      afterId: active!.projects[0]!.id,
+      groupKey: 'active',
+      limit: 1,
+      query,
+      queryHash: listed.queryHash,
+    });
+    const activeNext = next.projectGroups?.find((group) => group.key === 'active');
+    expect(activeNext?.projects).toHaveLength(1);
+    expect(activeNext?.hasMore).toBe(false);
+    expect(activeNext?.projects[0]?.id).not.toBe(active!.projects[0]!.id);
+  });
+
   it('honours project sort by name and rejects a task-only groupBy', async () => {
     await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
     await serverDB.insert(projects).values([
@@ -1694,5 +2153,126 @@ describe('labelId predicates', () => {
       query: labelQuery({ op: 'eq', value: foreign.id }),
     });
     expect(result.tasks).toHaveLength(0);
+  });
+});
+
+describe('executionState projection', () => {
+  it('derives canonical execution from dispatch then run then legacy status', async () => {
+    // Dispatch phase wins over the legacy status projection.
+    const dispatchFailed = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Dispatch failed',
+      status: 'running',
+    });
+    await serverDB.insert(taskDispatches).values({
+      generation: 1,
+      id: 'wq-dispatch-failed',
+      idempotencyKey: 'wq:dispatch-failed',
+      phase: 'failed',
+      policyRevision: 1,
+      requestedBy: `user:${userId}`,
+      requirementRevision: 1,
+      taskId: dispatchFailed.id,
+      taskRevision: 1,
+      workspaceId,
+    });
+    // No dispatch — the latest run's state projects.
+    const runWaiting = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Run waiting',
+    });
+    await serverDB.insert(taskTopics).values({
+      runState: 'waiting',
+      seq: 1,
+      taskId: runWaiting.id,
+      userId,
+    });
+    // A stale `tasks.status` value has no execution rows — the retired column
+    // must not resurrect an execution state.
+    const legacyRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Stale running',
+      status: 'running',
+    });
+    const dispatchRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Dispatch running',
+    });
+    await runDispatchFor(dispatchRunning.id);
+    // Never ran — the projection is NULL.
+    const neverRan = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Backlog',
+    });
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const idsOf = async (predicate: WorkQueryPredicate) =>
+      (
+        await model.queryTasks({
+          limit: 50,
+          query: {
+            entityType: 'task',
+            filter: {
+              all: [
+                { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+                predicate,
+              ],
+            },
+            schemaVersion: 2,
+          },
+        })
+      ).tasks
+        .map((row) => row.id)
+        .sort();
+
+    await expect(idsOf({ field: 'executionState', op: 'eq', value: 'failed' })).resolves.toEqual([
+      dispatchFailed.id,
+    ]);
+    await expect(idsOf({ field: 'executionState', op: 'eq', value: 'waiting' })).resolves.toEqual([
+      runWaiting.id,
+    ]);
+    await expect(idsOf({ field: 'executionState', op: 'eq', value: 'running' })).resolves.toEqual([
+      dispatchRunning.id,
+    ]);
+    await expect(
+      idsOf({ field: 'executionState', op: 'isNull', value: undefined }),
+    ).resolves.toEqual([legacyRunning.id, neverRan.id].sort());
+    // notIn is NULL-inclusive: a never-ran task is "not running".
+    await expect(
+      idsOf({ field: 'executionState', op: 'notIn', value: ['running'] }),
+    ).resolves.toEqual([dispatchFailed.id, legacyRunning.id, neverRan.id, runWaiting.id].sort());
+  });
+
+  it('normalizes a stored v1 status query onto workflow/execution before compiling', async () => {
+    // The workflow axis decides "completed" now, not the legacy column.
+    const doneViaWorkflow = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Done',
+      status: 'running',
+      workflowCategory: 'done',
+    });
+    const legacyRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Running',
+      workflowCategory: 'in_progress',
+    });
+    await runDispatchFor(legacyRunning.id);
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const result = await model.queryTasks({
+      limit: 50,
+      query: {
+        entityType: 'task',
+        filter: {
+          all: [
+            { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+            { field: 'status', op: 'in', value: ['completed', 'running'] },
+          ],
+        },
+        schemaVersion: 1,
+      },
+    });
+    expect(result.tasks.map((row) => row.id).sort()).toEqual(
+      [doneViaWorkflow.id, legacyRunning.id].sort(),
+    );
   });
 });

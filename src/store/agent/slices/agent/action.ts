@@ -1,9 +1,9 @@
-import { toast } from '@lobehub/ui/base-ui';
-import { isDesktop, randomAgentName } from '@orvilo/const';
+import { isDesktop, numberedAgentName } from '@orvilo/const';
 import { type AgentContextDocument } from '@orvilo/context-engine';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import {
   isChatGroupSessionId,
+  normalizeAgencyConfigForWrite,
   type OrviloAgentAgencyConfig,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
@@ -14,10 +14,12 @@ import type { SWRResponse } from 'swr';
 import type { PartialDeep } from 'type-fest';
 
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { MESSAGE_CANCEL_FLAT } from '@/const/message';
 import { analyticsClient } from '@/libs/analytics/client';
-import { mutate, useClientDataSWRWithSync } from '@/libs/swr';
+import { mutate, useClientDataSWR, useClientDataSWRWithSync } from '@/libs/swr';
 import { agentConfigKeys, builtinAgentKeys } from '@/libs/swr/keys';
+import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { getCacheScope } from '@/libs/swr/useCacheScope';
 import type { AvailableAgentItem, CreateAgentParams, CreateAgentResult } from '@/services/agent';
 import { agentService, AVAILABLE_AGENTS_CONTEXT_QUERY_LIMIT } from '@/services/agent';
@@ -27,8 +29,8 @@ import {
   agentDocumentSWRKeys,
   resolveAgentDocumentsContext,
 } from '@/services/agentDocument';
-import { useGlobalStore } from '@/store/global';
-import { globalGeneralSelectors } from '@/store/global/selectors';
+import { aiAgentService } from '@/services/aiAgent';
+import { homeService } from '@/services/home';
 import type { StoreSetter } from '@/store/types';
 import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -154,29 +156,73 @@ export class AgentSliceActionImpl {
     this.#set({ streamingSystemRole: currentContent + chunk }, false, 'appendStreamingSystemRole');
   };
 
+  /**
+   * In-flight creates keyed by `clientRequestId`. A second call carrying the
+   * same key (double-click, React strict re-fire, a UI retry of a still-open
+   * mutation) joins the pending mutation instead of minting a second agent —
+   * the client-side half of the create idempotency contract. Entries clear
+   * on settle, so a real retry after failure creates normally.
+   */
+  #createAgentInFlight = new Map<string, Promise<CreateAgentResult>>();
+
   createAgent = async (params: CreateAgentParams): Promise<CreateAgentResult> => {
+    if (params.clientRequestId) {
+      const inFlight = this.#createAgentInFlight.get(params.clientRequestId);
+      if (inFlight) return inFlight;
+    }
+    const task = this.#createAgentInner(params);
+    if (params.clientRequestId) {
+      this.#createAgentInFlight.set(params.clientRequestId, task);
+      try {
+        return await task;
+      } finally {
+        this.#createAgentInFlight.delete(params.clientRequestId);
+      }
+    }
+    return task;
+  };
+
+  #createAgentInner = async (params: CreateAgentParams): Promise<CreateAgentResult> => {
     // Seed a default name so a new agent has an identity before the Agent
-    // Builder conversation produces one; the builder may replace it later. This
-    // lives here rather than in the create endpoint because the language only
-    // resolves on the client (`auto` follows the browser). A caller that already
-    // carries a name — e.g. a market agent — keeps it.
+    // Builder conversation produces one; the builder may replace it later. A
+    // caller that already carries a name — e.g. a market agent — keeps it.
     //
-    // A heterogeneous agent never draws a random personal name. In personal or
-    // workspace-private scope its name is the product title; a shared workspace
-    // agent adds the creator so members can distinguish identical tools.
+    // The default is deterministic: the agent's own type name (product title
+    // for heterogeneous agents, "Orvilo AI" for builtin agents), numbered when
+    // the sidebar already has one — "Claude Code", "Claude Code 2", ... A
+    // shared workspace agent prefixes the creator so members can distinguish
+    // identical tools.
     const heteroProvider = params.config?.agencyConfig?.heterogeneousProvider;
-    const locale = globalGeneralSelectors.currentLanguage(useGlobalStore.getState());
+    // Names already in use reserve their slot. Read the same sidebar list the
+    // sidebar itself renders (server truth, so a stale or unloaded local copy
+    // can't mint a duplicate); if the fetch fails, a repeated name is better
+    // than no agent — the creation proceeds unnumbered.
+    let takenNames: string[] = [];
+    try {
+      const list = await homeService.getSidebarAgentList();
+      takenNames = [
+        ...list.pinned,
+        ...list.groups.flatMap((group) => group.items),
+        ...list.ungrouped,
+        ...list.privatePinned,
+        ...list.privateGroups.flatMap((group) => group.items),
+        ...list.privateUngrouped,
+      ]
+        .map((item) => item.name)
+        .filter((name): name is string => !!name);
+    } catch {
+      // Naming must never block agent creation.
+    }
+    const baseName = heteroProvider
+      ? heteroAgentDefaultName({
+          productTitle: params.config?.title || getHeterogeneousTypeLabel(heteroProvider.type),
+          visibility: params.visibility,
+          workspaceId: getActiveWorkspaceId(),
+        })
+      : params.config?.title?.trim() || 'Orvilo AI';
     const config = {
       ...params.config,
-      name:
-        params.config?.name ||
-        (heteroProvider
-          ? heteroAgentDefaultName({
-              productTitle: params.config?.title || getHeterogeneousTypeLabel(heteroProvider.type),
-              visibility: params.visibility,
-              workspaceId: getActiveWorkspaceId(),
-            })
-          : randomAgentName(locale)),
+      name: params.config?.name || (baseName ? numberedAgentName(baseName, takenNames) : undefined),
     };
 
     const result = await agentService.createAgent({ ...params, config });
@@ -455,6 +501,16 @@ export class AgentSliceActionImpl {
           this.#clearAgentConfigError(agentId);
         },
         onError: (error) => {
+          const { code, status } = normalizeAsyncError(error);
+          // A NOT_FOUND is the same terminal state as a `null` payload — the
+          // agent is gone or outside the caller's workspace scope (e.g. a
+          // workspace agent opened on a personal-scope route). Route it to the
+          // 404 guard instead of letting `agentConfigErrorMap` surface the raw
+          // TRPCClientError line above the composer.
+          if (code === 'NOT_FOUND' || status === 404) {
+            this.#markAgentNotFound(agentId);
+            return;
+          }
           this.#set(
             (state) => ({
               agentConfigErrorMap: {
@@ -469,6 +525,11 @@ export class AgentSliceActionImpl {
       },
     );
   };
+
+  useFetchServerDefaultHeterogeneousCapability = (enabled: boolean) =>
+    useClientDataSWR(enabled ? agentConfigKeys.serverDefaultHeterogeneousCapability() : null, () =>
+      aiAgentService.getServerDefaultHeterogeneousCapability(),
+    );
 
   /**
    * Re-trigger the agent config fetch after a failure. Clears the recorded
@@ -654,10 +715,16 @@ export class AgentSliceActionImpl {
       agencyConfigPatch,
     ) as OrviloAgentAgencyConfig;
 
-    pruneWorkingDirByDeviceDeletes(agencyConfig, agencyConfigPatch);
-    preserveWorkingDirDeleteMarkers(agencyConfig, agencyConfigPatch);
+    // The merge carries the cached row wholesale — a legacy row still holding
+    // retired `engine`/`adapterType` fields would re-send them and trip the
+    // server's retired-write rejection. Strip them from what is sent (the
+    // request schema owns refusing them from new clients).
+    const normalizedAgencyConfig = normalizeAgencyConfigForWrite(agencyConfig);
 
-    return { ...data, agencyConfig };
+    pruneWorkingDirByDeviceDeletes(normalizedAgencyConfig, agencyConfigPatch);
+    preserveWorkingDirDeleteMarkers(normalizedAgencyConfig, agencyConfigPatch);
+
+    return { ...data, agencyConfig: normalizedAgencyConfig };
   };
 
   optimisticUpdateAgentConfig = async (

@@ -5,11 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { lambdaClient } from '@/libs/trpc/client';
 import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 import { messageService } from '@/services/message';
+import { useAgentStore } from '@/store/agent';
+import { useAiInfraStore } from '@/store/aiInfra';
 
 import { useChatStore } from '../../../../store';
 import { messageMapKey } from '../../../../utils/messageMapKey';
 import { createMockMessage, TEST_IDS } from './fixtures';
-import { resetTestEnvironment } from './helpers';
+import { resetTestEnvironment, setupMockSelectors, spyOnMessageService } from './helpers';
 
 // Mock the tRPC client so the import chain doesn't pull
 // server-only code (cloud business packages, redis envs) into the test env.
@@ -75,6 +77,17 @@ const captureActError = async (action: () => Promise<void>): Promise<unknown> =>
     }
   });
   return captured;
+};
+
+// The local client-runtime resume path is restored (P30): non-gateway agents
+// resume paused tool interactions through `internal_createAgentState` +
+// `executeClientAgent` instead of failing GATEWAY_RESUME_REQUIRED.
+const seedLocalClientRuntime = (result: any) => {
+  setupMockSelectors();
+  spyOnMessageService();
+  useAgentStore.setState({ availableAgents: [] });
+  useAiInfraStore.setState({ isInitAiProviderRuntimeState: true });
+  return vi.spyOn(result.current, 'executeClientAgent').mockResolvedValue({} as any);
 };
 
 describe('ConversationControl actions', () => {
@@ -1291,7 +1304,7 @@ describe('ConversationControl actions', () => {
         executeGatewayAgentSpy.mockRestore();
       });
 
-      it('fails the interim op with GATEWAY_RESUME_REQUIRED when the agent has no gateway binding', async () => {
+      it('resumes the approved tool through the local client runtime when the agent has no gateway binding', async () => {
         const { result } = renderHook(() => useChatStore());
 
         const agentId = 'local-agent';
@@ -1314,8 +1327,9 @@ describe('ConversationControl actions', () => {
           });
         });
 
-        // No gateway mode, no hetero/ACP binding — the retired browser runtime
-        // no longer exists, so there is no local resume path to fall through to.
+        // No gateway mode, no hetero/ACP binding — the restored local runtime
+        // resumes the paused tool call in place.
+        const executeClientAgentSpy = seedLocalClientRuntime(result);
         vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
         vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
         const executeGatewayAgentSpy = vi
@@ -1327,19 +1341,16 @@ describe('ConversationControl actions', () => {
         });
 
         expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
+        expect(executeClientAgentSpy).toHaveBeenCalledTimes(1);
+        expect(executeClientAgentSpy.mock.calls[0]![0]).toMatchObject({
+          parentMessageId: 'tool-msg-1',
+          parentMessageType: 'tool',
+        });
         expect(
           Object.values(result.current.operations).find(
             (operation) => operation.type === 'approveToolCalling',
           ),
-        ).toMatchObject({
-          metadata: {
-            error: {
-              message:
-                'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
-            },
-          },
-          status: 'failed',
-        });
+        ).toMatchObject({ status: 'completed' });
 
         executeGatewayAgentSpy.mockRestore();
       });
@@ -2097,6 +2108,7 @@ describe('ConversationControl actions', () => {
             agentInterventionAction: {
               result: {
                 kind: 'agent_marketplace',
+                runtimeConfig: { model: 'gpt-4' },
                 selectedTemplateIds: ['template-1'],
               },
               type: 'submit_custom',
@@ -2118,7 +2130,7 @@ describe('ConversationControl actions', () => {
         );
       });
 
-      it('fails the interim op with GATEWAY_RESUME_REQUIRED when the agent has no gateway binding', async () => {
+      it('resumes the submitted answer through the local client runtime when the agent has no gateway binding', async () => {
         const { result } = renderHook(() => useChatStore());
 
         const agentId = 'client-agent';
@@ -2148,9 +2160,9 @@ describe('ConversationControl actions', () => {
           });
         });
 
-        // No gateway mode and no hetero/ACP binding — the retired browser
-        // runtime had the only local resume path, so the submission fails
-        // explicitly instead of silently dropping.
+        // No gateway mode and no hetero/ACP binding — the restored local
+        // runtime persists the answer and resumes from it in place.
+        const executeClientAgentSpy = seedLocalClientRuntime(result);
         vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
         vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
         vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
@@ -2165,19 +2177,12 @@ describe('ConversationControl actions', () => {
         });
 
         expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
+        expect(executeClientAgentSpy).toHaveBeenCalledTimes(1);
         expect(
           Object.values(result.current.operations).find(
             (operation) => operation.type === 'submitToolInteraction',
           ),
-        ).toMatchObject({
-          metadata: {
-            error: {
-              message:
-                'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
-            },
-          },
-          status: 'failed',
-        });
+        ).toMatchObject({ status: 'completed' });
 
         executeGatewayAgentSpy.mockRestore();
       });
@@ -2606,7 +2611,7 @@ describe('ConversationControl actions', () => {
   // the code does NOW.
   // ===========================================================================
   describe('rejectAndContinueToolCalling non-gateway characterization (lifecycle refactor regression net)', () => {
-    it('runs rejectToolCalling (one op completes) then fails a NEW op with GATEWAY_RESUME_REQUIRED', async () => {
+    it('runs rejectToolCalling (one op) then continues through a NEW local-runtime op', async () => {
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'client-agent';
@@ -2631,7 +2636,8 @@ describe('ConversationControl actions', () => {
       });
 
       // Non-gateway (no Gateway resume, no hetero binding): the halting reject
-      // still persists — only the "continue" half has no runtime to run on.
+      // persists, then the "continue" half resumes on the restored local runtime.
+      const executeClientAgentSpy = seedLocalClientRuntime(result);
       vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
       vi.spyOn(result.current, 'optimisticUpdateMessagePlugin').mockResolvedValue(undefined);
       vi.spyOn(result.current, 'optimisticUpdateMessageContent').mockResolvedValue(undefined);
@@ -2647,20 +2653,17 @@ describe('ConversationControl actions', () => {
       // 1) The halting reject runs first (it creates + completes its own op).
       expect(rejectToolCallingSpy).toHaveBeenCalledWith('tool-msg-1', 'not safe', undefined);
 
-      // 2) No runtime executes — there is no local resume path any more.
+      // 2) The continue half resumes through the local client runtime.
       expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
+      expect(executeClientAgentSpy).toHaveBeenCalledTimes(1);
 
-      // Two 'rejectToolCalling' ops exist: the halting reject's own op
-      // completes, while the continue op fails explicitly with the gateway
-      // requirement error.
+      // Two 'rejectToolCalling' ops exist: the halting reject's own op and the
+      // continue op — both complete on the restored local path.
       const rejectOps = Object.values(result.current.operations).filter(
         (op: any) => op.type === 'rejectToolCalling',
       );
       expect(rejectOps).toHaveLength(2);
-      expect(rejectOps.map((op: any) => op.status)).toEqual(['completed', 'failed']);
-      expect(rejectOps[1]!.metadata.error?.message).toBe(
-        'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
-      );
+      expect(rejectOps.map((op: any) => op.status)).toEqual(['completed', 'completed']);
     });
   });
 
@@ -3590,12 +3593,12 @@ describe('ConversationControl actions', () => {
       executeGatewayAgentSpy.mockRestore();
     });
 
-    // There is no local resume path any more — the retired browser runtime had
-    // the only sequential path, so each per-message approval now fails its
-    // interim op explicitly.
-    it('fails each approval with GATEWAY_RESUME_REQUIRED when the agent has no gateway binding', async () => {
+    // Non-gateway agents resume each pending tool in order on the restored
+    // local runtime — one interim op per message, same sequential loop.
+    it('resumes each approval through the local client runtime when the agent has no gateway binding', async () => {
       const { result } = renderHook(() => useChatStore());
       seedPendingBatch(result);
+      const executeClientAgentSpy = seedLocalClientRuntime(result);
       vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(false);
 
       const executeGatewayAgentSpy = vi
@@ -3607,8 +3610,8 @@ describe('ConversationControl actions', () => {
       });
 
       expect(executeGatewayAgentSpy).not.toHaveBeenCalled();
-      // One interim op per tool, each failed explicitly — sequential order is
-      // preserved by the per-message loop.
+      // One interim op per tool, each completed via the local resume — sequential
+      // order is preserved by the per-message loop.
       const approvalOps = Object.values(result.current.operations).filter(
         (op: any) => op.type === 'approveToolCalling',
       );
@@ -3617,14 +3620,8 @@ describe('ConversationControl actions', () => {
         'tool-msg-a',
         'tool-msg-b',
       ]);
-      expect(
-        approvalOps.every(
-          (op: any) =>
-            op.status === 'failed' &&
-            op.metadata.error?.message ===
-              'AGENT_RUNTIME_UNSUPPORTED: This interaction can only be resumed by a gateway-bound run.',
-        ),
-      ).toBe(true);
+      expect(executeClientAgentSpy).toHaveBeenCalledTimes(2);
+      expect(approvalOps.every((op: any) => op.status === 'completed')).toBe(true);
 
       executeGatewayAgentSpy.mockRestore();
     });

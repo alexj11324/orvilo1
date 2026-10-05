@@ -6,6 +6,7 @@ import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 export interface UseEffectiveAgencyConfigResult {
   /** Shared `agents.agencyConfig` merged with the caller's per-agent override. */
@@ -14,6 +15,8 @@ export interface UseEffectiveAgencyConfigResult {
   canDisplayExecutionTarget: boolean;
   /** Whether this caller may open the execution-target selector. */
   canSelectExecutionTarget: boolean;
+  /** Caller-owned private Agents and member selection may use the caller's personal pool. */
+  canSelectPersonalDevice: boolean;
   /**
    * The workspace preference fetch is still in flight. Until it settles, a
    * workspace agent's `agencyConfig` may reflect only the shared row — callers
@@ -21,6 +24,8 @@ export interface UseEffectiveAgencyConfigResult {
    * should wait instead of acting on a value that may flip.
    */
   isPreferenceLoading: boolean;
+  /** Explicit member device selection; never inferred from shared defaults. */
+  memberSelectedDeviceId?: string;
   /**
    * The effective config still comes from the workspace-shared fallback because
    * this member has not explicitly selected an execution target. Callers must
@@ -58,6 +63,7 @@ export const useEffectiveAgencyConfig = (agentId?: string): UseEffectiveAgencyCo
     agentId ? agentByIdSelectors.getAgentById(agentId)(s) : undefined,
   );
   const { canManageAgent, isAccessLoading } = useAgentManagementAccess(agentId);
+  const currentUserId = useUserStore(userProfileSelectors.userId);
   const usesWorkspaceMemberSelection =
     !!agent?.workspaceId && agent.visibility !== 'private' && !canManageAgent;
 
@@ -84,13 +90,22 @@ export const useEffectiveAgencyConfig = (agentId?: string): UseEffectiveAgencyCo
   // per-user override, so any workspace agent must wait for the preference
   // fetch — not just the member-selection case.
   const isPreferenceLoading = isAccessLoading || (!!agent?.workspaceId && isLoading);
+  const canSelectExecutionTarget =
+    !!agentId && !isPreferenceLoading && agencyConfig?.executionTargetSelectionPolicy !== 'fixed';
 
   return {
     agencyConfig,
     canDisplayExecutionTarget: !!agentId && !isPreferenceLoading,
-    canSelectExecutionTarget:
-      !!agentId && !isPreferenceLoading && agencyConfig?.executionTargetSelectionPolicy !== 'fixed',
+    canSelectExecutionTarget,
+    canSelectPersonalDevice:
+      canSelectExecutionTarget &&
+      (!agent?.workspaceId ||
+        (agent.visibility === 'private' && !!currentUserId && agent.userId === currentUserId) ||
+        usesWorkspaceMemberSelection),
     isPreferenceLoading,
+    ...(override?.executionTarget === 'device' && override.boundDeviceId
+      ? { memberSelectedDeviceId: override.boundDeviceId }
+      : {}),
     workspaceScoped: resolveWorkspaceScoped(usesWorkspaceMemberSelection, override),
   };
 };

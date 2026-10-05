@@ -1,10 +1,9 @@
-import { Block, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar, useThemeMode } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HeterogeneousTag from '@/features/HeterogeneousTag';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -33,6 +32,36 @@ const TaskDetailAssignee = memo(() => {
 
   if (!taskId) return null;
 
+  const chip = (
+    <div
+      className="flex items-center gap-2 px-[11px] py-1"
+      style={{
+        background: isDarkMode ? cssVar.colorFillSecondary : undefined,
+        border: isDarkMode ? undefined : `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+        cursor: 'pointer',
+        flex: 'none',
+        maxWidth: '100%',
+        minHeight: 32,
+      }}
+    >
+      {assigneeAgentId ? (
+        <>
+          <AssigneeAvatar agentId={assigneeAgentId} size={20} />
+          <div className="truncate block font-medium">{assigneeMeta?.title}</div>
+          <HeterogeneousTag type={assigneeHeterogeneousType} />
+        </>
+      ) : (
+        <>
+          <UnassignedAssigneeIcon kind={'agent'} />
+          <div className="font-medium" style={{ color: cssVar.colorTextDescription }}>
+            {t('createTask.assignee')}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <AssigneeAgentSelector
       currentAgentId={assigneeAgentId}
@@ -45,35 +74,16 @@ const TaskDetailAssignee = memo(() => {
         status === 'running' ? (agentId) => handoffTask(taskId, agentId) : undefined
       }
     >
-      <Tooltip title={assigneeAgentId ? undefined : t('taskList.unassignedAgentHint')}>
-        <Block
-          clickable
-          horizontal
-          align="center"
-          gap={8}
-          paddingBlock={4}
-          paddingInline={11}
-          style={{ flex: 'none', maxWidth: '100%', minHeight: 32 }}
-          variant={isDarkMode ? 'filled' : 'outlined'}
-        >
-          {assigneeAgentId ? (
-            <>
-              <AssigneeAvatar agentId={assigneeAgentId} size={20} />
-              <Text ellipsis weight={500}>
-                {assigneeMeta?.title}
-              </Text>
-              <HeterogeneousTag type={assigneeHeterogeneousType} />
-            </>
-          ) : (
-            <>
-              <UnassignedAssigneeIcon kind={'agent'} />
-              <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
-                {t('createTask.assignee')}
-              </Text>
-            </>
-          )}
-        </Block>
-      </Tooltip>
+      {assigneeAgentId ? (
+        chip
+      ) : (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger render={chip} />
+            <TooltipContent>{t('taskList.unassignedAgentHint')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </AssigneeAgentSelector>
   );
 });

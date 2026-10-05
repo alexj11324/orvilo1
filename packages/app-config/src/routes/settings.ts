@@ -59,6 +59,16 @@ export interface SettingsCapabilityContext {
 
 export type SettingsCapabilityGate = (context: SettingsCapabilityContext) => boolean;
 
+/**
+ * Which authority a settings page answers to — the boundary plan's four
+ * scopes (§7): `user` follows the person across clients, `workspace` is a
+ * shared/org surface, `host` configures THIS install (never a shared agent),
+ * `device` is bound to a `deviceId` and checked against device rights.
+ * Declared on every live tab so "where does this belong" is a registry fact,
+ * not a sidebar convention.
+ */
+export type SettingsScope = 'device' | 'host' | 'user' | 'workspace';
+
 export interface SettingsCapability {
   /**
    * Legacy destination of a withdrawn tab: a direct visit moves here instead of
@@ -84,6 +94,8 @@ export interface SettingsCapability {
    * invariant `settings.test.ts` pins.
    */
   offered?: SettingsCapabilityGate;
+  /** Ownership scope; meaningful on `enabled` tabs. */
+  scope?: SettingsScope;
   status: SettingsCapabilityStatus;
 }
 
@@ -98,69 +110,88 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // ids stay in `SettingsTabs` because stored URLs and persisted tab state
   // still reference them, and `getSettingsCapability` must keep resolving them
   // to a safe target instead of throwing.
-  [SettingsTabs.Agent]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  // The restored P30 provider surface revived `service-model` as a live tab,
+  // so the withdrawn agent/tts/image tabs point at it again exactly as the
+  // legacy redirect map did.
+  [SettingsTabs.Agent]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
   [SettingsTabs.ChatAppearance]: { aliasOf: SettingsTabs.Appearance, status: 'retired' },
   [SettingsTabs.Common]: { aliasOf: SettingsTabs.Appearance, status: 'retired' },
-  [SettingsTabs.Image]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  [SettingsTabs.Image]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
   // `llm` was the old provider page and has no live equivalent at all. It used
   // to fall through to Appearance; it must not, so it deliberately names no
   // alias and answers not-found.
   [SettingsTabs.LLM]: { status: 'retired' },
-  [SettingsTabs.ServiceModel]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
-  [SettingsTabs.TTS]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  [SettingsTabs.ServiceModel]: { scope: 'user', status: 'enabled' },
+  [SettingsTabs.TTS]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
 
   // Personal configuration uses the broker; it does not revive legacy execution.
-  [SettingsTabs.Provider]: { gate: ({ mobile }) => !mobile, status: 'enabled' },
+  [SettingsTabs.Provider]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
 
   // ── Live surfaces ────────────────────────────────────────────────────────
   // Settings that follow the user everywhere.
-  [SettingsTabs.Profile]: { status: 'enabled' },
-  [SettingsTabs.Appearance]: { status: 'enabled' },
+  [SettingsTabs.Profile]: { scope: 'user', status: 'enabled' },
+  [SettingsTabs.Appearance]: { scope: 'user', status: 'enabled' },
+  // Per-agent configuration home — the workspace keeps config out of the work
+  // surface; Settings → Agents is where model/runtime/tools live.
+  [SettingsTabs.Agents]: { scope: 'user', status: 'enabled' },
   // Hotkeys are a desktop concept; the mobile shell has nothing to bind.
-  [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, status: 'enabled' },
+  [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
 
   // Desktop notifications are a local capability, so the row is offered on
   // Electron regardless of whether the deployment ships the business pages
   // that host the rest of the notification settings.
   [SettingsTabs.Notification]: {
     offered: ({ enableBusinessFeatures, isDesktop }) => enableBusinessFeatures || isDesktop,
+    scope: 'user',
     status: 'enabled',
   },
 
-  [SettingsTabs.Memory]: { status: 'enabled' },
+  [SettingsTabs.Memory]: { scope: 'user', status: 'enabled' },
   // Electron-only: both pages configure the desktop runtime, and neither has
   // anything to configure in a browser.
-  [SettingsTabs.Proxy]: { gate: ({ isDesktop }) => isDesktop, status: 'enabled' },
-  [SettingsTabs.SystemTools]: { gate: ({ isDesktop }) => isDesktop, status: 'enabled' },
+  // Host scope: configures THIS install's network egress — the remote
+  // device's execution-network settings are a different surface entirely.
+  [SettingsTabs.Proxy]: { gate: ({ isDesktop }) => isDesktop, scope: 'host', status: 'enabled' },
+  [SettingsTabs.SystemTools]: {
+    gate: ({ isDesktop }) => isDesktop,
+    scope: 'host',
+    status: 'enabled',
+  },
 
   // The platform's own skill marketplace / management chain was retired as a
   // product. Nothing survives to alias onto: the Connector page manages
   // connections, not agent skills, so a stored `/settings/skill` is an honest
   // dead end rather than a redirect to a page that never owned this.
   [SettingsTabs.Skill]: { status: 'retired' },
-  [SettingsTabs.Connector]: { status: 'enabled' },
-  [SettingsTabs.Labels]: { status: 'enabled' },
+  // Messenger/IM adapters were retired as a product surface; stored links are dead ends.
+  [SettingsTabs.Messenger]: { status: 'retired' },
+  [SettingsTabs.Connector]: { scope: 'user', status: 'enabled' },
+  [SettingsTabs.Labels]: { scope: 'user', status: 'enabled' },
   // The user-built OAuth application console was retired. First-party clients
   // (`orvilo-cli`, desktop, mobile, market) come from the provider's static
   // `defaultClients`, and login / GitHub / Linear / device auth never went
   // through this router.
   [SettingsTabs.OAuthApps]: { status: 'retired' },
 
-  [SettingsTabs.Stats]: { status: 'enabled' },
+  [SettingsTabs.Stats]: { scope: 'user', status: 'enabled' },
   [SettingsTabs.Usage]: {
     gate: ({ enableBusinessFeatures }) => enableBusinessFeatures,
+    scope: 'workspace',
     status: 'enabled',
   },
   [SettingsTabs.Plans]: {
     gate: ({ enableBusinessFeatures }) => enableBusinessFeatures,
+    scope: 'workspace',
     status: 'enabled',
   },
   [SettingsTabs.Credits]: {
     gate: ({ enableBusinessFeatures }) => enableBusinessFeatures,
+    scope: 'workspace',
     status: 'enabled',
   },
   [SettingsTabs.Billing]: {
     gate: ({ enableBusinessFeatures }) => enableBusinessFeatures,
+    scope: 'workspace',
     status: 'enabled',
   },
   // The Referral *settings page* was an empty shell at every layer; the
@@ -168,27 +199,32 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // With no page to render there is nothing for the business flag to gate.
   [SettingsTabs.Referral]: { status: 'retired' },
 
-  [SettingsTabs.Creds]: { status: 'enabled' },
+  [SettingsTabs.Creds]: { scope: 'workspace', status: 'enabled' },
   // Hosted key management is a deployment capability, so the row is offered
   // only where the server actually serves it — but the page itself stays
   // reachable wherever it is linked (command palette, error recovery), which
   // is why `offered` is narrower than `gate` here rather than equal to it.
   [SettingsTabs.APIKey]: {
     offered: ({ isDevMode, showApiKeyManage }) => showApiKeyManage || isDevMode,
+    scope: 'user',
     status: 'enabled',
   },
-  [SettingsTabs.Security]: { status: 'enabled' },
+  [SettingsTabs.Security]: { scope: 'user', status: 'enabled' },
 
-  [SettingsTabs.Storage]: { status: 'enabled' },
-  [SettingsTabs.Devices]: { status: 'enabled' },
+  [SettingsTabs.Storage]: { scope: 'user', status: 'enabled' },
+  [SettingsTabs.Devices]: { scope: 'device', status: 'enabled' },
 
-  [SettingsTabs.Advanced]: { status: 'enabled' },
-  [SettingsTabs.Labs]: { status: 'enabled' },
+  [SettingsTabs.Advanced]: { scope: 'user', status: 'enabled' },
+  [SettingsTabs.Labs]: { scope: 'user', status: 'enabled' },
   // `hideDocs` withholds the *documentation* surface. The About page also
   // carries version, update channel and diagnostics, and `/apps` (retired)
   // still redirects into it, so the page stays enabled and only its nav row
   // follows the flag.
-  [SettingsTabs.About]: { offered: ({ hideDocs }) => !hideDocs, status: 'enabled' },
+  [SettingsTabs.About]: {
+    offered: ({ hideDocs }) => !hideDocs,
+    scope: 'user',
+    status: 'enabled',
+  },
 };
 
 /**
@@ -269,16 +305,14 @@ export interface WorkspaceSettingsAlias {
 
 export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   { alias: 'creds', target: 'credential' },
-  // `provider` and `service-model` are here because their capability *moved* —
-  // the provider surface folded into the workspace settings root, so the old
-  // URL has an honest successor to land on.
+  // `provider` and `service-model` are live workspace tabs again (restored P30
+  // provider surface), so they are registered by the leaves list, not here —
+  // an alias redirect would shadow the real pages.
   //
   // The skill marketplace and the OAuth-app console are deliberately absent:
   // nothing succeeded them. A redirect to the settings root would imply the
   // capability still exists somewhere, so their URLs stay unprefixed and answer
   // the same not-found the personal sidebar answers (see
   // `SettingsTabs.Skill` / `SettingsTabs.OAuthApps` in `SETTINGS_CAPABILITIES`).
-  { alias: 'provider', subPaths: true, target: 'root' },
-  { alias: 'service-model', target: 'root' },
   { alias: 'stats', target: 'statistics' },
 ];

@@ -1,6 +1,5 @@
 import type { ContextMenuItem, showContextMenu as showWebContextMenu } from '@lobehub/ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import type { ItemType } from 'antd/es/menu/interface';
 
 type NativeMenuIcon = {
   sfSymbol?: SFSymbol;
@@ -22,8 +21,4 @@ type AssertTrue<_T extends true> = never;
 
 export type AssertContextMenuItemArrayAssignable = AssertTrue<
   ContextMenuItem[] extends NativeContextMenuItem[] ? true : false
->;
-
-export type AssertAntdItemTypeArrayAssignable = AssertTrue<
-  ItemType[] extends NativeContextMenuItem[] ? true : false
 >;

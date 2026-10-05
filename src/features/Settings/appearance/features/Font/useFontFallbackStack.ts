@@ -1,5 +1,6 @@
-import type { SelectOption } from '@lobehub/ui/base-ui';
 import { useMemo } from 'react';
+
+import { flattenSelectOptions, type SelectOption } from '@/components/SelectOptions';
 
 import { APPLICATION_DEFAULT_FONT } from '../useSystemFontOptions';
 import { MAX_FALLBACK_FONTS } from './fontStack';
@@ -15,14 +16,14 @@ export const useFontFallbackStack = ({ onChange, options, stack }: UseFontFallba
 
   const candidates = useMemo(
     () =>
-      options
+      flattenSelectOptions(options)
         .filter((option) => option.value !== APPLICATION_DEFAULT_FONT)
         .map((option) => (stack.includes(option.value) ? { ...option, disabled: true } : option)),
     [options, stack],
   );
 
   const labelOf = (value: string) =>
-    options.find((option) => option.value === value)?.label ?? value;
+    flattenSelectOptions(options).find((option) => option.value === value)?.label ?? value;
 
   return {
     add: (value: string) => onChange([...stack, value]),

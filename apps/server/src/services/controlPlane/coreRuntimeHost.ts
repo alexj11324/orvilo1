@@ -7,12 +7,18 @@ import type {
   Commitment,
   ControlResult,
   DurableReceipt,
+  ExecutionFence,
+  ExecutionRuntime,
   IsolationEvidence,
   RuntimeEvent,
   RuntimeSession,
 } from '@orvilo/agent-execution';
+import type { HarnessInitPolicy } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
+import { HarnessTransport } from '@orvilo/agent-execution/controlPlane/harnessTransport';
 import type {
   DockerSupervisorOptions,
+  IsolatedLaunch,
+  PrimeEmbeddedRuntimeOptions,
   PrimeRuntimeOptions,
 } from '@orvilo/agent-execution/controlPlane/server';
 import {
@@ -20,6 +26,7 @@ import {
   createFileActionExecutor,
   DockerProcessTreeSupervisor,
   FileDurableReceiptStore,
+  PrimeEmbeddedRuntime,
   PrimeExecutionRuntime,
   PrimeStdioTransport,
   ScopedFileWriter,
@@ -29,11 +36,18 @@ import type { HandoffIntent } from '@/database/models/taskExecutionControl';
 import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 
+import { issueBindingExecution } from '../providerBinding/execution';
 import type { CanonicalCompletionOutcome, CanonicalReceiptMapping } from './canonicalCompletion';
 import { CanonicalVerifyCompletion } from './canonicalCompletion';
-import type { CanonicalRunBinding } from './canonicalRun';
+import type {
+  CanonicalRunAuthorityPort,
+  CanonicalRunBinding,
+  CanonicalRunRegistrationPort,
+} from './canonicalRun';
 import { CanonicalRunAuthority } from './canonicalRun';
 import { CanonicalSessionSnapshots } from './canonicalSessionSnapshot';
+import type { EmbeddedInferenceBridge, EmbeddedInferenceBridgeDeps } from './embeddedBroker';
+import { createEmbeddedInferenceBridge } from './embeddedBroker';
 
 interface HostJournal {
   binding: CanonicalRunBinding;
@@ -47,6 +61,10 @@ interface HostJournal {
 }
 
 export interface CanonicalCoreHostOptions {
+  /** Canonical admission authority — defaults to the task-row-locked
+   * `CanonicalRunAuthority`. Chat runs substitute `CanonicalChatRunAuthority`
+   * (the agent_operations chat-parallel contract). */
+  authority?: CanonicalRunAuthorityPort;
   binding: CanonicalRunBinding;
   /** Loaded from trusted server registration; never accepted as completion request data. */
   completionMappings?: CanonicalReceiptMapping[];
@@ -54,6 +72,10 @@ export interface CanonicalCoreHostOptions {
   controlDirectory: string;
   database: OrviloDatabase;
   docker: Omit<DockerSupervisorOptions, 'drainActions'>;
+  /** Phase-4 opt-in: compose the embedded harness runtime + broker inference
+   * bridge for `type:'orvilo'` runs instead of the ACP adapter. Absent keeps
+   * the ACP path third-party agents use. */
+  embedded?: EmbeddedRuntimeComposition;
   /** Explicit host-approved file.sha256 commitments. Empty means no mutations.
    * These are not inferred from runtime claims or treated as task completion evidence. */
   fileCommitments: Commitment[];
@@ -61,9 +83,43 @@ export interface CanonicalCoreHostOptions {
   outputDirectory: string;
   /** Stable private receipt namespace shared by successor registrations of this task. */
   receiptDirectory?: string;
+  /** Canonical process-ownership model — defaults to
+   * `TaskExecutionControlModel` (task_topics.execution_control). Chat runs
+   * substitute `ChatExecutionControlModel` (agent_operations.metadata). */
+  registration?: CanonicalRunRegistrationPort;
   runtimeLeaseMs?: number;
-  verifyArtifact: PrimeRuntimeOptions['verifyArtifact'];
+  /** Test seam — substitutes the supervised-tree port (e.g. without a daemon).
+   * The supplied port must honour the launch/connect/recover/terminate contract
+   * and call `drainActions` before reporting quiescence. */
+  supervisor?: (options: DockerSupervisorOptions) => HostSupervisorPort;
+  /** ACP artifact verification; required unless `embedded` supplies its own. */
+  verifyArtifact?: PrimeRuntimeOptions['verifyArtifact'];
 }
+
+/** Composition inputs for an embedded (first-party `type:'orvilo'`) run:
+ * everything `createEmbeddedInferenceBridge` needs except the canonical
+ * binding/database the host already owns, plus the artifact the launch pins. */
+export interface EmbeddedRuntimeComposition extends Omit<
+  EmbeddedInferenceBridgeDeps,
+  'binding' | 'database'
+> {
+  /** Runner arguments; defaults to [artifact]. */
+  args?: string[];
+  /** Runner bundle — the artifact `verifyArtifact` hashes before launch. */
+  artifact: string;
+  /** Run-derived `harness.init` policy (goal/rlm/tool surface); merged under
+   * the binding-derived slice the bridge returns. */
+  initPolicy?: HarnessInitPolicy;
+  /** Trusted embedded-artifact verification; the pin is always PRIME_EMBEDDED_PIN. */
+  verifyArtifact: PrimeEmbeddedRuntimeOptions['verifyArtifact'];
+}
+
+/** The supervised-tree port the host drives — DockerProcessTreeSupervisor in
+ * production. Tests may substitute an in-memory double without a daemon. */
+export type HostSupervisorPort = Pick<
+  DockerProcessTreeSupervisor,
+  'connect' | 'launch' | 'recover' | 'terminate'
+>;
 
 const failure = (message: string): ControlResult<never> => ({
   ok: false,
@@ -75,11 +131,12 @@ const failure = (message: string): ControlResult<never> => ({
  * All gateway effects hold CanonicalRunAuthority row locks; requestStop waits for
  * them and persists a fence advance before quiescence can be acknowledged. */
 export class CanonicalCoreRuntimeHost {
-  private readonly runtime: PrimeExecutionRuntime;
-  private readonly authority: CanonicalRunAuthority;
-  private readonly registration: TaskExecutionControlModel;
-  private readonly supervisor: DockerProcessTreeSupervisor;
+  private readonly runtime: ExecutionRuntime;
+  private readonly authority: CanonicalRunAuthorityPort;
+  private readonly registration: CanonicalRunRegistrationPort;
+  private readonly supervisor: HostSupervisorPort;
   private readonly commitments: Map<string, Commitment>;
+  private readonly embeddedBridge?: EmbeddedInferenceBridge;
   private journal: HostJournal;
   private session?: RuntimeSession;
   private starting = false;
@@ -91,68 +148,101 @@ export class CanonicalCoreRuntimeHost {
     private readonly writer: ScopedFileWriter,
     journal: HostJournal,
     recovering: boolean,
+    embeddedBridge?: EmbeddedInferenceBridge,
   ) {
     this.journal = journal;
     this.recovering = recovering;
+    this.embeddedBridge = embeddedBridge;
     this.receipts = options.receiptDirectory ?? path.join(options.controlDirectory, 'receipts');
-    this.authority = new CanonicalRunAuthority(options.database);
-    this.registration = new TaskExecutionControlModel(
-      options.database,
-      options.binding.userId,
-      options.binding.workspaceId,
-    );
+    this.authority = options.authority ?? new CanonicalRunAuthority(options.database);
+    this.registration =
+      options.registration ??
+      new TaskExecutionControlModel(
+        options.database,
+        options.binding.userId,
+        options.binding.workspaceId,
+      );
     this.commitments = new Map(
       options.fileCommitments.map((commitment) => [commitment.id, structuredClone(commitment)]),
     );
-    this.supervisor = new DockerProcessTreeSupervisor({
+    const supervised: DockerSupervisorOptions = {
       ...options.docker,
       containerName: journal.containerName,
       drainActions: (treeId) => this.drainActions(treeId),
-    });
-    this.runtime = new PrimeExecutionRuntime({
-      executable: options.docker.executable,
-      home: '/tmp',
-      temp: '/tmp',
-      runtimeWorkspace: '/workspace',
-      verifyArtifact: options.verifyArtifact,
-      authorize: async (fence) => {
-        if (this.journal.stopping || this.recovering) return failure('Host admission is closed');
-        const authorize = this.session
-          ? this.authority.withRun.bind(this.authority)
-          : this.authority.withRegistration.bind(this.authority);
-        const checked = await authorize(this.journal.binding, async (snapshot) => {
-          if (
-            Object.keys(snapshot.fence).some(
-              (key) =>
-                snapshot.fence[key as keyof typeof fence] !== fence[key as keyof typeof fence],
-            )
+    };
+    this.supervisor =
+      options.supervisor?.(supervised) ?? new DockerProcessTreeSupervisor(supervised);
+    const authorize = async (fence: ExecutionFence): Promise<ControlResult<true>> => {
+      if (this.journal.stopping || this.recovering) return failure('Host admission is closed');
+      const check = this.session
+        ? this.authority.withRun.bind(this.authority)
+        : this.authority.withRegistration.bind(this.authority);
+      const checked = await check(this.journal.binding, async (snapshot) => {
+        if (
+          Object.keys(snapshot.fence).some(
+            (key) => snapshot.fence[key as keyof typeof fence] !== fence[key as keyof typeof fence],
           )
-            return failure('Runtime fence does not match registered run');
-          return { ok: true as const, value: true as const };
+        )
+          return failure('Runtime fence does not match registered run');
+        return { ok: true as const, value: true as const };
+      });
+      return checked.ok ? checked.value : checked;
+    };
+    const supervisedLaunch = async (input: IsolatedLaunch) => {
+      const result = await this.supervisor.launch(input);
+      if (result.ok) {
+        this.journal.isolation = result.value;
+        try {
+          await this.persist();
+        } catch {
+          await this.supervisor.terminate(result.value.treeId);
+          throw new Error('Runtime tree registration could not persist');
+        }
+      }
+      return result;
+    };
+    const supervisedStreams = async (treeId: string) => {
+      if (treeId !== this.journal.isolation?.treeId) throw new Error('Unregistered runtime tree');
+      return this.supervisor.connect(treeId);
+    };
+    const embedded = options.embedded;
+    this.runtime = embedded
+      ? new PrimeEmbeddedRuntime({
+          args: embedded.args,
+          artifact: embedded.artifact,
+          authorize,
+          buildInferenceRequest: embeddedBridge?.buildInferenceRequest,
+          connect: async (treeId) => new HarnessTransport(await supervisedStreams(treeId)),
+          executable: options.docker.executable,
+          home: '/tmp',
+          inferenceBroker: embeddedBridge?.inferenceBroker,
+          initModel: embeddedBridge?.initModel,
+          initPolicy: { ...embedded.initPolicy, ...embeddedBridge?.initPolicy },
+          runtimeWorkspace: '/workspace',
+          supervisor: {
+            launch: supervisedLaunch,
+            terminate: (treeId) => this.supervisor.terminate(treeId),
+          },
+          temp: '/tmp',
+          verifyArtifact: embedded.verifyArtifact,
+        })
+      : new PrimeExecutionRuntime({
+          authorize,
+          connect: async (treeId) => new PrimeStdioTransport(await supervisedStreams(treeId)),
+          executable: options.docker.executable,
+          home: '/tmp',
+          runtimeWorkspace: '/workspace',
+          supervisor: {
+            launch: supervisedLaunch,
+            terminate: (treeId) => this.supervisor.terminate(treeId),
+          },
+          temp: '/tmp',
+          verifyArtifact: async (executable, pin) => {
+            const verify = options.verifyArtifact;
+            if (!verify) return failure('ACP artifact verification required');
+            return verify(executable, pin);
+          },
         });
-        return checked.ok ? checked.value : checked;
-      },
-      supervisor: {
-        launch: async (input) => {
-          const result = await this.supervisor.launch(input);
-          if (result.ok) {
-            this.journal.isolation = result.value;
-            try {
-              await this.persist();
-            } catch {
-              await this.supervisor.terminate(result.value.treeId);
-              throw new Error('Runtime tree registration could not persist');
-            }
-          }
-          return result;
-        },
-        terminate: (treeId) => this.supervisor.terminate(treeId),
-      },
-      connect: async (treeId) => {
-        if (treeId !== this.journal.isolation?.treeId) throw new Error('Unregistered runtime tree');
-        return new PrimeStdioTransport(await this.supervisor.connect(treeId));
-      },
-    });
   }
 
   static async open(input: CanonicalCoreHostOptions) {
@@ -160,10 +250,13 @@ export class CanonicalCoreRuntimeHost {
       ...input,
       binding: structuredClone(input.binding),
       docker: { ...input.docker },
+      embedded: input.embedded ? { ...input.embedded } : undefined,
       fileCommitments: structuredClone(input.fileCommitments),
       completionMappings: structuredClone(input.completionMappings ?? []),
       receiptDirectory: input.receiptDirectory ?? path.join(input.controlDirectory, 'receipts'),
     };
+    if (!options.embedded && !options.verifyArtifact)
+      throw new Error('Trusted artifact verification required');
     const { realpath } = await import('node:fs/promises');
     const mounted = await realpath(options.docker.workspace);
     if (
@@ -200,7 +293,7 @@ export class CanonicalCoreRuntimeHost {
         .update(
           JSON.stringify([
             options.binding.workspaceId,
-            options.binding.taskId,
+            options.binding.subject,
             options.binding.runtimeRegistrationId,
           ]),
         )
@@ -234,8 +327,22 @@ export class CanonicalCoreRuntimeHost {
     } catch (error) {
       if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
     }
+    // Composition-time binding resolve + issuance happens only for a host that
+    // can still start: a recovered host must keep drain/stop admission even
+    // when the provider binding vanished while its tree was orphaned.
+    let embeddedBridge: EmbeddedInferenceBridge | undefined;
+    if (options.embedded && !recovering) {
+      const bridge = await createEmbeddedInferenceBridge({
+        ...options.embedded,
+        binding: options.binding,
+        database: options.database,
+      });
+      if (!bridge.ok)
+        throw new Error(`Embedded inference bridge is not issuable: ${bridge.error.message}`);
+      embeddedBridge = bridge.value;
+    }
     const writer = await ScopedFileWriter.open(options.outputDirectory);
-    const host = new CanonicalCoreRuntimeHost(options, writer, journal, recovering);
+    const host = new CanonicalCoreRuntimeHost(options, writer, journal, recovering, embeddedBridge);
     if (!recovering) await host.persist(true);
     try {
       if (!recovering)
@@ -286,13 +393,33 @@ export class CanonicalCoreRuntimeHost {
     try {
       const checked = await this.authority.withRegistration(
         this.journal.binding,
-        async (snapshot) => snapshot,
+        async (snapshot, tx) => {
+          // The issued claim pinned at composition must still be issuable
+          // under the launch locks: a binding disabled or bumped mid-compose
+          // fails closed here, before the supervisor is ever asked to launch.
+          if (this.embeddedBridge) {
+            const issue = this.options.embedded?.issueExecution ?? issueBindingExecution;
+            const issued = await issue(tx, this.embeddedBridge.claim);
+            if (!issued) return { issuable: false as const, snapshot };
+          }
+          return { issuable: true as const, snapshot };
+        },
       );
       if (!checked.ok) return checked;
-      if (checked.value.registrationState !== 'registering' || checked.value.treeId)
+      if (!checked.value.issuable)
+        return {
+          ok: false,
+          error: {
+            code: 'unauthorized',
+            message: 'Provider binding is not issuable at launch',
+            retryable: false,
+          },
+        };
+      const snapshot = checked.value.snapshot;
+      if (snapshot.registrationState !== 'registering' || snapshot.treeId)
         return failure('A process is already registered');
       const result = await this.runtime.start({
-        fence: checked.value.fence,
+        fence: snapshot.fence,
         workspace: this.options.docker.workspace,
       });
       if (result.ok) {
@@ -306,8 +433,8 @@ export class CanonicalCoreRuntimeHost {
             supervisorId: isolation.supervisorId,
             sessionId: result.value.sessionId,
           };
-          if (checked.value.activeHandoffId) {
-            const handoff = await this.registration.read(checked.value.activeHandoffId);
+          if (snapshot.activeHandoffId) {
+            const handoff = await this.registration.read(snapshot.activeHandoffId);
             if (!handoff || handoff.phase !== 'transferred')
               throw new Error('Successor handoff changed');
             await this.registration.resume(handoff.id, handoff.revision, identity);
@@ -364,7 +491,9 @@ export class CanonicalCoreRuntimeHost {
     const commitment = this.commitments.get(request.commitmentId);
     if (
       !commitment ||
-      commitment.taskId !== this.journal.binding.taskId ||
+      // File commitments are task-scoped — a conversation subject approves none.
+      this.journal.binding.subject.kind !== 'task' ||
+      commitment.taskId !== this.journal.binding.subject.taskId ||
       request.action.kind !== 'file.write'
     )
       return failure('No approved file commitment');

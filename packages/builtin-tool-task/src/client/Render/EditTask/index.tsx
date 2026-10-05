@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Pencil } from 'lucide-react';
@@ -103,14 +101,18 @@ export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskSt
                     )}
                   </>
                 ) : (
-                  <Text type={'secondary'}>{t('builtins.orvilo-task.edit.unassign')}</Text>
+                  <div className="text-muted-foreground">
+                    {t('builtins.orvilo-task.edit.unassign')}
+                  </div>
                 )}
               </InlineField>
             )}
             {hasParent && (
               <InlineField label={t('builtins.orvilo-task.edit.parent')}>
                 {params.parentIdentifier === null ? (
-                  <Text type={'secondary'}>{t('builtins.orvilo-task.edit.parentClear')}</Text>
+                  <div className="text-muted-foreground">
+                    {t('builtins.orvilo-task.edit.parentClear')}
+                  </div>
                 ) : (
                   <span className={monoChipClassName}>{params.parentIdentifier}</span>
                 )}

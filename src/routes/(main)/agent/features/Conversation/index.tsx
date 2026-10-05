@@ -1,9 +1,9 @@
-import { Flexbox, TooltipGroup } from '@lobehub/ui';
 import React, { memo, Suspense } from 'react';
 
 import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { delayed } from '@/components/Skeleton/Delayed';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import { useLocalPathReference } from '@/features/Conversation/useLocalPathReference';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
@@ -39,11 +39,11 @@ const ChatConversation = memo(() => {
   const { enableLocalPathReference, handleLocalPaths } = useLocalPathReference(agentId, topicId);
 
   const content = (
-    <Flexbox flex={1} height={'100%'} style={{ minWidth: 0 }}>
-      <TooltipGroup>
+    <div className="flex flex-col flex-1" style={{ height: '100%', minWidth: 0 }}>
+      <TooltipProvider>
         <ConversationArea />
-      </TooltipGroup>
-    </Flexbox>
+      </TooltipProvider>
+    </div>
   );
 
   return (

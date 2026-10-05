@@ -1,15 +1,16 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { MessageCirclePlusIcon } from 'lucide-react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
@@ -192,24 +193,16 @@ const TextSelectionActionLayer = memo<TextSelectionActionLayerProps>(({ children
       {children}
       {activeSelection &&
         createPortal(
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.toolbar}
-            gap={2}
+          <div
+            className={cn('flex items-center gap-0.5', styles.toolbar)}
             ref={toolbarRef}
             style={toolbarStyle}
             onPointerDown={handleToolbarPointerDown}
           >
-            <Button
-              icon={<MessageCirclePlusIcon size={14} />}
-              size={'small'}
-              type={'text'}
-              onClick={handleAddToConversation}
-            >
-              {t('textSelection.addToConversation')}
+            <Button size="sm" variant="ghost" onClick={handleAddToConversation}>
+              <MessageCirclePlusIcon size={14} /> {t('textSelection.addToConversation')}
             </Button>
-          </Flexbox>,
+          </div>,
           document.body,
         )}
     </div>

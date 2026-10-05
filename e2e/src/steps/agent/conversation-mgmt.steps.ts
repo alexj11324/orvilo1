@@ -99,7 +99,8 @@ Given('用户已有一个对话', async function (this: CustomWorld) {
   await this.page.waitForTimeout(2000);
 
   // Store the current conversation title for later reference
-  const topicItems = this.page.locator('.ant-menu-item, [class*="NavItem"]');
+  // Topic rows render as NavItem anchors inside [data-testid="topic-item"] wrappers
+  const topicItems = this.page.locator('[data-testid="topic-item"]');
   const topicCount = await topicItems.count();
   console.log(`   📍 Found ${topicCount} topic items after creating conversation`);
 
@@ -138,7 +139,11 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   // live, so its topic would never be created inside the poll window — wait
   // for this turn to finish before opening the new topic.
   await waitForTurnSettled(this, '测试对话内容', firstSentAt);
-  await this.page.waitForURL((url) => /\/tpc_[^/]+$/.test(url.pathname), { timeout: 30_000 });
+  // `/chat/:topicId` is the canonical conversation route — the legacy
+  // `/agent/:aid/:tid` path auto-redirects, so wait for the settled URL.
+  await this.page.waitForURL((url) => /\/chat\/tpc_[^/]+$/.test(url.pathname), {
+    timeout: 30_000,
+  });
   const firstTopicPath = new URL(this.page.url()).pathname;
   const agentPath = firstTopicPath.slice(0, firstTopicPath.lastIndexOf('/'));
 
@@ -175,8 +180,20 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     await this.page.keyboard.press('Enter');
   };
 
+  // The new-topic button opens the blank composer at `/chat/new`. The click
+  // can still land while the row is mid-re-render after the settled poll, so
+  // retry it once when the first navigation never fires.
   await addTopicButton.click();
-  await this.page.waitForURL((url) => url.pathname === agentPath, { timeout: 30_000 });
+  try {
+    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+      timeout: 30_000,
+    });
+  } catch {
+    await addTopicButton.click();
+    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+      timeout: 30_000,
+    });
+  }
   await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();
 
@@ -343,15 +360,20 @@ When('用户右键点击对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击对话...');
 
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(1);
 
-  if (topicCount > 0) {
-    await sidebarTopics.first().click({ button: 'right' });
-    console.log('   ✅ 已右键点击对话');
-  } else {
-    throw new Error('No topics found to right-click');
-  }
+  await sidebarTopics.first().click({ button: 'right' });
+  console.log('   ✅ 已右键点击对话');
 
   await this.page.waitForTimeout(500);
 });
@@ -360,18 +382,23 @@ When('用户右键点击一个对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击一个对话...');
 
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(1);
 
   // Store the topic text for later verification
-  if (topicCount > 0) {
-    const topicText = await sidebarTopics.first().textContent();
-    this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
-    await sidebarTopics.first().click({ button: 'right' });
-    console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
-  } else {
-    throw new Error('No topics found to right-click');
-  }
+  const topicText = await sidebarTopics.first().textContent();
+  this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
+  await sidebarTopics.first().click({ button: 'right' });
+  console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
 
   await this.page.waitForTimeout(500);
 });
@@ -458,7 +485,9 @@ When('用户输入新的对话名称 {string}', async function (this: CustomWorl
   // Debug: check what's on the page
   const debugInfo = await this.page.evaluate(() => {
     const allInputs = document.querySelectorAll('input');
-    const allPopovers = document.querySelectorAll('[class*="popover"], .ant-popover');
+    const allPopovers = document.querySelectorAll(
+      '[data-testid*="popover"], [data-slot*="popover"]',
+    );
     const focusedElement = document.activeElement;
     return {
       focusedClass: focusedElement?.className,
@@ -481,11 +510,7 @@ When('用户输入新的对话名称 {string}', async function (this: CustomWorl
   // The rename UI can render as a dialog/modal in CI, not only as a popover.
   const renameInputSelectors = [
     '[role="dialog"] input[type="text"]',
-    '.ant-modal input[type="text"]',
     '[data-testid="editing-popover"] input',
-    '.ant-popover-inner input',
-    '.ant-popover-content input',
-    '.ant-popover input',
     'input[type="text"]:visible',
   ];
 
@@ -524,9 +549,7 @@ When('用户输入新的对话名称 {string}', async function (this: CustomWorl
       const isInRenameContainer = await input.evaluate((el) => {
         return (
           el.closest('[role="dialog"]') !== null ||
-          el.closest('.ant-modal') !== null ||
-          el.closest('.ant-popover') !== null ||
-          el.closest('[class*="popover"]') !== null
+          el.closest('[data-testid="editing-popover"]') !== null
         );
       });
 
@@ -597,6 +620,7 @@ When('用户确认删除', async function (this: CustomWorld) {
   // DeleteTopicConfirm modal (#16030) instead of a generic ok/删除 button.
   const confirmButton = this.page
     .getByRole('dialog')
+    .or(this.page.getByRole('alertdialog'))
     .getByRole('button', { name: /^(ok|delete( topic)?|删除(话题)?|确认|确定)$/i });
 
   await expect(confirmButton).toBeVisible({ timeout: 5000 });
@@ -765,8 +789,10 @@ Then('对话列表中不再显示该对话', async function (this: CustomWorld) 
 
   // The deleted topic should not be in the list
   if (this.testContext.deletedTopicTitle) {
+    // Topic rows render inside [data-testid="topic-item"] wrappers (the title
+    // text sits in the NavItem row within).
     const deletedTopic = this.page.locator(
-      `[class*="NavItem"]:has-text("${this.testContext.deletedTopicTitle}")`,
+      `[data-testid="topic-item"]:has-text("${this.testContext.deletedTopicTitle}")`,
     );
     const count = await deletedTopic.count();
     expect(count).toBe(0);
@@ -782,9 +808,9 @@ Then('应该显示包含 {string} 的对话', async function (this: CustomWorld,
   // Wait for search results to load (search opens a modal dialog)
   await this.page.waitForTimeout(2000);
 
-  // Search results appear in a modal/dialog, not in sidebar
-  // Look for the search modal and check for matching results
-  const searchModal = this.page.locator('.ant-modal, [role="dialog"]');
+  // Search results appear in the cmdk command palette, not in sidebar
+  // Look for the palette ([cmdk-root]) and check for matching results
+  const searchModal = this.page.locator('[cmdk-root]');
   const hasModal = (await searchModal.count()) > 0;
   console.log(`   📍 搜索模态框: ${hasModal}`);
 

@@ -14,7 +14,7 @@ describe('CustomizeSidebarModal', () => {
       'my-work',
       'reviews',
       'agent',
-      'drafts',
+      'group',
       'workspace',
       'favorites',
       'teams',
@@ -26,11 +26,12 @@ describe('CustomizeSidebarModal', () => {
       .filter((section) => section.alwaysVisible)
       .map((section) => section.id);
 
-    expect(pinned).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'drafts']);
+    expect(pinned).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'group']);
   });
 
   it('never offers retired sidebar keys', () => {
     const retired = [
+      'drafts',
       'home',
       'tasks',
       'automations',

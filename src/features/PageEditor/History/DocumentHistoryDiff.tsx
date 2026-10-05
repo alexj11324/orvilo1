@@ -2,14 +2,15 @@
 
 import type { LexicalDiffProps } from '@lobehub/editor/renderer';
 import { LexicalDiff } from '@lobehub/editor/renderer';
-import { Empty, Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { SerializedEditorState } from 'lexical';
 import { GitCompareArrowsIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CircleLoading from '@/components/Loading/CircleLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useClientDataSWR } from '@/libs/swr';
 import type { CompareHistoryItemsOutput } from '@/server/routers/lambda/_schema/documentHistory';
 import { documentService } from '@/services/document';
@@ -89,15 +90,22 @@ const DocumentHistoryDiff = memo<DocumentHistoryDiffProps>(({ documentId, histor
   }, [data?.from.editorData, data?.to.editorData]);
 
   return (
-    <Flexbox className={styles.container} flex={1} gap={0}>
+    <div className={cn('flex flex-col flex-1 gap-0', styles.container)}>
       {isLoading && !data ? (
-        <Flexbox align={'center'} className={styles.empty} justify={'center'}>
+        <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
           <CircleLoading />
-        </Flexbox>
+        </div>
       ) : error || !data || !normalizedValues.oldValue || !normalizedValues.newValue ? (
-        <Flexbox align={'center'} className={styles.empty} justify={'center'}>
-          <Empty description={t('pageEditor.history.compareError')} icon={GitCompareArrowsIcon} />
-        </Flexbox>
+        <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <GitCompareArrowsIcon />
+              </EmptyMedia>
+              <EmptyDescription>{t('pageEditor.history.compareError')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       ) : (
         <div className={styles.content}>
           <LexicalDiff
@@ -109,7 +117,7 @@ const DocumentHistoryDiff = memo<DocumentHistoryDiffProps>(({ documentId, histor
           />
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

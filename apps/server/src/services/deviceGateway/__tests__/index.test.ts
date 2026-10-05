@@ -43,6 +43,28 @@ describe('DeviceGateway', () => {
     mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = undefined;
   });
 
+  it('returns permission discovery catalogs including an empty advertised catalog', async () => {
+    mockEnv.DEVICE_GATEWAY_URL = 'https://gateway.example.com';
+    mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = 'token';
+    mockClient.invokeRpc.mockResolvedValue({ data: [], success: true });
+    const proxy = new DeviceGateway();
+    await expect(
+      proxy.listHeterogeneousAgentPermissions({
+        deviceId: 'device-1',
+        type: 'codex',
+        userId: 'user-1',
+      }),
+    ).resolves.toEqual([]);
+    mockClient.invokeRpc.mockResolvedValue({ error: 'device offline', success: false });
+    await expect(
+      proxy.listHeterogeneousAgentPermissions({
+        deviceId: 'device-1',
+        type: 'claude-code',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow('device offline');
+  });
+
   describe('isConfigured', () => {
     it('should return false when DEVICE_GATEWAY_URL is not set', () => {
       const proxy = new DeviceGateway();

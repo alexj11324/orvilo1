@@ -2,7 +2,6 @@
 
 import '@/app/globals.css';
 
-import { Alert } from '@lobehub/ui/base-ui';
 import { type AuthorizationPhase, type AuthorizationProgress } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { ArrowLeft, ArrowRight, Cloud, ExternalLink, LogOutIcon, Server } from 'lucide-react';
@@ -10,6 +9,7 @@ import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import { isDesktop } from '@/const/version';
 import UserInfo from '@/features/User/UserInfo';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { useSignOut } from '@/hooks/useSignOut';
+import { getHostPort } from '@/platform';
 import { remoteServerService } from '@/services/electron/remoteServer';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
@@ -350,7 +351,10 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
       </div>
 
       {failed && (
-        <Alert description={errorMessage} title={t('authResult.failed.title')} type="error" />
+        <Alert variant="destructive">
+          <AlertTitle>{t('authResult.failed.title')}</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       )}
 
       {showEndpoint ? (
@@ -388,7 +392,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
                     input.selectionStart || 0,
                     input.selectionEnd || 0,
                   );
-                  await electronSystemService.showContextMenu('editor', {
+                  await getHostPort().menu.showContextMenu('editor', {
                     selectionText: selectionText || undefined,
                   });
                 }}
@@ -496,9 +500,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
       {hasLegacyLocalDb && (
         <Button
           variant="link"
-          onClick={() =>
-            electronSystemService.openExternalLink(LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL)
-          }
+          onClick={() => getHostPort().openExternal(LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL)}
         >
           {t('screen5.legacyLocalDb.link')}
         </Button>

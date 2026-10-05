@@ -1,10 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -44,19 +43,19 @@ const MessageCommentBadge = memo<MessageCommentBadgeProps>(({ count, messageId, 
   const label = t('topicComment.openMessageComments', { count });
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.container} flex={'none'} padding={2}>
+    <div className={cx(styles.container, 'flex items-center flex-none p-[2px]')}>
       <Button
         aria-label={label}
         className={styles.button}
-        icon={MessageCircle}
-        size={'small'}
+        size="sm"
         title={label}
-        type={'text'}
+        variant="ghost"
         onClick={() => openTopicComments(topicId, messageId)}
       >
+        <MessageCircle data-icon="inline-start" />
         {count > 99 ? '99+' : count}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

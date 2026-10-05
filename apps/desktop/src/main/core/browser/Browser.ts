@@ -11,6 +11,7 @@ import { DESKTOP_EXTERNAL_NAVIGATION_HOSTS, isMac } from '@/const/env';
 import RemoteServerConfigCtr from '@/controllers/RemoteServerConfigCtr';
 import { backendProxyProtocolManager } from '@/core/infrastructure/BackendProxyProtocolManager';
 import { appendVercelCookie, setResponseHeader } from '@/utils/http-headers';
+import { isAppShellSender } from '@/utils/ipc/base';
 import { createLogger } from '@/utils/logger';
 import { getSystemLanguage, resolveUILocale } from '@/utils/system-language';
 import { LOADING_SCREEN_PAINTED_CHANNEL } from '~common/loadingScreen';
@@ -607,7 +608,10 @@ export default class Browser {
     ipcMain.removeHandler('retry-connection');
     logger.debug(`[${this.identifier}] Removed existing retry-connection handler if any.`);
 
-    ipcMain.handle('retry-connection', async () => {
+    ipcMain.handle('retry-connection', async (event) => {
+      if (!isAppShellSender(event.sender)) {
+        return { error: 'Not reachable from embedded content', success: false };
+      }
       logger.info(`[${this.identifier}] Retry connection requested for: ${urlWithLocale}`);
       try {
         await this._browserWindow?.loadURL(urlWithLocale);

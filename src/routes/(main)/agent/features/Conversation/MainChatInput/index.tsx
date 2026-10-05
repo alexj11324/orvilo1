@@ -14,7 +14,12 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import AgentConfigError from './AgentConfigError';
 import { useSendMenuItems } from './useSendMenuItems';
 
-const contextWindowRightActions: ActionKeys[] = ['agent', 'voiceMessage', 'contextWindow'];
+/**
+ * Right-side action order. Array order IS visual order. The composer picks the
+ * agent and nothing else: the model and the reasoning effort are the agent's own
+ * configuration, not a per-conversation choice, so neither gets a chip here.
+ */
+export const agentComposerRightActions: ActionKeys[] = ['agent', 'voiceMessage', 'contextWindow'];
 /**
  * MainChatInput
  *
@@ -29,7 +34,7 @@ const MainChatInput = memo(() => {
 
   const agentId = useConversationStore(contextSelectors.agentId);
   const isAgentConfigLoading = useAgentStore(agentByIdSelectors.isAgentConfigLoadingById(agentId));
-  const rightActions = contextWindowRightActions;
+  const rightActions = agentComposerRightActions;
 
   // The agent chip lives on the right, next to Send (see rightActions); the
   // left bar keeps the "+" menu, dictation and the expand toggle.
@@ -40,11 +45,11 @@ const MainChatInput = memo(() => {
       <AgentConfigError />
       <ChatInput
         skipScrollMarginWithList
-        // Reference parity: the composer card wraps its control strip (no
-        // free-floating bar below the card), and the editor opens at a single
-        // text row (~24px, matching the 676x24 reference measurement) instead
-        // of the shared two-row default.
-        controlBarInCard
+        // The control strip is a free-floating row *under* the card, which is
+        // `DesktopChatInput`'s default — so no `controlBarInCard`. The earlier
+        // "reference parity" note here read the reference backwards and wrapped
+        // the strip inside the card border; the single-row editor height from
+        // the same 676x24 measurement is the part that was right.
         editorDefaultRows={1}
         isConfigLoading={isAgentConfigLoading}
         leftActions={leftActions}

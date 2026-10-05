@@ -1,14 +1,15 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { type MouseEvent, type ReactNode } from 'react';
 import { memo, Suspense, useCallback } from 'react';
 
 import BubblesLoading from '@/components/BubblesLoading';
 import SafeBoundary from '@/components/ErrorBoundary';
+import { getHostPort } from '@/platform';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
@@ -121,13 +122,11 @@ const MessageItem = memo<MessageItemProps>(
         if (!message) return;
 
         if (isDesktop) {
-          const { electronSystemService } = await import('@/services/electron/system');
-
           // Get selected text for context menu features like Look Up and Search
           const selection = window.getSelection();
           const selectionText = selection?.toString() || '';
 
-          electronSystemService.showContextMenu('chat', {
+          getHostPort().menu.showContextMenu('chat', {
             content: message.content,
             hasError: !!message.error,
             messageId: id,
@@ -271,9 +270,12 @@ const MessageItem = memo<MessageItemProps>(
     return (
       <>
         {enableHistoryDivider && <History />}
-        <Flexbox
-          className={cx(styles.message, className, shouldDimCreatingMessage && styles.loading)}
+        <div
           data-index={index}
+          className={cn(
+            'flex flex-col',
+            cx(styles.message, className, shouldDimCreatingMessage && styles.loading),
+          )}
           onContextMenu={onContextMenu}
         >
           <MessageSelectionWrapper id={id} role={role}>
@@ -281,7 +283,7 @@ const MessageItem = memo<MessageItemProps>(
           </MessageSelectionWrapper>
           {!shouldInjectFooter && footerRender}
           {endRender}
-        </Flexbox>
+        </div>
       </>
     );
   },

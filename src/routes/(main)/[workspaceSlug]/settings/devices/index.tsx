@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tabs } from '@lobehub/ui/base-ui';
 import type { DeviceVisibility } from '@orvilo/types';
 import { LockIcon, RefreshCwIcon, TerminalIcon, UsersIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/DeviceManager';
 
 /**
@@ -14,7 +14,7 @@ import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/Dev
  * - Workspace: the shared (public-visibility) pool every member sees.
  * - Private: the caller's own private enrollments in this workspace.
  * The tab also parameterises the connect wizard, so a device enrolled from the
- * Private tab registers as private (`lh connect … --private`).
+ * Private tab registers as private (`orvilo connect … --private`).
  */
 const WorkspaceDevicesSetting = memo(() => {
   const { t } = useTranslation('setting');
@@ -28,40 +28,36 @@ const WorkspaceDevicesSetting = memo(() => {
 
   return (
     <>
-      <Flexbox gap={16}>
-        <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
-          <Tabs
-            activeKey={visibility}
-            items={[
-              {
-                icon: <Icon icon={UsersIcon} />,
-                key: 'public',
-                label: t('devices.visibilityTabs.workspace'),
-              },
-              {
-                icon: <Icon icon={LockIcon} />,
-                key: 'private',
-                label: t('devices.visibilityTabs.private'),
-              },
-            ]}
-            onChange={(key) => setVisibility(key as DeviceVisibility)}
-          />
-          <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4 justify-between">
+          <Tabs value={visibility} onValueChange={(key) => setVisibility(key as DeviceVisibility)}>
+            <TabsList>
+              <TabsTrigger value="public">
+                <UsersIcon />
+                {t('devices.visibilityTabs.workspace')}
+              </TabsTrigger>
+              <TabsTrigger value="private">
+                <LockIcon />
+                {t('devices.visibilityTabs.private')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex items-center gap-2">
             <Button
-              icon={<Icon icon={RefreshCwIcon} />}
               loading={isValidating}
+              size="icon"
               title={t('devices.actions.refresh')}
+              variant="outline"
               onClick={() => mutate()}
-            />
-            <Button
-              icon={<Icon icon={TerminalIcon} />}
-              type={'primary'}
-              onClick={() => setOpen(true)}
             >
+              <RefreshCwIcon />
+            </Button>
+            <Button onClick={() => setOpen(true)}>
+              <TerminalIcon data-icon="inline-start" />
               {t('devices.empty.methodCli.title')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         <DeviceManager
           key={visibility}
@@ -69,7 +65,7 @@ const WorkspaceDevicesSetting = memo(() => {
           visibility={visibility}
           onConnect={() => setOpen(true)}
         />
-      </Flexbox>
+      </div>
 
       <DeviceConnectModal
         open={open}

@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,24 +32,24 @@ const Body = memo(() => {
   // its owner. A terminal 404, distinct from the retryable transport error.
   if (isNotFound) {
     return (
-      <Flexbox flex={1} style={{ overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
         <AgentNotFound />
-      </Flexbox>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Flexbox flex={1} padding={24}>
+      <div className="flex flex-col flex-1 p-6">
         <AsyncError error={error} variant="page" onRetry={() => void mutate()} />
-      </Flexbox>
+      </div>
     );
   }
 
   if (isLoading) return <SurfaceSkeleton header={false} variant={'form'} />;
 
   return (
-    <Flexbox align="center" flex={1} gap={16} padding={32} style={{ overflowY: 'auto' }}>
+    <div className="flex flex-col items-center flex-1 gap-4 p-8" style={{ overflowY: 'auto' }}>
       <Avatar
         avatar={meta.avatar}
         background={meta.backgroundColor}
@@ -58,20 +57,16 @@ const Body = memo(() => {
         shape="square"
         size={80}
       />
-      <Text align="center" fontSize={24} weight="bold">
-        {displayName}
-      </Text>
+      <div className="text-center text-[24px] font-bold">{displayName}</div>
       {meta.description && (
-        <Text align="center" type="secondary">
-          {meta.description}
-        </Text>
+        <div className="text-center text-muted-foreground">{meta.description}</div>
       )}
       {openingMessage && (
-        <Flexbox width="min(100%, 560px)">
+        <div className="flex flex-col" style={{ width: 'min(100%, 560px)' }}>
           <Markdown variant="chat">{openingMessage}</Markdown>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,5 +1,6 @@
-import { toast } from '@lobehub/ui/base-ui';
 import i18next from 'i18next';
+
+import { toast } from '@/components/toast';
 
 import { localFileService } from './localFileService';
 

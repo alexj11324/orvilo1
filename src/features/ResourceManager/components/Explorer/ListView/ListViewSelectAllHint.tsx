@@ -1,7 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
+import { cx } from 'antd-style';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import type { SelectAllState } from '@/features/ResourceManager/store/initialState';
 
 import { getListViewMinWidth } from './ListItem/constants';
@@ -32,13 +32,9 @@ const ListViewSelectAllHint = ({
   if (!showSelectAllHint) return null;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.selectAllHint}
-      gap={6}
+    <div
+      className={cx('flex flex-row items-center gap-1.5 flex-wrap', styles.selectAllHint)}
       style={{ minWidth: getListViewMinWidth(showUploader) }}
-      wrap={'wrap'}
     >
       <span>
         {t(
@@ -55,7 +51,7 @@ const ListViewSelectAllHint = ({
         )}
       </span>
       {selectAllState !== 'all' && (
-        <Button size={'small'} type={'link'} onClick={onSelectAllResources}>
+        <Button size="sm" variant="link" onClick={onSelectAllResources}>
           {total && total > dataLength
             ? t('FileManager.total.selectAll', {
                 count: total,
@@ -63,7 +59,7 @@ const ListViewSelectAllHint = ({
             : t('FileManager.total.selectAllFallback')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

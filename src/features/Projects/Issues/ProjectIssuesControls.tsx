@@ -1,11 +1,10 @@
 'use client';
-
-import { ActionIcon } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { PanelRightCloseIcon, PanelRightOpenIcon, Plus } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import { Button } from '@/components/ui/button';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
 import IssueFilterPopover from './IssueFilterPopover';
@@ -59,23 +58,33 @@ const ProjectIssuesControls = memo<ProjectIssuesControlsProps>(
         {/* "+ New view" — the reference's tab-strip affordance, landing in the
             toolbar cluster since our tabs are fixed sections. Seeds the
             saved-view builder with this project's scope plus applied filters. */}
-        <ActionIcon
-          icon={Plus}
-          size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+        <Button
+          aria-label={tCommon('savedViews.newView')}
+          size="icon-sm"
           title={tCommon('savedViews.newView')}
+          variant="ghost"
           onClick={onNewView}
-        />
+        >
+          {createElement(Plus, { 'size': 16, 'aria-hidden': true })}
+        </Button>
         {/* "Open details" — arms peek mode; plain row clicks then select into
             the pane instead of navigating. List-only: on the board cards own
             their clicks, so the toggle hides. */}
         {peekEnabled && (
-          <ActionIcon
-            active={detailsOpen}
-            icon={detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+          <Button
+            aria-label={detailsOpen ? t('taskList.details.close') : t('taskList.details.open')}
+            aria-pressed={detailsOpen}
+            className={cn(detailsOpen && 'bg-muted', undefined)}
+            size="icon-sm"
             title={detailsOpen ? t('taskList.details.close') : t('taskList.details.open')}
+            variant="ghost"
             onClick={onToggleDetails}
-          />
+          >
+            {createElement(detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon, {
+              'size': 16,
+              'aria-hidden': true,
+            })}
+          </Button>
         )}
       </>
     );

@@ -1,12 +1,15 @@
 'use client';
 
-import { Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, confirmModal, toast } from '@lobehub/ui/base-ui';
 import { Trash2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DESKTOP_HEADER_ICON_SIZE, DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useUserMemoryStore } from '@/store/userMemory';
 
@@ -60,29 +63,37 @@ const PurgeButton = memo<Props>(({ iconOnly }) => {
 
   if (iconOnly) {
     return (
-      <Tooltip title={translate('purge.action', { ns: 'memory' })}>
-        <ActionIcon
-          danger
-          icon={Trash2Icon}
-          loading={loading}
-          size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-          tooltipProps={{ placement: 'bottom' }}
-          onClick={handleClick}
-        />
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span style={{ display: 'inline-flex' }}>
+                <ActionIcon
+                  danger
+                  icon={Trash2Icon}
+                  loading={loading}
+                  size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                  tooltipProps={{ placement: 'bottom' }}
+                  onClick={handleClick}
+                />
+              </span>
+            }
+          />
+          <TooltipContent>{translate('purge.action', { ns: 'memory' })}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
   return (
     <Button
-      danger
-      icon={<Icon icon={Trash2Icon} size={DESKTOP_HEADER_ICON_SIZE} />}
       loading={loading}
-      size={'small'}
+      size="sm"
       style={{ maxWidth: 300 }}
-      type={'primary'}
+      variant="destructive"
       onClick={handleClick}
     >
+      <Trash2Icon data-icon="inline-start" size={DESKTOP_HEADER_ICON_SIZE.size} />
       {translate('purge.action', { ns: 'memory' })}
     </Button>
   );

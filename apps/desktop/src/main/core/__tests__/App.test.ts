@@ -263,10 +263,25 @@ describe('App', () => {
         .mock.calls.findLast(
           ([channel]) => channel === 'desktop:get-bootstrap-identity',
         )?.[1] as (event: { returnValue?: unknown }) => void;
-      const event: { returnValue?: unknown } = {};
+      const event: { sender?: unknown; returnValue?: unknown } = { sender: {} };
 
       expect(() => listener(event)).not.toThrow();
       expect(event.returnValue).toEqual({ isIdentityResolved: true });
+    });
+
+    it('rejects bootstrap identity resolution for non-shell senders', () => {
+      appInstance = new App();
+      const listener = vi
+        .mocked(ipcMain.on)
+        .mock.calls.findLast(
+          ([channel]) => channel === 'desktop:get-bootstrap-identity',
+        )?.[1] as (event: { sender?: unknown; returnValue?: unknown }) => void;
+      const event: { sender?: unknown; returnValue?: unknown } = {
+        sender: { hostWebContents: {} },
+      };
+
+      listener(event);
+      expect(event.returnValue).toEqual({ isIdentityResolved: false });
     });
   });
 });

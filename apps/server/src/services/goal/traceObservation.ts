@@ -80,12 +80,16 @@ export const toTraceGraphState = (graph: GoalGraphSnapshot): GoalGraphState => (
   })),
 });
 
-export const toFrontierTaskState = (task: TaskItem, nodeId?: string): GoalFrontierTaskState => ({
+export const toFrontierTaskState = (
+  task: TaskItem,
+  nodeId?: string,
+  status?: string,
+): GoalFrontierTaskState => ({
   error: task.error,
   id: task.id,
   identifier: task.identifier,
   nodeId,
-  status: task.status,
+  status: status ?? task.status,
   updatedAt: new Date(task.updatedAt).getTime(),
 });
 

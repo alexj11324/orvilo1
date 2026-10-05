@@ -1,10 +1,9 @@
-import { Flexbox, Icon, type IconProps } from '@lobehub/ui';
-import { ActionIcon, type DropdownItem, DropdownMenu, Skeleton } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
-import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
+import type { LucideProps } from 'lucide-react';
 import {
   BoxesIcon,
   CheckIcon,
@@ -27,6 +26,8 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import {
   Activity,
+  type ComponentType,
+  createElement,
   lazy,
   memo,
   type ReactNode,
@@ -41,6 +42,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useBusinessWorkingSidebarTabs } from '@/business/client/features/WorkingSidebarTabs';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { isDesktop } from '@/const/version';
 import { useRepoType } from '@/features/ChatInput/ControlBar/useRepoType';
@@ -56,7 +61,6 @@ import { useDeferredMount } from '@/hooks/useDeferredMount';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
-import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -182,7 +186,7 @@ const MAX_PANEL_WIDTH = 1200;
 const TWO_PANE_MIN_WIDTH = 560;
 
 interface SidebarTabDescriptor {
-  icon: IconProps['icon'];
+  icon: ComponentType<LucideProps>;
   iconNode?: ReactNode;
   key: string;
   label: ReactNode;
@@ -681,7 +685,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
     })
     .filter((tab): tab is SidebarTabDescriptor => Boolean(tab));
   const createTabContextMenuItems = useCallback(
-    (tab: string, index: number): NativeContextMenuItem[] => {
+    (tab: string, index: number): DropdownItem[] => {
       const pinned = pinnedTabsSet.has(tab);
       const leftTabs = openedTabs.slice(0, index);
       const rightTabs = openedTabs.slice(index + 1);
@@ -692,18 +696,17 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
         ...(!isBrowserTab(tab)
           ? [
               {
-                icon: pinned ? PinOffIcon : PinIcon,
+                icon: pinned ? <PinOffIcon size={14} /> : <PinIcon size={14} />,
                 key: pinned ? 'unpin' : 'pin',
                 label: t(pinned ? 'workingPanel.tabs.unpin' : 'workingPanel.tabs.pin'),
                 onClick: () => (pinned ? unpinTab(tab) : pinTab(tab)),
-                sfSymbol: (pinned ? 'pin.slash' : 'pin') satisfies SFSymbol,
-              } as NativeContextMenuItem,
+              },
               { type: 'divider' as const },
             ]
           : []),
         {
           disabled: pinned,
-          icon: XIcon,
+          icon: <XIcon size={14} />,
           key: 'close',
           label: t('workingPanel.tabs.close'),
           onClick: () => closeTab(tab),
@@ -838,7 +841,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
 
       if (key === BROWSER_TAB_KEY) {
         return {
-          icon: <Icon icon={tab.icon} size={14} />,
+          icon: <tab.icon size={14} />,
           key,
           label: tab.label,
           onClick: () => {
@@ -849,7 +852,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
       }
 
       return {
-        icon: <Icon icon={openedTabs.includes(key) ? CheckIcon : tab.icon} size={14} />,
+        icon: createElement(openedTabs.includes(key) ? CheckIcon : tab.icon, { size: 14 }),
         key,
         label: tab.label,
         onClick: () => {
@@ -879,7 +882,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
     const toolChildren = [itemOf('browser')].filter((item): item is DropdownItem => Boolean(item));
     if (terminalAvailable) {
       toolChildren.push({
-        icon: <Icon icon={SquareTerminalIcon} size={14} />,
+        icon: <SquareTerminalIcon size={14} />,
         key: 'terminal',
         label: t('workingPanel.openMenu.terminal'),
         onClick: () => toggleTerminalPanel(true),
@@ -935,7 +938,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               style={{ width: overviewWidth }}
               transition={OVERVIEW_TRANSITION}
             >
-              <Flexbox className={styles.overviewBody}>
+              <div className={cn('flex flex-col', styles.overviewBody)}>
                 <Overview
                   active
                   agentId={activeAgentId}
@@ -946,7 +949,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                   workingDirectory={environmentWorkingDirectory}
                   onOpenTab={openTab}
                 />
-              </Flexbox>
+              </div>
             </m.div>
           </m.div>
         )}
@@ -973,15 +976,10 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
           updateSystemStatus({ workingSidebarWidth: w });
         }}
       >
-        <Flexbox height={'100%'} width={'100%'}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.header}
-            gap={4}
-            height={44}
-            justify={'space-between'}
-            paddingInline={4}
+        <div className="flex flex-col" style={{ height: '100%', width: '100%' }}>
+          <div
+            className={cn('flex items-center gap-1 justify-between px-1', styles.header)}
+            style={{ height: 44 }}
           >
             <div className={styles.tabsArea}>
               <div className={styles.tabs} ref={tabsRef}>
@@ -1005,7 +1003,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               <DropdownMenu
                 items={openMenuItems}
                 placement={'bottomRight'}
-                onOpenChangeComplete={(open) => {
+                onOpenChange={(open) => {
                   if (open) return;
                   if (pendingTabFocusRef.current) focusPendingTab();
                   else scrollActiveTabIntoView();
@@ -1025,30 +1023,41 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               size={DESKTOP_HEADER_ICON_SMALL_SIZE}
               onClick={() => toggleRightPanel(false)}
             />
-          </Flexbox>
-          <Flexbox className={styles.body} width={'100%'}>
-            {!contentReady && <SkeletonList paddingBlock={8} paddingInline={8} rows={6} />}
+          </div>
+          <div className={cn('flex flex-col', styles.body)} style={{ width: '100%' }}>
+            {!contentReady && (
+              <SkeletonList rows={6} style={{ paddingBlock: 8, paddingInline: 8 }} />
+            )}
             {contentReady && (
               <>
                 {commentsAvailable && (
-                  <Flexbox
-                    className={activeTab === 'comments' ? styles.pane : styles.paneHidden}
+                  <div
                     style={{ overflow: 'hidden' }}
+                    className={cn(
+                      'flex flex-col',
+                      activeTab === 'comments' ? styles.pane : styles.paneHidden,
+                    )}
                   >
                     <TopicCommentsSidebar />
-                  </Flexbox>
+                  </div>
                 )}
                 {paramsAvailable && activeTab === 'params' && (
-                  <Flexbox className={styles.pane}>
+                  <div className={cn('flex flex-col', styles.pane)}>
                     <Suspense
-                      fallback={<Skeleton.Text className={styles.paramsLoading} rows={6} />}
+                      fallback={
+                        <div className={cn('flex flex-col gap-2', styles.paramsLoading)}>
+                          {Array.from({ length: 6 }, (_, i) => (
+                            <Skeleton className={i === 5 ? 'h-4 w-3/5' : 'h-4 w-full'} key={i} />
+                          ))}
+                        </div>
+                      }
                     >
                       <ParamsSection />
                     </Suspense>
-                  </Flexbox>
+                  </div>
                 )}
                 {reviewAvailable && showRightPanel && fits && activeTab === 'review' && (
-                  <Flexbox className={styles.pane}>
+                  <div className={cn('flex flex-col', styles.pane)}>
                     <Review
                       active
                       composerTarget={composerTarget}
@@ -1057,13 +1066,13 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                       workingDirectory={workingDirectory}
                       onToggleTree={() => setShowReviewTree((v) => !v)}
                     />
-                  </Flexbox>
+                  </div>
                 )}
                 {filesAvailable && (
                   <Activity mode={showRightPanel && activeTab === 'files' ? 'visible' : 'hidden'}>
-                    <Flexbox className={styles.pane}>
+                    <div className={cn('flex flex-col', styles.pane)}>
                       <Files deviceId={remoteDeviceId} workingDirectory={workingDirectory} />
-                    </Flexbox>
+                    </div>
                   </Activity>
                 )}
                 {browserAvailable &&
@@ -1074,9 +1083,12 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                         : `${browserSessionId}:tab:${tab.slice(BROWSER_TAB_PREFIX.length)}`;
 
                     return (
-                      <Flexbox
-                        className={activeTab === tab ? styles.pane : styles.paneHidden}
+                      <div
                         key={sessionId}
+                        className={cn(
+                          'flex flex-col',
+                          activeTab === tab ? styles.pane : styles.paneHidden,
+                        )}
                       >
                         <BrowserPane
                           agentId={activeAgentId}
@@ -1093,16 +1105,19 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                             );
                           }}
                         />
-                      </Flexbox>
+                      </div>
                     );
                   })}
                 {businessTabs.map((tab) => (
-                  <Flexbox
-                    className={activeTab === tab.key ? styles.pane : styles.paneHidden}
+                  <div
                     key={tab.key}
+                    className={cn(
+                      'flex flex-col',
+                      activeTab === tab.key ? styles.pane : styles.paneHidden,
+                    )}
                   >
                     {tab.pane}
-                  </Flexbox>
+                  </div>
                 ))}
                 {/* Resource/works panes stay mounted to keep their state, but hidden ones
            go through Activity so their updates render at background priority
@@ -1113,24 +1128,24 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                     key={resourceTab}
                     mode={showRightPanel && activeTab === resourceTab ? 'visible' : 'hidden'}
                   >
-                    <Flexbox className={styles.pane} width={'100%'}>
+                    <div className={cn('flex flex-col', styles.pane)} style={{ width: '100%' }}>
                       <ResourcesSection
                         deviceId={remoteDeviceId}
                         enabled={showRightPanel && activeTab === resourceTab}
                         filter={resourceTab as 'skills' | 'documents' | 'web'}
                       />
-                    </Flexbox>
+                    </div>
                   </Activity>
                 ))}
                 <Activity mode={showRightPanel && activeTab === 'works' ? 'visible' : 'hidden'}>
-                  <Flexbox className={styles.pane}>
+                  <div className={cn('flex flex-col', styles.pane)}>
                     <WorksSection active={showRightPanel && activeTab === 'works'} />
-                  </Flexbox>
+                  </div>
                 </Activity>
               </>
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </RightPanel>
     </>
   );

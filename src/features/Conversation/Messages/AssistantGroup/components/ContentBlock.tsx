@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo, useCallback } from 'react';
 
 import SafeBoundary from '@/components/ErrorBoundary';
@@ -92,7 +91,7 @@ const ContentBlock = memo<ContentBlockProps>(
     }
 
     return (
-      <Flexbox gap={8} id={domId ?? id}>
+      <div className="flex flex-col gap-2" id={domId ?? id}>
         {showReasoning && (
           <SafeBoundary>
             <Reasoning {...reasoning} id={id} />
@@ -130,7 +129,7 @@ const ContentBlock = memo<ContentBlockProps>(
             already streamed content + a successful tool call. Surface it below
             the content instead of silently dropping it. */}
         {errorBlock && <SafeBoundary>{errorBlock}</SafeBoundary>}
-      </Flexbox>
+      </div>
     );
   },
 );

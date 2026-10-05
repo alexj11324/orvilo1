@@ -97,4 +97,13 @@ describe('retired root paths are reserved words', () => {
       expect(redirectTarget(routes, pathname)).toBe('..');
     }
   });
+
+  it.each(surfaces)('%s keeps the agents settings index inside the settings tree', (_, routes) => {
+    // `/:workspaceSlug/agents` scores higher than `settings/:tab` (the index
+    // bonus tips the tie), so the settings tree registers `agents` literally —
+    // without it the URL parses as workspace "settings" and 404s the section.
+    // Deeper links (`/settings/agents/:sub`) already outrank the slug.
+    const match = matchRoutes(routes, '/settings/agents');
+    expect(match?.[1]?.route.path, '/settings/agents left the settings tree').toBe('settings');
+  });
 });

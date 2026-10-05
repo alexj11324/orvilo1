@@ -372,19 +372,18 @@ describe('AI Agent Router Integration Tests', () => {
         prompt: 'Test prompt',
       });
 
-      expect(mockDispatchHeteroAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ userId }),
-        expect.objectContaining({
-          agentConfig: expect.objectContaining({
-            model: 'gpt-4o-mini',
-            provider: 'openai',
-          }),
-          model: 'gpt-4o-mini',
-          provider: 'openai',
-          resolvedAgentId: testAgentId,
-        }),
-        expect.anything(),
-      );
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledOnce();
+      const [deps, context, input] = mockDispatchHeteroAgent.mock.calls[0];
+      expect(deps.userId).toBe(userId);
+      expect(context).toMatchObject({
+        agentConfig: { model: 'gpt-4o-mini', provider: 'openai' },
+        model: 'gpt-4o-mini',
+        // The persisted provider feeds Prime's model; the runtime dispatch
+        // itself uses the builtin Orvilo provider.
+        provider: 'orvilo',
+        resolvedAgentId: testAgentId,
+      });
+      expect(input).toBeDefined();
     });
 
     it('should handle autoStart=true by default', async () => {

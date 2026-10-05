@@ -142,6 +142,10 @@ Opening or marking a PR ready is a checkpoint for that decision, not a trigger t
   reviewer can tell which revision it proves.
 - Do not publish verification to a separate acceptance site, and do not install a skill into an agent
   harness to produce it. There is no standalone acceptance platform behind this requirement.
+- Acceptance that involves local devices or local-cli agent runtimes (opencode, codex, claude-code,
+  pi, etc.) must drive the Electron desktop app (`apps/desktop`). The Chrome/Web SPA cannot spawn
+  local binaries — detection and spawn live in `apps/desktop/src/main` — so web runs only count as
+  evidence for web-only flows.
 
 Tests, lint, and type-check remain separate quality gates; they do not replace product verification.
 

@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
 
+import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import {
   buildHeteroExecStdinPayload,
   HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV,
@@ -7,10 +8,12 @@ import {
 } from '@orvilo/heterogeneous-agents/protocol';
 import { resolveHeteroSpawnCwd } from '@orvilo/heterogeneous-agents/workingDirectory';
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
+import { resolveHarnessAdapter } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 
 import { getTask, removeTask, saveTask, type TaskEntry } from '../daemon/taskRegistry';
 import { cancelAgentRun, getAgentRun, registerAgentRun } from './agentRunRegistry';
+import { admitPrimeDeviceRun } from './primeRun';
 
 /** Liveness probe for a detached run — the wrapper pid is a process-group leader. */
 function isProcessGroupAlive(pid: number): boolean {
@@ -24,7 +27,7 @@ function isProcessGroupAlive(pid: number): boolean {
 
 /** Poll interval while confirming a killed process group is really gone. */
 const PROCESS_GROUP_POLL_MS = 50;
-/** Bounded window to observe the exit after the forced kill — same contract as `lh task cancel`. */
+/** Bounded window to observe the exit after the forced kill — same contract as `orvilo task cancel`. */
 const KILL_CONFIRM_TIMEOUT_MS = 3000;
 
 const waitForProcessGroupExit = async (pid: number, timeoutMs: number): Promise<boolean> => {
@@ -124,12 +127,18 @@ const stopTrackedRun = async (
 
 export interface SpawnHeteroAgentRunParams {
   agentType: string;
-  /** Resolved `lh hetero exec` wrapper args. */
+  /** Resolved `orvilo hetero exec` wrapper args. */
   args?: string[];
   assistantMessageId?: string;
   /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
   builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
+  /**
+   * Server-minted spawn env (e.g. BYOK provider credentials) merged into the
+   * child env ahead of the fixed `ORVILO_*` keys. Travels verbatim over the
+   * authenticated dispatch channel; the device stores nothing.
+   */
+  env?: Record<string, string>;
   /** Image attachments (signed URLs) appended as image content blocks. */
   imageList?: HeteroExecImageRef[];
   jwt: string;
@@ -141,11 +150,18 @@ export interface SpawnHeteroAgentRunParams {
    * sandbox) share the same env contract.
    */
   operationJwt?: string;
+  /**
+   * Prime device-run descriptor — present iff the resolved harness adapter
+   * is Prime (`type:'orvilo'` after the transitional embedded fence flips).
+   * Swaps the launcher to the in-daemon `openPrimeDeviceRun` host instead of
+   * the `orvilo hetero exec` wrapper; admission/kill lifecycle is unchanged.
+   */
+  prime?: PrimeRunDescriptor;
   prompt: string;
   /** System context used only by the automatic retry without native resume. */
   resumeFallbackSystemContext?: string;
   resumeSessionId?: string;
-  /** Admission fence relayed to `lh hetero exec` via `ORVILO_RUN_GENERATION`. */
+  /** Admission fence relayed to `orvilo hetero exec` via `ORVILO_RUN_GENERATION`. */
   runGeneration?: number;
   serverUrl: string;
   systemContext?: string;
@@ -165,18 +181,18 @@ interface SpawnHeteroAgentRunLogger {
 }
 
 /**
- * Spawn `lh hetero exec` for a gateway-dispatched agent run. Mirrors the
- * desktop app's `spawnLhHeteroExec`: the spawned CLI owns the full pipeline
+ * Spawn `orvilo hetero exec` for a gateway-dispatched agent run. Mirrors the
+ * desktop app's `spawnOrviloHeteroExec`: the spawned CLI owns the full pipeline
  * (spawn -> adapt -> BatchIngester -> server ingest), so the connect daemon
  * needs no local stream handling — it only kicks off the process.
  *
  * Re-invokes the current CLI entry (`process.execPath` + `process.argv[1]`)
- * instead of relying on `lh` being on `PATH`, so it also works inside the
- * detached `lh connect --daemon` child where `PATH` may be minimal.
+ * instead of relying on `orvilo` being on `PATH`, so it also works inside the
+ * detached `orvilo connect --daemon` child where `PATH` may be minimal.
  *
  * Resolves only once the child's outcome is known: `accepted` on the `spawn`
  * event, `rejected` on an early wrapper-process `error`. A missing target cwd
- * is handled inside `lh hetero exec`, which can classify it and emit
+ * is handled inside `orvilo hetero exec`, which can classify it and emit
  * `heteroFinish`; other wrapper spawn failures flow back as rejected dispatches.
  */
 /**
@@ -217,6 +233,7 @@ async function admitHeteroAgentRun(
     args: extraArgs,
     builtinTools,
     cwd,
+    env: byokEnv,
     imageList,
     jwt,
     operationId,
@@ -282,6 +299,19 @@ async function admitHeteroAgentRun(
   // structured working_directory_not_found error through heteroFinish.
   const spawnCwd = resolveHeteroSpawnCwd(workDir);
 
+  // Prime launcher swap: a descriptor on the dispatch means the resolved
+  // harness adapter is Prime — the device hosts it in-daemon
+  // (`openPrimeDeviceRun`) instead of shelling to `orvilo hetero exec`.
+  // Everything else in this lifecycle (registry, supersede, kill) is shared.
+  if (params.prime !== undefined) {
+    if (resolveHarnessAdapter(agentType) !== 'prime')
+      return {
+        reason: `prime descriptor on a non-prime agent type: ${agentType}`,
+        status: 'rejected',
+      };
+    return admitPrimeDeviceRun(params, workDir, logger);
+  }
+
   // Server-ingest mode (--topic + --operation-id): events are batch-POSTed to
   // the server, not rendered. `--input-json -` reads the prompt from stdin.
   const cliArgs = [
@@ -306,7 +336,7 @@ async function admitHeteroAgentRun(
 
   // systemContext / image attachments turn the payload into a content-block
   // array: context block first, then the user's prompt, then images — mirrors
-  // the desktop path. `lh hetero exec` coerces both shapes via
+  // the desktop path. `orvilo hetero exec` coerces both shapes via
   // coerceJsonPrompt.
   const stdinPayload = buildHeteroExecStdinPayload({
     imageList,
@@ -345,6 +375,7 @@ async function admitHeteroAgentRun(
       detached: true,
       env: {
         ...childEnv,
+        ...byokEnv,
         ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
         ORVILO_JWT: jwt,

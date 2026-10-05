@@ -15,7 +15,7 @@ import { toStreamEvent } from './streamEvent';
 /**
  * Runtime-side hook that uploads a base64 image echoed by a tool_result to the
  * file store and returns its reference. Injected by whichever runtime actually
- * spawns the CLI (desktop main / `lh hetero exec`), because only they hold the
+ * spawns the CLI (desktop main / `orvilo hetero exec`), because only they hold the
  * authenticated file-store client. Return `undefined` (or throw) to signal the
  * upload could not be done — the pipeline drops the image and leaves the
  * `[Image: …]` text placeholder as the fallback.
@@ -59,7 +59,7 @@ export interface AgentStreamPipelineOptions {
  *
  *   stdout chunk → JsonlStreamProcessor → (codex tracker, if applicable) → adapter → toStreamEvent
  *
- * Both the desktop main process and the future `lh hetero exec` CLI feed
+ * Both the desktop main process and the future `orvilo hetero exec` CLI feed
  * stdout into this pipeline so consumers (renderer / server) only ever see a
  * single, unified wire shape. Codex's file-change diff/stat enrichment is
  * baked in here so consumers don't need to know it exists.

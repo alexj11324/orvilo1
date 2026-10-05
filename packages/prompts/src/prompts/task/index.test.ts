@@ -463,8 +463,8 @@ describe('buildTaskRunPrompt', () => {
     expect(result).toContain('must reference a real artifact by fileId');
     // The standalone Acceptance distribution is retired: the prompt must not
     // hand the runtime a shell instruction whose command no longer exists.
-    expect(result).not.toContain('lh acceptance install');
-    expect(result).not.toContain('lh acceptance run result submit');
+    expect(result).not.toContain('orvilo acceptance install');
+    expect(result).not.toContain('orvilo acceptance run result submit');
     expect(result).not.toContain('Use the `acceptance` skill to drive');
   });
 
@@ -485,7 +485,7 @@ describe('buildTaskRunPrompt', () => {
     expect(result).toContain('Verify — delivery acceptance');
     expect(result).toContain('Run the Acceptance inside this Task, not after it');
     expect(result).toContain('Criterion ids are minted when this run starts');
-    expect(result).toContain('lh verify plan state');
+    expect(result).toContain('orvilo verify plan state');
   });
 
   it('should omit the verify section when verify is disabled', () => {
@@ -699,7 +699,7 @@ describe('buildTaskRunPrompt', () => {
     expect(result.indexOf('真机 LCP 还是 2.4s')).toBeLessThan(result.indexOf('LCP < 2s'));
     expect(result).toContain('1. LCP < 2s — measured 2.8s — preload hero image');
     expect(result).toContain('2. Lighthouse ≥ 90');
-    expect(result).toContain('`lh task topic view TASK-1 <seq>`');
+    expect(result).toContain('`orvilo task topic view TASK-1 <seq>`');
   });
 
   it.each([undefined, 'Keep the existing table.'])(

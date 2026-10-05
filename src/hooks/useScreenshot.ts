@@ -1,4 +1,3 @@
-import { type TabsItem } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { snapdom } from '@zumer/snapdom';
 import dayjs from 'dayjs';
@@ -9,6 +8,11 @@ export enum ImageType {
   PNG = 'png',
   SVG = 'svg',
   WEBP = 'webp',
+}
+
+export interface TabsItem {
+  key: string;
+  label: string;
 }
 
 export const imageTypeOptions: TabsItem[] = [

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type FC } from 'react';
 import { memo, Suspense } from 'react';
 import { useParams } from 'react-router';
@@ -11,6 +10,7 @@ import ProfileSkeleton from '@/components/Skeleton/Profile';
 import AgentBuilder from '@/features/AgentBuilder';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
 import WideScreenContainer from '@/features/WideScreenContainer';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -47,10 +47,11 @@ const ProfileArea = memo(() => {
   const retryAgentConfigFetch = useAgentStore((s) => s.retryAgentConfigFetch);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const handleContentClick = useClickToFocusEditor(editor, canEdit);
+  const isMobile = useIsMobile();
 
   return (
     <>
-      <Flexbox flex={1} height={'100%'} style={styles.profileArea}>
+      <div className="flex flex-col flex-1" style={{ height: '100%', ...styles.profileArea }}>
         <AsyncBoundary
           // Config lives in the map only after a successful fetch — so "settled"
           // is exactly "not still loading". A truthy sentinel on success lets the
@@ -66,20 +67,26 @@ const ProfileArea = memo(() => {
           loading={<ProfileSkeleton />}
           onRetry={() => retryAgentConfigFetch()}
         >
-          <Header />
-          <Flexbox
-            horizontal
-            height={'100%'}
-            style={{ ...styles.contentWrapper, cursor: canEdit ? 'text' : 'default' }}
-            width={'100%'}
+          {/* The desktop header is nav chrome (breadcrumb, tabs, action menu)
+              that has no room on a narrow viewport — the mobile settings
+              shell already supplies the back affordance and page title. */}
+          {isMobile ? null : <Header />}
+          <div
+            className="flex"
+            style={{
+              height: '100%',
+              width: '100%',
+              ...styles.contentWrapper,
+              cursor: canEdit ? 'text' : 'default',
+            }}
             onClick={handleContentClick}
           >
             <WideScreenContainer>
               <ProfileEditor />
             </WideScreenContainer>
-          </Flexbox>
+          </div>
         </AsyncBoundary>
-      </Flexbox>
+      </div>
       {/* Mounted unconditionally (not behind the config-loading gate) so the lock
           is peeked on open and resolved before the editor renders. */}
       <EditLockDriver />
@@ -96,26 +103,32 @@ const AgentBuilderSlot = memo(() => {
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const lockedByOther = useProfileStore(profileSelectors.lockedByOther);
   const lockPending = useProfileStore(profileSelectors.lockPending);
-  if (isHeterogeneous || lockedByOther || lockPending) return null;
+  const isMobile = useIsMobile();
+  // The builder is a desktop side rail — on mobile it widens the page past the
+  // viewport; the same config it edits is reachable through the stacked cards.
+  if (isMobile || isHeterogeneous || lockedByOther || lockPending) return null;
   return <AgentBuilder />;
 });
 
-const AgentProfile: FC = () => {
+const AgentProfile: FC<{ agentId?: string }> = ({ agentId: agentIdProp }) => {
   const { aid } = useParams<{ aid: string }>();
+  // Embedded hosts (Settings → Agents) pass the id in since `:aid` only exists
+  // on the agent route — which now redirects here.
+  const agentId = agentIdProp ?? aid;
 
   return (
     <Suspense fallback={delayed(<ProfileSkeleton />)}>
       <ResourceConfigAccessGate
         loading={<ProfileSkeleton />}
-        redirectPath={`/agent/${aid ?? ''}`}
-        resourceId={aid}
+        redirectPath={agentIdProp ? '/settings/agents' : `/agent/${agentId ?? ''}`}
+        resourceId={agentId}
         resourceType="agent"
       >
         <ProfileProvider>
-          <Flexbox horizontal height={'100%'} width={'100%'}>
+          <div className="flex" style={{ height: '100%', width: '100%' }}>
             <ProfileArea />
             <AgentBuilderSlot />
-          </Flexbox>
+          </div>
         </ProfileProvider>
       </ResourceConfigAccessGate>
     </Suspense>

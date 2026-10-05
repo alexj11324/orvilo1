@@ -65,6 +65,7 @@ import {
   getRestrictedKnowledgeBaseIds,
   getUseLevelKnowledgeBaseIds,
 } from './_helpers/knowledgeBaseAccess';
+import { refuseRetiredAgencyConfigFields } from './_helpers/refuseRetiredAgencyConfigFields';
 import { getResourceConfigAccess, redactAgentConfig } from './_helpers/resourceConfigGuard';
 
 const getAgentPermissionPolicyPatch = (value: Record<string, unknown>) => {
@@ -186,7 +187,7 @@ export const agentRouter = router({
     .use(withScopedPermission('agent:create'))
     .input(
       z.object({
-        config: CreateAgentSchema.optional(),
+        config: CreateAgentSchema.optional().superRefine(refuseRetiredAgencyConfigFields),
         groupId: z.string().optional(),
         visibility: z.enum(['private', 'public']).optional(),
       }),
@@ -464,7 +465,7 @@ export const agentRouter = router({
     .use(withScopedPermission('agent:create'))
     .input(
       z.object({
-        config: z.object({}).passthrough().optional(),
+        config: z.object({}).passthrough().optional().superRefine(refuseRetiredAgencyConfigFields),
         groupId: z.string(),
       }),
     )
@@ -483,8 +484,10 @@ export const agentRouter = router({
         });
       }
 
-      // Create the agent entity only (no session)
-      const agent = await ctx.agentModel.create(input.config ?? {});
+      const group = await ctx.chatGroupModel.findById(input.groupId);
+      if (!group) throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
+      // A new member inherits the authoritative group's visibility before admission.
+      const agent = await ctx.agentModel.create({ ...input.config, visibility: group.visibility });
 
       // Add the agent to the group
       await ctx.chatGroupModel.addAgentToGroup(input.groupId, agent.id);
@@ -638,6 +641,36 @@ export const agentRouter = router({
     .query(async ({ input, ctx }) => {
       const config = await ctx.agentService.getAgentConfigById(input.agentId);
       return protectAgentConfig(ctx, input.agentId, config);
+    }),
+
+  getAgentRuntimeForCreation: agentProcedure
+    .use(withScopedPermission('agent:create'))
+    .input(
+      z.object({
+        agentId: z.string(),
+        visibility: z.enum(['private', 'public']).optional(),
+        model: z.string().optional(),
+        provider: z.string().optional(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const access = await getResourceConfigAccess(
+        {
+          db: ctx.serverDB,
+          grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+            .workspacePermissionCodes,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        },
+        'agent',
+        input.agentId,
+      );
+      if (access !== 'full')
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Agent runtime configuration is unavailable',
+        });
+      return ctx.agentModel.inheritRuntimeForCreation(input.agentId, input);
     }),
 
   /**
@@ -1399,7 +1432,7 @@ export const agentRouter = router({
     .input(
       z.object({
         agentId: z.string(),
-        value: z.object({}).passthrough().partial(),
+        value: z.object({}).passthrough().partial().superRefine(refuseRetiredAgencyConfigFields),
       }),
     )
     .mutation(async ({ input, ctx }) => {

@@ -1,11 +1,11 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { LOADING_FLAT } from '@orvilo/const';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { ChatItem } from '@/features/Conversation/ChatItem';
 import TaskAvatar from '@/features/Conversation/Messages/Tasks/shared/TaskAvatar';
 import { useMessageCommentCount } from '@/features/TopicComment/hooks';
@@ -82,7 +82,7 @@ const TaskMessage = memo<TaskMessageProps>(({ id, disableEditing }) => {
       message={message}
       placement={'left'}
       time={createdAt}
-      titleAddon={<Tag>{t('task.subtask')}</Tag>}
+      titleAddon={<Badge>{t('task.subtask')}</Badge>}
       actionAddon={
         commentCount > 0 && commentTopicId ? (
           <MessageCommentBadge count={commentCount} messageId={id} topicId={commentTopicId} />

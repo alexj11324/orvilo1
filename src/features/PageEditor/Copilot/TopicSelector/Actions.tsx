@@ -1,11 +1,13 @@
-import { type DropdownItem } from '@lobehub/ui';
-import { DropdownMenu } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
+
 interface ActionsProps {
-  dropdownMenu: DropdownItem[] | (() => DropdownItem[]);
+  dropdownMenu: SidebarDropdownMenuProps['items'];
 }
 
 const Actions = memo<ActionsProps>(({ dropdownMenu }) => {
@@ -13,9 +15,9 @@ const Actions = memo<ActionsProps>(({ dropdownMenu }) => {
     return null;
 
   return (
-    <DropdownMenu items={dropdownMenu}>
+    <SidebarDropdownMenu items={dropdownMenu}>
       <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

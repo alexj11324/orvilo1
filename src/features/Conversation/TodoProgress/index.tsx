@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Checkbox, Tag } from '@lobehub/ui/base-ui';
 import { type StepContextTodos } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown, ChevronUp, CircleArrowRight } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
 import { shinyTextStyles } from '@/styles';
 
@@ -174,8 +174,8 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
       onClick={toggleExpanded}
     >
       {/* Header */}
-      <Flexbox horizontal align="center" gap={8} justify="space-between">
-        <Flexbox horizontal align="center" gap={8} style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex items-center gap-2 justify-between">
+        <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
           <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>
             <circle
               className={styles.ringTrack}
@@ -202,18 +202,17 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
             {currentPendingTask?.text ||
               t('todoProgress.allCompleted', { defaultValue: 'All tasks completed' })}
           </span>
-          <Tag size="small" style={{ flexShrink: 0 }}>
+          <Badge size="sm" style={{ flexShrink: 0 }}>
             <span className={styles.count}>
               {completed}/{total}
             </span>
-          </Tag>
-        </Flexbox>
-        <Icon
-          icon={expanded ? ChevronUp : ChevronDown}
-          size={16}
-          style={{ color: cssVar.colorTextTertiary, flexShrink: 0 }}
-        />
-      </Flexbox>
+          </Badge>
+        </div>
+        {createElement(expanded ? ChevronUp : ChevronDown, {
+          size: 16,
+          style: { color: cssVar.colorTextTertiary, flexShrink: 0 },
+        })}
+      </div>
 
       {/* Expandable Todo List */}
       <div className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
@@ -225,11 +224,7 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
           if (isProcessing) {
             return (
               <div className={cx(styles.itemRow, styles.processingRow)} key={index}>
-                <Icon
-                  icon={CircleArrowRight}
-                  size={17}
-                  style={{ color: cssVar.colorTextSecondary }}
-                />
+                <CircleArrowRight size={17} style={{ color: cssVar.colorTextSecondary }} />
                 <span className={styles.textProcessing}>{item.text}</span>
               </div>
             );
@@ -237,22 +232,22 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
 
           // Todo and completed states use Checkbox
           return (
-            <Checkbox
-              backgroundColor={cssVar.colorSuccess}
-              checked={isCompleted}
-              key={index}
-              shape="circle"
-              style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
-              classNames={{
-                text: cx(styles.textTodo, isCompleted && styles.textCompleted),
-                wrapper: styles.itemRow,
-              }}
-              textProps={{
-                type: isCompleted ? 'secondary' : undefined,
-              }}
-            >
-              {item.text}
-            </Checkbox>
+            <label className={styles.itemRow} key={index}>
+              <Checkbox
+                checked={isCompleted}
+                className="rounded-full data-checked:border-success data-checked:bg-success"
+                style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
+              />
+              <span
+                className={cx(
+                  styles.textTodo,
+                  isCompleted && styles.textCompleted,
+                  isCompleted && 'text-muted-foreground',
+                )}
+              >
+                {item.text}
+              </span>
+            </label>
           );
         })}
       </div>

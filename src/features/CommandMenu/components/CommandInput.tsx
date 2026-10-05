@@ -1,12 +1,13 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
-import { ArrowLeft, X } from 'lucide-react';
+import { cn } from 'cn';
+import { ArrowLeft, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
@@ -67,9 +68,8 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
       {(menuContext !== 'general' || typeFilter) && !hasPages && !hasSelectedAgent && (
         <div className={styles.contextWrapper}>
           {hasActiveAgent ? (
-            <Tag
-              className={styles.contextTag}
-              icon={
+            <Tag className={cn(styles.contextTag)}>
+              {
                 <Avatar
                   emojiScaleWithBackground
                   avatar={activeAgentMeta?.avatar || DEFAULT_AVATAR}
@@ -79,21 +79,20 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
                   size={14}
                 />
               }
-            >
               {agentDisplayName(activeAgentMeta, t('defaultAgent'))}
             </Tag>
           ) : (
-            menuContext !== 'general' && <Tag className={styles.contextTag}>{contextName}</Tag>
+            menuContext !== 'general' && <Tag className={cn(styles.contextTag)}>{contextName}</Tag>
           )}
           {typeFilter && (
             <Tag
-              className={styles.backTag}
-              icon={<X size={12} />}
+              className={cn(styles.backTag)}
               onClick={() => {
                 onTypeFilterChange();
                 setTypeFilter(undefined);
               }}
             >
+              <XIcon size={12} />
               {getTypeLabel(typeFilter)}
             </Tag>
           )}
@@ -101,12 +100,13 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
       )}
       <div className={styles.inputWrapper}>
         {hasPages && !hasSelectedAgent && (
-          <Tag className={styles.backTag} icon={<ArrowLeft size={12} />} onClick={handleBack} />
+          <Tag className={cn(styles.backTag)} onClick={handleBack}>
+            <ArrowLeft size={12} />
+          </Tag>
         )}
         {hasSelectedAgent && (
-          <Tag
-            closable
-            icon={
+          <Tag>
+            {
               <Avatar
                 emojiScaleWithBackground
                 avatar={selectedAgent.avatar}
@@ -115,9 +115,14 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
                 size={14}
               />
             }
-            onClose={() => setSelectedAgent(undefined)}
-          >
             {agentDisplayName(selectedAgent)}
+            <button
+              aria-label={t('close', { ns: 'common' })}
+              type="button"
+              onClick={() => setSelectedAgent(undefined)}
+            >
+              <XIcon size={12} />
+            </button>
           </Tag>
         )}
         <Command.Input

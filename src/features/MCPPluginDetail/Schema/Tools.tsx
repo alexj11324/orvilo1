@@ -1,11 +1,12 @@
-import { Flexbox, Highlighter, Icon, Markdown } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon, MinusIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
+import { Badge } from '@/components/reui/badge';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import { useDetailContext } from '../DetailProvider';
@@ -54,7 +55,7 @@ const Tools = memo<ToolsProps>(({ mode, activeKey = [], setActiveKey }) => {
             open={activeKey.includes(item.name)}
           >
             {item.description && <Markdown fontSize={14}>{item.description}</Markdown>}
-            <Flexbox gap={6}>
+            <div className="flex flex-col gap-1.5">
               <SchemaSubtitle>{t('mcp.details.schema.tools.inputSchema')}</SchemaSubtitle>
               {mode === ModeType.Docs ? (
                 <InlineTable
@@ -73,18 +74,27 @@ const Tools = memo<ToolsProps>(({ mode, activeKey = [], setActiveKey }) => {
                     },
                     {
                       dataIndex: 'type',
-                      render: (_, record) => <Tag className={styles.code}>{record.type}</Tag>,
+                      render: (_, record) => (
+                        <Badge className={styles.code} variant="secondary">
+                          {record.type}
+                        </Badge>
+                      ),
                       title: t('mcp.details.schema.tools.table.type'),
                     },
                     {
                       dataIndex: 'required',
                       render: (_, record) => (
-                        <Icon
-                          icon={record.required ? CheckIcon : MinusIcon}
-                          color={
-                            record.required ? cssVar.colorSuccess : cssVar.colorTextDescription
-                          }
-                        />
+                        <span className="anticon" role="img">
+                          {createElement(record.required ? CheckIcon : MinusIcon, {
+                            size: '1em',
+                            width: '1em',
+                            height: '1em',
+                            color: record.required
+                              ? cssVar.colorSuccess
+                              : cssVar.colorTextDescription,
+                            fill: 'transparent',
+                          })}
+                        </span>
                       ),
                       title: t('mcp.details.schema.tools.table.required'),
                     },
@@ -95,11 +105,14 @@ const Tools = memo<ToolsProps>(({ mode, activeKey = [], setActiveKey }) => {
                   ]}
                 />
               ) : (
-                <Highlighter language={'json'} style={{ fontSize: 12 }} variant={'borderless'}>
-                  {JSON.stringify(item.inputSchema, null, 2)}
-                </Highlighter>
+                <CodeBlock
+                  code={JSON.stringify(item.inputSchema, null, 2)}
+                  language={'json'}
+                  style={{ fontSize: 12 }}
+                  variant={'ghost'}
+                />
               )}
-            </Flexbox>
+            </div>
           </SchemaItem>
         );
       })}

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { type ModelParamsSchema, type VideoModelParamsSchema } from '../standard-parameters';
+
 export type ModelPriceCurrency = 'CNY' | 'USD';
 
 export const AiModelSourceEnum = {
@@ -15,13 +17,19 @@ export const AiModelTypeSchema = z.enum([
   'embedding',
   'tts',
   'asr',
+  'image',
+  'video',
   'text2music',
   'realtime',
 ] as const);
 
 export type AiModelType = z.infer<typeof AiModelTypeSchema>;
 
-export const AgentCompatibilitySchema = z.object({}).passthrough();
+export const AgentCompatibilitySchema = z
+  .object({
+    serverDefaultHeterogeneousProfiles: z.array(z.string().min(1)).optional(),
+  })
+  .passthrough();
 
 export type AgentCompatibility = z.infer<typeof AgentCompatibilitySchema>;
 
@@ -155,16 +163,21 @@ export type PricingUnitName =
   | 'audioInput_cacheRead' // corresponds to ChatModelPricing.cachedAudioInput
 
   // Image-based pricing units
+  | 'imageGeneration' // for image generation models
   | 'imageInput'
   | 'imageInput_cacheRead'
   | 'imageOutput'
 
   // Video-based pricing units
-  | 'videoInput';
+  | 'videoInput'
+  | 'videoGeneration';
 
 export type PricingUnitType =
   | 'millionTokens' // per 1M tokens
   | 'millionCharacters' // per 1M characters
+  | 'image' // per image
+  | 'video' // per video
+  | 'megapixel' // per megapixel
   | 'second'; // per second
 
 export type PricingStrategy = 'fixed' | 'tiered' | 'lookup';
@@ -215,6 +228,10 @@ export interface Pricing {
    * Fallback approximate per-image price (USD) when detailed pricing table is unavailable
    */
   approximatePricePerImage?: number;
+  /**
+   * Fallback approximate per-video price (USD) when detailed pricing table is unavailable
+   */
+  approximatePricePerVideo?: number;
   /**
    * Positive model-specific audio input token rate used for duration-based pre-flight estimates.
    * Authoritative billing continues to use provider-reported usage.
@@ -622,6 +639,19 @@ export interface AIEmbeddingModelCard extends AIBaseModelCard {
   type: 'embedding';
 }
 
+export interface AIImageModelCard extends AIBaseModelCard {
+  parameters?: ModelParamsSchema;
+  pricing?: Pricing;
+  resolutions?: string[];
+  type: 'image';
+}
+
+export interface AIVideoModelCard extends AIBaseModelCard {
+  parameters?: VideoModelParamsSchema;
+  pricing?: Pricing;
+  type: 'video';
+}
+
 export interface AITTSModelCard extends AIBaseModelCard {
   pricing?: Pricing;
   type: 'tts';
@@ -668,6 +698,7 @@ export interface AiFullModelCard extends AIBaseModelCard {
   displayName?: string;
   id: string;
   maxDimension?: number;
+  parameters?: ModelParamsSchema;
   pricing?: Pricing;
   settings?: AiModelSettings;
   type: AiModelType;
@@ -710,6 +741,7 @@ export interface AiProviderModelListItem {
   generation?: string;
   id: string;
   knowledgeCutoff?: string;
+  parameters?: ModelParamsSchema;
   pricing?: Pricing;
   releasedAt?: string;
   settings?: AiModelSettings;
@@ -755,6 +787,14 @@ export type ToggleAiModelEnableParams = z.infer<typeof ToggleAiModelEnableSchema
 
 export interface AiModelForSelect {
   abilities: ModelAbilities;
+  /**
+   * Approximate per-image price (USD), used when exact calculation is not possible
+   */
+  approximatePricePerImage?: number;
+  /**
+   * Approximate per-video price (USD), used when exact calculation is not possible
+   */
+  approximatePricePerVideo?: number;
   contextWindowTokens?: number;
   description?: string;
   displayName?: string;
@@ -762,6 +802,15 @@ export interface AiModelForSelect {
   generation?: string;
   id: string;
   knowledgeCutoff?: string;
+  parameters?: ModelParamsSchema;
+  /**
+   * Exact per-image price (USD) calculated from pricing units
+   */
+  pricePerImage?: number;
+  /**
+   * Exact per-video price (USD) when resolved from pricing units
+   */
+  pricePerVideo?: number;
   pricing?: Pricing;
   releasedAt?: string;
 }
@@ -777,6 +826,7 @@ export interface EnabledAiModel {
   id: string;
   knowledgeCutoff?: string;
   maxOutput?: number;
+  parameters?: ModelParamsSchema;
   pricing?: Pricing;
   providerId: string;
   releasedAt?: string;

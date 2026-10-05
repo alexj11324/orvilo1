@@ -21,6 +21,7 @@ import { serverDBEnv } from '@/config/db';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { ChatGroupModel } from '@/database/models/chatGroup';
+import { DeviceModel } from '@/database/models/device';
 import { FileModel } from '@/database/models/file';
 import { MessageModel } from '@/database/models/message';
 import { RbacModel } from '@/database/models/rbac';
@@ -34,6 +35,7 @@ import { chatGroups } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { repairTopicDeviceBinding } from '@/server/services/deviceGateway/executionAdmission';
 import { FileService } from '@/server/services/file';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { after } from '@/server/utils/scheduleAfterResponse';
@@ -462,13 +464,26 @@ export const topicRouter = router({
 
   cloneTopic: topicProcedure
     .use(withScopedPermission('topic:create'))
-    .input(z.object({ id: z.string(), newTitle: z.string().optional() }))
+    .input(
+      z.object({
+        id: z.string(),
+        newTitle: z.string().optional(),
+        /**
+         * Fork-to-agent: the duplicate lands under this agent instead of the
+         * source's owner — the explicit fork, leaving the original untouched.
+         */
+        targetAgentId: z.string().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
       // Duplicating a visitor topic would copy its content into creator scope
       // (see `assertCreatorTopicTargets` on `batchMoveTopics` above).
       await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
-      const data = await ctx.topicModel.duplicate(input.id, input.newTitle);
+      if (input.targetAgentId) {
+        await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId: input.targetAgentId }]);
+      }
+      const data = await ctx.topicModel.duplicate(input.id, input.newTitle, input.targetAgentId);
 
       return data.topic.id;
     }),
@@ -587,6 +602,14 @@ export const topicRouter = router({
     .input(
       z
         .object({
+          /**
+           * Opaque `updatedAt|id` cursor from a previous page's `nextCursor`.
+           * Passing `cursor`/`limit` switches the response to the paged
+           * envelope `{items, nextCursor}`; callers that pass neither keep the
+           * legacy flat-array response.
+           */
+          cursor: z.string().min(1).optional(),
+          limit: z.number().int().min(1).max(50).optional(),
           pageSize: z.number().max(500).optional(),
           statuses: z.array(z.string()).optional(),
           withLastMessage: z.boolean().optional(),
@@ -594,6 +617,15 @@ export const topicRouter = router({
         .optional(),
     )
     .query(async ({ input, ctx }) => {
+      if (input?.limit !== undefined || input?.cursor !== undefined) {
+        return ctx.topicModel.queryTopicsPage({
+          cursor: input.cursor,
+          limit: input.limit,
+          statuses: input.statuses,
+          withLastMessage: input.withLastMessage,
+        });
+      }
+
       return ctx.topicModel.queryTopics({
         pageSize: input?.pageSize,
         statuses: input?.statuses,
@@ -625,6 +657,12 @@ export const topicRouter = router({
         includeTriggers: z.array(z.string()).optional(),
         isInbox: z.boolean().optional(),
         pageSize: z.number().max(100).optional(),
+        /**
+         * `'workspace'` lists the workspace-wide conversation feed: every
+         * non-group topic the caller can see, whatever agent owns it.
+         * `agentId`/`sessionId` are ignored in this scope.
+         */
+        scope: z.literal('workspace').optional(),
         sessionId: z.string().nullish(),
         /**
          * Server-side ordering. Defaults to `updatedAt`; `status` orders by
@@ -651,6 +689,20 @@ export const topicRouter = router({
         triggers,
         ...rest
       } = input;
+
+      // Workspace feed: no container resolution — the model lists every
+      // visible non-group topic. Skips the agentId lookup and the legacy
+      // agentId backfill migration below (there is no owning agent to backfill).
+      if (rest.scope === 'workspace') {
+        const result = await ctx.topicModel.query({
+          ...rest,
+          excludeStatuses,
+          excludeTriggers,
+          includeTriggers,
+          triggers,
+        });
+        return { items: result.items, total: result.total };
+      }
 
       // If groupId is provided, query by groupId directly
       if (groupId) {
@@ -974,16 +1026,21 @@ export const topicRouter = router({
         agentId: z.string().optional(),
         groupId: z.string().nullish(),
         keywords: z.string(),
+        /** `'workspace'` searches the workspace-wide conversation feed. */
+        scope: z.literal('workspace').optional(),
         sessionId: z.string().nullish(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      const resolved = await resolveContext(
-        { agentId: input.agentId, sessionId: input.sessionId },
-        ctx.serverDB,
-        ctx.userId,
-        ctx.workspaceId ?? undefined,
-      );
+      const isWorkspace = input.scope === 'workspace';
+      const resolved = isWorkspace
+        ? { sessionId: undefined }
+        : await resolveContext(
+            { agentId: input.agentId, sessionId: input.sessionId },
+            ctx.serverDB,
+            ctx.userId,
+            ctx.workspaceId ?? undefined,
+          );
 
       // Scope the search exactly like the topics list (`query`): by agentId
       // directly (the new agent system stamps every topic with an agentId).
@@ -995,6 +1052,7 @@ export const topicRouter = router({
         agentId: input.agentId,
         containerId: resolved.sessionId,
         groupId: input.groupId,
+        workspace: isWorkspace,
       });
     }),
 
@@ -1112,6 +1170,93 @@ export const topicRouter = router({
       await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
 
       return ctx.topicModel.updateMetadata(input.id, input.metadata);
+    }),
+
+  /**
+   * Server-side CAS repair for a topic's device binding
+   * (`DEVICE_BINDING_INVALID` / `DEVICE_BINDING_CONFLICT` / selection-required
+   * repair UI). Rebinding WHERE a conversation runs is an execution-identity
+   * decision — stronger than metadata co-editing — so the gate is:
+   *
+   *   1. the same `topic:update` + use/creator guards `updateTopicMetadata`
+   *      requires (a link-share visitor can never re-pin execution), AND
+   *   2. the caller must be authorized for the NEW device — present in their
+   *      personal registry or the workspace's pooled rows (a co-editor cannot
+   *      redirect execution onto a machine they cannot run on themselves).
+   *
+   * The write is a real compare-and-swap on the effective binding AND the
+   * `bindingRevision` epoch the caller was shown; a mismatch returns
+   * `binding-changed` with the winner's pin, never an overwrite. Workspace
+   * repairs are audited (`topic.device_binding.repaired`).
+   */
+  repairDeviceBinding: topicProcedure
+    .use(withScopedPermission('topic:update'))
+    .input(
+      z.object({
+        /** The device to bind — must be in the caller's authorized registry. */
+        deviceId: z.string().min(1),
+        /**
+         * The effective binding the caller observed (`errorData.deviceId`).
+         * Absent asserts NO binding was in place — the CAS compares it either
+         * way, so a stale expectation loses honestly.
+         */
+        expectedBoundDeviceId: z.string().optional(),
+        /**
+         * The `metadata.bindingRevision` epoch the admission error echoed
+         * back (`errorData.bindingRevision`). When present the CAS requires
+         * it too — pre-revision clients may omit it and bind on the pin
+         * alone.
+         */
+        expectedBindingRevision: z.number().int().optional(),
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
+      await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
+
+      // Execution-identity gate: the new device must be in the caller's
+      // authorized registry — their personal row or a workspace pool row they
+      // can see. (Same lookups referenced-device verification trusts.)
+      const deviceModel = new DeviceModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
+      const authorizedRow =
+        (await deviceModel.findByDeviceId(input.deviceId)) ??
+        (ctx.workspaceId ? await deviceModel.findWorkspaceDeviceById(input.deviceId) : undefined);
+      if (!authorizedRow) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'The requested device is not in your authorized device registry.',
+        });
+      }
+
+      const result = await repairTopicDeviceBinding(ctx.serverDB, {
+        deviceId: input.deviceId,
+        expectedBindingRevision: input.expectedBindingRevision,
+        expectedBoundDeviceId: input.expectedBoundDeviceId,
+        topicId: input.id,
+        workspaceId: ctx.workspaceId ?? undefined,
+      });
+
+      if (result.outcome === 'bound' && ctx.workspaceId) {
+        await new WorkspaceAuditLogModel(ctx.serverDB).create({
+          action: 'topic.binding_repaired',
+          metadata: {
+            bindingRevision: result.bindingRevision,
+            boundDeviceId: result.boundDeviceId,
+            expectedBoundDeviceId: input.expectedBoundDeviceId,
+          },
+          resourceId: input.id,
+          resourceType: 'topic',
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
+
+      return {
+        bindingRevision: result.bindingRevision,
+        boundDeviceId: result.boundDeviceId,
+        outcome: result.outcome === 'bound' ? 'repaired' : 'binding-changed',
+      } as const;
     }),
 
   settleRunningOperation: topicProcedure

@@ -1,5 +1,6 @@
 import type { HeterogeneousAgentModel } from '@orvilo/types';
 
+import type { HeterogeneousAgentPermissionCatalog } from '../types';
 import {
   buildAcpBridgeNotFoundError,
   detectAcpBridgeCommand,
@@ -8,37 +9,6 @@ import {
 } from './acpRuntime';
 import type { StandardAcpConfigOption, StandardAcpSessionOptions } from './standardAcpSession';
 import { StandardAcpSession } from './standardAcpSession';
-
-// bypassPermissions is rejected when the process runs as root (cloud
-// sandboxes); `acceptEdits` keeps headless runs working there — mirrors the
-// fallback the stream-json spawner applied to `--permission-mode`.
-const isRunningAsRoot = () => typeof process.getuid === 'function' && process.getuid() === 0;
-
-/**
- * Session config options that preserve each agent's legacy headless
- * permission posture:
- *   - claude-code  → mode=bypassPermissions (acceptEdits under root)
- *   - codex        → mode=agent-full-access (--dangerously-bypass-approvals-and-sandbox)
- *   - amp          → permission=bypass (--execute's implicit allow-all)
- * Agents without a bypass-shaped config option rely on the session's
- * auto-allow `session/request_permission` policy instead.
- */
-const AGENT_CONFIG_OPTIONS = (agentType: string): StandardAcpConfigOption[] => {
-  switch (agentType) {
-    case 'amp': {
-      return [{ configId: 'permission', value: 'bypass' }];
-    }
-    case 'claude-code': {
-      return [{ configId: 'mode', value: isRunningAsRoot() ? 'acceptEdits' : 'bypassPermissions' }];
-    }
-    case 'codex': {
-      return [{ configId: 'mode', value: 'agent-full-access' }];
-    }
-    default: {
-      return [];
-    }
-  }
-};
 
 /**
  * Build the ACP-mode argv for an agent. Native runtimes prepend their
@@ -284,7 +254,7 @@ export const createStandardAcpSession = (
   return new StandardAcpSession(options, {
     agentType,
     args: [...(options.commandArgs ?? []), ...buildStandardAcpArgs(agentType, options.args)],
-    configOptions: [...AGENT_CONFIG_OPTIONS(agentType), ...(options.configOptions ?? [])],
+    configOptions: options.configOptions,
     spec,
   });
 };
@@ -325,3 +295,26 @@ export const listStandardAcpModels = async (
     requestTimeoutMs: options.timeoutMs,
     sessionId: `${agentType}-model-discovery`,
   }).discoverModels();
+
+/** Read permission choices from a throwaway ACP session without changing its defaults. */
+export const listStandardAcpPermissions = async (
+  agentType: string,
+  options: ListStandardAcpModelsOptions,
+): Promise<HeterogeneousAgentPermissionCatalog[]> =>
+  createStandardAcpSession(agentType, {
+    args: options.args ?? [],
+    clientVersion: options.clientVersion ?? '1.0.0',
+    commandArgs: options.commandArgs,
+    commandPath: options.commandPath,
+    cwd: options.cwd,
+    env: options.env,
+    onEvents: () => {},
+    onRawMessage: () => {},
+    onRuntimeStatus: () => {},
+    onSessionId: () => {},
+    onStderr: () => {},
+    operationId: `${agentType}-permission-discovery`,
+    prompt: '',
+    requestTimeoutMs: options.timeoutMs,
+    sessionId: `${agentType}-permission-discovery`,
+  }).discoverPermissions();

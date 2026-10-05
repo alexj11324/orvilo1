@@ -1,22 +1,19 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
-import { type ActionKeys } from '@/features/ChatInput';
 import { ChatInput, ChatList } from '@/features/Conversation';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import AgentBuilderWelcome from './AgentBuilderWelcome';
+import { builderLeftActions, builderRightActions } from './composerActions';
 import { useResolveFeedbackOnSend } from './SuggestionChips/useResolveFeedbackOnSend';
 import TopicSelector from './TopicSelector';
 
 interface AgentBuilderConversationProps {
   agentId: string;
 }
-const actions: ActionKeys[] = [];
-const rightActions: ActionKeys[] = ['model'];
 
 /**
  * Agent Builder Conversation Component
@@ -39,13 +36,17 @@ const AgentBuilderConversation = memo<AgentBuilderConversationProps>(({ agentId 
       style={{ flex: 1, height: '100%' }}
       onUploadFiles={handleUploadFiles}
     >
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <TopicSelector agentId={agentId} disabled={!canCreate} />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ChatList welcome={<AgentBuilderWelcome disabled={!canCreate} />} />
-        </Flexbox>
-        <ChatInput leftActions={actions} rightActions={rightActions} showControlBar={false} />
-      </Flexbox>
+        </div>
+        <ChatInput
+          leftActions={builderLeftActions}
+          rightActions={builderRightActions}
+          showControlBar={false}
+        />
+      </div>
     </DragUploadZone>
   );
 });

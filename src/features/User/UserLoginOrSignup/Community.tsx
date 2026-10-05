@@ -1,7 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import UserInfo from '../UserInfo';
 import { trackLoginOrSignupClicked } from './trackLoginOrSignupClicked';
@@ -17,11 +17,11 @@ const UserLoginOrSignup = memo<{ onClick: () => void }>(({ onClick }) => {
   return (
     <>
       <UserInfo />
-      <Flexbox paddingBlock={12} paddingInline={16} width={'100%'}>
-        <Button block type={'primary'} onClick={handleClick}>
+      <div className="flex flex-col py-3 px-4 w-full">
+        <Button className="w-full" variant="default" onClick={handleClick}>
           {t('loginOrSignup')}
         </Button>
-      </Flexbox>
+      </div>
     </>
   );
 });

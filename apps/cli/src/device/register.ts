@@ -1,7 +1,7 @@
 import os from 'node:os';
 
 import type { DeviceIdentity } from '@orvilo/device-identity';
-import { deriveDeviceId, deriveScopedFallbackId } from '@orvilo/device-identity';
+import { resolvePersistentDeviceIdentity } from '@orvilo/device-identity';
 
 import { createLambdaClient } from '../api/client';
 import { isTransientNetworkError } from '../utils/error';
@@ -22,22 +22,22 @@ async function withWorkspaceTokenRetry<T>(operation: () => Promise<T>): Promise<
 
 /**
  * Resolve a stable device identity. An explicit `--device-id` wins (lets a user
- * pin a VM to a fixed identity); otherwise derive from the machine id so the
- * same machine + user maps to one device across reconnects. Returns undefined
+ * pin a VM to a fixed identity); otherwise use the shared persistent identity
+ * so the same machine + user maps to one device across reconnects. Returns undefined
  * when neither an explicit id nor a userId is available.
  */
-export function resolveDeviceIdentity(
+export async function resolveDeviceIdentity(
   userId: string | undefined,
   explicitDeviceId?: string,
-): DeviceIdentity | undefined {
+): Promise<DeviceIdentity | undefined> {
   if (explicitDeviceId) return { deviceId: explicitDeviceId, identitySource: 'fallback' };
-  if (userId) return deriveDeviceId(userId);
+  if (userId) return resolvePersistentDeviceIdentity(userId);
   return undefined;
 }
 
 /**
- * Register this device in the server registry. Shared by `lh login` (so the
- * device row exists right after auth) and `lh connect` (so the row exists
+ * Register this device in the server registry. Shared by `orvilo login` (so the
+ * device row exists right after auth) and `orvilo connect` (so the row exists
  * before the WS opens). Best-effort by contract: callers should wrap this in a
  * try/catch and treat any failure as non-fatal.
  */
@@ -60,23 +60,13 @@ type Auth = { serverUrl: string; token: string; tokenType: 'apiKey' | 'jwt' | 's
  * Identity for a WORKSPACE device: derived from the workspaceId (namespaced) so
  * the same physical machine enrolled into a workspace is a distinct device from
  * its personal identity, and stable across reconnects.
- *
- * `fallbackSeed` (a stable per-install id, e.g. `loadOrCreateConnectionId()`)
- * keeps the derivation stable on machines where the OS machine id is
- * unreadable — enroll and restore re-derive this identity and must agree. The
- * seed is namespaced per workspace principal, never used raw.
  */
-export function resolveWorkspaceDeviceIdentity(
+export async function resolveWorkspaceDeviceIdentity(
   workspaceId: string,
   explicitDeviceId?: string,
-  fallbackSeed?: string,
-): DeviceIdentity {
+): Promise<DeviceIdentity> {
   if (explicitDeviceId) return { deviceId: explicitDeviceId, identitySource: 'fallback' };
-  return deriveDeviceId(`workspace:${workspaceId}`, {
-    fallbackId: fallbackSeed
-      ? deriveScopedFallbackId(fallbackSeed, `workspace:${workspaceId}`)
-      : undefined,
-  });
+  return resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
 }
 
 /**
@@ -94,7 +84,7 @@ export async function mintWorkspaceConnectToken(
 /**
  * Register this machine as a device of the given workspace (member+).
  * `visibility: 'public'` enrolls it into the shared pool visible to every
- * member (`lh connect --workspace <id> --public`); omitted → the server
+ * member (`orvilo connect --workspace <id> --public`); omitted → the server
  * default (private, visible only to the enroller).
  */
 export async function registerWorkspaceDevice(

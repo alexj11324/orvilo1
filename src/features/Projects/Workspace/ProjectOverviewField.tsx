@@ -1,7 +1,8 @@
-import { Input } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   input: css`
@@ -69,7 +70,7 @@ export function ProjectOverviewField({ kind, onSave, value }: ProjectOverviewFie
         aria-busy={saving || undefined}
         aria-invalid={failed || undefined}
         aria-label={t(kind === 'name' ? 'rename.nameLabel' : 'overview.projectSummary')}
-        className={styles.input}
+
         maxLength={kind === 'name' ? 255 : 280}
         placeholder={kind === 'summary' ? t('create.summaryPlaceholder') : undefined}
         readOnly={saving}

@@ -18,7 +18,7 @@ describe('MCP subscription watchdog renewal', () => {
   const binding: McpEventBinding = {
     callbackToken: 'callback',
     callbackUrl: 'https://receiver.example/events/callback',
-    connectorId: 'connector',
+    connectorId: '00000000-0000-4000-8000-0000000000c1',
     cursor: null,
     eventArguments: {},
     eventName: 'message',
@@ -63,11 +63,13 @@ describe('MCP subscription watchdog renewal', () => {
       CREATE TABLE mcp_event_triggers (tenant_id text,workspace_id text,user_id text,task_id text,subscription_id text,source_id text);
       CREATE TABLE tasks (id text,workspace_id text,created_by_user_id text);
       CREATE TABLE workspace_members (workspace_id text,user_id text,role text,deleted_at bigint,suspended_at bigint);
-      CREATE TABLE user_connectors (id text,workspace_id text,user_id text,is_enabled boolean,status text,agent_id text);
-      INSERT INTO mcp_event_triggers VALUES ('workspace','workspace','user','task','binding','connector');
+      -- Real schema types: user_connectors.id is uuid, source_id stays text —
+      -- the scope query must join across the type boundary.
+      CREATE TABLE user_connectors (id uuid,workspace_id text,user_id text,is_enabled boolean,status text,agent_id text);
+      INSERT INTO mcp_event_triggers VALUES ('workspace','workspace','user','task','binding','00000000-0000-4000-8000-0000000000c1');
       INSERT INTO tasks VALUES ('task','workspace','user');
       INSERT INTO workspace_members VALUES ('workspace','user','member',NULL,NULL);
-      INSERT INTO user_connectors VALUES ('connector','workspace','user',true,'connected',NULL);
+      INSERT INTO user_connectors VALUES ('00000000-0000-4000-8000-0000000000c1','workspace','user',true,'connected',NULL);
     `,
     );
     repository = new SqlMcpEventBindingRepository(database);
@@ -113,7 +115,7 @@ describe('MCP subscription watchdog renewal', () => {
       );
       await repository.update(copy, copy.id, 'pending', { state: 'active' }, 0);
       await database.query(
-        `INSERT INTO mcp_event_triggers VALUES ('workspace','workspace','user','task',$1,'connector')`,
+        `INSERT INTO mcp_event_triggers VALUES ('workspace','workspace','user','task',$1,'00000000-0000-4000-8000-0000000000c1')`,
         [copy.id],
       );
     }

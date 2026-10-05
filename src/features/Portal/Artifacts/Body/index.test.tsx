@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import type { CSSProperties, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ArtifactDisplayMode } from '@/store/chat/slices/portal/initialState';
@@ -19,28 +18,22 @@ const mockArtifactState = vi.hoisted(() => ({
   setState: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Flexbox: ({ children, style }: { children: ReactNode; style?: CSSProperties }) => (
-    <div data-testid={style?.overflow === 'auto' ? 'artifact-scroll-container' : undefined}>
-      {children}
-    </div>
-  ),
-  Highlighter: ({
-    animated,
-    children,
+vi.mock('@/components/reui/code-block/code-block', () => ({
+  CodeBlock: ({
+    code,
     language,
+    streaming,
   }: {
-    animated?: boolean;
-    children: ReactNode;
+    code?: string;
     language?: string;
+    streaming?: boolean;
   }) => (
     <pre
-      data-animated={String(Boolean(animated))}
+      data-animated={String(Boolean(streaming))}
       data-language={language}
       data-testid="artifact-code"
     >
-      {children}
+      {code}
     </pre>
   ),
 }));
@@ -97,7 +90,7 @@ describe('ArtifactsUI', () => {
     expect(screen.getByTestId('artifact-code')).toHaveTextContent('<script>');
     expect(screen.getByTestId('artifact-code')).toHaveAttribute('data-animated', 'true');
     expect(screen.getByTestId('artifact-code')).toHaveAttribute('data-language', 'html');
-    expect(screen.getByTestId('artifact-scroll-container')).toBeDefined();
+    expect(document.querySelector('div[style*="overflow: auto"]')).not.toBeNull();
     expect(screen.queryByTestId('artifact-preview')).toBeNull();
     expect(mockArtifactState.setState).not.toHaveBeenCalled();
   });

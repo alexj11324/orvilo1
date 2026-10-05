@@ -13,7 +13,9 @@ import {
   resolveRemotePlatformRuntime,
 } from '@orvilo/heterogeneous-agents/scanHost';
 import { type ILocalSystemService, LocalSystemExecutionRuntime } from '@orvilo/tool-runtime';
+import { serializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { sleep } from '@orvilo/utils/sleep';
+import { app as electronApp } from 'electron';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
@@ -50,29 +52,29 @@ function parseHermesSessionId(stderr: string): string | undefined {
 }
 
 /**
- * Inject the lh-notify protocol into the first turn of a new hetero-agent session.
- * Tells the agent binary how to push results back to the Orvilo chat UI via `lh notify`.
+ * Inject the orvilo-notify protocol into the first turn of a new hetero-agent session.
+ * Tells the agent binary how to push results back to the Orvilo chat UI via `orvilo notify`.
  * Ported directly from apps/cli/src/tools/heteroTask.ts so desktop and CLI stay in sync.
  */
-function buildNotifyProtocol(lhPath: string, topicId: string): string {
+function buildNotifyProtocol(cliPath: string, topicId: string): string {
   return (
     `## Context: This task was dispatched by Orvilo\n\n` +
     `This conversation / task was sent to you by the **Orvilo platform** on behalf of a user. You are running as a background agent; the user is waiting for your response inside the Orvilo chat interface.\n\n` +
     `**When to call notify**: any time you have something meaningful to tell the user — a key finding, a decision you made, a result, a question, or your final answer.\n\n` +
     `**What to hide**: internal work details such as tool call sequences, file reads, intermediate command output, retries, or low-level reasoning steps.\n\n` +
     `## Sending messages back to the user\n\n` +
-    `Use the \`${lhPath} notify\` command. All your updates appear as a **single message bubble** in the UI — create it once and update it in place.\n\n` +
+    `Use the \`${cliPath} notify\` command. All your updates appear as a **single message bubble** in the UI — create it once and update it in place.\n\n` +
     `**Step 1 — Open the bubble on your first meaningful update** (captures the messageId):\n` +
     `\`\`\`\n` +
-    `MSG_ID=$(${lhPath} notify --topic ${topicId} --role assistant --content "Starting..." --json | grep -o '"messageId":"[^"]*"' | cut -d'"' -f4)\n` +
+    `MSG_ID=$(${cliPath} notify --topic ${topicId} --role assistant --content "Starting..." --json | grep -o '"messageId":"[^"]*"' | cut -d'"' -f4)\n` +
     `\`\`\`\n\n` +
     `**Step 2 — Update the same bubble as you make progress**:\n` +
     `\`\`\`\n` +
-    `${lhPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "Still working..."\n` +
+    `${cliPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "Still working..."\n` +
     `\`\`\`\n\n` +
     `**Step 3 — Replace with your complete, final response when done**:\n` +
     `\`\`\`\n` +
-    `${lhPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "<your full response here>"\n` +
+    `${cliPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "<your full response here>"\n` +
     `\`\`\`\n\n` +
     `Rules:\n` +
     `- Always use \`--json\` on the first call and capture \`messageId\` from the output.\n` +
@@ -249,7 +251,9 @@ export default class GatewayConnectionCtr extends ControllerModule {
     deviceId: string;
     hostname: string;
     platform: string;
+    userId?: string;
   }> {
+    await this.gatewayReady;
     return this.service.getDeviceInfo();
   }
 
@@ -320,7 +324,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       // Reuse this device's own logged-in session as the run identity. The
       // access token is a full user OIDC token (7-day TTL, longer than any run),
       // which heteroIngest/heteroFinish now accept (ownership-gated), AND which
-      // gives the spawned Claude Code's nested `lh` calls a real login state —
+      // gives the spawned Claude Code's nested `orvilo` calls a real login state —
       // unlike the narrow `hetero-operation` token, which only works for the
       // ingest endpoints. We deliberately do NOT pass the refresh token to the
       // CLI: the device stays the single refresher (refresh tokens rotate), and
@@ -335,12 +339,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
       // heteroIngest/heteroFinish -> server -> Gateway -> clients. Wait until
       // the process has actually spawned (or emitted an early error) before
       // acknowledging the server request.
-      return await this.heterogeneousAgentCtr.spawnLhHeteroExec({
+      return await this.heterogeneousAgentCtr.spawnOrviloHeteroExec({
         agentType: request.agentType,
         assistantMessageId: request.assistantMessageId,
         args: request.args,
         builtinTools: request.builtinTools,
         cwd: request.cwd,
+        env: request.env,
         imageList: request.imageList,
         jwt,
         operationId: request.operationId,
@@ -348,6 +353,9 @@ export default class GatewayConnectionCtr extends ControllerModule {
         // tool callbacks (`hetero:tool:exec`) even though `jwt` above was
         // swapped for this device's user token (see the comment above).
         operationJwt: request.jwt,
+        // Prime adapter: when the dispatch carries a descriptor the host
+        // launches `orvilo prime exec` — the resolved device executes the run.
+        prime: request.prime,
         prompt: request.prompt,
         resumeFallbackSystemContext: request.resumeFallbackSystemContext,
         resumeSessionId: request.resumeSessionId,
@@ -438,9 +446,16 @@ export default class GatewayConnectionCtr extends ControllerModule {
           logger.error(`Failed to approve project preview root ${root}:`, error);
         }
       },
-      // Workspace share (server-driven enroll/unenroll RPCs): the service owns
-      // the gateway connections, so both handlers route straight to it.
+      // Device-scoped MCP queries: manifest probes and installability checks
+      // only mean anything on this host — reuse McpCtr's IPC implementations,
+      // wrapped in the same `{json}` envelope the dispatcher ships to the server.
+      checkMcpInstallable: (params) =>
+        this.mcpCtr.validMcpServerInstallable(serializeMcpIpcPayload(params)),
       enrollWorkspace: (params) => this.service.enrollWorkspace(params),
+      getStdioMcpServerManifest: (params) =>
+        this.mcpCtr.getStdioMcpServerManifest(serializeMcpIpcPayload(params)),
+      getStreamableMcpServerManifest: (params) =>
+        this.mcpCtr.getStreamableMcpServerManifest(serializeMcpIpcPayload(params)),
       getLocalFilePreview: (params) => this.localFileCtr.getLocalFilePreview(params),
       readExternalAssetForPublish: (params) =>
         this.localFileCtr.readExternalAssetForPublish(params),
@@ -459,6 +474,8 @@ export default class GatewayConnectionCtr extends ControllerModule {
       },
       getProjectFileIndex: (params) => this.localFileCtr.getProjectFileIndex(params),
       listHeterogeneousAgentModels: (params) => this.heterogeneousAgentCtr.listModels(params),
+      listHeterogeneousAgentPermissions: (params) =>
+        this.heterogeneousAgentCtr.listPermissions(params),
       searchProjectFiles: (params) => this.localFileCtr.searchProjectFiles(params),
       unenrollWorkspace: (params) => this.service.unenrollWorkspace(params),
       // Skill-archive cache (`prepareSkillDirectory` RPC): reuse LocalFileCtr's
@@ -794,7 +811,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
   // ─── Platform Agent Task Execution ───
   //
   // Ported from apps/cli/src/tools/heteroTask.ts so that devices connected via
-  // the desktop gateway can execute openclaw/hermes tasks without requiring `lh connect`.
+  // the desktop gateway can execute openclaw/hermes tasks without requiring `orvilo connect`.
 
   private async runHeteroTask(args: {
     agentId?: string;
@@ -829,7 +846,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       this.remoteServerConfigCtr.getAccessToken(),
     ]);
 
-    // Inject auth + workspace scope into child env so `lh notify` can
+    // Inject auth + workspace scope into child env so `orvilo notify` can
     // authenticate AND target the same workspace as the dispatched topic
     // (without ORVILO_WORKSPACE_ID, the CLI's notify falls back to personal
     // mode and the workspace topic 404s).
@@ -851,13 +868,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
       if (!runtime.available) {
         throw new Error('OpenClaw executable not found');
       }
-      const lhPath = this.resolveLhPath();
+      const cliPath = this.resolveCliPath();
       const openclawAgent = platformAgentId?.trim() || process.env['OPENCLAW_AGENT_ID'] || 'main';
 
       // Always inject the notify protocol so openclaw knows how to report results
       // back to the Orvilo UI — even if the previous turn failed and the session
       // history was not cleanly committed.
-      const enrichedPrompt = `${prompt}\n\n${buildNotifyProtocol(lhPath, topicId)}`;
+      const enrichedPrompt = `${prompt}\n\n${buildNotifyProtocol(cliPath, topicId)}`;
 
       // Kill any existing openclaw process for this topicId before spawning a new one.
       // openclaw serialises session writes; a concurrent process holding the session
@@ -1177,7 +1194,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
 
   private async cancelHeteroTask(args: { signal?: string; taskId: string }): Promise<string> {
     const { signal = 'SIGINT', taskId } = args;
-    const localExec = await this.heterogeneousAgentCtr.cancelLhHeteroExec({
+    const localExec = await this.heterogeneousAgentCtr.cancelOrviloHeteroExec({
       operationId: taskId,
       signal: signal as HeterogeneousAgentCancellationSignal,
     });
@@ -1207,7 +1224,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
   /**
    * Send a notify message to the server so the frontend receives agent output or
    * a completion signal. Uses the tRPC agentNotify.notify endpoint directly —
-   * this is the desktop counterpart to `lh notify` used by the CLI path.
+   * this is the desktop counterpart to `orvilo notify` used by the CLI path.
    */
   private async sendNotify(params: {
     agentId?: string;
@@ -1247,7 +1264,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
         method: 'POST',
       });
     } catch {
-      // Fire-and-forget: openclaw's own `lh notify` calls are the primary channel.
+      // Fire-and-forget: openclaw's own `orvilo notify` calls are the primary channel.
     }
   }
 
@@ -1275,8 +1292,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
     };
     setDesktopUserAgentHeader(headers);
 
+    // Stamp the adapter version the server keeps as capability evidence —
+    // `adapterVersion` feeds admission's `minAdapterVersion` checks so a
+    // stale client is judged from its registered version, not guessed.
+    const payload = { ...info, adapterVersion: electronApp.getVersion() };
+
     await fetch(`${serverUrl}/trpc/lambda/device.register`, {
-      body: JSON.stringify({ json: info }),
+      body: JSON.stringify({ json: payload }),
       headers,
       method: 'POST',
     });
@@ -1363,11 +1385,11 @@ export default class GatewayConnectionCtr extends ControllerModule {
 
   // ─── Platform Agent Helpers ───
 
-  private resolveLhPath(): string {
+  private resolveCliPath(): string {
     try {
-      return execFileSync('which', ['lh'], { encoding: 'utf8' }).trim();
+      return execFileSync('which', ['orvilo'], { encoding: 'utf8' }).trim();
     } catch {
-      return 'lh';
+      return 'orvilo';
     }
   }
 }

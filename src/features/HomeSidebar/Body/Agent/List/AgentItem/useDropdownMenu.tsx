@@ -1,6 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { SessionDefaultGroup, type SidebarAgentLabel, type SidebarVisibility } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -26,8 +23,11 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useAgentTransferMenuItem } from '@/business/client/hooks/useAgentTransferMenuItem';
 import { useAgentTransferToMemberMenuItem } from '@/business/client/hooks/useAgentTransferToMemberMenuItem';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { openEditingPopover } from '@/features/EditingPopover/store';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -82,7 +82,7 @@ export const useAgentDropdownMenu = ({
   title,
   userId,
   visibility,
-}: UseAgentDropdownMenuParams): (() => MenuProps['items']) => {
+}: UseAgentDropdownMenuParams): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['chat', 'common', 'setting']);
   const navigate = useWorkspaceAwareNavigate();
 
@@ -183,7 +183,7 @@ export const useAgentDropdownMenu = ({
         ...(canEdit
           ? [
               {
-                icon: <Icon icon={pinned ? PinOff : Pin} />,
+                icon: pinned ? <PinOff size={16} /> : <Pin size={16} />,
                 key: 'pin',
                 label: t(pinned ? 'pinOff' : 'pin'),
                 onClick: () => pinAgent(id, !pinned),
@@ -192,7 +192,7 @@ export const useAgentDropdownMenu = ({
             ]
           : []),
         {
-          icon: <Icon icon={PictureInPicture2Icon} />,
+          icon: <PictureInPicture2Icon size={16} />,
           key: 'openInNewWindow',
           label: t('openInNewWindow'),
           onClick: ({ domEvent }: any) => {
@@ -207,7 +207,7 @@ export const useAgentDropdownMenu = ({
               {
                 // Renaming is config co-editing, which stays collaborative for
                 // shared agents — only ownership actions remain creator/owner-scoped.
-                icon: <Icon icon={Pen} />,
+                icon: <Pen size={16} />,
                 key: 'rename',
                 label: t('rename', { ns: 'common' }),
                 onClick: (info: any) => {
@@ -223,7 +223,7 @@ export const useAgentDropdownMenu = ({
         ...(canCreate
           ? [
               {
-                icon: <Icon icon={LucideCopy} />,
+                icon: <LucideCopy size={16} />,
                 key: 'duplicate',
                 label: t('duplicate', { ns: 'common' }),
                 onClick: ({ domEvent }: any) => {
@@ -239,7 +239,7 @@ export const useAgentDropdownMenu = ({
               {
                 children: [
                   ...sessionCustomGroups.map(({ id: groupId, name }) => ({
-                    icon: group === groupId ? <Icon icon={Check} /> : <div />,
+                    icon: group === groupId ? <Check size={16} /> : <div />,
                     key: groupId,
                     label: name,
                     onClick: async () => {
@@ -256,7 +256,7 @@ export const useAgentDropdownMenu = ({
                     sfSymbol: group === groupId ? 'checkmark' : undefined,
                   })),
                   {
-                    icon: isDefault ? <Icon icon={Check} /> : <div />,
+                    icon: isDefault ? <Check size={16} /> : <div />,
                     key: 'defaultList',
                     label: t('defaultList'),
                     onClick: async () => {
@@ -271,7 +271,7 @@ export const useAgentDropdownMenu = ({
                   },
                   { type: 'divider' as const },
                   {
-                    icon: <Icon icon={LucidePlus} />,
+                    icon: <LucidePlus size={16} />,
                     key: 'createGroup',
                     label: t('sessionGroup.createGroup'),
                     onClick: ({ domEvent }: any) => {
@@ -281,7 +281,7 @@ export const useAgentDropdownMenu = ({
                     sfSymbol: 'folder.badge.plus',
                   },
                 ],
-                icon: <Icon icon={FolderInputIcon} />,
+                icon: <FolderInputIcon size={16} />,
                 key: 'moveGroup',
                 label: t('sessionGroup.moveGroup'),
                 sfSymbol: 'folder',
@@ -322,7 +322,7 @@ export const useAgentDropdownMenu = ({
                             width: 14,
                           }}
                         >
-                          {assignedLabelIds.has(label.id) ? <Icon icon={Check} size={14} /> : null}
+                          {assignedLabelIds.has(label.id) ? <Check size={14} /> : null}
                         </span>
                         <span
                           style={{
@@ -361,7 +361,7 @@ export const useAgentDropdownMenu = ({
                   ...(canCreateLabel
                     ? [
                         {
-                          icon: <Icon icon={LucidePlus} />,
+                          icon: <LucidePlus size={16} />,
                           key: 'createLabel',
                           label: t('agentLabel.create', { ns: 'common' }),
                           onClick: ({ domEvent }: any) => {
@@ -381,7 +381,7 @@ export const useAgentDropdownMenu = ({
                   // settings tree and the personal one both render the same
                   // page, which reads the active workspace itself.
                   {
-                    icon: <Icon icon={Settings2Icon} />,
+                    icon: <Settings2Icon size={16} />,
                     key: 'manageLabels',
                     label: t('agentLabel.manage', { ns: 'common' }),
                     onClick: ({ domEvent }: any) => {
@@ -391,7 +391,7 @@ export const useAgentDropdownMenu = ({
                     sfSymbol: 'gearshape',
                   },
                 ],
-                icon: <Icon icon={TagIcon} />,
+                icon: <TagIcon size={16} />,
                 key: 'labels',
                 label: t('agentLabel.menuTitle', { ns: 'common' }),
                 sfSymbol: 'tag',
@@ -408,7 +408,7 @@ export const useAgentDropdownMenu = ({
                 ? [
                     { type: 'divider' as const },
                     {
-                      icon: <Icon icon={UsersIcon} />,
+                      icon: <UsersIcon size={16} />,
                       key: 'permission',
                       label: t('permission.page.entry', { ns: 'setting' }),
                       onClick: ({ domEvent }: any) => {
@@ -422,7 +422,7 @@ export const useAgentDropdownMenu = ({
               ...(showPublishAction
                 ? [
                     {
-                      icon: <Icon icon={GlobeIcon} />,
+                      icon: <GlobeIcon size={16} />,
                       key: 'publishToWorkspace',
                       label: t('agent.publishToWorkspace', {
                         defaultValue: 'Publish to Workspace',
@@ -472,7 +472,7 @@ export const useAgentDropdownMenu = ({
               ...(showMakePrivateAction
                 ? [
                     {
-                      icon: <Icon icon={EyeOffIcon} />,
+                      icon: <EyeOffIcon size={16} />,
                       key: 'makePrivate',
                       label: t('makePrivate', { ns: 'common' }),
                       onClick: async ({ domEvent }: any) => {
@@ -505,7 +505,7 @@ export const useAgentDropdownMenu = ({
                     { type: 'divider' as const },
                     {
                       danger: true,
-                      icon: <Icon icon={Trash} />,
+                      icon: <Trash size={16} />,
                       key: 'delete',
                       label: t('delete', { ns: 'common' }),
                       onClick: ({ domEvent }: any) => {
@@ -532,7 +532,7 @@ export const useAgentDropdownMenu = ({
                 : []),
             ]
           : []),
-      ] as MenuProps['items'],
+      ] as SidebarMenuItems,
     [
       activeWorkspaceId,
       anchor,

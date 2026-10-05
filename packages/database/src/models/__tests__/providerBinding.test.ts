@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomBytes } from 'node:crypto';
 
-import { providerBindingConfigSchema } from '@orvilo/types';
+import { PROVIDER_CONFIG_ANCHOR_MODEL, providerBindingConfigSchema } from '@orvilo/types';
 import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -69,12 +69,40 @@ afterEach(async () => {
 
 describe('Provider binding persistence', () => {
   it('validates direct model writes before persistence', async () => {
-    const invalid = { ...config(), enabled: true } as unknown as ReturnType<typeof config>;
+    // Armed rows are legal now (the restored provider plane mirrors the
+    // provider's enable state onto model rows) — validate on a rule that
+    // still holds: sandbox-target bindings may only carry https endpoints.
+    const invalid = { ...config(), endpoint: 'http://insecure.internal/v1' };
     await expect(model.create(invalid)).rejects.toThrow();
     expect(await model.list()).toEqual([]);
     const row = await model.create(config());
     await expect(model.update(row.id, 1, invalid)).rejects.toThrow();
     expect(await model.find(row.id)).toMatchObject({ revision: 1, config: { enabled: false } });
+  });
+
+  it('round-trips the armed flag and providerSettings on the anchor sentinel', async () => {
+    const armed = providerBindingConfigSchema.parse({
+      ...config(),
+      enabled: true,
+      model: PROVIDER_CONFIG_ANCHOR_MODEL,
+      providerSettings: {
+        checkModel: 'gpt-check',
+        enabled: true,
+        settings: { sdkType: 'anthropic' },
+        sort: 2,
+        source: 'custom',
+      },
+    });
+    const row = await model.create(armed);
+    const stored = (await model.find(row.id))!.config;
+    expect(stored.enabled).toBe(true);
+    expect(stored.providerSettings).toMatchObject({
+      checkModel: 'gpt-check',
+      enabled: true,
+      settings: { sdkType: 'anthropic' },
+      sort: 2,
+      source: 'custom',
+    });
   });
 
   it('retains defaults for omitted effort, mode and speed', async () => {
@@ -161,8 +189,13 @@ describe('Provider API against real persistence', () => {
   it('fails closed on connection checking and rejects stale revisions', async () => {
     const api = await caller(owner);
     const { data } = await api.create(config());
-    await expect(api.checkConnection({ id: data.id, revision: 1 })).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
+    // The real broker reports a failed provider probe as `unavailable`, not a
+    // green check — the wired composition resolves rather than throwing.
+    const check = await api.checkConnection({ id: data.id, revision: 1 });
+    expect(check).toMatchObject({
+      bindingId: data.id,
+      bindingRevision: 1,
+      status: 'unavailable',
     });
     await api.update({ id: data.id, revision: 1, config: { ...config(), name: 'Updated' } });
     await expect(api.checkConnection({ id: data.id, revision: 1 })).rejects.toMatchObject({

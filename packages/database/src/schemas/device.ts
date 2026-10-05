@@ -54,7 +54,7 @@ export const devices = pgTable(
     // were shared from. deviceIds are one-way hashes of (machine, principal),
     // so without this link the server cannot correlate a personal row with its
     // workspace twins. NULL for personal rows and for devices enrolled directly
-    // on the machine (`lh connect --workspace`).
+    // on the machine (`orvilo connect --workspace`).
     sharedFromDeviceId: varchar('shared_from_device_id', { length: 64 }),
 
     /** Machine-derived id (sha256 truncated to 32 chars; 64 leaves room for fallback randomUUID) */
@@ -72,6 +72,18 @@ export const devices = pgTable(
     /** @deprecated superseded by `workingDirs` (structured). Kept as a legacy column; no longer read/written. */
     recentCwds: text('recent_cwds').array().default([]).notNull(),
     workingDirs: jsonb('working_dirs').$type<WorkingDirEntry[]>().default([]),
+
+    /**
+     * Last capability evidence the device reported (`supportedTools` etc. from
+     * `queryDeviceSystemInfo` or registration) — the admission candidate set
+     * reads it as `registry:snapshot` evidence when no live probe answers, so
+     * an offline-but-known device degrades to `pending`, never fabricated.
+     */
+    capabilitySnapshot: jsonb('capability_snapshot').$type<{ supportedTools?: string[] }>(),
+    /** Device client version self-reported at registration (`app.getVersion()`). */
+    adapterVersion: varchar('adapter_version', { length: 32 }),
+    /** When `capabilitySnapshot`/`adapterVersion` were last verified fresh. */
+    lastVerifiedAt: timestamptz('last_verified_at'),
 
     firstSeenAt: timestamptz('first_seen_at').defaultNow().notNull(),
     lastSeenAt: timestamptz('last_seen_at').defaultNow().notNull(),

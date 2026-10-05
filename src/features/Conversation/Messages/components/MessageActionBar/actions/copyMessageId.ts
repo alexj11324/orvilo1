@@ -1,17 +1,17 @@
-import { copyToClipboard } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { Braces } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { defineAction } from '../defineAction';
 
 /**
  * Dev-tool action (visible only with Advanced Tools enabled): copies this
- * message's id — the handle for `lh` queries, eval cases and bug reports.
+ * message's id — the handle for `orvilo` queries, eval cases and bug reports.
  *
  * For a group message the useful id is the underlying assistant message, not
  * the aggregate group, same as `copyOperationId`.

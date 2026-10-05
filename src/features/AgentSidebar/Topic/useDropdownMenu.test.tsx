@@ -16,6 +16,12 @@ const confirmModalMock = vi.hoisted(() => vi.fn());
 const openWorkspaceDeleteAllModalMock = vi.hoisted(() => vi.fn());
 const removeSessionTopicsMock = vi.hoisted(() => vi.fn());
 const removeUnstarredTopicMock = vi.hoisted(() => vi.fn());
+const groupMock = vi.hoisted(() => ({ mode: 'byTime', ids: [] as string[] }));
+const globalMock = vi.hoisted(() => ({
+  collapsedKeys: [] as string[],
+  updateSystemStatus: vi.fn(),
+}));
+
 const userMock = vi.hoisted(() => ({ currentUserId: 'user-1' as string | undefined }));
 
 const chatStoreMock = vi.hoisted(() => ({
@@ -42,9 +48,13 @@ vi.mock('@/store/user', () => ({
   useUserStore: () => userMock.currentUserId,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: confirmModalMock,
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   toast: messageMock,
 }));
 
@@ -80,20 +90,28 @@ vi.mock('@/store/chat', () => ({
     }),
 }));
 
+vi.mock('./hooks/useAgentTopicGroupMode', () => ({
+  useAgentTopicGroupMode: () => ({ topicGroupMode: groupMock.mode }),
+}));
+
 vi.mock('@/store/chat/selectors', () => ({
-  topicSelectors: { currentTopics: (s: { topics: Array<Record<string, unknown>> }) => s.topics },
+  topicSelectors: {
+    currentTopics: (s: { topics: Array<Record<string, unknown>> }) => s.topics,
+    groupedTopicsForSidebar: () => () => groupMock.ids.map((id) => ({ id })),
+  },
 }));
 
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       topicPageSize: 20,
-      updateSystemStatus: vi.fn(),
+      updateSystemStatus: globalMock.updateSystemStatus,
     }),
 }));
 
 vi.mock('@/store/global/selectors', () => ({
   systemStatusSelectors: {
+    collapsedTopicGroupKeys: () => () => globalMock.collapsedKeys,
     topicPageSize: (s: { topicPageSize: number }) => s.topicPageSize,
   },
 }));
@@ -105,6 +123,10 @@ const getMenuItem = (
 
 describe('useTopicActionsDropdownMenu', () => {
   beforeEach(() => {
+    groupMock.mode = 'byTime';
+    groupMock.ids = [];
+    globalMock.collapsedKeys = [];
+    globalMock.updateSystemStatus.mockReset();
     permissionMock.create_content = true;
     permissionMock.edit_own_content = true;
     workspaceMock.activeWorkspaceId = null;
@@ -119,6 +141,39 @@ describe('useTopicActionsDropdownMenu', () => {
     chatStoreMock.updateTopicStatus.mockReset();
     messageMock.info.mockReset();
     messageMock.success.mockReset();
+  });
+
+  it('collapses and expands all visible groups through the menu while preserving hidden groups', () => {
+    groupMock.ids = ['today', 'yesterday'];
+    globalMock.collapsedKeys = ['older'];
+    const { result, rerender } = renderHook(() => useTopicActionsDropdownMenu());
+    const collapseItem = getMenuItem(result.current()!, 'toggleGroups');
+
+    expect(collapseItem).toMatchObject({ label: 'sidebar.collapseAll' });
+    if (collapseItem && 'onClick' in collapseItem) collapseItem.onClick?.({} as never);
+    expect(globalMock.updateSystemStatus).toHaveBeenLastCalledWith({
+      collapsedTopicGroupKeysByMode: { byTime: ['older', 'today', 'yesterday'] },
+    });
+
+    globalMock.collapsedKeys = ['older', 'today', 'yesterday'];
+    rerender();
+    const expandItem = getMenuItem(result.current()!, 'toggleGroups');
+    expect(expandItem).toMatchObject({ label: 'sidebar.expandAll' });
+    if (expandItem && 'onClick' in expandItem) expandItem.onClick?.({} as never);
+    expect(globalMock.updateSystemStatus).toHaveBeenLastCalledWith({
+      collapsedTopicGroupKeysByMode: { byTime: ['older'] },
+    });
+  });
+
+  it.each([
+    ['flat', ['first', 'second']],
+    ['byTime', ['only']],
+    ['byTime', []],
+  ])('hides the group toggle for %s with %j groups', (mode, ids) => {
+    groupMock.mode = mode;
+    groupMock.ids = ids;
+    const { result } = renderHook(() => useTopicActionsDropdownMenu());
+    expect(getMenuItem(result.current()!, 'toggleGroups')).toBeUndefined();
   });
 
   it('disables topic write management actions for workspace viewers', () => {
@@ -184,11 +239,11 @@ describe('useTopicActionsDropdownMenu', () => {
     await confirmModalMock.mock.calls[0][0].onOk();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledTimes(2);
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'own-merged',
     });
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'other-merged',
     });
 
@@ -249,7 +304,7 @@ describe('useTopicActionsDropdownMenu', () => {
     if (archiveItem && 'onClick' in archiveItem) await archiveItem.onClick?.({} as never);
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledOnce();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'own-merged',
     });
 
@@ -301,7 +356,7 @@ describe('useTopicActionsDropdownMenu', () => {
 
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledOnce();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'merged',
     });
     expect(chatStoreMock.refreshTopic).toHaveBeenCalledOnce();

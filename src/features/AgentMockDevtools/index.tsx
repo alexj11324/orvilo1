@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useMatches } from 'react-router';
 
@@ -23,9 +23,9 @@ const AgentMockPanel = memo(() => {
   return (
     <div className={devDockPanelStyles.root}>
       {!isAgentTopicRoute && (
-        <Text className={styles.notice} fontSize={12} type={'secondary'}>
+        <div className={cn('text-[12px]', 'text-muted-foreground', styles.notice)}>
           Open an agent topic conversation to replay mock cases into it.
-        </Text>
+        </div>
       )}
       <Controls />
     </div>

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import {
   type HeterogeneousAgentRuntimeState,
@@ -10,10 +8,11 @@ import {
 } from '@orvilo/electron-client-ipc';
 import { resolveHeteroCliAgentType } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { ActivityIcon, CircleAlertIcon, RadioTowerIcon, TimerResetIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { ActivityIcon, RadioTowerIcon, TimerResetIcon } from 'lucide-react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import HeteroDeviceSwitcher from '@/features/ChatInput/ControlBar/HeteroDeviceSwitcher';
 import WorkspaceControls from '@/features/ChatInput/ControlBar/WorkspaceControls';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
@@ -23,6 +22,9 @@ import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
+import { SimpleTooltip } from '../../SimpleTooltip';
+import ApprovalMode from '../ApprovalMode';
+import { PermissionSelector } from './PermissionSelector';
 import { ClaudeCodeQuotaMenu, CodexQuotaMenu } from './QuotaMenu';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -38,25 +40,6 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 0;
     padding-inline: 4px;
   `,
-  fullAccess: css`
-    cursor: default;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  // On a narrow bar the "full access" badge collapses to just its icon — the
-  // hover tooltip still spells it out. Saves a chunk of horizontal space that
-  // the truncating workspace cluster can use instead.
   fullAccessLabel: css`
     @container runtimebar (width < 600px) {
       display: none;
@@ -110,6 +93,12 @@ const styles = createStaticStyles(({ css }) => ({
 
     &::-webkit-scrollbar {
       display: none;
+    }
+
+    @container runtimebar (width < 720px) {
+      [data-workspace-label] {
+        max-width: clamp(0px, calc(33.333cqw - 100px), 120px);
+      }
     }
   `,
   rightGroup: css`
@@ -171,9 +160,9 @@ const HeteroControlBar = memo(() => {
   if (!canConfigureResource) {
     if (!agentId || isLoading) return null;
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
+      <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
         <HeteroDeviceSwitcher agentId={agentId} />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -185,38 +174,39 @@ const HeteroControlBar = memo(() => {
   if (!isDesktop) {
     if (!agentId) return null;
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} className={styles.leftGroup} gap={4}>
+      <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
+        <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
           <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
-        </Flexbox>
-        {shouldShowClaudeQuota && quotaDeviceId && (
-          <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
-            <ClaudeCodeQuotaMenu
-              agentId={agentId}
-              deviceId={quotaDeviceId}
-              env={heteroProvider?.env}
-            />
-          </Flexbox>
-        )}
-      </Flexbox>
+        </div>
+        <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
+          {heteroProvider?.type === 'orvilo' ? (
+            <ApprovalMode />
+          ) : (
+            <PermissionSelector agentId={agentId} />
+          )}
+          {shouldShowClaudeQuota && quotaDeviceId && (
+            <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
+              <ClaudeCodeQuotaMenu
+                agentId={agentId}
+                deviceId={quotaDeviceId}
+                env={heteroProvider?.env}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
   if (!agentId || isLoading) {
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} gap={4} justify={'space-between'}>
+      <div className={cx('flex flex-row items-center gap-1 justify-between', styles.bar)}>
         <Skeleton style={{ height: 22, minWidth: 100, width: 100 }} />
         <Skeleton style={{ height: 22, minWidth: 80, width: 80 }} />
-      </Flexbox>
+      </div>
     );
   }
 
-  const fullAccessBadge = (
-    <div className={styles.fullAccess}>
-      <Icon icon={CircleAlertIcon} size={14} />
-      <span className={styles.fullAccessLabel}>{tChat('heteroAgent.fullAccess.label')}</span>
-    </div>
-  );
   // Codex quota still needs the local CLI (spawned over IPC), so it stays
   // desktop-local; the runtime badge likewise reports this desktop's own ACP
   // runtime, not a remote device's.
@@ -245,27 +235,29 @@ const HeteroControlBar = memo(() => {
         ? TimerResetIcon
         : ActivityIcon;
   const sdkRuntimeBadge = shouldShowSdkRuntime ? (
-    <Tooltip
+    <SimpleTooltip
       title={tChat('heteroAgent.claudeSdkRuntime.tooltip', {
         count: runtimeStatus.activeTasks.length,
         state: tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`),
       })}
     >
       <div className={cx(styles.sdkRuntime, sdkRuntimeClassName)}>
-        <Icon icon={sdkRuntimeIcon} size={14} />
+        <span className="anticon" role="img">
+          {createElement(sdkRuntimeIcon, { size: 14, width: 14, height: 14, fill: 'transparent' })}
+        </span>
         <span className={styles.fullAccessLabel}>
           {tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`)}
         </span>
       </div>
-    </Tooltip>
+    </SimpleTooltip>
   ) : null;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
-      <Flexbox horizontal align={'center'} className={styles.leftGroup} gap={4}>
+    <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
+      <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
         <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
-      </Flexbox>
-      <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
+      </div>
+      <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
         {shouldShowCodexQuota && (
           <CodexQuotaMenu command={heteroProvider?.command} env={heteroProvider?.env} />
         )}
@@ -277,9 +269,13 @@ const HeteroControlBar = memo(() => {
           />
         )}
         {sdkRuntimeBadge}
-        <Tooltip title={tChat('heteroAgent.fullAccess.tooltip')}>{fullAccessBadge}</Tooltip>
-      </Flexbox>
-    </Flexbox>
+        {heteroProvider?.type === 'orvilo' ? (
+          <ApprovalMode />
+        ) : (
+          <PermissionSelector agentId={agentId} />
+        )}
+      </div>
+    </div>
   );
 });
 

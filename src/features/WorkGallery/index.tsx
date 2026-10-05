@@ -1,13 +1,14 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Avatar, Button } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { PackageOpenIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { formatWorkVersionCost } from '@/utils/workVersionCost';
@@ -140,19 +141,17 @@ const AgentFilter = memo<AgentFilterProps>(({ active, agentId, onSelect }) => {
   return (
     <Button
       className={cx(styles.agentFilter, active && styles.agentFilterActive)}
-      size={'small'}
-      type={'text'}
-      icon={
-        <Avatar
-          emojiScaleWithBackground
-          avatar={agent.avatar}
-          background={agent.backgroundColor}
-          shape={'square'}
-          size={20}
-        />
-      }
+      size="sm"
+      variant="ghost"
       onClick={() => onSelect(agentId)}
     >
+      <Avatar
+        emojiScaleWithBackground
+        avatar={agent.avatar}
+        background={agent.backgroundColor}
+        shape={'square'}
+        size={20}
+      />
       {agent.title}
     </Button>
   );
@@ -236,8 +235,8 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
   const renderBody = () => {
     if (error && items.length === 0)
       return (
-        <Center className={styles.emptyState} gap={12}>
-          <Empty
+        <div className={cx('flex flex-col items-center justify-center gap-3', styles.emptyState)}>
+          <SimpleEmpty
             description={t('work.loadError')}
             icon={TriangleAlertIcon}
             title={t('work.loadErrorTitle')}
@@ -245,30 +244,30 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
           <button className={styles.retry} type={'button'} onClick={() => reload()}>
             {t('work.retry')}
           </button>
-        </Center>
+        </div>
       );
 
     if (items.length === 0)
       return (
-        <Center className={styles.emptyState}>
-          <Empty
+        <div className={cx('flex flex-col items-center justify-center', styles.emptyState)}>
+          <SimpleEmpty
             description={t('work.empty.desc')}
             icon={PackageOpenIcon}
             title={t('work.empty.title')}
           />
-        </Center>
+        </div>
       );
 
     if (filteredItems.length === 0)
       return (
-        <Center className={styles.emptyState}>
-          <Empty description={t('work.agentEmpty.desc')} title={t('work.agentEmpty.title')} />
-        </Center>
+        <div className={cx('flex flex-col items-center justify-center', styles.emptyState)}>
+          <SimpleEmpty description={t('work.agentEmpty.desc')} title={t('work.agentEmpty.title')} />
+        </div>
       );
 
     return (
       <>
-        <Flexbox gap={32}>
+        <div className="flex flex-col gap-8">
           {groups.map((group) => (
             <section key={group.key}>
               <div className={styles.groupHeader}>
@@ -294,12 +293,12 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
               </div>
             </section>
           ))}
-        </Flexbox>
+        </div>
         <div aria-hidden ref={sentinelRef} style={{ height: 1 }} />
         {isLoadingMore ? (
-          <Flexbox style={{ marginBlockStart: 12 }}>
+          <div className="flex flex-col" style={{ marginBlockStart: 12 }}>
             <WorkGalleryCardsSkeleton count={4} />
-          </Flexbox>
+          </div>
         ) : error ? (
           <div className={styles.loadMoreError}>
             <span>{t('work.loadMoreError')}</span>
@@ -315,13 +314,13 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
   return isLoadingInitial && items.length === 0 ? (
     <WorkGallerySkeleton />
   ) : (
-    <Flexbox className={styles.container}>
+    <div className={cx('flex flex-col', styles.container)}>
       {agentIds.length > 0 && (
-        <Flexbox horizontal align={'center'} className={styles.filterBar} gap={4}>
+        <div className={cx('flex flex-row items-center gap-1', styles.filterBar)}>
           <Button
             className={cx(styles.agentFilter, !activeAgentId && styles.agentFilterActive)}
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             onClick={() => setActiveAgentId(null)}
           >
             {t('work.agentFilter.all')}
@@ -334,10 +333,10 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
               onSelect={setActiveAgentId}
             />
           ))}
-        </Flexbox>
+        </div>
       )}
-      <Flexbox className={styles.scroll}>{renderBody()}</Flexbox>
-    </Flexbox>
+      <div className={cx('flex flex-col', styles.scroll)}>{renderBody()}</div>
+    </div>
   );
 });
 

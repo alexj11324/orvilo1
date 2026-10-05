@@ -1,10 +1,8 @@
 'use client';
-
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
@@ -26,18 +24,19 @@ const PasswordRow = () => {
       anchor={'profile-password'}
       label={t('profile.password')}
       action={
-        <Text
+        <Button
+          className="text-sm"
           style={{ cursor: 'pointer', fontSize: 13 }}
+          type="button"
+          variant="link"
           onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}
         >
           {hasPasswordAccount ? t('profile.changePassword') : t('profile.setPassword')}{' '}
-          <Icon icon={ExternalLinkIcon} size={12} style={{ verticalAlign: 'middle' }} />
-        </Text>
+          <ExternalLinkIcon className="shrink-0" size={12} style={{ verticalAlign: 'middle' }} />
+        </Button>
       }
     >
-      <Text fontSize={12} type={'secondary'}>
-        {hasPasswordAccount ? '••••••••' : '--'}
-      </Text>
+      <span>{hasPasswordAccount ? '••••••••' : '--'}</span>
     </ProfileRow>
   );
 };

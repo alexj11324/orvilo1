@@ -1,21 +1,13 @@
 'use client';
 
-import { ContextMenuTrigger, Flexbox } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import React, { memo, type MouseEvent, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -49,6 +41,7 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
     isLoading,
   } = useCreateMenuItems();
 
@@ -57,10 +50,14 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
   // to private here. Session-group creation lives in the "More" dropdown.
   const addMenuItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem({ visibility: 'private' });
+    const groupFromDescription = createGroupFromDescriptionMenuItem({
+      visibility: 'private',
+    });
 
     return [
       createAgentMenuItem({ visibility: 'private' }),
       createGroupChatMenuItem({ visibility: 'private' }),
+      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
       // Same discovery entries as the workspace-public section — the agent
       // list opens on the Private tab so the surface matches this bucket.
@@ -72,6 +69,7 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
   ]);
 
   const handleOpenConfigGroupModal = useCallback(() => {
@@ -95,45 +93,41 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <ContextMenuTrigger items={dropdownMenu}>
-        <AccordionHeader>
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-            <Flexbox horizontal align="center" gap={4}>
-              <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-                {t('navPanel.privateAgents', { defaultValue: 'Private' })}
-              </Text>
-              {isRevalidating && <NeuralNetworkLoading size={14} />}
-            </Flexbox>
-          </AccordionTrigger>
-          <Flexbox
-            horizontal
-            align="center"
-            gap={2}
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-            )}
-          >
-            <ActionIcon
-              icon={ArrowRight}
-              size={'small'}
+      <SidebarContextMenu items={dropdownMenu}>
+        <div className="flex items-center">
+          <div className="min-w-0 flex-1">
+            <AccordionTrigger>
+              <div className="flex items-center gap-[4px]">
+                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                  {t('navPanel.privateAgents', { defaultValue: 'Private' })}
+                </span>
+                {isRevalidating && <NeuralNetworkLoading size={14} />}
+              </div>
+            </AccordionTrigger>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <Button
+              aria-label={t('navPanel.viewAllAgents')}
+              size="icon"
               title={t('navPanel.viewAllAgents')}
+              variant="ghost"
               onClick={handleViewAll}
-            />
+            >
+              <ArrowRight />
+            </Button>
             <Actions
               addMenuItems={addMenuItems}
               dropdownMenu={dropdownMenu}
               isLoading={isLoading}
             />
-          </Flexbox>
-        </AccordionHeader>
-      </ContextMenuTrigger>
-      <AccordionPanel>
+          </div>
+        </div>
+      </SidebarContextMenu>
+      <AccordionContent>
         <Suspense fallback={<SkeletonList rows={3} />}>
           <PrivateList />
         </Suspense>
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

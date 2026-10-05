@@ -1,13 +1,11 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
-import { Progress } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import BubblesLoading from '@/components/BubblesLoading';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
 
 import type { IdentityMemoryViewModel } from './identityMemoryViewModel';
@@ -59,15 +57,15 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
     if (isEmpty) return null;
 
     return (
-      <Flexbox className={styles.container}>
-        <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
-          <Flexbox flex={1}>
+      <div className={cn('flex', 'flex-col', styles.container)}>
+        <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
+          <div className="flex flex-col flex-1">
             <div className={styles.title}>{title || fallbackTitle}</div>
-          </Flexbox>
-          {identityType && <Tag>{identityType}</Tag>}
-          {relationship && <Tag color={'info'}>{relationship}</Tag>}
+          </div>
+          {identityType && <Badge>{identityType}</Badge>}
+          {relationship && <Badge variant="info">{relationship}</Badge>}
           {loading && <NeuralNetworkLoading size={20} />}
-        </Flexbox>
+        </div>
 
         {hasIdentityContent ? (
           <>
@@ -82,40 +80,43 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
             )}
 
             {(role || episodicDate || confidence !== undefined) && (
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.section}
-                gap={16}
+              <div
+                className={cn('flex', 'items-center', 'gap-4', 'flex-wrap', styles.section)}
                 style={{ paddingBlock: 12, paddingInline: 12 }}
-                wrap={'wrap'}
               >
                 {role && (
-                  <Flexbox horizontal align={'center'} className={styles.chip} gap={6}>
+                  <div className={cn('flex', 'items-center', 'gap-[6px]', styles.chip)}>
                     <span>🎓</span>
                     <span>{role}</span>
-                  </Flexbox>
+                  </div>
                 )}
                 {episodicDate && (
-                  <Flexbox horizontal align={'center'} gap={6}>
+                  <div className="flex items-center gap-[6px]">
                     <span>📅</span>
-                    <Text fontSize={12} type={'secondary'}>
-                      {episodicDate}
-                    </Text>
-                  </Flexbox>
+                    <div className="text-[12px] text-muted-foreground">{episodicDate}</div>
+                  </div>
                 )}
                 {confidence !== undefined && (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text fontSize={12} type={'secondary'} weight={500}>
-                      Confidence
-                    </Text>
-                    <Progress percent={confidence} showInfo={false} size={[2, 12]} steps={5} />
-                    <Text fontSize={12} type={'secondary'}>
-                      {confidence}%
-                    </Text>
-                  </Flexbox>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[12px] text-muted-foreground font-medium">Confidence</div>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, index) => (
+                        <div
+                          className="h-[2px] w-[12px] rounded-full"
+                          key={index}
+                          style={{
+                            background:
+                              index < Math.round((confidence * 5) / 100)
+                                ? 'var(--primary)'
+                                : 'var(--muted)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">{confidence}%</div>
+                  </div>
                 )}
-              </Flexbox>
+              </div>
             )}
 
             {sourceEvidence && (
@@ -125,21 +126,18 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
             )}
 
             {labels.length > 0 && (
-              <Flexbox
-                horizontal
-                className={styles.section}
-                gap={8}
+              <div
+                className={cn('flex', 'gap-2', 'flex-wrap', styles.section)}
                 style={{ paddingBlock: 12, paddingInline: 12 }}
-                wrap={'wrap'}
               >
                 {labels.map((label, index) => (
-                  <Tag key={index}>{label}</Tag>
+                  <Badge key={index}>{label}</Badge>
                 ))}
-              </Flexbox>
+              </div>
             )}
           </>
         ) : (
-          <Flexbox className={styles.content} gap={8}>
+          <div className={cn('flex', 'flex-col', 'gap-2', styles.content)}>
             {!summary && loading ? (
               <BubblesLoading />
             ) : (
@@ -147,17 +145,17 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
                 {summary && <div className={styles.summary}>{summary}</div>}
                 {details && <StreamingMarkdown>{details}</StreamingMarkdown>}
                 {tags.length > 0 && (
-                  <Flexbox horizontal className={styles.tags} gap={8} wrap={'wrap'}>
+                  <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                     {tags.map((tag, index) => (
-                      <Tag key={index}>{tag}</Tag>
+                      <Badge key={index}>{tag}</Badge>
                     ))}
-                  </Flexbox>
+                  </div>
                 )}
               </>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

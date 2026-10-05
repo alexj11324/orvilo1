@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { Badge } from '@/components/reui/badge';
 import type {
   DocumentHistoryListItem,
   DocumentHistorySaveSource,
@@ -197,21 +197,21 @@ const HistorySidebarRow = memo<HistorySidebarRowProps>(
             onSelect(item.id);
           }}
         >
-          <Flexbox gap={2}>
-            <Flexbox horizontal align={'center'} gap={4}>
-              <Text className={styles.time}>{formatHistoryRowTime(item.savedAt)}</Text>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1">
+              <div className={cn(styles.time)}>{formatHistoryRowTime(item.savedAt)}</div>
               {item.isCurrent && (
-                <Tag className={styles.tag} variant={'borderless'}>
+                <Badge className={cn(styles.tag, 'bg-transparent')} variant="secondary">
                   {t('pageEditor.history.current')}
-                </Tag>
+                </Badge>
               )}
               <span className={styles.source}>{saveSourceLabels[item.saveSource]}</span>
-            </Flexbox>
-            <Text className={styles.meta} type={'secondary'}>
+            </div>
+            <div className={cn('text-muted-foreground', styles.meta)}>
               {authorInfo?.fullName ? `${authorInfo.fullName} · ` : ''}
               {dayjs(item.savedAt).fromNow()}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -246,9 +246,9 @@ const HistorySidebar = memo<HistorySidebarProps>(
     return (
       <div className={styles.container}>
         {groups.map((group) => (
-          <Flexbox gap={0} key={group.key}>
+          <div className="flex flex-col gap-0" key={group.key}>
             <div className={styles.groupHeader}>
-              <Text type={'secondary'}>{group.label}</Text>
+              <div className="text-muted-foreground">{group.label}</div>
             </div>
             <div className={styles.group}>
               <div className={styles.rail} />
@@ -262,7 +262,7 @@ const HistorySidebar = memo<HistorySidebarProps>(
                 />
               ))}
             </div>
-          </Flexbox>
+          </div>
         ))}
       </div>
     );

@@ -1,5 +1,3 @@
-import type { TaskListItem } from '@orvilo/types';
-
 import { buildTaskRows, type TaskRow } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 
 import type { WorkQueryResultTask } from './workQueryPaging';
@@ -9,11 +7,15 @@ import type { WorkQueryResultTask } from './workQueryPaging';
  * A missing parent means the row stands on its own; a malformed cycle also
  * falls back to depth zero instead of pushing rows indefinitely to the right.
  */
+type HydratedWorkQueryTask = WorkQueryResultTask & {
+  participants: NonNullable<WorkQueryResultTask['participants']>;
+};
+
 export const workQueryHierarchyRows = (
   groupTasks: WorkQueryResultTask[],
   allTasks: WorkQueryResultTask[],
-): TaskRow[] => {
-  const hydratedTasks: TaskListItem[] = allTasks.map((task) => ({
+): TaskRow<HydratedWorkQueryTask>[] => {
+  const hydratedTasks: HydratedWorkQueryTask[] = allTasks.map((task) => ({
     ...task,
     participants: task.participants ?? [],
   }));

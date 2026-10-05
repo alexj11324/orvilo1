@@ -1,6 +1,3 @@
-import type { MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
 import {
@@ -17,13 +14,15 @@ import {
   Trash,
   Wand2,
 } from 'lucide-react';
-import { useCallback } from 'react';
+import { createElement, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { openRenameModal } from '@/components/RenameModal';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openShareModal } from '@/features/ShareModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -51,7 +50,7 @@ export const useDropdownMenu = ({
   status,
   topicId,
   topicTitle,
-}: UseDropdownMenuProps): (() => MenuProps['items']) => {
+}: UseDropdownMenuProps): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['common', 'topic']);
 
   const appOrigin = useAppOrigin();
@@ -67,21 +66,21 @@ export const useDropdownMenu = ({
     autoRenameTopicTitle,
     duplicateTopic,
     favoriteTopic,
-    markTopicCompleted,
+    archiveTopic,
     removeTopic,
-    unmarkTopicCompleted,
+    unarchiveTopic,
     updateTopicTitle,
   ] = useChatStore((s) => [
     s.autoRenameTopicTitle,
     s.duplicateTopic,
     s.favoriteTopic,
-    s.markTopicCompleted,
+    s.archiveTopic,
     s.removeTopic,
-    s.unmarkTopicCompleted,
+    s.unarchiveTopic,
     s.updateTopicTitle,
   ]);
 
-  const isCompleted = status === 'completed';
+  const isArchived = status === 'archived';
   const handleOpenShareModal = useCallback(() => {
     void openShareModal({ context: { threadId: null, topicId } });
   }, [topicId]);
@@ -91,26 +90,26 @@ export const useDropdownMenu = ({
       [
         {
           disabled: !canEditTopic,
-          icon: <Icon icon={isCompleted ? ArchiveRestore : Archive} />,
-          key: 'markCompleted',
-          label: isCompleted
-            ? t('actions.unmarkCompleted', { ns: 'topic' })
-            : t('actions.markCompleted', { ns: 'topic' }),
+          icon: createElement(isArchived ? ArchiveRestore : Archive),
+          key: 'archive',
+          label: isArchived
+            ? t('actions.unarchive', { ns: 'topic' })
+            : t('actions.archive', { ns: 'topic' }),
           onClick: () => {
-            if (isCompleted) {
-              unmarkTopicCompleted(topicId);
+            if (isArchived) {
+              unarchiveTopic(topicId);
             } else {
-              markTopicCompleted(topicId);
+              archiveTopic(topicId);
             }
           },
-          sfSymbol: isCompleted ? 'tray.and.arrow.up' : 'archivebox',
+          sfSymbol: isArchived ? 'tray.and.arrow.up' : 'archivebox',
         },
         {
           type: 'divider' as const,
         },
         {
           disabled: !canEditTopic,
-          icon: <Icon icon={Star} />,
+          icon: <Star />,
           key: 'favorite',
           label: fav
             ? t('actions.unfavorite', { ns: 'topic' })
@@ -125,7 +124,7 @@ export const useDropdownMenu = ({
         },
         {
           disabled: !canEditTopic,
-          icon: <Icon icon={Wand2} />,
+          icon: <Wand2 />,
           key: 'autoRename',
           label: t('actions.autoRename', { ns: 'topic' }),
           onClick: () => {
@@ -135,7 +134,7 @@ export const useDropdownMenu = ({
         },
         {
           disabled: !canEditTopic,
-          icon: <Icon icon={PencilLine} />,
+          icon: <PencilLine />,
           key: 'rename',
           label: t('rename'),
           onClick: () => {
@@ -157,7 +156,7 @@ export const useDropdownMenu = ({
           ? [
               {
                 disabled: !agentId,
-                icon: <Icon icon={PanelTop} />,
+                icon: <PanelTop />,
                 key: 'openInNewTab',
                 label: t('actions.openInNewTab', { ns: 'topic' }),
                 onClick: () => {
@@ -173,7 +172,7 @@ export const useDropdownMenu = ({
               },
               {
                 disabled: !agentId,
-                icon: <Icon icon={ExternalLink} />,
+                icon: <ExternalLink />,
                 key: 'openInNewWindow',
                 label: t('actions.openInNewWindow', { ns: 'topic' }),
                 onClick: () => {
@@ -188,7 +187,7 @@ export const useDropdownMenu = ({
             ]
           : []),
         {
-          icon: <Icon icon={Hash} />,
+          icon: <Hash />,
           key: 'copySessionId',
           label: t('actions.copySessionId', { ns: 'topic' }),
           onClick: () => {
@@ -198,7 +197,7 @@ export const useDropdownMenu = ({
         },
         {
           disabled: !agentId,
-          icon: <Icon icon={Link2} />,
+          icon: <Link2 />,
           key: 'copyLink',
           label: t('actions.copyLink', { ns: 'topic' }),
           onClick: () => {
@@ -210,7 +209,7 @@ export const useDropdownMenu = ({
         },
         {
           disabled: !canCreateTopic,
-          icon: <Icon icon={LucideCopy} />,
+          icon: <LucideCopy />,
           key: 'duplicate',
           label: t('actions.duplicate', { ns: 'topic' }),
           onClick: () => {
@@ -222,7 +221,7 @@ export const useDropdownMenu = ({
         },
         {
           disabled: !canEditTopic,
-          icon: <Icon icon={Share2} />,
+          icon: <Share2 />,
           key: 'share',
           label: t('share'),
           onClick: handleOpenShareModal,
@@ -234,7 +233,7 @@ export const useDropdownMenu = ({
         {
           danger: true,
           disabled: !canEditTopic,
-          icon: <Icon icon={Trash} />,
+          icon: <Trash />,
           key: 'delete',
           label: t('delete'),
           onClick: () => {
@@ -249,7 +248,7 @@ export const useDropdownMenu = ({
           },
           sfSymbol: 'trash',
         },
-      ].filter(Boolean) as MenuProps['items'],
+      ].filter(Boolean) as SidebarMenuItems,
     [
       addTab,
       activeWorkspaceSlug,
@@ -262,8 +261,8 @@ export const useDropdownMenu = ({
       favoriteTopic,
       fav,
       handleOpenShareModal,
-      isCompleted,
-      markTopicCompleted,
+      isArchived,
+      archiveTopic,
       navigate,
       onClose,
       onDelete,
@@ -272,7 +271,7 @@ export const useDropdownMenu = ({
       t,
       topicId,
       topicTitle,
-      unmarkTopicCompleted,
+      unarchiveTopic,
       updateTopicTitle,
     ],
   );

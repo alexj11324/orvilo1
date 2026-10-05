@@ -1,18 +1,16 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import isEqual from 'fast-deep-equal';
-import { InfoIcon, PlayIcon } from 'lucide-react';
-import React, { memo, useCallback, useEffect, useMemo } from 'react';
+import { InfoIcon, PlusIcon } from 'lucide-react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import urlJoin from 'url-join';
 
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { usePermission } from '@/hooks/usePermission';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useAgentGroupStore } from '@/store/agentGroup';
@@ -39,7 +37,6 @@ const MemberProfile = memo(() => {
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
 
   const { gid } = useParams<{ gid: string }>();
-  const groupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
   const currentGroup = useAgentGroupStore(
     (s) => agentGroupSelectors.getGroupById(gid ?? '')(s),
     isEqual,
@@ -48,7 +45,6 @@ const MemberProfile = memo(() => {
     (s) => agentGroupSelectors.getGroupAgents(gid ?? '')(s),
     isEqual,
   );
-  const router = useQueryRoute();
 
   // Check if the current agent is the supervisor
   const isSupervisor = currentGroup?.supervisorAgentId === agentId;
@@ -67,6 +63,15 @@ const MemberProfile = memo(() => {
     }),
     [config?.systemRole, config?.editorData],
   );
+
+  // The prompt canvas only mounts on demand — a member without instructions
+  // renders a compact affordance instead of a page-high empty editor.
+  const [contentRevealed, setContentRevealed] = useState(false);
+  const agentIdRef = useRef(agentId);
+  if (agentIdRef.current !== agentId) {
+    agentIdRef.current = agentId;
+    setContentRevealed(false);
+  }
 
   // Wrap updateAgentConfigById for saving editor content
   const updateContent = useCallback(
@@ -93,6 +98,8 @@ const MemberProfile = memo(() => {
     if (!editor || !agentBuilderContentUpdate) return;
     if (agentBuilderContentUpdate.entityId !== agentId) return;
 
+    // The builder is writing the prompt — surface the canvas for it.
+    setContentRevealed(true);
     // Directly set the editor content
     editor.setDocument('markdown', agentBuilderContentUpdate.content);
 
@@ -103,21 +110,19 @@ const MemberProfile = memo(() => {
   return (
     <>
       {/* External agent warning or AutoSaveHint */}
-      <Flexbox height={66} width={'100%'}>
+      <div className="flex flex-col" style={{ height: 66, width: '100%' }}>
         {isExternal && !isSupervisor && (
-          <Alert
-            icon={<Icon icon={InfoIcon} />}
-            style={{ width: '100%' }}
-            title={t('group.profile.externalAgentWarning', { ns: 'chat' })}
-            type="secondary"
-            variant={'outlined'}
-          />
+          <Alert style={{ width: '100%' }} variant="info">
+            <InfoIcon />
+            <AlertTitle>{t('group.profile.externalAgentWarning', { ns: 'chat' })}</AlertTitle>
+          </Alert>
         )}
-        <Flexbox paddingBlock={12}>
+        <div className="flex flex-col py-3">
           <AutoSaveHint />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox
+        </div>
+      </div>
+      <div
+        className="flex flex-col"
         style={{ cursor: 'default', marginBottom: 12 }}
         onClick={(e) => {
           e.stopPropagation();
@@ -126,40 +131,35 @@ const MemberProfile = memo(() => {
         {/* Header: Avatar + Name */}
         <AgentHeader disabled={!canEdit} readOnly={isSupervisor} />
         <AgentTool />
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          justify={'flex-start'}
-          style={{ marginTop: 16 }}
+      </div>
+      <Separator />
+      {/* Main Content: Prompt Editor — hidden until the member actually has
+          instructions or the user asks for them, so the column never renders a
+          large empty editor. */}
+      {config?.systemRole?.trim() || contentRevealed ? (
+        <EditorCanvas
+          disabled={!canEdit}
+          editor={editor}
+          editorData={editorData}
+          entityId={agentId}
+          placeholder={
+            isSupervisor
+              ? t('group.profile.supervisorPlaceholder', { ns: 'chat' })
+              : t('settingAgent.prompt.placeholder')
+          }
+          onContentChange={onContentChange}
+        />
+      ) : canEdit ? (
+        <Button
+          className="w-full justify-start"
+          style={{ borderStyle: 'dashed' }}
+          variant="outline"
+          onClick={() => setContentRevealed(true)}
         >
-          <Button
-            disabled={!canEdit}
-            icon={PlayIcon}
-            type={'primary'}
-            onClick={() => {
-              if (!groupId) return;
-              router.push(urlJoin('/group', groupId));
-            }}
-          >
-            {t('startConversation')}
-          </Button>
-        </Flexbox>
-      </Flexbox>
-      <Divider />
-      {/* Main Content: Prompt Editor */}
-      <EditorCanvas
-        disabled={!canEdit}
-        editor={editor}
-        editorData={editorData}
-        entityId={agentId}
-        placeholder={
-          isSupervisor
-            ? t('group.profile.supervisorPlaceholder', { ns: 'chat' })
-            : t('settingAgent.prompt.placeholder')
-        }
-        onContentChange={onContentChange}
-      />
+          <PlusIcon data-icon="inline-start" />
+          {t('group.profile.addInstructions', { ns: 'chat' })}
+        </Button>
+      ) : null}
     </>
   );
 });

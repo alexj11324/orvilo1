@@ -1,11 +1,12 @@
-import { createModal } from '@lobehub/ui/base-ui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createModal } from '@/components/Modal';
 
 import { openEditorModal } from '.';
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  ...(await import('~base-ui-stubs')).baseUiStubs,
+  createModal: vi.fn(() => ({ close: vi.fn(), open: vi.fn() })),
 }));
 
 vi.mock('./EditorModalContent', () => ({ default: () => null }));

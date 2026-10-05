@@ -1,5 +1,6 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { Component, type PropsWithChildren } from 'react';
+
+import { Button } from '@/components/ui/button';
 
 interface PanelErrorBoundaryState {
   error?: Error;
@@ -18,7 +19,7 @@ class PanelErrorBoundary extends Component<PropsWithChildren, PanelErrorBoundary
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16 }}>
         <span style={{ fontSize: 12 }}>Panel crashed: {this.state.error.message}</span>
         <Button
-          size={'small'}
+          size="sm"
           style={{ alignSelf: 'flex-start' }}
           onClick={() => this.setState({ error: undefined })}
         >

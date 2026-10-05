@@ -428,6 +428,9 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
   // tool when `disableSelfFeedbackIntentTool` is passed.
   it('mounts the self-feedback spec when the caller pins it', async () => {
     mockGetAgentConfig.mockResolvedValue({
+      // Mount-capable external binding — builtin 'orvilo' runs the
+      // no-tools Prime adapter and mounts no tool surface.
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
       chatConfig: {},
       id: 'agent-inbox',
       model: 'gpt-4',
@@ -495,6 +498,9 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
 
   it('should inject page-agent runtime for regular agents in page scope', async () => {
     mockGetAgentConfig.mockResolvedValue({
+      // Mount-capable external binding — builtin 'orvilo' runs the
+      // no-tools Prime adapter and mounts no tool surface.
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
       chatConfig: { enableHistoryCount: true },
       id: 'agent-custom',
       model: 'gpt-4',

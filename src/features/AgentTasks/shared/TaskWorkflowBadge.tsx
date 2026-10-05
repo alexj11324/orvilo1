@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TaskWorkflowBadgeProps {
   executionStatus: string;
@@ -17,10 +17,11 @@ interface TaskWorkflowBadgeProps {
 }
 
 /**
- * The workflow state as a bare status glyph — what a task row or board card
+ * The Issue Status as a bare workflow glyph — what a task row or board card
  * draws in its one status slot (Linear shows a single status mark per row).
- * `undefined` when the task carries no provider workflow state, so the caller
- * falls back to the execution-status glyph.
+ * `workflowCategory` is the canonical Issue Status: every categorized task
+ * renders its category mark, linked or not. `undefined` only when the task
+ * has no category at all.
  */
 export const useTaskWorkflowGlyph = ({
   executionStatus,
@@ -28,7 +29,7 @@ export const useTaskWorkflowGlyph = ({
   workflowStateId,
 }: TaskWorkflowBadgeProps): (StatusVisual & { label: ReactNode }) | undefined => {
   const { t } = useTranslation('chat');
-  if (!workflowStateId || !workflowCategory) return undefined;
+  if (!workflowCategory) return undefined;
 
   const categoryLabel = t(`taskDetail.workflow.category.${workflowCategory}` as never);
   const deliveryPending = workflowCategory === 'done' && executionStatus !== 'completed';
@@ -36,19 +37,22 @@ export const useTaskWorkflowGlyph = ({
   return {
     ...WORKFLOW_CATEGORY_VISUALS[workflowCategory],
     label: (
-      <Flexbox gap={4} style={{ maxWidth: 320 }}>
-        <Text fontSize={12} type={'secondary'}>
+      <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
+        <div className="text-xs text-muted-foreground">
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
-        </Text>
-        <Text fontSize={12} style={{ fontFamily: cssVar.fontFamilyCode }} type={'secondary'}>
-          {workflowStateId}
-        </Text>
-        {deliveryPending && (
-          <Text fontSize={12} type={'warning'}>
-            {t('taskDetail.workflow.deliveryPendingHelp')}
-          </Text>
+        </div>
+        {workflowStateId && (
+          <div
+            className="text-xs text-muted-foreground"
+            style={{ fontFamily: cssVar.fontFamilyCode }}
+          >
+            {workflowStateId}
+          </div>
         )}
-      </Flexbox>
+        {deliveryPending && (
+          <div className="text-xs text-warning">{t('taskDetail.workflow.deliveryPendingHelp')}</div>
+        )}
+      </div>
     ),
   };
 };
@@ -70,16 +74,21 @@ const TaskWorkflowBadge = memo<TaskWorkflowBadgeProps>((props) => {
       : categoryLabel;
 
   return (
-    <Tooltip title={glyph.label}>
-      <Tag
-        data-task-workflow-state={workflowCategory}
-        icon={<Icon color={glyph.color} icon={glyph.icon} size={12} />}
-        size={'small'}
-        style={{ flexShrink: 0 }}
-      >
-        {label}
-      </Tag>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <Tag data-task-workflow-state={workflowCategory} size="sm" style={{ flexShrink: 0 }}>
+                {createElement(glyph.icon, { color: glyph.color, size: 12 })}
+                {label}
+              </Tag>
+            </span>
+          }
+        />
+        <TooltipContent>{glyph.label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

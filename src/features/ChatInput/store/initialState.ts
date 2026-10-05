@@ -1,15 +1,18 @@
 import { type IEditor, type SlashOptions } from '@lobehub/editor';
 import { type ChatInputProps } from '@lobehub/editor/react';
-import { type MenuProps } from '@lobehub/ui';
 import { type OpenAIChatMessage, type VoiceMessageRecording } from '@orvilo/types';
 
 import { type ActionKeys } from '@/features/ChatInput';
+
+import type { ActionDropdownMenu } from '../ActionBar/components/ActionDropdown';
 
 export type SendButtonHandler = (params: {
   clearContent: () => void;
   editor: IEditor;
   getEditorData: () => Record<string, any> | undefined;
   getMarkdownContent: () => string;
+  /** Recover a cleared send draft without replacing newer input or another conversation. */
+  restoreDraft: () => void;
 }) => Promise<void> | void;
 
 export type VoiceMessageSendHandler = (recording: VoiceMessageRecording) => boolean;
@@ -83,7 +86,7 @@ export interface PublicState {
   resolveSendBlocked?: () => boolean;
   rightActions: ActionKeys[];
   sendButtonProps?: SendButtonProps;
-  sendMenu?: MenuProps;
+  sendMenu?: ActionDropdownMenu;
   showTypoBar?: boolean;
   /**
    * Slash menu placement: 'bottom' for home page (input in center), 'top' for page input (at bottom)

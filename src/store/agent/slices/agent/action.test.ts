@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { CHAT_GROUP_SESSION_ID_PREFIX } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type PropsWithChildren } from 'react';
@@ -6,11 +5,13 @@ import { SWRConfig, unstable_serialize } from 'swr';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as activeWorkspaceModule from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { setScopedMutate } from '@/libs/swr';
 import { agentConfigKeys, builtinAgentKeys } from '@/libs/swr/keys';
 import * as cacheScopeModule from '@/libs/swr/useCacheScope';
 import { agentService } from '@/services/agent';
 import { agentDocumentService } from '@/services/agentDocument';
+import { homeService } from '@/services/home';
 import { useGlobalStore } from '@/store/global';
 import { useUserStore } from '@/store/user';
 import { type OrviloAgentConfig } from '@/types/agent';
@@ -32,6 +33,19 @@ vi.mock('@/services/agent', () => ({
   },
 }));
 
+vi.mock('@/services/home', () => ({
+  homeService: {
+    getSidebarAgentList: vi.fn(() => ({
+      groups: [],
+      pinned: [],
+      privateGroups: [],
+      privatePinned: [],
+      privateUngrouped: [],
+      ungrouped: [],
+    })),
+  },
+}));
+
 vi.mock('@/services/agentDocument', () => ({
   agentDocumentService: {
     listDocuments: vi.fn(),
@@ -43,7 +57,7 @@ vi.mock('@/services/agentDocument', () => ({
   resolveAgentDocumentsContext: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));
@@ -383,23 +397,46 @@ describe('AgentSlice Actions', () => {
       expect(result.current.availableAgents).toBeUndefined();
     });
 
-    it('should seed a personal name matching the user language', async () => {
+    it('should seed the agent title as the personal name', async () => {
       vi.mocked(agentService.createAgent).mockResolvedValue({ agentId: 'agent-2' });
-      const status = useGlobalStore.getState().status;
-      useGlobalStore.setState({ status: { ...status, language: 'zh-CN' } });
       const { result } = renderHook(() => useAgentStore());
 
-      try {
-        await act(async () => {
-          await result.current.createAgent({ config: { title: '健康助手' } });
-        });
+      await act(async () => {
+        await result.current.createAgent({ config: { title: '健康助手' } });
+      });
 
-        const config = vi.mocked(agentService.createAgent).mock.calls[0][0].config!;
-        expect(config.title).toBe('健康助手');
-        expect(config.name).toMatch(/^\p{Script=Han}+$/u);
-      } finally {
-        useGlobalStore.setState({ status });
-      }
+      const config = vi.mocked(agentService.createAgent).mock.calls[0][0].config!;
+      expect(config.title).toBe('健康助手');
+      expect(config.name).toBe('健康助手');
+    });
+
+    it('numbers the seeded name when the sidebar already has one', async () => {
+      vi.mocked(agentService.createAgent).mockResolvedValue({ agentId: 'agent-2' });
+      vi.mocked(homeService.getSidebarAgentList).mockResolvedValueOnce({
+        groups: [],
+        pinned: [
+          { id: 'a1', name: 'Claude Code' } as never,
+          { id: 'a2', name: 'Claude Code 2' } as never,
+        ],
+        privateGroups: [],
+        privatePinned: [],
+        privateUngrouped: [],
+        ungrouped: [],
+      });
+      const { result } = renderHook(() => useAgentStore());
+
+      await act(async () => {
+        await result.current.createAgent({
+          config: {
+            agencyConfig: { heterogeneousProvider: { command: 'claude', type: 'claude-code' } },
+            title: 'Claude Code',
+          },
+        });
+      });
+
+      expect(vi.mocked(agentService.createAgent).mock.calls[0][0].config?.name).toBe(
+        'Claude Code 3',
+      );
     });
 
     it('uses the product title as a personal heterogeneous agent name', async () => {
@@ -511,6 +548,49 @@ describe('AgentSlice Actions', () => {
       });
 
       expect(vi.mocked(agentService.createAgent).mock.calls[0][0].config?.name).toBe('Ada');
+    });
+
+    it('dedupes concurrent creates that share a clientRequestId', async () => {
+      // The create contract's idempotency key: a double-click must not mint a
+      // twin — the in-flight call is shared, not re-run.
+      let resolveCreate: ((value: { agentId: string }) => void) | undefined;
+      vi.mocked(agentService.createAgent).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve;
+          }),
+      );
+      const { result } = renderHook(() => useAgentStore());
+
+      const params = {
+        clientRequestId: 'req-1',
+        config: { title: 'New Agent' },
+      };
+      const first = result.current.createAgent(params);
+      const second = result.current.createAgent(params);
+
+      await waitFor(() => {
+        expect(agentService.createAgent).toHaveBeenCalledTimes(1);
+      });
+      resolveCreate?.({ agentId: 'agent-2' });
+      await act(async () => {
+        await Promise.all([first, second]);
+      });
+      expect(agentService.createAgent).toHaveBeenCalledTimes(1);
+    });
+
+    it('a different clientRequestId is a real second create', async () => {
+      vi.mocked(agentService.createAgent).mockResolvedValue({ agentId: 'agent-2' });
+      const { result } = renderHook(() => useAgentStore());
+
+      await act(async () => {
+        await result.current.createAgent({ clientRequestId: 'req-1', config: { title: 'A' } });
+      });
+      await act(async () => {
+        await result.current.createAgent({ clientRequestId: 'req-2', config: { title: 'B' } });
+      });
+
+      expect(agentService.createAgent).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -1139,6 +1219,50 @@ describe('AgentSlice Actions', () => {
       );
     });
 
+    it('strips retired heterogeneousProvider fields the cached row still carries', async () => {
+      // Migration (contract §migration): the merge re-sends the cached row
+      // wholesale — a legacy row holding `engine`/`adapterType` would trip the
+      // server's retired-write rejection. The client strips them from what it
+      // sends; the request schema owns refusing them from new clients.
+      const { result } = renderHook(() => useAgentStore());
+      const legacyAgencyConfig = {
+        boundDeviceId: 'current-device',
+        heterogeneousProvider: {
+          adapterType: 'cli',
+          command: 'claude',
+          engine: 'claude-sdk',
+          type: 'orvilo',
+        },
+      } as const;
+      const sentAgencyConfig = {
+        boundDeviceId: 'current-device',
+        heterogeneousProvider: { command: 'claude', effort: 'high', type: 'orvilo' },
+      };
+
+      vi.mocked(agentService.updateAgentConfig).mockResolvedValue({
+        agent: { agencyConfig: sentAgencyConfig } as any,
+        success: true,
+      });
+
+      act(() => {
+        useAgentStore.setState({
+          agentMap: { 'agent-1': { agencyConfig: legacyAgencyConfig } as any },
+        });
+      });
+
+      await act(async () => {
+        await result.current.updateAgentConfigById('agent-1', {
+          agencyConfig: { heterogeneousProvider: { effort: 'high' } },
+        } as any);
+      });
+
+      expect(agentService.updateAgentConfig).toHaveBeenCalledWith(
+        'agent-1',
+        { agencyConfig: sentAgencyConfig },
+        expect.any(AbortSignal),
+      );
+    });
+
     // Note: refreshSessions is no longer called after optimistic update
     // as the implementation now uses API returned data directly
 
@@ -1340,6 +1464,41 @@ describe('AgentSlice Actions', () => {
       // Settled — not an error, not loading, and never lands in agentMap.
       expect(useAgentStore.getState().agentConfigErrorMap['agent-private']).toBeUndefined();
       expect(useAgentStore.getState().agentMap['agent-private']).toBeUndefined();
+    });
+
+    it('should mark agentNotFoundMap on a NOT_FOUND fetch error instead of recording it', async () => {
+      // Workspace-scoped queries on an out-of-scope agent reject (rather than
+      // resolve null) — e.g. a workspace agent opened on a personal-scope
+      // route. That's the same terminal state as the null path and must reach
+      // the 404 guard, not the raw TRPCClientError line above the composer.
+      const notFoundError = Object.assign(new Error('Resource not found'), {
+        data: { code: 'NOT_FOUND', httpStatus: 404 },
+      });
+      vi.mocked(agentService.getAgentConfigById).mockRejectedValueOnce(notFoundError);
+
+      renderHook(() => useAgentStore().useFetchAgentConfig(true, 'agent-ws'), {
+        wrapper: withSWR,
+      });
+
+      await waitFor(() => expect(useAgentStore.getState().agentNotFoundMap['agent-ws']).toBe(true));
+      expect(useAgentStore.getState().agentConfigErrorMap['agent-ws']).toBeUndefined();
+      expect(useAgentStore.getState().agentMap['agent-ws']).toBeUndefined();
+    });
+
+    it('should keep recording non-404 fetch errors in agentConfigErrorMap', async () => {
+      const error = Object.assign(new Error('server exploded'), {
+        data: { code: 'INTERNAL_SERVER_ERROR', httpStatus: 500 },
+      });
+      vi.mocked(agentService.getAgentConfigById).mockRejectedValueOnce(error);
+
+      renderHook(() => useAgentStore().useFetchAgentConfig(true, 'agent-500'), {
+        wrapper: withSWR,
+      });
+
+      await waitFor(() =>
+        expect(useAgentStore.getState().agentConfigErrorMap['agent-500']).toBe('server exploded'),
+      );
+      expect(useAgentStore.getState().agentNotFoundMap['agent-500']).toBeUndefined();
     });
 
     it('should drop the cached config when a previously loaded agent turns not-found', async () => {

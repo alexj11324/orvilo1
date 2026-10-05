@@ -5,6 +5,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./controlPlane": "./src/controlPlane/index.ts",
+    "./controlPlane/contracts": "./src/controlPlane/contracts.ts",
+    "./controlPlane/harnessProtocol": "./src/controlPlane/harnessProtocol.ts",
+    "./controlPlane/harnessTransport": "./src/controlPlane/harnessTransport.ts",
+    "./controlPlane/primeEmbeddedArtifact": "./src/controlPlane/primeEmbeddedArtifact.ts",
+    "./controlPlane/primeStreamMapping": "./src/controlPlane/primeStreamMapping.ts",
     "./controlPlane/server": "./src/controlPlane/server.ts"
   },
   "main": "./src/index.ts",

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import {
@@ -74,7 +73,7 @@ const HeteroPlus = memo(() => {
         children: OFFSETS_IN_HOURS.map((hours) => ({
           extra:
             armedHours === hours ? (
-              <Icon icon={CheckIcon} size={16} style={{ color: cssVar.colorSuccess }} />
+              <CheckIcon size={16} style={{ color: cssVar.colorSuccess }} />
             ) : (
               <span style={{ color: cssVar.colorTextTertiary, fontSize: 12 }}>
                 {resolveScheduleTime(hours).format('MM-DD HH:mm')}
@@ -86,8 +85,8 @@ const HeteroPlus = memo(() => {
         })),
         // Trailing chevron (replaces base-ui's default triangle submenu arrow,
         // which ActionDropdown hides via the .orvilo-submenu-chevron rule).
-        extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
-        icon: CalendarClockIcon,
+        extra: <ChevronRight className="orvilo-submenu-chevron" size={16} />,
+        icon: <CalendarClockIcon size={16} />,
         key: 'scheduleSend',
         label: t('input.schedule.title'),
       },
@@ -95,7 +94,7 @@ const HeteroPlus = memo(() => {
       // Formatting toolbar toggle — same trailing-switch row as the agent Plus.
       {
         checked: Boolean(showTypoBar),
-        icon: TypeIcon,
+        icon: <TypeIcon size={16} />,
         key: 'typo',
         label: tEditor('actions.typobar.title'),
         onCheckedChange: (checked: boolean) => setShowTypoBar(checked),
@@ -106,7 +105,7 @@ const HeteroPlus = memo(() => {
         ? ([
             { type: 'divider' },
             {
-              icon: TargetIcon,
+              icon: <TargetIcon size={16} />,
               key: 'set-topic-goal',
               // Same string as the chip it inserts — see the agent composer's Plus.
               label: tEditor('slash.goal'),

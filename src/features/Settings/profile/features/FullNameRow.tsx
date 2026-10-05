@@ -1,11 +1,9 @@
 'use client';
-
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { type InputRef } from 'antd';
 import { Loader2Icon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { saveToast } from '@/store/utils/saveToast';
@@ -17,10 +15,10 @@ const FullNameRow = () => {
   const fullName = useUserStore(userProfileSelectors.fullName);
   const updateFullName = useUserStore((s) => s.updateFullName);
   const [saving, setSaving] = useState(false);
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async () => {
-    const value = inputRef.current?.input?.value?.trim();
+    const value = inputRef.current?.value?.trim();
     if (!value || value === fullName) return;
 
     try {
@@ -36,8 +34,8 @@ const FullNameRow = () => {
 
   return (
     <ProfileRow anchor={'profile-full-name'} label={t('profile.fullName')}>
-      <Flexbox horizontal align="center" gap={8}>
-        {saving && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />}
+      <div className="flex items-center gap-2">
+        {saving && <Loader2Icon className="animate-spin" size={16} style={{ opacity: 0.5 }} />}
         <Input
           aria-label={t('profile.fullName')}
           defaultValue={fullName || ''}
@@ -45,12 +43,15 @@ const FullNameRow = () => {
           key={fullName}
           placeholder={t('profile.fullName')}
           ref={inputRef}
-          size={'small'}
           style={{ width: 180, maxWidth: '100%' }}
           onBlur={handleSave}
-          onPressEnter={handleSave}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+              handleSave();
+            }
+          }}
         />
-      </Flexbox>
+      </div>
     </ProfileRow>
   );
 };

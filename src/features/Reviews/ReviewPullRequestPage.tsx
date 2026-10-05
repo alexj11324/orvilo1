@@ -1,8 +1,8 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Button, Segmented, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { Markdown } from '@lobehub/ui';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   CheckCircle2Icon,
@@ -21,6 +21,10 @@ import { useLocation, useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceReview } from '@/features/WorkSurface';
@@ -553,54 +557,80 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
       <NavHeader
         styles={{ left: { flex: 1, minWidth: 0 }, right: { flex: 'none' } }}
         left={
-          <Flexbox horizontal align={'center'} gap={8} style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex flex-row items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
             {!embedded || showBack ? (
               <Button
                 aria-label={t('reviews.backToPullRequests')}
-                icon={<Icon icon={ChevronLeftIcon} />}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={() => navigate(returnTo)}
-              />
+              >
+                {
+                  <span className="anticon" role="img">
+                    <ChevronLeftIcon
+                      fill={'transparent'}
+                      height={'1em'}
+                      size={'1em'}
+                      width={'1em'}
+                    />
+                  </span>
+                }
+              </Button>
             ) : null}
-            <Text className={styles.headerCrumb} fontSize={12} type={'secondary'}>
+            <div className={cn('text-[12px]', 'text-muted-foreground', styles.headerCrumb)}>
               {t('tab.reviews')}
-            </Text>
-            <Text className={styles.headerCrumb} fontSize={12} type={'secondary'}>
-              ›
-            </Text>
-            <Icon color={cssVar.colorSuccess} icon={GitPullRequestIcon} size={14} />
-            <Text ellipsis className={styles.headerTitle} fontSize={13} weight={500}>
+            </div>
+            <div className={cn('text-[12px]', 'text-muted-foreground', styles.headerCrumb)}>›</div>
+            <span className="anticon" role="img">
+              <GitPullRequestIcon
+                color={cssVar.colorSuccess}
+                fill={'transparent'}
+                height={14}
+                size={14}
+                width={14}
+              />
+            </span>
+            <div
+              className={cn('truncate', 'block', 'text-[13px]', 'font-medium', styles.headerTitle)}
+            >
               {pullRequest?.title ?? t('tab.reviews')}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         }
         right={
           pullRequest ? (
-            <Flexbox horizontal align={'center'} gap={8}>
-              <Text
-                className={styles.headerCounter}
-                fontSize={12}
+            <div className="flex flex-row items-center gap-2">
+              <div
+                className={cn('text-[12px]', styles.headerCounter)}
                 style={{ color: cssVar.colorSuccess }}
               >
                 +{pullRequest.additions}
-              </Text>
-              <Text
-                className={styles.headerCounter}
-                fontSize={12}
+              </div>
+              <div
+                className={cn('text-[12px]', styles.headerCounter)}
                 style={{ color: cssVar.colorError }}
               >
                 −{pullRequest.deletions}
-              </Text>
+              </div>
               <Button
                 aria-label={t('reviews.openInGitHub')}
-                icon={<Icon icon={ExternalLinkIcon} />}
-                size={'small'}
+                size="sm"
                 title={t('reviews.openInGitHub')}
-                type={'text'}
+                variant="ghost"
                 onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
-              />
-            </Flexbox>
+              >
+                {
+                  <span className="anticon" role="img">
+                    <ExternalLinkIcon
+                      fill={'transparent'}
+                      height={'1em'}
+                      size={'1em'}
+                      width={'1em'}
+                    />
+                  </span>
+                }
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -623,21 +653,21 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
         >
           {t('reviews.diff')}
         </button>
-        <Flexbox flex={1} />
+        <div className="flex flex-col flex-1" />
         {pullRequest && canSubmitReview ? (
           <Button
             aria-expanded={composer.open}
             disabled={writeDisabled}
-            size={'small'}
-            type={'primary'}
+            size="sm"
+            variant="default"
             onClick={() => composer.setOpen(!composer.open)}
           >
             {t('reviews.submitReviewTitle')}
           </Button>
         ) : pullRequest ? (
           <Button
-            size={'small'}
-            type={'primary'}
+            size="sm"
+            variant="default"
             onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
           >
             {t('reviews.openInGitHub')}
@@ -649,21 +679,21 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           {isLoading ? (
             <ReviewDetailSkeleton view={activeView} />
           ) : notConnected ? (
-            <Center gap={8} padding={24}>
-              <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+            <div className="flex flex-col items-center justify-center gap-2 p-6">
+              <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />
               <ConnectGitHubButton onConnected={refresh} />
-            </Center>
+            </div>
           ) : error ? (
             <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />
           ) : pullRequest ? (
             <>
               {stale ? (
-                <Flexbox className={styles.staleBanner} role={'alert'}>
-                  <Text fontSize={13}>{t('reviews.staleBanner')}</Text>
-                  <Button size={'small'} onClick={() => void refresh()}>
+                <div className={cx('flex flex-col', styles.staleBanner)} role={'alert'}>
+                  <div className="text-[13px]">{t('reviews.staleBanner')}</div>
+                  <Button size="sm" onClick={() => void refresh()}>
                     {t('reviews.staleAction')}
                   </Button>
-                </Flexbox>
+                </div>
               ) : null}
               {canSubmitReview ? (
                 <div className={styles.reviewComposer} hidden={!composer.open}>
@@ -687,43 +717,53 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                   onViewMoreFiles={openDiff}
                 >
                   {unattachedThreads.length + allReviews.length > 0 ? (
-                    <Flexbox gap={8} style={{ marginBlockStart: 32 }}>
-                      <Text className={styles.sectionTitle} type={'secondary'} weight={500}>
+                    <div className="flex flex-col gap-2" style={{ marginBlockStart: 32 }}>
+                      <div
+                        className={cn('text-muted-foreground', 'font-medium', styles.sectionTitle)}
+                      >
                         {t('reviews.conversation')}
-                      </Text>
+                      </div>
                       {allReviews.map((review, index) => {
                         const visual = reviewStateVisual(review.state);
                         return (
-                          <Flexbox className={styles.reviewCard} gap={4} key={review.id ?? index}>
-                            <Flexbox horizontal align={'center'} gap={8}>
+                          <div
+                            className={cx('flex flex-col gap-1', styles.reviewCard)}
+                            key={review.id ?? index}
+                          >
+                            <div className="flex flex-row items-center gap-2">
                               <Avatar
                                 avatar={review.authorAvatar ?? undefined}
                                 name={review.author ?? '?'}
                                 size={20}
                               />
-                              <Icon color={visual.color} icon={visual.icon} size={14} />
-                              <Text fontSize={12} weight={500}>
-                                {review.author}
-                              </Text>
-                              <Text fontSize={12} type={'secondary'}>
+                              <span className="anticon" role="img">
+                                <visual.icon
+                                  color={visual.color}
+                                  fill={'transparent'}
+                                  height={14}
+                                  size={14}
+                                  width={14}
+                                />
+                              </span>
+                              <div className="text-[12px] font-medium">{review.author}</div>
+                              <div className="text-[12px] text-muted-foreground">
                                 {t(visual.labelKey as never)}
-                              </Text>
+                              </div>
                               {review.submittedAt ? (
-                                <Text
-                                  fontSize={12}
+                                <div
+                                  className="text-[12px] text-muted-foreground"
                                   title={dayjs(review.submittedAt).format('YYYY-MM-DD HH:mm')}
-                                  type={'secondary'}
                                 >
                                   {dayjs(review.submittedAt).fromNow()}
-                                </Text>
+                                </div>
                               ) : null}
-                            </Flexbox>
+                            </div>
                             {review.body ? (
                               <Markdown fontSize={13} variant={'chat'}>
                                 {review.body}
                               </Markdown>
                             ) : null}
-                          </Flexbox>
+                          </div>
                         );
                       })}
                       {unattachedThreads.map((thread) => (
@@ -772,7 +812,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                               : undefined
                         }
                       />
-                    </Flexbox>
+                    </div>
                   ) : null}
                   {allChecks.length > 0 ? (
                     <div style={{ marginBlockStart: 32 }}>
@@ -794,24 +834,27 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
               </div>
               <div hidden={activeView !== 'diff'}>
                 {diffMountedFor === reviewId ? (
-                  <Flexbox className={styles.diffBody} gap={12}>
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <Text weight={500}>
+                  <div className={cx('flex flex-col gap-3', styles.diffBody)}>
+                    <div className="flex flex-row items-center gap-2">
+                      <div className="font-medium">
                         {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
-                      </Text>
-                      <Flexbox flex={1} />
-                      <Segmented
-                        size={'small'}
-                        value={viewMode}
-                        options={[
-                          { label: t('reviews.viewSplit'), value: 'split' },
-                          { label: t('reviews.viewUnified'), value: 'unified' },
-                        ]}
-                        onChange={(value) => setViewMode(value as 'split' | 'unified')}
-                      />
-                    </Flexbox>
+                      </div>
+                      <div className="flex flex-col flex-1" />
+                      <ToggleGroup
+                        size="sm"
+                        value={[viewMode]}
+                        onValueChange={(value) =>
+                          value[0] && setViewMode(value[0] as 'split' | 'unified')
+                        }
+                      >
+                        <ToggleGroupItem value="split">{t('reviews.viewSplit')}</ToggleGroupItem>
+                        <ToggleGroupItem value="unified">
+                          {t('reviews.viewUnified')}
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
                     {allFiles.map((file) => (
-                      <Flexbox gap={8} key={file.filename}>
+                      <div className="flex flex-col gap-2" key={file.filename}>
                         <ReviewFileCard
                           file={file}
                           viewMode={viewMode}
@@ -830,7 +873,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                             }
                           />
                         ))}
-                      </Flexbox>
+                      </div>
                     ))}
                     <CollectionFooter
                       error={filesMore.loadMoreError}
@@ -851,7 +894,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                           : undefined
                       }
                     />
-                  </Flexbox>
+                  </div>
                 ) : null}
               </div>
             </>

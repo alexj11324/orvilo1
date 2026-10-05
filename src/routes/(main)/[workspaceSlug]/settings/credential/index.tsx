@@ -1,12 +1,14 @@
 'use client';
 
-import { Block, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Plus, UserRoundIcon, UsersIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createCreateCredModal } from '@/features/Settings/creds/features/CreateCredModal';
 import CredsList from '@/features/Settings/creds/features/CredsList';
 import { type CredsApi, CredsApiProvider } from '@/features/Settings/creds/features/useCredsApi';
@@ -25,7 +27,7 @@ const personalCredsApi: CredsApi = {
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
     overflow: hidden;
-    width: 100%;
+    width: '100%';
     padding-block: 4px;
     padding-inline: 16px;
   `,
@@ -115,54 +117,58 @@ const WorkspaceCredsSetting = () => {
   };
 
   const createButton = (
-    <Button
-      disabled={!canCreate}
-      icon={<Icon icon={Plus} />}
-      type={'primary'}
-      onClick={handleCreate}
-    >
+    <Button disabled={!canCreate} onClick={handleCreate}>
+      <Plus data-icon="inline-start" />
       {t('creds.create')}
     </Button>
   );
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
-        <Tabs
-          activeKey={scope}
-          items={[
-            {
-              icon: <Icon icon={UsersIcon} />,
-              key: 'workspace',
-              label: t('creds.tabs.workspace'),
-            },
-            {
-              icon: <Icon icon={UserRoundIcon} />,
-              key: 'personal',
-              label: t('creds.tabs.personal'),
-            },
-          ]}
-          onChange={(key) => setScope(key as CredsScope)}
-        />
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-4 justify-between">
+        <Tabs value={scope} onValueChange={(key) => setScope(key as CredsScope)}>
+          <TabsList>
+            <TabsTrigger value="workspace">
+              <UsersIcon />
+              {t('creds.tabs.workspace')}
+            </TabsTrigger>
+            <TabsTrigger value="personal">
+              <UserRoundIcon />
+              {t('creds.tabs.personal')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         {
           // Disabled buttons swallow hover events, so the tooltip needs the
           // span wrapper to fire (see the usePermission docstring pattern).
           createBlockedReason ? (
-            <Tooltip title={createBlockedReason}>
-              <span>{createButton}</span>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <span>{createButton}</span>
+                    </span>
+                  }
+                />
+                <TooltipContent>{createBlockedReason}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             createButton
           )
         }
-      </Flexbox>
-      <Flexbox gap={12}>
-        <Text className={styles.desc}>
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className={styles.desc}>
           {scope === 'workspace'
             ? t('creds.workspaceSection.desc')
             : t('creds.personalSection.desc')}
-        </Text>
-        <Block className={styles.container} variant={'outlined'}>
+        </div>
+        <div
+          className={cn('flex flex-col', styles.container)}
+          style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
+        >
           {scope === 'workspace' ? (
             <CredsApiProvider value={workspaceCredsApi}>
               <CredsList />
@@ -170,9 +176,9 @@ const WorkspaceCredsSetting = () => {
           ) : (
             <PersonalCredsSection onWorkspaceCredsChange={refetchWorkspaceCreds} />
           )}
-        </Block>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 };
 

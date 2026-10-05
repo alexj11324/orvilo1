@@ -1,16 +1,28 @@
 'use client';
 
-import { Block, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, DropdownMenu, Popover, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { ArchiveIcon, MessageSquareTextIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import {
+  ArchiveIcon,
+  MessageSquareTextIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  SearchIcon,
+} from 'lucide-react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import type { ExpertiseHabit } from '@/services/expertise';
 import { expertiseService } from '@/services/expertise';
@@ -46,15 +58,29 @@ const RecentDots = memo<{ recent: ExpertiseHabit['recent'] }>(({ recent }) => {
             .join(' '),
         });
   return (
-    <Tooltip title={tip}>
-      <Flexbox horizontal gap={3} style={{ flex: 'none' }}>
-        {recent.length === 0
-          ? [0, 1, 2].map((i) => <span className={`${styles.dot} ${styles.dotNone}`} key={i} />)
-          : recent.map((r, i) => (
-              <span className={`${styles.dot} ${r.pass ? styles.dotOk : styles.dotBad}`} key={i} />
-            ))}
-      </Flexbox>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <div className="flex gap-[3px]" style={{ flex: 'none' }}>
+                {recent.length === 0
+                  ? [0, 1, 2].map((i) => (
+                      <span className={`${styles.dot} ${styles.dotNone}`} key={i} />
+                    ))
+                  : recent.map((r, i) => (
+                      <span
+                        className={`${styles.dot} ${r.pass ? styles.dotOk : styles.dotBad}`}
+                        key={i}
+                      />
+                    ))}
+              </div>
+            </span>
+          }
+        />
+        <TooltipContent>{tip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 
@@ -71,6 +97,28 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   const { t } = useTranslation('selfLearning');
   const navigate = useWorkspaceAwareNavigate();
   const [teaching, setTeaching] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    },
+    [],
+  );
+  const clearHoverTimer = () => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+  };
+  const schedulePreviewOpen = () => {
+    clearHoverTimer();
+    hoverTimer.current = setTimeout(() => setPreviewOpen(true), 420);
+  };
+  const schedulePreviewClose = () => {
+    clearHoverTimer();
+    hoverTimer.current = setTimeout(() => setPreviewOpen(false), 150);
+  };
 
   const hint = useMemo(
     () => describeRecent(habit.recent, habit.taughtByUser, t),
@@ -108,13 +156,13 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   );
   const menu: DropdownItem[] = [
     {
-      icon: <Icon icon={PencilIcon} />,
+      icon: <PencilIcon />,
       key: 'correct',
       label: t('habit.action.correct'),
       onClick: () => setTeaching(true),
     },
     {
-      icon: <Icon icon={MessageSquareTextIcon} />,
+      icon: <MessageSquareTextIcon />,
       key: 'source',
       label: t('habit.action.source'),
       onClick: () => navigate(lessonPath),
@@ -122,7 +170,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
     { type: 'divider' },
     {
       danger: true,
-      icon: <Icon icon={ArchiveIcon} />,
+      icon: <ArchiveIcon />,
       key: 'forget',
       label: t('habit.action.forget'),
       onClick: retire,
@@ -130,23 +178,51 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   ];
 
   return (
-    <Flexbox className={styles.row} gap={6}>
-      <Flexbox horizontal align={'flex-start'} gap={12}>
-        <Text code fontSize={12} style={{ flex: 'none', marginTop: 2 }} type={'secondary'}>
+    <div className={cx(styles.row, 'flex flex-col gap-1.5')}>
+      <div className="flex items-start gap-3">
+        <div
+          className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground"
+          style={{ flex: 'none', marginTop: 2 }}
+        >
           {habit.code}
-        </Text>
-        <Popover
-          // Long enough that dragging the pointer down the list does not fetch every row.
-          openDelay={420}
-          // Below the row by preference, so the row the reader is pointing at stays visible
-          // while they move into the card.
-          placement={'bottomRight'}
-          // Preference, not a rule: reading down a list parks the pointer on the last visible
-          // row, and pinning the card downward there pushes its body off-screen. Base UI's
-          // default side avoidance flips it back above when the space below runs out.
-          positionerProps={{ collisionPadding: 12 }}
-          trigger={'hover'}
-          content={
+        </div>
+        <Popover open={previewOpen} onOpenChange={setPreviewOpen}>
+          <PopoverTrigger
+            render={
+              <div
+                className={cx(styles.previewTarget, 'flex flex-col gap-0.5')}
+                style={{ flex: 1, minWidth: 0 }}
+                onClick={() => navigate(lessonPath)}
+                onMouseEnter={schedulePreviewOpen}
+                onMouseLeave={schedulePreviewClose}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  navigate(lessonPath);
+                }}
+              >
+                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                  <div className="font-medium" style={{ fontSize: 13.5 }}>
+                    {habit.title}
+                  </div>
+                  {habit.taughtByUser && (
+                    <Badge variant="secondary">
+                      {t('habit.taughtTag')} · {dayjs(habit.createdAt).fromNow()}
+                    </Badge>
+                  )}
+                  {domainTitle && <Badge variant="secondary">{domainTitle}</Badge>}
+                </div>
+                <div className="text-[12px] text-muted-foreground">{hint}</div>
+              </div>
+            }
+          />
+          <PopoverContent
+            align="end"
+            className="w-auto p-0"
+            side="bottom"
+            onMouseEnter={clearHoverTimer}
+            onMouseLeave={schedulePreviewClose}
+          >
             <LessonPreview
               code={habit.code}
               layer={habit.layer}
@@ -154,50 +230,21 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
               lessonPath={lessonPath}
               title={habit.title}
             />
-          }
-        >
-          <Flexbox
-            className={styles.previewTarget}
-            gap={2}
-            style={{ flex: 1, minWidth: 0 }}
-            onClick={() => navigate(lessonPath)}
-            // base-ui gives the trigger role="button" and focus, but brings no activation of
-            // its own, so a keyboard user could tab here and have Enter do nothing.
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              event.preventDefault();
-              navigate(lessonPath);
-            }}
-          >
-            <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-              <Text fontSize={13.5} weight={500}>
-                {habit.title}
-              </Text>
-              {habit.taughtByUser && (
-                <Tag>
-                  {t('habit.taughtTag')} · {dayjs(habit.createdAt).fromNow()}
-                </Tag>
-              )}
-              {domainTitle && <Tag>{domainTitle}</Tag>}
-            </Flexbox>
-            <Text fontSize={12} type={'secondary'}>
-              {hint}
-            </Text>
-          </Flexbox>
+          </PopoverContent>
         </Popover>
         <RecentDots recent={habit.recent} />
-        <Flexbox horizontal align={'center'} className={'teach'} gap={4} style={{ flex: 'none' }}>
+        <div className={cx('teach', 'flex items-center gap-1')} style={{ flex: 'none' }}>
           <DropdownMenu items={menu}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
+            <ActionIcon icon={MoreHorizontalIcon} size="small" />
           </DropdownMenu>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {teaching && (
-        <Flexbox style={{ paddingInlineStart: 48 }}>
+        <div className="flex flex-col" style={{ paddingInlineStart: 48 }}>
           <TeachBox autoFocus placeholder={t('habit.teach.placeholderCorrect')} onSubmit={revise} />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -226,30 +273,38 @@ const HabitList = memo<HabitListProps>(
     }, [habits, search]);
 
     return (
-      <Flexbox gap={10}>
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
-          <Flexbox horizontal align={'baseline'} gap={8}>
-            <Text weight={600}>{t('habits.title')}</Text>
-            <Text fontSize={12} type={'secondary'}>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
+          <div className="flex items-baseline gap-2">
+            <div className="font-semibold">{t('habits.title')}</div>
+            <div className="text-[12px] text-muted-foreground">
               {t('habits.summary', { count: habits.length })}
-            </Text>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8}>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {viewAllPath && (
               <Link className={styles.viewAll} to={viewAllPath}>
                 {t('habits.viewAll', { count: habits.length })}
               </Link>
             )}
-            <SearchBar
-              placeholder={t('habits.search')}
-              style={{ width: 200 }}
-              value={search}
-              variant={'filled'}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </Flexbox>
-        </Flexbox>
-        <Block padding={0} variant={'outlined'}>
+            <div className="relative" style={{ width: 200 }}>
+              <SearchIcon
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={14}
+              />
+              <Input
+                className="h-7 pl-7"
+                placeholder={t('habits.search')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          className="flex flex-col p-0 border"
+          style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+        >
           {filtered.map((h) => (
             <HabitRow
               agentId={agentId}
@@ -259,8 +314,8 @@ const HabitList = memo<HabitListProps>(
               onChanged={onChanged}
             />
           ))}
-        </Block>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

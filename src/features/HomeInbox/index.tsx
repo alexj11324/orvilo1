@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Segmented } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
@@ -11,7 +9,9 @@ import {
   useHomeUsageWidgetActive,
 } from '@/business/client/features/HomeUsageWidget';
 import { useWorkspaceMemberProfiles } from '@/business/client/hooks/useWorkspaceMemberProfiles';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
 import GroupBlock from '@/features/Home/components/GroupBlock';
 import { homeType } from '@/features/Home/components/homeType';
@@ -260,11 +260,11 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   // "Needs you" section that may turn out empty). Recommendations keep their own.
   if (blockState === 'skeleton') {
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         <BriefCardSkeleton />
         <BriefCardSkeleton />
         <Recommendations variant={variant} />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -272,15 +272,14 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   // the first titled section's header — the primary "Needs you", or Unread when
   // there's nothing to handle. Only shown in a team workspace.
   const scopeToggle = isTeam ? (
-    <Segmented
-      size={'small'}
-      value={scope}
-      options={[
-        { label: t('inbox.scope.mine'), value: 'mine' },
-        { label: t('inbox.scope.team'), value: 'team' },
-      ]}
-      onChange={(value) => setScope(value as 'mine' | 'team')}
-    />
+    <ToggleGroup
+      size="sm"
+      value={[scope]}
+      onValueChange={(value) => value[0] && setScope(value[0] as 'mine' | 'team')}
+    >
+      <ToggleGroupItem value="mine">{t('inbox.scope.mine')}</ToggleGroupItem>
+      <ToggleGroupItem value="team">{t('inbox.scope.team')}</ToggleGroupItem>
+    </ToggleGroup>
   ) : undefined;
   const toggleSectionKey = scopeToggle
     ? resolveInboxScopeToggleSection({
@@ -342,11 +341,11 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
             key: 'needsYou',
             label: t('inbox.needsYou.title'),
             node: (
-              <Flexbox gap={12}>
+              <div className="flex flex-col gap-3">
                 {needsYou.map((brief) => (
                   <InboxBriefCard brief={brief} key={brief.id} />
                 ))}
-              </Flexbox>
+              </div>
             ),
           },
     );
@@ -398,11 +397,11 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
         key: 'needsYou',
         label: t('inbox.needsYou.title'),
         node: (
-          <Flexbox gap={12}>
+          <div className="flex flex-col gap-3">
             {needsYou.map((brief) => (
               <InboxBriefCard brief={brief} key={brief.id} />
             ))}
-          </Flexbox>
+          </div>
         ),
       });
     }
@@ -460,7 +459,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
 
     sections.push({
       action: (
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {unresolvedNews.length > 0 && (
             <MarkAllReadButton news={unresolvedNews} onResolved={() => void newsSWR.mutate()} />
           )}
@@ -478,7 +477,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
             title={t('inbox.news.nextDay')}
             onClick={() => setNewsDayOffset(Math.max(0, shownNewsOffset - 1))}
           />
-        </Flexbox>
+        </div>
       ),
       // Mid-paging (or on an empty day) the arrows are the section's only
       // controls — they must not vanish when the pointer leaves the header.
@@ -521,10 +520,10 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
 
     if (isRail)
       return recommendationsVisible || usageCard ? (
-        <Flexbox gap={12}>
+        <div className="flex flex-col gap-3">
           {recommendationsVisible && <Recommendations variant={'rail'} />}
           {usageCard}
-        </Flexbox>
+        </div>
       ) : null;
 
     // With no titled block above it, the bare recommendations list doesn't need
@@ -533,9 +532,9 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
     return (
       <>
         {recommendationsVisible && (
-          <Flexbox style={{ marginBlockStart: -24 }}>
+          <div className="flex flex-col" style={{ marginBlockStart: -24 }}>
             <Recommendations />
-          </Flexbox>
+          </div>
         )}
         {usageCard}
       </>
@@ -543,7 +542,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   }
 
   return (
-    <Flexbox gap={isRail ? 12 : 32}>
+    <div className="flex flex-col" style={{ gap: isRail ? 12 : 32 }}>
       {visibleSections.map(
         ({
           action,
@@ -581,7 +580,12 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
               </RailCard>
             );
 
-          if (!label) return <Flexbox key={key}>{node}</Flexbox>;
+          if (!label)
+            return (
+              <div className="flex flex-col" key={key}>
+                {node}
+              </div>
+            );
 
           return (
             <GroupBlock
@@ -609,7 +613,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
 
       {!isMain && <Recommendations variant={variant} />}
       {usageCard}
-    </Flexbox>
+    </div>
   );
 });
 

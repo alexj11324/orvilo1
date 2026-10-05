@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { type PropsWithChildren } from 'react';
 import { memo } from 'react';
@@ -33,11 +32,7 @@ const styles = createStaticStyles(({ css, cssVar }) => {
 });
 
 const CollapseDesc = memo<PropsWithChildren<{ hide?: boolean }>>(({ children, hide }) => {
-  return (
-    <Text as={'p'} className={cx(styles.desc, hide && styles.hideDesc)}>
-      {children}
-    </Text>
-  );
+  return <p className={cx(styles.desc, hide && styles.hideDesc)}>{children}</p>;
 });
 
 export default CollapseDesc;

@@ -1,16 +1,18 @@
 'use client';
 
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { Input, InputNumber } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Clock } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import InputNumber from '@/components/InputNumber';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -84,14 +86,14 @@ const ExecuteTaskIntervention = memo<BuiltinInterventionProps<ExecuteTaskParams>
 
     // Local state
     const [instruction, setInstruction] = useState(args?.instruction || '');
-    const [timeout, setTimeout] = useState(args?.timeout ?? DEFAULT_TIMEOUT);
+    const [timeout, setTimeoutMs] = useState(args?.timeout ?? DEFAULT_TIMEOUT);
     const [hasChanges, setHasChanges] = useState(false);
 
     // Sync local state when args change externally
     useEffect(() => {
       if (!hasChanges) {
         setInstruction(args?.instruction || '');
-        setTimeout(args?.timeout ?? DEFAULT_TIMEOUT);
+        setTimeoutMs(args?.timeout ?? DEFAULT_TIMEOUT);
       }
     }, [args?.instruction, args?.timeout, hasChanges]);
 
@@ -104,7 +106,7 @@ const ExecuteTaskIntervention = memo<BuiltinInterventionProps<ExecuteTaskParams>
     // Handle timeout change (minutes to milliseconds)
     const handleTimeoutChange = useCallback((value: number | null) => {
       if (value !== null) {
-        setTimeout(value * 60 * 1000); // Convert minutes to milliseconds
+        setTimeoutMs(value * 60 * 1000); // Convert minutes to milliseconds
         setHasChanges(true);
       }
     }, []);
@@ -123,47 +125,55 @@ const ExecuteTaskIntervention = memo<BuiltinInterventionProps<ExecuteTaskParams>
     }, [registerBeforeApprove, hasChanges, instruction, timeout, args, onArgsChange]);
 
     return (
-      <Flexbox className={styles.container} gap={12}>
+      <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
         {/* Header: Agent info + Timeout */}
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} flex={1} gap={12} style={{ minWidth: 0 }}>
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center flex-1 gap-3" style={{ minWidth: 0 }}>
             <Avatar
               avatar={agent?.avatar || '🤖'}
               background={agent?.backgroundColor || undefined}
               size={24}
               style={{ borderRadius: 8, flexShrink: 0 }}
             />
-            <Flexbox flex={1} gap={4} style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
               <span className={styles.agentTitle}>
                 {agent?.title || t('agentGroupManagement.executeTask.intervention.unknownAgent')}
               </span>
-            </Flexbox>
-          </Flexbox>
-          <Flexbox horizontal align="center" gap={8} style={{ flexShrink: 0 }}>
-            <Tooltip title={t('agentGroupManagement.executeTask.intervention.timeout')}>
-              <Clock size={14} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span>
+                    <Clock size={14} />
+                  </span>
+                }
+              />
+              <TooltipContent>
+                {t('agentGroupManagement.executeTask.intervention.timeout')}
+              </TooltipContent>
             </Tooltip>
             <InputNumber
               className={styles.timeoutInput}
               max={120}
               min={1}
-              size={'small'}
-              suffix={t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
               value={Math.round(timeout / 60_000)}
-              variant={'filled'}
               onChange={handleTimeoutChange}
             />
-          </Flexbox>
-        </Flexbox>
+            <span className="text-muted-foreground">
+              {t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
+            </span>
+          </div>
+        </div>
 
         {/* Instruction input */}
-        <Input.TextArea
-          autoSize={{ maxRows: 10, minRows: 6 }}
+        <Textarea
           placeholder={t('agentGroupManagement.executeTask.intervention.taskPlaceholder')}
           value={instruction}
           onChange={handleInstructionChange}
         />
-      </Flexbox>
+      </div>
     );
   },
   isEqual,

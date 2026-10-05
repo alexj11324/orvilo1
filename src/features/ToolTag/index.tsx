@@ -1,15 +1,14 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { type ComposioAppType } from '@orvilo/const';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
-import { useIsDark } from '@/hooks/useIsDark';
+import { Badge } from '@/components/reui/badge';
 import { useDiscoverStore } from '@/store/discover';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
@@ -27,7 +26,7 @@ const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, labe
     return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
   }
 
-  return <Icon fill={cssVar.colorText} icon={icon} size={16} />;
+  return createElement(icon, { fill: cssVar.colorText, size: 16 });
 });
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -62,7 +61,6 @@ export interface ToolTagProps {
  * Unlike PluginTag, this component is not closable and is designed for display-only purposes.
  */
 const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
-  const isDarkMode = useIsDark();
   const isCompact = variant === 'compact';
 
   // Get local plugin lists
@@ -154,13 +152,13 @@ const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
   };
 
   return (
-    <Tag
+    <Badge
       className={isCompact ? styles.compact : styles.tag}
-      icon={renderIcon()}
-      variant={isCompact ? 'borderless' : 'filled'}
+      variant={isCompact ? 'outline' : 'secondary'}
     >
+      {renderIcon()}
       {displayTitle}
-    </Tag>
+    </Badge>
   );
 });
 

@@ -1,3 +1,8 @@
+export type {
+  HeterogeneousAgentPermission,
+  HeterogeneousAgentPermissionCatalog,
+} from '@orvilo/types';
+
 /**
  * Heterogeneous Agent Adapter Types
  *

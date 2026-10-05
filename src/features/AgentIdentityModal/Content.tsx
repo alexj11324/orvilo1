@@ -1,15 +1,22 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Text, useModalContext } from '@lobehub/ui/base-ui';
-import { randomAgentName } from '@orvilo/const';
+import { numberedAgentName } from '@orvilo/const';
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { DicesIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useGlobalStore } from '@/store/global';
-import { globalGeneralSelectors } from '@/store/global/selectors';
+import ActionIcon from '@/components/ActionIcon';
+import { useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
@@ -22,11 +29,11 @@ interface FieldProps {
 }
 
 const Field = memo<FieldProps>(({ label, hint, children }) => (
-  <Flexbox gap={6}>
-    <Text type={'secondary'}>{label}</Text>
+  <div className="flex flex-col gap-1.5">
+    <div className="text-muted-foreground">{label}</div>
     {children}
     {hint}
-  </Flexbox>
+  </div>
 ));
 
 interface AgentIdentityContentProps {
@@ -41,44 +48,49 @@ interface AgentIdentityContentProps {
 const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'common']);
   const { close } = useModalContext();
-  const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
   const form = useAgentIdentityForm({ agentId, onSaved: close });
   const { setName } = form;
 
-  // Same draw as the header's "name it for me" button: the pool matches the
-  // user's language, and names already visible in the sidebar are excluded so
-  // the dice never suggests a second "佳宁". Read at click time — the list only
-  // matters at the moment of the roll.
+  // Same deterministic suggestion as the header's "name it for me" button and
+  // agent creation: the agent's own type name, numbered when the sidebar
+  // already has one. Read at click time — the list only matters at that moment.
   const rollName = useCallback(() => {
-    const takenNames = homeAgentListSelectors
-      .allAgents(useHomeStore.getState())
-      .filter((agent) => agent.id !== agentId)
-      .map((agent) => agent.name)
+    const agents = homeAgentListSelectors.allAgents(useHomeStore.getState());
+    const agent = agents.find((a) => a.id === agentId);
+    const takenNames = agents
+      .filter((a) => a.id !== agentId)
+      .map((a) => a.name)
       .filter((name): name is string => !!name);
+    const base =
+      agent?.title?.trim() ||
+      (agent?.heterogeneousType ? getHeterogeneousTypeLabel(agent.heterogeneousType) : undefined) ||
+      'Orvilo AI';
 
-    setName(randomAgentName(locale, takenNames));
-  }, [agentId, locale, setName]);
+    setName(numberedAgentName(base, takenNames));
+  }, [agentId, setName]);
 
   return (
-    <Flexbox gap={20} padding={20}>
+    <div className="flex flex-col gap-5 p-5">
       <Field label={t('settingAgent.personalName.label', { ns: 'setting' })}>
-        <Input
-          autoFocus
-          placeholder={t('settingAgent.personalName.placeholder', { ns: 'setting' })}
-          value={form.name}
-          suffix={
+        <InputGroup>
+          <InputGroupInput
+            autoFocus
+            placeholder={t('settingAgent.personalName.placeholder', { ns: 'setting' })}
+            value={form.name}
+            onChange={(e) => form.setName(e.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
             <ActionIcon
               icon={DicesIcon}
               size={'small'}
               title={t('settingAgent.personalName.roll', { ns: 'setting' })}
               onClick={rollName}
             />
-          }
-          onChange={(e) => form.setName(e.target.value)}
-        />
+          </InputGroupAddon>
+        </InputGroup>
       </Field>
       <Field label={t('settingAgent.role.label', { ns: 'setting' })}>
-        <Input
+        <InputGroupInput
           placeholder={t('settingAgent.role.placeholder', { ns: 'setting' })}
           value={form.title}
           onChange={(e) => form.setTitle(e.target.value)}
@@ -90,16 +102,22 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
           the bare marker states the fact and needs no caption. */}
       {form.slugLocked ? (
         <Field label={t('settingAgent.slug.label', { ns: 'setting' })}>
-          <Text code style={{ alignSelf: 'flex-start', color: cssVar.colorTextSecondary }}>
+          <div
+            className="font-mono rounded bg-muted px-1"
+            style={{ alignSelf: 'flex-start', color: cssVar.colorTextSecondary }}
+          >
             <span style={{ color: cssVar.colorTextTertiary }}>@</span>
             {form.slug}
-          </Text>
+          </div>
         </Field>
       ) : (
         <Field
           label={t('settingAgent.slug.label', { ns: 'setting' })}
           hint={
-            <Text style={{ fontSize: 12 }} type={form.error ? 'danger' : 'secondary'}>
+            <div
+              className={cn(form.error ? 'text-destructive' : 'text-muted-foreground')}
+              style={{ fontSize: 12 }}
+            >
               {/* Show the url the current input actually produces — a literal
                   `<slug>` leaves the reader to do the substitution themselves,
                   and it updates as they type. Only an empty field falls back to
@@ -111,34 +129,38 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
                       slug: form.slug.trim().toLowerCase(),
                     })
                   : t('settingAgent.slug.tooltip', { ns: 'setting' }))}
-            </Text>
+            </div>
           }
         >
-          <Input
-            placeholder={t('settingAgent.slug.placeholder', { ns: 'setting' })}
-            prefix={'@'}
-            status={form.error ? 'error' : undefined}
-            value={form.slug}
-            onChange={(e) => form.setSlug(e.target.value)}
-          />
+          <InputGroup>
+            <InputGroupAddon align="inline-start">
+              <InputGroupText>@</InputGroupText>
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-invalid={form.error ? true : undefined}
+              placeholder={t('settingAgent.slug.placeholder', { ns: 'setting' })}
+              value={form.slug}
+              onChange={(e) => form.setSlug(e.target.value)}
+            />
+          </InputGroup>
         </Field>
       )}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={form.saving} onClick={() => close()}>
           {t('cancel', { ns: 'common' })}
         </Button>
         <Button
           disabled={form.saving}
           loading={form.saving}
-          type={'primary'}
+          variant="default"
           onClick={() => {
             void form.save();
           }}
         >
           {t('save', { ns: 'common' })}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

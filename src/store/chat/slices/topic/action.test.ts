@@ -14,14 +14,15 @@ import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
+import { useGlobalStore } from '@/store/global';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
 import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
 
 import { useChatStore } from '../../store';
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
+vi.mock('@/components/toast', async (importOriginal) => {
   const actual = await importOriginal<{ toast: Record<string, unknown> }>();
   return { ...actual, toast: { ...actual.toast, error: vi.fn() } };
 });
@@ -59,6 +60,7 @@ vi.mock('@/services/topic', () => ({
     updateTopicTitle: vi.fn(),
     updateTopic: vi.fn(),
     batchRemoveTopics: vi.fn(),
+    batchMoveTopics: vi.fn(),
     getTopicDetail: vi.fn(),
     getTopics: vi.fn(),
     queryTopics: vi.fn(),
@@ -600,7 +602,7 @@ describe('topic action', () => {
     // Unique ids: updateTopicStatus registers a TTL-bounded pending status-write
     // in a private map that beforeEach's state reset can't clear, so a shared id
     // would bleed status onto other tests' fetched-topic fixtures.
-    it('stamps completedAt when archiving (status: completed)', async () => {
+    it('stamps completedAt on the completed transition', async () => {
       const { result } = renderHook(() => useChatStore());
       const topicId = 'update-status-completed-topic';
 
@@ -610,8 +612,8 @@ describe('topic action', () => {
         await result.current.updateTopicStatus({ status: 'completed', topicId });
       });
 
-      // "Archive" persists the completion timestamp alongside the status so the
-      // bulk/stale archive matches the single-item markTopicCompleted.
+      // Bulk/stale completions persist the completion timestamp alongside the
+      // status so they match the single-item markTopicCompleted.
       expect(updateSpy).toHaveBeenCalledWith(topicId, {
         completedAt: expect.any(Date),
         status: 'completed',
@@ -631,14 +633,80 @@ describe('topic action', () => {
       // Agent-run status writes must stay a pure status update — no completedAt.
       expect(updateSpy).toHaveBeenCalledWith(topicId, { status: 'running' });
     });
+
+    it('writes the optimistic status into the bucket that actually holds the topic', async () => {
+      // The sidebar feed lives in the workspace bucket, not the agent bucket
+      // scope params would derive — a status write keyed on the active pair
+      // lands nowhere and the row keeps its stale status (the pin only wins
+      // over refetches, it never inserts).
+      const { result } = renderHook(() => useChatStore());
+      const topicId = 'update-status-bucket-topic';
+      const agentId = 'agent-owner';
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
+              currentPage: 0,
+              hasMore: false,
+              items: [{ id: topicId, status: 'active', title: 'Feed row' } as ChatTopic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+      vi.spyOn(topicService, 'updateTopic').mockResolvedValue(undefined as any);
+      vi.spyOn(result.current, 'refreshTopic').mockResolvedValue(undefined);
+
+      await act(async () => {
+        await result.current.updateTopicStatus({ status: 'archived', topicId });
+      });
+
+      const row = useChatStore
+        .getState()
+        .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === topicId);
+      expect(row?.status).toBe('archived');
+    });
+  });
+
+  describe('archiveTopic', () => {
+    it('persists status: archived — a distinct state, not completed', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const topicId = 'archive-topic';
+
+      const updateSpy = vi.spyOn(topicService, 'updateTopic').mockResolvedValue(undefined as any);
+
+      await act(async () => {
+        await result.current.archiveTopic(topicId);
+      });
+
+      // Archiving is the user's explicit hide and must not be conflated with
+      // completion: no completedAt stamp, own status value.
+      expect(updateSpy).toHaveBeenCalledWith(topicId, { status: 'archived' });
+    });
+
+    it('unarchiveTopic restores status: active', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const topicId = 'unarchive-topic';
+
+      const updateSpy = vi.spyOn(topicService, 'updateTopic').mockResolvedValue(undefined as any);
+
+      await act(async () => {
+        await result.current.unarchiveTopic(topicId);
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(topicId, { status: 'active' });
+    });
   });
   describe('useFetchTopicDetail', () => {
-    // Regression: an archived (completed) topic is excluded from the sidebar
-    // list fetch, so the active topic vanished from topicDataMap and the
-    // header degraded to the "new topic" placeholder. The by-id detail fetch
-    // caches the row in topicDetailMap, which currentActiveTopic falls back to.
+    // Regression: an archived topic is excluded from the sidebar list fetch,
+    // so the active topic vanished from topicDataMap and the header degraded
+    // to the "new topic" placeholder. The by-id detail fetch caches the row in
+    // topicDetailMap, which currentActiveTopic falls back to.
     it('caches the fetched topic in topicDetailMap', async () => {
-      const archived = { id: 'archived-topic', status: 'completed', title: 'Archived Topic' };
+      const archived = { id: 'archived-topic', status: 'archived', title: 'Archived Topic' };
       (topicService.getTopicDetail as Mock).mockResolvedValue(archived);
 
       const { result } = renderHook(() => useChatStore().useFetchTopicDetail('archived-topic'));
@@ -652,6 +720,48 @@ describe('topic action', () => {
     it('does not fetch when no topic id is given', () => {
       renderHook(() => useChatStore().useFetchTopicDetail(undefined));
       expect(topicService.getTopicDetail).not.toHaveBeenCalled();
+    });
+
+    it('flags topicNotFoundMap when the detail fetch settles on null (deleted topic)', async () => {
+      // A stale list row / deep link to a deleted conversation: the by-id
+      // fetch resolves null and the route guard swaps in the 404 card.
+      (topicService.getTopicDetail as Mock).mockResolvedValue(null);
+
+      renderHook(() => useChatStore().useFetchTopicDetail('topic-deleted'));
+
+      await waitFor(() => {
+        expect(useChatStore.getState().topicNotFoundMap['topic-deleted']).toBe(true);
+      });
+    });
+
+    it('does not flag a client-minted topic whose server row is still confirming', async () => {
+      // During the first-send window the detail fetch legitimately resolves
+      // null — flagging it would flash the 404 card under a live composer.
+      useChatStore.setState({ creatingTopicIds: ['topic-minted'] });
+      (topicService.getTopicDetail as Mock).mockResolvedValue(null);
+
+      renderHook(() => useChatStore().useFetchTopicDetail('topic-minted'));
+
+      await waitFor(() => {
+        expect(topicService.getTopicDetail).toHaveBeenCalled();
+      });
+      expect(useChatStore.getState().topicNotFoundMap['topic-minted']).toBeUndefined();
+
+      useChatStore.setState({ creatingTopicIds: [] });
+    });
+
+    it('clears the not-found flag once a detail fetch returns the row', async () => {
+      useChatStore.setState({ topicNotFoundMap: { 'topic-restored': true } });
+      const restored = { id: 'topic-restored', status: 'running', title: 'Back' };
+      (topicService.getTopicDetail as Mock).mockResolvedValue(restored);
+
+      const { result } = renderHook(() => useChatStore().useFetchTopicDetail('topic-restored'));
+
+      await waitFor(() => {
+        expect(result.current.data).toEqual(restored);
+      });
+      expect(useChatStore.getState().topicNotFoundMap['topic-restored']).toBeUndefined();
+      expect(useChatStore.getState().topicDetailMap['topic-restored']).toEqual(restored);
     });
   });
 
@@ -798,7 +908,8 @@ describe('topic action', () => {
 
     it('does not let a stale load-more page resurrect a deleted topic', async () => {
       const agentId = 'stale-topic-page-delete-agent';
-      const key = topicMapKey({ agentId });
+      // Outside a group session load-more pages the workspace feed bucket.
+      const key = WORKSPACE_TOPIC_MAP_KEY;
       const doomedTopic = { id: 'topic-doomed-page', title: 'Doomed' } as ChatTopic;
       const keptTopic = { id: 'topic-kept-page', title: 'Kept' } as ChatTopic;
       const pageTwoTopic = { id: 'topic-page-two', title: 'Page two' } as ChatTopic;
@@ -1188,7 +1299,7 @@ describe('topic action', () => {
           topicDataMap: {
             [topicMapKey({ agentId })]: {
               currentPage: 1,
-              excludeStatuses: ['completed', 'archived'],
+              excludeStatuses: ['completed'],
               hasMore: true,
               isInbox: false,
               items: currentTopics,
@@ -1206,7 +1317,7 @@ describe('topic action', () => {
 
       const useFetchTopics = useChatStore.getState().useFetchTopics;
       const swrResponse = renderHook(() =>
-        useFetchTopics(true, { agentId, excludeStatuses: ['completed'], pageSize }),
+        useFetchTopics(true, { agentId, excludeStatuses: ['archived'], pageSize }),
       );
 
       await waitFor(() => {
@@ -1218,7 +1329,7 @@ describe('topic action', () => {
 
         expect(topicData).toMatchObject({
           currentPage: 0,
-          excludeStatuses: ['completed'],
+          excludeStatuses: ['archived'],
           hasMore: false,
           total: 20,
         });
@@ -1804,6 +1915,64 @@ describe('topic action', () => {
       expect(topicData.hasMore).toBe(false);
     });
   });
+
+  describe('evictStaleTopic', () => {
+    it('drops the stale topic from buckets and the detail map without a server call', () => {
+      const topicId = 'stale-topic';
+      const activeAgentId = 'evict-agent';
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId,
+          activeTopicId: topicId,
+          topicDataMap: {
+            [topicMapKey({ agentId: activeAgentId })]: {
+              currentPage: 1,
+              hasMore: false,
+              isInbox: false,
+              items: [
+                { id: topicId, status: 'completed', title: 'Gone' } as ChatTopic,
+                { id: 'live-topic', status: 'completed', title: 'Kept' } as ChatTopic,
+              ],
+              pageSize: 20,
+              total: 2,
+            },
+          },
+          topicDetailMap: {
+            [topicId]: { id: topicId, status: 'completed', title: 'Gone' } as ChatTopic,
+          },
+        });
+      });
+      const switchTopicSpy = vi.spyOn(result.current, 'switchTopic');
+
+      act(() => {
+        result.current.evictStaleTopic(topicId);
+      });
+
+      const bucket = useChatStore.getState().topicDataMap[topicMapKey({ agentId: activeAgentId })];
+
+      expect(topicService.removeTopic).not.toHaveBeenCalled();
+      expect(bucket.items.map((topic) => topic.id)).toEqual(['live-topic']);
+      expect(useChatStore.getState().topicDetailMap[topicId]).toBeUndefined();
+      expect(switchTopicSpy).toHaveBeenCalledWith(null);
+    });
+
+    it('does not switch the active topic when the stale one is not open', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        useChatStore.setState({ activeAgentId: 'evict-agent', activeTopicId: 'live-topic' });
+      });
+      const switchTopicSpy = vi.spyOn(result.current, 'switchTopic');
+
+      act(() => {
+        result.current.evictStaleTopic('stale-topic');
+      });
+
+      expect(switchTopicSpy).not.toHaveBeenCalled();
+    });
+  });
   describe('persisted topic-list cache write-through', () => {
     const setupBucket = (agentId: string) => {
       const containerKey = topicMapKey({ agentId });
@@ -1891,12 +2060,13 @@ describe('topic action', () => {
         { id: 'topic-2', favorite: true },
         { id: 'topic-3', favorite: false },
       ] as ChatTopic[];
-      // Set up mock state with unstarred topics
+      // Set up mock state with unstarred topics — outside a group session the
+      // sidebar reads the workspace conversation feed bucket.
       await act(async () => {
         useChatStore.setState({
           activeAgentId: 'abc',
           topicDataMap: {
-            [topicMapKey({ agentId: 'abc' })]: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
               items: topics,
               total: topics.length,
               currentPage: 0,
@@ -1929,7 +2099,7 @@ describe('topic action', () => {
         useChatStore.setState({
           activeAgentId: 'abc',
           topicDataMap: {
-            [topicMapKey({ agentId: 'abc' })]: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
               currentPage: 0,
               hasMore: false,
               items: topics,
@@ -1986,6 +2156,219 @@ describe('topic action', () => {
           result.current.internal_updateTopic(topicId, { title: 'New' }),
         ).rejects.toThrow('rename failed');
       });
+    });
+  });
+  describe('rebindTopicAgent', () => {
+    const setupBoundTopic = (overrides: Partial<ChatTopic> = {}) => {
+      const agentId = 'agent-a';
+      const topicId = 'topic-1';
+      const key = topicMapKey({ agentId });
+      const topic: ChatTopic = {
+        agentId,
+        createdAt: Date.now(),
+        favorite: false,
+        id: topicId,
+        sessionId: agentId,
+        title: 'Topic',
+        updatedAt: Date.now(),
+        ...overrides,
+      };
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: false,
+              isExpandingPageSize: false,
+              isLoadingMore: false,
+              items: [topic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+
+      return { topicId };
+    };
+
+    it('is a no-op when the topic already runs under the target agent', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      const updateTopicMock = vi.spyOn(topicService, 'updateTopic');
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
+      const updateTopicMetadataMock = vi.spyOn(topicService, 'updateTopicMetadata');
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-a');
+      });
+
+      expect(updateTopicMock).not.toHaveBeenCalled();
+      expect(batchMoveMock).not.toHaveBeenCalled();
+      expect(updateTopicMetadataMock).not.toHaveBeenCalled();
+    });
+
+    it('reassigns execution via updateTopic — never the move mutation — and appends a handoff entry', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      const updateTopicMock = vi.spyOn(topicService, 'updateTopic').mockResolvedValue([] as never);
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      const updateTopicMetadataMock = vi
+        .spyOn(topicService, 'updateTopicMetadata')
+        .mockResolvedValue([]);
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      // Continue only flips the topic's owner column — messages/threads are
+      // never re-parented, so earlier execution segments stay attributed.
+      expect(updateTopicMock).toHaveBeenCalledWith(topicId, { agentId: 'agent-b' });
+      expect(batchMoveMock).not.toHaveBeenCalled();
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
+      ).toMatchObject({ agentId: 'agent-b', id: topicId });
+      expect(updateTopicMetadataMock).toHaveBeenCalledWith(topicId, {
+        agentHandoffs: [expect.objectContaining({ fromAgentId: 'agent-a', toAgentId: 'agent-b' })],
+      });
+    });
+
+    it('keeps the topic in the workspace feed bucket under its flipped agentId', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const agentId = 'agent-a';
+      const topicId = 'topic-feed';
+      const topic: ChatTopic = {
+        agentId,
+        createdAt: Date.now(),
+        favorite: false,
+        id: topicId,
+        title: 'Feed topic',
+        updatedAt: Date.now(),
+      };
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
+              currentPage: 0,
+              hasMore: false,
+              isExpandingPageSize: false,
+              isLoadingMore: false,
+              items: [topic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+      vi.spyOn(topicService, 'updateTopic').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValue([]);
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      // A handoff must never push the row out of the shared feed.
+      expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items).toEqual([
+        expect.objectContaining({ agentId: 'agent-b', id: topicId }),
+      ]);
+    });
+
+    it('rolls back a rejected handoff and allows the same destination to be retried', async () => {
+      const { topicId } = setupBoundTopic();
+      const update = vi
+        .spyOn(topicService, 'updateTopic')
+        .mockRejectedValueOnce(new Error('handoff rejected'))
+        .mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValue([]);
+      await act(async () => {
+        await expect(useChatStore.getState().rebindTopicAgent(topicId, 'agent-b')).rejects.toThrow(
+          'handoff rejected',
+        );
+      });
+      const bucket = topicMapKey({ agentId: 'agent-a' });
+      expect(useChatStore.getState().topicDataMap[bucket].items[0].agentId).toBe('agent-a');
+      await act(async () => {
+        await useChatStore.getState().rebindTopicAgent(topicId, 'agent-b');
+      });
+      expect(update).toHaveBeenCalledTimes(2);
+      expect(useChatStore.getState().topicDataMap[bucket].items[0].agentId).toBe('agent-b');
+    });
+
+    it('restores an unbound topic after a rejected handoff', async () => {
+      const { topicId } = setupBoundTopic({ agentId: null });
+      vi.spyOn(topicService, 'updateTopic').mockRejectedValue(new Error('handoff rejected'));
+      await act(async () => {
+        await expect(useChatStore.getState().rebindTopicAgent(topicId, 'agent-b')).rejects.toThrow(
+          'handoff rejected',
+        );
+      });
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0].agentId,
+      ).toBeNull();
+    });
+
+    it('does not roll back a newer owner when an earlier handoff fails', async () => {
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'updateTopic').mockImplementation(async () => {
+        useChatStore.getState().internal_dispatchTopic({
+          type: 'updateTopic',
+          id: topicId,
+          value: { agentId: 'agent-c' },
+          containerKey: topicMapKey({ agentId: 'agent-a' }),
+        });
+        throw new Error('earlier handoff rejected');
+      });
+      await act(async () => {
+        await expect(useChatStore.getState().rebindTopicAgent(topicId, 'agent-b')).rejects.toThrow(
+          'earlier handoff rejected',
+        );
+      });
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0].agentId,
+      ).toBe('agent-c');
+    });
+
+    it('still completes the switch when the handoff metadata write fails', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'updateTopic').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockRejectedValue(
+        new Error('metadata write failed'),
+      );
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
+      ).toMatchObject({ agentId: 'agent-b' });
+    });
+  });
+
+  describe('forkTopicAgent', () => {
+    it('clones the topic under the target agent and leaves the original untouched', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const cloneSpy = vi.spyOn(topicService, 'cloneTopic').mockResolvedValue('topic-fork');
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
+
+      let newTopicId: string | undefined;
+      await act(async () => {
+        newTopicId = await result.current.forkTopicAgent('topic-1', 'agent-b');
+      });
+
+      expect(newTopicId).toBe('topic-fork');
+      expect(cloneSpy).toHaveBeenCalledWith('topic-1', undefined, 'agent-b');
+      expect(batchMoveMock).not.toHaveBeenCalled();
+      // The fork reconciles the workspace feed so the new topic appears.
+      expect(mutate).toHaveBeenCalledWith(expect.any(Function));
     });
   });
   describe('cleanupStaleRunningTopics', () => {
@@ -3269,5 +3652,265 @@ describe('Topic execution save failures', () => {
     vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValueOnce([]);
     await useChatStore.getState().updateTopicMetadata('topic-execution', selected);
     expect(useChatStore.getState().topicDataMap[key].items[0].metadata).toEqual(selected);
+  });
+});
+
+describe('workspace conversation feed', () => {
+  const seedFeedAndAgentBuckets = () => {
+    const agentKey = topicMapKey({ agentId: 'agent-b' });
+    const sharedRow = { id: 'topic-shared', status: 'running', title: 'Shared' } as ChatTopic;
+    const otherAgentRow = { id: 'topic-c', status: 'running', title: 'C' } as ChatTopic;
+    useChatStore.setState({
+      activeAgentId: 'agent-b',
+      topicDataMap: {
+        [WORKSPACE_TOPIC_MAP_KEY]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [sharedRow, otherAgentRow],
+          pageSize: 20,
+          total: 2,
+        },
+        [agentKey]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [sharedRow],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+    return { agentKey, otherAgentRow, sharedRow };
+  };
+
+  it('stores a workspace-scoped fetch in the feed bucket, not the agent bucket', async () => {
+    const topics = [
+      { agentId: 'agent-a', id: 'topic-a', title: 'A' },
+      { agentId: 'agent-b', id: 'topic-b', title: 'B' },
+    ];
+    (topicService.getTopics as Mock).mockResolvedValue({ items: topics, total: topics.length });
+
+    const { result } = renderHook(() =>
+      useChatStore().useFetchTopics(true, { pageSize: 20, scope: 'workspace' }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ items: topics, total: topics.length });
+    });
+
+    expect(topicService.getTopics).toHaveBeenCalledWith(
+      expect.objectContaining({ pageSize: 20, scope: 'workspace' }),
+    );
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY]?.items).toEqual(topics);
+    // The fetch must not leak into an agent bucket it never named.
+    expect(
+      useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })],
+    ).toBeUndefined();
+  });
+
+  it('mirrors an agent-bucket update into the workspace feed bucket', () => {
+    const { agentKey } = seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-shared',
+        type: 'updateTopic',
+        value: { status: 'completed' },
+      });
+    });
+
+    const agentRow = useChatStore
+      .getState()
+      .topicDataMap[agentKey].items.find((t) => t.id === 'topic-shared');
+    const feedRow = useChatStore
+      .getState()
+      .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === 'topic-shared');
+    expect(agentRow?.status).toBe('completed');
+    expect(feedRow?.status).toBe('completed');
+  });
+
+  it('mirrors add and delete into the workspace feed bucket', () => {
+    seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        optimistic: true,
+        type: 'addTopic',
+        value: { id: 'topic-new', title: 'New' } as CreateTopicParams & { id: string },
+      });
+    });
+
+    expect(
+      useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.map((t) => t.id),
+    ).toContain('topic-new');
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].total).toBe(3);
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-shared',
+        type: 'deleteTopic',
+      });
+    });
+
+    expect(
+      useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.map((t) => t.id),
+    ).not.toContain('topic-shared');
+  });
+
+  it('does not mirror a group-scoped write into the feed bucket', () => {
+    seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        id: 'topic-shared',
+        scope: 'group',
+        groupId: 'group-1',
+        type: 'updateTopic',
+        value: { status: 'failed' },
+      });
+    });
+
+    const feedRow = useChatStore
+      .getState()
+      .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === 'topic-shared');
+    expect(feedRow?.status).toBe('running');
+  });
+
+  it('does not materialize a feed bucket that was never fetched', () => {
+    useChatStore.setState({
+      activeAgentId: 'agent-b',
+      topicDataMap: {
+        [topicMapKey({ agentId: 'agent-b' })]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [{ id: 'topic-only', title: 'Only' } as ChatTopic],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-only',
+        type: 'updateTopic',
+        value: { status: 'completed' },
+      });
+    });
+
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY]).toBeUndefined();
+  });
+});
+
+describe('lastUsedAgentId contract', () => {
+  it('never moves the composer default on background topic churn', () => {
+    // `lastUsedAgentId` may only be written by the three user actions (composer
+    // pick, send, handoff). A background agent completing is funnelled through
+    // `internal_dispatchTopic` as an `updateTopic` — the default must stay put.
+    const backgroundAgentId = 'agent-background-runner';
+    const backgroundKey = topicMapKey({ agentId: backgroundAgentId });
+    useChatStore.setState({
+      topicDataMap: {
+        [backgroundKey]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [
+            {
+              agentId: backgroundAgentId,
+              id: 'topic-running',
+              status: 'running',
+              title: 'Background run',
+            } as ChatTopic,
+          ],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+    useGlobalStore.setState((s) => ({
+      status: { ...s.status, lastUsedAgentId: 'agent-user-picked' },
+    }));
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: backgroundAgentId,
+        id: 'topic-running',
+        type: 'updateTopic',
+        value: { status: 'completed' } as Partial<ChatTopic>,
+      });
+    });
+
+    expect(useChatStore.getState().topicDataMap[backgroundKey].items[0].status).toBe('completed');
+    expect(useGlobalStore.getState().status.lastUsedAgentId).toBe('agent-user-picked');
+  });
+
+  describe('composer model pick binding', () => {
+    const seedBlankComposer = (agentId: string, selection: { model: string; provider: string }) => {
+      const messages = [{ id: 'message1' }] as UIChatMessage[];
+      act(() => {
+        useChatStore.setState({
+          messagesMap: { [messageMapKey({ agentId })]: messages },
+          activeAgentId: agentId,
+          composerModelSelection: selection,
+        });
+      });
+    };
+
+    it('binds the composer pick to the new topic instead of the agent snapshot', async () => {
+      const { result } = renderHook(() => useChatStore());
+      seedBlankComposer('agt_codex', { model: 'gpt-5.6-sol', provider: 'codex' });
+
+      const createTopicSpy = vi
+        .spyOn(topicService, 'createTopic')
+        .mockResolvedValue('new-topic-id');
+
+      await result.current.saveToTopic();
+
+      const payload = createTopicSpy.mock.calls[0][0];
+      // The agent row carries the default model; the composer pick must win for
+      // this conversation without the agent ever being written.
+      expect(payload.model).toBe('gpt-5.6-sol');
+      expect(payload.provider).toBe('codex');
+    });
+
+    it('consumes the pending pick so it cannot leak into the next conversation', async () => {
+      const { result } = renderHook(() => useChatStore());
+      seedBlankComposer('agt_codex', { model: 'gpt-5.6-sol', provider: 'codex' });
+
+      vi.spyOn(topicService, 'createTopic').mockResolvedValue('new-topic-id');
+
+      await result.current.saveToTopic();
+
+      expect(useChatStore.getState().composerModelSelection).toBeUndefined();
+    });
+
+    it('prefers both composer picks over the agent snapshot and clears them', async () => {
+      const createTopicSpy = vi
+        .spyOn(topicService, 'createTopic')
+        .mockResolvedValue('new-topic-id');
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: 'agt_codex',
+          composerHeteroEffort: 'high',
+          composerModelSelection: { model: 'gpt-5.6-sol', provider: 'codex' },
+        });
+      });
+
+      await useChatStore.getState().createTopic();
+
+      expect(createTopicSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { heteroEffort: 'high' },
+          model: 'gpt-5.6-sol',
+          provider: 'codex',
+        }),
+      );
+      expect(useChatStore.getState().composerModelSelection).toBeUndefined();
+      expect(useChatStore.getState().composerHeteroEffort).toBeUndefined();
+    });
   });
 });

@@ -1,4 +1,3 @@
-import { type ContextMenuItem, Icon, type MenuInfo } from '@lobehub/ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { cssVar } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
@@ -12,6 +11,7 @@ import {
   type WorkspaceMemberWithProfile,
 } from '@/business/client/hooks/useWorkspaceMembers';
 import Avatar from '@/components/Avatar';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -20,6 +20,10 @@ import { partitionSelfMember } from './assigneeMemberOptions';
 import { renderMenuCheck } from './menuExtra';
 
 type Member = WorkspaceMemberWithProfile;
+
+type MenuInfo = {
+  domEvent: { stopPropagation: () => void };
+};
 
 const memberName = (member: Member) =>
   member.user?.fullName?.trim() ||
@@ -48,7 +52,7 @@ export const useAssigneeMenuItems = (
     disabled?: boolean;
     visibility?: 'private' | 'public' | null;
   },
-): ContextMenuItem[] => {
+): NativeContextMenuItem[] => {
   const { t } = useTranslation('chat');
   const activeWorkspaceId = useActiveWorkspaceId();
   // The context menu may be the only member-picker consumer on the surface —
@@ -71,7 +75,7 @@ export const useAssigneeMenuItems = (
         : assignable;
     const { others, self } = partitionSelfMember(visible, selfUserId);
 
-    const memberItem = (member: Member): ContextMenuItem => ({
+    const memberItem = (member: Member): NativeContextMenuItem => ({
       disabled,
       extra: renderMenuCheck(member.userId === currentUserId),
       icon: (
@@ -94,7 +98,7 @@ export const useAssigneeMenuItems = (
       {
         disabled,
         extra: renderMenuCheck(!currentUserId),
-        icon: <Icon color={cssVar.colorTextDescription} icon={UserRoundX} size={16} />,
+        icon: <UserRoundX size={16} style={{ color: cssVar.colorTextDescription }} />,
         key: 'assignee:unassigned',
         label: t('taskList.unassigned'),
         onClick: ({ domEvent }: MenuInfo) => {

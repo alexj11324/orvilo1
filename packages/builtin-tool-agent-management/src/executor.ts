@@ -15,9 +15,12 @@ import {
 
 import { agentService } from '@/services/agent';
 import { discoverService } from '@/services/discover';
-import { useAgentStore } from '@/store/agent';
+import { getAgentStoreState, useAgentStore } from '@/store/agent';
+import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
-import { AGENT_BINDING_REQUIRED_ERROR } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
+import { dispatchNonHeteroSubAgent } from '@/store/chat/slices/agentRun/actions/dispatch/nonHeteroSubAgentDispatcher';
+import { dbMessageSelectors } from '@/store/chat/slices/message/selectors';
+import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
 import {
   AgentManagementApiName,
@@ -45,8 +48,11 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
 
   // ==================== Agent CRUD ====================
 
-  createAgent = async (params: CreateAgentParams): Promise<BuiltinToolResult> => {
-    return runtime.createAgent(params);
+  createAgent = async (
+    params: CreateAgentParams,
+    ctx: BuiltinToolContext,
+  ): Promise<BuiltinToolResult> => {
+    return runtime.createAgent(params, { agentId: ctx.agentId });
   };
 
   updateAgent = async (params: UpdateAgentParams): Promise<BuiltinToolResult> => {
@@ -220,53 +226,64 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
         }
       }
 
-      // Surface an unsupported binding SYNCHRONOUSLY: the in-browser client
-      // runtime is retired and the deferred afterCompletion callback's throw
-      // would only be logged by buildRunLifecycle — the model would still get
-      // `success: true` and the user would see no actionable failure.
-      // callAgent can only dispatch through the gateway runtime — a local
-      // heterogeneous binding on the target is not drivable from this tool
-      // context, so the error names gateway mode specifically.
-      if (!useChatStore.getState().isGatewayModeEnabled(agentId)) {
-        return {
-          content: `Cannot call agent "${agentId}": agent-to-agent dispatch requires gateway mode, which is not enabled for this deployment.`,
-          success: false,
-        };
-      }
-
-      // Register afterCompletion to execute the agent via the gateway runtime.
-      // The in-browser client runtime is retired: without gateway mode there is
-      // no execution path, so surface an explicit binding-required error instead
-      // of silently falling back.
+      // Register afterCompletion to execute the agent.
+      // Runtime routing is fully delegated to dispatchNonHeteroSubAgent ().
       ctx.registerAfterCompletion(async () => {
         const get = useChatStore.getState;
-
-        if (!get().isGatewayModeEnabled(agentId)) {
-          throw new Error(AGENT_BINDING_REQUIRED_ERROR);
-        }
 
         const conversationContext: ConversationContext = {
           agentId: ctx.agentId || '',
           topicId: ctx.topicId || null,
         };
 
+        // Get current messages for client-mode runner (gateway loads from DB).
+        const chatKey = messageMapKey(conversationContext);
+        const messages = dbMessageSelectors.getDbMessagesByKey(chatKey)(get());
+
+        if (messages.length === 0) {
+          console.error('[callAgent] No messages found in current conversation');
+          return;
+        }
+
+        // Inject a virtual instruction message so the sub-agent has clear direction.
+        // Only used by the client runner; gateway mode sends `instruction` as a real
+        // user message via dispatchNonHeteroSubAgent.
+        const now = Date.now();
+        const messagesWithInstruction = instruction
+          ? [
+              ...messages,
+              {
+                content: `<speaker name="Supervisor" />\n${instruction}`,
+                createdAt: now,
+                id: `virtual_speak_instruction_${now}`,
+                role: 'user' as const,
+                updatedAt: now,
+              },
+            ]
+          : messages;
+
+        const parentAgentConfig = conversationContext.agentId
+          ? agentSelectors.getAgentConfigById(conversationContext.agentId)(getAgentStoreState())
+          : undefined;
+
         try {
-          // Execute with the target agent, but route persisted/streamed messages
-          // to the parent conversation. This keeps speaker identity and
-          // conversation ownership separate instead of hiding cross-agent
-          // replies in another messageMap bucket.
-          await get().executeGatewayAgent({
-            context: {
-              ...conversationContext,
-              agentId,
-              scope: 'sub_agent',
-              subAgentId: agentId,
+          await dispatchNonHeteroSubAgent(
+            {
+              kind: 'callAgent',
+              targetAgentId: agentId,
+              instruction,
+              parentMessageId: ctx.messageId,
             },
-            message: instruction,
-            messageContext: conversationContext,
-          });
+            {
+              conversationContext,
+              heterogeneousProvider: parentAgentConfig?.agencyConfig?.heterogeneousProvider,
+              isGatewayMode: get().isGatewayModeEnabled(),
+              messages: messagesWithInstruction,
+            },
+            get(),
+          );
         } catch (error) {
-          console.error('[callAgent] executeGatewayAgent failed:', error);
+          console.error('[callAgent] dispatchNonHeteroSubAgent failed:', error);
           throw error;
         }
       });

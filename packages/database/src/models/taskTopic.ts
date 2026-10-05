@@ -4,6 +4,7 @@ import type {
   BriefDecision,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
+  TaskRunTrigger,
   TaskTopicHandoff,
   TaskTopicIntegration,
   VerificationPollStage,
@@ -28,6 +29,7 @@ import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { isAutomationArmed, predicateForLegacyStatus } from './taskExecutionSql';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
 
@@ -131,7 +133,7 @@ export class TaskTopicModel {
       integration?: TaskTopicIntegration;
       operationId?: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+      trigger?: TaskRunTrigger;
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
@@ -178,7 +180,7 @@ export class TaskTopicModel {
       integration?: TaskTopicIntegration;
       operationId: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+      trigger?: TaskRunTrigger;
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
@@ -637,7 +639,7 @@ export class TaskTopicModel {
                   and(
                     eq(tasks.id, taskId),
                     eq(tasks.currentTopicId, topicId),
-                    eq(tasks.status, 'running'),
+                    predicateForLegacyStatus('running'),
                   ),
                 ),
             ),
@@ -659,7 +661,7 @@ export class TaskTopicModel {
             and(
               eq(tasks.id, taskId),
               eq(tasks.currentTopicId, topicId),
-              eq(tasks.status, 'running'),
+              predicateForLegacyStatus('running'),
               this.taskOwnership(),
             ),
           )
@@ -686,7 +688,7 @@ export class TaskTopicModel {
           and(
             eq(tasks.id, taskId),
             eq(tasks.currentTopicId, topicId),
-            inArray(tasks.status, ['running', 'scheduled']),
+            or(predicateForLegacyStatus('running'), isAutomationArmed),
             sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
             sql`${tasks.runReservationExpiresAt} <= ${now}`,
             this.taskOwnership(),
@@ -745,7 +747,7 @@ export class TaskTopicModel {
     taskId: string,
     options?: {
       since?: Date;
-      triggers?: Array<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>;
+      triggers?: TaskRunTrigger[];
     },
   ): Promise<number> {
     const conditions = [eq(taskTopics.taskId, taskId), this.ownership()];

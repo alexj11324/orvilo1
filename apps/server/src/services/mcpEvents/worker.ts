@@ -3,8 +3,12 @@ import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlan
 import type { McpEventInbox } from './deliveryTypes';
 import type { SqlMcpEventWorkRepository } from './workerRepository';
 
-/** Canonical Core port. No production adapter is installed, and this module does not start a runtime. */
-export type McpEventDispatchAdmission = EventDispatchAdmission;
+/** Canonical port — see @orvilo/agent-execution/controlPlane contracts. */
+export type { EventDispatchAdmission };
+export type { EventDispatchAdmission as McpEventDispatchAdmission };
+
+const metaString = (value: unknown) =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
 
 /** Called by the existing maintenance scheduler, never a second task runner. */
 export class McpEventWorker {
@@ -12,7 +16,7 @@ export class McpEventWorker {
     private readonly dependencies: {
       inbox: McpEventInbox;
       repository: SqlMcpEventWorkRepository;
-      admission?: McpEventDispatchAdmission;
+      admission?: EventDispatchAdmission;
       now?: () => number;
       leaseMs?: number;
       maxAttempts?: number;
@@ -49,23 +53,26 @@ export class McpEventWorker {
           const trigger = run.trigger;
           const result = this.dependencies.admission
             ? await this.dependencies.admission.admit({
+                causationId: metaString(delivery.event._meta?.causationId),
+                eventId: delivery.event.eventId,
+                idempotencyKey: run.idempotencyKey,
+                inboxRef: delivery.id,
+                rootDispatchId: metaString(delivery.event._meta?.rootDispatchId),
                 schemaVersion: 1,
-                tenantId: trigger.tenantId,
-                workspaceId: trigger.workspaceId,
-                userId: trigger.userId,
-                taskId: trigger.taskId,
-                triggerId: trigger.id,
-                triggerRevision: trigger.revision,
                 sourceId: trigger.sourceId,
                 subscriptionId: delivery.subscriptionId,
-                eventId: delivery.event.eventId,
-                inboxRef: delivery.id,
-                idempotencyKey: run.idempotencyKey,
+                taskId: trigger.taskId,
+                tenantId: trigger.tenantId,
+                triggerId: trigger.id,
+                triggerRevision: trigger.revision,
+                userId: trigger.userId,
+                workspaceId: trigger.workspaceId,
               })
             : { status: 'waiting' as const, reason: 'runtime-unavailable', retryable: true };
           if (result.status === 'waiting' && result.retryable) {
             retry = true;
             waiting = true;
+            errorCode = result.reason.replaceAll('-', '_');
             continue;
           }
           const saved = await this.dependencies.repository.settle(

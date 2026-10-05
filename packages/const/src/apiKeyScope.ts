@@ -225,6 +225,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   documentComment: rw('knowledge:read', 'knowledge:write'),
   documentLike: rw('knowledge:read', 'knowledge:write'),
   expertise: rw('agent:read', 'agent:write'),
+  // personal advisory memories — same domain as userMemory
+  experienceMemory: rw('user:read', 'user:write'),
   // whole-account backup dump (settings incl. market tokens, providers, agents)
   exporter: 'blocked',
   file: rw('file:read', 'file:write'),
@@ -251,6 +253,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   market: rw('agent:read', 'agent:write'),
   // tool execution inside a chat run
   mcp: { any: 'model:invoke' },
+  // workspace event triggers on tasks — member-gated like linearSync
+  mcpEvents: rw('workspace:read', 'workspace:write'),
   message: rw('chat:read', 'chat:write'),
   // numeric telemetry attached to a goal / agent / task / project — same
   // domain as the subjects that own it
@@ -267,6 +271,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // membership listing is readable; grant/revoke mutations stay off-limits to
   // restricted keys, like workspaceMember
   projectMember: rw('workspace:read', null),
+  // bindings hold personal credential references and `checkConnection` makes
+  // outbound calls to the configured provider endpoint — same class as creds
+  providerBinding: 'blocked',
   // GitHub PR review queue + review submission, proxied through the member's
   // own GitHub OAuth — same tier as task/agent work.
   pullRequest: rw('agent:read', 'agent:write'),
@@ -437,7 +444,7 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   // non-API-key auth and would bypass the scope guard entirely
   'aiAgent.issueGatewayUserToken',
   'aiAgent.refreshGatewayToken',
-  // sandbox execution mints a full ORVILO_JWT for `lh` commands
+  // sandbox execution mints a full ORVILO_JWT for `orvilo` commands
   // (`preprocessLhCommand`), which would bypass the key's scopes entirely
   'market.callCodeInterpreterTool',
   'market.execInSandbox',

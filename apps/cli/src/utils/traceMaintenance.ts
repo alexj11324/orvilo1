@@ -33,8 +33,8 @@ const lastActivityAt = (partial: {
  * Turn partials left behind by killed processes into completed `interrupted`
  * snapshots.
  *
- * Without this a `kill -9` leaves the run visible only to `lh trace op inspect`
- * (which falls back to partials) and invisible to `lh trace op list` (which
+ * Without this a `kill -9` leaves the run visible only to `orvilo trace op inspect`
+ * (which falls back to partials) and invisible to `orvilo trace op list` (which
  * lists completed snapshots) — the crashed runs, the ones most worth finding,
  * would be the ones that never show up.
  *

@@ -1,8 +1,9 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
+  BotMessageSquareIcon,
+  Brain,
   BrainCircuit,
   ChartColumnBigIcon,
   Coins,
@@ -18,16 +19,20 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
+  Sparkles,
   TagIcon,
   TerminalSquare,
+  User,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { isSettingsTabOffered } from '@/config/routes/settings';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
+import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -40,6 +45,7 @@ export enum SettingsGroupKey {
   Data = 'data',
   Developer = 'developer',
   Security = 'security',
+  ThisDevice = 'thisDevice',
   Tools = 'tools',
   UsageAndCost = 'usageAndCost',
 }
@@ -63,6 +69,7 @@ export const useCategory = () => {
   const { t: tAuth } = useTranslation('auth');
   const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
+  const { showProvider } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
@@ -98,7 +105,7 @@ export const useCategory = () => {
       {
         items: [
           {
-            icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={26} /> : undefined,
+            icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={16} /> : User,
             key: SettingsTabs.Profile,
             label: username || tAuth('tab.profile'),
           },
@@ -132,25 +139,30 @@ export const useCategory = () => {
       // 执行环境与 Agent — the agent plus the runtime it executes in.
       {
         items: [
+          // Per-agent configuration home (General / Runtime / Model / Tools &
+          // Permissions / Environment / Advanced) — exiled from the work
+          // surface so the agent page stays an instant workbench.
+          offered(SettingsTabs.Agents) && {
+            icon: BotMessageSquareIcon,
+            key: SettingsTabs.Agents,
+            label: t('tab.agents'),
+          },
+          // Provider settings should not depend on Advanced tools: new users may need
+          // non-LobeHub providers, and desktop users often bring their own API keys.
+          showProvider && {
+            icon: Brain,
+            key: SettingsTabs.Provider,
+            label: t('tab.provider'),
+          },
+          {
+            icon: Sparkles,
+            key: SettingsTabs.ServiceModel,
+            label: t('tab.serviceModel'),
+          },
           {
             icon: BrainCircuit,
             key: SettingsTabs.Memory,
             label: t('tab.memory'),
-          },
-          offered(SettingsTabs.Provider) && {
-            icon: KeyRound,
-            key: SettingsTabs.Provider,
-            label: t('tab.provider'),
-          },
-          offered(SettingsTabs.Proxy) && {
-            icon: EthernetPort,
-            key: SettingsTabs.Proxy,
-            label: t('tab.proxy'),
-          },
-          offered(SettingsTabs.SystemTools) && {
-            icon: TerminalSquare,
-            key: SettingsTabs.SystemTools,
-            label: t('tab.systemTools'),
           },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Agent,
@@ -174,6 +186,27 @@ export const useCategory = () => {
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Tools,
         title: t('group.tools'),
+      },
+
+      // 此应用·此设备 — host-scoped pages (this install's proxy, OS-level
+      // permissions). Registry scope 'host'; offered() already resolves the
+      // isDesktop gate, so an empty group can be dropped without a platform
+      // check here.
+      {
+        items: [
+          offered(SettingsTabs.Proxy) && {
+            icon: EthernetPort,
+            key: SettingsTabs.Proxy,
+            label: t('tab.proxy'),
+          },
+          offered(SettingsTabs.SystemTools) && {
+            icon: TerminalSquare,
+            key: SettingsTabs.SystemTools,
+            label: t('tab.systemTools'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.ThisDevice,
+        title: t('group.thisDevice'),
       },
 
       // 用量与成本 — the quota / cost / billing / audit surface S70 says to keep.
@@ -273,8 +306,8 @@ export const useCategory = () => {
         key: SettingsGroupKey.Developer,
         title: t('group.developer'),
       },
-    ];
-  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username]);
+    ].filter((group) => group.items.length > 0);
+  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username, showProvider]);
 
   return categoryGroups;
 };

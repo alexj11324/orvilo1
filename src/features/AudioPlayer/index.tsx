@@ -1,9 +1,16 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { DownloadIcon, PauseIcon, PlayIcon, RotateCcwIcon, XIcon } from 'lucide-react';
-import { memo, type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createElement,
+  memo,
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { VoiceMessageUploadState } from '@/store/chat/slices/voiceMessage/initialState';
@@ -338,7 +345,7 @@ const AudioPlayer = memo<AudioPlayerProps>(
           type={'button'}
           onClick={togglePlay}
         >
-          <Icon icon={isPlaying ? PauseIcon : PlayIcon} size={16} />
+          {createElement(isPlaying ? PauseIcon : PlayIcon, { size: 16 })}
         </button>
         <div className={styles.waveformWrap}>
           <button
@@ -378,7 +385,7 @@ const AudioPlayer = memo<AudioPlayerProps>(
             type={'button'}
             onClick={() => void handleDownload()}
           >
-            <Icon icon={DownloadIcon} size={15} />
+            <DownloadIcon size={15} />
           </button>
         )}
         {uploadState && (
@@ -391,7 +398,7 @@ const AudioPlayer = memo<AudioPlayerProps>(
                 type="button"
                 onClick={() => onRetryUpload?.()}
               >
-                <Icon icon={RotateCcwIcon} size={14} />
+                <RotateCcwIcon size={14} />
               </button>
             )}
             {(isPending || isFailed) && (
@@ -402,7 +409,7 @@ const AudioPlayer = memo<AudioPlayerProps>(
                 type="button"
                 onClick={() => onCancelUpload?.()}
               >
-                <Icon icon={XIcon} size={14} />
+                <XIcon size={14} />
               </button>
             )}
           </div>

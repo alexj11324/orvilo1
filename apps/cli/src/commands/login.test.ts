@@ -1,13 +1,28 @@
 import fs from 'node:fs';
 
+import type * as DeviceIdentityModule from '@orvilo/device-identity';
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getUserIdFromApiKey } from '../auth/apiKey';
 import { saveCredentials } from '../auth/credentials';
+import type * as DeviceRegister from '../device/register';
+import { registerDevice } from '../device/register';
 import { loadSettings, saveSettings } from '../settings';
 import { log } from '../utils/logger';
 import { registerLoginCommand, resolveCommandExecutable } from './login';
+
+vi.mock('@orvilo/device-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof DeviceIdentityModule>()),
+  resolvePersistentDeviceIdentity: vi.fn(async (principal: string) => ({
+    deviceId: `persistent:${principal}`,
+    identitySource: 'fallback',
+  })),
+}));
+vi.mock('../device/register', async (importOriginal) => ({
+  ...(await importOriginal<typeof DeviceRegister>()),
+  registerDevice: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('../auth/apiKey', () => ({
   getUserIdFromApiKey: vi.fn(),
@@ -17,6 +32,7 @@ vi.mock('../auth/credentials', () => ({
 }));
 vi.mock('../settings', () => ({
   loadSettings: vi.fn().mockReturnValue(null),
+  normalizeUrl: vi.fn((url?: string) => url?.replace(/\/$/, '')),
   saveSettings: vi.fn(),
 }));
 
@@ -112,6 +128,18 @@ describe('login command', () => {
     }
     return parsePromise;
   }
+
+  it('registers the awaited persistent fallback after login', async () => {
+    const payload = Buffer.from(JSON.stringify({ sub: 'user-1' })).toString('base64url');
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(deviceAuthResponse())
+      .mockResolvedValueOnce(tokenSuccessResponse({ access_token: `header.${payload}.signature` }));
+    await runLoginAndAdvanceTimers(createProgram());
+    expect(registerDevice).toHaveBeenCalledWith(expect.anything(), {
+      deviceId: 'persistent:user-1',
+      identitySource: 'fallback',
+    });
+  });
 
   it('should complete login flow successfully', async () => {
     vi.mocked(fetch)

@@ -1,8 +1,9 @@
 'use client';
 
-import { useModalContext } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { useEffect, useState } from 'react';
+
+import { useModalContext } from '@/components/Modal';
 
 import type { PendingAttachment } from '../Evidence/attachments';
 import { useFeedbackAttachments } from '../Evidence/attachments';

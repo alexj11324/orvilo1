@@ -1,11 +1,11 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import NavHeader from '@/features/NavHeader';
 import { useAgentGroupStore } from '@/store/agentGroup';
@@ -26,11 +26,9 @@ const Header = memo(() => {
 
   return (
     <NavHeader
-      paddingBlock={6}
-      paddingInline={8}
       showTogglePanelButton={false}
       left={
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-row items-center gap-2">
           <Avatar
             avatar={currentAgent?.avatar || DEFAULT_AVATAR}
             background={currentAgent?.backgroundColor ?? undefined}
@@ -40,15 +38,17 @@ const Header = memo(() => {
           <div style={{ fontWeight: 600 }}>
             {agentDisplayName(currentAgent, t('defaultSession', { ns: 'common' }))}
           </div>
-        </Flexbox>
+        </div>
       }
       right={
-        <Flexbox horizontal gap={4}>
+        <div className="flex flex-row gap-1">
           <ActionIcon icon={XIcon} size={'small'} onClick={close} />
-        </Flexbox>
+        </div>
       }
       style={{
         background: cssVar.colorBgContainer,
+        paddingBlock: 6,
+        paddingInline: 8,
       }}
     />
   );

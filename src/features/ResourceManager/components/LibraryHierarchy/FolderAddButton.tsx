@@ -1,8 +1,5 @@
 'use client';
-
 import { Notion } from '@lobehub/icons';
-import { type DropdownItem, DropdownMenu, Icon, stopPropagation } from '@lobehub/ui';
-import { ActionIcon, toast, Upload } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -13,6 +10,10 @@ import { type ChangeEvent } from 'react';
 import { memo, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
 import useNotionImport from '@/features/ResourceManager/components/Header/hooks/useNotionImport';
 import useUploadFolder from '@/features/ResourceManager/components/Header/hooks/useUploadFolder';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
@@ -146,13 +147,21 @@ const FolderAddButton = memo<FolderAddButtonProps>(({ folderId }) => {
   const items = useMemo<DropdownItem[]>(
     () => [
       {
-        icon: <Icon icon={FilePenLine} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FilePenLine fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'create-note',
         label: t('header.actions.newPage'),
         onClick: handleCreatePage,
       },
       {
-        icon: <Icon icon={FolderIcon} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FolderIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'create-folder',
         label: t('header.actions.newFolder'),
         onClick: handleCreateFolder,
@@ -162,7 +171,11 @@ const FolderAddButton = memo<FolderAddButtonProps>(({ folderId }) => {
       },
       {
         closeOnClick: false,
-        icon: <Icon icon={FileUp} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FileUp fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'upload-file',
         label: (
           <Upload
@@ -181,7 +194,11 @@ const FolderAddButton = memo<FolderAddButtonProps>(({ folderId }) => {
       },
       {
         closeOnClick: false,
-        icon: <Icon icon={FolderUp} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FolderUp fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'upload-folder',
         label: <label htmlFor={folderUploadInputId}>{t('header.actions.uploadFolder')}</label>,
       },
@@ -197,7 +214,11 @@ const FolderAddButton = memo<FolderAddButtonProps>(({ folderId }) => {
             onClick: handleOpenNotionGuide,
           },
         ],
-        icon: <Icon icon={Link} />,
+        icon: (
+          <span className="anticon" role="img">
+            <Link fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'connect',
         label: t('header.actions.connect'),
         type: 'submenu',
@@ -222,8 +243,8 @@ const FolderAddButton = memo<FolderAddButtonProps>(({ folderId }) => {
     <div
       className={'hierarchy-node-actions'}
       data-open={menuOpen}
-      onClick={stopPropagation}
-      onPointerDown={stopPropagation}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       <DropdownMenu
         items={items}

@@ -1,12 +1,12 @@
 'use client';
 
-import { Icon, Tooltip } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CornerDownRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { CreateTaskParams, CreateTaskState } from '../../../types';
@@ -98,11 +98,18 @@ export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, 
           </span>
         )}
         {parentIdentifier && (
-          <Tooltip title={t('builtins.orvilo-task.create.subtaskOf', { parent: parentIdentifier })}>
-            <span className={styles.subtaskTag}>
-              <Icon icon={CornerDownRight} size={11} />
-              {parentIdentifier}
-            </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className={styles.subtaskTag}>
+                  <CornerDownRight size={11} />
+                  {parentIdentifier}
+                </span>
+              }
+            />
+            <TooltipContent>
+              {t('builtins.orvilo-task.create.subtaskOf', { parent: parentIdentifier })}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>

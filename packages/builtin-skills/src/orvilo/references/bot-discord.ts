@@ -50,22 +50,22 @@ Connect a Discord bot to your agent.
 ### Step 4: Connect via CLI
 
 \`\`\`bash
-lh bot add -a <agentId> \\
+orvilo bot add -a <agentId> \\
   --platform discord \\
   --app-id <applicationId> \\
   --public-key <publicKey> \\
   --bot-token <botToken>
 
-lh bot test <botId>
-lh bot connect <botId>
+orvilo bot test <botId>
+orvilo bot connect <botId>
 \`\`\`
 
 ## Notes
 
 - **Message Content Intent** is critical — without it, the bot receives empty message content
 - Apps with 100+ servers must apply for Discord verification to use privileged intents
-- If you regenerate the bot token, the old one immediately stops working — update the bot config with \`lh bot update\`
-- Discord uses a WebSocket gateway (not webhooks) — \`lh bot connect\` keeps the connection alive
+- If you regenerate the bot token, the old one immediately stops working — update the bot config with \`orvilo bot update\`
+- Discord uses a WebSocket gateway (not webhooks) — \`orvilo bot connect\` keeps the connection alive
 `;
 
 export default content;

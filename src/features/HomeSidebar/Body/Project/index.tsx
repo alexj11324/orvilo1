@@ -1,20 +1,12 @@
 'use client';
 
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import { ArrowRightIcon, PlusIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
@@ -40,28 +32,27 @@ const Project = memo<ProjectProps>(({ itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <AccordionHeader>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Text ellipsis fontSize={12} type="secondary" weight={500}>
-            {t('sidebar.title')}
-          </Text>
-        </AccordionTrigger>
-        <div
-          className={cx(
-            'accordion-action',
-            accordionStyles.action,
-            accordionStyles.actionBorderless,
-          )}
-        >
-          <ActionIcon
-            icon={ArrowRightIcon}
-            size="small"
-            title={t('list.viewAll')}
-            onClick={() => navigate('/projects')}
-          />
+      <div className="flex items-center">
+        <div className="min-w-0 flex-1">
+          <AccordionTrigger>
+            <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+              {t('sidebar.title')}
+            </span>
+          </AccordionTrigger>
         </div>
-      </AccordionHeader>
-      <AccordionPanel>
+        <div className="flex shrink-0 items-center">
+          <Button
+            aria-label={t('list.viewAll')}
+            size="icon"
+            title={t('list.viewAll')}
+            variant="ghost"
+            onClick={() => navigate('/projects')}
+          >
+            <ArrowRightIcon />
+          </Button>
+        </div>
+      </div>
+      <AccordionContent>
         {error ? (
           <AsyncError error={error} variant="inline" onRetry={() => mutate()} />
         ) : isLoading ? (
@@ -75,7 +66,7 @@ const Project = memo<ProjectProps>(({ itemKey }) => {
         ) : (
           projects.map((project) => <ProjectItem key={project.id} project={project} />)
         )}
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

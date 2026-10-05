@@ -1,6 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
-import { copyToClipboard, Icon } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
 import {
@@ -26,10 +23,12 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { openRenameModal } from '@/components/RenameModal';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { createTopicForwardModal } from '@/features/Conversation/MessageForward/TopicForwardModal';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { createMoveTopicsModal } from '@/features/MoveTopicsModal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openShareModal } from '@/features/ShareModal';
 import { openTopicDoctorModal } from '@/features/TopicDoctorModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -40,6 +39,7 @@ import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
+import { copyToClipboard } from '@/utils/clipboard';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
 export interface TopicItemDropdownMenuProps {
@@ -73,20 +73,20 @@ export const useTopicItemDropdownMenu = ({
     duplicateTopic,
     removeTopic,
     favoriteTopic,
-    markTopicCompleted,
-    unmarkTopicCompleted,
+    archiveTopic,
+    unarchiveTopic,
     updateTopicTitle,
   ] = useChatStore((s) => [
     s.autoRenameTopicTitle,
     s.duplicateTopic,
     s.removeTopic,
     s.favoriteTopic,
-    s.markTopicCompleted,
-    s.unmarkTopicCompleted,
+    s.archiveTopic,
+    s.unarchiveTopic,
     s.updateTopicTitle,
   ]);
 
-  const isCompleted = status === 'completed';
+  const isArchived = status === 'archived';
   const handleOpenShareModal = useCallback(() => {
     if (!id) return;
 
@@ -99,21 +99,21 @@ export const useTopicItemDropdownMenu = ({
     return [
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={isCompleted ? ArchiveRestore : Archive} />,
-        key: 'markCompleted',
-        label: isCompleted ? t('actions.unmarkCompleted') : t('actions.markCompleted'),
+        icon: isArchived ? <ArchiveRestore /> : <Archive />,
+        key: 'archive',
+        label: isArchived ? t('actions.unarchive') : t('actions.archive'),
         onClick: () => {
-          if (isCompleted) {
-            unmarkTopicCompleted(id);
+          if (isArchived) {
+            unarchiveTopic(id);
           } else {
-            markTopicCompleted(id);
+            archiveTopic(id);
           }
         },
-        sfSymbol: isCompleted ? 'tray.and.arrow.up' : 'archivebox',
+        sfSymbol: isArchived ? 'tray.and.arrow.up' : 'archivebox',
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Star} />,
+        icon: <Star />,
         key: 'favorite',
         label: fav ? t('actions.unfavorite') : t('actions.favorite'),
         onClick: () => {
@@ -126,7 +126,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Wand2} />,
+        icon: <Wand2 />,
         key: 'autoRename',
         label: t('actions.autoRename'),
         onClick: () => {
@@ -136,7 +136,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={PencilLine} />,
+        icon: <PencilLine />,
         key: 'rename',
         label: t('rename', { ns: 'common' }),
         onClick: () => {
@@ -161,7 +161,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Stethoscope} />,
+        icon: <Stethoscope />,
         key: 'diagnose',
         label: t('actions.diagnose'),
         onClick: () => {
@@ -175,7 +175,7 @@ export const useTopicItemDropdownMenu = ({
       ...(isDesktop
         ? [
             {
-              icon: <Icon icon={PanelTop} />,
+              icon: <PanelTop />,
               key: 'openInNewTab',
               label: t('actions.openInNewTab'),
               onClick: () => {
@@ -191,7 +191,7 @@ export const useTopicItemDropdownMenu = ({
           ]
         : []),
       {
-        icon: <Icon icon={PanelRight} />,
+        icon: <PanelRight />,
         key: 'openOnRight',
         label: t('openOnRight', { ns: 'common' }),
         onClick: () => {
@@ -201,7 +201,7 @@ export const useTopicItemDropdownMenu = ({
       ...(isDesktop
         ? [
             {
-              icon: <Icon icon={ExternalLink} />,
+              icon: <ExternalLink />,
               key: 'openInNewWindow',
               label: t('actions.openInNewWindow'),
               onClick: () => {
@@ -214,7 +214,7 @@ export const useTopicItemDropdownMenu = ({
           ]
         : [{ type: 'divider' as const }]),
       {
-        icon: <Icon icon={Hash} />,
+        icon: <Hash />,
         key: 'copySessionId',
         label: t('actions.copySessionId'),
         onClick: async () => {
@@ -223,7 +223,7 @@ export const useTopicItemDropdownMenu = ({
         },
       },
       {
-        icon: <Icon icon={Link2} />,
+        icon: <Link2 />,
         key: 'copyLink',
         label: t('actions.copyLink'),
         onClick: async () => {
@@ -238,7 +238,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canCreateTopic,
-        icon: <Icon icon={LucideCopy} />,
+        icon: <LucideCopy />,
         key: 'duplicate',
         label: t('actions.duplicate'),
         onClick: () => {
@@ -247,7 +247,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canCreateTopic || !activeAgentId,
-        icon: <Icon icon={Forward} />,
+        icon: <Forward />,
         key: 'forwardToAgent',
         label: t('actions.forwardToAgent'),
         onClick: () => {
@@ -257,7 +257,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={FolderInput} />,
+        icon: <FolderInput />,
         key: 'moveToAgent',
         label: t('actions.moveToAgent'),
         onClick: () => {
@@ -269,7 +269,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Download} />,
+        icon: <Download />,
         key: 'share',
         label: t('shareModal.title', { ns: 'chat' }),
         onClick: handleOpenShareModal,
@@ -281,7 +281,7 @@ export const useTopicItemDropdownMenu = ({
       {
         danger: true,
         disabled: !canEditTopic,
-        icon: <Icon icon={Trash} />,
+        icon: <Trash />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => {
@@ -302,22 +302,22 @@ export const useTopicItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     id,
     fav,
-    isCompleted,
+    isArchived,
     title,
     canCreateTopic,
     canEditTopic,
     activeAgentId,
     activeWorkspaceSlug,
     appOrigin,
+    archiveTopic,
+    unarchiveTopic,
     autoRenameTopicTitle,
     duplicateTopic,
     favoriteTopic,
-    markTopicCompleted,
-    unmarkTopicCompleted,
     removeTopic,
     updateTopicTitle,
     openTopicInNewWindow,

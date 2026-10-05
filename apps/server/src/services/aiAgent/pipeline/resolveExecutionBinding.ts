@@ -1,6 +1,7 @@
 import { isHeterogeneousAgentModelId } from '@orvilo/const';
-import { DEFAULT_ORVILO_ENGINE } from '@orvilo/types';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
+import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 
 import type { AgentConfigWithId } from '@/server/services/agent';
 
@@ -11,8 +12,9 @@ import type { AgentConfigWithId } from '@/server/services/agent';
  * Since the Lobe model loop is retired, every agent run resolves to an ACP
  * execution binding — an explicit `agencyConfig.heterogeneousProvider` when
  * configured, a legacy heterogeneous `model` id (`'claude-code'`, `'codex'`,
- * …) when set, otherwise the builtin `'orvilo'` harness (default engine
- * `claude-sdk`, which the dispatch layer maps onto the claude-code ACP agent).
+ * …) when set, otherwise the builtin `'orvilo'` agent, whose harness is
+ * fixed to Prime and resolves a device like every other type
+ * (docs/development/device-execution-contract.md).
  * The binding is resolved per run; downstream device/sandbox dispatch in
  * `pipeline/heteroDispatch` validates the target environment, pins it to the
  * run, and rejects targets it cannot safely execute on.
@@ -35,12 +37,35 @@ export const resolveExecutionBinding = (
   synthesized: boolean;
 } => {
   const explicit = agentConfig.agencyConfig?.heterogeneousProvider;
-  if (explicit) return { heteroType: explicit.type, heterogeneousProvider: explicit, synthesized: false };
+  if (explicit)
+    return { heteroType: explicit.type, heterogeneousProvider: explicit, synthesized: false };
   if (isHeterogeneousAgentModelId(model))
     return { heteroType: model, heterogeneousProvider: undefined, synthesized: false };
   return {
     heteroType: 'orvilo',
-    heterogeneousProvider: { engine: DEFAULT_ORVILO_ENGINE, type: 'orvilo' },
+    heterogeneousProvider: { type: 'orvilo' },
     synthesized: true,
   };
+};
+
+/**
+ * Whether the agent's resolved execution binding can mount the per-run
+ * builtin/MCP tool surface — the pre-dispatch form of the
+ * `supportsBuiltinToolMount` input `resolveRunToolSurface` gets from the
+ * execution turn. Selection and binding gates call this so a task that
+ * requires the surface is never routed onto an agent that cannot mount it.
+ */
+export const agentCanMountBuiltinToolSurface = (
+  agentConfig:
+    | { agencyConfig?: OrviloAgentAgencyConfig | null }
+    | Pick<AgentConfigWithId, 'agencyConfig'>
+    | null
+    | undefined,
+  model?: string | null,
+): boolean => {
+  const { heteroType } = resolveExecutionBinding(
+    agentConfig?.agencyConfig ? { agencyConfig: agentConfig.agencyConfig } : {},
+    model,
+  );
+  return canMountBuiltinToolSurface({ type: heteroType });
 };

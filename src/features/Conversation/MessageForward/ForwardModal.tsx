@@ -1,15 +1,19 @@
 'use client';
 
-import { Flexbox, SearchBar, TextArea } from '@lobehub/ui';
-import { Button, createModal, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type StoreApiWithSelector } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
+import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { getForwardedMessageText } from '@/store/chat/slices/forward/helpers';
 import { useHomeStore } from '@/store/home';
@@ -144,61 +148,71 @@ const ForwardModalContent = memo(() => {
     close();
   };
 
-  const avatarOf = (avatar: unknown) => (typeof avatar === 'string' ? avatar : undefined);
-
   return (
-    <Flexbox horizontal className={styles.body} gap={16}>
+    <div className={cn('flex gap-4', styles.body)}>
       {/* Left: searchable multi-select agent list */}
-      <Flexbox flex={1} gap={8} style={{ minWidth: 0 }}>
-        <SearchBar
-          allowClear
-          placeholder={t('messageForward.modal.searchPlaceholder')}
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        <Flexbox className={styles.list} gap={4}>
+      <div className="flex flex-col flex-1 gap-2" style={{ minWidth: 0 }}>
+        <div className="relative">
+          <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-4 text-muted-foreground" />
+          <Input
+            className="px-8"
+            placeholder={t('messageForward.modal.searchPlaceholder')}
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+          {keyword && (
+            <button
+              className="-translate-y-1/2 absolute top-1/2 right-2 text-muted-foreground"
+              type="button"
+              onClick={() => setKeyword('')}
+            >
+              <XIcon className="size-4" />
+            </button>
+          )}
+        </div>
+        <div className={cn('flex flex-col gap-1', styles.list)}>
           {candidates.length === 0 ? (
-            <Flexbox align={'center'} justify={'center'} padding={24}>
-              <Text type={'secondary'}>{t('messageForward.modal.empty')}</Text>
-            </Flexbox>
+            <div className="flex flex-col items-center justify-center p-6">
+              <div className="text-muted-foreground">{t('messageForward.modal.empty')}</div>
+            </div>
           ) : (
             candidates.map((agent) => {
               const checked = selectedIds.includes(agent.id);
               return (
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={cx(styles.row, checked && styles.rowSelected)}
-                  gap={8}
+                <div
                   key={agent.id}
+                  className={cn(
+                    'flex items-center gap-2',
+                    cx(styles.row, checked && styles.rowSelected),
+                  )}
                   onClick={() => toggle(agent.id)}
                 >
                   <SelectCircle checked={checked} />
-                  <AgentAvatar avatar={avatarOf(agent.avatar)} />
-                  <Text ellipsis style={{ flex: 1 }}>
+                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType} />
+                  <div className="truncate" style={{ flex: 1 }}>
                     {agentDisplayName(agent, t('untitledAgent'))}
-                  </Text>
-                </Flexbox>
+                  </div>
+                </div>
               );
             })
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
       <div className={styles.divider} />
 
       {/* Right: forwarded content preview + note */}
-      <Flexbox flex={1} gap={8} style={{ minWidth: 0 }}>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+      <div className="flex flex-col flex-1 gap-2" style={{ minWidth: 0 }}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('messageForward.transcript.header', { count: preview.count })}
-        </Text>
-        <Flexbox className={styles.preview} flex={1}>
-          <Flexbox className={styles.previewLines} flex={1} gap={4}>
+        </div>
+        <div className={cn('flex flex-col flex-1', styles.preview)}>
+          <div className={cn('flex flex-col flex-1 gap-1', styles.previewLines)}>
             {preview.lines.map((line, i) => (
               <div className={styles.previewLine} key={i}>
-                <Text strong style={{ fontSize: 12 }}>
+                <div className="font-semibold" style={{ fontSize: 12 }}>
                   {line.role}:
-                </Text>{' '}
+                </div>{' '}
                 {line.text}
               </div>
             ))}
@@ -209,29 +223,28 @@ const ForwardModalContent = memo(() => {
                 })}
               </div>
             )}
-          </Flexbox>
+          </div>
           <div className={styles.noteDivider} />
-          <TextArea
-            autoSize={{ maxRows: 4, minRows: 2 }}
+          <Textarea
             className={styles.note}
             placeholder={t('messageForward.modal.notePlaceholder')}
-            resize={false}
+            rows={2}
+            style={{ maxHeight: '4lh', resize: 'none' }}
             value={note}
-            variant={'borderless'}
             onChange={(e) => setNote(e.target.value)}
           />
-        </Flexbox>
+        </div>
 
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
+        <div className="flex gap-2 justify-end">
           <Button onClick={close}>{t('messageForward.bar.cancel')}</Button>
-          <Button disabled={selectedIds.length === 0} type={'primary'} onClick={handleForward}>
+          <Button disabled={selectedIds.length === 0} variant="default" onClick={handleForward}>
             {selectedIds.length > 0
               ? t('messageForward.modal.sendCount', { count: selectedIds.length })
               : t('messageForward.bar.forward')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

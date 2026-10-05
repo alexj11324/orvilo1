@@ -272,7 +272,47 @@ export interface WorkspaceScanDeps {
  * - The CLI uses the portable defaults exported from this package
  *   (`defaultGetLocalFilePreview`, `defaultGetProjectFileIndex`).
  */
+// ─── Device-scoped MCP queries ───
+
+/**
+ * Probe a streamable-HTTP MCP endpoint in THIS device's network space —
+ * the counterpart of the desktop `getStreamableMcpServerManifest` IPC for a
+ * remote device. A localhost / LAN URL can only ever resolve where the MCP
+ * server will actually run, so the query must execute on the target host.
+ */
+export interface DeviceMcpStreamableManifestParams {
+  auth?: { accessToken?: string; token?: string; type: 'none' | 'bearer' | 'oauth2' };
+  headers?: Record<string, string>;
+  identifier: string;
+  metadata?: { avatar?: string; description?: string; name?: string };
+  url: string;
+}
+
+/** Probe a stdio MCP server manifest on THIS device (spawn + listManifests). */
+export interface DeviceMcpStdioManifestParams {
+  args?: string[];
+  command: string;
+  env?: Record<string, string>;
+  metadata?: { avatar?: string; description?: string; name?: string };
+  name: string;
+}
+
+/**
+ * Check installability of an MCP plugin's deployment options on THIS device —
+ * binaries, PATH, package managers all live where the server will run.
+ */
+export interface DeviceMcpCheckInstallableParams {
+  deploymentOptions: unknown[];
+}
+
 export interface DeviceControlDeps extends SkillDirectoryDeps, WorkspaceScanDeps {
+  /**
+   * Installability probe for an MCP plugin's deployment options, in this
+   * host's toolchain. Optional — a host without an MCP runtime (e.g. the
+   * `orvilo connect` CLI daemon) omits it and the dispatcher fails the RPC
+   * with a clear reason rather than a fabricated result.
+   */
+  checkMcpInstallable?: (params: DeviceMcpCheckInstallableParams) => Promise<unknown>;
   /** Copy a publish asset (possibly outside the workspace) to a path inside the workspace. */
   copyAssetForPublish?: (params: CopyAssetForPublishParams) => Promise<CopyAssetForPublishResult>;
   /**
@@ -297,10 +337,18 @@ export interface DeviceControlDeps extends SkillDirectoryDeps, WorkspaceScanDeps
   getLocalFilePreview: (params: LocalFilePreviewUrlParams) => Promise<LocalFilePreviewResult>;
   /** Build the project file index. */
   getProjectFileIndex: (params: ProjectFileIndexParams) => Promise<ProjectFileIndexResult>;
+  /** Probe a stdio MCP server manifest on this host. Optional — same rule as {@link checkMcpInstallable}. */
+  getStdioMcpServerManifest?: (params: DeviceMcpStdioManifestParams) => Promise<unknown>;
+  /** Probe a streamable-HTTP MCP endpoint in this host's network space. Optional — same rule as {@link checkMcpInstallable}. */
+  getStreamableMcpServerManifest?: (params: DeviceMcpStreamableManifestParams) => Promise<unknown>;
   /** Query a heterogeneous CLI's model catalog on this execution host. */
   listHeterogeneousAgentModels?: (
     params: ListHeterogeneousAgentModelsParams,
   ) => Promise<HeterogeneousAgentModelCatalog>;
+  /** Query the permission options advertised by this execution host's harness. */
+  listHeterogeneousAgentPermissions?: (
+    params: ListHeterogeneousAgentPermissionsParams,
+  ) => Promise<HeterogeneousAgentPermissionCatalog[]>;
   /** Read raw bytes after the user explicitly approved an external publish closure. */
   readExternalAssetForPublish?: (
     params: ExternalAssetForPublishParams,
@@ -334,6 +382,21 @@ export interface WorktreeActiveWriter {
  * Structural mirrors of the canonical `@orvilo/types` catalog contracts.
  * Kept local so device-control remains a leaf package with no app/type-layer dependency.
  */
+export interface ListHeterogeneousAgentPermissionsParams {
+  args?: string[];
+  command?: string;
+  cwd?: string;
+  env?: Record<string, string>;
+  type: string;
+}
+
+export interface HeterogeneousAgentPermissionCatalog {
+  configId: string;
+  currentValue: string;
+  name: string;
+  options: { description?: string; name: string; value: string }[];
+}
+
 export interface ListHeterogeneousAgentModelsParams {
   args?: string[];
   command?: string;

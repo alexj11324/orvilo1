@@ -1,7 +1,6 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import type { ProjectDetail } from '@/store/project';
@@ -27,9 +26,9 @@ interface ProjectDashboardProps {
  */
 const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
   return (
-    <Flexbox className={styles.main} gap={24}>
+    <div className={cn('flex flex-col', styles.main)} style={{ gap: 24 }}>
       <ProjectMilestones detail={detail} />
-    </Flexbox>
+    </div>
   );
 });
 

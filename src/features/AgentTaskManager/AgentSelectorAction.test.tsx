@@ -41,24 +41,12 @@ const mocks = vi.hoisted(() => ({
 
 // The real Popover only mounts its content after an open interaction; the
 // assertions read the selector list synchronously.
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Popover: ({
-    children,
-    content,
-    onOpenChange,
-  }: {
-    children: ReactNode;
-    content: ReactNode;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div>
-      <button data-testid="open-popover" onClick={() => onOpenChange?.(true)}>
-        {children}
-      </button>
-      <div data-testid="popover-content">{content}</div>
-    </div>
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: ReactNode }) => (
+    <div data-testid="popover-content">{children}</div>
   ),
+  PopoverTrigger: ({ render }: { render: ReactNode }) => render,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -99,10 +87,6 @@ vi.mock('@/hooks/useFetchAgentList', () => ({
   useFetchAgentList: () => mocks.fetchAgentList(),
 }));
 
-vi.mock('@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar', () => ({
-  default: ({ avatar }: { avatar?: string }) => <span data-avatar={avatar} data-testid="avatar" />,
-}));
-
 vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
   AgentModalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
@@ -136,13 +120,11 @@ describe('AgentSelectorAction', () => {
     expect(document.body.textContent).not.toContain('Custom Group');
   });
 
-  it('uses the active agent avatar and forwards agent changes', () => {
+  it('uses the builtin runtime icon and forwards agent changes', () => {
     const onAgentChange = vi.fn();
-    const { getByText, getByTestId } = render(
-      <AgentSelectorAction onAgentChange={onAgentChange} />,
-    );
+    const { container, getByText } = render(<AgentSelectorAction onAgentChange={onAgentChange} />);
 
-    expect(getByTestId('avatar').dataset.avatar).toBe('task-avatar');
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('/app-icons/icon-512x512.png');
 
     fireEvent.click(getByText('Custom Agent'));
     expect(onAgentChange).toHaveBeenCalledWith('agt_custom');

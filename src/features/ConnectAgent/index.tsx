@@ -453,15 +453,16 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     const targetLabel =
       target?.kind === 'device' ? deviceLabel(target.device) : t('connectAgent.create.localDevice');
 
+    // Only providers the scan actually found are listed — this step is the
+    // picker for what can be connected, so uninstalled harnesses never render.
     const inventory = useMemo(() => {
       if (scanState.status !== 'success' || !scanState.agents) return [];
-      const rank = (available?: boolean) => (available ? 0 : 1);
-      return [...CONNECTABLE_PROVIDERS]
-        .map((provider) => ({ provider, status: scanState.agents?.[provider.type] }))
-        .sort((a, b) => rank(a.status?.available) - rank(b.status?.available));
+      return CONNECTABLE_PROVIDERS.filter(
+        (provider) => scanState.agents?.[provider.type]?.available,
+      ).map((provider) => ({ provider, status: scanState.agents?.[provider.type] }));
     }, [scanState]);
 
-    const detectedCount = inventory.filter((entry) => entry.status?.available).length;
+    const detectedCount = inventory.length;
 
     const selectedProviders = useMemo(
       () => CONNECTABLE_PROVIDERS.filter((provider) => selectedTypes.includes(provider.type)),

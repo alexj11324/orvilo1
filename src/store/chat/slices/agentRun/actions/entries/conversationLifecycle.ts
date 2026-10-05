@@ -935,6 +935,14 @@ export class ConversationLifecycleActionImpl {
         inputSendErrorMsg: error instanceof Error ? error.message : 'Unknown error',
       });
 
+      // The composer owns the scoped draft snapshot and attachment merge.
+      // Its callback also refuses to replace input typed while this send awaited.
+      if (onPreflightFailure) {
+        onPreflightFailure();
+        return;
+      }
+      if (targetInputEditor?.getMarkdownContent?.().trim()) return;
+
       const op = this.#get().operations[operationId];
       if (op?.metadata.inputEditorTempState) {
         targetInputEditor?.setJSONState(op.metadata.inputEditorTempState);

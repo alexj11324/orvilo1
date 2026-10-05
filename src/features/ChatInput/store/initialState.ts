@@ -11,6 +11,8 @@ export type SendButtonHandler = (params: {
   editor: IEditor;
   getEditorData: () => Record<string, any> | undefined;
   getMarkdownContent: () => string;
+  /** Recover a cleared send draft without replacing newer input or another conversation. */
+  restoreDraft: () => void;
 }) => Promise<void> | void;
 
 export type VoiceMessageSendHandler = (recording: VoiceMessageRecording) => boolean;

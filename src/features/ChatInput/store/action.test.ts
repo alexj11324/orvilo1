@@ -3,6 +3,7 @@ import { KEY_ESCAPE_COMMAND } from 'lexical';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAgentStore } from '@/store/agent';
+import { useFileStore } from '@/store/file/store';
 import { systemAgentSelectors } from '@/store/user/selectors';
 
 import { getDraft, saveDraft } from '../draftStorage';
@@ -13,6 +14,7 @@ describe('ChatInput store actions', () => {
   beforeEach(() => {
     localStorage.clear();
     useAgentStore.setState({ activeAgentId: undefined });
+    useFileStore.setState({ chatUploadFileList: [], chatContextSelectionsByContext: {} });
     vi.restoreAllMocks();
   });
 
@@ -102,6 +104,91 @@ describe('ChatInput store actions', () => {
 
     expect(getDraft('main_agt_a_tpc_1')).toEqual({ text: 'Hello' });
   });
+
+  it.each([
+    [false, false],
+    [true, false],
+    [true, true],
+  ])(
+    'recovers a rejected send without replacing newer input=%s or another conversation=%s',
+    (hasNewInput, switchedConversation) => {
+      const draftKey = 'topic_test';
+      const contextSelectionKey = 'main_agent_topic';
+      const original = { root: { children: [{ text: 'Original draft' }] } };
+      let content = 'Original draft';
+      let document: Record<string, unknown> = original;
+      let restoreDraft!: () => void;
+      const file = {
+        id: 'file-original',
+        status: 'success',
+        file: new File(['abc'], 'original.txt'),
+      } as any;
+      const context = {
+        id: 'context-original',
+        content: 'Original context',
+        source: 'code',
+      } as any;
+      const newFile = { ...file, id: 'file-new' };
+      const newContext = { ...context, id: 'context-new' };
+      const editor = {
+        cleanDocument: () => {
+          content = '';
+          document = { root: { children: [] } };
+        },
+        focus: vi.fn(),
+        getLexicalEditor: () => ({}),
+        getDocument: (type: string) => (type === 'markdown' ? content : document),
+        setDocument: (_type: string, restored: Record<string, unknown>) => {
+          document = restored;
+          content = 'Original draft';
+        },
+      };
+      useFileStore.setState({
+        chatUploadFileList: [file],
+        chatContextSelectionsByContext: { [contextSelectionKey]: [context] },
+      });
+      const store = createStore({
+        agentId: 'agent-1',
+        contextSelectionKey,
+        draftKey,
+        editor: editor as unknown as IEditor,
+        onSend: (params) => {
+          restoreDraft = params.restoreDraft;
+          params.clearContent();
+          useFileStore.getState().clearChatUploadFileList();
+          useFileStore.getState().clearChatContextSelections(contextSelectionKey);
+        },
+      });
+
+      store.getState().handleSendButton();
+      if (hasNewInput) {
+        content = 'Newer draft';
+        document = { root: { children: [{ text: 'Newer draft' }] } };
+        useFileStore.setState({
+          chatUploadFileList: [newFile],
+          chatContextSelectionsByContext: { [contextSelectionKey]: [newContext] },
+        });
+      }
+      if (switchedConversation)
+        store.setState({ draftKey: 'topic_other', contextSelectionKey: 'other_context' });
+      restoreDraft();
+      restoreDraft();
+
+      expect(content).toBe(hasNewInput ? 'Newer draft' : 'Original draft');
+      if (!hasNewInput) expect(getDraft(draftKey)).toEqual(original);
+      expect(getInputHistory({ agentId: 'agent-1' })[0].json).toEqual(original);
+      expect(useFileStore.getState().chatUploadFileList.map((item) => item.id)).toEqual(
+        switchedConversation
+          ? ['file-new']
+          : hasNewInput
+            ? ['file-new', 'file-original']
+            : ['file-original'],
+      );
+      expect(useFileStore.getState().chatContextSelectionsByContext[contextSelectionKey]).toEqual(
+        switchedConversation ? [newContext] : hasNewInput ? [context, newContext] : [context],
+      );
+    },
+  );
 
   it('records sent input in the active agent history when no agent id is provided', () => {
     useAgentStore.setState({ activeAgentId: 'active-agent' });

@@ -2,6 +2,7 @@
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { type VoiceMessageRecording } from '@orvilo/types';
+import debug from 'debug';
 import { Info, X } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -55,6 +56,7 @@ import { canSendVoiceMessage, useCanSendVoiceMessage } from './voiceMessageCapab
 
 /** Max recent messages to feed into auto-complete context (≈10 conversation turns) */
 const MAX_CONTEXT_MESSAGES = 25;
+const log = debug('orvilo-client:conversation-input');
 
 export interface ChatInputProps {
   /**
@@ -355,7 +357,7 @@ const ChatInput = memo<ChatInputProps>(
 
     // Send handler - gets message, clears editor immediately, then sends
     const handleSend: SendButtonHandler = useCallback(
-      async ({ clearContent, getMarkdownContent, getEditorData }) => {
+      async ({ clearContent, getMarkdownContent, getEditorData, restoreDraft }) => {
         // Host surface is read-only (e.g. page locked) — block Enter too, not
         // just the grayed-out button.
         if (disableSend) return;
@@ -406,17 +408,25 @@ const ChatInput = memo<ChatInputProps>(
         const { contextSelections, pageSelections } =
           buildMessageContextSelections(currentContextList);
 
-        // Fire and forget - send with captured message
-        await sendMessage({
-          contextSelections,
-          editorData,
-          files: currentFileList,
-          message,
-          onPreflightFailure: () => {
-            useFileStore.getState().restoreChatContextSelections(contextKey, currentContextList);
-          },
-          pageSelections,
-        });
+        let accepted = false;
+        try {
+          await sendMessage({
+            contextSelections,
+            editorData,
+            files: currentFileList,
+            message,
+            onMessageAccepted: () => {
+              accepted = true;
+            },
+            onPreflightFailure: restoreDraft,
+            pageSelections,
+          });
+        } catch (error) {
+          // Access/mention preflights can throw before their failure callback.
+          // A persisted turn owns its attachments and must never be replayed.
+          if (!accepted) restoreDraft();
+          log('Message send failed before acceptance=%s: %O', !accepted, error);
+        }
       },
       [contextKey, sendMessage, storeApi, disableQueue, disableSend, isInputQueueBlocked],
     );

@@ -95,6 +95,26 @@ The local machine also has a stable `deviceId` and must not be listed twice
 (unified entry with a "this machine" marker). Legacy `local` fields keep a
 compat layer, but resolution must always end at a concrete device.
 
+## Runtime branding — derived on reads, never stored
+
+There is no separate persisted branding column. Every surface derives the
+runtime type at read time through `resolveAgentRuntimeType` /
+`normalizeAgentRuntimeIdentity`:
+
+- `agencyConfig.heterogeneousProvider` (normalized via
+  `normalizeHeterogeneousProviderConfig`, so legacy/alias spellings resolve to
+  the registered type) is the single source of truth.
+- Legacy rows with no `agencyConfig` fall back to
+  `isHeterogeneousAgentModelId(config.model)` (a model id that names a known
+  heterogeneous runtime brands as that runtime).
+- Otherwise the row is `'orvilo'`.
+
+Every consumer — sidebar `heterogeneousType`, `AgentRuntimeIcon`,
+settings/headers, selectors — reads the derived type through this one
+function, so rebranding never requires a data migration and an icon is always
+bound to a registered runtime (unknown types fall back to the Orvilo mark,
+never to a stale per-agent asset).
+
 ## Workspace preferences (existing chain, kept)
 
 `useEffectiveAgencyConfig` + `agentDeviceOverrides`: Personal → agent config;

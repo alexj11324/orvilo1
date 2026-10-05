@@ -79,7 +79,10 @@ const AgentHeader = memo(() => {
             zIndex: 4,
           }}
         >
-          <AgentRuntimeIcon size={72} type={resolveAgentRuntimeType(config)} />
+          <AgentRuntimeIcon
+            size={72} // linear-token-override: profile hero avatar disc — matches the 72px identity header scale used by group/member profile pages
+            type={resolveAgentRuntimeType(config)}
+          />
         </div>
       </div>
       {/* Identity Section — display only. Editing all three fields happens in a

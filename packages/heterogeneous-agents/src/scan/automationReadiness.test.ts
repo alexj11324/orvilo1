@@ -46,30 +46,21 @@ describe('automation host readiness', () => {
     }) as any);
   });
 
-  it('checks the same resolved engine and PATH without creating a session', async () => {
+  it('resolves the builtin orvilo agent to the embedded prime executor', async () => {
     const result = await checkAutomationReadinessOnHost({
       agentType: 'orvilo',
       engine: 'codex-app-server',
     });
     expect(result).toMatchObject({
-      authenticated: true,
-      executor: 'codex',
+      authenticated: 'unknown',
+      executor: 'prime',
       installed: true,
-      unattended: true,
+      unattended: false,
+      blockers: ['EXECUTOR_UNSUPPORTED'],
     });
-    expect(spawnPlan.mock.calls.map((call) => call[1])).toEqual([
-      ['login', 'status'],
-      ['exec', '--help'],
-    ]);
-    expect(childProcess.execFile).toHaveBeenCalledWith(
-      '/validated/codex',
-      ['login', 'status'],
-      expect.objectContaining({
-        env: expect.objectContaining({ PATH: '/validated' }),
-        timeout: 1500,
-      }),
-      expect.any(Function),
-    );
+    expect(detect).not.toHaveBeenCalled();
+    expect(remote).not.toHaveBeenCalled();
+    expect(childProcess.execFile).not.toHaveBeenCalled();
   });
 
   it('does not interpret Not logged in as a successful login even with zero exit', async () => {
@@ -235,7 +226,11 @@ describe('automation host readiness', () => {
     });
     expect(
       await checkAutomationReadinessOnHost({ agentType: 'orvilo', engine: 'other' }),
-    ).toMatchObject({ installed: 'unknown' });
+    ).toMatchObject({
+      executor: 'prime',
+      installed: true,
+      blockers: ['EXECUTOR_UNSUPPORTED'],
+    });
     expect(detect).not.toHaveBeenCalled();
     expect(remote).not.toHaveBeenCalled();
   });

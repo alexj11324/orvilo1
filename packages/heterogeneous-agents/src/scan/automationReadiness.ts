@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 
 import { probePrimeArtifactInstallation } from '@orvilo/prime-harness/readiness';
-import { resolveOrviloCliAgentType } from '@orvilo/types';
+import { resolveHeteroCliAgentType } from '@orvilo/types';
 import { z } from 'zod';
 
 import { getHeterogeneousAgentConfig } from '../config';
@@ -103,14 +103,14 @@ export async function checkAutomationReadinessOnHost(
   input: AutomationReadinessRequest,
 ): Promise<AutomationReadinessResult> {
   const params = automationReadinessRequestSchema.parse(input);
-  const engineSupported =
-    !params.engine || params.engine === 'claude-sdk' || params.engine === 'codex-app-server';
+  // The engine model is retired: the builtin 'orvilo' agent IS the embedded
+  // Prime harness, so it resolves to the prime executor like 'native'. A stale
+  // `engine` field on the request is ignored for it rather than honored as a
+  // CLI-family selector — device dispatch only supports CLI families today.
   const executor =
-    params.agentType === 'orvilo' && engineSupported
-      ? resolveOrviloCliAgentType(params.engine)
-      : params.agentType === 'native' || params.engine === 'prime'
-        ? 'prime'
-        : params.agentType;
+    params.agentType === 'orvilo' || params.agentType === 'native' || params.engine === 'prime'
+      ? 'prime'
+      : (resolveHeteroCliAgentType({ type: params.agentType }) ?? params.agentType);
   const result: AutomationReadinessResult = {
     authenticated: 'unknown',
     checkedAt: new Date().toISOString(),
@@ -130,11 +130,6 @@ export async function checkAutomationReadinessOnHost(
     result.blockers = ['EXECUTOR_UNSUPPORTED'];
     return result;
   }
-  if (params.agentType === 'orvilo' && !engineSupported) {
-    result.blockers = ['EXECUTOR_UNSUPPORTED'];
-    return result;
-  }
-
   const config = getHeterogeneousAgentConfig(executor);
   const status = config
     ? await detectHeterogeneousCliCommand(config.type, config.defaultCommand)

@@ -113,6 +113,7 @@ const DeviceAdmissionError = memo<DeviceAdmissionErrorProps>(
         try {
           const result = await repairDeviceBinding({
             deviceId,
+            expectedBindingRevision: body.bindingRevision,
             expectedBoundDeviceId: body.deviceId,
             topicId,
           });
@@ -128,7 +129,7 @@ const DeviceAdmissionError = memo<DeviceAdmissionErrorProps>(
           setRepairingDeviceId(undefined);
         }
       },
-      [body.deviceId, dismiss, repairDeviceBinding, t, topicId],
+      [body.bindingRevision, body.deviceId, dismiss, repairDeviceBinding, t, topicId],
     );
 
     const handleViewRunStatus = useCallback(() => {

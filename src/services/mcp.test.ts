@@ -24,6 +24,16 @@ const mockTopicDetail = vi.hoisted(() => ({
   getTopicDetail: vi.fn(),
 }));
 
+// The server-side device RPC surface (`lambdaClient.device.*`) — the
+// tunnel a foreign-device scope takes: query + tool-call procs forward the
+// request to the named device over the gateway relay.
+const mockDeviceLambda = vi.hoisted(() => ({
+  callMcpTool: vi.fn(),
+  checkMcpInstallable: vi.fn(),
+  getStdioMcpServerManifest: vi.fn(),
+  getStreamableMcpServerManifest: vi.fn(),
+}));
+
 // Local execution identity — `{localDeviceId}` means this host proved its own
 // device id through the gateway handshake; `{}` is an unproven host.
 const mockLocalIdentity = vi.hoisted(() => ({
@@ -57,6 +67,12 @@ vi.mock('./discover', () => ({
 
 vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
+    device: {
+      callMcpTool: { mutate: mockDeviceLambda.callMcpTool },
+      checkMcpInstallable: { query: mockDeviceLambda.checkMcpInstallable },
+      getStdioMcpServerManifest: { query: mockDeviceLambda.getStdioMcpServerManifest },
+      getStreamableMcpServerManifest: { query: mockDeviceLambda.getStreamableMcpServerManifest },
+    },
     topic: {
       getTopicDetail: { query: mockTopicDetail.getTopicDetail },
     },
@@ -305,8 +321,8 @@ describe('MCPService', () => {
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
 
-    it('should answer OPERATION_UNSUPPORTED for a device-only call bound to a remote device', async () => {
-      const { toolsClient } = await import('@/libs/trpc/client');
+    it('should tunnel a device-only call to the bound remote device over the server relay', async () => {
+      const { lambdaClient, toolsClient } = await import('@/libs/trpc/client');
       mockTopicBindings.set('topic-remote', 'remote-device-1');
 
       const mockStdioPlugin = {
@@ -319,6 +335,11 @@ describe('MCPService', () => {
       mockPluginSelectors.getInstalledPluginById.mockReturnValue(() => mockStdioPlugin);
       mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
 
+      mockDeviceLambda.callMcpTool.mockResolvedValue({
+        content: 'remote result',
+        success: true,
+      });
+
       const payload: ChatToolPayload = {
         id: 'tool-call-3c',
         identifier: 'stdio-plugin',
@@ -329,11 +350,63 @@ describe('MCPService', () => {
 
       const result = await mcpService.invokeMcpToolCall(payload, { topicId: 'topic-remote' });
 
-      expect(result).toMatchObject({
-        error: { code: 'OPERATION_UNSUPPORTED', deviceId: 'remote-device-1' },
+      expect(result).toMatchObject({ content: 'remote result', success: true });
+      expect(lambdaClient.device.callMcpTool.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiName: 'execute',
+          arguments: '{}',
+          deviceId: 'remote-device-1',
+          identifier: 'stdio-plugin',
+          params: {
+            args: ['script.js'],
+            command: 'node',
+            env: {},
+            name: 'stdio-plugin',
+            type: 'stdio',
+          },
+        }),
+        { signal: undefined },
+      );
+      expect(toolsClient.mcp.callTool.mutate).not.toHaveBeenCalled();
+      expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+    });
+
+    it('should surface a device-relay transport failure naming the bound device — never a fake success', async () => {
+      mockTopicBindings.set('topic-remote-fail', 'remote-device-1');
+
+      const mockStdioPlugin = {
+        customParams: {
+          mcp: { type: 'stdio', command: 'node', args: ['script.js'] },
+        },
+        manifest: { meta: { title: 'Stdio Plugin' }, version: '1.0.0' },
+      };
+
+      mockPluginSelectors.getInstalledPluginById.mockReturnValue(() => mockStdioPlugin);
+      mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
+
+      mockDeviceLambda.callMcpTool.mockResolvedValue({
+        content: 'device unreachable',
+        error: 'device unreachable',
+        errorCode: 'DEVICE_NOT_CONNECTED',
         success: false,
       });
-      expect(toolsClient.mcp.callTool.mutate).not.toHaveBeenCalled();
+
+      const payload: ChatToolPayload = {
+        id: 'tool-call-3d',
+        identifier: 'stdio-plugin',
+        apiName: 'execute',
+        arguments: '{}',
+        type: 'standalone',
+      };
+
+      const result = await mcpService.invokeMcpToolCall(payload, {
+        topicId: 'topic-remote-fail',
+      });
+
+      expect(result).toMatchObject({
+        error: { code: 'DEVICE_NOT_CONNECTED', deviceId: 'remote-device-1' },
+        success: false,
+      });
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
 
@@ -990,33 +1063,40 @@ describe('MCPService', () => {
       mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
     });
 
-    it('controlling device B answers for B — install/manifest/call never touch device A', async () => {
+    it('controlling device B answers for B — install/manifest/call all tunnel to B, never touch A', async () => {
       // The conversation is bound to B (authoritative read says B). Every
-      // operation under that scope must produce a B-scoped verdict — a remote
-      // device has no client MCP RPC yet, so the honest result is
-      // OPERATION_UNSUPPORTED naming B — and A's IPC stays at 0 calls.
+      // operation under that scope executes on B through the server-side
+      // device RPC relay — A's IPC counters stay at zero.
       mockTopicDetail.getTopicDetail.mockResolvedValue({
         metadata: { executionConfig: { boundDeviceId: deviceB } },
       });
+      mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'ok', success: true });
+      mockDeviceLambda.getStdioMcpServerManifest.mockResolvedValue({ api: [] });
+      mockDeviceLambda.checkMcpInstallable.mockResolvedValue({ success: true });
       const scope = { kind: 'topic', topicId: 'topic-b' } as const;
 
       const callResult = await mcpService.invokeMcpToolCall(stdioPayload, { scope });
-      expect(callResult).toMatchObject({
-        error: { code: 'OPERATION_UNSUPPORTED', deviceId: deviceB },
-        success: false,
-      });
+      expect(callResult).toMatchObject({ success: true });
+      expect(mockDeviceLambda.callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
 
-      await expect(
-        mcpService.getStdioMcpServerManifest(
-          { args: ['server.js'], command: 'node', name: 'stdio-plugin' },
-          undefined,
-          { scope },
-        ),
-      ).rejects.toMatchObject({ code: 'OPERATION_UNSUPPORTED', deviceId: deviceB });
+      await mcpService.getStdioMcpServerManifest(
+        { args: ['server.js'], command: 'node', name: 'stdio-plugin' },
+        undefined,
+        { scope },
+      );
+      expect(mockDeviceLambda.getStdioMcpServerManifest).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
 
-      await expect(
-        mcpService.checkInstallation(stdioPlugin.manifest as any, { scope }),
-      ).rejects.toMatchObject({ code: 'OPERATION_UNSUPPORTED', deviceId: deviceB });
+      await mcpService.checkInstallation(stdioPlugin.manifest as any, { scope });
+      expect(mockDeviceLambda.checkMcpInstallable).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
 
       // Device A (the local host) never spawned a process and never answered
       // a request — its IPC counters stay at zero.
@@ -1025,20 +1105,47 @@ describe('MCPService', () => {
       expect(mockElectronIpc.mcp.validMcpServerInstallable).not.toHaveBeenCalled();
     });
 
+    it('an old device client still answers OPERATION_UNSUPPORTED — the relay never fabricates', async () => {
+      // A device running a pre-MCP-RPC client rejects honestly; the server's
+      // PRECONDITION_FAILED/cause.data.code=OPERATION_UNSUPPORTED propagates
+      // verbatim so the UI offers upgrade, not retry.
+      mockTopicDetail.getTopicDetail.mockResolvedValue({
+        metadata: { executionConfig: { boundDeviceId: deviceB } },
+      });
+      const unsupported = Object.assign(
+        new Error('This device client does not support MCP manifest queries'),
+        {
+          data: { code: 'PRECONDITION_FAILED', cause: { data: { code: 'OPERATION_UNSUPPORTED' } } },
+        },
+      );
+      mockDeviceLambda.getStdioMcpServerManifest.mockRejectedValue(unsupported);
+
+      await expect(
+        mcpService.getStdioMcpServerManifest(
+          { args: ['server.js'], command: 'node', name: 'stdio-plugin' },
+          undefined,
+          { scope: { kind: 'topic', topicId: 'topic-b-old' } },
+        ),
+      ).rejects.toThrow('does not support MCP manifest queries');
+      expect(mockElectronIpc.mcp.getStdioMcpServerManifest).not.toHaveBeenCalled();
+    });
+
     it('cleared topic cache → authoritative binding decides (B), never A', async () => {
       // Display cache miss (topic not in the store) — the authoritative read
       // reports the binding: B. A cache miss is never "unbound".
       mockTopicDetail.getTopicDetail.mockResolvedValue({
         metadata: { boundDeviceId: deviceB },
       });
+      mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'ok', success: true });
 
       const result = await mcpService.invokeMcpToolCall(stdioPayload, {
         scope: { kind: 'topic', topicId: 'topic-cleared-cache' },
       });
-      expect(result).toMatchObject({
-        error: { code: 'OPERATION_UNSUPPORTED', deviceId: deviceB },
-        success: false,
-      });
+      expect(result).toMatchObject({ success: true });
+      expect(mockDeviceLambda.callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
 
@@ -1084,15 +1191,26 @@ describe('MCPService', () => {
 
     it('B disconnected mid-flight still answers for B — never re-picked to A', async () => {
       // The binding targets B whether or not B is currently connected — the
-      // call never re-targets to this host.
+      // call tunnels to B and the transport failure names B; it never
+      // re-targets to this host.
       mockTopicBindings.set('topic-b-offline', deviceB);
+      mockDeviceLambda.callMcpTool.mockResolvedValue({
+        content: 'device unreachable',
+        error: 'device unreachable',
+        errorCode: 'DEVICE_NOT_CONNECTED',
+        success: false,
+      });
       const result = await mcpService.invokeMcpToolCall(stdioPayload, {
         scope: { kind: 'topic', topicId: 'topic-b-offline' },
       });
       expect(result).toMatchObject({
-        error: { code: 'OPERATION_UNSUPPORTED', deviceId: deviceB },
+        error: { code: 'DEVICE_NOT_CONNECTED', deviceId: deviceB },
         success: false,
       });
+      expect(mockDeviceLambda.callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
 
@@ -1107,14 +1225,17 @@ describe('MCPService', () => {
       expect(same).toEqual('local result');
 
       mockElectronIpc.mcp.callTool.mockClear();
-      // {kind:'device', deviceId:B} — foreign → unsupported, A untouched.
+      // {kind:'device', deviceId:B} — foreign → the server relay carries it
+      // to B; A's IPC stays untouched.
+      mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'ok', success: true });
       const foreign = await mcpService.invokeMcpToolCall(stdioPayload, {
         scope: { deviceId: deviceB, kind: 'device' },
       });
-      expect(foreign).toMatchObject({
-        error: { code: 'OPERATION_UNSUPPORTED', deviceId: deviceB },
-        success: false,
-      });
+      expect(foreign).toMatchObject({ success: true });
+      expect(mockDeviceLambda.callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
 
@@ -1145,11 +1266,13 @@ describe('MCPService', () => {
         kind: 'resource' as const,
         resource: { deviceId: deviceB, relativePath: 'x', rootRef: '/' },
       };
+      mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'ok', success: true });
       const result = await mcpService.invokeMcpToolCall(stdioPayload, { subject });
-      expect(result).toMatchObject({
-        error: { code: 'OPERATION_UNSUPPORTED', deviceId: deviceB },
-        success: false,
-      });
+      expect(result).toMatchObject({ success: true });
+      expect(mockDeviceLambda.callMcpTool).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
   });

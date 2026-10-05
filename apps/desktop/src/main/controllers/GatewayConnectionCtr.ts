@@ -13,7 +13,9 @@ import {
   resolveRemotePlatformRuntime,
 } from '@orvilo/heterogeneous-agents/scanHost';
 import { type ILocalSystemService, LocalSystemExecutionRuntime } from '@orvilo/tool-runtime';
+import { serializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { sleep } from '@orvilo/utils/sleep';
+import { app as electronApp } from 'electron';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
@@ -442,9 +444,16 @@ export default class GatewayConnectionCtr extends ControllerModule {
           logger.error(`Failed to approve project preview root ${root}:`, error);
         }
       },
-      // Workspace share (server-driven enroll/unenroll RPCs): the service owns
-      // the gateway connections, so both handlers route straight to it.
+      // Device-scoped MCP queries: manifest probes and installability checks
+      // only mean anything on this host — reuse McpCtr's IPC implementations,
+      // wrapped in the same `{json}` envelope the dispatcher ships to the server.
+      checkMcpInstallable: (params) =>
+        this.mcpCtr.validMcpServerInstallable(serializeMcpIpcPayload(params)),
       enrollWorkspace: (params) => this.service.enrollWorkspace(params),
+      getStdioMcpServerManifest: (params) =>
+        this.mcpCtr.getStdioMcpServerManifest(serializeMcpIpcPayload(params)),
+      getStreamableMcpServerManifest: (params) =>
+        this.mcpCtr.getStreamableMcpServerManifest(serializeMcpIpcPayload(params)),
       getLocalFilePreview: (params) => this.localFileCtr.getLocalFilePreview(params),
       readExternalAssetForPublish: (params) =>
         this.localFileCtr.readExternalAssetForPublish(params),
@@ -1279,8 +1288,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
     };
     setDesktopUserAgentHeader(headers);
 
+    // Stamp the adapter version the server keeps as capability evidence —
+    // `adapterVersion` feeds admission's `minAdapterVersion` checks so a
+    // stale client is judged from its registered version, not guessed.
+    const payload = { ...info, adapterVersion: electronApp.getVersion() };
+
     await fetch(`${serverUrl}/trpc/lambda/device.register`, {
-      body: JSON.stringify({ json: info }),
+      body: JSON.stringify({ json: payload }),
       headers,
       method: 'POST',
     });

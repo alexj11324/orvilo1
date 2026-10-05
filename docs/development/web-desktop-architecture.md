@@ -114,6 +114,35 @@ MCP 设备操作与执行候选集的语义，任何修改必须保持：
    share、revoke、版本变更后由 admission + pre-launch 复验，前端缓存
    永不是授权源。
 
+## 绑定修复与能力证据（FIX-F）
+
+- **修绑 = 执行身份决策，非内容协作**。「topic 有编辑权的人」与「能决定执行
+  位置的人」是两个集合：chat 是本人可见 + 链接共享制，共享读者拿到的是读权。
+  `topic.repairDeviceBinding` 因此要求 `topic:update` + **新设备必须在调用者
+  自己的授权注册表内**（`findByDeviceId` / `findWorkspaceDeviceById` 命中，
+  否则 FORBIDDEN）—— 任何人无法把话题绑到自己没有执行权限的设备上。
+- **`bindingRevision` 绑定纪元**。`metadata.bindingRevision` 由服务端在每次
+  绑定变更时 `+1` 戳记（`providerBinding.revision` 同形）；首绑从 1 起、修复
+  递增，CAS 输方回读赢家 epoch 返回。准入 `errorData` 携带当前 epoch，修复
+  客户端回传 `expectedBindingRevision` —— 同 pin 但 epoch 动了（中间落过别的
+  写）同样判 `occupied`。旧行无 epoch 读作 0，旧客户端省略 expected → 跳过
+  epoch 校验（向下降级，但绑定 CAS 永不缺席）。
+- **能力证据有时效**。`devices` 表新增 `capabilitySnapshot` /
+  `adapterVersion` / `lastVerifiedAt`（迁移 0203，幂等）：注册即写
+  `lastVerifiedAt`，活探测的 `supportedTools` 刷新快照。准入判读只认 7 天
+  TTL 内的证据 —— 过期或缺失 → `pending`，绝不凭陈旧行捏造 `verified`。
+  `minAdapterVersion` 以 `satisfiesMinAdapterVersion`（x.y.z 数字元组）比较，
+  不可解析输入永不满足。
+- **MCP 查询同域执行**。manifest（stdio/streamable）与 installability 走
+  device-control RPC：`DeviceControlDeps` 注入宿主实现（desktop 复用
+  `McpCtr` 三个既有 IPC 实现），无 MCP runtime 的宿主（CLI daemon）返回
+  诚实 `does not support` → 服务端映射 `PRECONDITION_FAILED` +
+  `cause.data.code:'OPERATION_UNSUPPORTED'`。远端 stdio /localhost MCP 工具
+  调用经 `device.callMcpTool` 隧道（`type:'mcp'` relay），决不在另一台机器
+  上代执行、决不伪报成功；无网关 → `GATEWAY_NOT_CONFIGURED`。
+- **修绑留痕**。workspace scope 的成功修复写 `topic.binding_repaired` 审计
+  （metadata 携带 `bindingRevision` + 新旧 pin）。
+
 ## 不做什么
 
 - 不新建 Prime gateway / 调度器 / 第二套权限引擎；复用 TaskDispatch/TaskRunner、
@@ -173,10 +202,9 @@ entry ─┐            ├─ HostPort（宿主动作：窗口/更新/原生对
   SELECTION_REQUIRED / EXECUTION_TARGET_NONE / NOT_FOUND (有候选) → 修复
   （选择器限定 `repairCandidates`，单候选 = 单个 "修复绑定到 X" 按钮）；
   DISPATCH_ADMISSION_PERSIST_FAILED → 查看运行状态。
-- **修复写 = 校验后写**。修复写入与服务端 first-bind CAS 同形的绑定三元组
-  （`executionConfig.boundDeviceId` + `executionTarget:'device'` + 顶层
-  `boundDeviceId`），并清空 `heteroSession*`—— 修复后的下一次运行必须
-  在新设备上建全新执行会话，绝不复用另一台设备的原生会话 id。服务端
-  尚无专用修复 CAS（已作为契约变更请求提出），客户端以
-  `getTopicDetail` 重读 + `expectedBoundDeviceId` 校验近似 CAS，期间绑定
-  被并发改写则拒绝落笔。
+- **修复写 = 服务端 CAS**。`topic.repairDeviceBinding`（FIX-F）在服务端以真
+  compare-and-swap 落笔（`repairTopicDeviceBinding`）：effective 绑定与
+  `bindingRevision` epoch 双 CAS，写入与服务端 first-bind 同形的绑定三元组
+  并清空 `heteroSession*`—— 修复后的下一次运行必须在新设备上建全新执行
+  会话，绝不复用另一台设备的原生会话 id。CAS 输的一方回读赢家并返回
+  `{outcome:'occupied'}`，客户端据此提示 `binding-changed` 而非覆盖。

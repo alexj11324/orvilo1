@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
 import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
@@ -18,7 +19,6 @@ import {
 } from '../../schemas/workAttention';
 import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 describe('NotificationModel', () => {
   const returning = vi.fn();

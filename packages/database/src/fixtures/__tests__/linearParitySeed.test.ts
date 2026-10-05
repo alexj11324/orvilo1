@@ -2,7 +2,6 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { seedPrimeRuntime } from '../../models/__tests__/_primeRuntime';
 import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
 import { applyWorkQueryLayout, myWorkQueryForMode, WorkQueryModel } from '../../models/workQuery';
@@ -20,6 +19,7 @@ import {
   LINEAR_PARITY_TEAM,
   seedLinearParity,
 } from '../linearParitySeed';
+import { seedPrimeRuntime } from '../seedPrimeRuntime';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'linear-parity-seed-test-user';

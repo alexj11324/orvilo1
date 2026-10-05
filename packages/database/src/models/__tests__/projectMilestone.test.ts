@@ -2,11 +2,11 @@ import { sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'milestone-progress-user';

@@ -3,12 +3,12 @@ import type { AcceptanceStatus } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { acceptances, topics, users, verifyRuns, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AcceptanceModel } from '../acceptance';
 import { ProjectModel } from '../project';
 import { VerifyRunModel } from '../verifyRun';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 

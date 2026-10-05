@@ -26,6 +26,14 @@ import {
 import { agentGroupRouter } from '../agentGroup';
 
 vi.mock('@/server/services/resourceEvents', () => ({ publishResourceEvent: vi.fn() }));
+// The admission check is a DB-backed contract verified by its own model tests;
+// this router suite runs against a bare `serverDB` object, so stub the seam and
+// assert on the runtime the router hands it.
+vi.mock('@/database/utils/agentRuntimeCreation', () => ({
+  assertAgentRuntimeCreation: vi.fn(
+    async (_db: any, _actor: any, config: any) => config.agencyConfig,
+  ),
+}));
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
@@ -89,6 +97,15 @@ describe('agentGroupRouter', () => {
 
     agentModelMock = {
       batchCreate: vi.fn(),
+      getPrimeRuntimeForCreation: vi.fn().mockResolvedValue({
+        agencyConfig: {
+          boundDeviceId: 'prime-host',
+          executionTarget: 'device',
+          heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' },
+        },
+        model: 'gpt-4',
+        provider: 'openai',
+      }),
     };
 
     chatGroupModelMock = {
@@ -197,10 +214,14 @@ describe('agentGroupRouter', () => {
       const caller = agentGroupRouter.createCaller(mockCtx);
       const result = await caller.createGroup(mockInput);
 
-      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith({
-        ...mockInput,
-        config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
-      });
+      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
+        {
+          ...mockInput,
+          config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
+        },
+        [],
+        undefined,
+      );
       expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
     });
 
@@ -222,10 +243,14 @@ describe('agentGroupRouter', () => {
       const caller = agentGroupRouter.createCaller(mockCtx);
       const result = await caller.createGroup(mockInput);
 
-      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith({
-        ...mockInput,
-        config: undefined,
-      });
+      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
+        {
+          ...mockInput,
+          config: undefined,
+        },
+        [],
+        undefined,
+      );
       expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
     });
   });
@@ -265,7 +290,7 @@ describe('agentGroupRouter', () => {
           config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
         },
         ['agent-1', 'agent-2'],
-        undefined,
+        await agentModelMock.getPrimeRuntimeForCreation.mock.results[0]?.value,
       );
       expect(result).toEqual({
         agentIds: ['agent-1', 'agent-2'],

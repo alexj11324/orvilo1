@@ -148,12 +148,49 @@ afterEach(async () => {
   await db.delete(users);
 });
 
-const failedGoal = async (enabled = true, error = 'fetch failed: ECONNRESET') => {
+/**
+ * `initialize` inherits an orvilo-typed Prime runtime, which is mount-incapable
+ * by design — `canMountBuiltinToolSurface` refuses 'orvilo' and the held
+ * capability decision keeps it that way. These flows exercise supervisor
+ * dispatch mechanics (diagnosis, cancellation, adoption), not the gate itself,
+ * so each goal gets a pre-seeded supervisorState whose agent resolves a
+ * mount-capable runtime; `initialize` returns the existing state verbatim.
+ */
+const seedSupervisorAgent = async (goalId: string) => {
+  const agent = await new AgentModel(db, userId).create({
+    agencyConfig: {
+      boundDeviceId: 'supervisor-host',
+      executionTarget: 'device',
+      heterogeneousProvider: { model: 'saved-supervisor-model', type: 'claude-code' },
+    },
+    model: 'saved-supervisor-model',
+    provider: 'openai',
+    title: 'Goal Supervisor Seed',
+    visibility: 'private',
+    virtual: true,
+  });
+  const topicId = `topic-supervisor-${++sequence}`;
+  await db.insert(topics).values({ id: topicId, userId });
+  const state = await goalModel.updateSupervisorState(goalId, 0, {
+    agentId: agent.id,
+    incidents: [],
+    topicId,
+  });
+  if (!state) throw new Error('Failed to seed supervisor state');
+  return state;
+};
+
+const failedGoal = async (
+  enabled = true,
+  error = 'fetch failed: ECONNRESET',
+  seedSupervisor = true,
+) => {
   const graph = await service().create({
     config: { supervision: { enabled } },
     tasks: ['Finish existing report'],
     title: 'Interrupted delivery',
   });
+  if (seedSupervisor) await seedSupervisorAgent(graph.goal.id);
   const created = await service().tick(graph.goal.id);
   const taskId = created.taskId!;
   const topicId = `topic-failed-${++sequence}`;
@@ -186,6 +223,7 @@ const pipelineFailureGoal = async (
     tasks: ['Finish existing report'],
     title: 'Interrupted delivery',
   });
+  if (withRun) await seedSupervisorAgent(graph.goal.id);
   const created = await service().tick(graph.goal.id);
   const taskId = created.taskId!;
   if (withRun) {
@@ -234,9 +272,9 @@ const diagnose = async (goalId: string, action = 'retry') => {
 };
 
 describe('Goal Supervisor integration', () => {
-  it('dispatches diagnosis using the inherited saved runtime without static model defaults', async () => {
-    const { goalId } = await failedGoal();
-    await service().tick(goalId);
+  it('creates the supervisor with the inherited saved runtime, then escalates per the held mount gate', async () => {
+    const { goalId } = await failedGoal(true, 'fetch failed: ECONNRESET', false);
+    expect((await service().tick(goalId)).outcome).toBe('waiting_human');
     const state = (await goalModel.findById(goalId))!.config!.supervisorState!;
     const [agent] = await db.select().from(agents).where(eq(agents.id, state.agentId));
     expect(agent).toMatchObject({
@@ -249,17 +287,15 @@ describe('Goal Supervisor integration', () => {
       provider: 'openai',
       visibility: 'private',
     });
-    expect(AiAgentService.prototype.execAgent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentId: state.agentId,
-        model: 'saved-supervisor-model',
-        provider: 'openai',
-      }),
-    );
+    // Held decision (handoff item 2): an orvilo-typed supervisor can never
+    // mount the diagnostic tool surface — the incident escalates instead of
+    // dispatching to execAgent.
+    expect(state.incidents.at(-1)).toMatchObject({ status: 'escalated' });
+    expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
   });
 
   it('rejects an unbound explicit goal model before creating a supervisor', async () => {
-    const { goalId, taskId, nodeId } = await failedGoal();
+    const { goalId, taskId, nodeId } = await failedGoal(true, 'fetch failed: ECONNRESET', false);
     await db.insert(userSettings).values({
       id: userId,
       systemAgent: { goal: { model: 'unauthorized-model', provider: 'openai' } },
@@ -276,7 +312,7 @@ describe('Goal Supervisor integration', () => {
   });
 
   it('preserves the interrupted Goal when no runtime is admitted', async () => {
-    const { goalId, taskId, nodeId } = await failedGoal();
+    const { goalId, taskId, nodeId } = await failedGoal(true, 'fetch failed: ECONNRESET', false);
     await db.delete(providerBindings);
     const graph = await new GoalGraphModel(db, userId).getGraph(goalId);
     const task = await taskModel.findById(taskId);

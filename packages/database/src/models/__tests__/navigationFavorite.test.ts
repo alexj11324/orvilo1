@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
@@ -9,7 +10,6 @@ import { ProjectModel } from '../project';
 import { SavedViewModel } from '../savedView';
 import { TaskModel } from '../task';
 import { TeamModel } from '../team';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'fav-user';

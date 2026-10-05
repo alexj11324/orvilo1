@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   acceptances,
   agentOperations,
@@ -24,7 +25,6 @@ import { ProjectModel } from '../project';
 import { taskActivityActor, TaskModel } from '../task';
 import { legacyStatusExpr } from '../taskExecutionSql';
 import { WorkModel } from '../work';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 

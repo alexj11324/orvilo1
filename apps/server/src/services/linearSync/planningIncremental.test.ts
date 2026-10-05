@@ -4,6 +4,7 @@ import { desc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
 import { LinearSyncModel } from '@/database/models/linearSync';
@@ -49,6 +50,9 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  // Project creation inherits a Prime runtime; strict admission requires an
+  // executable orvilo runtime (host device + armed binding + owned credential).
+  await seedPrimeRuntime(db, { userId, workspaceId });
 });
 
 afterEach(cleanup);

@@ -1,5 +1,5 @@
-import { agents, credentials, devices, providerBindings } from '../../schemas';
-import type { OrviloDatabase } from '../../type';
+import { agents, credentials, devices, providerBindings } from '../schemas';
+import type { OrviloDatabase } from '../type';
 
 /**
  * Project creation auto-provisions a coordinator agent through Prime runtime

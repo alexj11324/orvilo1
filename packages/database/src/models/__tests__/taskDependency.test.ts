@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   linearExternalRelations,
   linearInstallations,
@@ -18,7 +19,6 @@ import { LinearSyncModel } from '../linearSync';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 const db = await getTestDB();
 const userId = 'prerequisites-user';

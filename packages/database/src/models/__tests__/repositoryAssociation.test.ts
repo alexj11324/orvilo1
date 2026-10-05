@@ -3,12 +3,12 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { projectRepositories, teamRepoDefaults, teams, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { RepositoryModel } from '../repository';
 import { TaskModel } from '../task';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 /**
  * Regression coverage for the auditable association lifecycle (WM-07):

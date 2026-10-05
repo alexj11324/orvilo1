@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   linearImportJobs,
   linearImportReceipts,
@@ -16,7 +17,6 @@ import type { OrviloDatabase } from '../../type';
 import { LinearImportModel } from '../linearImport';
 import { LinearSyncModel } from '../linearSync';
 import { ProjectModel } from '../project';
-import { seedPrimeRuntime } from './_primeRuntime';
 
 const db: OrviloDatabase = await getTestDB();
 const workspaceId = 'linear-import-test-workspace';

@@ -2,8 +2,8 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { seedPrimeRuntime } from '../../../fixtures/seedPrimeRuntime';
 import { projectWorks, topics, works, workspaces } from '../../../schemas';
-import { seedPrimeRuntime } from '../../__tests__/_primeRuntime';
 import { AgentDocumentModel } from '../../agentDocuments';
 import { ProjectModel } from '../../project';
 import { TaskModel } from '../../task';

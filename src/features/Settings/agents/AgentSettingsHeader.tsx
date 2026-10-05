@@ -1,6 +1,5 @@
 'use client';
 
-import { resolveAgentRuntimeType } from '@orvilo/const';
 import { agentSecondaryDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -22,6 +21,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 import { getDeleteErrorMessageKey } from '@/utils/forbiddenError';
 
 interface AgentSettingsHeaderProps {

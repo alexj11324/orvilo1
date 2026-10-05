@@ -1,7 +1,11 @@
-import { render, renderHook } from '@testing-library/react';
+import type { SidebarAgentItem } from '@orvilo/types';
+import { cleanup, render, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { isValidElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import AssigneeAgentSelector from '@/features/AgentTasks/features/AssigneeAgentSelector';
+import MoveTopicsContent from '@/features/MoveTopicsModal/Content';
 import { canGoNative } from '@/libs/contextMenu/canGoNative';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
@@ -46,6 +50,7 @@ vi.mock('antd', async (importOriginal) => {
 vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: mocks.confirmModal,
+  useModalContext: () => ({ close: vi.fn(), setCanDismissByClickOutside: vi.fn() }),
 }));
 vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -108,6 +113,31 @@ vi.mock('@/store/home/selectors', () => ({
     allLabels: () => [],
   },
   homeAgentListSelectors: {
+    allAgents: () => [
+      {
+        id: 'codex-option',
+        type: 'agent',
+        title: 'Renamed Codex',
+        heterogeneousType: 'codex',
+        pinned: false,
+        updatedAt: new Date(),
+      } satisfies SidebarAgentItem,
+    ],
+    isAgentListInit: () => true,
+    pinnedAgents: () => [],
+    ungroupedAgents: () => [
+      {
+        id: 'codex-option',
+        type: 'agent',
+        title: 'Renamed Codex',
+        heterogeneousType: 'codex',
+        pinned: false,
+        updatedAt: new Date(),
+      } satisfies SidebarAgentItem,
+    ],
+    privatePinnedAgents: () => [],
+    privateUngroupedAgents: () => [],
+    hasPrivateAgents: () => false,
     agentGroups: () => [],
     privateAgentGroups: () => [],
   },
@@ -124,6 +154,18 @@ vi.mock('@/store/user/selectors', () => ({
 
 vi.mock('../../../../hooks', () => ({ useRevealSidebarSection: () => vi.fn() }));
 
+vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: () => undefined }));
+vi.mock('@/store/agent', () => ({ useAgentStore: () => undefined }));
+vi.mock('@/store/agent/selectors', () => ({
+  agentSelectors: { getAgentMetaById: () => () => undefined },
+  builtinAgentSelectors: { inboxAgentId: () => undefined },
+}));
+vi.mock('@/store/task', () => ({ useTaskStore: () => vi.fn() }));
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: ReactNode }) => children,
+  PopoverContent: ({ children }: { children: ReactNode }) => children,
+  PopoverTrigger: () => null,
+}));
 vi.mock('@/hooks/usePrefetchAgent', () => ({ usePrefetchAgent: () => vi.fn() }));
 vi.mock('@/store/chat', () => ({ useChatStore: () => false }));
 vi.mock('@/store/chat/selectors', () => ({
@@ -138,7 +180,7 @@ vi.mock('@/features/Workspace/WorkspaceLink', () => ({
 vi.mock('@/features/NavPanel/components/NavItem', () => ({
   default: ({ icon, title }: { icon: ReactNode; title: ReactNode }) => (
     <div>
-      {icon}
+      {isValidElement(icon) ? icon : null}
       {title}
     </div>
   ),
@@ -204,6 +246,18 @@ describe('useAgentDropdownMenu', () => {
     expect(getByText('Renamed Codex')).toBeTruthy();
     expect(container.querySelector('[aria-label="Codex"]')).not.toBeNull();
     expect(container.querySelector('img[src="/app-icons/icon-512x512.png"]')).toBeNull();
+  });
+
+  it('passes the actual Home runtime into move-topic and issue-assignee selector rows', () => {
+    const move = render(<MoveTopicsContent sourceAgentId="source" topicIds={['topic']} />);
+    expect(move.container.querySelector('[aria-label="Codex"]')).not.toBeNull();
+    cleanup();
+    const assign = render(
+      <AssigneeAgentSelector>
+        <button>Assign</button>
+      </AssigneeAgentSelector>,
+    );
+    expect(assign.container.querySelector('[aria-label="Codex"]')).not.toBeNull();
   });
 
   it('keeps non-config actions available to a use-only Workspace member', () => {

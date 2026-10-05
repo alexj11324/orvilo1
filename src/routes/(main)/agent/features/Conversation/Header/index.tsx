@@ -1,6 +1,5 @@
 'use client';
 
-import { resolveAgentRuntimeType } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
@@ -15,6 +14,7 @@ import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirecto
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import FavoriteToggle from './FavoriteToggle';
 import HeaderActions from './HeaderActions';

@@ -1,6 +1,5 @@
 'use client';
 
-import { resolveAgentRuntimeType } from '@orvilo/const';
 import isEqual from 'fast-deep-equal';
 import {
   ActivityIcon,
@@ -26,6 +25,7 @@ import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 const TAB_META = {
   [ChatSettingsTabs.Graph]: { icon: GitBranchIcon, labelKey: 'agentTab.graph' },

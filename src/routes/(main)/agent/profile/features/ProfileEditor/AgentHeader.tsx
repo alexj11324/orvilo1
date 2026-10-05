@@ -1,6 +1,5 @@
 'use client';
 
-import { resolveAgentRuntimeType } from '@orvilo/const';
 import { agentSecondaryDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -17,6 +16,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import { useAutoName } from './useAutoName';
 

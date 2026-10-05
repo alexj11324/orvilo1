@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { resolveAgentRuntimeType } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
@@ -14,6 +13,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 const AgentInfo = memo(() => {
   const { t } = useTranslation(['chat', 'welcome']);

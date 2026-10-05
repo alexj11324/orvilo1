@@ -1,5 +1,5 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import { CHAT_TOPIC_URL, resolveAgentRuntimeType } from '@orvilo/const';
+import { CHAT_TOPIC_URL } from '@orvilo/const';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
@@ -21,6 +21,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import SelectorTrigger from '../../components/SelectorTrigger';
 import { useAgentId } from '../../hooks/useAgentId';

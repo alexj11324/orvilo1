@@ -63,6 +63,9 @@ export const useFirstAgentDevice = () => {
   return {
     deviceId: resolved ? deviceId : undefined,
     error,
+    // True when the resolved host is this computer — the connect wizard
+    // treats it as the `local` target, not as a device row to scan remotely.
+    isLocalDevice: resolved && !!deviceId && deviceId === localDeviceId,
     // The list loaded but no candidate could host the agent — the user fixes
     // this under Settings → Devices.
     exhausted: resolved && !deviceId,

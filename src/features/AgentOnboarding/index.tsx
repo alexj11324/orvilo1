@@ -14,8 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import LocalHarnessSection from '@/features/ChatInput/ActionBar/Agent/LocalHarnessSection';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
-import { useAgentScan } from '@/features/ConnectAgent/useAgentScan';
-import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
+import { type ScanTarget, useAgentScan } from '@/features/ConnectAgent/useAgentScan';
+import {
+  openNewConversation,
+  selectAgentForConversation,
+} from '@/features/Conversation/selectAgent';
 import {
   createOnboardingAgentOnce,
   type FirstAgentCreationCheckpoint,
@@ -25,6 +28,7 @@ import {
 import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 import { providerBindingService } from '@/services/providerBinding';
 import { useAgentStore } from '@/store/agent';
+import { useElectronStore } from '@/store/electron';
 import { useProviderBindingStore } from '@/store/providerBinding';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -171,6 +175,7 @@ const OnboardingBody = ({
   const { t } = useTranslation('chat');
   const { scan, state } = useAgentScan();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const bindings = useProviderBindingStore((s) => s.bindings);
   const [apiSetup, setApiSetup] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -181,7 +186,7 @@ const OnboardingBody = ({
   // The execution host resolves itself (this computer, then a persisted pick,
   // then the first online personal device); choosing a device is an advanced
   // concern that lives in Settings → Devices, not in onboarding.
-  const { deviceId, loading: loadingDevice } = useFirstAgentDevice();
+  const { deviceId, isLocalDevice, loading: loadingDevice } = useFirstAgentDevice();
   const createAgent = useAgentStore((s) => s.createAgent);
   const completeAgent = async (
     agentId: string,
@@ -197,9 +202,14 @@ const OnboardingBody = ({
         firstAgentExecutionTarget: executionTarget,
       },
     });
-    // The agent just created is where the user lands when the gate releases —
-    // the write goes through the single select action, not a sidebar default.
-    selectAgentForConversation(agentId);
+    // The agent just created is where the user lands when the gate releases.
+    // Inside the account wizard the finish step owns the navigation instead —
+    // it selects the same agent and goes to the post-onboarding target.
+    if (pathname === '/onboarding') {
+      selectAgentForConversation(agentId);
+    } else {
+      openNewConversation({ agentId });
+    }
     await retry();
   };
   const createPrime = async () => {
@@ -268,21 +278,28 @@ const OnboardingBody = ({
   const connect = (type?: HeterogeneousAgentType) => {
     if (!deviceId) return;
     setCreateError(undefined);
+    const open = (initialTarget: ScanTarget) =>
+      openConnectAgentModal({
+        initialType: type,
+        initialTarget,
+        creationCheckpoint: cliCreation.current,
+        visibility: 'private',
+        onCreated: (agentId, config) =>
+          completeAgent(
+            agentId,
+            config?.agencyConfig?.boundDeviceId,
+            config?.agencyConfig?.executionTarget === 'local' ? 'local' : 'device',
+          ),
+      });
+    // This computer is the wizard's `local` target, not a device row: opening
+    // it as `kind:'device'` asks the workspace device RPC to scan a personal
+    // machine and comes back "Workspace device not found".
+    if (isLocalDevice) {
+      open({ kind: 'local' });
+      return;
+    }
     void verifyFirstAgentDevice(deviceId)
-      .then((device) => {
-        openConnectAgentModal({
-          initialType: type,
-          initialTarget: { kind: 'device', device },
-          creationCheckpoint: cliCreation.current,
-          visibility: 'private',
-          onCreated: (agentId, config) =>
-            completeAgent(
-              agentId,
-              config?.agencyConfig?.boundDeviceId,
-              config?.agencyConfig?.executionTarget === 'local' ? 'local' : 'device',
-            ),
-        });
-      })
+      .then((device) => open({ device, kind: 'device' }))
       .catch(setCreateError);
   };
 
@@ -392,7 +409,17 @@ interface AgentOnboardingProps {
  * missing piece.
  */
 const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  // On Electron the window URL is a one-way mirror of the active tab: the
+  // root router location this hook returns can sit on a settings path while
+  // the tab the user is actually looking at renders a normal page, which
+  // would release the gate app-wide. The electron store's active-tab URL is
+  // authoritative there; everywhere else (it is empty on web) the router
+  // location is.
+  const activeTabUrl = useElectronStore(
+    (s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.url ?? null,
+  );
+  const pathname = activeTabUrl?.split(/[?#]/)[0] ?? location.pathname;
   const { availability, ready, error, retry, retrying } = useAgentAvailability();
   const isLogin = useUserStore(authSelectors.isLogin);
   if (!isLogin || isFirstAgentSetupPath(pathname)) return <>{children}</>;

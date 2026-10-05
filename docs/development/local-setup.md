@@ -134,3 +134,13 @@ not provide an export named 'GlobeOff'` (or another recent icon): the
   version; if you see this on an older checkout, `pnpm install` inside
   `apps/desktop` after pulling, then `rm -rf node_modules/.vite/deps` to
   drop the stale optimized chunk.
+- **Chat/agent pages crash with `ReferenceError: TabIdContext is not defined`** —
+  a canary merge dropped the `TabIdContext` import in
+  `HeteroDeviceSwitcher.tsx` while keeping the `use(TabIdContext)` call. The
+  fix restores the import from `@/features/Electron/TabHost/TabIdContext`.
+- **`checkHostDeviceBoundaries` fails on untouched files** — new host-probe
+  modules (e.g. `heterogeneous-agents/src/scan/*`, `prime-harness/readiness.ts`)
+  enter the web entry closure before their edges are exempted. The gate wants
+  a precise `{rule, importer, target}` entry in
+  `scripts/ci/hostDeviceBoundariesAllowlist.json` mirroring the `spawn/*`
+  rows, not `--no-verify`.

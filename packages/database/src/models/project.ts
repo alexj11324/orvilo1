@@ -454,12 +454,11 @@ export class ProjectModel {
         identifier,
         name: input.name,
       });
-      const coordinator = await new AgentModel(
-        tx as OrviloDatabase,
-        this.userId,
-        this.workspaceId,
-      ).create({
+      const agentModel = new AgentModel(db, this.userId, this.workspaceId);
+      const runtime = await agentModel.getPrimeRuntimeForCreation({ visibility: input.visibility });
+      const coordinator = await agentModel.create({
         ...coordinatorConfig,
+        ...runtime,
         visibility: input.visibility,
         virtual: true,
       });

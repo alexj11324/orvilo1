@@ -116,6 +116,19 @@ interface AgentGroupMembershipImpactRef {
 }
 
 class AgentService {
+  getRuntimeForCreation = async (params: {
+    agentId: string;
+    visibility?: 'private' | 'public';
+    model?: string;
+    provider?: string;
+  }): Promise<Pick<Partial<OrviloAgentConfig>, 'agencyConfig' | 'model' | 'provider'>> => {
+    const runtime = await lambdaClient.agent.getAgentRuntimeForCreation.query(params);
+    return {
+      agencyConfig: runtime.agencyConfig ?? undefined,
+      model: runtime.model ?? undefined,
+      provider: runtime.provider ?? undefined,
+    };
+  };
   /**
    * Check if an agent with the given marketIdentifier already exists
    */

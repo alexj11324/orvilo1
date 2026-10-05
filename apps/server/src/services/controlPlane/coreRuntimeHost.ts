@@ -13,6 +13,7 @@ import type {
   RuntimeEvent,
   RuntimeSession,
 } from '@orvilo/agent-execution';
+import type { HarnessInitPolicy } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { HarnessTransport } from '@orvilo/agent-execution/controlPlane/harnessTransport';
 import type {
   DockerSupervisorOptions,
@@ -106,6 +107,9 @@ export interface EmbeddedRuntimeComposition extends Omit<
   args?: string[];
   /** Runner bundle — the artifact `verifyArtifact` hashes before launch. */
   artifact: string;
+  /** Run-derived `harness.init` policy (goal/rlm/tool surface); merged under
+   * the binding-derived slice the bridge returns. */
+  initPolicy?: HarnessInitPolicy;
   /** Trusted embedded-artifact verification; the pin is always PRIME_EMBEDDED_PIN. */
   verifyArtifact: PrimeEmbeddedRuntimeOptions['verifyArtifact'];
 }
@@ -213,6 +217,7 @@ export class CanonicalCoreRuntimeHost {
           home: '/tmp',
           inferenceBroker: embeddedBridge?.inferenceBroker,
           initModel: embeddedBridge?.initModel,
+          initPolicy: { ...embedded.initPolicy, ...embeddedBridge?.initPolicy },
           runtimeWorkspace: '/workspace',
           supervisor: {
             launch: supervisedLaunch,

@@ -1,9 +1,26 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import type * as OrviloConstModule from '@orvilo/const';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { Component, createElement, type ReactNode, Suspense } from 'react';
 import { SWRConfig } from 'swr';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { type ElectronStore, useElectronStore } from '@/store/electron';
+import { useUserStore } from '@/store/user';
+import type { OrviloUser } from '@/types/user';
+
+const environment = vi.hoisted(() => ({ desktop: false }));
+vi.mock('@orvilo/const', async (importOriginal) => ({
+  ...(await importOriginal<typeof OrviloConstModule>()),
+  get isDesktop() {
+    return environment.desktop;
+  },
+}));
+
+afterEach(() => {
+  environment.desktop = false;
+  vi.restoreAllMocks();
+});
 
 /**
  * Regression: on web (non-desktop) these SWR hooks used to call the Electron
@@ -57,5 +74,57 @@ describe('desktop-only SWR hooks under a suspense SWRConfig on web', () => {
     // Before the fix the hook suspended on the doomed IPC fetch, the rejection
     // hit the boundary, and the hook body never (re)rendered to completion.
     await waitFor(() => expect(rendered.length).toBeGreaterThan(0));
+  });
+});
+
+describe('gateway identity follows the authenticated owner', () => {
+  it('skips pre-login identity and replaces cached identity after account changes', async () => {
+    environment.desktop = true;
+    useUserStore.setState({ user: undefined });
+    useElectronStore.setState({ gatewayDeviceInfo: undefined });
+    const fetchInfo = vi.spyOn(gatewayConnectionService, 'getDeviceInfo');
+    fetchInfo.mockResolvedValue({
+      deviceId: 'owner-a-device',
+      hostname: 'host',
+      platform: 'darwin',
+      userId: 'owner-a',
+    });
+    const { result } = renderHook(() => useElectronStore.getState().useFetchGatewayDeviceInfo(), {
+      wrapper: ({ children }) =>
+        createElement(
+          SWRConfig,
+          { value: { provider: () => new Map(), suspense: true } },
+          createElement(Suspense, undefined, children),
+        ),
+    });
+    expect(fetchInfo).not.toHaveBeenCalled();
+    await act(async () => useUserStore.setState({ user: { id: 'owner-a' } as OrviloUser }));
+    await waitFor(() => expect(result.current.data?.deviceId).toBe('owner-a-device'));
+    expect(useElectronStore.getState().gatewayDeviceInfo?.deviceId).toBe('owner-a-device');
+    let resolveNext!: (info: {
+      deviceId: string;
+      hostname: string;
+      platform: string;
+      userId: string;
+    }) => void;
+    fetchInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveNext = resolve;
+        }),
+    );
+    await act(async () => useUserStore.setState({ user: { id: 'owner-b' } as OrviloUser }));
+    await waitFor(() => expect(fetchInfo).toHaveBeenCalledTimes(2));
+    expect(useElectronStore.getState().gatewayDeviceInfo).toBeUndefined();
+    act(() => useUserStore.setState({ user: undefined }));
+    await act(async () =>
+      resolveNext({
+        deviceId: 'owner-b-device',
+        hostname: 'host',
+        platform: 'darwin',
+        userId: 'owner-b',
+      }),
+    );
+    expect(useElectronStore.getState().gatewayDeviceInfo).toBeUndefined();
   });
 });

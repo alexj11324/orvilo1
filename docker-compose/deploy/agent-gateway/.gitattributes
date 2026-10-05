@@ -1,0 +1,2 @@
+# Unified diff context includes intentional spaces before Go tabs and empty lines.
+backend-origin.patch -whitespace

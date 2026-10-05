@@ -104,6 +104,17 @@ const fakeRunner = (): FakeRunner => {
         emit({ id: frame.id, jsonrpc: '2.0', result: { stopReason: 'end_turn' } });
       } else if (frame.method === 'session.abort') {
         emit({ id: frame.id, jsonrpc: '2.0', result: { ok: true } });
+      } else if (frame.method === 'session.list') {
+        emit({ id: frame.id, jsonrpc: '2.0', result: { sessions: ['sess-1', 'sess-old'] } });
+      } else if (frame.method === 'session.resume') {
+        emit({
+          id: frame.id,
+          jsonrpc: '2.0',
+          result: {
+            resumed: (frame.params as { resumeSessionId: string }).resumeSessionId === 'sess-old',
+            sessionId: (frame.params as { resumeSessionId: string }).resumeSessionId,
+          },
+        });
       }
     }
   });
@@ -327,6 +338,79 @@ describe('openPrimeDeviceRun', () => {
     expect(runner.child.killed).toBe(true);
     const abortFrame = runner.inbound.find((frame) => frame.method === 'session.abort');
     expect(abortFrame).toBeTruthy();
+  });
+
+  it('spreads descriptor.init policy onto the harness.init handshake', async () => {
+    const { artifact, dir } = await stage();
+    const runner = fakeRunner();
+    const opened = await openPrimeDeviceRun({
+      artifact,
+      brokerUrl: 'https://server.test/api/agent/prime-broker',
+      descriptor: descriptor({
+        init: {
+          goal: { objective: 'ship the fix' },
+          rlm: { maxDepth: 2 },
+          thinkingLevel: 'high',
+          toolPolicy: { allowed: ['ipython'] },
+        },
+      }),
+      executable: '/usr/bin/node',
+      fetchImpl: okFetch(),
+      log: noopLog,
+      operationId: 'op-init',
+      spawnImpl: (() => runner.child) as unknown as typeof spawn,
+      stateDir: `${dir}/state`,
+      workspace: dir,
+    });
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const run = opened.value;
+    try {
+      const initFrame = runner.inbound.find((frame) => frame.method === 'harness.init');
+      expect(initFrame?.params).toMatchObject({
+        goal: { objective: 'ship the fix' },
+        rlm: { maxDepth: 2 },
+        thinkingLevel: 'high',
+        toolPolicy: { allowed: ['ipython'] },
+      });
+    } finally {
+      await run.kill();
+    }
+  });
+
+  it('forwards session.list and session.resume to the runner', async () => {
+    const { artifact, dir } = await stage();
+    const runner = fakeRunner();
+    const opened = await openPrimeDeviceRun({
+      artifact,
+      brokerUrl: 'https://server.test/api/agent/prime-broker',
+      descriptor: descriptor(),
+      executable: '/usr/bin/node',
+      fetchImpl: okFetch(),
+      log: noopLog,
+      operationId: 'op-resume',
+      spawnImpl: (() => runner.child) as unknown as typeof spawn,
+      stateDir: `${dir}/state`,
+      workspace: dir,
+    });
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const run = opened.value;
+    try {
+      const listed = await run.listSessions();
+      expect(listed).toEqual({ ok: true, value: { sessions: ['sess-1', 'sess-old'] } });
+      const resumed = await run.resume('sess-old');
+      expect(resumed).toEqual({ ok: true, value: { resumed: true, sessionId: 'sess-old' } });
+      const listFrame = runner.inbound.find((frame) => frame.method === 'session.list');
+      expect(listFrame?.params).toMatchObject({ sessionId: 'sess-1' });
+      const resumeFrame = runner.inbound.find((frame) => frame.method === 'session.resume');
+      expect(resumeFrame?.params).toMatchObject({
+        resumeSessionId: 'sess-old',
+        sessionId: 'sess-1',
+      });
+    } finally {
+      await run.kill();
+    }
   });
 
   // ROOT CAUSE: the bridge captured the op's bound credential at open; a

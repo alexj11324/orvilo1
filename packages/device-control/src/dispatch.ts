@@ -34,6 +34,9 @@ import type {
   BrowseDirectoryParams,
   CopyAssetForPublishParams,
   DeviceControlDeps,
+  DeviceMcpCheckInstallableParams,
+  DeviceMcpStdioManifestParams,
+  DeviceMcpStreamableManifestParams,
   EnrollWorkspaceParams,
   ExternalAssetForPublishParams,
   InitWorkspaceParams,
@@ -62,6 +65,9 @@ export const DEVICE_RPC_METHODS = [
   'listHeterogeneousAgentModels',
   'listHeterogeneousAgentPermissions',
   'getClaudeCodeQuota',
+  'getStreamableMcpServerManifest',
+  'getStdioMcpServerManifest',
+  'checkMcpInstallable',
   'listProjectSkills',
   'prepareSkillDirectory',
   'browseDirectory',
@@ -157,6 +163,31 @@ export const executeDeviceRpc = async (
 
     case 'getClaudeCodeQuota': {
       return getClaudeCodeQuota(params as GetClaudeCodeQuotaParams);
+    }
+
+    // Device-scoped MCP queries: manifests and installability only mean
+    // anything where the MCP server will actually run — a localhost URL
+    // resolves in THIS device's network space, a stdio command in THIS
+    // host's toolchain. Hosts without an MCP runtime reject honestly.
+    case 'getStreamableMcpServerManifest': {
+      if (!deps.getStreamableMcpServerManifest) {
+        throw new Error('This device client does not support MCP manifest queries');
+      }
+      return deps.getStreamableMcpServerManifest(params as DeviceMcpStreamableManifestParams);
+    }
+
+    case 'getStdioMcpServerManifest': {
+      if (!deps.getStdioMcpServerManifest) {
+        throw new Error('This device client does not support MCP manifest queries');
+      }
+      return deps.getStdioMcpServerManifest(params as DeviceMcpStdioManifestParams);
+    }
+
+    case 'checkMcpInstallable': {
+      if (!deps.checkMcpInstallable) {
+        throw new Error('This device client does not support MCP installability checks');
+      }
+      return deps.checkMcpInstallable(params as DeviceMcpCheckInstallableParams);
     }
 
     case 'listProjectSkills': {

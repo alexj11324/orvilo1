@@ -229,6 +229,34 @@ export interface RpcResponseMessage {
  * - `subject` is the canonical run subject — device leases/auth key on
  *   `subject.taskId` (null for conversation subjects).
  */
+/**
+ * Host-pinnable init policy mirrored from the harness protocol's
+ * `HarnessInitPolicy` — the fields on `harness.init` a server composer may
+ * set. Declared structurally here (the package cannot depend on
+ * agent-execution) and spread verbatim into the runner's init request.
+ */
+export interface PrimeRunInitPolicy {
+  /** Upstream autonomous-continuation policy; absent keeps it disabled. */
+  autonomous?: {
+    enabled?: boolean;
+    gates?: { commands?: string[]; maxRetries?: number; timeoutMs?: number };
+    maxContinuations?: number;
+    maxTokens?: number;
+    maxTurns?: number;
+    continuationPrompt?: string;
+    subagentKeepAliveMs?: number;
+    timeoutMs?: number;
+  };
+  /** Seed goal for a fresh top-level session; ignored on resume. */
+  goal?: { objective: string; tokenBudget?: number };
+  /** RLM sub-agent policy (`maxDepth` pins upstream `rlmMaxDepth`). */
+  rlm?: { maxDepth?: number };
+  /** Reasoning effort for the session (upstream `thinkingLevel`). */
+  thinkingLevel?: string;
+  /** Host-pinnable tool allowlist/active subset; absent → upstream defaults. */
+  toolPolicy?: { active?: string[]; allowed?: string[] };
+}
+
 export interface PrimeRunDescriptor {
   artifact: {
     /** Byte length of the verified bundle (matches runner.manifest.json). */
@@ -245,6 +273,9 @@ export interface PrimeRunDescriptor {
      * `device_id`, `model_route`, `operation_id`). */
     credential: string;
   };
+  /** Host-pinnable `harness.init` policy — spread under the handshake
+   * identity fields the host derives itself. */
+  init?: PrimeRunInitPolicy;
   lease: {
     /** Milliseconds a run may continue without a lease renewal signal. */
     ttlMs: number;

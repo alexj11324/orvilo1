@@ -122,11 +122,9 @@ describe('AgentSelectorAction', () => {
 
   it('uses the builtin runtime icon and forwards agent changes', () => {
     const onAgentChange = vi.fn();
-    const { getAllByTitle, getByText } = render(
-      <AgentSelectorAction onAgentChange={onAgentChange} />,
-    );
+    const { container, getByText } = render(<AgentSelectorAction onAgentChange={onAgentChange} />);
 
-    expect(getAllByTitle('Orvilo')[0].querySelector('img')).not.toBeNull();
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('/app-icons/icon-512x512.png');
 
     fireEvent.click(getByText('Custom Agent'));
     expect(onAgentChange).toHaveBeenCalledWith('agt_custom');

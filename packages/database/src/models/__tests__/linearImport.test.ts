@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   linearImportJobs,
   linearImportReceipts,
@@ -48,6 +49,8 @@ beforeEach(async () => {
   await db
     .insert(linearInstallations)
     .values({ id: installationId, organizationId: 'org-1', workspaceId });
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(db, { userId, workspaceId });
 });
 afterEach(cleanup);
 

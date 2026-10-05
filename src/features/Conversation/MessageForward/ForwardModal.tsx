@@ -9,11 +9,11 @@ import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { getForwardedMessageText } from '@/store/chat/slices/forward/helpers';
 import { useHomeStore } from '@/store/home';

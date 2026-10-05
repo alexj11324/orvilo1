@@ -128,14 +128,54 @@ export interface RuntimeSession {
   sessionId: string;
 }
 
+/**
+ * RLM child-session context stamped on runtime events originating from a
+ * spawned sub-agent (or an update about one). `childId` is the child's
+ * stable node id — the ledger maps it onto hetero `parentToolCallId` for
+ * Thread routing.
+ */
+export interface RuntimeSubagentContext {
+  childId: string;
+  name?: string;
+  parentId?: string;
+}
+
+/** RLM child lifecycle snapshot, verbatim from the harness wire. */
+export interface RuntimeSubagentSnapshot {
+  activeSessionId?: string;
+  activity?: { kind: string; toolName?: string };
+  answerPreview?: string;
+  durationMs?: number;
+  error?: string;
+  id: string;
+  label?: string;
+  model?: string;
+  parentId?: string;
+  progressNote?: string;
+  prompt?: string;
+  sessionDir?: string;
+  sessionName?: string;
+  status: 'queued' | 'running' | 'done' | 'error' | 'cancelled';
+  toolUseCount?: number;
+}
+
 export type RuntimeEvent =
-  | { type: 'text'; sessionId: string; text: string }
-  | { type: 'thinking'; sessionId: string; text: string }
+  | { type: 'text'; sessionId: string; text: string; subagent?: RuntimeSubagentContext }
+  | { type: 'thinking'; sessionId: string; text: string; subagent?: RuntimeSubagentContext }
+  | {
+      type: 'subagent_update';
+      sessionId: string;
+      child: RuntimeSubagentSnapshot;
+      /** Emitting scope when the update arrives on a child's own stream —
+       * routes into the emitter's Thread, not the snapshot subject's. */
+      subagent?: RuntimeSubagentContext;
+    }
   | { type: 'turn-ended'; sessionId: string; reason: 'end_turn' | 'gate' | 'budget' | 'cancelled' }
   | {
       /** A tool call entered execution inside the runtime's session. */
       args: unknown;
       sessionId: string;
+      subagent?: RuntimeSubagentContext;
       toolCallId: string;
       toolName: string;
       type: 'tool_call';
@@ -144,6 +184,7 @@ export type RuntimeEvent =
       /** In-flight partial result while a tool call executes. */
       partialResult: unknown;
       sessionId: string;
+      subagent?: RuntimeSubagentContext;
       toolCallId: string;
       toolName: string;
       type: 'tool_progress';
@@ -153,6 +194,7 @@ export type RuntimeEvent =
       isError: boolean;
       result: unknown;
       sessionId: string;
+      subagent?: RuntimeSubagentContext;
       toolCallId: string;
       toolName: string;
       type: 'tool_result';
@@ -163,6 +205,7 @@ export type RuntimeEvent =
       inputTokens: number;
       outputTokens: number;
       totalTokens?: number;
+      subagent?: RuntimeSubagentContext;
       cost?: {
         input?: number;
         output?: number;
@@ -171,7 +214,7 @@ export type RuntimeEvent =
         total?: number;
       };
     }
-  | { type: 'error'; sessionId: string; error: ControlError };
+  | { type: 'error'; sessionId: string; error: ControlError; subagent?: RuntimeSubagentContext };
 
 export interface QuiescenceProof {
   observedAt: number;

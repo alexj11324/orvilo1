@@ -5,7 +5,8 @@ import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { deriveDeviceId, deriveScopedFallbackId } from '@orvilo/device-identity';
+import type * as DeviceIdentityModule from '@orvilo/device-identity';
+import { resolvePersistentDeviceIdentity } from '@orvilo/device-identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
@@ -208,6 +209,14 @@ vi.mock('@orvilo/device-gateway-client', () => ({
 
 vi.mock('fast-glob', () => ({ default: vi.fn().mockResolvedValue([]) }));
 vi.mock('fflate', () => ({ unzipSync: vi.fn() }));
+
+vi.mock('@orvilo/device-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof DeviceIdentityModule>()),
+  resolvePersistentDeviceIdentity: vi.fn(async (principal: string) => ({
+    deviceId: `canonical-${principal}`,
+    identitySource: 'machine-id' as const,
+  })),
+}));
 
 // ─── Mock Controllers ───
 
@@ -444,9 +453,7 @@ describe('GatewayConnectionCtr', () => {
       await vi.advanceTimersByTimeAsync(0);
       mockStoreSet.mockClear();
 
-      const workspaceDevice = deriveDeviceId(`workspace:${workspaceId}`, {
-        fallbackId: deriveScopedFallbackId(fallbackId, `workspace:${workspaceId}`),
-      });
+      const workspaceDevice = await resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
       const result = await ctr.reconnectFromProtocol({ deviceId: workspaceDevice.deviceId });
 
       expect(result).toBe(true);
@@ -2050,6 +2057,86 @@ describe('GatewayConnectionCtr', () => {
   });
 
   describe('getDeviceInfo', () => {
+    it('keeps a connecting account identity stable during another account lookup', async () => {
+      mockStoreGet.mockImplementation((key: string) =>
+        key === 'gatewayEnabled' ? false : undefined,
+      );
+      ctr.afterFirstFrame();
+      const token = (sub: string) =>
+        `header.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.signature`;
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token('owner-a'));
+      let release!: () => void;
+      let registered!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const registrationStarted = new Promise<void>((resolve) => {
+        registered = resolve;
+      });
+      mockGatewayConnectionSrv.setDeviceRegistrar(async () => {
+        registered();
+        await held;
+      });
+      const connecting = ctr.connect();
+      await registrationStarted;
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken)
+        .mockResolvedValueOnce(token('owner-b'))
+        .mockResolvedValueOnce(token('owner-b'));
+      expect(await ctr.getDeviceInfo()).toMatchObject({
+        deviceId: 'canonical-owner-b',
+        userId: 'owner-b',
+      });
+      expect(mockGatewayConnectionSrv.getDeviceId()).toBe('canonical-owner-a');
+      // Another legitimate resolver can update service state while registration is pending.
+      await mockGatewayConnectionSrv.matchesDeviceId('canonical-owner-b');
+      release();
+      await connecting;
+      expect(MockGatewayClient.lastOptions).toMatchObject({
+        deviceId: 'canonical-owner-a',
+        userId: 'owner-a',
+      });
+    });
+
+    it('resolves authenticated identity before any disabled gateway socket starts', async () => {
+      mockStoreGet.mockImplementation((key: string) => {
+        if (key === 'gatewayEnabled') return false;
+        if (key === 'gatewayDeviceId') return 'connection-only';
+        return undefined;
+      });
+      const token = `header.${Buffer.from(JSON.stringify({ sub: 'owner-disabled' })).toString('base64url')}.signature`;
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token);
+      const infoPromise = ctr.getDeviceInfo();
+      let settled = false;
+      void infoPromise.then(() => {
+        settled = true;
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      ctr.afterFirstFrame();
+      expect((await infoPromise).deviceId).toBe('canonical-owner-disabled');
+      expect(MockGatewayClient.lastInstance).toBeNull();
+    });
+
+    it('refreshes identity for the current account while preserving the connection UUID', async () => {
+      mockStoreGet.mockImplementation((key: string) => {
+        if (key === 'gatewayEnabled') return false;
+        if (key === 'gatewayDeviceId') return 'connection-only';
+        return undefined;
+      });
+      const token = (sub: string) =>
+        `header.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.signature`;
+      ctr.afterFirstFrame();
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token('owner-a'));
+      expect((await ctr.getDeviceInfo()).deviceId).toBe('canonical-owner-a');
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(token('owner-b'));
+      expect((await ctr.getDeviceInfo()).deviceId).toBe('canonical-owner-b');
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(null);
+      expect((await ctr.getDeviceInfo()).deviceId).toBe('connection-only');
+      expect(mockGatewayConnectionSrv.getConnectionId()).toBe('connection-only');
+      expect(MockGatewayClient.lastInstance).toBeNull();
+    });
+
     it('should return device information', async () => {
       mockStoreGet.mockImplementation((key: string) => {
         if (key === 'gatewayEnabled') return true;
@@ -2064,6 +2151,7 @@ describe('GatewayConnectionCtr', () => {
         deviceId: 'my-device',
         hostname: 'mock-hostname',
         platform: process.platform,
+        userId: undefined,
       });
     });
   });

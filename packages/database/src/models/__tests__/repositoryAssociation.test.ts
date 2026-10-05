@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { projectRepositories, teamRepoDefaults, teams, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
@@ -45,6 +46,8 @@ beforeEach(async () => {
     name: 'Association Team',
     workspaceId,
   });
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(db, { userId, workspaceId });
 });
 
 afterEach(cleanup);

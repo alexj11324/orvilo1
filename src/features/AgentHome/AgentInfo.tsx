@@ -6,13 +6,14 @@ import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 const AgentInfo = memo(() => {
   const { t } = useTranslation(['chat', 'welcome']);
@@ -25,8 +26,8 @@ const AgentInfo = memo(() => {
   const isInbox = !!inboxAgentId && agentId === inboxAgentId;
   const isLoading = useAgentStore(agentByIdSelectors.isAgentConfigLoadingById(agentId));
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId), isEqual);
-  const runtimeType = useAgentStore(
-    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider?.type,
+  const runtimeType = useAgentStore((s) =>
+    resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
   );
   const openingMessage = useAgentStore(
     (s) => agentSelectors.getAgentConfigById(agentId)(s)?.openingMessage || '',

@@ -5,6 +5,7 @@ import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import SelectorTrigger from '../../components/SelectorTrigger';
 import { useAgentId } from '../../hooks/useAgentId';
@@ -111,10 +113,10 @@ const Agent = memo(() => {
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
 
   const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
-  const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  const runtimeType = useAgentStore(
-    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider?.type,
+  const runtimeType = useAgentStore((s) =>
+    resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
   );
+  const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   // The task agent is a virtual row — its label comes from the same fallback
   // the task-manager selector uses, not the agent meta map.
   const title = agentDisplayName(

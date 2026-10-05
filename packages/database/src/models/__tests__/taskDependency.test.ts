@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   linearExternalRelations,
   linearInstallations,
@@ -249,6 +250,8 @@ describe('task prerequisite invariants', () => {
       organizationId: 'linear-related-org',
       workspaceId,
     });
+    // Project creation provisions a coordinator through Prime inheritance.
+    await seedPrimeRuntime(db, { userId, workspaceId });
     const project = await new ProjectModel(db, userId, workspaceId).create({
       identifier: 'REL',
       name: 'Related sync',

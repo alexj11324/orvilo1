@@ -5,24 +5,61 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { GatewayClient } from '@orvilo/device-gateway-client';
+import type * as DeviceIdentityModule from '@orvilo/device-identity';
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveToken } from '../auth/resolveToken';
 import { removeStatus, spawnDaemon, stopDaemon, writeStatus } from '../daemon/manager';
 import type * as DeviceRegister from '../device/register';
-import { loadSettings, saveSettings } from '../settings';
+import {
+  addWorkspaceEnrollment,
+  loadOrCreateConnectionId,
+  loadSettings,
+  loadWorkspaceEnrollments,
+  saveSettings,
+} from '../settings';
 import { executeToolCall } from '../tools';
 import { cleanupAllProcesses } from '../tools/shell';
 import { log, setVerbose } from '../utils/logger';
 import { registerConnectCommand } from './connect';
 
+vi.mock('@orvilo/device-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof DeviceIdentityModule>()),
+  resolvePersistentDeviceIdentity: vi.fn(async (principal: string) => ({
+    deviceId: `persistent:${principal}`,
+    identitySource: 'fallback',
+  })),
+}));
+
 const registerDeviceMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock('../device/register', async (importOriginal) => {
   const actual = await importOriginal<typeof DeviceRegister>();
-  return { ...actual, registerDevice: registerDeviceMock };
+  return {
+    ...actual,
+    mintWorkspaceConnectToken: vi.fn(async (_auth, workspaceId) => ({
+      token: 'workspace-token',
+      workspaceId,
+    })),
+    registerDevice: registerDeviceMock,
+    registerWorkspaceDevice: vi.fn().mockResolvedValue(undefined),
+  };
 });
+
+vi.mock('../api/client', () => ({
+  createLambdaClient: vi.fn((_auth, workspaceId: string) => ({
+    device: {
+      listDevices: {
+        query: vi
+          .fn()
+          .mockResolvedValue([
+            { deviceId: `persistent:workspace:${workspaceId}`, registered: true },
+          ]),
+      },
+    },
+  })),
+}));
 
 vi.mock('../auth/refresh', () => ({
   getValidToken: vi.fn().mockResolvedValue({
@@ -130,6 +167,7 @@ describe('connect command', () => {
     mockRunningPid = null;
     mockSpawnedPid = 0;
     mockStatus = null;
+    vi.mocked(loadWorkspaceEnrollments).mockReturnValue([]);
   });
 
   afterEach(() => {
@@ -148,6 +186,75 @@ describe('connect command', () => {
     registerConnectCommand(program);
     return program;
   }
+
+  it('awaits the persistent identity while keeping channel connection IDs independent', async () => {
+    vi.stubEnv('ORVILO_CLI_CHANNEL', 'cli-dev');
+    vi.mocked(loadOrCreateConnectionId).mockReturnValueOnce('connection-one');
+    await createProgram().parseAsync(['node', 'test', 'connect']);
+    expect(clientOptions).toMatchObject({
+      channel: 'cli-dev',
+      connectionId: 'connection-one',
+      deviceId: 'persistent:test-user',
+    });
+    expect(registerDeviceMock).toHaveBeenLastCalledWith(expect.anything(), {
+      deviceId: 'persistent:test-user',
+      identitySource: 'fallback',
+    });
+
+    vi.mocked(loadOrCreateConnectionId).mockReturnValueOnce('connection-two');
+    await createProgram().parseAsync(['node', 'test', 'connect']);
+    expect(clientOptions).toMatchObject({
+      connectionId: 'connection-two',
+      deviceId: 'persistent:test-user',
+    });
+  });
+
+  it('awaits workspace identity without consuming a connection ID for identity', async () => {
+    vi.mocked(loadOrCreateConnectionId).mockReturnValueOnce('workspace-connection');
+    await createProgram().parseAsync(['node', 'test', 'connect', '--workspace', 'workspace-1']);
+    expect(clientOptions).toMatchObject({
+      connectionId: 'workspace-connection',
+      deviceId: 'persistent:workspace:workspace-1',
+      workspaceId: 'workspace-1',
+    });
+  });
+
+  it('returns the same persistent identity from enrollment probe and real enrollment', async () => {
+    await createProgram().parseAsync(['node', 'test', 'connect']);
+    const handleRpc = clientEventHandlers.rpc_request;
+    await handleRpc({
+      method: 'enrollWorkspace',
+      params: { identityOnly: true, token: 'workspace-token', workspaceId: 'workspace-1' },
+      requestId: 'probe',
+    });
+    expect(lastSentRpcResponse.result.data).toEqual({
+      deviceId: 'persistent:workspace:workspace-1',
+      identitySource: 'fallback',
+    });
+    expect(addWorkspaceEnrollment).not.toHaveBeenCalled();
+
+    await handleRpc({
+      method: 'enrollWorkspace',
+      params: { token: 'workspace-token', workspaceId: 'workspace-1' },
+      requestId: 'enroll',
+    });
+    expect(clientOptions.deviceId).toBe('persistent:workspace:workspace-1');
+    expect(addWorkspaceEnrollment).toHaveBeenCalledWith('workspace-1');
+  });
+
+  it('restores a registered persistent workspace fallback after restart', async () => {
+    vi.mocked(loadWorkspaceEnrollments).mockReturnValue(['workspace-1']);
+    await createProgram().parseAsync(['node', 'test', 'connect']);
+    await vi.waitFor(() => {
+      expect(clientOptions.deviceId).toBe('persistent:workspace:workspace-1');
+    });
+    expect(clientOptions.workspaceId).toBe('workspace-1');
+  });
+
+  it('preserves the explicit device ID override', async () => {
+    await createProgram().parseAsync(['node', 'test', 'connect', '--device-id', 'pinned-id']);
+    expect(clientOptions.deviceId).toBe('pinned-id');
+  });
 
   it('should persist deviceId in status for foreground connections', async () => {
     const program = createProgram();

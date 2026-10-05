@@ -99,8 +99,18 @@ export class AgentManagerRuntime {
   /**
    * Create a new agent
    */
-  async createAgent(params: CreateAgentParams): Promise<BuiltinToolResult> {
+  async createAgent(
+    params: CreateAgentParams,
+    context?: { agentId?: string },
+  ): Promise<BuiltinToolResult> {
     try {
+      if (!context?.agentId) throw new Error('Agent setup required: invoking agent is missing');
+      const runtimeConfig = await this.agentService.getRuntimeForCreation({
+        agentId: context.agentId,
+        model: params.model,
+        provider: params.provider,
+        visibility: 'private',
+      });
       // Guard against LLM double-encoding: if array fields are JSON strings, parse them.
       // Use `as any` to bypass TS narrowing — at runtime LLMs can send strings for typed array params.
       const parseArrayParam = (v: any): string[] | undefined => {
@@ -126,6 +136,8 @@ export class AgentManagerRuntime {
         systemRole: params.systemRole,
         tags: parseArrayParam(params.tags),
         title: params.title,
+        visibility: 'private',
+        ...runtimeConfig,
       };
 
       const result = await this.agentService.createAgent({ config });

@@ -95,6 +95,26 @@ The local machine also has a stable `deviceId` and must not be listed twice
 (unified entry with a "this machine" marker). Legacy `local` fields keep a
 compat layer, but resolution must always end at a concrete device.
 
+## Runtime branding — derived on reads, never stored
+
+There is no separate persisted branding column. Every surface derives the
+runtime type at read time through `resolveAgentRuntimeType` /
+`normalizeAgentRuntimeIdentity`:
+
+- `agencyConfig.heterogeneousProvider` (normalized via
+  `normalizeHeterogeneousProviderConfig`, so legacy/alias spellings resolve to
+  the registered type) is the single source of truth.
+- Legacy rows with no `agencyConfig` fall back to
+  `isHeterogeneousAgentModelId(config.model)` (a model id that names a known
+  heterogeneous runtime brands as that runtime).
+- Otherwise the row is `'orvilo'`.
+
+Every consumer — sidebar `heterogeneousType`, `AgentRuntimeIcon`,
+settings/headers, selectors — reads the derived type through this one
+function, so rebranding never requires a data migration and an icon is always
+bound to a registered runtime (unknown types fall back to the Orvilo mark,
+never to a stale per-agent asset).
+
 ## Workspace preferences (existing chain, kept)
 
 `useEffectiveAgencyConfig` + `agentDeviceOverrides`: Personal → agent config;
@@ -216,6 +236,20 @@ notices, not configuration items. The diagnostics page may show the actual
 device / Prime version / run identity. External agents share the same device
 component and rules; the connect flow follows the same 0/1/many rules; opening
 settings never triggers inference; each setting has exactly one write entry.
+
+## First-agent gate (post-login onboarding)
+
+While no usable agent exists, `AgentOnboarding` (mounted once at the
+`(main)`/`(mobile)` layouts, not inside a page) covers the entire app window
+— sidebar, title area, and every route — because nothing else can run yet.
+Provider/credential/device settings stay reachable during the block: they are
+the fix-it paths (`isFirstAgentSetupPath`). Device selection is deliberately
+absent from the flow — it is an advanced concern owned by Settings → Devices.
+The host auto-resolves via `useFirstAgentDevice`: this computer on Electron
+(`resolveLocalExecutionIdentity`), then a still-online persisted pick, then
+the first online personal device; the resolved id is checkpointed into the
+onboarding setup record. Creating the first agent selects it through
+`selectAgentForConversation` so the user lands on the agent they just made.
 
 ## Migration
 

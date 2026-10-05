@@ -6,11 +6,11 @@ import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';

@@ -6,7 +6,6 @@ import { type CSSProperties, type DragEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { usePrefetchAgent } from '@/hooks/usePrefetchAgent';
@@ -80,7 +79,7 @@ interface AgentItemProps {
 }
 
 const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, secondaryLabel }) => {
-  const { id, avatar, backgroundColor, heterogeneousType, pinned, slug, userId, visibility } = item;
+  const { avatar, backgroundColor, id, heterogeneousType, pinned, slug, userId, visibility } = item;
   // Unread count is server-computed (topics.status === 'unread') and carried on
   // the sidebar list item, so it stays accurate across agents whose topics
   // aren't loaded into the chat store on this client.
@@ -146,7 +145,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
       return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
     }
 
-    const avatarNode = <AgentRuntimeIcon size={22} type={heterogeneousType} />;
+    const avatarNode = <Avatar type={heterogeneousType} />;
 
     if (isLoading) {
       return (

@@ -1069,6 +1069,9 @@ export class AiAgentService {
         // explicit request (subject to request authorization), NOT the pin.
         requestedDeviceId,
         runAttachments,
+        // The binding epoch paired with the pin — echoed in admission
+        // errorData so repair can CAS on the revision it was shown.
+        sessionBindingRevision: turn.topicBindingRevision,
         // The topic's durable device pin — the session binding admission
         // consults first (invalid → DEVICE_BINDING_INVALID, never silently
         // re-resolved onto another device).

@@ -3,8 +3,10 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import type { NewAgent } from '../../schemas';
 import {
   agentHistoryJobs,
+  devices,
   messageGroups,
   messagePlugins,
   messages,
@@ -27,6 +29,30 @@ const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'atj-test-user';
 const wsId = 'atj-test-ws';
 
+// Creation goes through strict admission: seed a saved personal host and bind
+// a registered runtime, matching the production creation contract.
+const withRuntime = async (config: Partial<NewAgent> = {}, actor = userId) => {
+  const boundDeviceId = `atj-host-${actor}`;
+  await serverDB
+    .insert(devices)
+    .values({
+      deviceId: boundDeviceId,
+      identitySource: 'machine-id',
+      userId: actor,
+      visibility: 'private',
+    })
+    .onConflictDoNothing();
+  return {
+    ...config,
+    agencyConfig: {
+      boundDeviceId,
+      executionTarget: 'device' as const,
+      heterogeneousProvider: { type: 'codex' as const },
+      ...config.agencyConfig,
+    },
+  };
+};
+
 beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }]);
@@ -48,7 +74,7 @@ afterEach(async () => {
  *  plus one topicless agent-linked (residual) message. */
 const seedAgentWithHistory = async () => {
   const model = new AgentModel(serverDB, userId);
-  const agent = await model.create({ title: 'Heavy Agent' });
+  const agent = await model.create(await withRuntime({ title: 'Heavy Agent' }));
 
   await serverDB.insert(topics).values([
     { id: 'atj-t1', userId, agentId: agent.id, title: 't1' },

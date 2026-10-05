@@ -121,8 +121,23 @@ export class GroupAgentBuilderExecutionRuntime {
   /**
    * Create a new group with an auto-generated supervisor agent
    */
-  async createGroup(args: CreateGroupParams): Promise<BuiltinToolResult> {
+  async createGroup(
+    args: CreateGroupParams,
+    context?: { agentId?: string },
+  ): Promise<BuiltinToolResult> {
     try {
+      if (!context?.agentId) throw new Error('Agent setup required: invoking agent is missing');
+      const runtimeConfig = await agentService.getRuntimeForCreation({
+        agentId: context.agentId,
+        model: args.supervisor?.model,
+        provider: args.supervisor?.provider,
+        visibility: 'private',
+      });
+      if (runtimeConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo') {
+        throw new Error(
+          'Group supervisor runtime unsupported: an admitted Prime Agent is required',
+        );
+      }
       const state = getChatGroupStoreState();
       const groupConfig = {
         ...(args.openingMessage !== undefined && { openingMessage: args.openingMessage }),
@@ -136,50 +151,11 @@ export class GroupAgentBuilderExecutionRuntime {
         content: args.prompt,
         description: args.description,
         title: args.title,
+        visibility: 'private',
+        supervisorConfig: { ...args.supervisor, ...runtimeConfig },
       });
 
       state.internal_dispatchChatGroup({ payload: group, type: 'addGroup' });
-
-      if (args.supervisor) {
-        const {
-          avatar,
-          backgroundColor,
-          description,
-          model,
-          params,
-          provider,
-          systemRole,
-          tags,
-          title: supervisorTitle,
-        } = args.supervisor;
-
-        const supervisorConfig = {
-          ...(model !== undefined && { model }),
-          ...(params !== undefined && { params }),
-          ...(provider !== undefined && { provider }),
-          ...(systemRole !== undefined && { systemRole }),
-        };
-        const supervisorMeta = {
-          ...(avatar !== undefined && { avatar }),
-          ...(backgroundColor !== undefined && { backgroundColor }),
-          ...(description !== undefined && { description }),
-          ...(tags !== undefined && { tags }),
-          ...(supervisorTitle !== undefined && { title: supervisorTitle }),
-        };
-        const tasks = [];
-
-        if (Object.keys(supervisorConfig).length > 0) {
-          tasks.push(agentService.updateAgentConfig(supervisorAgentId, supervisorConfig));
-        }
-
-        if (Object.keys(supervisorMeta).length > 0) {
-          tasks.push(agentService.updateAgentMeta(supervisorAgentId, supervisorMeta));
-        }
-
-        if (tasks.length > 0) {
-          await Promise.all(tasks);
-        }
-      }
 
       await state.internal_fetchGroupDetail(group.id);
 
@@ -201,7 +177,11 @@ export class GroupAgentBuilderExecutionRuntime {
   /**
    * Create a new agent and add it to the group
    */
-  async createAgent(groupId: string, args: CreateAgentParams): Promise<BuiltinToolResult> {
+  async createAgent(
+    groupId: string,
+    args: CreateAgentParams,
+    context?: { agentId?: string },
+  ): Promise<BuiltinToolResult> {
     try {
       const state = getChatGroupStoreState();
       const group = agentGroupSelectors.getGroupById(groupId)(state);
@@ -214,10 +194,17 @@ export class GroupAgentBuilderExecutionRuntime {
         };
       }
 
+      if (!context?.agentId) throw new Error('Agent setup required: invoking agent is missing');
+      const runtimeConfig = await agentService.getRuntimeForCreation({
+        agentId: context.agentId,
+        visibility: group.visibility ?? 'private',
+      });
+
       // Create a virtual agent only (no session needed for group agents)
       // Map 'tools' from LLM input to 'plugins' for internal API
       const result = await agentService.createAgentOnly({
         config: {
+          ...runtimeConfig,
           avatar: args.avatar,
           description: args.description,
           plugins: args.tools,
@@ -260,6 +247,7 @@ export class GroupAgentBuilderExecutionRuntime {
   async batchCreateAgents(
     groupId: string,
     args: BatchCreateAgentsParams,
+    context?: { agentId?: string },
   ): Promise<BuiltinToolResult> {
     try {
       const state = getChatGroupStoreState();
@@ -273,9 +261,16 @@ export class GroupAgentBuilderExecutionRuntime {
         };
       }
 
+      if (!context?.agentId) throw new Error('Agent setup required: invoking agent is missing');
+      const runtimeConfig = await agentService.getRuntimeForCreation({
+        agentId: context.agentId,
+        visibility: group.visibility ?? 'private',
+      });
+
       // Use batch API to create all agents in one request
       // Map 'tools' from LLM input to 'plugins' for internal API
       const agentConfigs: GroupMemberConfig[] = args.agents.map((agentDef) => ({
+        ...runtimeConfig,
         avatar: agentDef.avatar,
         description: agentDef.description,
         plugins: agentDef.tools,

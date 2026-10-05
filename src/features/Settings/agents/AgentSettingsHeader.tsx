@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
 import ActionIcon from '@/components/ActionIcon';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
@@ -21,6 +22,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 import { getDeleteErrorMessageKey } from '@/utils/forbiddenError';
 
 interface AgentSettingsHeaderProps {
@@ -39,8 +41,8 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
   const navigate = useWorkspaceAwareNavigate();
 
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId), isEqual);
-  const runtimeType = useAgentStore(
-    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider?.type,
+  const runtimeType = useAgentStore((s) =>
+    resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
   );
   const slug = useAgentStore(agentSelectors.getAgentSlugById(agentId));
   const removeAgent = useHomeStore((s) => s.removeAgent);

@@ -28,6 +28,7 @@ import type {
 import { CONTROL_PLANE_VERSION, toInferenceMessage } from './contracts';
 import type {
   HarnessInitModel,
+  HarnessInitPolicy,
   HarnessSessionEvent,
   SanitizedInferenceRequest,
 } from './harnessProtocol';
@@ -94,6 +95,9 @@ export interface PrimeEmbeddedRuntimeOptions {
   inferenceBroker?: InferenceBroker;
   /** Model identity pinned into harness.init — resolved from the issued binding. */
   initModel?: HarnessInitModel;
+  /** Host-pinnable init policy (goal/thinkingLevel/rlm/tool subset) — merged
+   * run-derived + binding-derived slices, spread under the identity fields. */
+  initPolicy?: HarnessInitPolicy;
   now?: () => number;
   /** Trusted supervisor mapping of the host workspace into the isolated tree. */
   runtimeWorkspace?: string;
@@ -218,6 +222,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       }
       transport = await options.connect(isolation.treeId);
       const ack = await transport.request(HARNESS_INIT_METHOD, {
+        ...options.initPolicy,
         protocolVersion: HARNESS_PROTOCOL_VERSION,
         controlPlaneVersion: CONTROL_PLANE_VERSION,
         model: options.initModel ?? DEFAULT_EMBEDDED_INIT_MODEL,
@@ -488,7 +493,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
   ): void {
     switch (event.kind) {
       case 'text': {
-        push({ type: 'text', sessionId, text: event.text });
+        push({ type: 'text', sessionId, text: event.text, subagent: event.subagent });
         return;
       }
       case 'usage': {
@@ -497,13 +502,23 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
           sessionId,
           inputTokens: event.inputTokens,
           outputTokens: event.outputTokens,
+          subagent: event.subagent,
           ...(event.totalTokens !== undefined ? { totalTokens: event.totalTokens } : {}),
           ...(event.cost !== undefined ? { cost: { ...event.cost } } : {}),
         });
         return;
       }
       case 'thinking': {
-        push({ type: 'thinking', sessionId, text: event.text });
+        push({ type: 'thinking', sessionId, text: event.text, subagent: event.subagent });
+        return;
+      }
+      case 'subagent_update': {
+        push({
+          type: 'subagent_update',
+          sessionId,
+          child: { ...event.child },
+          subagent: event.subagent,
+        });
         return;
       }
       case 'tool_call': {
@@ -513,6 +528,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
           toolCallId: event.toolCallId,
           toolName: event.toolName,
           args: event.args,
+          subagent: event.subagent,
         });
         return;
       }
@@ -523,6 +539,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
           toolCallId: event.toolCallId,
           toolName: event.toolName,
           partialResult: event.partialResult,
+          subagent: event.subagent,
         });
         return;
       }
@@ -534,6 +551,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
           toolName: event.toolName,
           result: event.result,
           isError: event.isError,
+          subagent: event.subagent,
         });
         return;
       }

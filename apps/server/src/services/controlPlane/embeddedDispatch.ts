@@ -36,9 +36,11 @@ import type {
   ControlResult,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
+import type { HarnessInitPolicy } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import {
   createPrimeStreamState,
   mapRuntimeEvent,
+  subagentContext,
 } from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
 import type {
   DockerSupervisorOptions,
@@ -312,6 +314,13 @@ export const openEmbeddedDispatchHost = async (
   return composeEmbeddedRunHost(deps, {
     binding,
     environment: input.environment,
+    init: {
+      // The task's own name is the top-level goal the session seeds
+      // (upstream `initialGoal`); RLM depth stays pinned at the upstream
+      // default rather than unlimited.
+      ...(task.name ? { goal: { objective: task.name } } : {}),
+      rlm: { maxDepth: 2 },
+    },
     model: input.model,
   });
 };
@@ -320,6 +329,9 @@ export interface ComposeEmbeddedHostInput {
   /** Canonical binding the run is admitted under (task or chat shaped). */
   binding: CanonicalRunBinding;
   environment?: EmbeddedDispatchEnvironment;
+  /** Run-derived `harness.init` policy (goal/rlm/tool surface) — merged
+   * under the binding-derived slice the bridge returns. */
+  init?: HarnessInitPolicy;
   /** Task's requested model route — narrows which binding may issue. */
   model?: string;
   /** Chat runs substitute their own canonical contracts (canonicalChatRun.ts). */
@@ -428,6 +440,7 @@ export const composeEmbeddedRunHost = async (
       embedded: {
         artifact,
         backend,
+        initPolicy: input.init,
         resolveBinding: async () => resolved,
         runAuthority: input.overrides?.runAuthority,
         target: 'sandbox',
@@ -527,10 +540,19 @@ export const driveEmbeddedCanonicalRun = async (
       const streamState = createPrimeStreamState();
       for await (const event of prepared.host.prompt(run.prompt)) {
         if (event.type === 'text') {
+          const subagent = subagentContext(streamState, event.subagent);
           await ingest([
-            streamEvent(operationId, 'stream_chunk', { chunkType: 'text', content: event.text }),
+            streamEvent(operationId, 'stream_chunk', {
+              chunkType: 'text',
+              content: event.text,
+              ...(subagent ? { subagent } : {}),
+            }),
           ]);
-        } else if (event.type === 'thinking' || event.type.startsWith('tool_')) {
+        } else if (
+          event.type === 'thinking' ||
+          event.type === 'subagent_update' ||
+          event.type.startsWith('tool_')
+        ) {
           const emissions = mapRuntimeEvent(streamState, event);
           if (emissions.length > 0)
             await ingest(

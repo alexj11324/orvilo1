@@ -2,7 +2,7 @@ import { agentSecondaryDisplayName, type SidebarAgentItem } from '@orvilo/types'
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
 interface AgentItemProps {

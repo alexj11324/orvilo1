@@ -17,6 +17,7 @@ import { toast } from '@/components/toast';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { openNewConversation } from '@/features/Conversation/selectAgent';
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -78,6 +79,7 @@ export const useCreateMenuItems = () => {
     s.switchToGroup,
     s.removeAgent,
   ]);
+  const privateGroups = useHomeStore((s) => s.privateAgentGroups);
   const [createGroup, loadGroups] = useAgentGroupStore((s) => [s.createGroup, s.loadGroups]);
 
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -121,24 +123,16 @@ export const useCreateMenuItems = () => {
     },
   );
 
-  /**
-   * One-click Orvilo agent create — no LLM call, no purpose field, no Agent
-   * Builder (docs/development/device-execution-contract.md). Writes the fixed
-   * `type:'orvilo'` binding and a client-side idempotency key so a
-   * double-click / UI retry can never mint a twin; everything else inherits
-   * the legal defaults (the inbox's temporary model is deliberately NOT
-   * copied). The entry's origin decides the destination.
-   */
   const createAgent = useCallback(
     async (options?: CreateAgentOptions) => {
       if (!canCreate) return;
 
+      const config = await requestAgentRuntime({ visibility: options?.visibility });
+      if (!config) return;
+
       const result = await mutateAgent({
         clientRequestId: crypto.randomUUID(),
-        config: {
-          agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
-          title: 'Orvilo AI',
-        },
+        config,
         groupId: options?.groupId,
         visibility: options?.visibility,
       });
@@ -152,7 +146,7 @@ export const useCreateMenuItems = () => {
             },
           },
         ],
-        title: t('agentCreated', { name: 'Orvilo AI' }),
+        title: t('agentCreated', { name: config.title || 'Orvilo AI' }),
       });
 
       if (options?.origin === 'settings') {
@@ -170,7 +164,7 @@ export const useCreateMenuItems = () => {
    * Uses backend batch creation for better performance and consistency
    */
   const createGroupFromTemplate = useCallback(
-    async (templateId: string, selectedMemberTitles?: string[]) => {
+    async (templateId: string, selectedMemberTitles?: string[], options?: CreateAgentOptions) => {
       if (!canCreate) return false;
 
       setIsCreatingGroup(true);
@@ -185,8 +179,17 @@ export const useCreateMenuItems = () => {
             ? template.members
             : template.members.filter((m) => selectedMemberTitles.includes(m.title));
 
+        const visibility = options?.groupId
+          ? privateGroups.some((group) => group.id === options.groupId)
+            ? 'private'
+            : 'public'
+          : options?.visibility;
+        const runtimeConfig = await requestAgentRuntime({ visibility });
+        if (!runtimeConfig) return false;
+
         // Prepare member configs for batch creation
         const memberConfigs: GroupMemberConfig[] = membersToCreate.map((member) => ({
+          ...runtimeConfig,
           avatar: member.avatar,
           backgroundColor: member.backgroundColor,
           plugins: member.plugins,
@@ -198,6 +201,8 @@ export const useCreateMenuItems = () => {
         const { groupId } = await chatGroupService.createGroupWithMembers(
           {
             title: template.title,
+            groupId: options?.groupId,
+            visibility,
           },
           memberConfigs,
         );
@@ -218,7 +223,7 @@ export const useCreateMenuItems = () => {
         setIsCreatingGroup(false);
       }
     },
-    [canCreate, groupTemplates, refreshAgentList, loadGroups, switchToGroup, t],
+    [canCreate, groupTemplates, refreshAgentList, loadGroups, switchToGroup, privateGroups, t],
   );
 
   /**

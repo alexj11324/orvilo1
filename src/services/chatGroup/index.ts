@@ -1,4 +1,4 @@
-import { type AgentGroupDetail } from '@orvilo/types';
+import { type AgentGroupDetail, type OrviloAgentAgencyConfig } from '@orvilo/types';
 
 import {
   type ChatGroupAgentItem,
@@ -10,18 +10,21 @@ import type { GroupMemberRole } from '@/database/utils/groupMembership';
 import { lambdaClient } from '@/libs/trpc/client';
 
 export interface GroupMemberConfig {
+  agencyConfig?: OrviloAgentAgencyConfig;
   avatar?: string;
   backgroundColor?: string;
   description?: string;
-  model?: string;
+  // Server accepts `z.string().nullish()` — imported runtimes may lack these.
+  model?: string | null;
   plugins?: string[];
-  provider?: string;
+  provider?: string | null;
   systemRole?: string;
   tags?: string[];
-  title?: string;
+  title?: string | null;
 }
 
 export interface SupervisorConfig {
+  agencyConfig?: OrviloAgentAgencyConfig;
   avatar?: string;
   backgroundColor?: string;
   description?: string;
@@ -47,7 +50,7 @@ class ChatGroupService {
    * The supervisor agent is automatically created as a virtual agent.
    */
   createGroup = (
-    params: Omit<NewChatGroup, 'userId'>,
+    params: Omit<NewChatGroup, 'userId'> & { supervisorConfig?: SupervisorConfig },
   ): Promise<{ group: ChatGroupItem; supervisorAgentId: string }> => {
     return lambdaClient.group.createGroup.mutate({
       ...params,

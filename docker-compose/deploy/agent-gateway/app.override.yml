@@ -1,0 +1,7 @@
+services:
+  orvilo:
+    env_file:
+      - /run/orvilo-agent-gateway/app.env
+  hatchet-worker:
+    env_file:
+      - /run/orvilo-agent-gateway/app.env

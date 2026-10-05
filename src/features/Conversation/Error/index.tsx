@@ -33,6 +33,7 @@ import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfi
 import { getRuntimeErrorMessage } from '@/utils/locale/runtimeErrorMessage';
 
 import ChatInvalidAPIKey from './ChatInvalidApiKey';
+import { isDeviceAdmissionErrorBody } from './deviceAdmission';
 import { isHeterogeneousAgentStatusGuideError } from './heterogeneous';
 import { useHeterogeneousAutoRetry } from './useHeterogeneousAutoRetry';
 
@@ -112,6 +113,11 @@ const DeprecatedModelError = dynamic(() => import('./DeprecatedModelError'), {
 });
 
 const QuotaLimitError = dynamic(() => import('./QuotaLimitError'), { loading, ssr: false });
+
+const DeviceAdmissionError = dynamic(() => import('./DeviceAdmissionError'), {
+  loading,
+  ssr: false,
+});
 
 const TraceIdError = dynamic(() => import('./TraceIdError'), { loading, ssr: false });
 
@@ -490,6 +496,22 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
                   : '/settings/credential',
             )
           }
+        />
+      );
+    }
+
+    // Device-execution admission errors (FIX-A `DeviceAdmissionErrorData`) get
+    // the structured card — the SAME `code` that came through API → stream →
+    // store decides the ONE true action; the human `detail` text is display
+    // only, never parsed. Placed before the generic error-type fallbacks so a
+    // ServerAgentRuntimeError body still reaches the admission surface.
+    if (isDeviceAdmissionErrorBody(sessionErrorBody)) {
+      return (
+        <DeviceAdmissionError
+          body={sessionErrorBody}
+          error={error ?? undefined}
+          id={data.id}
+          onRetry={handleRetryAgentMessage}
         />
       );
     }

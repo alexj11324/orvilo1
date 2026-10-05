@@ -5,9 +5,9 @@ import { PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import { Button } from '@/components/ui/button';
-import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';

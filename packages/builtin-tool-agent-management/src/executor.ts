@@ -48,8 +48,11 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
 
   // ==================== Agent CRUD ====================
 
-  createAgent = async (params: CreateAgentParams): Promise<BuiltinToolResult> => {
-    return runtime.createAgent(params);
+  createAgent = async (
+    params: CreateAgentParams,
+    ctx: BuiltinToolContext,
+  ): Promise<BuiltinToolResult> => {
+    return runtime.createAgent(params, { agentId: ctx.agentId });
   };
 
   updateAgent = async (params: UpdateAgentParams): Promise<BuiltinToolResult> => {

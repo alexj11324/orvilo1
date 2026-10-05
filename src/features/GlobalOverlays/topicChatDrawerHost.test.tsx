@@ -82,7 +82,7 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
 }));
 
 // --- the real `(main)` layout's leaves -------------------------------------
-vi.mock('@/const/version', () => ({ isDesktop: false }));
+vi.mock('@/const/version', () => ({ CURRENT_VERSION: '0.0.0', isDesktop: false }));
 vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isPWA: false }) }));
 vi.mock('@/libs/next/dynamic', () => ({ default: () => () => null }));
 vi.mock('@/features/AlertBanner/CloudBanner', () => ({ BANNER_HEIGHT: 0, default: nullComponent }));

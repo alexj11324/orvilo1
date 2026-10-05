@@ -26,6 +26,32 @@ beforeEach(async () => {
     primaryOwnerId: memberA,
     slug: ws,
   });
+  // Creation admission requires a resolvable bound host.
+  await clientDB.insert(Schema.devices).values([
+    {
+      deviceId: `creation-host-${memberA}`,
+      identitySource: 'installation',
+      userId: memberA,
+      visibility: 'private',
+    },
+    {
+      deviceId: `creation-host-${ws}`,
+      identitySource: 'installation',
+      userId: memberA,
+      visibility: 'public',
+      workspaceId: ws,
+    },
+  ]);
+});
+
+const withRuntime = (config: any = {}, workspaceId?: string) => ({
+  ...config,
+  agencyConfig: {
+    boundDeviceId: `creation-host-${workspaceId ?? memberA}`,
+    executionTarget: 'device' as const,
+    heterogeneousProvider: { type: 'codex' as const },
+    ...config.agencyConfig,
+  },
 });
 
 afterEach(async () => {
@@ -36,11 +62,16 @@ afterEach(async () => {
 describe('shared workspace sidebar skeleton', () => {
   it('pins from the shared column surface for every member', async () => {
     const agentModel = new AgentModel(clientDB, memberA, ws);
-    const agent = await agentModel.create({
-      systemRole: '',
-      title: 'Shared Agent',
-      visibility: 'public',
-    } as any);
+    const agent = await agentModel.create(
+      withRuntime(
+        {
+          systemRole: '',
+          title: 'Shared Agent',
+          visibility: 'public',
+        } as any,
+        ws,
+      ),
+    );
     await agentModel.update(agent.id, { pinned: true });
 
     for (const member of [memberA, memberB]) {
@@ -53,11 +84,16 @@ describe('shared workspace sidebar skeleton', () => {
   it("lists another member's public folder, with the same shared membership", async () => {
     const folder = await new SessionGroupModel(clientDB, memberA, ws).create({ name: 'Marketing' });
     const agentModel = new AgentModel(clientDB, memberA, ws);
-    const agent = await agentModel.create({
-      systemRole: '',
-      title: 'Campaign Agent',
-      visibility: 'public',
-    } as any);
+    const agent = await agentModel.create(
+      withRuntime(
+        {
+          systemRole: '',
+          title: 'Campaign Agent',
+          visibility: 'public',
+        } as any,
+        ws,
+      ),
+    );
     await agentModel.updateSessionGroupId(agent.id, folder.id);
 
     // Member B never created the folder, never moved the agent into it.
@@ -86,11 +122,13 @@ describe('shared workspace sidebar skeleton', () => {
 
   it('personal mode keeps reading the shared columns', async () => {
     const agentModel = new AgentModel(clientDB, memberA);
-    const agent = await agentModel.create({
-      systemRole: '',
-      title: 'Personal Agent',
-      visibility: 'private',
-    } as any);
+    const agent = await agentModel.create(
+      withRuntime({
+        systemRole: '',
+        title: 'Personal Agent',
+        visibility: 'private',
+      } as any),
+    );
     await agentModel.update(agent.id, { pinned: true });
 
     const result = await new HomeRepository(clientDB, memberA).getSidebarAgentList();

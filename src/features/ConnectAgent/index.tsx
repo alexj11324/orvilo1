@@ -45,6 +45,7 @@ import {
   type FirstAgentCreationCheckpoint,
 } from '@/services/agentOnboarding';
 import { deviceService } from '@/services/device';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { useAgentStore } from '@/store/agent';
 import { heteroAgentDefaultName } from '@/store/agent/utils/heteroAgentDefaultName';
 import { useElectronStore } from '@/store/electron';
@@ -194,11 +195,6 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorFillTertiary};
   `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
   row: css`
     cursor: pointer;
 
@@ -344,9 +340,8 @@ const AgentScanRow = memo<{
   provider: ConnectableProvider;
   selected: boolean;
   status?: HeterogeneousAgentScanStatus;
-  subtitle: string;
   unavailableText: string;
-}>(({ onToggle, provider, selected, status, subtitle, unavailableText }) => {
+}>(({ onToggle, provider, selected, status, unavailableText }) => {
   const available = status?.available === true;
   const row = (
     <div
@@ -356,15 +351,11 @@ const AgentScanRow = memo<{
       onClick={available ? onToggle : undefined}
     >
       <provider.brand.Avatar size={32} />
-      <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1 justify-center" style={{ minHeight: 42, minWidth: 0 }}>
         <div className="font-semibold">{provider.title}</div>
-        <div className="truncate block text-[12px] text-muted-foreground">{subtitle}</div>
       </div>
       {available ? (
-        <>
-          {status?.version && <span className={styles.mono}>{status.version}</span>}
-          <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
-        </>
+        <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
       ) : (
         <div className="text-[12px] text-muted-foreground">{unavailableText}</div>
       )}
@@ -462,15 +453,16 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     const targetLabel =
       target?.kind === 'device' ? deviceLabel(target.device) : t('connectAgent.create.localDevice');
 
+    // Only providers the scan actually found are listed — this step is the
+    // picker for what can be connected, so uninstalled harnesses never render.
     const inventory = useMemo(() => {
       if (scanState.status !== 'success' || !scanState.agents) return [];
-      const rank = (available?: boolean) => (available ? 0 : 1);
-      return [...CONNECTABLE_PROVIDERS]
-        .map((provider) => ({ provider, status: scanState.agents?.[provider.type] }))
-        .sort((a, b) => rank(a.status?.available) - rank(b.status?.available));
+      return CONNECTABLE_PROVIDERS.filter(
+        (provider) => scanState.agents?.[provider.type]?.available,
+      ).map((provider) => ({ provider, status: scanState.agents?.[provider.type] }));
     }, [scanState]);
 
-    const detectedCount = inventory.filter((entry) => entry.status?.available).length;
+    const detectedCount = inventory.length;
 
     const selectedProviders = useMemo(
       () => CONNECTABLE_PROVIDERS.filter((provider) => selectedTypes.includes(provider.type)),
@@ -545,13 +537,16 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           isRemoteHeterogeneousType(provider.type) &&
           !profiles[provider.type]
         ) {
-          const deviceId = target?.kind === 'device' ? target.device.deviceId : currentDeviceId;
-          if (!deviceId) return;
           const platform = provider.type;
-          void deviceService
-            .getAgentProfile({ deviceId, platform })
-            .then((profile) => setProfiles((prev) => ({ ...prev, [platform]: profile })))
-            .catch(() => {});
+          void (async () => {
+            const deviceId =
+              target?.kind === 'device'
+                ? target.device.deviceId
+                : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
+            if (!deviceId) return;
+            const profile = await deviceService.getAgentProfile({ deviceId, platform });
+            setProfiles((prev) => ({ ...prev, [platform]: profile }));
+          })().catch(() => {});
         }
       },
       [creationCheckpoint, currentDeviceId, profiles, target],
@@ -570,7 +565,17 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     }, [activeWorkspaceId, profiles, single, visibility]);
 
     const buildCreateParams = useCallback(
-      (provider: ConnectableProvider, overrides?: { description?: string; name?: string }) => {
+      async (
+        provider: ConnectableProvider,
+        overrides?: { description?: string; name?: string },
+      ) => {
+        // A local target binds this computer's device: the electron-store
+        // snapshot can be absent before the gateway handshake lands, so fall
+        // back to the proven identity owner instead of shipping an empty id.
+        const localDeviceId =
+          target?.kind === 'device'
+            ? target.device.deviceId
+            : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
         return {
           config: buildConnectAgentConfig({
             overrides,
@@ -579,7 +584,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             target:
               target?.kind === 'device'
                 ? { deviceId: target.device.deviceId, kind: 'device' }
-                : { deviceId: currentDeviceId, kind: 'local' },
+                : { deviceId: localDeviceId, kind: 'local' },
           }),
           groupId,
           visibility,
@@ -596,7 +601,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         try {
           const created = await Promise.all(
             selectedProviders.map(async (provider) => {
-              const params = buildCreateParams(
+              const params = await buildCreateParams(
                 provider,
                 provider === single ? overrides : undefined,
               );
@@ -925,7 +930,6 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     provider={provider}
                     selected={selectedTypes.includes(provider.type)}
                     status={status}
-                    subtitle={t(`connectAgent.providerDesc.${provider.type}`)}
                     unavailableText={t('connectAgent.create.notInstalled')}
                     onToggle={() => toggleType(provider)}
                   />

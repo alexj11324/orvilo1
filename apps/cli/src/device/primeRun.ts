@@ -36,6 +36,7 @@ import {
   createPrimeStreamState,
   mapHarnessSessionEvent,
   type PrimeStreamState,
+  subagentContext,
 } from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
 import { openPrimeDeviceRun, type PrimeDeviceRun } from '@orvilo/device-prime-host';
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
@@ -165,10 +166,12 @@ const startSessionPump = (session: PrimeRunSession, logger?: PrimeRunLogger): vo
         if (!op || op.settled) continue;
         switch (event.kind) {
           case 'text': {
+            const subagent = subagentContext(op.streamState, event.subagent);
             op.ingester.push(
               makeEvent(op.operationId, 'stream_chunk', {
                 chunkType: 'text',
                 content: event.text,
+                ...(subagent ? { subagent } : {}),
               }),
             );
             break;
@@ -177,6 +180,7 @@ const startSessionPump = (session: PrimeRunSession, logger?: PrimeRunLogger): vo
             op.usage = { inputTokens: event.inputTokens, outputTokens: event.outputTokens };
             break;
           }
+          case 'subagent_update':
           case 'thinking':
           case 'tool_call':
           case 'tool_progress':
@@ -194,7 +198,13 @@ const startSessionPump = (session: PrimeRunSession, logger?: PrimeRunLogger): vo
             break;
           }
           case 'error': {
-            op.ingester.push(makeEvent(op.operationId, 'error', { message: event.message }));
+            const subagent = subagentContext(op.streamState, event.subagent);
+            op.ingester.push(
+              makeEvent(op.operationId, 'error', {
+                message: event.message,
+                ...(subagent ? { subagent } : {}),
+              }),
+            );
             break;
           }
         }

@@ -19,7 +19,7 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 export interface AgentRow {
   avatar?: string;
   backgroundColor?: string;
-  heterogeneousType?: string | null;
+  heterogeneousType?: SidebarAgentItem['heterogeneousType'];
   id: string;
   pinned?: boolean;
   subtitle?: string;
@@ -93,6 +93,7 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
           out.push({
             avatar: typeof item.avatar === 'string' ? item.avatar : undefined,
             backgroundColor: item.backgroundColor || undefined,
+            heterogeneousType: item.heterogeneousType,
             id: item.id,
             heterogeneousType: item.heterogeneousType,
             pinned: item.pinned ?? false,

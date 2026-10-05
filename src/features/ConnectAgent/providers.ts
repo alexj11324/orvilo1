@@ -113,11 +113,16 @@ export const getConnectableProvider = (type: string) =>
 
 export const buildPlatformAgencyConfig = (
   type: RemoteHeterogeneousAgentType,
-  target: { deviceId: string; kind: 'device' } | { kind: 'local' },
+  target: { deviceId: string; kind: 'device' } | { deviceId?: string; kind: 'local' },
 ) => ({
   ...(target.kind === 'device'
     ? { boundDeviceId: target.deviceId, executionTarget: 'device' as const }
-    : undefined),
+    : {
+        // Creation admission requires a saved host/target: a local platform
+        // agent binds this computer the same way a local CLI agent does.
+        ...(target.deviceId ? { boundDeviceId: target.deviceId } : undefined),
+        executionTarget: 'local' as const,
+      }),
   heterogeneousProvider: { type },
 });
 

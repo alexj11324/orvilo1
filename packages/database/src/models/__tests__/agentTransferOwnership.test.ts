@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import type { NewAgent } from '../../schemas';
 import {
   agentAccountBindings,
   agentCronJobs,
@@ -48,6 +49,37 @@ const wsId = 'handover-ws';
 const ownerModel = new AgentModel(serverDB, ownerId, wsId);
 const recipientModel = new AgentModel(serverDB, recipientId, wsId);
 
+// Creation goes through strict admission: seed a saved host and bind a
+// registered runtime, matching the production creation contract.
+const withRuntime = async (
+  config: Partial<NewAgent> = {},
+  actor = ownerId,
+  workspaceId: string | null = wsId,
+) => {
+  const boundDeviceId = workspaceId ? `handover-host-${workspaceId}` : `handover-host-${actor}`;
+  await serverDB
+    .insert(devices)
+    .values({
+      deviceId: boundDeviceId,
+      identitySource: 'machine-id',
+      userId: actor,
+      visibility: workspaceId ? 'public' : 'private',
+      workspaceId,
+    })
+    .onConflictDoNothing();
+  return {
+    ...config,
+    agencyConfig: {
+      boundDeviceId,
+      executionTarget: 'device' as const,
+      heterogeneousProvider: { type: 'codex' as const },
+      ...config.agencyConfig,
+    },
+  };
+};
+const createOwnerAgent = async (config: Parameters<AgentModel['create']>[0]) =>
+  ownerModel.create(await withRuntime(config));
+
 const handover = (params: Parameters<AgentModel['transferAgentOwnership']>[1]) =>
   serverDB.transaction(async (trx) => recipientModel.transferAgentOwnership(trx, params));
 
@@ -72,7 +104,7 @@ afterEach(async () => {
 
 describe('AgentModel.transferAgentOwnership', () => {
   it('rejects the handover while the agent still carries a share row', async () => {
-    const agent = await ownerModel.create({ slug: 'shared-handover', title: 'Shared Handover' });
+    const agent = await createOwnerAgent({ slug: 'shared-handover', title: 'Shared Handover' });
     await serverDB
       .insert(agentShares)
       .values({ agentId: agent.id, shareConfig: { monthlySpendLimit: 5 }, visibility: 'link' });
@@ -91,7 +123,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('flips only the agent owner; scope, slug and visibility stay put', async () => {
-    const agent = await ownerModel.create({
+    const agent = await createOwnerAgent({
       slug: 'handover-agent',
       title: 'Handover Agent',
       visibility: 'public',
@@ -111,7 +143,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('keeps everyone’s conversations untouched', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(topics).values([
       { agentId: agent.id, id: 'owner-topic', userId: ownerId, workspaceId: wsId },
       { agentId: agent.id, id: 'teammate-topic', userId: teammateId, workspaceId: wsId },
@@ -125,7 +157,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('detaches knowledge mounts the recipient cannot access, keeps the rest', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(knowledgeBases).values([
       {
         id: 'kb-owner-private',
@@ -208,7 +240,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('disconnects agent-owned connectors and unmounts other members’ linked ones', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(userConnectors).values([
       // The previous owner's agent-owned connector: its OAuth credentials are
       // personal identity and must NOT travel — the row re-homes as a
@@ -314,9 +346,9 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('leaves other members’ projects when a PRIVATE agent is handed over', async () => {
-    const agent = await ownerModel.create({ title: 'Agent', visibility: 'private' });
-    const coordinatorA = await ownerModel.create({ title: 'Coord A', visibility: 'public' });
-    const coordinatorB = await ownerModel.create({ title: 'Coord B', visibility: 'public' });
+    const agent = await createOwnerAgent({ title: 'Agent', visibility: 'private' });
+    const coordinatorA = await createOwnerAgent({ title: 'Coord A', visibility: 'public' });
+    const coordinatorB = await createOwnerAgent({ title: 'Coord B', visibility: 'public' });
     await serverDB.insert(projects).values([
       {
         coordinatorAgentId: coordinatorA.id,
@@ -353,7 +385,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('keeps a dedicated-provenance document bound to a TOPIC with its owner', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(documents).values([
       {
         content: 'topic-shared skill',
@@ -401,8 +433,8 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('re-homes the previous owner’s label assignments and exclusive labels', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
-    const otherAgent = await ownerModel.create({ title: 'Other Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
+    const otherAgent = await createOwnerAgent({ title: 'Other Agent' });
     await serverDB.insert(agentLabels).values([
       // Assigned ONLY to the transferred agent: the label row itself re-homes,
       // or the previous owner's deletion cascades it (and the assignment) away.
@@ -461,8 +493,8 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('re-homes the previous owner’s quota account bindings, still enabled', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
-    const otherAgent = await ownerModel.create({ title: 'Other Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
+    const otherAgent = await createOwnerAgent({ title: 'Other Agent' });
     await serverDB.insert(agentProviderAccounts).values([
       // Consumed ONLY by the transferred agent: the account row itself
       // re-homes, or the previous owner's deletion cascades it (and with it
@@ -526,7 +558,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('re-homes agent-exclusive private expertise, unbinds shared domains', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(expertiseDomains).values([
       {
         domainFilter: 'f',
@@ -583,8 +615,8 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('re-homes the previous owner’s VFS documents with the agent', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
-    const otherAgent = await ownerModel.create({ title: 'Other Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
+    const otherAgent = await createOwnerAgent({ title: 'Other Agent' });
     await serverDB.insert(documents).values([
       // DEDICATED provenance but ALSO associated to another agent since: the
       // external consumer makes it shared content — ownership must not move.
@@ -752,7 +784,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('drops a binding to another member’s PRIVATE workspace device, keeps public ones', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(devices).values([
       {
         deviceId: 'owner-private-ws-device',
@@ -792,8 +824,8 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('detaches other users’ tasks from a PRIVATE agent, keeps public-agent tasks intact', async () => {
-    const privateAgent = await ownerModel.create({ title: 'Private', visibility: 'private' });
-    const publicAgent = await ownerModel.create({ title: 'Public', visibility: 'public' });
+    const privateAgent = await createOwnerAgent({ title: 'Private', visibility: 'private' });
+    const publicAgent = await createOwnerAgent({ title: 'Public', visibility: 'public' });
     await serverDB.insert(tasks).values([
       {
         assigneeAgentId: privateAgent.id,
@@ -845,7 +877,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('leaves other members’ groups when a PRIVATE agent is handed over', async () => {
-    const agent = await ownerModel.create({ title: 'Private', visibility: 'private' });
+    const agent = await createOwnerAgent({ title: 'Private', visibility: 'private' });
     await serverDB.insert(chatGroups).values([
       { id: 'teammate-group', title: 'T', userId: teammateId, workspaceId: wsId },
       { id: 'recipient-group', title: 'R', userId: recipientId, workspaceId: wsId },
@@ -877,7 +909,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('refuses handover of an agent with an OWNED group membership', async () => {
-    const agent = await ownerModel.create({ title: 'Supervisor' });
+    const agent = await createOwnerAgent({ title: 'Supervisor' });
     await serverDB
       .insert(chatGroups)
       .values([{ id: 'own-group', title: 'G', userId: ownerId, workspaceId: wsId }]);
@@ -897,7 +929,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('re-homes the previous owner’s cron jobs and bot providers, not teammates’', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(agentCronJobs).values([
       {
         agentId: agent.id,
@@ -929,7 +961,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('strips device bindings the recipient cannot reach', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB
       .update(agents)
       .set({
@@ -954,7 +986,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('refuses while a cross-scope backfill job still covers the agent', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.transaction((trx) =>
       AgentTransferJobModel.createJob(trx, {
         agentIds: [agent.id],
@@ -971,7 +1003,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('rejects a stale request when the owner already changed', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.update(agents).set({ userId: teammateId }).where(eq(agents.id, agent.id));
 
     await expect(
@@ -981,7 +1013,9 @@ describe('AgentModel.transferAgentOwnership', () => {
 
   it('rejects when the agent is no longer in the workspace', async () => {
     const personalModel = new AgentModel(serverDB, ownerId);
-    const agent = await personalModel.create({ title: 'Personal Agent' });
+    const agent = await personalModel.create(
+      await withRuntime({ title: 'Personal Agent' }, ownerId, null),
+    );
 
     await expect(
       handover({ agentId: agent.id, fromUserId: ownerId, toUserId: recipientId }),

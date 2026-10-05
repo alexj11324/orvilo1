@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   createOnboardingAgentOnce,
   type FirstAgentCreationCheckpoint,
@@ -13,6 +12,8 @@ import {
   verifyFirstAgentDevice,
 } from '@/services/agentOnboarding';
 import { useAgentStore } from '@/store/agent';
+
+import { ProviderSetupFields } from './ProviderSetupFields';
 
 export default function ApiAgentSetup({
   onCreated,
@@ -77,36 +78,17 @@ export default function ApiAgentSetup({
       }}
     >
       <p className="text-sm text-muted-foreground">{t('onboarding.api.description')}</p>
-      <label className="flex flex-col gap-1 text-sm">
-        {t('onboarding.api.endpoint')}
-        <Input
-          required
-          disabled={pending || !!createdAgent.current || creation.current.attempted}
-          type="url"
-          value={endpoint}
-          onChange={(event) => setEndpoint(event.target.value)}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t('onboarding.api.model')}
-        <Input
-          required
-          disabled={pending || !!createdAgent.current || creation.current.attempted}
-          value={model}
-          onChange={(event) => setModel(event.target.value)}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {t('onboarding.api.key')}
-        <Input
-          autoComplete="new-password"
-          disabled={pending || !!createdAgent.current}
-          required={!createdAgent.current}
-          type="password"
-          value={apiKey}
-          onChange={(event) => setApiKey(event.target.value)}
-        />
-      </label>
+      <ProviderSetupFields
+        apiKey={apiKey}
+        configDisabled={pending || !!createdAgent.current || creation.current.attempted}
+        endpoint={endpoint}
+        keyDisabled={pending || !!createdAgent.current}
+        keyRequired={!createdAgent.current}
+        model={model}
+        onApiKeyChange={setApiKey}
+        onEndpointChange={setEndpoint}
+        onModelChange={setModel}
+      />
       {error !== undefined && (
         <AsyncError
           description={t('onboarding.api.failed')}

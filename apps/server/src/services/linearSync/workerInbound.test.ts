@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
@@ -39,6 +40,9 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  // Project creation provisions a coordinator via Prime inheritance; strict
+  // admission requires an executable workspace-scoped runtime first.
+  await seedPrimeRuntime(db, { userId, workspaceId });
 });
 
 afterEach(cleanup);

@@ -9,6 +9,7 @@ import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
+import AgentOnboarding from '@/features/AgentOnboarding';
 import FirstLoginGate from '@/features/AgentOnboarding/FirstLoginGate';
 import DesktopFileMenuBridge from '@/features/DesktopFileMenuBridge';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
@@ -64,44 +65,49 @@ const Layout: FC = () => {
         <DesktopAutoOidcOnFirstOpen />
         <FirstLoginGate>
           <WorkspaceContextSlot>
-            <ActiveConversationBridge />
-            <TabCacheBridges />
-            <Suspense fallback={null}>
-              <DesktopNavigationBridge />
-              <DesktopFileMenuBridge />
-              <OverlaySnapshotPublisher />
-              <OverlayCaptureUploader />
-              <OverlayMessageDispatcher />
-              {showCloudPromotion && <CloudBanner />}
-            </Suspense>
-            <ZoomHUD />
+            {/* Until the first usable agent exists the gate covers the whole
+                window — nothing else can run yet, so no page or sidebar entry
+                may be reachable mid-setup. */}
+            <AgentOnboarding>
+              <ActiveConversationBridge />
+              <TabCacheBridges />
+              <Suspense fallback={null}>
+                <DesktopNavigationBridge />
+                <DesktopFileMenuBridge />
+                <OverlaySnapshotPublisher />
+                <OverlayCaptureUploader />
+                <OverlayMessageDispatcher />
+                {showCloudPromotion && <CloudBanner />}
+              </Suspense>
+              <ZoomHUD />
 
-            <Suspense fallback={null}>
-              <TitleBar />
-            </Suspense>
-            <DndContextWrapper>
-              <div
-                className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
-                style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
-              >
-                <SidebarShell />
-                <DesktopLayoutContainer>
-                  <div
-                    className="flex flex-col"
-                    style={{ height: '100%', width: '100%', ...tabHostContainer }}
-                  >
-                    <TabHost />
-                  </div>
-                </DesktopLayoutContainer>
-              </div>
-            </DndContextWrapper>
-            <Suspense fallback={null}>
-              <HotkeyHelperPanel />
-              <RegisterHotkeys />
-              <CmdkLazy />
-              <GlobalApprovalNotification />
-              <GlobalOverlays />
-            </Suspense>
+              <Suspense fallback={null}>
+                <TitleBar />
+              </Suspense>
+              <DndContextWrapper>
+                <div
+                  className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+                  style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
+                >
+                  <SidebarShell />
+                  <DesktopLayoutContainer>
+                    <div
+                      className="flex flex-col"
+                      style={{ height: '100%', width: '100%', ...tabHostContainer }}
+                    >
+                      <TabHost />
+                    </div>
+                  </DesktopLayoutContainer>
+                </div>
+              </DndContextWrapper>
+              <Suspense fallback={null}>
+                <HotkeyHelperPanel />
+                <RegisterHotkeys />
+                <CmdkLazy />
+                <GlobalApprovalNotification />
+                <GlobalOverlays />
+              </Suspense>
+            </AgentOnboarding>
           </WorkspaceContextSlot>
         </FirstLoginGate>
       </HotkeysProvider>

@@ -45,16 +45,21 @@ export class CustomPluginActionImpl {
     try {
       updateInstallError(id, undefined);
       updateInstallLoadingState(id, true);
-      const manifest = await mcpService.getStreamableMcpServerManifest({
-        auth: plugin.customParams.mcp.auth,
-        headers: plugin.customParams.mcp.headers,
-        identifier: plugin.identifier,
-        metadata: {
-          avatar: plugin.customParams.avatar,
-          description: plugin.customParams.description,
+      // Settings-driven manifest refresh is a local-scope probe — the
+      // machine running this session owns the install.
+      const manifest = await mcpService.getStreamableMcpServerManifest(
+        {
+          auth: plugin.customParams.mcp.auth,
+          headers: plugin.customParams.mcp.headers,
+          identifier: plugin.identifier,
+          metadata: {
+            avatar: plugin.customParams.avatar,
+            description: plugin.customParams.description,
+          },
+          url,
         },
-        url,
-      });
+        { scope: { kind: 'local' } },
+      );
       await pluginService.updatePluginManifest(id, manifest);
       await refreshPlugins();
     } catch (error) {

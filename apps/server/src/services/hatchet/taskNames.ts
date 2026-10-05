@@ -1,10 +1,12 @@
 export const HATCHET_TASK_NAMES = {
   agentStep: 'orvilo-agent-step',
   agentSignalNightlySchedule: 'orvilo-agent-signal-nightly-schedule',
+  automationResultOutputSweep: 'orvilo-automation-result-output-sweep',
   collaborationOutboxSweep: 'orvilo-collaboration-outbox-sweep',
   goalAdvance: 'orvilo-goal-advance',
   goalSweep: 'orvilo-goal-sweep',
   linearSyncSweep: 'orvilo-linear-sync-sweep',
+  mcpEventInboxSweep: 'orvilo-mcp-event-inbox-sweep',
   taskHeartbeat: 'orvilo-task-heartbeat',
   taskReminderSweep: 'orvilo-task-reminder-sweep',
   taskScheduleDispatch: 'orvilo-task-schedule-dispatch',

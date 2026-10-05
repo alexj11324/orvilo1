@@ -25,7 +25,7 @@ import type {
   TaskSchedulerContext,
   TaskTopicHandoff,
 } from '@orvilo/types';
-import { ChatErrorType, DEFAULT_BRIEF_ACTIONS } from '@orvilo/types';
+import { ChatErrorType, DEFAULT_BRIEF_ACTIONS, isAutomationRunTrigger } from '@orvilo/types';
 import debug from 'debug';
 
 import {
@@ -155,16 +155,14 @@ export class TaskLifecycleService {
    * Flow: updateHeartbeat → updateTopicStatus → handoff → review → checkpoint
    */
   async onTopicComplete(params: TopicCompleteParams): Promise<void> {
-    const {
-      taskId,
-      taskIdentifier,
-      topicId,
-      reason: rawReason,
-      lastAssistantContent,
-      errorMessage,
-      errorCode,
-    } = params;
-    const reason = rawReason === 'max_steps' || rawReason === 'cost_limit' ? 'done' : rawReason;
+    const { taskId, taskIdentifier, topicId, reason: rawReason, lastAssistantContent } = params;
+    const limited =
+      rawReason === 'max_steps' || rawReason === 'cost_limit' || rawReason === 'timeout';
+    const reason = limited ? 'error' : rawReason;
+    if (limited && !params.errorCode) params.errorCode = rawReason;
+    if (limited && !params.errorMessage)
+      params.errorMessage = `Execution stopped because of ${rawReason}.`;
+    const { errorMessage, errorCode } = params;
 
     const hasDispatchClaim =
       params.dispatchId !== undefined ||
@@ -189,7 +187,10 @@ export class TaskLifecycleService {
         phase: terminalPhase,
       });
       if (!settlement) throw new Error('Task dispatch claim is stale or does not match this run');
-      if (settlement.state === 'already_settled') {
+      if (
+        settlement.state === 'already_settled' &&
+        !(settlement.currentGeneration && settlement.currentContract)
+      ) {
         log(
           'Ignored replayed completion: task=%s dispatch=%s generation=%s',
           taskId,
@@ -244,8 +245,10 @@ export class TaskLifecycleService {
       topicId,
       params.operationId,
       reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed',
+      rawReason,
     );
     if (!claimed) {
+      await this.persistAutomationResult(params);
       log(
         'onTopicComplete: duplicate or stale callback ignored task=%s currentTopic=%s receivedTopic=%s',
         taskIdentifier,
@@ -257,6 +260,8 @@ export class TaskLifecycleService {
 
     if (reason === 'interrupted') {
       log('onTopicComplete: interrupted run settled without advancing task=%s', taskIdentifier);
+      await this.markAutomationResultReady(params);
+      await this.persistAutomationResult(params);
       return;
     }
 
@@ -567,7 +572,7 @@ export class TaskLifecycleService {
           );
         }
       } else if (reason === 'error') {
-        const errorText = errorMessage || 'Unknown error';
+        const errorText = params.errorMessage || errorMessage || 'Unknown error';
 
         // A budget / plan failure won't clear on a blind Retry — lead the card with
         // the fix (Upgrade → plans page) instead. Other causes keep retry + feedback.
@@ -633,7 +638,7 @@ export class TaskLifecycleService {
         });
 
         const runTrigger = params.runTrigger ?? 'manual';
-        const isAutomationTick = runTrigger === 'schedule' || runTrigger === 'heartbeat';
+        const isAutomationTick = isAutomationRunTrigger(runTrigger);
 
         // Captured by the schedule sub-branch below for the failure notification:
         // how deep into the fuse this failure is, and whether it blew the fuse
@@ -673,7 +678,10 @@ export class TaskLifecycleService {
             },
             outcome: 'failed',
           });
-        } else if (currentTask.automationMode === 'schedule') {
+        } else if (
+          currentTask.automationMode === 'schedule' ||
+          currentTask.automationMode === 'event'
+        ) {
           // a scheduled tick failed. A single transient error must not
           // permanently pause a recurring task. Count consecutive failures and
           // only pause once the fuse blows; otherwise keep the task 'scheduled' so
@@ -802,7 +810,11 @@ export class TaskLifecycleService {
         const { driveTaskFromVerify } = await import('../verify/settle');
         await driveTaskFromVerify(this.db, this.userId, params.operationId, this.workspaceId);
       }
-      if (!verifyBound) await this.bridgeResultToCreator(params);
+      if (!verifyBound) {
+        await this.markAutomationResultReady(params);
+        await this.persistAutomationResult(params);
+        await this.bridgeResultToCreator(params);
+      }
 
       // Heartbeat re-arm: re-read task state (status / context may have just
       // been mutated by the branches above) and decide whether to publish the
@@ -875,6 +887,45 @@ export class TaskLifecycleService {
    * it. Always best-effort: a bridge failure must never affect task status, so
    * it's wrapped here and the underlying service also avoids throwing.
    */
+  private async markAutomationResultReady(params: TopicCompleteParams): Promise<void> {
+    if (!params.topicId) return;
+    const topic = await this.taskTopicModel.findByTopicId(params.topicId);
+    if (!topic) return;
+    if (!topic.contract?.occurrence) {
+      const task = await this.taskModel.findById(params.taskId);
+      if (!task?.automationMode) return;
+    }
+    const { resultStatus } = await import('../automationResultDelivery');
+    const executionOutcome = resultStatus(params.reason, topic.status);
+    const integrationPending =
+      topic.integration && !['integrated', 'skipped'].includes(topic.integration.state);
+    await this.taskTopicModel.markResultReady(
+      params.taskId,
+      params.topicId,
+      params.operationId,
+      executionOutcome === 'succeeded' && integrationPending ? 'unknown' : executionOutcome,
+    );
+  }
+
+  private async persistAutomationResult(params: TopicCompleteParams): Promise<void> {
+    // Readiness is durable before insertion. Recovery can retry an outbox failure
+    // without changing execution settlement or running the Agent again.
+    try {
+      const { AutomationResultDeliveryService } = await import('../automationResultDelivery');
+      await new AutomationResultDeliveryService(
+        this.db,
+        this.userId,
+        this.workspaceId,
+      ).enqueueSettledResult(params);
+    } catch (error) {
+      log(
+        'automation result outbox unavailable task=%s (recoverable): %O',
+        params.taskIdentifier,
+        error,
+      );
+    }
+  }
+
   private async bridgeResultToCreator(params: TopicCompleteParams): Promise<void> {
     try {
       await new TaskResultBridgeService(this.db, this.userId, this.workspaceId).deliver({

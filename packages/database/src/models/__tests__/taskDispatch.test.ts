@@ -135,6 +135,7 @@ const attachTaskToGoal = async (taskId: string, status: 'paused' | 'running', se
 
 /** Seed the durable chain `verifyEventEvidence` re-checks at claim time. */
 const seedEventEvidence = async (taskId: string) => {
+  await db.update(tasks).set({ automationMode: 'event' }).where(eq(tasks.id, taskId));
   const tenantId = workspaceId;
   const connectorId = '00000000-0000-4000-8000-000000000101';
   const subscriptionId = 'event-sub-1';
@@ -186,7 +187,12 @@ const seedEventEvidence = async (taskId: string) => {
     delivery: {
       bindingRevision: 0,
       connectorId,
-      event: { data: {}, eventId, name: 'message', timestamp: '2026-09-30T00:00:00Z' },
+      event: {
+        data: { reportId: 'FIRST-REPORT-731' },
+        eventId,
+        name: 'message',
+        timestamp: '2026-09-30T00:00:00Z',
+      },
       payloadHash: 'payload-hash',
       rawBodyBase64: '',
       receivedAt: Date.now(),
@@ -272,6 +278,190 @@ describe('TaskDispatchModel', () => {
     expect(first.dispatch.waitingReason).toBe('project_auto_dispatch_disabled');
     expect(replay.dispatch.id).toBe(first.dispatch.id);
     expect(replay.dispatch.waitingReason).toBe('project_auto_dispatch_disabled');
+  });
+
+  it('freezes one event identity across concurrent replay and edits, then versions the next event', async () => {
+    const task = await createTask('EVT-FROZEN', 102);
+    await db.insert(agents).values({ id: 'event-version-agent', userId, workspaceId });
+    await db
+      .update(tasks)
+      .set({
+        assigneeAgentId: 'event-version-agent',
+        instruction: 'Report only',
+        config: { model: 'model-v1', provider: 'provider-v1' },
+      })
+      .where(eq(tasks.id, task.id));
+    const eventEvidence = await seedEventEvidence(task.id);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = {
+      eventEvidence,
+      idempotencyKey: eventEvidence.idempotencyKey,
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'event' as const,
+    };
+    const [first, duplicate] = await Promise.all([model.request(input), model.request(input)]);
+    if (first.state === 'busy' || duplicate.state === 'busy') throw new Error('unexpected busy');
+    expect(duplicate.dispatch.id).toBe(first.dispatch.id);
+    expect(first.dispatch.eventEvidence).toEqual(eventEvidence);
+    expect(await db.select().from(taskDispatches)).toHaveLength(1);
+    const lease = await model.claimForProvisioning(first.dispatch.id, 'event-owner', 60_000);
+    if (!lease) throw new Error('event dispatch not claimed');
+    const freeze = (owner: string, instruction: string) =>
+      model.freezeAutomationContent({
+        dispatchId: first.dispatch.id,
+        owner,
+        fence: lease.fence,
+        content: { instruction, verify: { enabled: false } },
+        fileIds: ['report-input'],
+      });
+    const frozen = await freeze('event-owner', 'Report only');
+    expect(frozen?.content?.instruction).toBe('Report only');
+    expect(frozen?.input?.data).toEqual({ reportId: 'FIRST-REPORT-731' });
+    expect(await freeze('foreign-owner', 'Replace original')).toBeNull();
+    expect(await freeze('event-owner', 'Replace original')).toEqual(frozen);
+    await db
+      .update(tasks)
+      .set({
+        instruction: 'Report and update the issue',
+        config: { model: 'model-v2', provider: 'provider-v2' },
+        policyRevision: 2,
+        requirementRevision: 3,
+      })
+      .where(eq(tasks.id, task.id));
+    const replay = await model.request(input);
+    if (replay.state === 'busy') throw new Error('same occurrence became busy');
+    expect(replay.dispatch.automationOccurrence).toEqual(frozen);
+    expect(replay.dispatch.automationOccurrence?.definition.config).toEqual({
+      model: 'model-v1',
+      provider: 'provider-v1',
+    });
+    await model.settle({
+      dispatchId: first.dispatch.id,
+      expected: ['claimed'],
+      fence: lease.fence,
+      generation: first.dispatch.generation,
+      phase: 'succeeded',
+    });
+    const [receipt] = await db
+      .select()
+      .from(mcpEventInbox)
+      .where(eq(mcpEventInbox.id, eventEvidence.inboxRef));
+    const nextEvidence = {
+      ...eventEvidence,
+      eventId: 'occurrence-b',
+      inboxRef: 'event-inbox-2',
+      triggerRunId: 'event-run-2',
+      idempotencyKey: 'event:trigger:occurrence-b',
+    };
+    await db.insert(mcpEventInbox).values({
+      ...receipt,
+      id: nextEvidence.inboxRef,
+      eventId: nextEvidence.eventId,
+      leaseUntil: Date.now() + 60_000,
+      delivery: {
+        ...receipt.delivery,
+        event: {
+          ...receipt.delivery.event,
+          eventId: nextEvidence.eventId,
+          data: { reportId: 'NEXT-REPORT-932' },
+        },
+      },
+    });
+    await db.insert(mcpEventTriggerRuns).values({
+      id: nextEvidence.triggerRunId,
+      idempotencyKey: nextEvidence.idempotencyKey,
+      inboxId: nextEvidence.inboxRef,
+      status: 'pending',
+      tenantId: nextEvidence.tenantId,
+      triggerId: nextEvidence.triggerId,
+      triggerRevision: nextEvidence.triggerRevision,
+    });
+    const next = await model.request({
+      ...input,
+      eventEvidence: nextEvidence,
+      idempotencyKey: nextEvidence.idempotencyKey,
+    });
+    if (next.state === 'busy') throw new Error('next occurrence could not start');
+    expect(next.dispatch.id).not.toBe(first.dispatch.id);
+    expect(next.dispatch.automationOccurrence?.definition.instruction).toBe(
+      'Report and update the issue',
+    );
+    expect(next.dispatch.automationOccurrence?.definition.definitionVersionId).not.toBe(
+      frozen?.definition.definitionVersionId,
+    );
+    expect(next.dispatch.automationOccurrence?.input?.data).toEqual({
+      reportId: 'NEXT-REPORT-932',
+    });
+    expect((await model.findById(first.dispatch.id))?.automationOccurrence).toEqual(frozen);
+  });
+
+  it('persists resume evidence beyond inbox completion and blocks revoked execution', async () => {
+    const task = await createTask('EVT-RESUME', 103);
+    const evidence = await seedEventEvidence(task.id);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = {
+      eventEvidence: evidence,
+      idempotencyKey: evidence.idempotencyKey,
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'event' as const,
+    };
+    const first = await model.request(input);
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await model.markWaiting(first.dispatch.id, 'dispatch_prepare_retryable');
+    await db
+      .update(mcpEventTriggerRuns)
+      .set({ status: 'accepted', dispatchId: first.dispatch.id })
+      .where(eq(mcpEventTriggerRuns.id, evidence.triggerRunId));
+    await db
+      .update(mcpEventInbox)
+      .set({ status: 'completed', leaseToken: null, leaseUntil: null })
+      .where(eq(mcpEventInbox.id, evidence.inboxRef));
+    const candidates = await TaskDispatchModel.findWaitingResumeCandidates(db, {
+      now: new Date(Date.now() + 600_000),
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].eventEvidence).toEqual(evidence);
+    expect((await model.request(input)).state).toBe('existing');
+    await db
+      .update(userConnectors)
+      .set({ isEnabled: false })
+      .where(eq(userConnectors.id, evidence.sourceId));
+    await expect(model.request({ ...input, eventEvidence: undefined })).rejects.toMatchObject({
+      code: 'revoked',
+    });
+    await expect(model.request(input)).rejects.toMatchObject({ code: 'revoked' });
+    expect(await db.select().from(taskDispatches)).toHaveLength(1);
+  });
+
+  it('does not freeze occurrence content after its provisioning lease expires', async () => {
+    const task = await createTask('EVT-STALE-FREEZE', 104);
+    const evidence = await seedEventEvidence(task.id);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = await model.request({
+      eventEvidence: evidence,
+      idempotencyKey: evidence.idempotencyKey,
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'event',
+    });
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    const lease = await model.claimForProvisioning(first.dispatch.id, 'expired-owner', 60_000);
+    if (!lease) throw new Error('event dispatch not claimed');
+    await db
+      .update(taskDispatches)
+      .set({ leaseExpiresAt: new Date(Date.now() - 1) })
+      .where(eq(taskDispatches.id, first.dispatch.id));
+    expect(
+      await model.freezeAutomationContent({
+        dispatchId: first.dispatch.id,
+        owner: 'expired-owner',
+        fence: lease.fence,
+        content: { instruction: 'Stale writer' },
+        fileIds: [],
+      }),
+    ).toBeNull();
   });
 
   it('allows only one active dispatch claim for a task', async () => {

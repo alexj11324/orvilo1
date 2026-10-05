@@ -46,8 +46,10 @@ import AutomationBreadcrumb from './AutomationBreadcrumb';
 import AutomationRunList from './AutomationRunList';
 import AutomationSettingsTab from './AutomationSettingsTab';
 import AutomationStatusBadge from './AutomationStatusBadge';
+import ResultDeliveryList from './ResultDeliveryList';
 import { automationStatusOf } from './shared';
 import { useAutomationActions } from './useAutomationActions';
+import { useCanManageAutomation } from './useCanManageAutomation';
 
 dayjs.extend(relativeTime);
 
@@ -104,10 +106,14 @@ const ProjectSelect = memo(() => {
 const AutomationStatusSwitch = memo(() => {
   const { allowed: canEdit, reason } = usePermission('create_content');
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const mode = useTaskDetailSelector(
+    (s, id) => taskDetailSelectors.taskDetail(s, id)?.automationMode,
+  );
   const taskId = useTaskDetailTaskId();
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
   const active = status ? automationStatusOf(status) === 'active' : true;
 
+  if (mode === 'event') return null;
   return (
     <div className="flex items-center gap-2" title={canEdit ? undefined : reason}>
       <Switch
@@ -177,7 +183,7 @@ const DetailHeaderActions = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const { remove } = useAutomationActions();
   const taskId = useTaskDetailTaskId();
-  const name = useTaskDetailSelector(taskDetailSelectors.taskName);
+  const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
 
   const confirmDelete = useCallback(() => {
     if (!taskId) return;
@@ -196,11 +202,20 @@ const DetailHeaderActions = memo(() => {
         }
       },
     });
-  }, [taskId, name, navigate, remove, t]);
+  }, [taskId, navigate, remove, t]);
 
   return (
     <div className="flex items-center gap-1.5">
-      <TaskDetailRunPauseAction />
+      {automationMode === 'event' ? (
+        <Button
+          variant="outline"
+          onClick={() => taskId && navigate(`/automations/${taskId}?tab=settings`)}
+        >
+          {t('events.title')}
+        </Button>
+      ) : (
+        <TaskDetailRunPauseAction />
+      )}
       <DropdownMenu
         items={[
           {
@@ -224,6 +239,13 @@ const DetailHeaderActions = memo(() => {
 });
 
 type DetailTab = 'runs' | 'settings';
+
+const AutomationResults = memo(() => {
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const taskId = useTaskDetailTaskId();
+  const canManage = useCanManageAutomation(detail?.createdByUserId);
+  return taskId ? <ResultDeliveryList readOnly={!canManage} taskId={taskId} /> : null;
+});
 
 const AutomationDetailPage = memo(() => {
   const { t } = useTranslation('automation');
@@ -306,7 +328,14 @@ const AutomationDetailPage = memo(() => {
                     <TabsTrigger value="runs">{t('settings.tab_runs')}</TabsTrigger>
                   </TabsList>
                 </Tabs>
-                {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
+                {tab === 'settings' ? (
+                  <AutomationSettingsTab />
+                ) : (
+                  <>
+                    <AutomationRunList />
+                    <AutomationResults />
+                  </>
+                )}
               </div>
             )}
           </WideScreenContainer>

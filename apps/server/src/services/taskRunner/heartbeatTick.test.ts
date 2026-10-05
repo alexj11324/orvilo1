@@ -65,6 +65,7 @@ describe('runHeartbeatTick', () => {
 
   const baseTask = (overrides: Partial<Record<string, unknown>> = {}) => ({
     automationMode: 'heartbeat',
+    context: { scheduler: { tickToken: 'tick-1' } },
     executionGeneration: 0,
     heartbeatInterval: 30,
     id: taskId,
@@ -171,14 +172,15 @@ describe('runHeartbeatTick', () => {
     mockSelectTask.mockResolvedValue([baseTask()]);
     mockRunner.runTask.mockResolvedValue(undefined);
 
-    const outcome = await runHeartbeatTick(taskId, userId);
+    const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
 
     expect(outcome).toEqual({ ran: true, taskIdentifier: 'T-1' });
     expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
       excludeTypes: ['error'],
     });
     expect(mockRunner.runTask).toHaveBeenCalledWith({
-      idempotencyKey: `heartbeat:tick:task:${taskId}:generation:1`,
+      intent: 'fresh_occurrence',
+      idempotencyKey: 'heartbeat:tick:tick-1',
       taskId,
       trigger: 'heartbeat',
     });
@@ -188,7 +190,7 @@ describe('runHeartbeatTick', () => {
     mockSelectTask.mockResolvedValue([baseTask()]);
     mockBriefModel.hasUnresolvedUrgentByTask.mockResolvedValue(true);
 
-    const outcome = await runHeartbeatTick(taskId, userId);
+    const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
 
     expect(outcome).toEqual({ ran: false, reason: 'human-waiting' });
     expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
@@ -208,20 +210,39 @@ describe('runHeartbeatTick', () => {
     expect(mockRunner.runTask).not.toHaveBeenCalled();
   });
 
-  it('allows legacy tokenless ticks when no active generation is stored', async () => {
+  it('rejects tokenless ticks when no durable occurrence is stored', async () => {
     mockSelectTask.mockResolvedValue([baseTask({ context: {} })]);
     mockRunner.runTask.mockResolvedValue(undefined);
 
     const outcome = await runHeartbeatTick(taskId, userId);
 
-    expect(outcome).toEqual({ ran: true, taskIdentifier: 'T-1' });
+    expect(outcome).toEqual({ ran: false, reason: 'stale-tick' });
+    expect(mockRunner.runTask).not.toHaveBeenCalled();
+  });
+
+  it('rejects tokenless redeliveries even when a newer durable tick is pending', async () => {
+    mockSelectTask.mockResolvedValue([baseTask()]);
+    expect(await runHeartbeatTick(taskId, userId)).toEqual({ ran: false, reason: 'stale-tick' });
+    expect(mockRunner.runTask).not.toHaveBeenCalled();
+  });
+
+  it('uses the persisted tick identity across execution generation changes', async () => {
+    mockSelectTask
+      .mockResolvedValueOnce([baseTask()])
+      .mockResolvedValueOnce([baseTask({ executionGeneration: 9 })]);
+    mockRunner.runTask.mockResolvedValue(undefined);
+    await runHeartbeatTick(taskId, userId, 'tick-1');
+    await runHeartbeatTick(taskId, userId, 'tick-1');
+    expect(mockRunner.runTask.mock.calls[0][0].idempotencyKey).toBe(
+      mockRunner.runTask.mock.calls[1][0].idempotencyKey,
+    );
   });
 
   it('returns in-flight when runTask raises a CONFLICT', async () => {
     mockSelectTask.mockResolvedValue([baseTask()]);
     mockRunner.runTask.mockRejectedValue(new TRPCError({ code: 'CONFLICT', message: 'busy' }));
 
-    const outcome = await runHeartbeatTick(taskId, userId);
+    const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
 
     expect(outcome).toEqual({ ran: false, reason: 'in-flight' });
   });

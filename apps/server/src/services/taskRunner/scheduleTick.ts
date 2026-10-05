@@ -7,11 +7,12 @@ import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { tasks } from '@/database/schemas';
+import { taskDispatches, tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 
 import { taskRunIdempotencyKey } from './idempotency';
 import { TaskRunnerService } from './index';
+import { isValidScheduleOccurrenceToken } from './scheduleOccurrence';
 
 const log = debug('task-runner:schedule-tick');
 
@@ -30,6 +31,7 @@ export type ScheduleTickSkipReason =
   | 'no-pattern'
   | 'not-found'
   | 'paused'
+  | 'stale-tick'
   | 'terminal';
 
 /**
@@ -78,6 +80,37 @@ export async function runScheduleTick(
     return { ran: false, reason: 'paused' };
   }
 
+  if (!tickToken) return { ran: false, reason: 'stale-tick' };
+  const idempotencyKey = taskRunIdempotencyKey.automationTick({
+    kind: 'schedule',
+    taskId,
+    tickToken,
+  });
+  const [persistedDispatch] = await db
+    .select()
+    .from(taskDispatches)
+    .where(
+      and(eq(taskDispatches.taskId, taskId), eq(taskDispatches.idempotencyKey, idempotencyKey)),
+    )
+    .limit(1);
+  const frozenDefinition = persistedDispatch?.automationOccurrence?.definition;
+  const startedAt = (task.context as { scheduler?: { scheduleStartedAt?: string } } | null)
+    ?.scheduler?.scheduleStartedAt;
+  if (
+    !isValidScheduleOccurrenceToken({
+      taskId,
+      tickToken,
+      pattern: frozenDefinition?.schedulePattern ?? task.schedulePattern,
+      timezone: frozenDefinition ? frozenDefinition.scheduleTimezone : task.scheduleTimezone,
+      notBefore: startedAt ? new Date(startedAt) : null,
+    })
+  )
+    return { ran: false, reason: 'stale-tick' };
+
+  // Edits apply to later occurrences. A queued occurrence keeps its original
+  // stopping policy, while current mode/pause/identity/permission remain gates.
+  const occurrenceConfig = frozenDefinition ? frozenDefinition.config : task.config;
+
   const briefModel = new BriefModel(db, userId, wsId);
   if (await briefModel.hasUnresolvedUrgentByTask(taskId, { excludeTypes: ['error'] })) {
     log('skip task=%s reason=human-waiting', taskId);
@@ -96,7 +129,8 @@ export async function runScheduleTick(
   // user editing maxExecutions downward after the cap is already exceeded;
   // or stale `scheduled` rows from older code paths.
   const scheduleConfig =
-    ((task.config as { schedule?: { maxExecutions?: number | null } } | null) ?? {}).schedule ?? {};
+    ((occurrenceConfig as { schedule?: { maxExecutions?: number | null } } | null) ?? {})
+      .schedule ?? {};
   const maxExecutions = scheduleConfig.maxExecutions ?? null;
   if (maxExecutions != null && maxExecutions > 0) {
     const scheduler =
@@ -134,12 +168,8 @@ export async function runScheduleTick(
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
     await runner.runTask({
-      idempotencyKey: taskRunIdempotencyKey.automationTick({
-        executionGeneration: task.executionGeneration ?? 0,
-        kind: 'schedule',
-        taskId,
-        tickToken,
-      }),
+      intent: 'fresh_occurrence',
+      idempotencyKey,
       taskId,
       trigger: 'schedule',
     });

@@ -8,6 +8,11 @@ import { parseCronPattern, type ScheduleType, WEEKDAYS } from './CronConfig';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+/** The server accepts positive heartbeat intervals from ten minutes upward. */
+export const normalizeHeartbeatInterval = (value: number, unit: 'hours' | 'minutes'): number =>
+  Math.max(unit === 'hours' ? 1 : 10, Math.ceil(Number.isFinite(value) ? value : 1)) *
+  (unit === 'hours' ? 3600 : 60);
+
 const padTime = (n: number) => String(n).padStart(2, '0');
 
 const formatHHmm = (hour: number, minute: number) => `${padTime(hour)}:${padTime(minute)}`;

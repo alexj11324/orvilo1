@@ -7,6 +7,7 @@ import type {
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
@@ -16,6 +17,7 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
+import { CredentialModel } from '@/database/models/credential';
 import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import {
   TaskHandoffRequiredError,
@@ -31,6 +33,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { resolveWorkflowCreatePreset } from '@/database/models/workflowMove';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
+import { automationResultDeliveries } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
@@ -46,6 +49,8 @@ import {
   TaskInputService,
 } from '@/server/services/agentDelegation';
 import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
+import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
+import { automationResultWebhookConfigSchema } from '@/server/services/automationResultDelivery/transport';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
@@ -127,7 +132,7 @@ const createSchema = z.object({
   // Optional schedule wiring at create time. When `automationMode` is
   // 'schedule', `schedulePattern` (cron) is required for the central
   // schedule-dispatch sweep to pick the task up.
-  automationMode: z.enum(['heartbeat', 'schedule']).optional(),
+  automationMode: z.enum(['heartbeat', 'schedule', 'event']).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   createdByAgentId: z.string().optional(),
   description: z.string().optional(),
@@ -178,7 +183,7 @@ const updateSchema = z.object({
   afterId: z.string().nullish(),
   assigneeAgentId: z.string().nullish(),
   assigneeUserId: z.string().nullish(),
-  automationMode: z.enum(['heartbeat', 'schedule']).nullish(),
+  automationMode: z.enum(['heartbeat', 'schedule', 'event']).nullish(),
   beforeId: z.string().nullish(),
   config: z.record(z.string(), z.unknown()).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
@@ -1123,6 +1128,93 @@ export const taskRouter = router({
           message: 'Failed to list automation runs',
         });
       }
+    }),
+
+  listAutomationResults: taskProcedure
+    .input(z.object({ taskId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+      return new AutomationResultDeliveryService(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ).list(task.id);
+    }),
+
+  listAutomationOutputCredentials: taskProcedure
+    .input(z.object({ taskId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await resolveOrThrow(ctx.taskModel, input.taskId);
+      const model = new CredentialModel(ctx.serverDB, ctx.userId);
+      const rows = ctx.workspaceId
+        ? await model.listWorkspace(ctx.workspaceId)
+        : await model.listPersonal();
+      return rows
+        .filter((row) => row.type === 'kv-header')
+        .map(({ id, name, type }) => ({ id, name, type }));
+    }),
+
+  updateAutomationOutputs: taskProcedureWrite
+    .input(
+      z.object({
+        taskId: z.string(),
+        resultWebhooks: z.array(automationResultWebhookConfigSchema).max(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+      assertWorkspaceRowManageable(ctx, task.createdByUserId, 'automation');
+      if (!task.automationMode)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Task is not an automation' });
+      const credentials = new CredentialModel(ctx.serverDB, ctx.userId);
+      for (const destination of input.resultWebhooks) {
+        if (!destination.credentialId) continue;
+        const row = ctx.workspaceId
+          ? await credentials.findWorkspaceReadableById(destination.credentialId, ctx.workspaceId)
+          : await credentials.findPersonalById(destination.credentialId);
+        if (!row || row.type !== 'kv-header')
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Output credential is unavailable' });
+      }
+      const updated = await ctx.taskModel.updateTaskConfig(
+        task.id,
+        { resultWebhooks: input.resultWebhooks },
+        { invalidateRun: false },
+      );
+      if (!updated)
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Automation changed while saving outputs',
+        });
+      return { success: true };
+    }),
+
+  retryAutomationResult: taskProcedureWrite
+    .input(z.object({ id: z.string(), acknowledgeUnknown: z.boolean().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const [delivery] = await ctx.serverDB
+        .select({ taskId: automationResultDeliveries.taskId })
+        .from(automationResultDeliveries)
+        .where(
+          and(
+            eq(automationResultDeliveries.id, input.id),
+            ctx.workspaceId
+              ? eq(automationResultDeliveries.workspaceId, ctx.workspaceId)
+              : and(
+                  eq(automationResultDeliveries.userId, ctx.userId),
+                  isNull(automationResultDeliveries.workspaceId),
+                ),
+          ),
+        )
+        .limit(1);
+      if (!delivery)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Output delivery not found' });
+      const task = await resolveOrThrow(ctx.taskModel, delivery.taskId);
+      assertWorkspaceRowManageable(ctx, task.createdByUserId, 'automation');
+      return new AutomationResultDeliveryService(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ).retry(input.id, input.acknowledgeUnknown);
     }),
 
   contractContext: taskProcedure.input(idInput).query(async ({ input, ctx }) => {

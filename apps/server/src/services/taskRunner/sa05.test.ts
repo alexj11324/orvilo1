@@ -1,7 +1,8 @@
 // @vitest-environment node
-import type { TaskExecutionContract, TaskItem } from '@orvilo/types';
+import type { AutomationOccurrenceSnapshot, TaskExecutionContract, TaskItem } from '@orvilo/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { ActionApprovalItem } from '@/database/schemas/actionApproval';
@@ -11,9 +12,15 @@ import type { ConsumeForDispatchOutcome } from '@/server/services/agentDelegatio
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 
+import type * as TaskPromptModule from './buildTaskPrompt';
 import { buildTaskPrompt } from './buildTaskPrompt';
 import { TaskRunnerService } from './index';
 
+vi.mock('@/database/models/goal', () => ({
+  GoalModel: class {
+    findByGraphTask = async () => undefined;
+  },
+}));
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
 // `consumeForDispatch` is an instance field (arrow), not a prototype method —
@@ -173,6 +180,12 @@ const newRunner = () => {
   const service = new TaskRunnerService(db as never, 'user-1', 'ws-1');
   (service as unknown as { agentModel: unknown }).agentModel = {
     getAgentModelConfig: vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
+    getAgentConfig: vi.fn().mockResolvedValue({
+      agencyConfig: {
+        heterogeneousProvider: { type: 'codex' },
+        executionTargetSelectionPolicy: 'member',
+      },
+    }),
     getBuiltinAgent: vi.fn(),
   };
   (service as unknown as { delegationService: unknown }).delegationService = {
@@ -186,6 +199,22 @@ const runParams = {
   idempotencyKey: 'k-1',
   taskId: 'task-1',
   workspaceOverride: { workingDirectory: '/tmp/wt', workingDirectoryConfig: {} as never },
+};
+
+/** Keep the real prompt renderer and contract assembler; stub only stored context reads. */
+const useActualPromptBuilder = async () => {
+  vi.spyOn(BriefModel.prototype, 'findByTaskId').mockResolvedValue([]);
+  vi.spyOn(TaskModel.prototype, 'getComments').mockResolvedValue([]);
+  vi.spyOn(TaskModel.prototype, 'findSubtasks').mockResolvedValue([]);
+  vi.spyOn(TaskModel.prototype, 'getDependencies').mockResolvedValue([]);
+  vi.spyOn(TaskModel.prototype, 'getTreePinnedDocuments').mockResolvedValue({
+    tree: [],
+    nodeMap: {},
+  });
+  vi.spyOn(TaskModel.prototype, 'derivedStatusByIds').mockResolvedValue({ 'task-1': 'scheduled' });
+  vi.spyOn(TaskModel.prototype, 'findByIds').mockResolvedValue([]);
+  const actual = await vi.importActual<typeof TaskPromptModule>('./buildTaskPrompt');
+  vi.mocked(buildTaskPrompt).mockImplementationOnce(actual.buildTaskPrompt);
 };
 
 describe('TaskRunnerService run intent (SA05-A)', () => {
@@ -234,6 +263,192 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     expect(vi.mocked(buildTaskPrompt).mock.calls[0]?.[3]).toEqual({
       contractContent: priorContract.content,
     });
+  });
+
+  it('a new occurrence uses the published edit without inheriting the last topic contract', async () => {
+    const task = baseTask({
+      automationMode: 'schedule',
+      status: 'scheduled',
+      totalTopics: 1,
+      instruction: 'NEW OCCURRENCE: update issue 739',
+      config: { model: 'm', provider: 'p', automationDeviceId: 'pinned-device' },
+    });
+    const { execAgent, prepare } = setupHappyPath(task, [priorTopic()]);
+    const occurrence: AutomationOccurrenceSnapshot = {
+      occurrenceId: 'schedule-occurrence-2',
+      definition: {
+        assigneeAgentId: task.assigneeAgentId,
+        config: task.config,
+        instruction: task.instruction,
+        definitionVersionId: 'published-v2',
+        policyRevision: 2,
+        requirementRevision: 1,
+      },
+    };
+    prepare.mockResolvedValue({
+      dispatch: {
+        generation: 2,
+        id: 'dsp-occurrence-2',
+        automationOccurrence: occurrence,
+      } as never,
+      fence: 2,
+      owner: 'owner',
+      task,
+    });
+    const runner = newRunner();
+    (runner as any).taskWorkspace = { provision: vi.fn().mockResolvedValue(undefined) };
+    vi.spyOn(TaskDispatchService.prototype, 'freezeAutomationContent').mockImplementation(
+      async (prepared, content, fileIds) => {
+        prepared.dispatch.automationOccurrence = { ...occurrence, content, fileIds };
+        return prepared.dispatch.automationOccurrence;
+      },
+    );
+    await useActualPromptBuilder();
+    const oldTopics = vi
+      .spyOn(TaskTopicModel.prototype, 'findWithHandoff')
+      .mockResolvedValue([
+        { topicId: 'old-topic', handoff: { summary: 'OLD_TOPIC_CONTEXT_MUST_NOT_CONTINUE' } },
+      ] as never);
+
+    await runner.runTask({
+      taskId: task.id,
+      idempotencyKey: 'schedule-occurrence-2',
+      trigger: 'schedule',
+      intent: 'fresh_occurrence',
+    });
+
+    expect(execAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('NEW OCCURRENCE: update issue 739'),
+        deviceId: 'pinned-device',
+      }),
+    );
+    expect(execAgent.mock.calls[0]?.[0].prompt).not.toContain('FROZEN source instruction');
+    expect(execAgent.mock.calls[0]?.[0].prompt).not.toContain(
+      'OLD_TOPIC_CONTEXT_MUST_NOT_CONTINUE',
+    );
+    expect(oldTopics).not.toHaveBeenCalled();
+    const contract = vi.mocked(TaskTopicModel.prototype.startRun).mock.calls[0]?.[2].contract;
+    expect(contract).toMatchObject({
+      intent: 'fresh_occurrence',
+      content: { instruction: task.instruction },
+      occurrence: {
+        occurrenceId: 'schedule-occurrence-2',
+        definition: { definitionVersionId: 'published-v2' },
+      },
+    });
+    expect(contract?.sourceContractId).toBeUndefined();
+  });
+
+  it('retries the same occurrence with its original instruction, event input and device after an edit', async () => {
+    const task = baseTask({
+      automationMode: 'schedule',
+      status: 'scheduled',
+      instruction: 'LATER EDIT: ignore the report',
+      config: { model: 'm', provider: 'p', automationDeviceId: 'later-device' },
+    });
+    const { execAgent, prepare } = setupHappyPath(task, [priorTopic()]);
+    const occurrence: AutomationOccurrenceSnapshot = {
+      occurrenceId: 'existing-occurrence',
+      definition: {
+        assigneeAgentId: task.assigneeAgentId,
+        config: { model: 'm', provider: 'p', automationDeviceId: 'original-device' },
+        instruction: 'ORIGINAL: investigate this report',
+        definitionVersionId: 'published-v1',
+        policyRevision: 1,
+        requirementRevision: 1,
+      },
+      content: { instruction: 'ORIGINAL: investigate this report', verify: { enabled: false } },
+      input: {
+        data: { report: 'UNIQUE_REPORT_931' },
+        eventId: 'event-1',
+        eventType: 'report',
+        inputHash: 'frozen-hash',
+        inputRef: 'inbox-1',
+        receivedAt: '2026-10-03T00:00:00Z',
+        source: 'verified-source',
+      },
+    };
+    prepare.mockResolvedValue({
+      dispatch: { generation: 2, id: 'dsp-retry', automationOccurrence: occurrence } as never,
+      fence: 2,
+      owner: 'owner',
+      task,
+    });
+    const runner = newRunner();
+    (runner as any).taskWorkspace = { provision: vi.fn().mockResolvedValue(undefined) };
+    vi.spyOn(TaskDispatchService.prototype, 'freezeAutomationContent').mockResolvedValue(
+      occurrence,
+    );
+    await useActualPromptBuilder();
+
+    await runner.runTask({
+      taskId: task.id,
+      idempotencyKey: 'existing-occurrence',
+      trigger: 'schedule',
+      intent: 'fresh_occurrence',
+    });
+
+    const execInput = execAgent.mock.calls[0]?.[0];
+    expect(execInput).toMatchObject({ deviceId: 'original-device' });
+    expect(execInput?.prompt).toContain('ORIGINAL: investigate this report');
+    expect(execInput?.prompt).toContain('UNIQUE_REPORT_931');
+    expect(execInput?.prompt).not.toContain('LATER EDIT');
+    const contract = vi.mocked(TaskTopicModel.prototype.startRun).mock.calls[0]?.[2].contract;
+    expect(contract?.occurrence).toEqual(occurrence);
+    expect(contract?.content?.instruction).toBe('ORIGINAL: investigate this report');
+  });
+
+  it.each([
+    {
+      label: 'a conflicting fixed Agent Device policy',
+      agencyConfig: {
+        executionTargetSelectionPolicy: 'fixed',
+        executionTarget: 'device',
+        boundDeviceId: 'other-device',
+        heterogeneousProvider: { type: 'codex' },
+      },
+    },
+    {
+      label: 'a Prime executor without a Device dispatch host',
+      agencyConfig: { heterogeneousProvider: { type: 'orvilo', engine: 'prime' } },
+    },
+  ])('does not start $label after the automation target is pinned', async ({ agencyConfig }) => {
+    const task = baseTask({
+      automationMode: 'schedule',
+      status: 'scheduled',
+      config: { model: 'm', provider: 'p', automationDeviceId: 'pinned-device' },
+    });
+    const { execAgent } = setupHappyPath(task);
+    const runner = newRunner();
+    (runner as any).agentModel.getAgentConfig.mockResolvedValue({ agencyConfig });
+    vi.spyOn(TaskDispatchService.prototype, 'freezeAutomationContent').mockResolvedValue(
+      undefined as never,
+    );
+    await expect(
+      runner.runTask({
+        taskId: task.id,
+        idempotencyKey: 'fresh-pinned',
+        trigger: 'schedule',
+        intent: 'fresh_occurrence',
+      }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(execAgent).not.toHaveBeenCalled();
+    expect(vi.mocked(TaskTopicModel.prototype.startRun)).not.toHaveBeenCalled();
+  });
+
+  it('does not allow a manual caller to use fresh occurrence to adopt unauthorized edits', async () => {
+    const { execAgent, prepare } = setupHappyPath(baseTask(), [priorTopic()]);
+    await expect(
+      newRunner().runTask({
+        taskId: 'task-1',
+        idempotencyKey: 'new',
+        intent: 'fresh_occurrence',
+        trigger: 'manual',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(execAgent).not.toHaveBeenCalled();
   });
 
   it('C01 — refuses an authorized replan without an approval id', async () => {

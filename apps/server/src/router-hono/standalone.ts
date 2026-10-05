@@ -104,6 +104,9 @@ const startServer = async () => {
   // a re-invoked startServer from stacking intervals.
   const { startTaskReminderLocalLoop } = await import('@/server/services/taskReminder/localLoop');
   startTaskReminderLocalLoop();
+  const { startLocalHeartbeatRecoveryLoop } =
+    await import('@/server/services/taskScheduler/recovery');
+  startLocalHeartbeatRecoveryLoop();
 
   process.title = `orvilo-dev-hono-${port}`;
   server.listen(port, host, () => {

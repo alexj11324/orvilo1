@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { PGlite } from '@electric-sql/pglite';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { AutomationOccurrenceSnapshot } from '@orvilo/types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AcceptedMcpEvent, McpEventBinding } from './deliveryTypes';
 import { matchesMcpEventFilters } from './filter';
@@ -167,6 +168,98 @@ describe('MCP event durable worker', () => {
     ]);
   });
 
+  it('retains the prepared input and definition on retry, while the next receipt freezes a new version', async () => {
+    let instruction = 'Original automation';
+    const versioned = new SqlMcpEventWorkRepository(db, async () => ({
+      assigneeAgentId: null,
+      config: {},
+      instruction,
+      definitionVersionId: instruction,
+      policyRevision: 0,
+      requirementRevision: 0,
+    }));
+    await inbox.accept(event('version-first', 'hello original'));
+    const [first] = await inbox.claim(now, 100, 1);
+    const [run] = await versioned.prepare(first, now);
+    const snapshots = async () =>
+      (
+        await db.query<{ automation_occurrence: AutomationOccurrenceSnapshot }>(
+          'SELECT automation_occurrence FROM mcp_event_trigger_runs ORDER BY id',
+        )
+      ).rows.map((row) => row.automation_occurrence);
+    const [original] = await snapshots();
+    expect(original.definition.instruction).toBe('Original automation');
+    expect(original.input?.data).toEqual({ text: 'hello original' });
+    instruction = 'Edited automation';
+    const [replayed] = await versioned.prepare(first, now);
+    expect(replayed.id).toBe(run.id);
+    expect(await snapshots()).toEqual([original]);
+    await inbox.accept(event('version-second', 'hello changed'));
+    const [second] = await inbox.claim(now, 100, 1);
+    await versioned.prepare(second, now);
+    expect(await snapshots()).toEqual(
+      expect.arrayContaining([
+        original,
+        expect.objectContaining({
+          definition: expect.objectContaining({
+            instruction: 'Edited automation',
+            definitionVersionId: 'Edited automation',
+          }),
+          input: expect.objectContaining({
+            eventId: 'version-second',
+            data: { text: 'hello changed' },
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('records disabled triggers as skipped decisions instead of reviving their receipts after resume', async () => {
+    await triggers.save({ ...trigger, enabled: false }, 0);
+    await inbox.accept(event('paused-event'));
+    const admit = vi.fn();
+    const worker = new McpEventWorker({ inbox, repository, now: () => now, admission: { admit } });
+    expect(await worker.pump()).toEqual({ claimed: 1, completed: 1, retried: 0 });
+    expect((await db.query('SELECT status,reason FROM mcp_event_trigger_runs')).rows).toEqual([
+      { status: 'denied', reason: 'paused_at_receipt' },
+    ]);
+    await triggers.save({ ...trigger, enabled: true }, 1);
+    expect(await worker.pump()).toEqual({ claimed: 0, completed: 0, retried: 0 });
+    expect(admit).not.toHaveBeenCalled();
+  });
+
+  it('skips pre-enable queued receipts, and admits only receipts received after the activation boundary', async () => {
+    await inbox.accept(event('before-resume'));
+    const enabledAt = new Date(now + 1).toISOString();
+    const bounded = new SqlMcpEventWorkRepository(db, async () => ({
+      assigneeAgentId: null,
+      config: { automationEnabledAt: enabledAt },
+      instruction: 'Active automation',
+      definitionVersionId: 'active-version',
+      policyRevision: 0,
+      requirementRevision: 0,
+    }));
+    now += 2;
+    await inbox.accept(event('after-resume'));
+    const admit = vi.fn().mockResolvedValue({ status: 'accepted', dispatchId: 'new-dispatch' });
+    expect(
+      await new McpEventWorker({
+        inbox,
+        repository: bounded,
+        now: () => now,
+        admission: { admit },
+      }).pump(),
+    ).toEqual({ claimed: 2, completed: 2, retried: 0 });
+    expect(admit).toHaveBeenCalledOnce();
+    expect(admit.mock.calls[0][0].eventId).toBe('after-resume');
+    expect((await db.query('SELECT status,reason FROM mcp_event_trigger_runs')).rows).toEqual(
+      expect.arrayContaining([
+        { status: 'denied', reason: 'paused_at_receipt' },
+        { status: 'accepted', reason: null },
+      ]),
+    );
+  });
+
   it('fences stale workers and rejects changed trigger revision before admission', async () => {
     await inbox.accept(event());
     const [old] = await inbox.claim(now, 10);
@@ -274,6 +367,129 @@ describe('MCP event durable worker', () => {
     ]);
   });
 
+  it('processes another receipt while the first device admission is blocked', async () => {
+    await inbox.accept(event('first'));
+    await inbox.accept(event('second'));
+    let release!: () => void;
+    let secondStarted!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const other = new Promise<void>((resolve) => {
+      secondStarted = resolve;
+    });
+    let calls = 0;
+    const worker = new McpEventWorker({
+      inbox,
+      repository,
+      now: () => now,
+      concurrency: 2,
+      admission: {
+        async admit() {
+          calls++;
+          if (calls === 1) await gate;
+          else secondStarted();
+          return { status: 'accepted', dispatchId: 'dispatch' };
+        },
+      },
+    });
+    const pumping = worker.pump({ limit: 2 });
+    try {
+      await other;
+      expect(calls).toBe(2);
+    } finally {
+      release();
+    }
+    expect(await pumping).toEqual({ claimed: 2, completed: 2, retried: 0 });
+  });
+
+  it('renews a live receipt lease while slow admission is in flight', async () => {
+    await inbox.accept(event());
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const worker = new McpEventWorker({
+      inbox,
+      repository,
+      leaseMs: 60,
+      concurrency: 1,
+      now: Date.now,
+      admission: {
+        async admit() {
+          entered();
+          await gate;
+          return { status: 'accepted', dispatchId: 'slow-dispatch' };
+        },
+      },
+    });
+    const pumping = worker.pump({ limit: 1 });
+    try {
+      await started;
+      await vi.advanceTimersByTimeAsync(200);
+      // Other consumers still cannot claim this live delivery after more than
+      // three original lease windows, because the owner renewed it.
+      expect(await inbox.claim(Date.now(), 60, 1)).toEqual([]);
+      release();
+      expect(await pumping).toEqual({ claimed: 1, completed: 1, retried: 0 });
+    } finally {
+      release();
+      await pumping;
+      vi.useRealTimers();
+    }
+  });
+
+  it('releases its processing slot after the deadline and ignores late admission results', async () => {
+    await inbox.accept(event());
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const worker = new McpEventWorker({
+      inbox,
+      repository,
+      leaseMs: 60,
+      maxProcessingMs: 100,
+      concurrency: 1,
+      now: Date.now,
+      admission: {
+        async admit() {
+          entered();
+          await gate;
+          return { status: 'accepted', dispatchId: 'late-dispatch' };
+        },
+      },
+    });
+    const pumping = worker.pump({ limit: 1 });
+    try {
+      await started;
+      await vi.advanceTimersByTimeAsync(120);
+      expect(await pumping).toEqual({ claimed: 1, completed: 0, retried: 0 });
+      release();
+      await vi.advanceTimersByTimeAsync(100);
+      expect((await db.query('SELECT status FROM mcp_event_trigger_runs')).rows).toEqual([
+        { status: 'pending' },
+      ]);
+      expect(await inbox.claim(Date.now(), 60, 1)).toHaveLength(1);
+    } finally {
+      release();
+      await pumping;
+      vi.useRealTimers();
+    }
+  });
+
   it('backs off failed admissions exponentially and dead-letters at the attempt ceiling', async () => {
     await inbox.accept(event());
     const worker = new McpEventWorker({
@@ -323,6 +539,19 @@ describe('MCP event durable worker', () => {
       available_at: now + 8000,
       last_error: 'admission_interrupted',
     });
+  });
+
+  it('retains timed-out waiting receipts without starting an Agent', async () => {
+    await inbox.accept(event());
+    now += 24 * 60 * 60_000;
+    const admit = vi.fn();
+    expect(
+      await new McpEventWorker({ inbox, repository, now: () => now, admission: { admit } }).pump(),
+    ).toEqual({ claimed: 1, completed: 0, retried: 1 });
+    expect(admit).not.toHaveBeenCalled();
+    expect((await db.query('SELECT status,last_error FROM mcp_event_inbox')).rows).toEqual([
+      { status: 'dead', last_error: 'waiting_timeout' },
+    ]);
   });
 
   it('retains exhausted transport failures for operator recovery', async () => {

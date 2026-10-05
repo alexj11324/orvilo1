@@ -17,6 +17,7 @@ import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog'
 import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/verify/handlers/sweep';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
+import { runMcpEventInboxSweep } from '@/server/services/mcpEvents/runtime';
 import { runTaskReminderSweep } from '@/server/services/taskReminder/sweep';
 import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
@@ -142,6 +143,22 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
+  // Immediate ingress wakes this durable task. The independent minute cron
+  // recovers committed receipts after a crash or a failed wake-up enqueue.
+  const mcpEventInboxSweep = hatchet.task({
+    name: HATCHET_TASK_NAMES.mcpEventInboxSweep,
+    backoff: { factor: 2, maxSeconds: 60 },
+    concurrency: {
+      expression: '"mcp-event-inbox"',
+      limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+      maxRuns: 4,
+    },
+    executionTimeout: '15m',
+    fn: async () => runMcpEventInboxSweep(),
+    onCrons: ['* * * * *'],
+    retries: 3,
+  });
+
   const verifySweep = hatchet.task({
     name: HATCHET_TASK_NAMES.verifySweep,
     executionTimeout: '15m',
@@ -179,6 +196,7 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     goalAdvance,
     goalSweep,
     linearSyncSweep,
+    mcpEventInboxSweep,
     taskHeartbeat,
     taskReminderSweep,
     taskScheduleDispatch,

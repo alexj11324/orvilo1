@@ -21,6 +21,28 @@ describe('executeToolCall', () => {
     fs.rmSync(tmpDir, { force: true, recursive: true });
   });
 
+  it('dispatches read-only automation readiness without claiming Prime is available', async () => {
+    const result = await executeToolCall(
+      'checkAutomationReadiness',
+      JSON.stringify({ agentType: 'native', cwd: tmpDir }),
+    );
+    expect(result.success).toBe(true);
+    expect(JSON.parse(result.content)).toMatchObject({
+      authenticated: 'unknown',
+      executor: 'prime',
+      repositoryAccessible: true,
+      requiredToolsSupported: true,
+      unattended: false,
+      blockers: ['EXECUTOR_UNSUPPORTED'],
+    });
+  });
+
+  it('rejects malformed automation readiness before execution', async () => {
+    const result = await executeToolCall('checkAutomationReadiness', '{}');
+    expect(result.success).toBe(false);
+    expect(result.error).toBeTruthy();
+  });
+
   it('should dispatch readFile with formatted content and structured state', async () => {
     const filePath = path.join(tmpDir, 'test.txt');
     await writeFile(filePath, 'hello world');

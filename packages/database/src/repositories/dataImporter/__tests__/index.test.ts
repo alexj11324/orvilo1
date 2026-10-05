@@ -148,6 +148,29 @@ describe('DataImporter', () => {
       });
     });
 
+    it('skips a duplicate legacy agent row without a runtime instead of aborting', async () => {
+      const data = agentsData as ImportPgDataStructure;
+      const result = await importer.importPgData(withRuntime(data));
+      expect(result.success).toBe(true);
+
+      // Same clientId resolves to a skip before insertion — a metadata-only
+      // legacy row (no runtime) must not abort the whole table.
+      const legacy = {
+        ...data,
+        data: {
+          ...data.data,
+          agents: [{ id: agentsData.data.agents[0].id, title: 'Legacy Agent' }],
+          agentsToSessions: [],
+          sessions: [],
+        },
+      } as unknown as ImportPgDataStructure;
+      const result2 = await importer.importPgData(legacy);
+
+      expect(result2.success).toBe(true);
+      expect(result2.results.agents).toMatchObject({ added: 0, errors: 0, skips: 1 });
+      expect(await clientDB.select().from(Schema.agents)).toHaveLength(1);
+    });
+
     it('should import without agentToSessions error', async () => {
       const data = agentsToSessionsData as ImportPgDataStructure;
       const result = await importer.importPgData(withRuntime(data));

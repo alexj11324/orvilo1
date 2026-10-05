@@ -219,8 +219,13 @@ export type AgentInterventionFormAnswers = Record<string, AgentInterventionFormV
 /** Schema-validated, deliberately shallow result accepted from bespoke forms. */
 export type AgentMarketplaceRuntimeConfig = Pick<
   OrviloAgentConfig,
-  'agencyConfig' | 'model' | 'provider' | 'title'
->;
+  'agencyConfig' | 'provider' | 'title'
+> & {
+  // Imported CLI runtimes may carry no selected model at all — the fork only
+  // needs the heterogeneous provider. Keep `model` honest (nullable), not
+  // required like `OrviloAgentConfig.model` pretends.
+  model?: string | null;
+};
 
 export type AgentInterventionCustomResult =
   | Record<string, AgentInterventionFormValue>

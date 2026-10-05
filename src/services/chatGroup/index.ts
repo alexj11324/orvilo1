@@ -14,7 +14,8 @@ export interface GroupMemberConfig {
   avatar?: string;
   backgroundColor?: string;
   description?: string;
-  model?: string;
+  // Server accepts `z.string().nullish()` — imported runtimes may lack a model.
+  model?: string | null;
   plugins?: string[];
   provider?: string;
   systemRole?: string;

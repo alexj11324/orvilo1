@@ -522,17 +522,6 @@ export class DataImporterRepos {
         return { newRecord, originalId };
       });
 
-      // Imported Agent rows are selectable, so they need the same saved runtime as ordinary creation.
-      if (tableName === 'agents') {
-        for (const record of preparedData) {
-          record.newRecord.agencyConfig = await assertAgentRuntimeCreation(
-            trx,
-            { userId: this.userId, workspaceId: this.workspaceId },
-            record.newRecord,
-          );
-        }
-      }
-
       // 5. Check unique constraints and apply conflict strategy
       for (const record of preparedData) {
         if (isCompositeKey && uniqueConstraints.length > 0) {
@@ -596,6 +585,7 @@ export class DataImporterRepos {
                     .set(record.newRecord)
                     .where(and(...whereConditions));
                   record.newRecord._skip = true;
+                  record.newRecord._merged = true;
                   if (result.updated) result.updated++;
                   else {
                     result.updated = 1;
@@ -653,6 +643,7 @@ export class DataImporterRepos {
                     .set(record.newRecord)
                     .where(eq(table[field], record.newRecord[field]));
                   record.newRecord._skip = true;
+                  record.newRecord._merged = true;
                   if (result.updated) result.updated++;
                   else {
                     result.updated = 1;
@@ -665,11 +656,28 @@ export class DataImporterRepos {
         }
       }
 
+      // Imported Agent rows are selectable, so they need the same saved
+      // runtime as ordinary creation. Assert only the rows that will actually
+      // be written: skip-resolved duplicates never insert, so a legacy
+      // duplicate carrying a stale runtime must not abort the whole table
+      // (merge still rewrites the stored config and is validated too).
+      if (tableName === 'agents') {
+        for (const record of preparedData) {
+          if (record.newRecord._skip && !record.newRecord._merged) continue;
+          record.newRecord.agencyConfig = await assertAgentRuntimeCreation(
+            trx,
+            { userId: this.userId, workspaceId: this.workspaceId },
+            record.newRecord,
+          );
+        }
+      }
+
       // Filter out records marked to be skipped
       const filteredData = preparedData.filter((record) => !record.newRecord._skip);
 
       // Clear temporary markers
       filteredData.forEach((record) => delete record.newRecord._skip);
+      filteredData.forEach((record) => delete record.newRecord._merged);
 
       // 6. Batch insert data
       const BATCH_SIZE = 100;

@@ -126,11 +126,11 @@ const SubmitCustomSchema = z
           title: true,
         })
           .extend({
-            // A confirmed runtime always names a model — admission rejects the
-            // fork without one, so the schema refuses nullish values up front.
-            model: z.string().min(1).max(200),
-            provider: z.string().optional(),
-            title: z.string().optional(),
+            // Only `agencyConfig` is truly required downstream
+            // (`installMarketplaceAgents` asserts heterogeneousProvider);
+            // imported CLI runtimes may carry no selected model, so the field
+            // stays nullable like the stored row — just length-capped.
+            model: z.string().max(200).nullish(),
           })
           .strict(),
       })

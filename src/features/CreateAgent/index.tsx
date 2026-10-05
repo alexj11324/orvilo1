@@ -30,10 +30,11 @@ import { deviceService } from '@/services/device';
 import { homeService } from '@/services/home';
 import { providerBindingService } from '@/services/providerBinding';
 
-export type AgentRuntimeConfig = Pick<
-  OrviloAgentConfig,
-  'agencyConfig' | 'model' | 'provider' | 'title'
->;
+export type AgentRuntimeConfig = Pick<OrviloAgentConfig, 'agencyConfig' | 'provider' | 'title'> & {
+  // A saved external runtime (imported CLI adapters) may carry no selected
+  // model; the row's `model` column is nullable in reality.
+  model?: string | null;
+};
 
 interface RuntimeRequest {
   visibility?: 'private' | 'public';

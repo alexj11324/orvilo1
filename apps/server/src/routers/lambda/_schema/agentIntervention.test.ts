@@ -158,6 +158,22 @@ describe('ResolveAgentInterventionSchema', () => {
         },
       }).success,
     ).toBe(true);
+    // Imported CLI runtimes may carry no selected model — the picker must be
+    // able to submit them (Devin Review: model-less runtimes were rejected).
+    expect(
+      ResolveAgentInterventionSchema.safeParse({
+        ...wrapper,
+        action: {
+          itemId: 'item-1',
+          result: {
+            kind: 'agent_marketplace',
+            runtimeConfig: { ...runtimeConfig, model: null },
+            selectedTemplateIds: ['agent-1'],
+          },
+          type: 'submit_custom',
+        },
+      }).success,
+    ).toBe(true);
   });
 });
 

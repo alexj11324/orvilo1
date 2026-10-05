@@ -5,7 +5,9 @@ import { normalizeHeterogeneousProviderConfig } from '@orvilo/types';
 /** Resolve runtime branding from persisted config using the existing read migration. */
 export const resolveAgentRuntimeType = (
   config?: {
-    agencyConfig?: { heterogeneousProvider?: Partial<HeterogeneousProviderConfig> | null } | null;
+    agencyConfig?: {
+      heterogeneousProvider?: Pick<Partial<HeterogeneousProviderConfig>, 'command' | 'type'> | null;
+    } | null;
     model?: string | null;
   } | null,
 ): string => {

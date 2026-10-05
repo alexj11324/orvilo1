@@ -221,6 +221,20 @@ device / Prime version / run identity. External agents share the same device
 component and rules; the connect flow follows the same 0/1/many rules; opening
 settings never triggers inference; each setting has exactly one write entry.
 
+## First-agent gate (post-login onboarding)
+
+While no usable agent exists, `AgentOnboarding` (mounted once at the
+`(main)`/`(mobile)` layouts, not inside a page) covers the entire app window
+— sidebar, title area, and every route — because nothing else can run yet.
+Provider/credential/device settings stay reachable during the block: they are
+the fix-it paths (`isFirstAgentSetupPath`). Device selection is deliberately
+absent from the flow — it is an advanced concern owned by Settings → Devices.
+The host auto-resolves via `useFirstAgentDevice`: this computer on Electron
+(`resolveLocalExecutionIdentity`), then a still-online persisted pick, then
+the first online personal device; the resolved id is checkpointed into the
+onboarding setup record. Creating the first agent selects it through
+`selectAgentForConversation` so the user lands on the agent they just made.
+
 ## Migration
 
 The schema layer refuses new writes of the retired `engine` field (not just a

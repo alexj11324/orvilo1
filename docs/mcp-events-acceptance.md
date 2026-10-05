@@ -131,31 +131,37 @@ regenerated a single canonical migration as `0197_cloud_control_plane` covering
 Provider bindings, experience memory, the five MCP event tables, and Core
 execution-control objects (0196/0197 drafts were consolidated into it).
 
-### Remaining execution integration
+### Current execution integration (2026-10-03 working branch)
 
-The consumer is attached to the existing watchdog, including permission-checked
-subscription renewal. No second timer or task runner exists. Authenticated workspace
-users can discover supported sources and save a real subscription with a disabled
-trigger; no UI or router enables them yet, so live event execution remains
-exercised only through the admission service directly. `TaskRunnerService` still
-rejects `trigger: 'event'` calls without `eventEvidence` before any lookup/effect.
-Authoritative admission is `McpEventDispatchAdmissionService` in
-`apps/server/src/services/mcpEvents/admission.ts`, installed by
-`sweepMcpEventInbox`: it resolves the persisted trigger run, re-verifies evidence
-inside `TaskDispatchModel.request`'s claim transaction (tenant binding, trigger
-revision, inbox lease, binding/connector/member/task state, causation loop), and
-enters the existing durable TaskDispatch/TaskRunner path — no separate runner,
-no trust in wire metadata as execution authority.
+The consumer already implements the canonical `EventDispatchAdmission` imported
+from `@orvilo/agent-execution/controlPlane`. It resolves persisted trigger runs and
+enters the existing `TaskDispatchModel` / `TaskRunnerService`; the former temporary
+structural-port integration item is obsolete. Admission re-verifies scope, inbox
+lease, source binding, trigger revision, connector/member/task state and causation
+under the task lock. Wire payloads are not execution authority.
 
-The parent subsequently confirmed canonical Core exports at
-`@orvilo/agent-execution/controlPlane` and the trusted host entry
-`@orvilo/agent-execution/controlPlane/server`. Those files are in a separate cloud
-checkout. The minimum type integration package is its `package.json` export map,
-the `controlPlane` barrel/entry, `contracts.ts`, and any files that barrel re-exports.
-The consumer's temporary structural port must be replaced with the canonical
-`EventDispatchAdmission` type after that commit is materialized. Production activation
-additionally requires the trusted server implementation, DB/authority adapters and
-their acceptance evidence; existence of an export does not satisfy these gates.
+New occurrences bind a saved definition hash and immutable inbox input. Their
+contracts do not inherit a prior topic; retries reuse the same snapshot. Event
+inputs reach the Agent as untrusted business data; oversized inputs are available
+through a run-scoped builtin tool. Event settlement preserves the recurring
+automation lifecycle and the raw stop reason.
+
+Receipt wakes the existing persistent Hatchet task. A minute sweep and watchdog
+recover missed wakes; claims are individual, renewed and bounded, rather than a
+batch lease covering sequential device provisioning. Local heartbeat timers are
+rebuilt from persistent scheduling state. Output delivery has its own durable
+outbox and never starts the Agent again.
+
+The product can save paused event drafts, check actual device/tool/worker readiness,
+and CAS-enable a checked definition. The release flag `mcp_event_automations`
+defaults to false, so these routes cannot enable production event execution before
+real Device acceptance is deliberately released. Missing executor capability,
+source credentials, device or recent worker health remain independent blockers.
+Prime is an executor choice; this patch does not substitute a fixed server for the
+bound Device or implement a missing Prime Device transport.
+
+See [automation repair acceptance](development/automation-repair-acceptance.md)
+for current tests and the distinction between SQL, real ACP and real Device proof.
 
 ## Evidence limits
 

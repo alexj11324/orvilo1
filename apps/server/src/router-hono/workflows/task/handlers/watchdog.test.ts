@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { watchdog } from './watchdog';
 
+vi.mock('@/server/services/automationResultDelivery', () => ({
+  AutomationResultDeliveryService: { recoverDue: vi.fn(async () => 0) },
+}));
+
 type RunningTopic = { operationId?: null | string; status: string; topicId?: string };
 type WatchdogTask = {
   assigneeAgentId: null | string;
@@ -128,6 +132,11 @@ vi.mock('@/server/services/mcpEvents/runtime', () => ({ sweepMcpEventInbox }));
 vi.mock('@/server/services/mcpEvents/maintenance', () => ({
   sweepMcpEventSubscriptions: vi.fn().mockResolvedValue([]),
 }));
+vi.mock('@/server/services/taskScheduler/recovery', () => ({
+  recoverLocalHeartbeatSchedules: vi
+    .fn()
+    .mockResolvedValue({ restored: 0, overdue: 0, invalid: 0 }),
+}));
 vi.mock('@/database/models/brief', () => ({
   BriefModel: vi.fn(function () {
     return { create: briefCreate };
@@ -183,7 +192,8 @@ describe('task watchdog', () => {
       const response = await watchdog(context());
       expect(response.body).toMatchObject({
         eventInbox: { status: 'unavailable' },
-        success: true,
+        eventMaintenanceHealthy: false,
+        success: false,
       });
       expect(sweepTaskCancellations).toHaveBeenCalledOnce();
       expect(sweepMcpEventInbox).toHaveBeenCalledOnce();

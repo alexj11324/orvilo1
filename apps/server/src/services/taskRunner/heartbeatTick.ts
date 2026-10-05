@@ -65,7 +65,7 @@ export async function runHeartbeatTick(
   }
   const activeTickToken = (task.context as { scheduler?: { tickToken?: string } } | null)?.scheduler
     ?.tickToken;
-  if (activeTickToken && activeTickToken !== tickToken) {
+  if (tickToken && activeTickToken !== tickToken) {
     log('skip task=%s reason=stale-tick', taskId);
     return { ran: false, reason: 'stale-tick' };
   }
@@ -85,6 +85,11 @@ export async function runHeartbeatTick(
   }
 
   if (taskStatus === 'paused') return { ran: false, reason: 'paused' };
+
+  // A queue redelivery must name its persisted pending tick. Tokenless legacy
+  // requests cannot adopt today's pending token: a late old request would then
+  // be allowed to start a different occurrence after settlement re-arms it.
+  if (!tickToken || !activeTickToken) return { ran: false, reason: 'stale-tick' };
 
   const wsId = task.workspaceId ?? undefined;
   const briefModel = new BriefModel(db, userId, wsId);
@@ -122,8 +127,8 @@ export async function runHeartbeatTick(
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
     await runner.runTask({
+      intent: 'fresh_occurrence',
       idempotencyKey: taskRunIdempotencyKey.automationTick({
-        executionGeneration: task.executionGeneration ?? 0,
         kind: 'heartbeat',
         taskId,
         tickToken,

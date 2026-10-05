@@ -1,4 +1,31 @@
 export default {
+  'actions.update_failed': 'Failed to update automation',
+  'batch.update_failed': 'Failed to update some automations',
+  'events.reason.ACCEPTANCE_REQUIRED':
+    'Event execution is awaiting release after real device acceptance.',
+  'run_source.event': 'Event',
+  'create.eventDraftHint':
+    'Save a draft, then choose an event source and execution device before enabling.',
+  'create.save_event_draft': 'Save event draft',
+
+  'events.reason.EXECUTOR_UNSUPPORTED': 'The selected executor cannot run on the bound device yet.',
+  'events.active': 'Event automation enabled. Waiting for the next event.',
+  'events.pause': 'Pause automation',
+  'events.device': 'Execution device',
+  'events.boundDevice': 'Execution device: {{device}}',
+  'events.checkReadiness': 'Check readiness',
+  'events.reason.CONFIGURATION_INVALID':
+    'Save valid event instructions and execution settings before enabling.',
+  'events.reason.CONNECTOR_REVOKED': 'Reconnect an active event subscription.',
+  'events.reason.AUTH_REQUIRED': 'Verify the agent and executor credentials.',
+  'events.reason.DEVICE_UNAVAILABLE': 'The bound execution device is unavailable.',
+  'events.reason.DEVICE_SELECTION_REQUIRED': 'Choose an execution device, then check readiness.',
+  'events.reason.EXECUTOR_UNVERIFIED': 'The device could not verify an unattended executor.',
+  'events.reason.REQUIRED_TOOLS_UNSUPPORTED': 'Required tools are unavailable on this executor.',
+  'events.reason.REPOSITORY_UNAVAILABLE':
+    'The repository directory cannot be accessed on the device.',
+  'events.reason.WORKER_UNHEALTHY': 'No recent healthy event worker observation is available.',
+
   'events.cleanupPending':
     'Local event reception is stopped. Remote subscription cleanup needs retry.',
   'events.bindingUnavailable':
@@ -36,6 +63,11 @@ export default {
 
   'create.add_trigger': 'Add trigger',
   'create.draft': 'Draft',
+  'create.configuration_mismatch':
+    'The saved configuration differs from your draft. Review it before enabling.',
+  'create.open_draft': 'Open saved draft',
+  'create.saved_configuration':
+    'This draft is saved. Retry enabling it, or open it to change the saved configuration.',
   'create.enable_failed': 'Automation was created, but could not be enabled. Retry enabling it.',
   'create.instructions_placeholder': 'Describe what this automation should do each time it runs…',
   'create.submit': 'Create automation',
@@ -189,4 +221,35 @@ export default {
   'trigger.remove': 'Remove trigger',
   'trigger.section': 'Triggers',
   'trigger.unconfigured': 'No trigger yet — the automation only runs manually.',
+
+  'result.settingsTitle': 'Results',
+  'result.inboxNotice':
+    'Each run saves its result in Orvilo. You can also send it to one external webhook.',
+  'result.endpoint': 'Result webhook URL',
+  'result.endpointHint':
+    'Use a public HTTPS endpoint without URL secrets or query parameters. Redirects are disabled.',
+  'result.invalidEndpoint':
+    'Enter a public HTTPS URL without credentials, query parameters or a fragment.',
+  'result.credential': 'Authentication credential',
+  'result.noCredential': 'No authentication',
+  'result.credentialHint':
+    'Select a saved header credential with an Authorization field. Its secret stays in the vault.',
+  'result.save': 'Save output settings',
+  'result.historyTitle': 'Run results and output delivery',
+  'result.empty': 'No settled run results yet.',
+  'result.inbox': 'Orvilo result',
+  'result.webhook': 'External webhook',
+  'result.run.succeeded': 'Verified run succeeded',
+  'result.run.failed': 'Run failed',
+  'result.run.canceled': 'Run canceled',
+  'result.run.limited': 'Stopped at a limit',
+  'result.run.unknown': 'Result unconfirmed',
+  'result.delivery.pending': 'Waiting to send',
+  'result.delivery.delivering': 'Sending output',
+  'result.delivery.delivered': 'Delivered',
+  'result.delivery.failed': 'Output failed',
+  'result.delivery.unknown': 'Delivery unconfirmed',
+  'result.acknowledgeUnknown':
+    'The receiver may already have this result. I accept a possible duplicate output.',
+  'result.retryOutput': 'Retry output only',
 } as const;

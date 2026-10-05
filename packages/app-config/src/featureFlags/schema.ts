@@ -26,6 +26,9 @@ export const FeatureFlagsSchema = z.object({
    */
   agent_share: FeatureFlagValue.optional(),
 
+  /** Enable only for deployment/users with completed real Device event acceptance. */
+  mcp_event_automations: FeatureFlagValue.optional(),
+
   speech_to_text: FeatureFlagValue.optional(),
   voice_dictation: FeatureFlagValue.optional(),
   token_counter: FeatureFlagValue.optional(),
@@ -99,6 +102,7 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   // are additionally hard-blocked by ENABLE_BUSINESS_FEATURES on the server
   // gate, so setting this env-side does not enable the feature there.
   agent_share: false,
+  mcp_event_automations: false,
 
   check_updates: true,
   welcome_suggest: true,

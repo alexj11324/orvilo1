@@ -1,12 +1,18 @@
-import { isExecutionTime } from '@orvilo/utils/cronEval';
 import debug from 'debug';
 import type { Context } from 'hono';
 
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { getServerDB } from '@/database/server';
+import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
 import { appEnv } from '@/envs/app';
 import { enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
+import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
+import {
+  latestScheduleOccurrence,
+  scheduleOccurrenceToken,
+} from '@/server/services/taskRunner/scheduleOccurrence';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
 
 const log = debug('orvilo-server:workflows:task:schedule-dispatch');
@@ -30,7 +36,7 @@ interface DueTask {
  * `*\/30 * * * *`) pointing at this endpoint. On each tick:
  *
  *   1. Loads all schedule-mode tasks in dispatchable status (`scheduled`/`backlog`).
- *   2. Filters by cron pattern + timezone + last-run dedup (`isExecutionTime`).
+ *   2. Filters by cron pattern + timezone + latest elapsed plan slot + last-run dedup.
  *   3. Fan-outs one Hatchet task per due task to the schedule executor.
  *
  * No per-user authentication: this is a global worker sweep.
@@ -51,22 +57,61 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
 
   const now = new Date();
   const due: DueTask[] = [];
+  let failedToPersist = 0;
   for (const task of tasks) {
     if (!task.schedulePattern) continue;
     if (!task.createdByUserId) continue;
-    const matches = isExecutionTime({
-      cronPattern: task.schedulePattern,
-      currentTime: now,
-      lastExecutedAt: task.lastHeartbeatAt ?? null,
+    const startedAt = (task.context as { scheduler?: { scheduleStartedAt?: string } } | null)
+      ?.scheduler?.scheduleStartedAt;
+    const plannedAt = latestScheduleOccurrence({
+      pattern: task.schedulePattern,
       timezone: task.scheduleTimezone,
+      now,
+      notBefore: startedAt ? new Date(startedAt) : null,
     });
-    if (!matches) continue;
+    if (
+      !plannedAt ||
+      (task.lastHeartbeatAt && plannedAt.getTime() <= new Date(task.lastHeartbeatAt).getTime())
+    )
+      continue;
+    const tickToken = scheduleOccurrenceToken({
+      taskId: task.id,
+      pattern: task.schedulePattern,
+      timezone: task.scheduleTimezone,
+      plannedAt,
+    });
+    if (!dryRun) {
+      try {
+        // Queue publication happens only after the canonical occurrence has
+        // frozen its definition under the task lock. A lost queue publish is
+        // recoverable through the existing dispatch recovery worker.
+        const requested = await new TaskDispatchModel(db, task.workspaceId ?? undefined).request({
+          taskId: task.id,
+          trigger: 'schedule',
+          idempotencyKey: taskRunIdempotencyKey.automationTick({
+            kind: 'schedule',
+            taskId: task.id,
+            tickToken,
+          }),
+          expectedDefinitionVersionId: snapshotAutomationDefinition(task).definitionVersionId,
+          requestedBy: task.createdByUserId,
+          initiator: task.createdByUserId,
+          origin: 'external',
+        });
+        // The one active dispatch owns the task; a later sweep coalesces missed
+        // slots when it is free, rather than creating another execution queue.
+        if (requested.state === 'busy') continue;
+      } catch (error) {
+        failedToPersist++;
+        console.error('[task/schedule-dispatch] failed to persist task=%s: %O', task.id, error);
+        continue;
+      }
+    }
     due.push({
       pattern: task.schedulePattern,
       taskId: task.id,
       taskIdentifier: task.identifier,
-      // A retrying sweep must reuse the same durable execution identity.
-      tickToken: `task:${task.id}:generation:${task.executionGeneration + 1}`,
+      tickToken,
       timezone: task.scheduleTimezone,
       userId: task.createdByUserId,
     });
@@ -86,7 +131,7 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
       dryRun,
       due: due.length,
       skipped: tasks.length - due.length,
-      success: true,
+      success: failedToPersist === 0,
       total: tasks.length,
     };
   }
@@ -97,7 +142,7 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
     dispatched,
     due: due.length,
     skipped: tasks.length - due.length,
-    success: true,
+    success: failedToPersist === 0 && dispatched === due.length,
     total: tasks.length,
   };
 };

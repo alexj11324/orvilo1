@@ -563,7 +563,7 @@ export interface TaskRunPromptInput {
   /** Task data */
   task: {
     assigneeAgentId?: string | null;
-    automationMode?: 'heartbeat' | 'schedule' | null;
+    automationMode?: 'event' | 'heartbeat' | 'schedule' | null;
     dependencies?: Array<{ dependsOn: string; type: string }>;
     description?: string | null;
     /** Lightweight metadata of files attached to the task instruction. Actual

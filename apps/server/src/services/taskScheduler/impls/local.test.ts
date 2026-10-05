@@ -101,6 +101,22 @@ describe('LocalTaskScheduler', () => {
       expect(callback).toHaveBeenCalledOnce();
     });
 
+    it('keeps a long interval in the future instead of overflowing the Node timer', async () => {
+      const callback = vi.fn().mockResolvedValue(undefined);
+      scheduler.setExecutionCallback(callback);
+      const durationMs = 60 * 24 * 60 * 60_000;
+      await scheduler.scheduleNextTopic({
+        delay: durationMs / 1000,
+        taskId: 'long-task',
+        tickToken: 'long-tick',
+        userId: 'user-1',
+      });
+      await vi.advanceTimersByTimeAsync(durationMs - 1);
+      expect(callback).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(callback).toHaveBeenCalledExactlyOnceWith('long-task', 'user-1', 'long-tick');
+    });
+
     it('should support multiple concurrent schedules', async () => {
       const callback = vi.fn().mockResolvedValue(undefined);
       scheduler.setExecutionCallback(callback);

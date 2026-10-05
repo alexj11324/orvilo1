@@ -25,6 +25,7 @@ import {
   formatTimezoneName,
   nextHeartbeatFiring,
   nextScheduleFiring,
+  normalizeHeartbeatInterval,
 } from './scheduler/helpers';
 import SchedulerForm, { type SchedulerFormChange } from './scheduler/SchedulerForm';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -82,7 +83,7 @@ const IntervalTab = memo<IntervalTabProps>(({ currentInterval, disabled, taskId 
 
   const toSeconds = (val: number | null, u: IntervalUnit): number | null => {
     if (!val || val <= 0) return null;
-    return u === 'hours' ? val * 3600 : val * 60;
+    return normalizeHeartbeatInterval(val, u);
   };
 
   const handleValueChange = useCallback(

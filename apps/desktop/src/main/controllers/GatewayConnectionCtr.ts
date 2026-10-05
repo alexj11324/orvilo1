@@ -6,6 +6,7 @@ import path from 'node:path';
 import type { DeviceControlDeps } from '@orvilo/device-control';
 import type { AgentRunRequestMessage, GatewayMcpParams } from '@orvilo/device-gateway-client';
 import type { GatewayConnectionStatus } from '@orvilo/electron-client-ipc';
+import type { AutomationReadinessRequest } from '@orvilo/heterogeneous-agents/automationReadiness';
 import type { HeterogeneousAgentCancellationSignal } from '@orvilo/heterogeneous-agents/protocol';
 import type { RemotePlatformCommandRuntime } from '@orvilo/heterogeneous-agents/scanHost';
 import {
@@ -531,6 +532,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
     if (localSystemOutput) return localSystemOutput;
 
     switch (apiName) {
+      case 'checkAutomationReadiness': {
+        const { checkAutomationReadinessOnHost } =
+          await import('@orvilo/heterogeneous-agents/automationReadiness');
+        const result = await checkAutomationReadinessOnHost(args as AutomationReadinessRequest);
+        return { content: JSON.stringify(result), state: result, success: true };
+      }
+
       // ─── Platform agent tools (openclaw / hermes) ───
       // These don't go through LocalSystemExecutionRuntime — they return raw
       // domain payloads that we envelope into BuiltinServerRuntimeOutput here.

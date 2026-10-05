@@ -26,6 +26,7 @@ import { eq } from 'drizzle-orm';
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
+import { TaskTopicModel } from '@/database/models/taskTopic';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -894,6 +895,45 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
           success: false,
         };
       }
+    },
+
+    readAutomationInput: async (args: { offset?: number; limit?: number }) => {
+      if (
+        !deps.db ||
+        !deps.userId ||
+        !taskId ||
+        !operationId ||
+        !topicId ||
+        !(await taskModel().findById(taskId))
+      ) {
+        return { content: 'No authorized automation run context.', success: false };
+      }
+      const run = (
+        await new TaskTopicModel(deps.db, deps.userId, deps.workspaceId).findByTaskId(taskId)
+      ).find((row) => row.topicId === topicId && row.operationId === operationId);
+      const input = run?.contract?.occurrence?.input;
+      if (!input) return { content: 'This run has no automation input.', success: false };
+      if (
+        (args.offset !== undefined && (!Number.isSafeInteger(args.offset) || args.offset < 0)) ||
+        (args.limit !== undefined &&
+          (!Number.isSafeInteger(args.limit) || args.limit < 1 || args.limit > 16000))
+      ) {
+        return { content: 'Invalid input chunk range.', success: false };
+      }
+      const serialized = JSON.stringify(input.data);
+      const offset = args.offset ?? 0;
+      const chunk = serialized.slice(offset, offset + (args.limit ?? 16000));
+      return {
+        content: JSON.stringify({
+          inputRef: input.inputRef,
+          inputHash: input.inputHash,
+          untrusted: true,
+          chunk,
+          totalCharacters: serialized.length,
+          nextOffset: offset + chunk.length < serialized.length ? offset + chunk.length : null,
+        }),
+        success: true,
+      };
     },
 
     viewTask: async (args: { identifier?: string }) => {

@@ -1,4 +1,9 @@
-import type { McpEventBinding, McpEventFilter, PersistedMcpInboxDelivery } from '@orvilo/types';
+import type {
+  AutomationOccurrenceSnapshot,
+  McpEventBinding,
+  McpEventFilter,
+  PersistedMcpInboxDelivery,
+} from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -110,6 +115,8 @@ export const mcpEventTriggerRuns = pgTable(
     idempotencyKey: text('idempotency_key').notNull(),
     status: text('status').default('pending').notNull(),
     dispatchId: text('dispatch_id'),
+    /** First-match snapshot survives task edits while admission is waiting. */
+    automationOccurrence: jsonb('automation_occurrence').$type<AutomationOccurrenceSnapshot>(),
     reason: text('reason'),
   },
   (t) => [

@@ -63,6 +63,7 @@ const AutomationCreatePage = memo(() => {
   );
   const [submitting, setSubmitting] = useState(false);
   const [createdIdentifier, setCreatedIdentifier] = useState<string>();
+  const configurationLocked = submitting || !!createdIdentifier;
   const assigneeMeta = useAgentDisplayMeta(assigneeAgentId ?? undefined);
 
   const createTask = useTaskStore((s) => s.createTask);
@@ -89,6 +90,8 @@ const AutomationCreatePage = memo(() => {
         const created = await createTask({
           assigneeAgentId: assigneeAgentId ?? undefined,
           automationMode: draft!.kind,
+          config: { schedule: { maxExecutions: draft!.maxExecutions ?? null } },
+          ...(draft!.kind === 'event' ? { status: 'paused' } : {}),
           heartbeatInterval:
             draft!.kind === 'heartbeat' ? (draft!.heartbeatInterval ?? 3600) : undefined,
           instruction: instructions.trim() || trimmedName,
@@ -96,14 +99,36 @@ const AutomationCreatePage = memo(() => {
           schedulePattern: draft!.kind === 'schedule' ? (draft!.pattern ?? undefined) : undefined,
           scheduleTimezone: draft!.kind === 'schedule' ? (draft!.timezone ?? undefined) : undefined,
         });
-        identifier = created?.identifier;
-        if (identifier) {
-          taskCreated = true;
-          setCreatedIdentifier(identifier);
+        if (!created?.identifier) throw new Error('Task creation did not return an identifier');
+        identifier = created.identifier;
+        taskCreated = true;
+        setCreatedIdentifier(identifier);
+
+        // The creation response is the persisted row, not an echo of the request.
+        // Keep a successful insert even if validation or enabling fails so retry
+        // can never create another automation or silently discard form edits.
+        const storedConfig = created.config as {
+          schedule?: { maxExecutions?: number | null };
+        } | null;
+        const configurationMatches =
+          created.name === trimmedName &&
+          created.instruction === (instructions.trim() || trimmedName) &&
+          created.assigneeAgentId === assigneeAgentId &&
+          created.automationMode === draft!.kind &&
+          (storedConfig?.schedule?.maxExecutions ?? null) === (draft!.maxExecutions ?? null) &&
+          (draft!.kind === 'event' ||
+            (draft!.kind === 'heartbeat'
+              ? created.heartbeatInterval === (draft!.heartbeatInterval ?? 3600)
+              : created.schedulePattern === draft!.pattern &&
+                created.scheduleTimezone === draft!.timezone));
+        if (!configurationMatches) {
+          toast.error(t('create.configuration_mismatch'));
+          navigate(automationDetailPath(identifier), { replace: true });
+          return;
         }
       }
       if (identifier) {
-        await updateTaskStatus(identifier, 'scheduled');
+        if (draft?.kind !== 'event') await updateTaskStatus(identifier, 'scheduled');
         navigate(automationDetailPath(identifier), { replace: true });
       } else {
         navigate('/automations', { replace: true });
@@ -163,15 +188,33 @@ const AutomationCreatePage = memo(() => {
             variant="outline"
             onClick={submit}
           >
-            {t(createdIdentifier ? 'create.retry_enable' : 'create.submit')}
+            {t(
+              draft?.kind === 'event'
+                ? 'create.save_event_draft'
+                : createdIdentifier
+                  ? 'create.retry_enable'
+                  : 'create.submit',
+            )}
           </Button>
         }
       />
       <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
         <WideScreenContainer>
           <div className="flex flex-col gap-6 py-4" style={{ maxWidth: 768 }}>
+            {createdIdentifier && (
+              <div className="flex flex-col items-start gap-2" role="status">
+                <div className="text-muted-foreground">{t('create.saved_configuration')}</div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(automationDetailPath(createdIdentifier))}
+                >
+                  {t('create.open_draft')}
+                </Button>
+              </div>
+            )}
             <Input
               autoFocus
+              disabled={configurationLocked}
               placeholder={t('create.title_placeholder')}
               style={{ fontSize: 20, fontWeight: 600 }}
               value={name}
@@ -180,6 +223,7 @@ const AutomationCreatePage = memo(() => {
             <div className="flex">
               <AssigneeAgentSelector
                 currentAgentId={assigneeAgentId}
+                disabled={configurationLocked}
                 onChange={(agentId) => setAssigneeAgentId(agentId)}
               >
                 <div
@@ -203,11 +247,16 @@ const AutomationCreatePage = memo(() => {
                 </div>
               </AssigneeAgentSelector>
             </div>
-            <AutomationTriggerDraft draft={draft} onChange={setDraft} />
+            <AutomationTriggerDraft
+              disabled={configurationLocked}
+              draft={draft}
+              onChange={setDraft}
+            />
             <div className="flex flex-col gap-2">
               <div className="text-[13px] font-semibold">{t('instructions.section')}</div>
               <Textarea
                 className="min-h-[calc(4lh+0.75rem)]"
+                disabled={configurationLocked}
                 placeholder={t('create.instructions_placeholder')}
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}

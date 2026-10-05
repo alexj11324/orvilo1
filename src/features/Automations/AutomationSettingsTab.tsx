@@ -1,3 +1,4 @@
+import type { AutomationResultWebhookConfig } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -5,13 +6,16 @@ import { ChevronRightIcon, TimerIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { useTaskDetailSelector } from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import TaskInstruction from '../AgentTasks/AgentTaskDetail/TaskInstruction';
 import TaskScheduleConfig from '../AgentTasks/AgentTaskDetail/TaskScheduleConfig';
 import McpEventTriggerSettings from './McpEventTriggerSettings';
+import ResultWebhookSettings from './ResultWebhookSettings';
 import { automationDetailNextRun, automationDetailTriggerSummary } from './shared';
+import { useCanManageAutomation } from './useCanManageAutomation';
 
 dayjs.extend(relativeTime);
 
@@ -71,12 +75,30 @@ const TriggerCard = memo(() => {
 
 const AutomationSettingsTab = memo(() => {
   const { t } = useTranslation('automation');
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const refresh = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const canManage = useCanManageAutomation(detail?.createdByUserId);
+  const outputs =
+    (detail?.config as { resultWebhooks?: AutomationResultWebhookConfig[] } | undefined)
+      ?.resultWebhooks ?? [];
   return (
     <div className="flex flex-col gap-6 py-4" style={{ maxWidth: 768 }}>
-      <Section title={t('trigger.section')}>
-        <TriggerCard />
-      </Section>
-      <McpEventTriggerSettings />
+      {detail?.automationMode === 'event' ? (
+        <McpEventTriggerSettings />
+      ) : (
+        <Section title={t('trigger.section')}>
+          <TriggerCard />
+        </Section>
+      )}
+      {detail ? (
+        <ResultWebhookSettings
+          key={detail.id}
+          readOnly={!canManage}
+          taskId={detail.id}
+          value={outputs}
+          onSaved={() => refresh(detail.id)}
+        />
+      ) : null}
       <Section title={t('instructions.section')}>
         <TaskInstruction />
       </Section>

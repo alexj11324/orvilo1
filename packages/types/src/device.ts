@@ -7,9 +7,12 @@ export interface DeviceUnavailableErrorData {
    * device could not be addressed at all; `DEVICE_BINDING_INVALID` is the
    * device-execution contract's explicit-repair outcome — the bound device
    * was deleted, revoked, or is no longer authorized, and the caller must
-   * rebind rather than silently retry another host.
+   * rebind rather than silently retry another host. `DEVICE_NOT_CONNECTED`
+   * means the device is still registered but could not be reached (offline,
+   * asleep, mid-reconnect); `DEVICE_OFFLINE` means presence already reported
+   * the device offline before any contact was attempted.
    */
-  code: 'DEVICE_BINDING_INVALID' | 'DEVICE_NOT_FOUND';
+  code: 'DEVICE_BINDING_INVALID' | 'DEVICE_NOT_CONNECTED' | 'DEVICE_NOT_FOUND' | 'DEVICE_OFFLINE';
   /** Logical device requested by the failed dispatch. */
   deviceId: string;
   /** When `DEVICE_BINDING_INVALID`: device ids the caller may explicitly
@@ -40,8 +43,12 @@ export type DeviceAdmissionErrorCode =
   | 'DEVICE_BINDING_INVALID'
   /** The device inventory could not be authoritatively read — no 0/1/N judgment. */
   | 'DEVICE_INVENTORY_INCOMPLETE'
+  /** The bound device is still registered but could not be reached (offline/asleep/mid-reconnect). */
+  | 'DEVICE_NOT_CONNECTED'
   /** The device could not be addressed at all. */
   | 'DEVICE_NOT_FOUND'
+  /** Presence already reported the device offline — no contact was attempted. */
+  | 'DEVICE_OFFLINE'
   /** The request named a device outside the principal's authorized set. */
   | 'DEVICE_REQUEST_UNAUTHORIZED'
   /** Zero legitimate candidates. */

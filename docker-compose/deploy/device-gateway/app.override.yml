@@ -1,0 +1,9 @@
+# Merge these env_file entries into the host-local production override.
+# The existing .env remains inherited from the base Compose definition.
+services:
+  orvilo:
+    env_file:
+      - /run/orvilo-device-gateway/app.env
+  hatchet-worker:
+    env_file:
+      - /run/orvilo-device-gateway/app.env

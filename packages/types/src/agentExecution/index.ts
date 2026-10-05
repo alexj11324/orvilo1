@@ -2,7 +2,11 @@ import type { AgentRunAdmissionState } from '../agent/acpExecution';
 import type { HeterogeneousTopicPin } from '../agent/agencyConfig';
 import type { OrviloAgentChatConfig } from '../agent/chatConfig';
 import type { CreateThreadWithMessageParams } from '../aiChat';
-import type { DeviceUnavailableErrorData, WorkingDirConfig } from '../device';
+import type {
+  DeviceAdmissionErrorData,
+  DeviceUnavailableErrorData,
+  WorkingDirConfig,
+} from '../device';
 import type { TaskDetail, UIChatMessage } from '../message';
 import type { ChatTopic } from '../topic';
 
@@ -383,8 +387,12 @@ export interface ExecAgentResult {
   createdThreadId?: string;
   /** Error message if operation failed to start */
   error?: string;
-  /** Structured availability context when a device dispatch failed before acceptance. */
-  errorData?: DeviceUnavailableErrorData;
+  /**
+   * Structured context when a device dispatch failed before acceptance —
+   * either an availability probe answer or the unified-admission refusal
+   * contract (the UI branches on `code`, never on the detail text).
+   */
+  errorData?: DeviceAdmissionErrorData | DeviceUnavailableErrorData;
   /**
    * External heterogeneous producer for this run. `null` explicitly denotes
    * the normal AgentRuntime path; `undefined` is reserved for rolling clients

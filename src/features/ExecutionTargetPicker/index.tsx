@@ -7,6 +7,13 @@ import { memo } from 'react';
 
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
 
+// The grouping/candidate derivations live in the shared helper so settings,
+// chat, connect and repair surfaces all read ONE pool definition.
+export {
+  executionTargetDeviceCandidates,
+  groupExecutionTargetDevices,
+} from '@/helpers/executionTarget';
+
 const styles = createStaticStyles(({ css }) => ({
   dotOffline: css`
     flex: none;
@@ -94,19 +101,6 @@ export const resolveExecutionTargetSelection = ({
   // heterogeneous ones genuinely have no selection until the author picks one.
   return configuredTarget === undefined && !isHeterogeneous ? { target: 'none' } : undefined;
 };
-
-export const groupExecutionTargetDevices = (devices: DeviceListItem[] | undefined) => ({
-  personal: (devices ?? []).filter((device) => device.scope === 'personal'),
-  privateWorkspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility === 'private',
-  ),
-  publicWorkspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility === 'public',
-  ),
-  workspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility !== 'private',
-  ),
-});
 
 interface ExecutionTargetIconProps {
   devicePlatform?: string | null;

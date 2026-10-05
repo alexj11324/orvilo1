@@ -8,6 +8,7 @@ import { CompletionLifecycle } from '@/server/services/agentExecution/Completion
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 // Under ACP a resume/regenerate run still prunes the anchor's old answer
 // branch — but the pruning now happens inside `dispatchHeteroAgent` (topic
@@ -307,7 +308,7 @@ describe('AiAgentService.execAgent - resume mode', () => {
     mockMessageCreate.mockResolvedValue({ id: 'assistant-msg-new' });
     mockQueryTree.mockResolvedValue([]);
 
-    service = new AiAgentService({} as any, 'user-1');
+    service = new AiAgentService(createDispatchTestDb() as any, 'user-1');
   });
 
   afterEach(() => {

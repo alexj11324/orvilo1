@@ -325,6 +325,12 @@ export interface TurnSetupResult {
   runAttachments: RunAttachments;
   /** Rows THIS turn persisted — the history loader must exclude them. */
   selfMessageIds: Set<string>;
+  /**
+   * The binding epoch paired with `topicBoundDeviceId`
+   * (`topic.metadata.bindingRevision`) — echoed back in admission errorData
+   * so a repair can present the exact revision it saw to the CAS gate.
+   */
+  topicBindingRevision?: number | null;
   topicBoundDeviceId?: string | null;
   topicId: string;
   userMessageId?: string;
@@ -385,6 +391,7 @@ export const setupTurn = async (
     : isFixedExecutionTargetSelection
       ? undefined
       : requestedDeviceId;
+  let topicBindingRevision: number | undefined;
 
   // Effective model/provider for this run. Defaults to the agent config, but a
   // topic pins its own model in the top-level `topics.model`/`provider` columns
@@ -569,6 +576,7 @@ export const setupTurn = async (
         ? undefined
         : agentConfig.agencyConfig?.boundDeviceId;
       topicBoundDeviceId = agentConfig.agencyConfig?.boundDeviceId;
+      topicBindingRevision = existingTopic.metadata?.bindingRevision;
     }
 
     /** A group topic pins its owning agent; member runs keep their own model and effort. */
@@ -778,6 +786,7 @@ export const setupTurn = async (
     requestTriggerMetadata,
     runAttachments,
     selfMessageIds,
+    topicBindingRevision,
     topicBoundDeviceId,
     topicId,
     userMessageId: userMessageRecord?.id,

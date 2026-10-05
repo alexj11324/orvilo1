@@ -56,6 +56,33 @@ export class UnsupportedDeviceOperationError extends Error implements DeviceOper
   }
 }
 
+export const TARGET_QUERY_FAILED_ERROR_CODE = 'TARGET_QUERY_FAILED' as const;
+
+/**
+ * The operation DID name a scope (a conversation, a bound device), but the
+ * authoritative binding could not be read — a cache miss is never "unbound",
+ * and an unreadable binding is never a license to execute on another
+ * machine. Distinct from `TargetRequiredError` (no target was named): the
+ * caller surfaces a failed lookup and retries, never falls back locally.
+ */
+export class TargetQueryFailedError extends Error implements DeviceOperationError {
+  readonly code = TARGET_QUERY_FAILED_ERROR_CODE;
+  readonly operation: string;
+  readonly status = 'error' as const;
+
+  constructor(operation: string, detail?: string) {
+    super(`"${operation}" could not resolve its execution target` + (detail ? `: ${detail}` : ''));
+    this.name = 'TargetQueryFailedError';
+    this.operation = operation;
+  }
+}
+
+export const isTargetQueryFailedError = (error: unknown): error is TargetQueryFailedError =>
+  error instanceof TargetQueryFailedError ||
+  (typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === TARGET_QUERY_FAILED_ERROR_CODE);
+
 /**
  * Evidence that THIS client is itself an execution device: the host's proven
  * local device identity, resolved via the gateway device handshake (see

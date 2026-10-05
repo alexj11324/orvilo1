@@ -457,7 +457,7 @@ export const setupTurn = async (
     // sendMessage paths. It lands on the topic's own pin fields — the same
     // `topics.model`/`topics.provider` columns and `metadata.heteroEffort` slot a
     // later turn reads back through the topic-pin path below — and never on the
-    // agent row (docs/development/chat-agent-model-ia.md §5.2). With no pick the
+    // agent row. With no pick the
     // snapshot stays byte-identical to the agent-config snapshot.
     const snapshot = {
       metadata:
@@ -467,6 +467,10 @@ export const setupTurn = async (
       model: newTopicPins?.model ?? agentSnapshot.model,
       provider: newTopicPins?.provider ?? agentSnapshot.provider,
     };
+    if (heterogeneousProvider?.type === 'orvilo') {
+      model = modelOverride || snapshot.model || model;
+      provider = providerOverride || snapshot.provider || provider;
+    }
     const metadataWithSnapshot: ChatTopicMetadata | undefined =
       metadata || snapshot.metadata ? { ...metadata, ...snapshot.metadata } : undefined;
     // Second argument: the id the client already rendered this topic under

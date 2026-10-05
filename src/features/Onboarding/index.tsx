@@ -35,9 +35,7 @@ function OnboardingSetup() {
   const { t } = useTranslation('onboarding');
   const { t: tSetting } = useTranslation('setting');
   const navigate = useNavigate();
-  const initialName = useUserStore((s) => s.user?.fullName ?? '');
   const setup = useUserStore((s) => s.onboarding?.setup);
-  const [fullName, setFullName] = useState(initialName);
   const {
     workspaceName,
     workspaceSlug,
@@ -65,18 +63,10 @@ function OnboardingSetup() {
 
   const continueWorkspace = async (event: FormEvent) => {
     event.preventDefault();
-    if (
-      busy ||
-      !fullName.trim() ||
-      !workspaceName.trim() ||
-      !workspaceSlug.trim() ||
-      workspaceSlugError
-    )
-      return;
+    if (busy || !workspaceName.trim() || !workspaceSlug.trim() || workspaceSlugError) return;
     setBusy(true);
     setError(undefined);
     try {
-      await useUserStore.getState().updateFullName(fullName.trim());
       const resolved = await resolveOnboardingWorkspace(
         { workspaceName, workspaceSlug },
         useUserStore.getState().onboarding?.setup?.workspaceId,
@@ -177,17 +167,6 @@ function OnboardingSetup() {
             onSubmit={continueWorkspace}
           >
             <Field>
-              <FieldLabel htmlFor="onboarding-name">{t('reui.profile.fullName')}</FieldLabel>
-              <Input
-                required
-                autoComplete="name"
-                disabled={busy}
-                id="onboarding-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </Field>
-            <Field>
               <FieldLabel htmlFor="onboarding-workspace">{t('reui.workspace.name')}</FieldLabel>
               <Input
                 required
@@ -225,11 +204,7 @@ function OnboardingSetup() {
             <Button
               type="submit"
               disabled={
-                busy ||
-                !fullName.trim() ||
-                !workspaceName.trim() ||
-                !workspaceSlug.trim() ||
-                !!workspaceSlugError
+                busy || !workspaceName.trim() || !workspaceSlug.trim() || !!workspaceSlugError
               }
             >
               {busy && <Spinner data-icon="inline-start" />}

@@ -286,7 +286,7 @@
   "setup.step.agent": "2 Agent",
   "setup.step.workspace": "1 Workspace",
   "setup.steps": "Setup steps",
-  "setup.workspace.description": "Choose your display name and a home for your work.",
+  "setup.workspace.description": "Choose a workspace name and address for your work.",
   "setup.workspace.title": "Set up your workspace",
   "telemetry.agreement": "All data collected is anonymous and used solely to improve the product experience. By continuing, you confirm that you understand and agree to the <terms>Terms and Conditions</terms> and <privacy>Privacy Policy</privacy>.",
   "telemetry.desc": "I’m your Agent concierge—here to help you think, create, and manage Agents and Groups.",

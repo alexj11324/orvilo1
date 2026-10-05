@@ -338,7 +338,7 @@ export default {
   'setup.step.workspace': '1 Workspace',
   'setup.step.agent': '2 Agent',
   'setup.workspace.title': 'Set up your workspace',
-  'setup.workspace.description': 'Choose your display name and a home for your work.',
+  'setup.workspace.description': 'Choose a workspace name and address for your work.',
   'setup.agent.title': 'Create your first Agent',
   'setup.agent.description': 'Connect an Agent, then enter your workspace.',
   'setup.agent.verifying': 'Checking your Agent…',

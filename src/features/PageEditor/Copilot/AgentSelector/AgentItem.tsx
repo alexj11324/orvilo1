@@ -1,12 +1,8 @@
-import {
-  type AgentNameFields,
-  agentSecondaryDisplayName,
-  type GroupMemberAvatar,
-} from '@orvilo/types';
+import { agentSecondaryDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
 interface AgentItemProps {
@@ -15,16 +11,15 @@ interface AgentItemProps {
    * Identity fields of the agent, used to resolve the role shown beside its
    * name. Omit for rows that have no agent record behind them.
    */
-  agent?: AgentNameFields | null;
+  agent?: Pick<SidebarAgentItem, 'name' | 'title' | 'heterogeneousType'> | null;
   agentId: string;
   agentTitle: string;
-  avatar: string | GroupMemberAvatar[] | null | undefined;
   onAgentChange: (agentId: string) => void;
   onClose: () => void;
 }
 
 const AgentItem = memo<AgentItemProps>(
-  ({ active, agent, agentId, agentTitle, avatar, onAgentChange, onClose }) => {
+  ({ active, agent, agentId, agentTitle, onAgentChange, onClose }) => {
     const { t } = useTranslation('chat');
 
     const title = agentTitle || t('untitledAgent');
@@ -35,7 +30,7 @@ const AgentItem = memo<AgentItemProps>(
     return (
       <NavItem
         active={active}
-        icon={<AgentAvatar avatar={typeof avatar === 'string' ? avatar : undefined} />}
+        icon={<AgentRuntimeIcon size={22} type={agent?.heterogeneousType} />}
         style={{ flexShrink: 0 }}
         title={
           roleTag ? (

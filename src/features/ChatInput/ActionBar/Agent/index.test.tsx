@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { fireEvent, render, within } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -142,6 +142,7 @@ vi.mock('@/store/agent', () => ({
 
 vi.mock('@/store/agent/selectors', () => ({
   agentSelectors: {
+    getAgentConfigById: (id: string) => (s: typeof mocks) => s.agentMap[id] ?? {},
     getAgentMetaById: (id: string) => (s: typeof mocks) => s.agentMap[id] ?? {},
   },
   builtinAgentSelectors: {
@@ -181,11 +182,11 @@ describe('Agent action', () => {
     mocks.isDesktop = false;
   });
 
-  it('shows the bound agent avatar and display name on the chip', () => {
+  it('shows the fixed Orvilo runtime icon and editable display name on the chip', () => {
     const { getByTestId } = render(<Agent />);
 
-    const avatar = within(getByTestId('popover-trigger')).getByTestId('avatar');
-    expect(avatar.dataset.avatar).toBe('current-avatar');
+    const icon = getByTestId('popover-trigger').querySelector('img');
+    expect(icon?.getAttribute('src')).toBe('/app-icons/icon-512x512.png');
     expect(getByTestId('popover-trigger').textContent).toContain('Current Agent');
     expect(mocks.fetchAgentList).toHaveBeenCalledOnce();
     // The dropdown must offer the builtin task agent as a conversation target.

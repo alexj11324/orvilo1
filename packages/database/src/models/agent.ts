@@ -2,9 +2,13 @@ import { BUILTIN_AGENT_SLUGS, getAgentPersistConfig } from '@orvilo/builtin-agen
 import { INBOX_SESSION_ID, isHeterogeneousAgentModelId } from '@orvilo/const';
 import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
+  HETEROGENEOUS_AGENT_CONFIGS,
   normalizeAgencyConfigForWrite,
   pruneWorkingDirByDeviceDeletes,
+  REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
+  resolveAgentAgencyConfig,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import {
@@ -23,6 +27,7 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
+import { isEqual } from 'es-toolkit';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
@@ -81,6 +86,8 @@ import {
 } from '../utils/agentKnowledgeMounts';
 import { rehomeAgentLabelsForRecipient } from '../utils/agentLabelsOwnership';
 import { rehomeAgentQuotaBindingsForRecipient } from '../utils/agentQuotaBindings';
+import { assertAgentRuntimeCreation } from '../utils/agentRuntimeCreation';
+import { normalizeAgentRuntimeIdentity } from '../utils/agentRuntimeIdentity';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
@@ -105,6 +112,7 @@ import {
   syncTopicCommentsOnTopicTransfer,
   TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS,
 } from './topicComment';
+import { WorkspaceUserSettingsModel } from './workspaceUserSettings';
 
 /**
  * Fields the Agent Builder's own row (`slug = BUILTIN_AGENT_SLUGS.agentBuilder`) must never
@@ -396,6 +404,7 @@ export class AgentModel {
     agentWorkspaceId: string | null,
     agencyConfig: PartialDeep<OrviloAgentAgencyConfig> | null | undefined,
     storedConfig?: OrviloAgentAgencyConfig | null,
+    visibility?: 'private' | 'public',
   ): Promise<void> => {
     if (!agentWorkspaceId) return;
     const existing = new Set(this.collectBoundDeviceIds(storedConfig));
@@ -405,7 +414,21 @@ export class AgentModel {
     const rows = await this.db
       .select({ deviceId: devices.deviceId })
       .from(devices)
-      .where(and(eq(devices.workspaceId, agentWorkspaceId), inArray(devices.deviceId, candidates)));
+      .where(
+        and(
+          visibility === 'private'
+            ? buildWorkspaceWhere({ userId: this.userId, workspaceId: agentWorkspaceId }, devices)
+            : buildStrictWorkspaceWhere(
+                {
+                  userId: this.userId,
+                  workspaceId: agentWorkspaceId,
+                  callerAgentVisibility: 'public',
+                },
+                devices,
+              ),
+          inArray(devices.deviceId, candidates),
+        ),
+      );
     const allowed = new Set(rows.map((r) => r.deviceId));
     const invalid = candidates.find((id) => !allowed.has(id));
     if (invalid) {
@@ -619,6 +642,7 @@ export class AgentModel {
         description: agents.description,
         id: agents.id,
         name: agents.name,
+        model: agents.model,
         slug: agents.slug,
         title: agents.title,
         userId: agents.userId,
@@ -631,9 +655,14 @@ export class AgentModel {
       .offset(offset);
 
     // Surface only the hetero runtime type, not the full agencyConfig payload.
-    return rows.map(({ slug, agencyConfig, ...row }) =>
+    return rows.map(({ slug, agencyConfig, model, ...row }) =>
       normalizeInboxAgentMeta(
-        { ...row, heteroType: agencyConfig?.heterogeneousProvider?.type },
+        {
+          ...row,
+          heteroType:
+            agencyConfig?.heterogeneousProvider?.type ??
+            (isHeterogeneousAgentModelId(model) ? model : undefined),
+        },
         { slug },
       ),
     );
@@ -1020,20 +1049,185 @@ export class AgentModel {
     return { ...config, slug: undefined };
   };
 
+  private runtimeAvatar = (config: Partial<Pick<AgentItem, 'agencyConfig' | 'model'>>): string => {
+    if (
+      config.agencyConfig != null &&
+      (typeof config.agencyConfig !== 'object' || Array.isArray(config.agencyConfig))
+    ) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Unsupported agent runtime configuration',
+      });
+    }
+    const provider = config.agencyConfig?.heterogeneousProvider;
+    const type =
+      provider !== undefined && provider !== null
+        ? provider.type
+        : isHeterogeneousAgentModelId(config.model)
+          ? config.model
+          : 'orvilo';
+    const cli = HETEROGENEOUS_AGENT_CONFIGS.find((entry) => entry.type === type);
+    const remote = REMOTE_HETEROGENEOUS_AGENT_CONFIGS.find((entry) => entry.type === type);
+    const builtin = BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.find((entry) => entry.type === type);
+    if (!cli && !remote && !builtin) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported agent runtime' });
+    }
+    if (builtin) return '/app-icons/icon-512x512.png';
+    if (type === 'droid') return 'https://factory.ai/favicon.svg';
+    const iconId = cli?.iconId ?? (type === 'hermes' ? 'HermesAgent' : 'OpenClaw');
+    return `https://registry.npmmirror.com/@lobehub/icons-static-avatar/latest/files/avatars/${iconId.toLowerCase()}.webp`;
+  };
+
+  private assertRuntimeUpdate = async (stored: AgentItem, next: Partial<AgentItem>) => {
+    if (stored.slug && getAgentPersistConfig(stored.slug)) return;
+    const before = normalizeAgencyConfigForWrite(stored.agencyConfig);
+    const after = normalizeAgencyConfigForWrite(next.agencyConfig);
+    const previousType = before?.heterogeneousProvider?.type;
+    const nextType = after?.heterogeneousProvider?.type;
+    if (previousType && previousType !== nextType) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'AGENT_RUNTIME_IDENTITY_FIXED' });
+    }
+    const contract = (
+      config: Partial<AgentItem>,
+      agency: OrviloAgentAgencyConfig | null | undefined,
+    ) => ({
+      host: agency?.boundDeviceId,
+      target: agency?.executionTarget,
+      type: agency?.heterogeneousProvider?.type,
+      runtimeModel: agency?.heterogeneousProvider?.model,
+      apiConfig: agency?.heterogeneousProvider?.apiConfig,
+      command: agency?.heterogeneousProvider?.command,
+      model: config.model,
+      provider: config.provider,
+    });
+    if (isEqual(contract(stored, before), contract(next, after))) return;
+    next.agencyConfig = await assertAgentRuntimeCreation(
+      this.db,
+      { userId: this.userId, workspaceId: stored.workspaceId ?? undefined },
+      { ...next, agencyConfig: after },
+    );
+  };
+
+  /** Copy only execution configuration from a visible saved runtime, never its environment secrets. */
+  inheritRuntimeForCreation = async (
+    agentId: string,
+    options: {
+      deviceId?: string;
+      visibility?: 'private' | 'public';
+      model?: string;
+      provider?: string;
+    } = {},
+  ): Promise<Pick<AgentItem, 'agencyConfig' | 'model' | 'provider'>> => {
+    const [source] = await this.db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, agentId), this.ownership()))
+      .limit(1);
+    if (!source) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+    // Device/model overrides live on the workspace member preference only —
+    // a personal agent has exactly one member, so there is nothing to override.
+    const preference = this.workspaceId
+      ? await new WorkspaceUserSettingsModel(this.db, this.userId, this.workspaceId).getPreference()
+      : undefined;
+    const agency = resolveAgentAgencyConfig(
+      source.agencyConfig,
+      preference?.agentDeviceOverrides?.[agentId],
+      {
+        canManage: source.userId === this.userId,
+        visibility: source.visibility ?? undefined,
+        workspaceId: source.workspaceId,
+      },
+    );
+    const provider = agency?.heterogeneousProvider;
+    if (!provider)
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_RUNTIME_REQUIRED' });
+    const { env: _env, ...safeProvider } = provider;
+    const override = preference?.agentModelOverrides?.[agentId];
+    const selectedModel = options.model ?? override?.model ?? safeProvider.model ?? source.model;
+    const config = {
+      agencyConfig: {
+        ...agency,
+        // `resolveAgentAgencyConfig` strips the stored selection policy on the
+        // owner path — it is a read-time view of the shared row, not the shape
+        // to persist. A copied/inherited runtime must carry the agent's stored
+        // workspace policy, so restore it from the source row.
+        ...(source.agencyConfig?.executionTargetSelectionPolicy
+          ? {
+              executionTargetSelectionPolicy: source.agencyConfig.executionTargetSelectionPolicy,
+            }
+          : {}),
+        ...(options.deviceId
+          ? { boundDeviceId: options.deviceId, executionTarget: 'device' as const }
+          : {}),
+        heterogeneousProvider: {
+          ...safeProvider,
+          ...(selectedModel ? { model: selectedModel } : {}),
+        },
+      },
+      model: selectedModel ?? null,
+      provider: options.provider ?? override?.provider ?? source.provider,
+      visibility: options.visibility,
+    };
+    await assertAgentRuntimeCreation(
+      this.db,
+      { userId: this.userId, workspaceId: this.workspaceId },
+      config,
+    );
+    return { agencyConfig: config.agencyConfig, model: config.model, provider: config.provider };
+  };
+
+  /** Internal resource-owned Prime consumers inherit an existing executable contract. */
+  getPrimeRuntimeForCreation = async (
+    options: { visibility?: 'private' | 'public'; model?: string; provider?: string } = {},
+  ): Promise<Pick<AgentItem, 'agencyConfig' | 'model' | 'provider'>> => {
+    const candidates = await this.db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(
+        and(
+          this.ownership(),
+          eq(agents.userId, this.userId),
+          sql`${agents.agencyConfig}->'heterogeneousProvider'->>'type' = 'orvilo'`,
+        ),
+      )
+      .orderBy(desc(agents.updatedAt));
+    for (const candidate of candidates) {
+      try {
+        return await this.inheritRuntimeForCreation(candidate.id, options);
+      } catch (error) {
+        if (
+          !(error instanceof TRPCError) ||
+          !['BAD_REQUEST', 'FORBIDDEN', 'PRECONDITION_FAILED'].includes(error.code)
+        )
+          throw error;
+      }
+    }
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_RUNTIME_SETUP_REQUIRED' });
+  };
+
   /**
    * Create an agent record only (without creating a session).
    * This is used for creating virtual agents (e.g., group chat members).
    */
   create = async (input: Partial<AgentItem>): Promise<AgentItem> => {
-    const config = this.stripReservedSlug(input);
+    const config = { ...this.stripReservedSlug(input), avatar: this.runtimeAvatar(input) };
     // Retired provider fields (`engine`, `adapterType`) are stripped at this
     // write chokepoint — the request schema refuses them from clients, and
     // internal callers must not carry them forward either (contract §migration).
     const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(
-      normalizeAgencyConfigForWrite(config.agencyConfig),
+      await assertAgentRuntimeCreation(
+        this.db,
+        { userId: this.userId, workspaceId: this.workspaceId },
+        config,
+      ),
     );
 
-    await this.assertWorkspaceDeviceBinding(this.workspaceId ?? null, agencyConfig);
+    await this.assertWorkspaceDeviceBinding(
+      this.workspaceId ?? null,
+      agencyConfig,
+      undefined,
+      config.visibility ?? undefined,
+    );
     await this.assertFixedExecutionTarget(this.workspaceId ?? null, agencyConfig);
 
     const [result] = await this.db
@@ -1060,16 +1254,28 @@ export class AgentModel {
   batchCreate = async (configs: Partial<AgentItem>[]): Promise<AgentItem[]> => {
     if (configs.length === 0) return [];
 
-    const normalizedConfigs = configs.map((config) => ({
-      ...this.stripReservedSlug(config),
-      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
-        normalizeAgencyConfigForWrite(config.agencyConfig),
-      ),
-    }));
+    const normalizedConfigs = await Promise.all(
+      configs.map(async (config) => ({
+        ...this.stripReservedSlug(config),
+        avatar: this.runtimeAvatar(config),
+        agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
+          await assertAgentRuntimeCreation(
+            this.db,
+            { userId: this.userId, workspaceId: this.workspaceId },
+            config,
+          ),
+        ),
+      })),
+    );
 
     await Promise.all(
       normalizedConfigs.flatMap((config) => [
-        this.assertWorkspaceDeviceBinding(this.workspaceId ?? null, config.agencyConfig),
+        this.assertWorkspaceDeviceBinding(
+          this.workspaceId ?? null,
+          config.agencyConfig,
+          undefined,
+          config.visibility ?? undefined,
+        ),
         this.assertFixedExecutionTarget(this.workspaceId ?? null, config.agencyConfig),
       ]),
     );
@@ -1096,9 +1302,45 @@ export class AgentModel {
       this.stripImmutableFields(data),
     );
 
+    const [agent] = await this.db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, agentId), this.ownership()))
+      .limit(1);
+    if (!agent) return;
+    const agencyConfig = normalizeAgencyConfigForWrite(agent.agencyConfig);
+    if (
+      Object.hasOwn(sanitizedData, 'agencyConfig') ||
+      Object.hasOwn(sanitizedData, 'model') ||
+      Object.hasOwn(sanitizedData, 'provider')
+    ) {
+      if (Object.hasOwn(sanitizedData, 'agencyConfig'))
+        sanitizedData.agencyConfig = normalizeAgentRuntimeIdentity(sanitizedData.agencyConfig);
+      const next = { ...agent, ...sanitizedData };
+      if (
+        Object.hasOwn(sanitizedData, 'model') &&
+        typeof sanitizedData.model === 'string' &&
+        next.agencyConfig?.heterogeneousProvider?.type === 'orvilo'
+      ) {
+        next.agencyConfig = {
+          ...next.agencyConfig,
+          heterogeneousProvider: {
+            ...next.agencyConfig.heterogeneousProvider,
+            model: sanitizedData.model,
+          },
+        };
+      }
+      await this.assertRuntimeUpdate(agent, next);
+      sanitizedData.agencyConfig = next.agencyConfig;
+    }
+    const avatar =
+      agent.slug === BUILTIN_AGENT_SLUGS.agentBuilder
+        ? agent.avatar
+        : this.runtimeAvatar({ ...agent, agencyConfig, ...sanitizedData });
+
     return this.db
       .update(agents)
-      .set({ ...sanitizedData, updatedAt: new Date() })
+      .set({ agencyConfig, ...sanitizedData, avatar, updatedAt: new Date() })
       .where(and(eq(agents.id, agentId), this.ownership()));
   };
 
@@ -1341,23 +1583,21 @@ export class AgentModel {
 
     const data = this.stripImmutableFields(input);
 
-    // Same retired-field normalization as `create`: the request schema refuses
-    // them from clients; internal callers reaching the model get them stripped
-    // (the retired value is meaningless to every reader — contract §migration).
-    if (data.agencyConfig) {
-      data.agencyConfig = normalizeAgencyConfigForWrite(data.agencyConfig);
-    }
-
     const agent = await this.db.query.agents.findFirst({
       where: and(eq(agents.id, agentId), this.ownership()),
     });
 
     if (!agent) return;
 
+    // Compatibility applies only to persisted rows. Merge provider patches with
+    // that source before validating; normalizing input alone invents a runtime.
+    agent.agencyConfig = normalizeAgencyConfigForWrite(agent.agencyConfig);
+
     await this.assertWorkspaceDeviceBinding(
       agent.workspaceId,
       data.agencyConfig,
       agent.agencyConfig,
+      agent.visibility ?? undefined,
     );
 
     // First process the params field: undefined means delete, null means disable flag
@@ -1390,7 +1630,27 @@ export class AgentModel {
       for (const field of AGENT_BUILDER_PROTECTED_FIELDS) delete restData[field];
     }
 
-    const mergedValue = merge(agent, restData);
+    const mergedValue = merge(
+      { ...agent, agencyConfig: normalizeAgencyConfigForWrite(agent.agencyConfig) },
+      restData,
+    );
+    // Validate after merging so a command-only patch keeps the existing type.
+    // Do not infer Claude Code from an incomplete or malformed client binding.
+    if (Object.hasOwn(data, 'agencyConfig')) {
+      mergedValue.agencyConfig =
+        data.agencyConfig?.heterogeneousProvider !== undefined
+          ? normalizeAgentRuntimeIdentity(mergedValue.agencyConfig)
+          : normalizeAgencyConfigForWrite(mergedValue.agencyConfig);
+    }
+    if (mergedValue.agencyConfig?.heterogeneousProvider?.type === 'orvilo') {
+      if (Object.hasOwn(data, 'model') && typeof data.model === 'string') {
+        mergedValue.agencyConfig.heterogeneousProvider.model = data.model;
+      } else if (data.agencyConfig?.heterogeneousProvider?.model !== undefined) {
+        mergedValue.model = data.agencyConfig.heterogeneousProvider.model;
+      }
+    }
+    if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder) this.runtimeAvatar(mergedValue);
+    mergedValue.agencyConfig = normalizeAgencyConfigForWrite(mergedValue.agencyConfig);
 
     // The inbox is Orvilo's built-in default cloud agent; it must never be
     // turned into a heterogeneous (external-CLI) agent. Two independent inputs can
@@ -1465,6 +1725,15 @@ export class AgentModel {
     // `undefined`, which merge() skips — prune those keys so the delete persists.
     pruneWorkingDirByDeviceDeletes(mergedValue.agencyConfig, data.agencyConfig);
 
+    if (
+      Object.hasOwn(data, 'agencyConfig') ||
+      Object.hasOwn(data, 'model') ||
+      Object.hasOwn(data, 'provider')
+    ) {
+      await this.assertRuntimeUpdate(agent, mergedValue);
+    }
+    if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder)
+      mergedValue.avatar = this.runtimeAvatar(mergedValue);
     await this.assertFixedExecutionTarget(agent.workspaceId, mergedValue.agencyConfig);
 
     // Final cleanup: ensure no undefined or null values enter the database
@@ -1592,13 +1861,10 @@ export class AgentModel {
     // device. Sanitize exactly like `transferAgents` does when moving into a
     // workspace. Personal-scope copies keep existing bindings (any device is
     // reachable there).
-    const agencyConfig = this.workspaceId
-      ? (
-          await this.sanitizeAgencyConfigForWorkspace(this.db, this.workspaceId, [
-            sourceAgent.agencyConfig,
-          ])
-        )[0]
-      : (sourceAgent.agencyConfig ?? null);
+    sourceAgent.agencyConfig = normalizeAgencyConfigForWrite(sourceAgent.agencyConfig);
+    const runtime = await this.inheritRuntimeForCreation(agentId, {
+      visibility: sourceAgent.visibility ?? undefined,
+    });
 
     // Create new agent with explicit include fields
     const [newAgent] = await this.db
@@ -1611,20 +1877,20 @@ export class AgentModel {
             // binding, sub-agent defaults, verify rubric...). Duplicating must
             // preserve it, otherwise a heterogeneous agent is copied as a plain
             // one and its external runtime config is silently lost.
-            agencyConfig,
-            avatar: sourceAgent.avatar,
+            agencyConfig: runtime.agencyConfig,
+            avatar: this.runtimeAvatar(sourceAgent),
             backgroundColor: sourceAgent.backgroundColor,
             chatConfig: sourceAgent.chatConfig,
             description: sourceAgent.description,
             fewShots: sourceAgent.fewShots,
-            model: sourceAgent.model,
+            model: runtime.model,
             openingMessage: sourceAgent.openingMessage,
             openingQuestions: sourceAgent.openingQuestions,
             params: sourceAgent.params,
             pinned: sourceAgent.pinned,
             // Config
             plugins: sourceAgent.plugins,
-            provider: sourceAgent.provider,
+            provider: runtime.provider,
 
             // Session group. Visibility has to travel with it: the column
             // defaults to `public`, and now that folder placement is shared and

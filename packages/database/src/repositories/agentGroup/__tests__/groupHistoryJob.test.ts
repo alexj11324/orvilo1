@@ -15,6 +15,7 @@ import {
   agents,
   chatGroups,
   chatGroupsAgents,
+  devices,
   messagePlugins,
   messages,
   threads,
@@ -32,6 +33,15 @@ const wsId = 'ghj-ws';
 const groupId = 'ghj-group';
 const supervisorId = 'ghj-supervisor';
 const memberId = 'ghj-member';
+const wsDeviceId = 'ghj-ws-device';
+
+// Member clones go through strict creation admission: the copied config must
+// carry a registered runtime and a host the target workspace can resolve.
+const seedRuntimeConfig = {
+  boundDeviceId: wsDeviceId,
+  executionTarget: 'device' as const,
+  heterogeneousProvider: { type: 'codex' as const },
+};
 
 beforeEach(async () => {
   await serverDB.delete(users);
@@ -39,6 +49,15 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'WS', primaryOwnerId: userId, slug: 'ghj-ws' }]);
+  await serverDB.insert(devices).values([
+    {
+      deviceId: wsDeviceId,
+      identitySource: 'machine-id',
+      userId,
+      visibility: 'public',
+      workspaceId: wsId,
+    },
+  ]);
 });
 
 afterEach(async () => {
@@ -56,8 +75,14 @@ afterEach(async () => {
  */
 const seedGroupWithHistory = async () => {
   await serverDB.insert(agents).values([
-    { id: supervisorId, title: 'Supervisor', userId, virtual: true },
-    { id: memberId, title: 'Member', userId },
+    {
+      agencyConfig: seedRuntimeConfig,
+      id: supervisorId,
+      title: 'Supervisor',
+      userId,
+      virtual: true,
+    },
+    { agencyConfig: seedRuntimeConfig, id: memberId, title: 'Member', userId },
   ]);
   await serverDB.insert(chatGroups).values([{ id: groupId, title: 'Team', userId }]);
   await serverDB.insert(chatGroupsAgents).values([

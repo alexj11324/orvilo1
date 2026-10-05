@@ -289,7 +289,6 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
               agent={option.agent}
               agentId={option.agent.id}
               agentTitle={agentDisplayName(option.agent, t('untitledAgent', { ns: 'chat' }))}
-              avatar={option.agent.avatar}
               onAgentChange={() => handleSelect(option)}
               onClose={() => setOpen(false)}
             />

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
@@ -24,6 +25,9 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'fav-ws',
   });
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId, workspaceId });
+  await seedPrimeRuntime(serverDB, { userId: otherUserId, workspaceId });
 });
 
 afterEach(async () => {

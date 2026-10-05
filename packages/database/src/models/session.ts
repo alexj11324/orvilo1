@@ -19,6 +19,7 @@ import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../
 import { idGenerator } from '../utils/idGenerator';
 import { inJsonStringArray } from '../utils/inJsonStringArray';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import { AgentModel } from './agent';
 
 export class SessionModel {
   private userId: string;
@@ -254,36 +255,29 @@ export class SessionModel {
         return result[0];
       }
 
-      const newAgents = await trx
-        .insert(agents)
-        .values(
-          buildWorkspacePayload(
-            { userId: this.userId, workspaceId: this.workspaceId },
-            {
-              avatar,
-              backgroundColor,
-              chatConfig: chatConfig || {},
-              createdAt: new Date(),
-              description,
-              editorData: editorData || null,
-              fewShots: examples || null, // Map examples to fewShots field
-              id: idGenerator('agents'),
-              marketIdentifier: identifier || marketIdentifier,
-              model: typeof model === 'string' ? model : null,
-              openingMessage,
-              openingQuestions,
-              params: params || {},
-              plugins,
-              provider,
-              systemRole,
-              tags,
-              title,
-              tts: tts || {},
-              updatedAt: new Date(),
-            },
-          ),
-        )
-        .returning();
+      const newAgent = await new AgentModel(trx, this.userId, this.workspaceId).create({
+        agencyConfig: config.agencyConfig,
+        avatar,
+        backgroundColor,
+        chatConfig: chatConfig || {},
+        createdAt: new Date(),
+        description,
+        editorData: editorData || null,
+        fewShots: examples || null, // Map examples to fewShots field
+        id: idGenerator('agents'),
+        marketIdentifier: identifier || marketIdentifier,
+        model: typeof model === 'string' ? model : null,
+        openingMessage,
+        openingQuestions,
+        params: params || {},
+        plugins,
+        provider,
+        systemRole,
+        tags,
+        title,
+        tts: tts || {},
+        updatedAt: new Date(),
+      });
 
       const result = await trx
         .insert(sessions)
@@ -303,7 +297,7 @@ export class SessionModel {
         .returning();
 
       await trx.insert(agentsToSessions).values({
-        agentId: newAgents[0].id,
+        agentId: newAgent.id,
         sessionId: id,
         userId: this.userId,
         workspaceId: this.workspaceId ?? null,
@@ -320,15 +314,30 @@ export class SessionModel {
 
     if (item) return;
 
-    return await this.create({
-      // `merge` returns the `@orvilo/types` OrviloAgentConfig shape
-      // (plugins: AgentPluginEntry[]); `create`'s `config` is the DB-layer
-      // NewAgent, whose `plugins` column type is intentionally left as
-      // `string[]` (only the domain types are widened for the tri-state
-      // rollout, not the JSONB column's compile-time annotation).
-      config: merge(DEFAULT_AGENT_CONFIG, defaultAgentConfig) as Partial<NewAgent>,
-      slug: INBOX_SESSION_ID,
-      type: 'agent',
+    return this.db.transaction(async (trx) => {
+      const agentModel = new AgentModel(trx, this.userId, this.workspaceId);
+      const builtin = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+      if (!builtin) throw new Error('Builtin Inbox is unavailable');
+      await agentModel.updateConfig(
+        builtin.id,
+        merge(DEFAULT_AGENT_CONFIG, defaultAgentConfig) as Partial<NewAgent>,
+      );
+      const [inbox] = await trx
+        .insert(sessions)
+        .values(
+          buildWorkspacePayload(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            { slug: INBOX_SESSION_ID, type: 'agent' },
+          ),
+        )
+        .returning();
+      await trx.insert(agentsToSessions).values({
+        agentId: builtin.id,
+        sessionId: inbox.id,
+        userId: this.userId,
+        workspaceId: this.workspaceId ?? null,
+      });
+      return inbox;
     });
   };
 

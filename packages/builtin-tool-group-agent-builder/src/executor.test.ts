@@ -64,14 +64,14 @@ describe('GroupAgentBuilderExecutor', () => {
     it('falls back to the active group when the tool context has no groupId', async () => {
       mockCreateAgent.mockResolvedValue({ content: 'ok', success: true });
 
-      await groupAgentBuilderExecutor.createAgent(
-        { systemRole: 'x', title: 'PM' },
-        {} as BuiltinToolContext,
-      );
+      await groupAgentBuilderExecutor.createAgent({ systemRole: 'x', title: 'PM' }, {
+        agentId: 'source',
+      } as BuiltinToolContext);
 
       expect(mockCreateAgent).toHaveBeenCalledWith(
         'cg_1',
         expect.objectContaining({ title: 'PM' }),
+        { agentId: 'source' },
       );
     });
 

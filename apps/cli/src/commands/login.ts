@@ -223,23 +223,16 @@ export function registerLoginCommand(program: Command) {
             // (which only adds the channel-online step). Mirrors the desktop
             // app, which registers on login. Best-effort: a failure here must
             // not fail the login.
-            //
-            // Skip the `fallback` source: `orvilo login` has no `--device-id` and
-            // persists no fallback id, so a machine without a readable
-            // machine-id would derive a *fresh random* id on every login —
-            // registering it just spawns orphan device rows that never match
-            // the id a later `orvilo connect` resolves. Defer registration to
-            // `connect` in that case, where the same id is reused for the WS.
-            const identity = resolveDeviceIdentity(parseJwtSub(body.access_token));
-            if (identity && identity.identitySource !== 'fallback') {
-              try {
+            try {
+              const identity = await resolveDeviceIdentity(parseJwtSub(body.access_token));
+              if (identity) {
                 await registerDevice(
                   { serverUrl, token: body.access_token, tokenType: 'jwt' },
                   identity,
                 );
-              } catch (err) {
-                log.warn(`Device registration failed (non-fatal): ${(err as Error).message}`);
               }
+            } catch (err) {
+              log.warn(`Device registration failed (non-fatal): ${(err as Error).message}`);
             }
 
             log.info('Login successful! Credentials saved.');

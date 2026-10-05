@@ -24,6 +24,14 @@ beforeEach(async () => {
     primaryOwnerId: creator,
     slug: 'ws-1',
   });
+  // Creation admission requires a resolvable bound host.
+  await clientDB.insert(Schema.devices).values({
+    deviceId: `creation-host-${ws}`,
+    identitySource: 'installation',
+    userId: creator,
+    visibility: 'public',
+    workspaceId: ws,
+  });
 });
 
 afterEach(async () => {
@@ -37,7 +45,11 @@ describe('workspace hetero agent visibility flip ', () => {
 
     // mirrors useCreateHeteroAgent -> lambda createAgent (public default)
     const agent = await agentModel.create({
-      agencyConfig: { heterogeneousProvider: { command: 'claude', type: 'claude-code' } } as any,
+      agencyConfig: {
+        boundDeviceId: `creation-host-${ws}`,
+        executionTarget: 'device',
+        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+      } as any,
       provider: 'claude-code',
       systemRole: '',
       title: 'CC Agent',

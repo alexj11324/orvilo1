@@ -1,9 +1,48 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import type * as DeviceIdentityModule from '@orvilo/device-identity';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { mintWorkspaceConnectToken } from './register';
+import {
+  mintWorkspaceConnectToken,
+  resolveDeviceIdentity,
+  resolveWorkspaceDeviceIdentity,
+} from './register';
+
+vi.mock('@orvilo/device-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof DeviceIdentityModule>()),
+  resolvePersistentDeviceIdentity: vi.fn(async (principal: string) => ({
+    deviceId: `persistent:${principal}`,
+    identitySource: 'fallback',
+  })),
+}));
+
+describe('persistent device identity', () => {
+  it('reuses the shared personal fallback across resolutions', async () => {
+    const expected = { deviceId: 'persistent:user-1', identitySource: 'fallback' };
+    expect(await resolveDeviceIdentity('user-1')).toEqual(expected);
+    expect(await resolveDeviceIdentity('user-1')).toEqual(expected);
+  });
+
+  it('uses the shared workspace principal without a channel seed', async () => {
+    expect(await resolveWorkspaceDeviceIdentity('workspace-1')).toEqual({
+      deviceId: 'persistent:workspace:workspace-1',
+      identitySource: 'fallback',
+    });
+    expect(await resolveWorkspaceDeviceIdentity('workspace-2')).toEqual({
+      deviceId: 'persistent:workspace:workspace-2',
+      identitySource: 'fallback',
+    });
+  });
+
+  it('preserves explicit IDs and missing personal principals', async () => {
+    const expected = { deviceId: 'pinned-device', identitySource: 'fallback' };
+    expect(await resolveDeviceIdentity(undefined, 'pinned-device')).toEqual(expected);
+    expect(await resolveWorkspaceDeviceIdentity('workspace-1', 'pinned-device')).toEqual(expected);
+    expect(await resolveDeviceIdentity(undefined)).toBeUndefined();
+  });
+});
 
 const servers: Server[] = [];
 

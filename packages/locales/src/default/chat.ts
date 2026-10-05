@@ -1,4 +1,17 @@
 export default {
+  'creation.runtime.title': 'Choose Agent runtime',
+  'creation.runtime.description':
+    'Choose Prime with a saved host and model, or reuse an existing connected runtime.',
+  'creation.runtime.label': 'Runtime',
+  'creation.runtime.prime': 'Prime',
+  'creation.runtime.host': 'Execution host',
+  'creation.runtime.hostEmpty': 'Choose a registered host',
+  'creation.runtime.hostHelp':
+    'Register a device in Devices. Shared Agents require a public Workspace device.',
+  'creation.runtime.provider': 'Provider and model',
+  'creation.runtime.devices': 'Open Devices',
+  'creation.runtime.use': 'Use runtime',
+
   'workingPanel.overview.configure': 'Review execution setup',
   'goalExperiment.continuedFrom': 'Continued exploration',
   'goalExperiment.drill': 'Explore inside',
@@ -630,13 +643,14 @@ export default {
   'heteroAgent.executionTarget.fixedTip':
     'The execution device is fixed in the agent\u0027s settings and cannot be switched while chatting.',
   'heteroAgent.executionTarget.infoTooltip':
-    'Choose where this Agent runs: on this computer or on an added external device.',
+    'Choose where this Agent runs. A device can read and write files or operate a computer; Cloud Sandbox runs in an isolated temporary environment.',
+  'heteroAgent.executionTarget.readOnlyTip': 'This run executes on this device.',
   'heteroAgent.executionTarget.gateway': 'Gateway',
   'heteroAgent.executionTarget.gatewayDesc':
-    'Run through the device gateway so other clients can follow progress',
+    'Run on this computer via the gateway; other clients can follow progress',
   'heteroAgent.executionTarget.loading': 'Loading devices…',
-  'heteroAgent.executionTarget.local': 'Local device',
-  'heteroAgent.executionTarget.localDesc': 'Run as a local process on this desktop app',
+  'heteroAgent.executionTarget.local': 'Local process',
+  'heteroAgent.executionTarget.localDesc': 'Run directly on this computer through the desktop app',
   'heteroAgent.executionTarget.localSandbox': 'Shell isolation',
   'heteroAgent.executionTarget.localSandboxDesc':
     'Optional shell isolation: writes stay in the working directory and temporary directory; network is blocked',
@@ -648,7 +662,7 @@ export default {
   'heteroAgent.executionTarget.localSandboxUnavailable': 'Not available on this device: {{reason}}',
   'heteroAgent.executionTarget.manage': 'Manage',
   'heteroAgent.executionTarget.noDevices':
-    'No remote devices yet. Run `orvilo connect` on another machine to add one.',
+    'No connected devices yet. Run `orvilo connect` on this computer or another computer to add one.',
   'heteroAgent.executionTarget.noWorkspaceDevices':
     'No workspace devices yet. Run `{{cmd}}` on a machine to enroll it for every member.',
   'heteroAgent.executionTarget.none': 'No device',
@@ -679,6 +693,19 @@ export default {
   'heteroAgent.executionTarget.downloadDesktopTitle': 'Get the desktop app',
   'heteroAgent.executionTarget.title': 'Device',
   'heteroAgent.executionTarget.unknownDevice': 'Unknown device',
+  'deviceAdmission.bindingChanged':
+    'The device binding changed while repairing — nothing was written.',
+  'deviceAdmission.connect': 'Connect a device',
+  'deviceAdmission.operation': 'Run: {{id}}',
+  'deviceAdmission.repairDesc':
+    'Pick the device this conversation runs on. The broken binding is only replaced by the device you choose — the old device\u0027s session is never reused.',
+  'deviceAdmission.repairFailed': 'Could not repair the device binding — try again.',
+  'deviceAdmission.repairTo': 'Repair binding to {{device}}',
+  'deviceAdmission.repaired': 'Device binding repaired.',
+  'deviceAdmission.requestAuthorization': 'Manage device access',
+  'deviceAdmission.retryInventory': 'Retry device lookup',
+  'deviceAdmission.title': 'This run could not start on a device',
+  'deviceAdmission.viewRunStatus': 'View run status',
   'hideForYou':
     "Direct message content is hidden. Please enable 'Show Direct Message Content' in settings to view.",
   'history.title': 'The Agent will keep only the latest {{count}} messages.',

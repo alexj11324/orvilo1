@@ -11,6 +11,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import {
   AgentSettings as Settings,
@@ -24,6 +25,7 @@ import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 const TAB_META = {
   [ChatSettingsTabs.Graph]: { icon: GitBranchIcon, labelKey: 'agentTab.graph' },
@@ -96,6 +98,7 @@ const Content = memo(() => {
       activeTab={activeTab}
       avatar={isInbox ? DEFAULT_INBOX_AVATAR : meta.avatar || DEFAULT_AVATAR}
       background={meta.backgroundColor || undefined}
+      icon={<AgentRuntimeIcon size={24} type={resolveAgentRuntimeType(config)} />}
       tabs={tabs}
       title={displayTitle}
       onTabChange={(key) => setTab(key as ChatSettingsTabs)}

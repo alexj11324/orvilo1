@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
@@ -45,6 +46,9 @@ describe('ProjectModel milestone progress', () => {
   beforeEach(async () => {
     await serverDB.delete(users);
     await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
+    // Project creation provisions a coordinator through Prime inheritance.
+    await seedPrimeRuntime(serverDB, { userId });
+    await seedPrimeRuntime(serverDB, { userId: otherUserId });
   });
 
   afterEach(async () => {
@@ -234,6 +238,7 @@ describe('ProjectModel milestone progress', () => {
       { role: 'owner', userId, workspaceId },
       { role: 'member', userId: otherUserId, workspaceId },
     ]);
+    await seedPrimeRuntime(serverDB, { userId, workspaceId });
     const owner = new ProjectModel(serverDB, userId, workspaceId);
     const member = new ProjectModel(serverDB, otherUserId, workspaceId);
     const { milestoneId, project } = await createProjectWithMilestone(owner);
@@ -271,6 +276,9 @@ describe('ProjectModel milestone CRUD', () => {
   beforeEach(async () => {
     await serverDB.delete(users);
     await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
+    // Project creation provisions a coordinator through Prime inheritance.
+    await seedPrimeRuntime(serverDB, { userId });
+    await seedPrimeRuntime(serverDB, { userId: otherUserId });
   });
 
   afterEach(async () => {

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
 import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
@@ -1281,6 +1282,8 @@ describe('NotificationModel (integration)', () => {
         { role: 'owner', userId, workspaceId },
         { role: 'member', userId: otherUserId, workspaceId },
       ]);
+      // Project creation provisions a coordinator through Prime inheritance.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'SEC06',
         name: 'Secret Project',
@@ -1313,6 +1316,8 @@ describe('NotificationModel (integration)', () => {
         { role: 'owner', userId, workspaceId },
         { role: 'member', userId: otherUserId, workspaceId },
       ]);
+      // Project creation provisions a coordinator through Prime inheritance.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'GRANT',
         name: 'Granted Project',

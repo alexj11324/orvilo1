@@ -443,6 +443,124 @@ export class DeviceGateway {
     }
   }
 
+  /**
+   * Device-scoped MCP query round-trip. Unlike {@link invokeDeviceRead} —
+   * which collapses every failure to `undefined` — the reason is preserved:
+   * an old client answering "does not support" reaches the caller verbatim so
+   * the feature degrades as genuinely unsupported instead of being misread
+   * as "device offline" or "query failed".
+   */
+  private async invokeDeviceMcp<T>(
+    method: 'checkMcpInstallable' | 'getStdioMcpServerManifest' | 'getStreamableMcpServerManifest',
+    params: { deviceId: string; timeout?: number; userId: string; workspaceId?: string },
+    rpcParams: Record<string, unknown>,
+  ): Promise<{ data?: T; error?: string }> {
+    const { userId, deviceId, timeout = 30_000, workspaceId } = params;
+    const client = this.getClient();
+    if (!client) return { error: 'Device Gateway is not configured' };
+
+    try {
+      const result = await client.invokeRpc<T>(
+        { deviceId, timeout, userId, workspaceId },
+        { method, params: rpcParams },
+      );
+      if (!result.success || result.data === undefined) {
+        return { error: result.error || `${method} failed` };
+      }
+      return { data: result.data };
+    } catch (error) {
+      log('%s: error for deviceId=%s — %O', method, deviceId, error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
+   * Probe a streamable-HTTP MCP endpoint IN THE DEVICE's network space —
+   * a localhost / LAN URL only resolves where the MCP server will run.
+   * `data` is the MCP IPC payload envelope (`{json}`); the router unwraps it.
+   */
+  mcpGetStreamableManifest(params: {
+    deviceId: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+    input: {
+      auth?: unknown;
+      headers?: Record<string, string>;
+      identifier: string;
+      metadata?: { avatar?: string; description?: string };
+      url: string;
+    };
+  }) {
+    const { input, ...rest } = params;
+    return this.invokeDeviceMcp<unknown>(
+      'getStreamableMcpServerManifest',
+      rest,
+      input as unknown as Record<string, unknown>,
+    );
+  }
+
+  /** Probe a stdio MCP server manifest on the device (spawn + listManifests). */
+  mcpGetStdioManifest(params: {
+    deviceId: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+    input: {
+      args?: string[];
+      command: string;
+      env?: Record<string, string>;
+      metadata?: { avatar?: string; description?: string; name?: string };
+      name: string;
+    };
+  }) {
+    const { input, ...rest } = params;
+    return this.invokeDeviceMcp<unknown>(
+      'getStdioMcpServerManifest',
+      rest,
+      input as unknown as Record<string, unknown>,
+    );
+  }
+
+  /** Check MCP plugin installability against the device's own toolchain. */
+  mcpCheckInstallable(params: {
+    deploymentOptions: unknown[];
+    deviceId: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+  }) {
+    const { deploymentOptions, ...rest } = params;
+    return this.invokeDeviceMcp<unknown>('checkMcpInstallable', rest, { deploymentOptions });
+  }
+
+  /**
+   * Tunnel an MCP tool call to the device over the `/api/device/tool-call`
+   * relay (`type:'mcp'`) — the device routes it to its local MCP client.
+   * Stdio commands and localhost / LAN HTTP endpoints can only ever run
+   * there; failures stay inside `DeviceToolCallResult.error`.
+   */
+  async callDeviceMcpTool(mcpCall: {
+    apiName: string;
+    arguments: string;
+    deviceId?: string;
+    identifier: string;
+    params: GatewayMcpParams;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+  }): Promise<DeviceToolCallResult> {
+    const client = this.getClient();
+    if (!client)
+      return {
+        content: '',
+        error: 'Device Gateway is not configured',
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
+        success: false,
+      };
+    return client.executeMcpCall(mcpCall);
+  }
+
   /** Branch name + detached flag for a directory on a remote device. */
   gitBranch(params: { deviceId: string; path: string; userId: string; workspaceId?: string }) {
     return this.invokeDeviceRead<DeviceGitBranchInfo>('getGitBranch', params, {

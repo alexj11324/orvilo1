@@ -234,8 +234,23 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
         }
       },
 
-      createGroup: async (params: CreateGroupParams): Promise<ToolExecutionResult> => {
+      createGroup: async (
+        params: CreateGroupParams,
+        ctx: ToolExecutionContext,
+      ): Promise<ToolExecutionResult> => {
         try {
+          if (!ctx.agentId) throw new Error('Agent setup required: invoking agent is missing');
+          const runtimeConfig = await agentModel.inheritRuntimeForCreation(ctx.agentId, {
+            deviceId: ctx.activeDeviceId,
+            model: params.supervisor?.model,
+            provider: params.supervisor?.provider,
+            visibility: 'private',
+          });
+          if (runtimeConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo') {
+            throw new Error(
+              'Group supervisor runtime unsupported: an admitted Prime Agent is required',
+            );
+          }
           const groupConfig: ChatGroupConfig = {
             ...(params.openingMessage !== undefined && { openingMessage: params.openingMessage }),
             ...(params.openingQuestions !== undefined && {
@@ -253,21 +268,16 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
               content: params.prompt,
               description: params.description,
               title: params.title,
+              visibility: 'private',
             },
             [],
-            params.supervisor
-              ? {
-                  avatar: params.supervisor.avatar,
-                  backgroundColor: params.supervisor.backgroundColor,
-                  description: params.supervisor.description,
-                  model: params.supervisor.model,
-                  params: params.supervisor.params,
-                  provider: params.supervisor.provider,
-                  systemRole: params.supervisor.systemRole,
-                  tags: params.supervisor.tags,
-                  title: params.supervisor.title,
-                }
-              : undefined,
+            {
+              ...params.supervisor,
+              ...runtimeConfig,
+              // The runtime guard above proves agencyConfig is present; the
+              // schema type is optional-but-never-null.
+              agencyConfig: runtimeConfig.agencyConfig ?? undefined,
+            },
           );
 
           if (workspaceId && group.visibility !== 'private') {
@@ -315,9 +325,15 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
           if (!group) return groupNotFound(groupId);
 
           await assertGroupEditable(groupId);
+          if (!ctx.agentId) throw new Error('Agent setup required: invoking agent is missing');
+          const runtimeConfig = await agentModel.inheritRuntimeForCreation(ctx.agentId, {
+            deviceId: ctx.activeDeviceId,
+            visibility: group.visibility ?? 'private',
+          });
 
           const [agent] = await agentModel.batchCreate([
             {
+              ...runtimeConfig,
               avatar: params.avatar,
               description: params.description,
               // Domain tool plugins support structured entries, while the DB
@@ -326,7 +342,7 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
               systemRole: params.systemRole,
               title: params.title,
               virtual: true,
-              ...(group.visibility ? { visibility: group.visibility } : {}),
+              visibility: group.visibility ?? 'private',
             },
           ]);
 
@@ -359,16 +375,22 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
           if (!group) return groupNotFound(groupId);
 
           await assertGroupEditable(groupId);
+          if (!ctx.agentId) throw new Error('Agent setup required: invoking agent is missing');
+          const runtimeConfig = await agentModel.inheritRuntimeForCreation(ctx.agentId, {
+            deviceId: ctx.activeDeviceId,
+            visibility: group.visibility ?? 'private',
+          });
 
           const createdAgents = await agentModel.batchCreate(
             params.agents.map((agent) => ({
+              ...runtimeConfig,
               avatar: agent.avatar,
               description: agent.description,
               plugins: agent.tools as unknown as string[] | undefined,
               systemRole: agent.systemRole,
               title: agent.title,
               virtual: true,
-              ...(group.visibility ? { visibility: group.visibility } : {}),
+              visibility: group.visibility ?? 'private',
             })),
           );
 

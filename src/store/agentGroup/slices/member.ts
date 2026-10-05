@@ -1,3 +1,4 @@
+import type { AgentRuntimeConfig } from '@/features/CreateAgent';
 import { chatGroupService, type GroupMemberConfig } from '@/services/chatGroup';
 import { type ChatGroupStore } from '@/store/agentGroup/store';
 
@@ -22,14 +23,17 @@ export class ChatGroupMemberAction {
   };
 
   /**
-   * Create a blank virtual agent that lives only inside the group and add it as a member.
+   * Create a configured virtual agent that lives only inside the group and add it as a member.
    * Returns the new agent id so the caller can navigate to it.
    */
   createAgentInGroup = async (
     groupId: string,
-    config?: GroupMemberConfig,
+    config: GroupMemberConfig,
+    runtimeConfig: AgentRuntimeConfig,
   ): Promise<string | undefined> => {
-    const { agentIds } = await chatGroupService.batchCreateAgentsInGroup(groupId, [config ?? {}]);
+    const { agentIds } = await chatGroupService.batchCreateAgentsInGroup(groupId, [
+      { ...config, ...runtimeConfig, title: config.title ?? runtimeConfig.title },
+    ]);
     await this.#get().refreshGroupDetail(groupId);
     return agentIds[0];
   };

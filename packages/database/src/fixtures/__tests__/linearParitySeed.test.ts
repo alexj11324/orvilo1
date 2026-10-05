@@ -10,7 +10,7 @@ import { projects } from '../../schemas/project';
 import { taskDependencies, tasks } from '../../schemas/task';
 import { projectTeams, teamMembers, teams, teamWorkflowStates } from '../../schemas/team';
 import { users } from '../../schemas/user';
-import { workspaceMembers } from '../../schemas/workspace';
+import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 import {
   LINEAR_PARITY_MILESTONES,
@@ -19,6 +19,7 @@ import {
   LINEAR_PARITY_TEAM,
   seedLinearParity,
 } from '../linearParitySeed';
+import { seedPrimeRuntime } from '../seedPrimeRuntime';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'linear-parity-seed-test-user';
@@ -33,7 +34,22 @@ const seedUsers = async () => {
   ]);
 };
 
-const seedFixture = () => seedLinearParity(db, { target: 'test', userId });
+const seedFixture = async () => {
+  // The seed provisions a project through Prime inheritance, which needs an
+  // owned orvilo runtime bound to a host filed to the target workspace. The
+  // 'agent-testing' slug is the resolution path the seeder uses when no
+  // explicit workspace id is given.
+  const [existing] = await db
+    .select()
+    .from(workspaces)
+    .where(eq(workspaces.slug, 'agent-testing'))
+    .limit(1);
+  const workspace =
+    existing ??
+    (await new WorkspaceModel(db, userId).create({ name: 'Agent Testing', slug: 'agent-testing' }));
+  await seedPrimeRuntime(db, { userId, workspaceId: workspace.id });
+  return seedLinearParity(db, { target: 'test', userId, workspaceId: workspace.id });
+};
 
 beforeEach(async () => {
   await seedUsers();
@@ -226,6 +242,7 @@ describe('linear parity seed', () => {
       userId: foreignUserId,
       workspaceId: workspace.id,
     });
+    await seedPrimeRuntime(db, { userId: foreignUserId, workspaceId: workspace.id });
     await new ProjectModel(db, foreignUserId, workspace.id).create({
       identifier: 'FPR',
       name: LINEAR_PARITY_PROJECT.name,

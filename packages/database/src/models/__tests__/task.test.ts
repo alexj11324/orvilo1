@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   acceptances,
   agentOperations,
@@ -78,6 +79,8 @@ const derivedStatus = async (id: string) => {
 beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId });
 });
 
 afterEach(async () => {

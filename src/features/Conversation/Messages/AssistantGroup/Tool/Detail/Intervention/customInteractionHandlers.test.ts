@@ -6,6 +6,7 @@ import {
 import { WebOnboardingApiName, WebOnboardingIdentifier } from '@orvilo/builtin-tool-web-onboarding';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import { installMarketplaceAgents } from '@/services/installMarketplaceAgents';
 
 import {
@@ -13,6 +14,8 @@ import {
   prepareCustomInteractionSubmit,
   recordCustomInteractionResolution,
 } from './customInteractionHandlers';
+
+vi.mock('@/features/CreateAgent', () => ({ requestAgentRuntime: vi.fn() }));
 
 vi.mock('@/services/installMarketplaceAgents', () => ({
   installMarketplaceAgents: vi.fn(),
@@ -24,9 +27,32 @@ describe('customInteractionHandlers', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-29T10:00:00.000Z'));
+    vi.mocked(requestAgentRuntime).mockResolvedValue({
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'host-1',
+        heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
+      },
+      model: 'prime-model',
+      provider: 'openai',
+      title: 'Orvilo AI',
+    });
     vi.mocked(installMarketplaceAgents).mockReset();
     updateTopicMetadata.mockReset();
     updateTopicMetadata.mockResolvedValue(undefined);
+  });
+
+  it('keeps marketplace picks pending and performs no install when runtime selection is cancelled', async () => {
+    vi.mocked(requestAgentRuntime).mockResolvedValue(undefined);
+    await expect(
+      prepareCustomInteractionSubmit(
+        WebOnboardingIdentifier,
+        { selectedTemplateIds: ['template-1'] },
+        { apiName: WebOnboardingApiName.showAgentMarketplace },
+      ),
+    ).rejects.toThrow('AGENT_RUNTIME_SELECTION_CANCELLED');
+    expect(installMarketplaceAgents).not.toHaveBeenCalled();
+    expect(updateTopicMetadata).not.toHaveBeenCalled();
   });
 
   it('persists submitted marketplace picks to onboardingSession metadata', async () => {
@@ -79,6 +105,9 @@ describe('customInteractionHandlers', () => {
       skippedAgentIds: ['template-existing'],
     });
     expect(result.options?.createUserMessage).toBe(false);
+    expect(result.options?.pluginState?.runtimeConfig).toEqual(
+      await vi.mocked(requestAgentRuntime).mock.results[0].value,
+    );
   });
 
   it.each([

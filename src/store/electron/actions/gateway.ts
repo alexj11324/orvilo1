@@ -1,5 +1,6 @@
 import { isDesktop } from '@orvilo/const';
 import type { GatewayConnectionStatus } from '@orvilo/electron-client-ipc';
+import { useEffect } from 'react';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
 
@@ -7,6 +8,7 @@ import { electronKeys } from '@/libs/swr/keys';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { primeLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { type StoreSetter } from '@/store/types';
+import { useUserStore } from '@/store/user';
 
 import { type ElectronStore } from '../store';
 
@@ -18,6 +20,7 @@ export interface GatewayDeviceInfo {
   deviceId: string;
   hostname: string;
   platform: string;
+  userId?: string;
 }
 
 export class ElectronGatewayActionImpl {
@@ -56,19 +59,25 @@ export class ElectronGatewayActionImpl {
   };
 
   useFetchGatewayDeviceInfo = (): SWRResponse<GatewayDeviceInfo> => {
-    return useSWR<GatewayDeviceInfo>(
-      // Desktop-only IPC: on web there is no electronAPI, so never fetch off-desktop.
-      isDesktop ? electronKeys.gatewayDeviceInfo() : null,
-      async () => gatewayConnectionService.getDeviceInfo() as Promise<GatewayDeviceInfo>,
-      {
-        onSuccess: (data) => {
-          // The handshake response is the local device's proven identity —
-          // prime the service-layer resolver so guarded calls reuse it.
-          primeLocalExecutionIdentity(data?.deviceId);
-          this.#set({ gatewayDeviceInfo: data }, false, 'setGatewayDeviceInfo');
-        },
+    const ownerId = useUserStore((state) => state.user?.id);
+    const response = useSWR<GatewayDeviceInfo>(
+      isDesktop && ownerId ? [...electronKeys.gatewayDeviceInfo(), ownerId] : null,
+      async () => {
+        const info = await gatewayConnectionService.getDeviceInfo();
+        if (info.userId !== ownerId)
+          throw new Error('Local device identity belongs to another account');
+        return info;
       },
+      // Ownership changes must commit the clearing effect while the next IPC is pending.
+      { suspense: false },
     );
+    useEffect(() => {
+      if (useUserStore.getState().user?.id === ownerId) {
+        primeLocalExecutionIdentity(response.data?.deviceId, ownerId);
+        this.#set({ gatewayDeviceInfo: response.data }, false, 'setGatewayDeviceInfo');
+      }
+    }, [ownerId, response.data]);
+    return response;
   };
 
   useFetchGatewayStatus = (): SWRResponse<{ status: GatewayConnectionStatus }> => {

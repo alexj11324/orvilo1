@@ -1,4 +1,5 @@
 import type {
+  AgentMarketplaceRuntimeConfig,
   ExecAgentAppContext,
   ExecAgentResult,
   HeterogeneousTopicPin,
@@ -69,7 +70,11 @@ export type AgentInterventionSourceAction =
   | { scope: 'operation'; type: 'stop' }
   | { result: Record<string, string | string[]>; type: 'submit_answers' }
   | {
-      result: { kind: 'agent_marketplace'; selectedTemplateIds: string[] };
+      result: {
+        kind: 'agent_marketplace';
+        runtimeConfig: AgentMarketplaceRuntimeConfig;
+        selectedTemplateIds: string[];
+      };
       type: 'submit_custom';
     }
   | { type: 'skip_interaction' }

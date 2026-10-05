@@ -32,7 +32,6 @@ import type { Operation } from '@/store/chat/slices/operation/types';
 import { AI_RUNTIME_OPERATION_TYPES } from '@/store/chat/slices/operation/types';
 import { type ChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { getElectronStoreState } from '@/store/electron';
 import { type StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 
@@ -211,10 +210,10 @@ export class ConversationControlActionImpl {
       return (
         selectRuntimeType({
           boundDeviceId: agencyConfig?.boundDeviceId,
-          // Resume must take the same transport the original send resolved —
-          // a desktop `local` run admitted through the gateway resumes through
-          // it; a disconnected socket resumes the IPC-local lifecycle.
-          deviceGatewayConnected: getElectronStoreState().gatewayConnectionStatus === 'connected',
+          // Resume takes the same transport the original send resolved — a
+          // desktop `local` run admitted through the gateway resumes through
+          // it. Socket state no longer reroutes to an IPC-local lifecycle:
+          // unreachable devices surface as blocked/unknown instead.
           executionTarget: agencyConfig?.executionTarget,
           heterogeneousProvider: agencyConfig?.heterogeneousProvider,
           isGatewayMode: this.#get().isGatewayModeEnabled(context.agentId),

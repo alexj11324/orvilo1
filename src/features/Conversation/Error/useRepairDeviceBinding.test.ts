@@ -4,82 +4,93 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRepairDeviceBinding } from './useRepairDeviceBinding';
 
 const state = vi.hoisted(() => ({
-  agencyConfig: {
-    boundDeviceId: 'old-device',
-    executionTarget: 'sandbox' as const,
-    localSandbox: false,
-    localSandboxNetwork: true,
-  },
   chat: {
-    updateTopicMetadata: vi.fn(),
+    internal_dispatchTopic: vi.fn(),
+  },
+  lambdaClient: {
+    topic: {
+      repairDeviceBinding: { mutate: vi.fn() },
+    },
   },
   topicService: {
     getTopicDetail: vi.fn(),
   },
 }));
 
-vi.mock('@/hooks/useTopicAgencyConfig', () => ({
-  useTopicAgencyConfig: () => ({ agencyConfig: state.agencyConfig }),
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: state.lambdaClient,
 }));
 
 vi.mock('@/store/chat', () => ({
-  useChatStore: Object.assign(
-    (selector: (s: typeof state.chat) => unknown) => selector(state.chat),
-    { getState: () => state.chat },
-  ),
+  getChatStoreState: () => state.chat,
 }));
 
 vi.mock('@/services/topic', () => ({
   topicService: state.topicService,
 }));
 
-const topicWithBinding = (boundDeviceId?: string) => ({
-  id: 'topic-1',
-  metadata: {
-    boundDeviceId,
-    executionConfig: boundDeviceId ? { boundDeviceId, executionTarget: 'device' } : {},
-    heteroSessionBindingKey: 'key-old',
-    heteroSessionBindingKeyByWorkingDirectory: { '/w': 'key-old' },
-    heteroSessionId: 'session-old',
-    heteroSessionIdByWorkingDirectory: { '/w': 'session-old' },
-  },
-});
-
 describe('useRepairDeviceBinding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    state.chat.updateTopicMetadata.mockResolvedValue(undefined);
-    state.topicService.getTopicDetail.mockResolvedValue(topicWithBinding('old-device'));
+    state.lambdaClient.topic.repairDeviceBinding.mutate.mockResolvedValue({
+      bindingRevision: 2,
+      boundDeviceId: 'new-device',
+      outcome: 'repaired',
+    });
+    state.topicService.getTopicDetail.mockResolvedValue({
+      id: 'topic-1',
+      metadata: {
+        bindingRevision: 2,
+        boundDeviceId: 'new-device',
+        executionConfig: { boundDeviceId: 'new-device', executionTarget: 'device' },
+      },
+      status: 'idle',
+    });
   });
 
-  it('writes the canonical binding triple when the stored binding still matches', async () => {
+  it('forwards device + expected binding + revision to the server CAS endpoint', async () => {
     const { result } = renderHook(() => useRepairDeviceBinding('agent'));
     await expect(
       result.current({
         deviceId: 'new-device',
+        expectedBindingRevision: 1,
         expectedBoundDeviceId: 'old-device',
         topicId: 'topic-1',
       }),
     ).resolves.toBe('repaired');
 
-    expect(state.chat.updateTopicMetadata).toHaveBeenCalledWith('topic-1', {
-      boundDeviceId: 'new-device',
-      executionConfig: {
-        boundDeviceId: 'new-device',
-        executionTarget: 'device',
-        inheritWorkspaceScope: false,
-        localSandbox: false,
-        localSandboxNetwork: true,
-      },
-      heteroSessionBindingKey: '',
-      heteroSessionBindingKeyByWorkingDirectory: {},
-      heteroSessionId: '',
-      heteroSessionIdByWorkingDirectory: {},
+    expect(state.lambdaClient.topic.repairDeviceBinding.mutate).toHaveBeenCalledWith({
+      deviceId: 'new-device',
+      expectedBindingRevision: 1,
+      expectedBoundDeviceId: 'old-device',
+      id: 'topic-1',
     });
   });
 
-  it('refuses to clobber a binding that changed underneath (CAS mismatch)', async () => {
-    state.topicService.getTopicDetail.mockResolvedValue(topicWithBinding('other-device'));
+  it('folds the fresh server row into the topic store on success', async () => {
+    const { result } = renderHook(() => useRepairDeviceBinding('agent'));
+    await result.current({ deviceId: 'new-device', topicId: 'topic-1' });
+
+    expect(state.topicService.getTopicDetail).toHaveBeenCalledWith('topic-1');
+    expect(state.chat.internal_dispatchTopic).toHaveBeenCalledWith(
+      {
+        id: 'topic-1',
+        type: 'updateTopic',
+        value: {
+          metadata: expect.objectContaining({ boundDeviceId: 'new-device' }),
+          status: 'idle',
+        },
+      },
+      'repairDeviceBinding',
+    );
+  });
+
+  it('returns binding-changed when the server CAS loses — never an overwrite', async () => {
+    state.lambdaClient.topic.repairDeviceBinding.mutate.mockResolvedValue({
+      bindingRevision: 3,
+      boundDeviceId: 'winner-device',
+      outcome: 'binding-changed',
+    });
     const { result } = renderHook(() => useRepairDeviceBinding('agent'));
     await expect(
       result.current({
@@ -88,69 +99,41 @@ describe('useRepairDeviceBinding', () => {
         topicId: 'topic-1',
       }),
     ).resolves.toBe('binding-changed');
-    expect(state.chat.updateTopicMetadata).not.toHaveBeenCalled();
+    // The store is NOT patched with a stale read on a lost race.
+    expect(state.topicService.getTopicDetail).not.toHaveBeenCalled();
+    expect(state.chat.internal_dispatchTopic).not.toHaveBeenCalled();
   });
 
-  it('refuses when the topic vanished', async () => {
-    state.topicService.getTopicDetail.mockResolvedValue(null);
-    const { result } = renderHook(() => useRepairDeviceBinding('agent'));
-    await expect(
-      result.current({
-        deviceId: 'new-device',
-        expectedBoundDeviceId: 'old-device',
-        topicId: 'topic-1',
-      }),
-    ).resolves.toBe('binding-changed');
-    expect(state.chat.updateTopicMetadata).not.toHaveBeenCalled();
-  });
-
-  it('repairs a selection-required state only while still unbound', async () => {
-    state.topicService.getTopicDetail.mockResolvedValue(topicWithBinding(undefined));
+  it('selection-required repair works with no expected binding at all', async () => {
     const { result } = renderHook(() => useRepairDeviceBinding('agent'));
     await expect(result.current({ deviceId: 'new-device', topicId: 'topic-1' })).resolves.toBe(
       'repaired',
     );
-    expect(state.chat.updateTopicMetadata).toHaveBeenCalledWith(
-      'topic-1',
-      expect.objectContaining({ boundDeviceId: 'new-device' }),
-    );
+    expect(state.lambdaClient.topic.repairDeviceBinding.mutate).toHaveBeenCalledWith({
+      deviceId: 'new-device',
+      expectedBindingRevision: undefined,
+      expectedBoundDeviceId: undefined,
+      id: 'topic-1',
+    });
   });
 
-  it('refuses to write over a binding that arrived after the unbound error', async () => {
-    state.topicService.getTopicDetail.mockResolvedValue(topicWithBinding('surprise-device'));
+  it('propagates server rejections (authz / validation) — never swallowed as binding-changed', async () => {
+    state.lambdaClient.topic.repairDeviceBinding.mutate.mockRejectedValue(
+      new Error('The requested device is not in your authorized device registry.'),
+    );
+    const { result } = renderHook(() => useRepairDeviceBinding('agent'));
+    await expect(result.current({ deviceId: 'new-device', topicId: 'topic-1' })).rejects.toThrow(
+      'authorized device registry',
+    );
+    expect(state.chat.internal_dispatchTopic).not.toHaveBeenCalled();
+  });
+
+  it('still reports repaired when the post-repair display fetch misses', async () => {
+    state.topicService.getTopicDetail.mockResolvedValue(null);
     const { result } = renderHook(() => useRepairDeviceBinding('agent'));
     await expect(result.current({ deviceId: 'new-device', topicId: 'topic-1' })).resolves.toBe(
-      'binding-changed',
+      'repaired',
     );
-    expect(state.chat.updateTopicMetadata).not.toHaveBeenCalled();
-  });
-
-  it('reads the legacy top-level binding when executionConfig lacks one', async () => {
-    state.topicService.getTopicDetail.mockResolvedValue({
-      id: 'topic-1',
-      metadata: { boundDeviceId: 'old-device' },
-    });
-    const { result } = renderHook(() => useRepairDeviceBinding('agent'));
-    await expect(
-      result.current({
-        deviceId: 'new-device',
-        expectedBoundDeviceId: 'old-device',
-        topicId: 'topic-1',
-      }),
-    ).resolves.toBe('repaired');
-  });
-
-  it('clears every heteroSession* handle — never reuses another device session', async () => {
-    const { result } = renderHook(() => useRepairDeviceBinding('agent'));
-    await result.current({
-      deviceId: 'new-device',
-      expectedBoundDeviceId: 'old-device',
-      topicId: 'topic-1',
-    });
-    const metadata = state.chat.updateTopicMetadata.mock.calls[0][1];
-    expect(metadata.heteroSessionId).toBe('');
-    expect(metadata.heteroSessionBindingKey).toBe('');
-    expect(metadata.heteroSessionIdByWorkingDirectory).toEqual({});
-    expect(metadata.heteroSessionBindingKeyByWorkingDirectory).toEqual({});
+    expect(state.chat.internal_dispatchTopic).not.toHaveBeenCalled();
   });
 });

@@ -1,80 +1,77 @@
-import { snapshotTopicExecutionConfig } from '@orvilo/types';
 import { useCallback } from 'react';
 
-import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
+import { lambdaClient } from '@/libs/trpc/client';
 import { topicService } from '@/services/topic';
-import { useChatStore } from '@/store/chat';
+import { getChatStoreState } from '@/store/chat';
 
 export type RepairDeviceBindingResult = 'repaired' | 'binding-changed';
-
-const storedBindingOf = (metadata: {
-  boundDeviceId?: string;
-  executionConfig?: { boundDeviceId?: string };
-}) => metadata.executionConfig?.boundDeviceId ?? metadata.boundDeviceId;
 
 /**
  * Repair write for a blocked run's device binding (`DEVICE_BINDING_INVALID` /
  * `DEVICE_BINDING_CONFLICT` / selection-required codes).
  *
- * The binding the admission contract enforces is the canonical triple the
- * server's first-bind CAS (`bindTopicDeviceAtomically`) writes — topic
- * `metadata.executionConfig.boundDeviceId` + `executionTarget: 'device'` +
- * the legacy top-level `metadata.boundDeviceId` — so the repair writes the
- * same shape. Clearing the `heteroSession*` handles makes the next run mint a
- * NEW execution session on the repaired device: reusing another device's
- * native session id under a relabeled config is exactly what the admission
- * layer rejects.
+ * The write is delegated to the server's CAS endpoint
+ * `topic.repairDeviceBinding` — the same server-side CAS class
+ * `bindTopicDeviceAtomically` uses for first-bind. The server owns the
+ * canonical triple write (`metadata.executionConfig.boundDeviceId` +
+ * `executionTarget: 'device'` + the legacy top-level `boundDeviceId`), the
+ * `bindingRevision++` epoch stamp, `heteroSession*` cleanup (a repaired
+ * binding must mint a NEW execution session — reusing another device's
+ * native session id under a relabeled config is exactly what admission
+ * rejects) and the workspace audit row.
  *
- * Compare-and-swap: no server-side repair CAS exists yet (requested —
- * `topic.updateTopicMetadata` is a plain merge). Until then the client
- * approximates atomicity with a fresh read (`getTopicDetail` bypasses the
- * topic list's stale window) + verify against `expectedBoundDeviceId`, and
- * refuses to clobber a binding that changed underneath it.
+ * The client only forwards the binding + revision the admission error showed:
+ * a binding that moved underneath returns `binding-changed` with the winner's
+ * pin, never an overwrite. On success the fresh topic row folds into the
+ * store through the same `internal_dispatchTopic` funnel every server-sourced
+ * row uses, so the displayed binding reflects the repair.
  */
-export const useRepairDeviceBinding = (agentId: string) => {
-  const updateTopicMetadata = useChatStore((s) => s.updateTopicMetadata);
-  const { agencyConfig } = useTopicAgencyConfig(agentId);
-
-  return useCallback(
+export const useRepairDeviceBinding = (_agentId: string) =>
+  useCallback(
     async ({
-      expectedBoundDeviceId,
       deviceId,
+      expectedBindingRevision,
+      expectedBoundDeviceId,
       topicId,
     }: {
       /** The device to bind — must be one of the admission repair candidates. */
       deviceId: string;
       /**
+       * The `metadata.bindingRevision` epoch the admission error echoed back
+       * (`errorData.bindingRevision`). Passed through verbatim — the server
+       * CAS requires it when present; pre-revision errors may omit it.
+       */
+      expectedBindingRevision?: number;
+      /**
        * The binding the admission error observed (`errorData.deviceId`) —
-       * `undefined` when the block was "nothing bound yet". The write is
-       * refused if the topic's stored binding moved since.
+       * `undefined` when the block was "nothing bound yet". The CAS compares
+       * it either way, so a stale expectation loses honestly.
        */
       expectedBoundDeviceId?: string;
       topicId: string;
     }): Promise<RepairDeviceBindingResult> => {
-      const fresh = await topicService.getTopicDetail(topicId);
-      if (!fresh) return 'binding-changed';
-      const current = storedBindingOf(fresh.metadata ?? {});
-      if (current !== expectedBoundDeviceId) return 'binding-changed';
-
-      await updateTopicMetadata(topicId, {
-        // Canonical binding triple — same shape `bindTopicDeviceAtomically`
-        // persists on the server.
-        boundDeviceId: deviceId,
-        executionConfig: {
-          ...snapshotTopicExecutionConfig(agencyConfig),
-          inheritWorkspaceScope: false,
-          boundDeviceId: deviceId,
-          executionTarget: 'device',
-        },
-        // Repaired binding ⇒ next run builds a new execution session/context;
-        // the old device's native session must not be resurrected.
-        heteroSessionBindingKey: '',
-        heteroSessionBindingKeyByWorkingDirectory: {},
-        heteroSessionId: '',
-        heteroSessionIdByWorkingDirectory: {},
+      const result = await lambdaClient.topic.repairDeviceBinding.mutate({
+        deviceId,
+        expectedBindingRevision,
+        expectedBoundDeviceId,
+        id: topicId,
       });
+      if (result.outcome === 'binding-changed') return 'binding-changed';
+
+      // Fold the server's fresh row into the store — the binding every
+      // surface displays must reflect the repair, not the pre-repair pin.
+      const fresh = await topicService.getTopicDetail(topicId);
+      if (fresh) {
+        getChatStoreState().internal_dispatchTopic(
+          {
+            id: topicId,
+            type: 'updateTopic',
+            value: { metadata: fresh.metadata, status: fresh.status },
+          },
+          'repairDeviceBinding',
+        );
+      }
       return 'repaired';
     },
-    [agencyConfig, updateTopicMetadata],
+    [],
   );
-};

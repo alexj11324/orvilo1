@@ -9,7 +9,7 @@ import { isLocalOrPrivateUrl, safeParseJSON } from '@orvilo/utils';
 import { deserializeMcpIpcPayload, serializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 
 import { type MCPToolCallResult } from '@/libs/mcp';
-import { toolsClient } from '@/libs/trpc/client';
+import { lambdaClient, toolsClient } from '@/libs/trpc/client';
 import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import {
   TargetQueryFailedError,
@@ -31,8 +31,9 @@ import { discoverService } from './discover';
  *   connector sync, connection tests). Identity is still re-verified; an
  *   unprovable local device fails as `TARGET_REQUIRED`, never silently local.
  * - `{kind:'device'}` — a named registered device. Local transport only when
- *   the id matches this host's proven id; a foreign device has no client-side
- *   MCP device-RPC yet → honest `OPERATION_UNSUPPORTED`.
+ *   the id matches this host's proven id; a foreign device goes through the
+ *   server-side gateway RPC relay (`lambdaClient.device.*`) so the call lands
+ *   on the machine the scope actually named.
  * - `{kind:'topic'}` — a run/conversation: the persisted device binding
  *   (`metadata.executionConfig.boundDeviceId`, legacy `metadata.boundDeviceId`)
  *   decides. Bound → that device; authoritatively unbound → the client-executor
@@ -129,21 +130,27 @@ type McpResolvedTarget =
   | { kind: 'unset' };
 
 /**
- * The device's own answer for an operation it cannot run through this client:
- * a bound remote device has no renderer-reachable MCP RPC yet (the gateway
- * tunnel is server-side only, inside dispatched runs), so this is
- * `OPERATION_UNSUPPORTED` in result form — never a silent empty result and
- * never a wrong-machine fallback.
+ * Map a tunneled `DeviceToolCallResult` onto the caller-facing
+ * `MCPToolCallResult`. Transport failures keep their normalized
+ * `errorCode` (DEVICE_* / GATEWAY_NOT_CONFIGURED) so callers can tell
+ * "never delivered" from a real tool error — never a fabricated success.
  */
-const deviceScopedMcpUnsupported = (deviceId: string, identifier: string): MCPToolCallResult => {
-  const message =
-    `MCP server '${identifier}' runs on the bound device (${deviceId}), but this ` +
-    'client has no device-RPC channel for MCP yet — the tool can only run inside ' +
-    'an agent run dispatched to that device.';
+const deviceMcpCallResult = (
+  deviceId: string,
+  res: { content: string; error?: string; errorCode?: string; state?: unknown; success: boolean },
+): MCPToolCallResult => {
+  if (res.success) {
+    return {
+      content: res.content,
+      state: res.state as MCPToolCallResult['state'],
+      success: true,
+    };
+  }
+  const message = res.error ?? res.content;
   return {
-    content: message,
-    error: { code: 'OPERATION_UNSUPPORTED', deviceId, message },
-    state: { content: [{ text: message, type: 'text' }], isError: true },
+    content: res.content || message,
+    error: { code: res.errorCode ?? 'DEVICE_CALL_FAILED', deviceId, message },
+    state: { content: [{ text: res.content || message, type: 'text' }], isError: true },
     success: false,
   };
 };
@@ -230,10 +237,11 @@ class MCPService {
   }
 
   /**
-   * Terminal failure for a device-scoped query the local IPC could not serve:
-   * a foreign device → `OPERATION_UNSUPPORTED` (no client MCP device-RPC yet),
-   * an unreadable binding → `TARGET_QUERY_FAILED`, an unproven local target or
-   * a missing scope → `TARGET_REQUIRED`. Never a wrong-machine fallback.
+   * Terminal failure for a device-scoped query no transport could serve:
+   * a foreign device routes through the server-side gateway RPC (never
+   * thrown here), an unreadable binding → `TARGET_QUERY_FAILED`, an
+   * unproven local target or a missing scope → `TARGET_REQUIRED`. Never a
+   * wrong-machine fallback.
    */
   #throwForUnresolvedTarget(target: McpResolvedTarget, operation: string): never {
     if (target.kind === 'device') {
@@ -347,10 +355,41 @@ class MCPService {
     const useLocalIpc = isDeviceScoped && !!target && (await this.#canUseLocalIpc(target));
 
     if (isDeviceScoped && !useLocalIpc && target) {
-      if (target.kind === 'device') return deviceScopedMcpUnsupported(target.deviceId, identifier);
       if (target.kind === 'query-failed')
         return mcpTargetQueryFailed(identifier, `invokeMcpToolCall(${apiName})`);
-      throw new TargetRequiredError(`invokeMcpToolCall(${identifier}/${apiName})`);
+      if (target.kind !== 'device') {
+        throw new TargetRequiredError(`invokeMcpToolCall(${identifier}/${apiName})`);
+      }
+      // The bound device is remote: tunnel the call through the server-side
+      // gateway relay (`type:'mcp'`) — the device spawns the stdio binary or
+      // reaches the LAN endpoint in ITS space. No local stand-in, ever.
+      const gatewayParams =
+        connection?.type === 'stdio'
+          ? {
+              args: (params.args as string[] | undefined) ?? [],
+              command: params.command as string,
+              env: params.env as Record<string, string> | undefined,
+              name: identifier,
+              type: 'stdio' as const,
+            }
+          : {
+              auth: params.auth,
+              headers: params.headers as Record<string, string> | undefined,
+              name: identifier,
+              type: 'http' as const,
+              url: params.url as string,
+            };
+      const res = await lambdaClient.device.callMcpTool.mutate(
+        {
+          apiName,
+          arguments: JSON.stringify(safeParseJSON(args) ?? {}),
+          deviceId: target.deviceId,
+          identifier,
+          params: gatewayParams,
+        },
+        { signal },
+      );
+      return deviceMcpCallResult(target.deviceId, res);
     }
 
     // Build meta for server-side reporting
@@ -433,10 +472,10 @@ class MCPService {
 
     // A localhost / LAN URL must be probed in the NETWORK SPACE of the
     // connecting device — on the proven-local device via IPC (the backend's
-    // fetch cannot reach the viewer's localhost). A bound remote device has no
-    // client-side device-RPC yet → structured unsupported. An unreadable
-    // binding or a missing scope fails the same way every device-scoped
-    // endpoint does — never the local host as a stand-in.
+    // fetch cannot reach the viewer's localhost), on a bound remote device
+    // via the server-side gateway RPC relay. An unreadable binding or a
+    // missing scope fails the same way every device-scoped endpoint does —
+    // never the local host as a stand-in.
     if (isLocalOrPrivateUrl(params.url)) {
       const target = await this.#resolveTarget(normalizeMcpScope(resolvedOptions));
       if (await this.#canUseLocalIpc(target)) {
@@ -446,6 +485,12 @@ class MCPService {
           serialized as any,
         );
         return deserializeMcpIpcPayload(serializedResult) as any;
+      }
+      if (target.kind === 'device') {
+        return lambdaClient.device.getStreamableMcpServerManifest.query(
+          { deviceId: target.deviceId, input: params },
+          { signal },
+        );
       }
       this.#throwForUnresolvedTarget(target, 'getStreamableMcpServerManifest');
     }
@@ -468,11 +513,17 @@ class MCPService {
     const resolvedOptions = normalizeScopeOptions<McpQueryScopeOptions>(options);
 
     // stdio probes the device that will run the command: the proven-local
-    // device over IPC, a bound remote device is unsupported (no device RPC),
-    // an unreadable binding or missing scope is a failed query — never a
-    // silent local probe on a machine the operation does not target.
+    // device over IPC, a bound remote device over the server-side gateway
+    // RPC relay; an unreadable binding or missing scope is a failed query —
+    // never a silent local probe on a machine the operation does not target.
     const target = await this.#resolveTarget(normalizeMcpScope(resolvedOptions));
     if (!(await this.#canUseLocalIpc(target))) {
+      if (target.kind === 'device') {
+        return lambdaClient.device.getStdioMcpServerManifest.query(
+          { deviceId: target.deviceId, input: { ...stdioParams, metadata } },
+          { signal: resolvedOptions.signal },
+        );
+      }
       this.#throwForUnresolvedTarget(target, 'getStdioMcpServerManifest');
     }
 
@@ -502,6 +553,15 @@ class MCPService {
 
     const target = await this.#resolveTarget(normalizeMcpScope(resolvedOptions));
     if (!(await this.#canUseLocalIpc(target))) {
+      if (target.kind === 'device') {
+        return (await lambdaClient.device.checkMcpInstallable.query(
+          {
+            deploymentOptions: manifest.deploymentOptions as any,
+            deviceId: target.deviceId,
+          },
+          { signal: resolvedOptions.signal },
+        )) as CheckMcpInstallResult;
+      }
       this.#throwForUnresolvedTarget(target, 'checkInstallation');
     }
 

@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
 import ActionIcon from '@/components/ActionIcon';
-import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';

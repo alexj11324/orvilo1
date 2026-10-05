@@ -1146,6 +1146,15 @@ export class AgentModel {
     const config = {
       agencyConfig: {
         ...agency,
+        // `resolveAgentAgencyConfig` strips the stored selection policy on the
+        // owner path — it is a read-time view of the shared row, not the shape
+        // to persist. A copied/inherited runtime must carry the agent's stored
+        // workspace policy, so restore it from the source row.
+        ...(source.agencyConfig?.executionTargetSelectionPolicy
+          ? {
+              executionTargetSelectionPolicy: source.agencyConfig.executionTargetSelectionPolicy,
+            }
+          : {}),
         ...(options.deviceId
           ? { boundDeviceId: options.deviceId, executionTarget: 'device' as const }
           : {}),

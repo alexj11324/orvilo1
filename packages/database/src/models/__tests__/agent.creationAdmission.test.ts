@@ -141,7 +141,9 @@ describe('Agent creation admission', () => {
   it('refuses legacy metadata-only duplication while leaving existing name edits available', async () => {
     const [legacy] = await db.insert(agents).values({ title: 'Legacy', userId }).returning();
     await model.updateConfig(legacy.id, { name: 'My legacy name' });
-    await expect(model.duplicate(legacy.id)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(model.duplicate(legacy.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
     expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBe(
       'My legacy name',
     );

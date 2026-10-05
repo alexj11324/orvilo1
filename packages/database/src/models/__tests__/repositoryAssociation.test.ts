@@ -8,6 +8,7 @@ import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { RepositoryModel } from '../repository';
 import { TaskModel } from '../task';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 /**
  * Regression coverage for the auditable association lifecycle (WM-07):
@@ -45,6 +46,8 @@ beforeEach(async () => {
     name: 'Association Team',
     workspaceId,
   });
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(db, { userId, workspaceId });
 });
 
 afterEach(cleanup);

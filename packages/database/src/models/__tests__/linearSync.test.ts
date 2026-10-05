@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   agents,
+  credentials,
+  devices,
   linearExternalRelations,
   linearInstallations,
   linearIssueLinks,
@@ -14,6 +16,7 @@ import {
   linearSyncScopes,
   linearTeamLinks,
   projects,
+  providerBindings,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
@@ -55,6 +58,51 @@ beforeEach(async () => {
     name: 'Linear Sync Test Workspace',
     primaryOwnerId: userId,
     slug: workspaceId,
+  });
+  // Project creation provisions an agent through Prime runtime inheritance,
+  // which needs an owned orvilo agent backed by an armed binding and a
+  // resolvable bound host.
+  await db.insert(credentials).values({
+    id: `cred_${userId}`,
+    key: `test-${userId}`,
+    name: 'Fixture credential',
+    ownerUserId: userId,
+    payload: 'encrypted-test-fixture',
+    type: 'kv-env' as const,
+  });
+  await db.insert(providerBindings).values({
+    config: {
+      enabled: true,
+      endpoint: 'https://provider.example/v1',
+      model: 'gpt-4',
+      provider: 'openai',
+      secretReference: `credential:cred_${userId}`,
+      selection: {
+        mode: 'default' as const,
+        runtime: 'orvilo' as const,
+        speed: 'default' as const,
+        target: 'sandbox' as const,
+      },
+    },
+    userId,
+  });
+  await db.insert(devices).values({
+    deviceId: `creation-host-${workspaceId}`,
+    identitySource: 'installation',
+    userId,
+    visibility: 'public',
+    workspaceId,
+  });
+  await db.insert(agents).values({
+    agencyConfig: {
+      boundDeviceId: `creation-host-${workspaceId}`,
+      executionTarget: 'device',
+      heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' },
+    },
+    model: 'gpt-4',
+    provider: 'openai',
+    title: 'Prime Seed',
+    userId,
   });
 });
 

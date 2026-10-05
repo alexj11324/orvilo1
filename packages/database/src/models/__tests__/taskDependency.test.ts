@@ -18,6 +18,7 @@ import { LinearSyncModel } from '../linearSync';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 const db = await getTestDB();
 const userId = 'prerequisites-user';
@@ -249,6 +250,8 @@ describe('task prerequisite invariants', () => {
       organizationId: 'linear-related-org',
       workspaceId,
     });
+    // Project creation provisions a coordinator through Prime inheritance.
+    await seedPrimeRuntime(db, { userId, workspaceId });
     const project = await new ProjectModel(db, userId, workspaceId).create({
       identifier: 'REL',
       name: 'Related sync',

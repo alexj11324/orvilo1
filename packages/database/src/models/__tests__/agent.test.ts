@@ -215,9 +215,9 @@ describe('AgentModel', () => {
       await expect(agentModel.create(config)).rejects.toThrow(
         /Unsupported agent runtime|Unknown heterogeneous agent type/,
       );
-      await expect(agentModel.batchCreate([{ title: 'Orvilo' }, config])).rejects.toThrow(
-        /Unsupported agent runtime|Unknown heterogeneous agent type/,
-      );
+      await expect(
+        agentModel.batchCreate([await withRuntime({ title: 'Orvilo' }), config]),
+      ).rejects.toThrow(/Unsupported agent runtime|Unknown heterogeneous agent type/);
       expect(await serverDB.select().from(agents)).toHaveLength(0);
     });
 
@@ -232,7 +232,7 @@ describe('AgentModel', () => {
     );
 
     it('keeps the runtime icon when an agent is renamed or given a custom avatar', async () => {
-      const agent = await agentModel.create({ title: 'OA', avatar: '🐱' });
+      const agent = await agentModel.create(await withRuntime({ title: 'OA', avatar: '🐱' }));
       expect(agent.avatar).toBe('/app-icons/icon-512x512.png');
       await agentModel.update(agent.id, { title: 'DR', avatar: 'DR' });
       let [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
@@ -244,11 +244,13 @@ describe('AgentModel', () => {
     });
 
     it('uses the imported runtime brand regardless of its display name', async () => {
-      const agent = await agentModel.create({
-        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-        avatar: 'OA',
-        title: 'Custom name',
-      });
+      const agent = await agentModel.create(
+        await withRuntime({
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+          avatar: 'OA',
+          title: 'Custom name',
+        }),
+      );
       expect(agent.avatar).toContain('/avatars/claudecode.webp');
       await agentModel.updateConfig(agent.id, { title: 'Renamed', avatar: 'DR' });
       const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
@@ -257,18 +259,20 @@ describe('AgentModel', () => {
     });
 
     it('does not infer an imported runtime for a write missing its type', async () => {
-      const agent = await agentModel.create({ title: 'Orvilo' });
+      const agent = await agentModel.create(await withRuntime({ title: 'Orvilo' }));
       const invalid = { agencyConfig: { heterogeneousProvider: { command: 'claude' } } } as any;
       await expect(agentModel.create(invalid)).rejects.toThrow('Unsupported agent runtime');
-      await expect(agentModel.updateConfig(agent.id, invalid)).rejects.toThrow(
-        'Unsupported agent runtime',
+      // `updateConfig` merges into the persisted runtime, so the refusal boundary
+      // for a type-less replacement is the `update` path.
+      await expect(agentModel.update(agent.id, invalid)).rejects.toThrow(
+        /must use Orvilo or a supported external agent runtime|Unsupported agent runtime/,
       );
     });
 
     it('stamps the runtime brand when duplicating an older row with custom artwork', async () => {
       const [source] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Older', avatar: '⚡' })
+        .values({ ...(await withRuntime()), userId, title: 'Older', avatar: '⚡' })
         .returning();
       const copy = await agentModel.duplicate(source.id, 'Copy');
       const [saved] = await serverDB.select().from(agents).where(eq(agents.id, copy!.agentId));
@@ -282,9 +286,11 @@ describe('AgentModel', () => {
         const [source] = await serverDB
           .insert(agents)
           .values({
+            ...(await withRuntime({
+              agencyConfig: { heterogeneousProvider: { command: 'codex' } } as any,
+              title: 'Legacy Codex',
+            })),
             userId,
-            title: 'Legacy Codex',
-            agencyConfig: { heterogeneousProvider: { command: 'codex' } } as any,
           })
           .returning();
         let savedId = source.id;
@@ -303,9 +309,11 @@ describe('AgentModel', () => {
     );
 
     it('merges an effort-only provider patch with the persisted runtime type', async () => {
-      const agent = await agentModel.create({
-        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-      });
+      const agent = await agentModel.create(
+        await withRuntime({
+          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        }),
+      );
       await agentModel.updateConfig(agent.id, {
         agencyConfig: { heterogeneousProvider: { effort: 'high' } },
       });
@@ -325,14 +333,16 @@ describe('AgentModel', () => {
     ])(
       'rejects malformed replacement or partial config %j without changing the persisted Codex runtime',
       async (agencyConfig) => {
-        const agent = await agentModel.create({
-          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-        });
+        const agent = await agentModel.create(
+          await withRuntime({
+            agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+          }),
+        );
         await expect(agentModel.update(agent.id, { agencyConfig } as any)).rejects.toThrow(
-          /Unsupported agent runtime/,
+          /must use Orvilo or a supported external agent runtime|Unsupported agent runtime/,
         );
         await expect(agentModel.updateConfig(agent.id, { agencyConfig } as any)).rejects.toThrow(
-          /Unsupported agent runtime/,
+          /must use Orvilo or a supported external agent runtime|Unsupported agent runtime/,
         );
         const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
         expect(saved.agencyConfig?.heterogeneousProvider?.type).toBe('codex');
@@ -340,16 +350,16 @@ describe('AgentModel', () => {
     );
 
     it('refuses invalid runtime changes through both update paths', async () => {
-      const agent = await agentModel.create({ title: 'Orvilo' });
+      const agent = await agentModel.create(await withRuntime({ title: 'Orvilo' }));
       const invalid = { agencyConfig: { heterogeneousProvider: { type: 'made-up-agent' } } } as any;
       await expect(agentModel.update(agent.id, invalid)).rejects.toThrow(
-        /Unsupported agent runtime|Unknown heterogeneous agent type/,
+        /must use Orvilo or a supported external agent runtime|Unknown heterogeneous agent type/,
       );
       await expect(agentModel.updateConfig(agent.id, invalid)).rejects.toThrow(
-        /Unsupported agent runtime|Unknown heterogeneous agent type/,
+        /must use Orvilo or a supported external agent runtime|Unknown heterogeneous agent type/,
       );
       const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
-      expect(saved.agencyConfig?.heterogeneousProvider).toBeUndefined();
+      expect(saved.agencyConfig?.heterogeneousProvider?.type).toBe('orvilo');
     });
   });
 
@@ -1833,6 +1843,7 @@ describe('AgentModel', () => {
         boundDeviceId: `creation-host-${workspace.id}`,
         executionTarget: 'device',
         executionTargetSelectionPolicy: 'member',
+        heterogeneousProvider: { type: 'orvilo' },
         modelSelectionPolicy: 'member',
         topicSharePolicy: 'member',
       });
@@ -2752,7 +2763,12 @@ describe('AgentModel', () => {
         userId,
         virtual: false,
       });
-      await agentModel.create(await withRuntime({ title: 'Normal Agent', virtual: false }));
+      await serverDB.insert(agents).values({
+        id: 'normal-agent',
+        title: 'Normal Agent',
+        userId,
+        virtual: false,
+      });
 
       const result = await agentModel.queryAgents();
 

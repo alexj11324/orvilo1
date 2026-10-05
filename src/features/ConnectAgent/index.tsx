@@ -45,6 +45,7 @@ import {
   type FirstAgentCreationCheckpoint,
 } from '@/services/agentOnboarding';
 import { deviceService } from '@/services/device';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { useAgentStore } from '@/store/agent';
 import { heteroAgentDefaultName } from '@/store/agent/utils/heteroAgentDefaultName';
 import { useElectronStore } from '@/store/electron';
@@ -535,13 +536,16 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           isRemoteHeterogeneousType(provider.type) &&
           !profiles[provider.type]
         ) {
-          const deviceId = target?.kind === 'device' ? target.device.deviceId : currentDeviceId;
-          if (!deviceId) return;
           const platform = provider.type;
-          void deviceService
-            .getAgentProfile({ deviceId, platform })
-            .then((profile) => setProfiles((prev) => ({ ...prev, [platform]: profile })))
-            .catch(() => {});
+          void (async () => {
+            const deviceId =
+              target?.kind === 'device'
+                ? target.device.deviceId
+                : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
+            if (!deviceId) return;
+            const profile = await deviceService.getAgentProfile({ deviceId, platform });
+            setProfiles((prev) => ({ ...prev, [platform]: profile }));
+          })().catch(() => {});
         }
       },
       [creationCheckpoint, currentDeviceId, profiles, target],
@@ -560,7 +564,17 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     }, [activeWorkspaceId, profiles, single, visibility]);
 
     const buildCreateParams = useCallback(
-      (provider: ConnectableProvider, overrides?: { description?: string; name?: string }) => {
+      async (
+        provider: ConnectableProvider,
+        overrides?: { description?: string; name?: string },
+      ) => {
+        // A local target binds this computer's device: the electron-store
+        // snapshot can be absent before the gateway handshake lands, so fall
+        // back to the proven identity owner instead of shipping an empty id.
+        const localDeviceId =
+          target?.kind === 'device'
+            ? target.device.deviceId
+            : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
         return {
           config: buildConnectAgentConfig({
             overrides,
@@ -569,7 +583,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             target:
               target?.kind === 'device'
                 ? { deviceId: target.device.deviceId, kind: 'device' }
-                : { deviceId: currentDeviceId, kind: 'local' },
+                : { deviceId: localDeviceId, kind: 'local' },
           }),
           groupId,
           visibility,
@@ -586,7 +600,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         try {
           const created = await Promise.all(
             selectedProviders.map(async (provider) => {
-              const params = buildCreateParams(
+              const params = await buildCreateParams(
                 provider,
                 provider === single ? overrides : undefined,
               );

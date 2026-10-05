@@ -24,6 +24,7 @@ import { ProjectModel } from '../project';
 import { taskActivityActor, TaskModel } from '../task';
 import { legacyStatusExpr } from '../taskExecutionSql';
 import { WorkModel } from '../work';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 
@@ -78,6 +79,8 @@ const derivedStatus = async (id: string) => {
 beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId });
 });
 
 afterEach(async () => {

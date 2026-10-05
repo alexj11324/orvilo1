@@ -8,6 +8,7 @@ import type { OrviloDatabase } from '../../type';
 import { AcceptanceModel } from '../acceptance';
 import { ProjectModel } from '../project';
 import { VerifyRunModel } from '../verifyRun';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 
@@ -19,6 +20,8 @@ beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
   await serverDB.insert(topics).values([{ id: topicId, userId }]);
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId });
 });
 
 afterEach(async () => {

@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import type { NewAgent } from '../../schemas';
 import {
   agentCronJobs,
   agentDocuments,
@@ -14,6 +15,7 @@ import {
   briefs,
   chatGroups,
   chatGroupsAgents,
+  devices,
   documentHistories,
   documents,
   expertiseBindings,
@@ -64,6 +66,50 @@ beforeEach(async () => {
     { id: wsId1, name: 'WS 1', slug: 'ws-1', primaryOwnerId: userId },
     { id: wsId2, name: 'WS 2', slug: 'ws-2', primaryOwnerId: targetUserId },
   ]);
+  // Runtime creation admission requires a resolvable bound host. Personal
+  // agents bind the actor's unfiled device; workspace-public agents bind a
+  // public device inside the workspace.
+  await serverDB.insert(devices).values([
+    {
+      deviceId: `creation-host-${userId}`,
+      identitySource: 'installation',
+      userId,
+      visibility: 'private',
+    },
+    {
+      deviceId: `creation-host-${targetUserId}`,
+      identitySource: 'installation',
+      userId: targetUserId,
+      visibility: 'private',
+    },
+    {
+      deviceId: `creation-host-${wsId1}`,
+      identitySource: 'installation',
+      userId,
+      visibility: 'public',
+      workspaceId: wsId1,
+    },
+    {
+      deviceId: `creation-host-${wsId2}`,
+      identitySource: 'installation',
+      userId,
+      visibility: 'public',
+      workspaceId: wsId2,
+    },
+  ]);
+});
+
+// A codex-typed runtime satisfies admission with a host binding alone, so the
+// fixtures need no provider bindings. `actor`/`workspaceId` mirror the scope
+// of the AgentModel being exercised.
+const withRuntime = (config: Partial<NewAgent> = {}, actor = userId, workspaceId?: string) => ({
+  ...config,
+  agencyConfig: {
+    boundDeviceId: `creation-host-${workspaceId ?? actor}`,
+    executionTarget: 'device' as const,
+    heterogeneousProvider: { type: 'codex' as const },
+    ...config.agencyConfig,
+  },
 });
 
 afterEach(async () => {
@@ -73,7 +119,7 @@ afterEach(async () => {
 describe('AgentModel.transferAgent', () => {
   it('should transfer agent from personal to workspace', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Test Agent', slug: 'test-agent' });
+    const agent = await model.create(withRuntime({ title: 'Test Agent', slug: 'test-agent' }));
 
     const result = await model.transferAgent(agent.id, wsId1, userId);
 
@@ -88,7 +134,9 @@ describe('AgentModel.transferAgent', () => {
 
   it('should transfer agent from workspace to personal', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'WS Agent', slug: 'ws-agent' });
+    const agent = await model.create(
+      withRuntime({ title: 'WS Agent', slug: 'ws-agent' }, userId, wsId1),
+    );
 
     const result = await model.transferAgent(agent.id, null, userId);
 
@@ -103,7 +151,9 @@ describe('AgentModel.transferAgent', () => {
 
   it('should transfer agent between workspaces', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'WS1 Agent', slug: 'ws1-agent' });
+    const agent = await model.create(
+      withRuntime({ title: 'WS1 Agent', slug: 'ws1-agent' }, userId, wsId1),
+    );
 
     const result = await model.transferAgent(agent.id, wsId2, userId);
 
@@ -117,11 +167,13 @@ describe('AgentModel.transferAgent', () => {
 
   it('should handle slug conflict by appending suffix', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent1 = await model.create({ title: 'Agent', slug: 'my-agent' });
+    const agent1 = await model.create(
+      withRuntime({ title: 'Agent', slug: 'my-agent' }, userId, wsId1),
+    );
 
     // Create an agent with the same slug in target workspace
     const model2 = new AgentModel(serverDB, userId, wsId2);
-    await model2.create({ title: 'Existing Agent', slug: 'my-agent' });
+    await model2.create(withRuntime({ title: 'Existing Agent', slug: 'my-agent' }, userId, wsId2));
 
     const result = await model.transferAgent(agent1.id, wsId2, userId);
 
@@ -135,7 +187,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should update related sessions and agentsToSessions', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Agent' });
+    const agent = await model.create(withRuntime({ title: 'Agent' }));
 
     // Create a session linked to the agent
     await serverDB.insert(sessions).values({ id: 'sess-1', userId, type: 'agent' });
@@ -157,7 +209,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should transfer agent-owned expertise and its learned content', async () => {
     const agentModel = new AgentModel(serverDB, userId, wsId1);
-    const agent = await agentModel.create({ title: 'Learning Agent' });
+    const agent = await agentModel.create(withRuntime({ title: 'Learning Agent' }, userId, wsId1));
     const expertiseModel = new ExpertiseModel(serverDB, userId, wsId1);
     const domainId = await expertiseModel.createDomain({
       agentId: agent.id,
@@ -239,7 +291,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should clear stale session group references on transfer', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Grouped Agent' });
+    const agent = await model.create(withRuntime({ title: 'Grouped Agent' }));
 
     // Personal-scope sidebar folder the agent and its session lived in
     await serverDB.insert(sessionGroups).values({ id: 'sg-personal', name: 'Folder', userId });
@@ -265,7 +317,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should update topics and messages', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Agent' });
+    const agent = await model.create(withRuntime({ title: 'Agent' }));
 
     await serverDB.insert(topics).values({ id: 'topic-1', agentId: agent.id, userId });
     await serverDB
@@ -284,7 +336,7 @@ describe('AgentModel.transferAgent', () => {
   it('should preserve content timestamps while transferring ownership', async () => {
     const originalUpdatedAt = new Date('2024-01-02T03:04:05.000Z');
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Historical Agent' });
+    const agent = await model.create(withRuntime({ title: 'Historical Agent' }));
 
     await serverDB
       .update(agents)
@@ -441,7 +493,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should move topic comments and mentions with the topic between workspaces', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'Commented Agent' });
+    const agent = await model.create(withRuntime({ title: 'Commented Agent' }, userId, wsId1));
     const originalCommentUpdatedAt = new Date('2024-01-02T03:04:05.000Z');
 
     await serverDB
@@ -479,7 +531,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should delete topic comments when transferring to personal scope', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'Commented Agent 2' });
+    const agent = await model.create(withRuntime({ title: 'Commented Agent 2' }, userId, wsId1));
 
     await serverDB
       .insert(topics)
@@ -525,7 +577,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should flag teammate-authored and orphaned comments as foreign rows', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'Guarded Agent' });
+    const agent = await model.create(withRuntime({ title: 'Guarded Agent' }, userId, wsId1));
 
     await serverDB
       .insert(topics)
@@ -575,7 +627,7 @@ describe('AgentModel.transferAgent', () => {
       for (let i = 0; i < trials; i++) {
         const model = new AgentModel(serverDB, userId, wsId1);
         const commenterModel = new TopicCommentModel(serverDB, targetUserId, wsId1);
-        const agent = await model.create({ title: `Race Agent ${i}` });
+        const agent = await model.create(withRuntime({ title: `Race Agent ${i}` }, userId, wsId1));
         const topicId = `transfer-comment-race-topic-${i}`;
         await serverDB.insert(topics).values({
           agentId: agent.id,
@@ -609,7 +661,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should transfer tasks assigned to the agent and their child records', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'Task Agent' });
+    const agent = await model.create(withRuntime({ title: 'Task Agent' }, userId, wsId1));
 
     await serverDB.insert(tasks).values([
       {
@@ -748,7 +800,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should cascade targetVisibility to moved tasks and their child rows', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Personal Agent' });
+    const agent = await model.create(withRuntime({ title: 'Personal Agent' }));
 
     await serverDB.insert(tasks).values({
       createdByAgentId: agent.id,
@@ -843,7 +895,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should not touch visibility when moving to personal scope', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'WS Agent' });
+    const agent = await model.create(withRuntime({ title: 'WS Agent' }, userId, wsId1));
 
     await serverDB.insert(tasks).values({
       createdByAgentId: agent.id,
@@ -866,7 +918,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('should remove chat group associations', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Agent' });
+    const agent = await model.create(withRuntime({ title: 'Agent' }));
 
     await serverDB.insert(chatGroups).values({ id: 'group-1', userId });
     await serverDB
@@ -887,12 +939,14 @@ describe('AgentModel.transferAgent', () => {
     // unconditionally, so the group lost its supervisor, and the next read
     // silently minted a blank replacement — systemRole, model and all.
     const model = new AgentModel(serverDB, userId);
-    const supervisor = await model.create({
-      model: 'gpt-5',
-      systemRole: 'You orchestrate the group',
-      title: 'Supervisor',
-      virtual: true,
-    });
+    const supervisor = await model.create(
+      withRuntime({
+        model: 'gpt-5',
+        systemRole: 'You orchestrate the group',
+        title: 'Supervisor',
+        virtual: true,
+      }),
+    );
 
     await serverDB.insert(chatGroups).values({ id: 'sup-group', title: 'Squad', userId });
     await serverDB.insert(chatGroupsAgents).values({
@@ -923,7 +977,9 @@ describe('AgentModel.transferAgent', () => {
 
   it('should refuse a supervisor row regardless of the agent flags', async () => {
     const model = new AgentModel(serverDB, userId);
-    const supervisor = await model.create({ title: 'Legacy Supervisor', virtual: true });
+    const supervisor = await model.create(
+      withRuntime({ title: 'Legacy Supervisor', virtual: true }),
+    );
 
     await serverDB.insert(chatGroups).values({ id: 'legacy-sup-group', title: 'Legacy', userId });
     await serverDB.insert(chatGroupsAgents).values({
@@ -940,7 +996,7 @@ describe('AgentModel.transferAgent', () => {
 
   it('getGroupMembershipImpact reports groups an agent would leave', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Joiner' });
+    const agent = await model.create(withRuntime({ title: 'Joiner' }));
 
     await serverDB.insert(chatGroups).values({ id: 'impact-group', title: 'Impact', userId });
     await serverDB.insert(chatGroupsAgents).values({
@@ -969,7 +1025,9 @@ describe('AgentModel.transferAgent', () => {
     // is asking — but the name of another member's private group is not the
     // caller's to read.
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'Shared', visibility: 'public' });
+    const agent = await model.create(
+      withRuntime({ title: 'Shared', visibility: 'public' }, userId, wsId1),
+    );
 
     await serverDB.insert(chatGroups).values({
       id: 'hidden-group',
@@ -1007,7 +1065,7 @@ describe('AgentModel.transferAgent', () => {
     // at all. The guard inside `transferAgents` is deliberately unscoped; this
     // read is not, and the difference has to hold at the model boundary.
     const owner = new AgentModel(serverDB, targetUserId);
-    const secret = await owner.create({ title: 'Not Yours' });
+    const secret = await owner.create(withRuntime({ title: 'Not Yours' }, targetUserId));
 
     await serverDB.insert(chatGroups).values({
       id: 'unseen-group',
@@ -1042,7 +1100,7 @@ describe('AgentModel.transferAgent', () => {
   // `agentShare.ts`.
   it('should reject the transfer when the agent still carries a share row', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Shared Agent', slug: 'shared-agent' });
+    const agent = await model.create(withRuntime({ title: 'Shared Agent', slug: 'shared-agent' }));
 
     await serverDB
       .insert(agentShares)
@@ -1065,7 +1123,9 @@ describe('AgentModel.transferAgent', () => {
 
   it('should keep the share row on a same-owner personal ↔ workspace round-trip', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Roundtrip Agent', slug: 'roundtrip-agent' });
+    const agent = await model.create(
+      withRuntime({ title: 'Roundtrip Agent', slug: 'roundtrip-agent' }),
+    );
 
     await serverDB
       .insert(agentShares)
@@ -1088,7 +1148,7 @@ describe('AgentModel.transferAgent', () => {
 describe('AgentModel.transferAgent scope riders (connectors & documents)', () => {
   it('should move agent-scoped connectors with credentials when the owner stays the same', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Plugin Agent' });
+    const agent = await model.create(withRuntime({ title: 'Plugin Agent' }));
 
     const [connector] = await serverDB
       .insert(userConnectors)
@@ -1133,7 +1193,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should strip credentials from foreign-owned agent connectors on scope transfer', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'Shared Agent' });
+    const agent = await model.create(withRuntime({ title: 'Shared Agent' }, userId, wsId1));
 
     // Another member connected this agent-scoped connector with THEIR account.
     const [connector] = await serverDB
@@ -1167,7 +1227,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should unmount base connectors linked by the moved agent', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Mount Agent' });
+    const agent = await model.create(withRuntime({ title: 'Mount Agent' }));
 
     const [base] = await serverDB
       .insert(userConnectors)
@@ -1195,7 +1255,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should move dedicated agent documents with binding and history', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Doc Agent' });
+    const agent = await model.create(withRuntime({ title: 'Doc Agent' }));
 
     await serverDB.insert(documents).values({
       content: '# skill',
@@ -1244,7 +1304,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should detach associated documents and leave them in the source scope', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Assoc Agent' });
+    const agent = await model.create(withRuntime({ title: 'Assoc Agent' }));
 
     await serverDB.insert(documents).values({
       content: 'notes',
@@ -1279,8 +1339,8 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should keep a dedicated document bound to an outside agent in the source scope', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Moving Agent' });
-    const stayingAgent = await model.create({ title: 'Staying Agent' });
+    const agent = await model.create(withRuntime({ title: 'Moving Agent' }));
+    const stayingAgent = await model.create(withRuntime({ title: 'Staying Agent' }));
 
     await serverDB.insert(documents).values({
       content: 'shared skill',
@@ -1323,7 +1383,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should move a dedicated document referenced only by topics that move too', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Topic Doc Agent' });
+    const agent = await model.create(withRuntime({ title: 'Topic Doc Agent' }));
 
     await serverDB
       .insert(topics)
@@ -1367,7 +1427,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should detach a moved topic link whose document stays in the source scope', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Assoc Topic Agent' });
+    const agent = await model.create(withRuntime({ title: 'Assoc Topic Agent' }));
 
     await serverDB
       .insert(topics)
@@ -1407,7 +1467,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should detach a moved task pin whose document stays in the source scope', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Assoc Task Agent' });
+    const agent = await model.create(withRuntime({ title: 'Assoc Task Agent' }));
 
     await serverDB.insert(tasks).values({
       createdByAgentId: agent.id,
@@ -1448,8 +1508,8 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should leave a document whose provenance names an agent outside the move', async () => {
     const model = new AgentModel(serverDB, userId);
-    const outsider = await model.create({ title: 'Outsider Agent' });
-    const agent = await model.create({ title: 'Borrower Agent' });
+    const outsider = await model.create(withRuntime({ title: 'Outsider Agent' }));
+    const agent = await model.create(withRuntime({ title: 'Borrower Agent' }));
 
     // Created for `outsider`, later associated to the moving agent. Provenance
     // alone would read as "dedicated" and hand it over with the move.
@@ -1491,7 +1551,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it("should leave another member's skill bundle that was only associated", async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Skill Borrower' });
+    const agent = await model.create(withRuntime({ title: 'Skill Borrower' }));
 
     // Skill-management provenance carries no agent id; only the create/convert
     // flows stamp the binding, and `associate` does not.
@@ -1531,7 +1591,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it("should move an agent's own skill bundle together with its index", async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Skill Owner' });
+    const agent = await model.create(withRuntime({ title: 'Skill Owner' }));
 
     await serverDB.insert(documents).values([
       {
@@ -1575,7 +1635,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should hold a whole skill tree back when one node is pinned outside the move', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Pinned Skill Owner' });
+    const agent = await model.create(withRuntime({ title: 'Pinned Skill Owner' }));
 
     // A task that is NOT moving with this transfer pins the index alone.
     await serverDB.insert(tasks).values({
@@ -1632,7 +1692,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it("should drop the slug when it collides with another member's private document", async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Slug Agent' });
+    const agent = await model.create(withRuntime({ title: 'Slug Agent' }));
 
     // Invisible to the mover through the read predicate, but the
     // `documents_slug_workspace_id_unique` index still covers it.
@@ -1677,7 +1737,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should rehome revision history to the new owner when moving to personal scope', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'History Agent' });
+    const agent = await model.create(withRuntime({ title: 'History Agent' }, userId, wsId1));
 
     await serverDB.insert(documents).values({
       content: '# skill',
@@ -1722,7 +1782,7 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 
   it('should keep revision authorship when the document lands in a workspace', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent = await model.create({ title: 'History WS Agent' });
+    const agent = await model.create(withRuntime({ title: 'History WS Agent' }, userId, wsId1));
 
     await serverDB.insert(documents).values({
       content: '# skill',
@@ -1767,8 +1827,8 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
 describe('AgentModel.transferAgents (batch)', () => {
   it('should transfer multiple agents with their topics and messages in one call', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent1 = await model.create({ title: 'Agent 1' });
-    const agent2 = await model.create({ title: 'Agent 2' });
+    const agent1 = await model.create(withRuntime({ title: 'Agent 1' }));
+    const agent2 = await model.create(withRuntime({ title: 'Agent 2' }));
 
     await serverDB.insert(topics).values([
       { id: 'batch-topic-1', agentId: agent1.id, userId },
@@ -1801,11 +1861,15 @@ describe('AgentModel.transferAgents (batch)', () => {
   it('should resolve slug conflicts against the target scope and within the batch', async () => {
     // Target workspace already holds `my-agent`
     const targetModel = new AgentModel(serverDB, userId, wsId2);
-    await targetModel.create({ title: 'Existing', slug: 'my-agent' });
+    await targetModel.create(withRuntime({ title: 'Existing', slug: 'my-agent' }, userId, wsId2));
 
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent1 = await model.create({ title: 'A1', slug: 'my-agent' });
-    const agent2 = await model.create({ title: 'A2', slug: 'my-agent-1' });
+    const agent1 = await model.create(
+      withRuntime({ title: 'A1', slug: 'my-agent' }, userId, wsId1),
+    );
+    const agent2 = await model.create(
+      withRuntime({ title: 'A2', slug: 'my-agent-1' }, userId, wsId1),
+    );
 
     const results = await model.transferAgents([agent1.id, agent2.id], wsId2, userId);
 
@@ -1824,7 +1888,7 @@ describe('AgentModel.transferAgents (batch)', () => {
 
   it('should roll back the whole batch when any agent is missing', async () => {
     const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Survivor' });
+    const agent = await model.create(withRuntime({ title: 'Survivor' }));
 
     await expect(model.transferAgents([agent.id, 'nonexistent'], wsId1, userId)).rejects.toThrow(
       'Agent not found',
@@ -1836,8 +1900,8 @@ describe('AgentModel.transferAgents (batch)', () => {
 
   it('should reject the whole batch when a topic has a foreign comment', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const agent1 = await model.create({ title: 'Guarded 1' });
-    const agent2 = await model.create({ title: 'Guarded 2' });
+    const agent1 = await model.create(withRuntime({ title: 'Guarded 1' }, userId, wsId1));
+    const agent2 = await model.create(withRuntime({ title: 'Guarded 2' }, userId, wsId1));
     await serverDB.insert(topics).values({
       agentId: agent2.id,
       id: 'batch-guard-topic',
@@ -1872,11 +1936,17 @@ describe('AgentModel.transferAgents (batch)', () => {
 
   it('transferHasForeignRows should accept an array of agent ids', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);
-    const mine = await model.create({ title: 'Mine' });
-    const foreign = await new AgentModel(serverDB, targetUserId, wsId1).create({
-      title: 'Foreign',
-      visibility: 'public',
-    });
+    const mine = await model.create(withRuntime({ title: 'Mine' }, userId, wsId1));
+    const foreign = await new AgentModel(serverDB, targetUserId, wsId1).create(
+      withRuntime(
+        {
+          title: 'Foreign',
+          visibility: 'public',
+        },
+        targetUserId,
+        wsId1,
+      ),
+    );
 
     await serverDB
       .insert(topics)

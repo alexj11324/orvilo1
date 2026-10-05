@@ -18,6 +18,7 @@ import {
 } from '../../schemas/workAttention';
 import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 describe('NotificationModel', () => {
   const returning = vi.fn();
@@ -1281,6 +1282,8 @@ describe('NotificationModel (integration)', () => {
         { role: 'owner', userId, workspaceId },
         { role: 'member', userId: otherUserId, workspaceId },
       ]);
+      // Project creation provisions a coordinator through Prime inheritance.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'SEC06',
         name: 'Secret Project',
@@ -1313,6 +1316,8 @@ describe('NotificationModel (integration)', () => {
         { role: 'owner', userId, workspaceId },
         { role: 'member', userId: otherUserId, workspaceId },
       ]);
+      // Project creation provisions a coordinator through Prime inheritance.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'GRANT',
         name: 'Granted Project',

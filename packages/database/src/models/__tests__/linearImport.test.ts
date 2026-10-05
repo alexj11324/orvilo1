@@ -16,6 +16,7 @@ import type { OrviloDatabase } from '../../type';
 import { LinearImportModel } from '../linearImport';
 import { LinearSyncModel } from '../linearSync';
 import { ProjectModel } from '../project';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 const db: OrviloDatabase = await getTestDB();
 const workspaceId = 'linear-import-test-workspace';
@@ -48,6 +49,8 @@ beforeEach(async () => {
   await db
     .insert(linearInstallations)
     .values({ id: installationId, organizationId: 'org-1', workspaceId });
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(db, { userId, workspaceId });
 });
 afterEach(cleanup);
 

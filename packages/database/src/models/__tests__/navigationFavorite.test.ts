@@ -9,6 +9,7 @@ import { ProjectModel } from '../project';
 import { SavedViewModel } from '../savedView';
 import { TaskModel } from '../task';
 import { TeamModel } from '../team';
+import { seedPrimeRuntime } from './_primeRuntime';
 
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'fav-user';
@@ -24,6 +25,9 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'fav-ws',
   });
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId, workspaceId });
+  await seedPrimeRuntime(serverDB, { userId: otherUserId, workspaceId });
 });
 
 afterEach(async () => {

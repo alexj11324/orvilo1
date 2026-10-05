@@ -6,6 +6,7 @@ import {
   bindTopicDeviceAtomically,
   listAuthorizedDeviceCandidates,
   resolveHeteroExecutionPlan,
+  satisfiesMinAdapterVersion,
 } from './executionAdmission';
 import { getScopedOnlineDevices } from './scopedDevices';
 
@@ -15,12 +16,14 @@ const {
   queryWorkspaceDevices,
   findByDeviceId,
   findWorkspaceDeviceById,
+  updateCapabilityEvidence,
 } = vi.hoisted(() => ({
   findByDeviceId: vi.fn(),
   findWorkspaceDeviceById: vi.fn(),
   queryDeviceList: vi.fn(),
   queryPersonal: vi.fn(),
   queryWorkspaceDevices: vi.fn(),
+  updateCapabilityEvidence: vi.fn(),
 }));
 
 vi.mock('@/database/models/device', () => ({
@@ -29,6 +32,7 @@ vi.mock('@/database/models/device', () => ({
     findWorkspaceDeviceById = findWorkspaceDeviceById;
     queryPersonal = queryPersonal;
     queryWorkspaceDevices = queryWorkspaceDevices;
+    updateCapabilityEvidence = updateCapabilityEvidence;
   },
 }));
 
@@ -83,6 +87,7 @@ beforeEach(() => {
   queryDeviceList.mockReset().mockResolvedValue([]);
   findByDeviceId.mockReset().mockResolvedValue(undefined);
   findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
+  updateCapabilityEvidence.mockReset().mockResolvedValue(undefined);
 });
 
 describe('resolveHeteroExecutionPlan', () => {
@@ -372,7 +377,7 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
   });
 
   it('returns the binding it installed when the CAS write wins', async () => {
-    updateReturning.mockResolvedValue([{ boundDeviceId: 'dev-a' }]);
+    updateReturning.mockResolvedValue([{ bindingRevision: 1, boundDeviceId: 'dev-a' }]);
     const fakeDb = { select, update } as never;
 
     await expect(
@@ -381,7 +386,7 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
         topicId: 'topic-1',
         userId: 'user-1',
       }),
-    ).resolves.toEqual({ boundDeviceId: 'dev-a', outcome: 'bound' });
+    ).resolves.toEqual({ bindingRevision: 1, boundDeviceId: 'dev-a', outcome: 'bound' });
     expect(update).toHaveBeenCalledTimes(1);
     // The winner is already known — no re-read.
     expect(select).not.toHaveBeenCalled();
@@ -389,7 +394,7 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
 
   it('re-reads and returns the winner when the CAS loses', async () => {
     updateReturning.mockResolvedValue([]);
-    selectLimit.mockResolvedValue([{ boundDeviceId: 'dev-winner' }]);
+    selectLimit.mockResolvedValue([{ bindingRevision: 2, boundDeviceId: 'dev-winner' }]);
     const fakeDb = { select, update } as never;
 
     await expect(
@@ -398,7 +403,7 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
         topicId: 'topic-1',
         userId: 'user-1',
       }),
-    ).resolves.toEqual({ boundDeviceId: 'dev-winner', outcome: 'occupied' });
+    ).resolves.toEqual({ bindingRevision: 2, boundDeviceId: 'dev-winner', outcome: 'occupied' });
   });
 
   it('throws when the CAS loses and no binding can be read — never guesses', async () => {
@@ -626,5 +631,152 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
     // capabilityStatus stays 'pending' under a failed/absent probe → the
     // candidate is not selectable → the request resolves to a block, not a run.
     expect(plan.kind).toBe('blocked');
+  });
+});
+
+describe('satisfiesMinAdapterVersion', () => {
+  it.each([
+    ['2.0.0', '2.0.0', true],
+    ['2.1.0', '2.0.0', true],
+    ['2.0.1', '2.0.0', true],
+    ['3.0.0', '2.9.9', true],
+    ['1.9.9', '2.0.0', false],
+    ['2.0.0', '2.0.1', false],
+    // Partial versions parse as their prefix — x.y.z tuple, missing = 0.
+    ['2', '1.9', true],
+    ['2.1', '2.0.5', true],
+    // Unparseable input never satisfies — honest pending beats a coerced verdict.
+    ['dev', '1.0.0', false],
+    ['2.0.0', 'not-a-version', false],
+    ['', '1.0.0', false],
+  ])('%s satisfies %s → %s', (current, min, expected) => {
+    expect(satisfiesMinAdapterVersion(current, min)).toBe(expected);
+  });
+});
+
+describe('registry capability evidence (F06 — snapshots feed the verdict, never fabricate)', () => {
+  it('a fresh stored adapterVersion proves minAdapterVersion — stale or absent stays pending', async () => {
+    const evidenceRows = [
+      {
+        ...deviceRows('dev-fresh')[0],
+        adapterVersion: '2.1.0',
+        lastVerifiedAt: new Date(),
+      },
+      {
+        ...deviceRows('dev-stale')[0],
+        adapterVersion: '2.1.0',
+        // Beyond the 7-day TTL — a device not heard from cannot vouch for itself.
+        lastVerifiedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      },
+      { ...deviceRows('dev-blank')[0] },
+    ];
+    queryPersonal.mockResolvedValue(evidenceRows);
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      requiredOperation: { adapter: 'claude-code', kind: 'agent-run', minAdapterVersion: '2.0.0' },
+    });
+
+    const fresh = inventory.candidates.find((c) => c.deviceId === 'dev-fresh')!;
+    expect(fresh).toMatchObject({
+      capabilityStatus: 'verified',
+      versionOk: true,
+      versionStatus: 'verified',
+    });
+    expect(fresh.verification).toMatchObject({ source: 'registry:adapterVersion' });
+
+    for (const id of ['dev-stale', 'dev-blank']) {
+      const candidate = inventory.candidates.find((c) => c.deviceId === id)!;
+      expect(candidate.versionStatus).toBe('pending');
+      expect(candidate.versionOk).toBe(false);
+      expect(isSelectableDevice(candidate)).toBe(false);
+    }
+  });
+
+  it('a stored adapterVersion below the requirement stays pending — never coerced', async () => {
+    queryPersonal.mockResolvedValue([
+      {
+        ...deviceRows('dev-old')[0],
+        adapterVersion: '1.5.0',
+        lastVerifiedAt: new Date(),
+      },
+    ]);
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      requiredOperation: { adapter: 'claude-code', kind: 'agent-run', minAdapterVersion: '2.0.0' },
+    });
+
+    const candidate = inventory.candidates.find((c) => c.deviceId === 'dev-old')!;
+    expect(candidate.versionStatus).toBe('pending');
+    expect(candidate.versionOk).toBe(false);
+  });
+
+  it('a fresh capabilitySnapshot answers a device-tool-call when the device cannot be probed', async () => {
+    // dev-a is OFFLINE (no gateway presence) so the live probe never reaches it —
+    // but its registry row carries a snapshot from a verified session.
+    queryPersonal.mockResolvedValue([
+      {
+        ...deviceRows('dev-a')[0],
+        capabilitySnapshot: { supportedTools: ['mcp.call', 'files.read'] },
+        lastVerifiedAt: new Date(),
+      },
+      {
+        ...deviceRows('dev-b')[0],
+        capabilitySnapshot: { supportedTools: ['files.read'] },
+        lastVerifiedAt: new Date(),
+      },
+    ]);
+    queryDeviceList.mockResolvedValue([]);
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      // The probe answers nothing — the snapshot is the only evidence.
+      probeSystemInfo: async () => undefined,
+      requiredOperation: { kind: 'device-tool-call', toolName: 'mcp.call' },
+    });
+
+    const capable = inventory.candidates.find((c) => c.deviceId === 'dev-a')!;
+    expect(capable).toMatchObject({
+      capabilityOk: true,
+      capabilityStatus: 'verified',
+      verification: { mode: 'registry', source: 'registry:snapshot' },
+    });
+
+    const incapable = inventory.candidates.find((c) => c.deviceId === 'dev-b')!;
+    expect(incapable.capabilityStatus).toBe('incompatible');
+    expect(isSelectableDevice(incapable)).toBe(false);
+  });
+
+  it('a stale snapshot is treated as absent — pending, never verified', async () => {
+    queryPersonal.mockResolvedValue([
+      {
+        ...deviceRows('dev-a')[0],
+        capabilitySnapshot: { supportedTools: ['mcp.call'] },
+        lastVerifiedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      },
+    ]);
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      probeSystemInfo: async () => undefined,
+      requiredOperation: { kind: 'device-tool-call', toolName: 'mcp.call' },
+    });
+
+    const candidate = inventory.candidates.find((c) => c.deviceId === 'dev-a')!;
+    expect(candidate.capabilityStatus).toBe('pending');
+    expect(candidate.capabilityOk).toBe(false);
+  });
+
+  it('a successful live probe refreshes the stored snapshot for later offline verdicts', async () => {
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-a'));
+
+    await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      probeSystemInfo: async () => ({ supportedTools: ['mcp.call'] }),
+      requiredOperation: { kind: 'device-tool-call', toolName: 'mcp.call' },
+    });
+
+    // The registry write is fire-and-forget — settle the microtask before
+    // asserting so a slow event loop cannot hide the call.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(updateCapabilityEvidence).toHaveBeenCalledWith('dev-a', {
+      supportedTools: ['mcp.call'],
+    });
   });
 });

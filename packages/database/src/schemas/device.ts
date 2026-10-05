@@ -73,6 +73,18 @@ export const devices = pgTable(
     recentCwds: text('recent_cwds').array().default([]).notNull(),
     workingDirs: jsonb('working_dirs').$type<WorkingDirEntry[]>().default([]),
 
+    /**
+     * Last capability evidence the device reported (`supportedTools` etc. from
+     * `queryDeviceSystemInfo` or registration) — the admission candidate set
+     * reads it as `registry:snapshot` evidence when no live probe answers, so
+     * an offline-but-known device degrades to `pending`, never fabricated.
+     */
+    capabilitySnapshot: jsonb('capability_snapshot').$type<{ supportedTools?: string[] }>(),
+    /** Device client version self-reported at registration (`app.getVersion()`). */
+    adapterVersion: varchar('adapter_version', { length: 32 }),
+    /** When `capabilitySnapshot`/`adapterVersion` were last verified fresh. */
+    lastVerifiedAt: timestamptz('last_verified_at'),
+
     firstSeenAt: timestamptz('first_seen_at').defaultNow().notNull(),
     lastSeenAt: timestamptz('last_seen_at').defaultNow().notNull(),
 

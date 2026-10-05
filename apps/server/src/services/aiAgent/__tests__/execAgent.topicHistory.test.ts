@@ -8,6 +8,7 @@ import { CompletionLifecycle } from '@/server/services/agentExecution/Completion
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
 const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
@@ -269,7 +270,7 @@ vi.mock('model-bank', async (importOriginal) => {
 describe('AiAgentService.execAgent - topic history loading', () => {
   let service: AiAgentService;
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
-  const mockDb = {} as any;
+  const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {

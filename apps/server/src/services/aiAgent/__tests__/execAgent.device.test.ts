@@ -1,3 +1,4 @@
+import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type * as ModelBankModule from 'model-bank';
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -5,9 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
   mockSandboxFeatureFlags: vi.fn(),
@@ -328,7 +331,7 @@ vi.mock('model-bank', async (importOriginal) => {
 describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
   let service: AiAgentService;
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
-  const mockDb = {} as any;
+  const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {
@@ -356,6 +359,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
+    // `clearAllMocks` keeps the last-set implementation — re-establish the
+    // auth-pass default so a test that stubs BINDING_INVALID can't leak it
+    // into later tests.
+    vi.mocked(resolveDeviceDispatchAuthorizationFailure).mockResolvedValue(undefined);
     mockComposeDevicePrimeRun.mockResolvedValue({
       ok: true,
       value: { descriptor: mockPrimeDescriptor },
@@ -632,6 +639,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         expect(mockDispatchAgentRun).not.toHaveBeenCalled();
         expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
         expect(result).toMatchObject({ error: 'No bound device', success: false });
+        // Every admission refusal carries the structured contract surface —
+        // the repair UI branches on errorData.code, never the prose.
+        expect(result.errorData?.code).toMatch(/^DEVICE_/);
+        expect(result.errorData?.retryable).toBe(true);
       },
     );
 
@@ -660,6 +671,91 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         expect.objectContaining({ deviceId: 'device-001' }),
       );
       expect(result).toMatchObject({ error: 'DEVICE_NOT_FOUND', success: false });
+    });
+
+    it('surfaces DEVICE_NOT_CONNECTED when the bound device is unreachable', async () => {
+      // DEVICE_CHANNEL_UNAVAILABLE = the gateway addressed the device but it
+      // is offline/asleep/mid-reconnect — the honest surface code is
+      // DEVICE_NOT_CONNECTED, not the registration-gone DEVICE_NOT_FOUND.
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_CHANNEL_UNAVAILABLE',
+        errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
+        success: false,
+      });
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run a command',
+      });
+
+      expect(result).toMatchObject({ error: 'DEVICE_NOT_CONNECTED', success: false });
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_NOT_CONNECTED',
+        deviceId: 'device-001',
+        retryable: true,
+        scope: 'personal',
+      });
+    });
+
+    it('surfaces DEVICE_BINDING_INVALID when the bound device row is gone', async () => {
+      // The bound pin resolves at admission, then the registry re-check on the
+      // NOT_FOUND failure finds the row already deleted — the surface names
+      // the explicit-repair code and offers candidates in the same scope.
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_NOT_FOUND',
+        errorCode: DeviceTransportErrorCode.DeviceNotFound,
+        success: false,
+      });
+      vi.mocked(resolveDeviceDispatchAuthorizationFailure).mockResolvedValue({
+        code: 'DEVICE_BINDING_INVALID',
+        deviceId: 'device-001',
+        repairCandidates: ['device-002'],
+        retryable: true,
+        scope: 'personal',
+      });
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run a command',
+      });
+
+      expect(result).toMatchObject({ error: 'DEVICE_BINDING_INVALID', success: false });
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_BINDING_INVALID',
+        deviceId: 'device-001',
+        repairCandidates: ['device-002'],
+      });
+    });
+
+    it('surfaces DEVICE_NOT_CONNECTED when the registry still holds the device row', async () => {
+      // The gateway reported NOT_FOUND but the registry still knows the
+      // device — the gateway simply lost reachability, so the surface names
+      // DEVICE_NOT_CONNECTED (retryable), never the repair-only NOT_FOUND.
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_NOT_FOUND',
+        errorCode: DeviceTransportErrorCode.DeviceNotFound,
+        success: false,
+      });
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run a command',
+      });
+
+      expect(resolveDeviceDispatchAuthorizationFailure).toHaveBeenCalledWith(
+        mockDb,
+        userId,
+        'device-001',
+        undefined,
+      );
+      expect(result).toMatchObject({ error: 'DEVICE_NOT_CONNECTED', success: false });
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_NOT_CONNECTED',
+        deviceId: 'device-001',
+      });
     });
   });
 

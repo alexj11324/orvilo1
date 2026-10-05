@@ -49,6 +49,7 @@ export type WorkspaceAuditAction =
   | 'auto_top_up.succeeded'
   | 'auto_top_up.failed'
   | 'top_up.succeeded'
+  | 'topic.binding_repaired'
   | 'provider.enabled'
   | 'provider.disabled'
   | 'provider.updated'

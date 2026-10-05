@@ -1,4 +1,4 @@
-import type { OrviloAgentAgencyConfig } from '@orvilo/types';
+import type { DeviceListItem, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
@@ -6,6 +6,7 @@ import {
   canExecutionTargetReadLocalPaths,
   type ExecutionPlan,
   executionPlanToManifestExecutionEnv,
+  executionTargetDeviceCandidates,
   executionTargetToRuntimeMode,
   isDeviceLockedPlan,
   isHeterogeneousSandboxExecutionAvailable,
@@ -1438,5 +1439,54 @@ describe('canExecutionTargetReadLocalPaths', () => {
     expect(canExecutionTargetReadLocalPaths('sandbox', config, 'device-1')).toBe(false);
     expect(canExecutionTargetReadLocalPaths('auto', config, 'device-1')).toBe(false);
     expect(canExecutionTargetReadLocalPaths('none', config, 'device-1')).toBe(false);
+  });
+});
+
+describe('executionTargetDeviceCandidates — the ONE pool every surface judges', () => {
+  const dev = (
+    deviceId: string,
+    scope: 'personal' | 'workspace',
+    visibility?: 'private' | 'public' | null,
+    online = true,
+  ) =>
+    ({
+      deviceId,
+      online,
+      scope,
+      visibility: visibility ?? null,
+    }) as DeviceListItem;
+
+  it('personal scope returns personal devices only', () => {
+    const pool = executionTargetDeviceCandidates(
+      [dev('p1', 'personal'), dev('w1', 'workspace', 'public'), dev('wp', 'workspace', 'private')],
+      'personal',
+    );
+    expect(pool.map((d) => d.deviceId)).toEqual(['p1']);
+  });
+
+  it('workspace scope includes private + shared enrollments (F07)', () => {
+    const pool = executionTargetDeviceCandidates(
+      [
+        dev('p1', 'personal'),
+        dev('w1', 'workspace', 'public'),
+        dev('wp', 'workspace', 'private'),
+        dev('wu', 'workspace', null),
+      ],
+      'workspace',
+    );
+    expect(pool.map((d) => d.deviceId)).toEqual(['wp', 'w1', 'wu']);
+  });
+
+  it('offline devices stay candidates — online gates launch, not membership', () => {
+    const pool = executionTargetDeviceCandidates(
+      [dev('a', 'personal', null, false), dev('b', 'personal', null, true)],
+      'personal',
+    );
+    expect(pool.map((d) => d.deviceId)).toEqual(['a', 'b']);
+  });
+
+  it('empty / undefined inventory is zero candidates, not an error', () => {
+    expect(executionTargetDeviceCandidates(undefined, 'workspace')).toEqual([]);
+    expect(executionTargetDeviceCandidates([], 'personal')).toEqual([]);
   });
 });

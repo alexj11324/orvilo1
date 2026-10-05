@@ -128,6 +128,43 @@ describe('Operation Actions', () => {
         expect.objectContaining({ filePath: 'src/second.ts', id: 'selection-2' }),
       ]);
     });
+
+    it('should coerce a stale hetero forceRuntime pin to gateway', () => {
+      // Pre-removal queue data can still carry a 'hetero' pin; the private IPC
+      // runtime it named no longer exists, so the merged send keeps the only
+      // live rail left.
+      const merged = mergeQueuedMessages([
+        {
+          content: 'pinned',
+          createdAt: 1,
+          forceRuntime: 'hetero',
+          id: 'q1',
+          interruptMode: 'soft',
+        },
+      ]);
+
+      expect(merged.forceRuntime).toBe('gateway');
+    });
+
+    it('should keep a gateway forceRuntime pin through the merge', () => {
+      const merged = mergeQueuedMessages([
+        {
+          content: 'first',
+          createdAt: 1,
+          id: 'q1',
+          interruptMode: 'soft',
+        },
+        {
+          content: 'second',
+          createdAt: 2,
+          forceRuntime: 'gateway',
+          id: 'q2',
+          interruptMode: 'soft',
+        },
+      ]);
+
+      expect(merged.forceRuntime).toBe('gateway');
+    });
   });
 
   describe('startOperation', () => {

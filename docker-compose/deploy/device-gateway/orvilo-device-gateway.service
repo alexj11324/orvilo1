@@ -1,0 +1,18 @@
+[Unit]
+Description=Orvilo device gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+LoadCredential=service-token:/etc/orvilo-device-gateway/service-token
+RuntimeDirectory=orvilo-device-gateway
+RuntimeDirectoryMode=0700
+Environment=HOST=127.0.0.1 PORT=28788 ORVILO_API_BASE_URL=https://orvilo.aspectlylabs.com
+ExecStart=/var/lib/orvilo1/device-gateway/start.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

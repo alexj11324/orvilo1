@@ -43,3 +43,21 @@ export const MODEL_LABELS: Record<string, string> = {
       .map((option) => [option.value, option.label]),
   ),
 };
+
+/**
+ * User-facing model name. Catalog entries carry an optional display `label`;
+ * otherwise the raw `modelId`/`id` (e.g. `opencode/nemotron-3.5-lightning`)
+ * keeps only its last segment — provider prefixes, channel slashes and flag
+ * syntax are engineering detail user surfaces never render.
+ */
+export const modelDisplayLabel = (model: {
+  id: string;
+  label?: string;
+  modelId: string;
+}): string => {
+  const label = model.label?.trim();
+  if (label) return label;
+  const raw = (model.modelId || model.id).trim();
+  const last = raw.split('/').findLast(Boolean);
+  return last ?? raw;
+};

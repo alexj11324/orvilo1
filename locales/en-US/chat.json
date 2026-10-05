@@ -971,7 +971,7 @@
   "heteroAgent.executionTarget.gatewayDesc": "Run on this computer via the gateway; other clients can follow progress",
   "heteroAgent.executionTarget.infoTooltip": "Choose a device and execution route. This computer can run directly or through the gateway.",
   "heteroAgent.executionTarget.loading": "Loading devices…",
-  "heteroAgent.executionTarget.local": "Local process",
+  "heteroAgent.executionTarget.local": "Local",
   "heteroAgent.executionTarget.localDesc": "Run directly on this computer through the desktop app",
   "heteroAgent.executionTarget.localSandbox": "Shell isolation",
   "heteroAgent.executionTarget.localSandboxDesc": "Optional shell isolation: writes stay in the working directory and temporary directory; network is blocked",

@@ -971,7 +971,7 @@
   "heteroAgent.executionTarget.gatewayDesc": "经由网关在这台电脑上运行，其他客户端可跟踪进度",
   "heteroAgent.executionTarget.infoTooltip": "选择设备和执行方式。这台电脑可直接运行，也可经由网关运行。",
   "heteroAgent.executionTarget.loading": "正在加载设备…",
-  "heteroAgent.executionTarget.local": "本地进程",
+  "heteroAgent.executionTarget.local": "本地",
   "heteroAgent.executionTarget.localDesc": "通过桌面端直接在这台电脑上运行",
   "heteroAgent.executionTarget.localSandbox": "命令隔离",
   "heteroAgent.executionTarget.localSandboxDesc": "可选命令隔离：仅能写入工作目录和临时目录，网络默认关闭",

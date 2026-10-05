@@ -648,7 +648,7 @@ export default {
   'heteroAgent.executionTarget.gatewayDesc':
     'Run on this computer via the gateway; other clients can follow progress',
   'heteroAgent.executionTarget.loading': 'Loading devices…',
-  'heteroAgent.executionTarget.local': 'Local process',
+  'heteroAgent.executionTarget.local': 'Local',
   'heteroAgent.executionTarget.localDesc': 'Run directly on this computer through the desktop app',
   'heteroAgent.executionTarget.localSandbox': 'Shell isolation',
   'heteroAgent.executionTarget.localSandboxDesc':

@@ -157,25 +157,29 @@
 
 ### 门禁
 
-- `scripts/ci/checkHostDeviceBoundaries.mjs`：真实导入图（静态 + dynamic import + re-export，regex 提取 + tsconfig 别名 / 工作区解析），五类规则：
-  - `shared-to-native`：共享产品面（src/features|components|store|services|…，adapter 层除外）直连 electron/app-desktop/exec builtin 的**跨界边**；
-  - `web-closure`：web/mobile/popup/auth 入口闭包可达的 native/exec 种子（`node:child_process` 等），按种子 allowlist；
-  - `server-cli`：apps/server、apps/cli 直连 apps/desktop/electron 实现；
-  - `types-purity`：packages/types、app-config 引入 builtin 或爬进 src//apps；
-  - `isdesktop-census`：`isDesktop`/`__ELECTRON__` 在 adapter 根之外的逐文件计数封顶（只缩不增）。
-- 实测：9445 文件扫描～1.6s（纯 Node，无依赖），CI job `Host Device Boundaries` 已接入 test.yml + Required Quality Gate required 列表。
+- `scripts/ci/checkHostDeviceBoundaries.mjs`（FIX-E/F08 重写）：真实导入图 —— 静态 import、`export ... from` re-export、`import()` 动态导入、`require()`/`require.resolve()`、`jest.mock`/`vi.mock`/`mock.module`、import-equals、`import type` 全部经 TypeScript AST 提取（`.mjs`/`.cjs` 同样扫描）。解析语义 = 真实解析：tsconfig `paths` 按 extends 链逐层套用（每层用其自身 baseUrl 解释，`{extends: "../../tsconfig.json"}` 的继承路径仍指向声明它的根配置目录）；workspace 包名走 `ts.resolveModuleName`，经虚拟 node_modules host 暴露每个包真实的 `exports`/`imports` 条件（真实 node_modules 永不参与 ——CI 无 install 也可跑，且快一个量级）；builtin 判定用 Node 官方 `builtinModules` 清单，`node:` 前缀与每个 banned builtin 的所有子路径（`node:fs/promises`/`fs/promises` 均命中 `builtin:fs/promises`）。受检路径上解析失败的**运行时** specifier 记 `unresolved:` 直接 FAIL（不静默跳过）；type-only specifier 编译期被 bundler 抹除，记 `type-unresolved:` 仅信息输出。六类规则：`shared-to-native` / `web-closure` / `server-cli` / `types-purity` / `unresolved` / `isdesktop-census`。
+- 实测：9504 文件扫描～17s（需 typescript；CI 以 `npm --prefix` 装 scratch 前缀并经 `HOST_BOUNDARY_TS_PATH` 注入），CI job `Host Device Boundaries` 已接入 test.yml + Required Quality Gate required 列表。
+
+#### allowlist v2 —— 精确到边
+
+`scripts/ci/hostDeviceBoundariesAllowlist.json` 已从 v1 `files` 格式迁移到 v2 `edges`：每条豁免即一条**精确边** `{rule, importer, target, scope, owner, reason, exit, expires?}`；`importer` 为仓库相对路径或精确 glob；`target` 为门禁输出的解析目标串（`builtin:<name>`、`pkg:<name>`、`file:<repo-path>`、`unresolved:<spec>`）；`scope` 为 `direct`（importer 自身源码判定）或 `closure`（web 入口闭包内判定）；`isdesktop-census` 用 `importer`+`max`（只缩不增的用量上限）。关键语义：**新 importer 命中已豁免 target 仍会 FAIL**（豁免归边不归目标）、file 级豁免不覆盖同文件新违边、已豁免的边消失即 stale → FAIL（删债须连同条目一起删）。v1 的 4 个 `seed:builtin:node:*` 全局豁免已展开为逐条 `web-closure` 边登记；加载器会拒绝 v1 格式文件。
+
+#### 已知缺口（诚实声明）
+
+- 门禁核对的是**源码图**；web 构建产物（Vite/Next bundle）的模块图未单独核对 —— tree-shaking 会移除部分源图边，亦可能引入构建期插件产生的边，当前未覆盖。构建产物图核对仍待后续工作包。
 
 ### isDesktop 普查（冻结基线）
 
-- 共享 `src/`：**465 处使用 / 182 文件**（非 adapter 根）。allowlist `hostDeviceBoundariesAllowlist.json` 逐文件记 `isDesktopMax` 封顶 + owner（wd-02..wd-05）+ 退出预期；adapter 根（`src/spa`、`src/platform`、`src/services/electron`、`*.desktop.*`）不计入违规。
+- 共享 `src/`：**465 处使用 / 182 文件**（非 adapter 根）。allowlist `hostDeviceBoundariesAllowlist.json` v2 逐文件记 `isdesktop-census` 条目（`importer` + `max` 封顶）+ owner（wd-02..wd-05）+ 退出预期；adapter 根（`src/spa`、`src/platform`、`src/services/electron`、`*.desktop.*`）不计入违规。
 - 另：跳过文件（`*.test.*`、`__tests__`、`e2e`）不参与普查。
 
 ### 现有跨界边（allowlist 登记的债务）
 
-- `src/libs/mcp/client.ts → node:child_process`（stdio spawn；owner wd-04 —— 设备作用域传输改造后消失）
-- `src/libs/debug-file-logger.ts → node:fs`（desktop-only 日志；owner wd-02 —— 移入 host adapter）
-- `packages/app-config/src/routes/settings.ts → src/store/global/initialState`（契约包爬 store 取 `SettingsTabs`；owner wd-05 —— 枚举下沉契约层）
-- web 闭包种子：`node:child_process` / `node:fs` / `node:os` / `node:process`（spawn、tempFileManager、otel node、agent-execution 等经共享服务导入可达；owner wd-03/wd-04 —— 执行图按设备隔离后消失）
+- `src/libs/mcp/client.ts → builtin:child_process`（stdio spawn；owner wd-04 —— 设备作用域传输改造后消失）
+- `src/libs/debug-file-logger.ts → builtin:fs`（desktop-only 日志；owner wd-02 —— 移入 host adapter）
+- `packages/app-config/src/routes/settings.ts → file:src/store/global/initialState.ts`（契约包爬 store 取 `SettingsTabs`；owner wd-05 —— 枚举下沉契约层）
+- `src/utils/electron/ipc.ts → file:apps/desktop/src/main/exports.d.ts`（`@orvilo/desktop-ipc-typings` 实即 apps/desktop/src/main 自身的 workspace 包 —— 类型导出 barrel 住在 Electron 实现树里，真实解析后新暴露；owner wd-03 —— 类型面迁出 apps/desktop）
+- web 闭包边：52 条 builtin 边 + 上述 ipc 边逐条登记（spawn、tempFileManager、otel node、agent-execution、file-loaders、agent-tracing 等经共享服务导入可达；owner wd-04 —— 执行图按设备隔离后消失）
 
 ### 附带修复
 

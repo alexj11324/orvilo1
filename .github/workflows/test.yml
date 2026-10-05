@@ -269,7 +269,16 @@ jobs:
           git fetch --no-tags --depth=1 origin "${REF_SHA}"
           git checkout --force FETCH_HEAD
 
+      - name: Install typescript for module resolution
+        # The gate resolves real module edges with ts.resolveModuleName; install
+        # the repo's pinned typescript into a scratch prefix (no repo install).
+        run: |
+          TS_VER=$(node -p "require('./package.json').devDependencies.typescript.replace(/^[~^]/, '')")
+          npm install --prefix /tmp/hdb-ts --no-save --no-audit --no-fund --loglevel=error "typescript@${TS_VER}"
+
       - name: Check host/device import boundaries
+        env:
+          HOST_BOUNDARY_TS_PATH: /tmp/hdb-ts/node_modules/typescript
         run: |
           node scripts/ci/checkHostDeviceBoundaries.mjs
           node --test scripts/ci/checkHostDeviceBoundaries.test.mjs

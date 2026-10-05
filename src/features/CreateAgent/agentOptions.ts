@@ -51,3 +51,11 @@ export const effortOptionsFor = (
   if (!effort) return [];
   return [HETEROGENEOUS_AGENT_DEFAULT_SELECTION, ...effort.levels(model)];
 };
+
+/** A model switch cannot carry an effort level its new model rejects. */
+export const validEffortFor = (
+  type: string | undefined,
+  model: string,
+  effort: HeterogeneousReasoningEffort,
+): HeterogeneousReasoningEffort =>
+  effortOptionsFor(type, model).includes(effort) ? effort : HETEROGENEOUS_AGENT_DEFAULT_SELECTION;

@@ -15,7 +15,8 @@ export const useFirstLoginGate = () => {
     !!s.onboarding?.finishedAt,
     s.refreshUserState,
   ]);
-  if (isFirstAgentSetupPath(pathname)) return { status: 'allowed' as const };
+  if (pathname === '/onboarding' || isFirstAgentSetupPath(pathname))
+    return { status: 'allowed' as const };
   if (!loaded || (signedIn && !initialized && !error)) return { status: 'loading' as const };
   if (signedIn && error) return { status: 'error' as const, error, retry: refresh };
   if (signedIn && !finished)

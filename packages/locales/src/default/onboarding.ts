@@ -333,4 +333,17 @@ export default {
   'reui.workspace.urlDescription': 'Your workspace will open at orvilo.aspectlylabs.com/{{slug}}.',
   'reui.workspace.successDescription': 'Your workspace is set up and ready for the first project.',
   'reui.workspace.successTitle': '{{name}} is ready',
+
+  'setup.steps': 'Setup steps',
+  'setup.step.workspace': '1 Workspace',
+  'setup.step.agent': '2 Agent',
+  'setup.workspace.title': 'Set up your workspace',
+  'setup.workspace.description': 'Choose your display name and a home for your work.',
+  'setup.agent.title': 'Create your first Agent',
+  'setup.agent.description': 'Connect an Agent, then enter your workspace.',
+  'setup.agent.verifying': 'Checking your Agent…',
+  'setup.agent.enter': 'Check Agent and enter workspace',
+  'setup.account': 'Account settings',
+  'setup.provider': 'Provider settings',
+  'setup.devices': 'Device settings',
 };

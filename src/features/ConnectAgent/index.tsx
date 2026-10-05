@@ -25,6 +25,7 @@ const ConnectAgentContent = ({ onCreated, ...panelProps }: OpenConnectAgentModal
   return (
     <CreateAgentPanel
       {...panelProps}
+      onCancel={close}
       onCreated={async (agentId, config) => {
         // Success leads to the result: land on the fresh agent's conversation.
         // A caller-supplied onCreated (e.g. the onboarding gate) takes over
@@ -53,5 +54,5 @@ export const openConnectAgentModal = (options?: OpenConnectAgentModalOptions): M
     maskClosable: true,
     styles: { content: { paddingBlockStart: 0 } },
     title: i18nT('createAgent.title', { ns: 'chat' }),
-    width: 520,
+    width: 'min(92vw, 520px)',
   });

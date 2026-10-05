@@ -258,7 +258,12 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     });
 
   return (
-    <SettingsGroup title={t('settingAgent.executionSettings.title')}>
+    <SettingsGroup title={t('settingAgent.execution.target')}>
+      {(!deviceInventoryComplete && !deviceInventoryError) || isPreferenceLoading ? (
+        <SettingsRow>
+          <span className={settingsStyles.hint}>{t('settingAgent.list.loading')}</span>
+        </SettingsRow>
+      ) : null}
       {deviceInventoryError ? (
         <SettingsRow>
           <AsyncError
@@ -288,7 +293,8 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
         </SettingsRow>
       ) : null}
 
-      {showReadOnlyBinding ? (
+      {showReadOnlyBinding ||
+      (!showDeviceSelector && selected && deviceInventoryComplete && !isPreferenceLoading) ? (
         <SettingsRow label={t('settingAgent.deviceSettings.deviceLabel')}>
           {boundDevice ? (
             <div className="flex items-center gap-2">
@@ -305,7 +311,11 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
             </div>
           ) : (
             <div className={settingsStyles.hint}>
-              {t('settingAgent.deviceSettings.bindingMissing')}
+              {selected?.target === 'local'
+                ? t('chat:heteroAgent.executionTarget.local')
+                : selected?.target === 'sandbox'
+                  ? t('chat:heteroAgent.executionTarget.sandbox')
+                  : t('settingAgent.deviceSettings.bindingMissing')}
             </div>
           )}
         </SettingsRow>

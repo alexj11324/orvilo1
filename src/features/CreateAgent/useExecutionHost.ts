@@ -1,39 +1,38 @@
 'use client';
 
 import type { DeviceListItem } from '@orvilo/types';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useDeviceList } from '@/features/DeviceManager';
 import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 
-export interface ExecutionHost {
-  device?: DeviceListItem;
-  deviceId?: string;
-  /** The inventory settled and still no machine can run the agent. */
-  exhausted: boolean;
-  /** True when the resolved host is this computer (not a device-list row). */
-  isLocal: boolean;
-  loading: boolean;
-  retry: () => Promise<unknown>;
-}
+export const eligibleExecutionDevices = (
+  devices: DeviceListItem[],
+  workspaceId?: string,
+  visibility?: 'private' | 'public',
+) =>
+  devices.filter(
+    (device) =>
+      device.registered &&
+      device.online &&
+      (!workspaceId
+        ? device.scope === 'personal'
+        : visibility !== 'private'
+          ? device.scope === 'workspace' && device.visibility === 'public'
+          : true),
+  );
 
-/**
- * The execution host for a newly created agent. Device selection is an
- * advanced concern that lives in Settings → Devices — create never asks — so
- * the host resolves itself: this computer on Electron, then the first online
- * personal device. Same resolution order as onboarding's `useFirstAgentDevice`,
- * minus the onboarding writeback: a plain create flow must not mutate the
- * onboarding setup record.
- */
-export const useExecutionHost = (): ExecutionHost => {
+export const useExecutionHost = (visibility?: 'private' | 'public') => {
+  const workspaceId = useActiveWorkspaceId();
   const { data: devices, error, mutate } = useDeviceList();
   const [localDeviceId, setLocalDeviceId] = useState<string>();
   const [identityChecked, setIdentityChecked] = useState(false);
-
+  const [selectedId, setSelectedId] = useState<string>();
+  const [identityAttempt, setIdentityAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    // The identity owner returns `{}` immediately off Electron, so web
-    // resolves straight past this.
+    setIdentityChecked(false);
     void resolveLocalExecutionIdentity().then((identity) => {
       if (!active) return;
       setLocalDeviceId(identity.localDeviceId);
@@ -42,28 +41,27 @@ export const useExecutionHost = (): ExecutionHost => {
     return () => {
       active = false;
     };
-  }, []);
-
-  const pickable = useMemo(
-    () => (devices ?? []).filter((device) => device.scope === 'personal' && device.online),
-    [devices],
-  );
-
-  const deviceId = useMemo(() => {
-    // A proven local identity IS the host — this computer is always a valid
-    // execution target on desktop, even before the devices inventory synced.
-    if (localDeviceId) return localDeviceId;
-    return pickable[0]?.deviceId;
-  }, [localDeviceId, pickable]);
-
-  const resolved = identityChecked && (!!localDeviceId || devices !== undefined || !!error);
-
+  }, [identityAttempt]);
+  const pickable = eligibleExecutionDevices(devices ?? [], workspaceId, visibility);
+  const allowLocal = !workspaceId || visibility === 'private';
+  const localId = allowLocal ? localDeviceId : undefined;
+  const deviceId = selectedId ?? localId ?? pickable[0]?.deviceId;
+  const isLocal = !!deviceId && deviceId === localId;
+  const device = pickable.find((row) => row.deviceId === deviceId);
+  const resolved = identityChecked && (!!localId || devices !== undefined || !!error);
   return {
-    device: deviceId ? devices?.find((device) => device.deviceId === deviceId) : undefined,
-    deviceId: resolved ? deviceId : undefined,
-    exhausted: resolved && !deviceId,
-    isLocal: resolved && !!deviceId && deviceId === localDeviceId,
+    device,
+    deviceId: resolved && (isLocal || device) ? deviceId : undefined,
+    devices: pickable,
+    error,
+    exhausted: resolved && !localId && !pickable.length && !error,
+    isLocal,
     loading: !resolved,
-    retry: mutate,
+    localDeviceId: localId,
+    retry: async () => {
+      setIdentityAttempt((value) => value + 1);
+      return mutate();
+    },
+    select: setSelectedId,
   };
 };

@@ -95,7 +95,6 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
             backgroundColor: item.backgroundColor || undefined,
             heterogeneousType: item.heterogeneousType,
             id: item.id,
-            heterogeneousType: item.heterogeneousType,
             pinned: item.pinned ?? false,
             subtitle: agentSecondaryDisplayName(item),
             title: agentDisplayName(item, t('untitledAgent')),

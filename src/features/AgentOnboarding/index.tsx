@@ -103,6 +103,7 @@ const OnboardingBody = ({ retry }: { retry: () => Promise<void> }) => {
         <div className={styles.title}>{t('onboarding.title')}</div>
       </div>
       <CreateAgentPanel
+        lockVisibility
         onCreated={(agentId, config) =>
           completeAgent(
             agentId,
@@ -146,7 +147,13 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
   const pathname = activeTabUrl?.split(/[?#]/)[0] ?? location.pathname;
   const { availability, ready, error, retry, retrying } = useAgentAvailability();
   const isLogin = useUserStore(authSelectors.isLogin);
-  if (!isLogin || isFirstAgentSetupPath(pathname)) return <>{children}</>;
+  if (
+    !isLogin ||
+    location.pathname === '/onboarding' ||
+    pathname === '/onboarding' ||
+    isFirstAgentSetupPath(pathname)
+  )
+    return <>{children}</>;
 
   const cover = (content: ReactNode) => (
     <>

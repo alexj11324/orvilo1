@@ -1,9 +1,14 @@
 /** @vitest-environment happy-dom */
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AgentModelSettings from './AgentModelSettings';
+import AgentOpeningSettings from './AgentOpeningSettings';
+
+dayjs.extend(relativeTime);
 
 const state = vi.hoisted(() => ({
   config: { agencyConfig: { heterogeneousProvider: { type: 'orvilo' } } },
@@ -15,6 +20,8 @@ const state = vi.hoisted(() => ({
     mutate: vi.fn(),
   },
   update: vi.fn(),
+  catalogError: undefined as unknown,
+  catalogRetry: vi.fn(),
 }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/store/agent', () => ({
@@ -57,6 +64,8 @@ vi.mock('@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog', () => ({
   useModelCatalog: () => ({
     data: { models: [{ id: 'model-one', modelId: 'model-one', label: 'Model One' }] },
     isLoading: false,
+    error: state.catalogError,
+    mutate: state.catalogRetry,
   }),
 }));
 vi.mock('@/components/NeuralNetworkLoading', () => ({
@@ -67,6 +76,7 @@ describe('Agent model settings states', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     state.config.agencyConfig.heterogeneousProvider.type = 'orvilo';
+    state.catalogError = undefined;
     state.response = { data: undefined, error: undefined, isLoading: true, mutate: vi.fn() };
   });
 
@@ -87,13 +97,54 @@ describe('Agent model settings states', () => {
     expect(state.response.mutate).toHaveBeenCalledOnce();
   });
 
+  it('retries a failed catalog even when the picker is already open', async () => {
+    state.config.agencyConfig.heterogeneousProvider.type = 'opencode';
+    state.catalogError = new Error('catalog offline');
+    const user = userEvent.setup();
+    const view = render(<AgentModelSettings agentId="agt_one" />);
+    await user.click(view.getByRole('combobox'));
+    await user.click(view.getByRole('button', { name: 'createAgent.retry' }));
+    expect(state.catalogRetry).toHaveBeenCalledOnce();
+  });
+
   it('explains a catalog search with no matching models', async () => {
     state.config.agencyConfig.heterogeneousProvider.type = 'opencode';
     const user = userEvent.setup();
     const view = render(<AgentModelSettings agentId="agt_one" />);
-    const input = view.getByRole('combobox');
+    await user.click(view.getByRole('combobox'));
+    const input = view.getByRole('combobox', { name: 'createAgent.model.search' });
     await user.clear(input);
     await user.type(input, 'zz-no-matching-model');
-    expect(view.getByText('common:cmdk.noResults')).toBeTruthy();
+    expect(view.getByText('createAgent.model.empty')).toBeTruthy();
+  });
+});
+
+describe('Agent opening autosave recovery', () => {
+  it('keeps a failed message retry available after questions save successfully', async () => {
+    vi.clearAllMocks();
+    let messageFailed = false;
+    state.update.mockImplementation(
+      async (_agentId: string, patch: { openingMessage?: string; openingQuestions?: string[] }) => {
+        Object.assign(state.config, patch);
+        if (patch.openingMessage !== undefined && !messageFailed) {
+          messageFailed = true;
+          throw new Error('message save unavailable');
+        }
+      },
+    );
+    const view = render(<AgentOpeningSettings agentId="agt_one" />);
+    const message = view.getByRole('textbox', { name: 'settingAgent.opening.message' });
+    const questions = view.getByRole('textbox', { name: 'settingAgent.opening.questions' });
+    fireEvent.change(message, { target: { value: 'Hello from the Agent' } });
+    fireEvent.blur(message);
+    await waitFor(() => expect(state.update).toHaveBeenCalledTimes(1));
+    fireEvent.change(questions, { target: { value: 'How can you help?' } });
+    fireEvent.blur(questions);
+    await waitFor(() => expect(state.update).toHaveBeenCalledTimes(2));
+    const failedHint = await view.findByText(/autoSave.failed/);
+    fireEvent.click(failedHint);
+    await waitFor(() => expect(state.update).toHaveBeenCalledTimes(3));
+    expect(state.update.mock.calls[2][1]).toEqual({ openingMessage: 'Hello from the Agent' });
+    await waitFor(() => expect(view.queryByText(/autoSave.failed/)).toBeNull());
   });
 });

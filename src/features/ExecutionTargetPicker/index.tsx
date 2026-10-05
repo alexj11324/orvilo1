@@ -95,7 +95,8 @@ export const resolveExecutionTargetSelection = ({
     return boundDevice ? { deviceId: boundDevice.deviceId, target: 'device' } : undefined;
   }
 
-  if (isSharedExecutionTarget(configuredTarget)) return { target: configuredTarget };
+  if (configuredTarget === 'local' || isSharedExecutionTarget(configuredTarget))
+    return { target: configuredTarget };
 
   // Built-in-runtime agents default to "no environment" when nothing is stored;
   // heterogeneous ones genuinely have no selection until the author picks one.

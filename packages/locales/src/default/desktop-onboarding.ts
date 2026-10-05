@@ -114,4 +114,7 @@ export default {
   'screen5.title': 'Sign in to sync across devices',
   'screen5.title2': 'Keep your data synchronized everywhere',
   'screen5.title3': 'Your data stays in your control',
+
+  'screen5.actions.reopen': 'Reopen browser',
+  'screen5.auth.cancelled': 'Sign-in cancelled. You can try again when you are ready.',
 };

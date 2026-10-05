@@ -1,73 +1,67 @@
 'use client';
 
-import { memo } from 'react';
+import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
-import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
+import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import { Input } from '@/components/ui/input';
 import { usePermission } from '@/hooks/usePermission';
+import { useSaveState } from '@/hooks/useSaveState';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
-import { SettingsGroup, SettingsRow, settingsStyles } from './SettingsGroup';
+import { SettingsGroup, SettingsRow } from './SettingsGroup';
 
-interface AgentGeneralSettingsProps {
-  agentId: string;
-}
-
-/**
- * The agent's General settings group: its display name plus, for a legacy
- * agent (no `heterogeneousProvider`), the one-step migrate CTA — the same
- * materialization the retired engine card offered. Tools/skills are not
- * settings: capabilities reach an agent through ACP mount and the symlink
- * share, so no tool/skill/priority rows exist here.
- */
-const AgentGeneralSettings = memo<AgentGeneralSettingsProps>(({ agentId }) => {
+export const AgentGeneralSettings = ({ agentId }: { agentId: string }) => {
   const { t } = useTranslation('setting');
   const { allowed: canEdit } = usePermission('edit_own_content');
-  const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
-  const legacyRuntime = !config?.agencyConfig?.heterogeneousProvider;
-  const personalName = meta.name?.trim();
-
+  const provider = useAgentStore(
+    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider,
+  );
+  const update = useAgentStore((s) => s.updateAgentMetaById);
+  const [name, setName] = useState(meta.name ?? '');
+  const { status, save, lastSavedAt, retry } = useSaveState();
+  useEffect(() => setName(meta.name ?? ''), [agentId, meta.name]);
   return (
-    <SettingsGroup title={t('settingAgent.generalSettings.title')}>
+    <SettingsGroup
+      title={t('settingAgent.generalSettings.title')}
+      action={
+        status !== 'idle' ? (
+          <AutoSaveHint
+            lastUpdatedTime={lastSavedAt}
+            saveStatus={status}
+            onRetry={() => void retry()}
+          />
+        ) : undefined
+      }
+    >
       <SettingsRow label={t('settingAgent.generalSettings.name')}>
-        <div className="flex items-center gap-2">
-          <span className="truncate">{personalName || t('settingAgent.identity.untitled')}</span>
-          {canEdit ? (
-            <Button size="sm" variant="outline" onClick={() => createAgentIdentityModal(agentId)}>
-              {t('settingAgent.identity.edit')}
-            </Button>
-          ) : null}
-        </div>
+        <Input
+          aria-label={t('settingAgent.generalSettings.name')}
+          disabled={!canEdit || status === 'saving'}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onBlur={() => {
+            const next = name.trim();
+            if (next && next !== meta.name)
+              void save(() => update(agentId, { name: next }, { rethrow: true }));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+          }}
+        />
       </SettingsRow>
-      {legacyRuntime ? (
-        <SettingsRow label={t('settingAgent.generalSettings.legacyLabel')}>
-          <div className="flex flex-col items-start gap-2">
-            <div>{t('settingAgent.generalSettings.legacyName')}</div>
-            <div className={settingsStyles.hint}>
-              {t('settingAgent.generalSettings.legacyDesc')}
-            </div>
-            <Button
-              disabled={!canEdit}
-              size="sm"
-              onClick={() => {
-                void updateAgentConfigById(agentId, {
-                  agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
-                });
-              }}
-            >
-              {t('settingAgent.generalSettings.legacyMigrate')}
-            </Button>
-          </div>
-        </SettingsRow>
-      ) : null}
+      <SettingsRow label={t('settingAgent.generalSettings.agentLabel')}>
+        <span>
+          {provider
+            ? (HETEROGENEOUS_TYPE_LABELS[provider.type] ?? provider.type)
+            : t('settingAgent.generalSettings.legacyName')}
+        </span>
+      </SettingsRow>
     </SettingsGroup>
   );
-});
-
-AgentGeneralSettings.displayName = 'AgentGeneralSettings';
+};
 
 export default AgentGeneralSettings;

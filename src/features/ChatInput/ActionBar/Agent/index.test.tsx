@@ -7,6 +7,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type RealAgentList from '@/features/Home/AgentSelect/AgentList';
+import type { ConfiguredAgentRow as RealConfiguredAgentRow } from '@/features/Home/AgentSelect/ConfiguredAgentRow';
 
 import Agent from './index';
 
@@ -31,9 +32,16 @@ const mocks = vi.hoisted(() => ({
   isDesktop: false,
   listSelect: vi.fn(),
   navigate: vi.fn(),
-  openConnectAgentModal: vi.fn(),
+  createAgent: vi.fn(),
   setState: vi.fn(),
   taskAgentId: 'agt_task',
+  profile: { data: null as unknown, isLoading: false, error: undefined },
+  effectiveConfig: {
+    agencyConfig: undefined as unknown,
+    isPreferenceLoading: true,
+    workspaceScoped: false,
+  },
+  devices: [] as unknown[],
   updateSystemStatus: vi.fn(),
 }));
 
@@ -105,16 +113,33 @@ vi.mock('@/store/home/selectors', () => ({
   },
 }));
 
-vi.mock('@/features/ConnectAgent', () => ({
-  openConnectAgentModal: (options: unknown) => mocks.openConnectAgentModal(options),
+vi.mock('@/features/HomeSidebar/hooks', () => ({
+  useCreateMenuItems: () => ({ createAgent: mocks.createAgent }),
 }));
 
-// The real section probes the desktop binary detector on mount; the picker's
-// contract with it is only the `onConnect` hand-off, so stub the probe away.
-vi.mock('./LocalHarnessSection', () => ({
-  default: ({ onConnect }: { onConnect: (type: string) => void }) => (
-    <button data-testid="harness-connect" onClick={() => onConnect('codex')}>
-      Codex
+vi.mock('@/libs/swr', () => ({ useClientDataSWRWithSync: () => mocks.profile }));
+vi.mock('@/hooks/useEffectiveAgencyConfig', () => ({
+  useEffectiveAgencyConfig: () => mocks.effectiveConfig,
+}));
+vi.mock('@/features/DeviceManager/useDeviceList', () => ({
+  useDeviceList: () => ({ data: mocks.devices }),
+}));
+vi.mock('@/store/providerBinding', () => ({
+  useFetchProviderBindings: () => ({ data: { data: [] } }),
+}));
+
+vi.mock('@/features/Home/AgentSelect/ConfiguredAgentRow', () => ({
+  ConfiguredAgentRow: ({
+    row,
+    active,
+    onSelect,
+  }: {
+    row: { id: string; title: string };
+    active: boolean;
+    onSelect: (id: string) => void;
+  }) => (
+    <button aria-pressed={active} onClick={() => onSelect(row.id)}>
+      {row.title}
     </button>
   ),
 }));
@@ -205,7 +230,11 @@ describe('Agent action', () => {
     await user.keyboard('{Enter}');
 
     expect(mocks.setState).toHaveBeenCalledWith(
-      { composerAgentId: 'agt_other' },
+      {
+        composerAgentId: 'agt_other',
+        composerHeteroEffort: undefined,
+        composerModelSelection: undefined,
+      },
       false,
       'selectAgent/explicit',
     );
@@ -219,7 +248,11 @@ describe('Agent action', () => {
 
     // The pick routes through the unified `selectAgentForConversation` action.
     expect(mocks.setState).toHaveBeenCalledWith(
-      { composerAgentId: 'agt_other' },
+      {
+        composerAgentId: 'agt_other',
+        composerHeteroEffort: undefined,
+        composerModelSelection: undefined,
+      },
       false,
       'selectAgent/explicit',
     );
@@ -289,26 +322,65 @@ describe('Agent action', () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it('keeps the local-harness probe out of the web build', () => {
-    const { queryByTestId } = render(<Agent />);
-
-    expect(queryByTestId('harness-connect')).toBeNull();
-    expect(mocks.listSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ bottomSection: undefined }),
+  it('opens unified Agent creation without selecting a detected install', () => {
+    const { getByText } = render(<Agent />);
+    fireEvent.click(getByText('+ newAgent'));
+    expect(mocks.createAgent).toHaveBeenCalledOnce();
+    expect(mocks.setState).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+  it('shows Configure after a stale Agent profile settles to null', async () => {
+    const { ConfiguredAgentRow } = await vi.importActual<{
+      ConfiguredAgentRow: typeof RealConfiguredAgentRow;
+    }>('@/features/Home/AgentSelect/ConfiguredAgentRow');
+    mocks.profile.data = null;
+    mocks.effectiveConfig = {
+      agencyConfig: undefined,
+      isPreferenceLoading: true,
+      workspaceScoped: false,
+    };
+    const onConfigure = vi.fn();
+    const onSelect = vi.fn();
+    const { getByText, getByRole } = render(
+      <ConfiguredAgentRow
+        active={false}
+        row={{ id: 'deleted', title: 'Deleted Agent' }}
+        onConfigure={onConfigure}
+        onSelect={onSelect}
+      />,
     );
+    expect(getByText('agentPicker.status.configure')).toBeDefined();
+    fireEvent.click(getByRole('button', { name: 'agentPicker.configure' }));
+    expect(onConfigure).toHaveBeenCalledWith('deleted');
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('hands a locally installed harness to the connect wizard, never to a selection', () => {
-    mocks.isDesktop = true;
-    const { getByTestId } = render(<Agent />);
-
-    fireEvent.click(getByTestId('harness-connect'));
-
-    // The wizard owns naming and the explicit confirmation, so the click must
-    // not walk any of the agent-switch paths.
-    expect(mocks.openConnectAgentModal).toHaveBeenCalledWith({ initialType: 'codex' });
-    expect(mocks.setState).not.toHaveBeenCalled();
-    expect(mocks.createModal).not.toHaveBeenCalled();
-    expect(mocks.navigate).not.toHaveBeenCalled();
+  it('shows offline reason and prevents selection of a configured offline Agent', async () => {
+    const { ConfiguredAgentRow } = await vi.importActual<{
+      ConfiguredAgentRow: typeof RealConfiguredAgentRow;
+    }>('@/features/Home/AgentSelect/ConfiguredAgentRow');
+    const agencyConfig = {
+      executionTarget: 'device',
+      boundDeviceId: 'offline-device',
+      heterogeneousProvider: { type: 'codex' },
+    };
+    mocks.profile.data = { agencyConfig };
+    mocks.effectiveConfig = { agencyConfig, isPreferenceLoading: false, workspaceScoped: false };
+    mocks.devices = [{ deviceId: 'offline-device', online: false, scope: 'personal' }];
+    const onSelect = vi.fn();
+    const { getByText, getByRole } = render(
+      <ConfiguredAgentRow
+        active
+        row={{ id: 'offline', title: 'Offline Agent' }}
+        onConfigure={vi.fn()}
+        onSelect={onSelect}
+      />,
+    );
+    expect(getByText('agentPicker.status.offline')).toBeDefined();
+    const button = getByRole('button', { name: /Offline Agent/ });
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(button);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

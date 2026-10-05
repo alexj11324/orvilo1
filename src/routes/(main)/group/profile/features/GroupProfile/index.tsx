@@ -11,7 +11,6 @@ import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentG
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import ActionIcon from '@/components/ActionIcon';
-import { type ModalInstance } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
@@ -26,7 +25,6 @@ import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useGroupProfileStore } from '@/store/groupProfile';
 
-import { openGroupAgentSettingsModal } from '../AgentSettings';
 import AutoSaveHint from '../Header/AutoSaveHint';
 import GroupHeader from './GroupHeader';
 
@@ -100,15 +98,6 @@ const GroupProfile = memo(() => {
     transferMenuItems,
     transferToMemberItem,
   ]);
-
-  const settingsModalRef = useRef<ModalInstance | null>(null);
-  useEffect(
-    () => () => {
-      settingsModalRef.current?.close();
-      settingsModalRef.current = null;
-    },
-    [],
-  );
 
   // Collaborative edit lock for workspace groups (same model as pages): read-only
   // when another member is editing; acquired implicitly on the first edit.
@@ -216,20 +205,6 @@ const GroupProfile = memo(() => {
               />
             </SidebarDropdownMenu>
           )}
-          <Button
-            disabled={!canEdit}
-            size="sm"
-            style={{ color: theme.colorTextSecondary }}
-            variant="ghost"
-            onClick={() => {
-              if (!canEdit) return;
-
-              settingsModalRef.current?.close();
-              settingsModalRef.current = openGroupAgentSettingsModal();
-            }}
-          >
-            {t('advancedSettings')}
-          </Button>
         </div>
       </div>
       <Separator />

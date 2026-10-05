@@ -48,6 +48,22 @@ describe('finishOnboardingAndNavigate', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('does not select the agent or navigate when finishedAt persistence fails', async () => {
+    const navigate = vi.fn();
+    await expect(
+      finishOnboardingAndNavigate(
+        async () => {
+          throw new Error('persistence failed');
+        },
+        navigate,
+        async () => {},
+        'first-agent',
+      ),
+    ).rejects.toThrow('persistence failed');
+    expect(selectMock).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('transfers first, then persists completion and navigates', async () => {
     const events: string[] = [];
     await finishOnboardingAndNavigate(

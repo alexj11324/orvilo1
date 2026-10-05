@@ -55,9 +55,10 @@ export const modelDisplayLabel = (model: {
   label?: string;
   modelId: string;
 }): string => {
-  const label = model.label?.trim();
-  if (label) return label;
-  const raw = (model.modelId || model.id).trim();
+  // Catalog labels can still carry a channel prefix (`OpenCode Zen/Nemotron…`),
+  // which is the same engineering detail a raw id has — take the last segment
+  // of whichever display string we end up with.
+  const raw = (model.label?.trim() || model.modelId || model.id).trim();
   const last = raw.split('/').findLast(Boolean);
   return last ?? raw;
 };

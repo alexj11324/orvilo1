@@ -5,7 +5,6 @@ import { ChevronsUpDownIcon } from 'lucide-react';
 import { memo, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';

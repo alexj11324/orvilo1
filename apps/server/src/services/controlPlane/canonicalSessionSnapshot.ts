@@ -21,7 +21,7 @@ import {
   type CanonicalRunSnapshot,
 } from './canonicalRun';
 
-/** Explicit disposable acceptance DDL. This does not install a production migration. */
+/** Same shape as journal 0199. Disposable tests apply it when the migration has not run. */
 export const CORE_SESSION_SNAPSHOT_CANDIDATE_SQL = `CREATE TABLE IF NOT EXISTS core_session_snapshots (
  id text PRIMARY KEY, workspace_id text NOT NULL, user_id text NOT NULL, task_id text NOT NULL,
  topic_id text NOT NULL, registration_id text NOT NULL, epoch bigint NOT NULL,

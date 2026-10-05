@@ -24,6 +24,11 @@ import {
 
 /** Real SQL repositories. Core admission is an explicit boundary, not a runtime claim. */
 describe('MCP event durable worker', () => {
+  it('requires the canonical event admission port', () => {
+    expectTypeOf<
+      NonNullable<ConstructorParameters<typeof McpEventWorker>[0]['admission']>
+    >().toEqualTypeOf<EventDispatchAdmission>();
+  });
   let db: PGlite;
   let directory: string;
   let inbox: SqlMcpEventInbox;
@@ -296,7 +301,7 @@ describe('MCP event durable worker', () => {
         async admit() {
           return { status: 'waiting', retryable: true, reason: 'admission-held' };
         },
-      },
+      } satisfies EventDispatchAdmission,
     });
     await worker.pump();
     now += 3000;

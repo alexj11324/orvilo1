@@ -1248,6 +1248,30 @@ table user_installed_plugins {
   }
 }
 
+table action_receipts {
+  id text [pk, not null]
+  reservation_key text [not null]
+  owner_token text [not null]
+  receipt jsonb [not null]
+
+  indexes {
+    reservation_key [name: 'action_receipts_reservation_key_unique', unique]
+  }
+}
+
+table core_session_snapshots {
+  id text [pk, not null]
+  workspace_id text [not null]
+  user_id text [not null]
+  task_id text [not null]
+  topic_id text [not null]
+  registration_id text [not null]
+  epoch bigint [not null]
+  captured_at bigint [not null]
+  digest text [not null]
+  snapshot jsonb [not null]
+}
+
 table credentials {
   id text [pk, not null]
   owner_user_id text [not null]

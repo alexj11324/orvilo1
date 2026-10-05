@@ -7,7 +7,7 @@ export interface ReceiptSql {
   query: <T>(sql: string, parameters?: unknown[]) => Promise<{ rows: T[] }>;
 }
 
-/** Candidate DDL only. Applied explicitly to isolated test databases; not a migration. */
+/** Same shape as journal 0199. Isolated tests may apply it when the migration has not run. */
 export const ACTION_RECEIPT_SCHEMA_SQL = `
 CREATE TABLE action_receipts (
   id text PRIMARY KEY,

@@ -21,7 +21,7 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '../../schemas/taskExecutionControl';
+import { installTaskExecutionControlCandidate } from '../../schemas/taskExecutionControl';
 import type { OrviloDatabase } from '../../type';
 import {
   type RuntimeRunBinding,

@@ -75,9 +75,11 @@ beforeEach(async () => {
       enabled: true,
       endpoint: 'https://provider.example/v1',
       model: 'gpt-4',
+      name: 'Fixture Provider',
       provider: 'openai',
       secretReference: `credential:cred_${userId}`,
       selection: {
+        effort: 'default' as const,
         mode: 'default' as const,
         runtime: 'orvilo' as const,
         speed: 'default' as const,

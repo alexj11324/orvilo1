@@ -52,6 +52,7 @@ describe('ChatGroupMemberSlice', () => {
     };
     vi.mocked(chatGroupService.batchCreateAgentsInGroup).mockResolvedValue({
       agentIds: ['new-member'],
+      agents: [],
     });
     const id = await useAgentGroupStore
       .getState()

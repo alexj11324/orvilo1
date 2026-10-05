@@ -345,6 +345,7 @@ export default {
   'defaultAgent': 'Custom Agent',
   'defaultSession': 'Custom Agent',
   'delete': 'Delete',
+  'desktop': 'Desktop',
   'document': 'User Manual',
   'download': 'Download',
   'drafts.attachment': 'Attachment',

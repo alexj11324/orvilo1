@@ -124,7 +124,15 @@ const SubmitCustomSchema = z
           model: true,
           provider: true,
           title: true,
-        }).strict(),
+        })
+          .extend({
+            // A confirmed runtime always names a model — admission rejects the
+            // fork without one, so the schema refuses nullish values up front.
+            model: z.string().min(1).max(200),
+            provider: z.string().optional(),
+            title: z.string().optional(),
+          })
+          .strict(),
       })
       .strict(),
     type: z.literal('submit_custom'),

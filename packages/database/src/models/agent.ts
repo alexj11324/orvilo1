@@ -112,7 +112,6 @@ import {
   syncTopicCommentsOnTopicTransfer,
   TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS,
 } from './topicComment';
-import { UserModel } from './user';
 import { WorkspaceUserSettingsModel } from './workspaceUserSettings';
 
 /**
@@ -1125,9 +1124,11 @@ export class AgentModel {
       .where(and(eq(agents.id, agentId), this.ownership()))
       .limit(1);
     if (!source) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+    // Device/model overrides live on the workspace member preference only —
+    // a personal agent has exactly one member, so there is nothing to override.
     const preference = this.workspaceId
       ? await new WorkspaceUserSettingsModel(this.db, this.userId, this.workspaceId).getPreference()
-      : await new UserModel(this.db, this.userId).getUserPreference();
+      : undefined;
     const agency = resolveAgentAgencyConfig(
       source.agencyConfig,
       preference?.agentDeviceOverrides?.[agentId],

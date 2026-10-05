@@ -187,9 +187,11 @@ beforeEach(async () => {
           enabled: true,
           endpoint: 'https://provider.example/v1',
           model,
+          name: 'Fixture Provider',
           provider: model.startsWith('claude') ? 'anthropic' : 'openai',
           secretReference: `credential:cred_${userId}`,
           selection: {
+            effort: 'default' as const,
             runtime: 'orvilo' as const,
             target: 'sandbox' as const,
             mode: 'default' as const,

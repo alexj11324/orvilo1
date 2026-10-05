@@ -1,5 +1,5 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import type { AgentGroupDetail, AgentGroupMember, AgentPluginEntry } from '@orvilo/types';
+import type { AgentGroupDetail, AgentGroupMember, CreateAgentConfig } from '@orvilo/types';
 import { cleanObject } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import { and, asc, count, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
@@ -77,20 +77,22 @@ interface CopyAgentGroupToWorkspaceOptions {
   targetVisibility?: 'private' | 'public';
 }
 
-export interface SupervisorAgentConfig {
-  agencyConfig?: AgentItem['agencyConfig'];
-  avatar?: string;
-  backgroundColor?: string;
-  chatConfig?: AgentItem['chatConfig'];
-  description?: string;
-  model?: string | null;
-  params?: AgentItem['params'];
-  plugins?: AgentPluginEntry[];
-  provider?: string | null;
-  systemRole?: string;
-  tags?: string[];
-  title?: string;
-}
+export interface SupervisorAgentConfig extends Pick<
+  CreateAgentConfig,
+  | 'agencyConfig'
+  | 'avatar'
+  | 'backgroundColor'
+  | 'chatConfig'
+  | 'description'
+  | 'model'
+  | 'params'
+  | 'plugins'
+  | 'provider'
+  | 'systemRole'
+  | 'tags'
+  | 'title'
+  | 'visibility'
+> {}
 
 /**
  * Result of checking agents before removal

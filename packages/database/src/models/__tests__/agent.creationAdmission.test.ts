@@ -57,9 +57,16 @@ beforeEach(async () => {
       enabled: true,
       endpoint: 'https://provider.example/v1',
       model: 'executable-model',
+      name: 'Fixture Provider',
       provider: 'openai',
       secretReference: 'credential:cred_admission',
-      selection: { runtime: 'orvilo', target: 'sandbox', mode: 'default', speed: 'default' },
+      selection: {
+        effort: 'default',
+        runtime: 'orvilo',
+        target: 'sandbox',
+        mode: 'default',
+        speed: 'default',
+      },
     },
   });
 });

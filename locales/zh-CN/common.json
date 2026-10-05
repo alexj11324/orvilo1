@@ -274,6 +274,7 @@
   "delete": "删除",
   "deleteHistoryMigrating": "聊天记录正在迁移中，迁移完成后即可删除，请几分钟后再试",
   "deleteSharedOwnerOnly": "该资产承载了其他成员的会话，仅工作区 Owner 可删除",
+  "desktop": "桌面设备",
   "document": "使用文档",
   "download": "下载",
   "downloadingUpdate": "正在下载 {{percent}}%",

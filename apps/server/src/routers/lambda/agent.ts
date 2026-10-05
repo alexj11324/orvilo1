@@ -657,7 +657,8 @@ export const agentRouter = router({
       const access = await getResourceConfigAccess(
         {
           db: ctx.serverDB,
-          grantedPermissions: ctx.workspacePermissionCodes,
+          grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+            .workspacePermissionCodes,
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
         },

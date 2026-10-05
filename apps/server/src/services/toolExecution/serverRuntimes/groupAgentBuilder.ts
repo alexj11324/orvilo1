@@ -274,6 +274,9 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
             {
               ...params.supervisor,
               ...runtimeConfig,
+              // The runtime guard above proves agencyConfig is present; the
+              // schema type is optional-but-never-null.
+              agencyConfig: runtimeConfig.agencyConfig ?? undefined,
             },
           );
 

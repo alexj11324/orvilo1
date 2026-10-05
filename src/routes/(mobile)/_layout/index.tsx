@@ -7,6 +7,7 @@ import { Outlet, useLocation } from 'react-router';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import Loading from '@/components/Loading/BrandTextLoading';
+import AgentOnboarding from '@/features/AgentOnboarding';
 import FirstLoginGate from '@/features/AgentOnboarding/FirstLoginGate';
 import { MobileNavVisibleContext } from '@/features/MobileNav/navContext';
 import { RouteMetaBridge } from '@/features/RouteMeta';
@@ -61,14 +62,18 @@ const MobileMainLayout: FC = () => {
   return (
     <FirstLoginGate>
       <WorkspaceContextSlot>
-        <RouteMetaBridge />
-        <Suspense fallback={null}>{showCloudPromotion && <CloudBanner mobile />}</Suspense>
-        <Suspense fallback={<Loading debugId="MobileMainLayout > Outlet" />}>
-          <MobileNavVisibleContext value={showNav}>
-            <Outlet />
-            {showNav && <NavBar />}
-          </MobileNavVisibleContext>
-        </Suspense>
+        {/* Same first-agent gate as the desktop layout: while no usable agent
+            exists the setup screen covers the whole window, tab bar included. */}
+        <AgentOnboarding>
+          <RouteMetaBridge />
+          <Suspense fallback={null}>{showCloudPromotion && <CloudBanner mobile />}</Suspense>
+          <Suspense fallback={<Loading debugId="MobileMainLayout > Outlet" />}>
+            <MobileNavVisibleContext value={showNav}>
+              <Outlet />
+              {showNav && <NavBar />}
+            </MobileNavVisibleContext>
+          </Suspense>
+        </AgentOnboarding>
       </WorkspaceContextSlot>
     </FirstLoginGate>
   );

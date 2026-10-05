@@ -6,7 +6,7 @@ import { createStaticStyles } from 'antd-style';
 import { Loader2, RefreshCw, TerminalIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import { ProductLogo } from '@/components/Branding';
@@ -15,6 +15,7 @@ import { Spinner } from '@/components/ui/spinner';
 import LocalHarnessSection from '@/features/ChatInput/ActionBar/Agent/LocalHarnessSection';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { useAgentScan } from '@/features/ConnectAgent/useAgentScan';
+import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import {
   createOnboardingAgentOnce,
   type FirstAgentCreationCheckpoint,
@@ -30,8 +31,9 @@ import { authSelectors } from '@/store/user/selectors';
 
 import ApiAgentSetup from './ApiAgentSetup';
 import { collectInstalledHarnessTypes, isBuiltinAgentUsable } from './availability';
-import FirstAgentDeviceChoice from './FirstAgentDeviceChoice';
+import { isFirstAgentSetupPath } from './setupPath';
 import { useAgentAvailability } from './useAgentAvailability';
+import { useFirstAgentDevice } from './useFirstAgentDevice';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   brand: css`
@@ -176,25 +178,16 @@ const OnboardingBody = ({
   const createdPrime = useRef<{ agentId: string; deviceId: string } | undefined>(undefined);
   const primeCreation = useRef<FirstAgentCreationCheckpoint>({ requestId: crypto.randomUUID() });
   const cliCreation = useRef<FirstAgentCreationCheckpoint>({ requestId: crypto.randomUUID() });
-  const [deviceId, setDeviceId] = useState<string | undefined>(
-    useUserStore.getState().onboarding?.setup?.firstAgentDeviceId,
-  );
+  // The execution host resolves itself (this computer, then a persisted pick,
+  // then the first online personal device); choosing a device is an advanced
+  // concern that lives in Settings → Devices, not in onboarding.
+  const { deviceId, loading: loadingDevice } = useFirstAgentDevice();
   const createAgent = useAgentStore((s) => s.createAgent);
-  const selectDevice = (selectedDeviceId: string) => {
-    setDeviceId(selectedDeviceId);
-    const state = useUserStore.getState();
-    void state
-      .updateOnboarding({
-        setup: { ...state.onboarding?.setup, firstAgentDeviceId: selectedDeviceId },
-      })
-      .catch(setCreateError);
-  };
   const completeAgent = async (
     agentId: string,
     selectedDeviceId?: string,
     executionTarget: 'device' | 'local' = 'device',
   ) => {
-    setDeviceId(selectedDeviceId);
     const state = useUserStore.getState();
     await state.updateOnboarding({
       setup: {
@@ -204,6 +197,9 @@ const OnboardingBody = ({
         firstAgentExecutionTarget: executionTarget,
       },
     });
+    // The agent just created is where the user lands when the gate releases —
+    // the write goes through the single select action, not a sidebar default.
+    selectAgentForConversation(agentId);
     await retry();
   };
   const createPrime = async () => {
@@ -318,7 +314,6 @@ const OnboardingBody = ({
         <TerminalIcon size={16} />
         {t('onboarding.connect')}
       </Button>
-      <FirstAgentDeviceChoice deviceId={deviceId} onSelect={selectDevice} />
       {scanning ? (
         <div className={styles.card}>
           <div className={styles.scanHint}>
@@ -331,8 +326,17 @@ const OnboardingBody = ({
           <div className={styles.card}>
             {deviceId ? (
               <LocalHarnessSection onConnect={connect} />
+            ) : loadingDevice ? (
+              <div className={styles.scanHint}>
+                <Loader2 className="animate-spin" size={14} />
+              </div>
             ) : (
-              <div className="p-4 text-sm">{t('onboarding.device.title')}</div>
+              <div className="flex flex-col items-start gap-2 p-4">
+                <p className="text-sm">{t('onboarding.device.empty')}</p>
+                <Button size="sm" variant="outline" onClick={() => navigate('/settings/devices')}>
+                  {t('onboarding.device.connect')}
+                </Button>
+              </div>
             )}
           </div>
           <div className={styles.card}>
@@ -379,25 +383,43 @@ interface AgentOnboardingProps {
   children: ReactNode;
 }
 
-/** Block until authoritative reads confirm a persisted configured agent. */
+/**
+ * First-agent gate, mounted at the (main)/(mobile) layouts: until an
+ * authoritative read confirms a usable agent, the setup screen covers the
+ * whole app window — sidebar, title area and every page included — because
+ * nothing else can run yet. Setup paths (provider/credential/device settings)
+ * stay reachable: they are exactly where a blocked user goes to fix the
+ * missing piece.
+ */
 const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
+  const { pathname } = useLocation();
   const { availability, ready, error, retry, retrying } = useAgentAvailability();
   const isLogin = useUserStore(authSelectors.isLogin);
-  if (!isLogin) return <>{children}</>;
+  if (!isLogin || isFirstAgentSetupPath(pathname)) return <>{children}</>;
+
+  const cover = (content: ReactNode) => (
+    <>
+      {children}
+      {/* z-50 clears the shell chrome (sidebar sits at z-10) but stays under
+          modal/toast layers so dialogs opened from the flow still interact. */}
+      <div className="fixed inset-0 z-50 overflow-auto bg-background">
+        <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center px-6 py-8">
+          {content}
+        </div>
+      </div>
+    </>
+  );
+
   if (error !== undefined)
-    return <AsyncError error={error} retrying={retrying} onRetry={() => void retry()} />;
+    return cover(<AsyncError error={error} retrying={retrying} onRetry={() => void retry()} />);
   if (!ready)
-    return (
+    return cover(
       <div className="flex min-h-64 items-center justify-center">
         <Spinner />
-      </div>
+      </div>,
     );
   if (availability.usable) return <>{children}</>;
-  return (
-    <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-6 py-8">
-      <OnboardingBody builtinUsable={availability.builtinUsable} retry={retry} />
-    </div>
-  );
+  return cover(<OnboardingBody builtinUsable={availability.builtinUsable} retry={retry} />);
 };
 
 export default AgentOnboarding;

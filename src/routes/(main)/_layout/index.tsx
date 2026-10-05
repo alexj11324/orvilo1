@@ -11,6 +11,7 @@ import { Outlet } from 'react-router';
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import { isDesktop } from '@/const/version';
+import AgentOnboarding from '@/features/AgentOnboarding';
 import FirstLoginGate from '@/features/AgentOnboarding/FirstLoginGate';
 import { BANNER_HEIGHT } from '@/features/AlertBanner/CloudBanner';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
@@ -53,31 +54,36 @@ const Layout: FC = () => {
         {isDesktop && <DesktopAutoOidcOnFirstOpen />}
         <FirstLoginGate>
           <WorkspaceContextSlot>
-            <RouteMetaBridge />
-            <Suspense fallback={null}>{showCloudPromotion && <CloudBanner />}</Suspense>
-            <DndContextWrapper>
-              <div
-                className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
-                style={{
-                  height: showCloudPromotion ? `calc(100% - ${BANNER_HEIGHT}px)` : '100%',
-                  width: '100%',
-                }}
-              >
-                <SidebarShell />
-                <DesktopLayoutContainer>
-                  <Suspense fallback={<RouteSegmentSkeleton />}>
-                    <Outlet />
-                  </Suspense>
-                </DesktopLayoutContainer>
-              </div>
-            </DndContextWrapper>
-            <Suspense fallback={null}>
-              <HotkeyHelperPanel />
-              <RegisterHotkeys />
-              <CmdkLazy />
-              <GlobalApprovalNotification />
-              <GlobalOverlays />
-            </Suspense>
+            {/* Until the first usable agent exists the gate covers the whole
+                window — nothing else can run yet, so no page or sidebar entry
+                may be reachable mid-setup. */}
+            <AgentOnboarding>
+              <RouteMetaBridge />
+              <Suspense fallback={null}>{showCloudPromotion && <CloudBanner />}</Suspense>
+              <DndContextWrapper>
+                <div
+                  className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+                  style={{
+                    height: showCloudPromotion ? `calc(100% - ${BANNER_HEIGHT}px)` : '100%',
+                    width: '100%',
+                  }}
+                >
+                  <SidebarShell />
+                  <DesktopLayoutContainer>
+                    <Suspense fallback={<RouteSegmentSkeleton />}>
+                      <Outlet />
+                    </Suspense>
+                  </DesktopLayoutContainer>
+                </div>
+              </DndContextWrapper>
+              <Suspense fallback={null}>
+                <HotkeyHelperPanel />
+                <RegisterHotkeys />
+                <CmdkLazy />
+                <GlobalApprovalNotification />
+                <GlobalOverlays />
+              </Suspense>
+            </AgentOnboarding>
           </WorkspaceContextSlot>
         </FirstLoginGate>
       </HotkeysProvider>

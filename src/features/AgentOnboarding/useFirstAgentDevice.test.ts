@@ -77,6 +77,23 @@ describe('first-agent device auto-resolution', () => {
     await waitFor(() => expect(view.result.current.deviceId).toBe('dev-local'));
   });
 
+  it('resolves this computer even when the inventory has no row for it', async () => {
+    mocks.localDeviceId = 'dev-local';
+    mocks.devices = [device({ deviceId: 'dev-remote' })];
+    const view = renderHook(() => useFirstAgentDevice());
+    await waitFor(() => expect(view.result.current.deviceId).toBe('dev-local'));
+    expect(view.result.current.isLocalDevice).toBe(true);
+    expect(view.result.current.exhausted).toBe(false);
+  });
+
+  it('resolves this computer without waiting for the inventory', async () => {
+    mocks.localDeviceId = 'dev-local';
+    mocks.devices = undefined;
+    const view = renderHook(() => useFirstAgentDevice());
+    await waitFor(() => expect(view.result.current.deviceId).toBe('dev-local'));
+    expect(view.result.current.loading).toBe(false);
+  });
+
   it('keeps a persisted pick that is still online when no local device exists', async () => {
     mocks.persisted = 'dev-picked';
     mocks.devices = [device({ deviceId: 'dev-other' }), device({ deviceId: 'dev-picked' })];

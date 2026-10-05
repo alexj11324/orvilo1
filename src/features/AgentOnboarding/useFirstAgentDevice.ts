@@ -42,14 +42,20 @@ export const useFirstAgentDevice = () => {
   );
 
   const deviceId = useMemo(() => {
-    const ranked = [localDeviceId, persisted, pickable[0]?.deviceId];
+    // A proven local identity IS the host — this computer is always a valid
+    // execution target on desktop, even before the devices inventory has
+    // synced its row. Gating it on `pickable` produced a false
+    // "No connected device is online" on Electron.
+    if (localDeviceId) return localDeviceId;
+    const ranked = [persisted, pickable[0]?.deviceId];
     return ranked.find((id) => id && pickable.some((device) => device.deviceId === id));
   }, [localDeviceId, persisted, pickable]);
 
-  // Wait for the inventory (and the desktop identity handshake) before writing
-  // the checkpoint so a transient candidate isn't persisted ahead of this
-  // computer.
-  const resolved = devices !== undefined && identityChecked;
+  // The desktop identity handshake alone can prove the host; the inventory is
+  // only needed when it couldn't (web or unproven). An inventory error ends
+  // resolution too — better the empty state with a Settings escape than a
+  // spinner that never settles.
+  const resolved = identityChecked && (!!localDeviceId || devices !== undefined || !!error);
   useEffect(() => {
     if (!resolved || !deviceId || deviceId === persisted) return;
     const state = useUserStore.getState();

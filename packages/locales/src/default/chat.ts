@@ -619,7 +619,7 @@ export default {
   'heteroAgent.resumeReset.cwdChanged':
     'Working directory changed. Previous Claude Code session can only be resumed from its original directory, so a new conversation has started.',
   'heteroAgent.resumeReset.cursorAcpIncompatible':
-    'The previous Cursor session could not be restored through ACP, so a new conversation has started with fresh context.',
+    'The previous Cursor session could not be restored, so a new conversation has started with fresh context.',
   'heteroAgent.resumeReset.resumeFailed':
     'The saved Codex thread could not be resumed safely, so a new conversation has started for this topic.',
   'heteroAgent.switchCwd.cancel': 'Cancel',
@@ -1147,11 +1147,11 @@ export default {
   'onboarding.api.create': 'Verify and create agent',
   'onboarding.api.failed':
     'Setup could not finish. Check your device, key, endpoint, and model, then retry. Your saved setup will be reused.',
-  'onboarding.connect': 'Connect an ACP agent',
+  'onboarding.connect': 'Connect an agent',
   'onboarding.prime.create': 'Create Orvilo AI',
   'onboarding.prime.ready': 'An existing provider route is available for Orvilo AI.',
   'onboarding.prime.unavailable':
-    'Orvilo AI needs a verified provider route. Connect an ACP agent or configure your API key.',
+    'Orvilo AI needs a verified provider route. Connect an agent or configure your API key.',
   'onboarding.builtin.action': 'Open settings',
   'onboarding.builtin.desc': 'No model provider is configured yet, so it cannot run.',
   'onboarding.builtin.group': 'Built-in Agent',
@@ -1163,7 +1163,7 @@ export default {
     'No connected device is online. Connect this computer or enroll a device, then check again.',
   'onboarding.device.use': 'Use {{name}}',
   'onboarding.device.connect': 'Connect a device',
-  'onboarding.emptyDesc': 'Connect an ACP agent or create Orvilo AI with your API key.',
+  'onboarding.emptyDesc': 'Connect an agent or create Orvilo AI with your API key.',
   'onboarding.emptyTitle': 'Create your first agent',
   'onboarding.footerHint': 'Create your first usable agent to continue setup.',
   'onboarding.installCli.desc': 'Claude Code / Codex / OpenCode…',

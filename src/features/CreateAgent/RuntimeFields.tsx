@@ -143,7 +143,7 @@ export const useAgentRuntimeForm = ({
     if (!host.isLocal || choice === BUILTIN_AGENT_KEY) {
       const devices = await deviceService.listDevices();
       if (
-        !eligibleExecutionDevices(devices, workspaceId, visibility).some(
+        !eligibleExecutionDevices(devices, workspaceId ?? undefined, visibility).some(
           (device) => device.deviceId === host.deviceId,
         )
       )

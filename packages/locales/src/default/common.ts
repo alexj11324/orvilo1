@@ -210,7 +210,7 @@ export default {
 
   'cmdk.navigate': 'Navigate',
 
-  'cmdk.newAgent': 'Create New Agent',
+  'cmdk.newAgent': 'New Agent',
 
   'cmdk.newAgentTeam': 'Create New Group',
 

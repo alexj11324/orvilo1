@@ -1,5 +1,6 @@
 'use client';
 
+import { agentDisplayName } from '@orvilo/types';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -47,9 +48,9 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
     setRuntime(
       coordinator
         ? {
-            agencyConfig: coordinator.agencyConfig,
-            model: coordinator.model,
-            provider: coordinator.provider,
+            agencyConfig: coordinator.agencyConfig ?? undefined,
+            model: coordinator.model ?? undefined,
+            provider: coordinator.provider ?? undefined,
           }
         : undefined,
     );
@@ -113,11 +114,13 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
           }}
         >
           <TabsList className="max-w-full overflow-x-auto" variant="line">
-            {['basic', 'members', 'coordinator', 'opening', 'permissions'].map((value) => (
-              <TabsTrigger disabled={pending} key={value} value={value}>
-                {t(`group.settings.tabs.${value}`)}
-              </TabsTrigger>
-            ))}
+            {(['basic', 'members', 'coordinator', 'opening', 'permissions'] as const).map(
+              (value) => (
+                <TabsTrigger disabled={pending} key={value} value={value}>
+                  {t(`group.settings.tabs.${value}`)}
+                </TabsTrigger>
+              ),
+            )}
           </TabsList>
           <TabsContent value="basic">
             <BasicSettings />
@@ -142,18 +145,22 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
                 key={member.id}
               >
                 <Button
+                  className="min-w-0 max-w-[45%]"
                   variant={selectedMember === member.id ? 'secondary' : 'ghost'}
                   onClick={() => {
                     setSelectedMember(member.id);
                     useGroupProfileStore.setState({ activeTabId: member.id });
                   }}
                 >
-                  {member.title}
+                  <span className="truncate">
+                    {agentDisplayName(member, t('defaultSession', { ns: 'common' }))}
+                  </span>
                 </Button>
-                <span className="flex-1 text-xs text-muted-foreground">
+                <span className="min-w-0 flex-1 text-xs text-muted-foreground">
                   {t(member.virtual ? 'group.settings.groupOwned' : 'group.settings.sharedAgent')}
                 </span>
                 <Button
+                  className="shrink-0"
                   size="sm"
                   variant="ghost"
                   onClick={() =>

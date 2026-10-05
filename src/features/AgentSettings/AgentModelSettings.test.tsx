@@ -62,7 +62,7 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 }));
 vi.mock('@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog', () => ({
   useModelCatalog: () => ({
-    data: { models: [{ id: 'model-one', modelId: 'model-one', label: 'Model One' }] },
+    data: { models: [{ id: 'model-one', modelId: 'model-one', label: 'Provider/Model One' }] },
     isLoading: false,
     error: state.catalogError,
     mutate: state.catalogRetry,
@@ -116,6 +116,14 @@ describe('Agent model settings states', () => {
     await user.clear(input);
     await user.type(input, 'zz-no-matching-model');
     expect(view.getByText('createAgent.model.empty')).toBeTruthy();
+  });
+
+  it('shows the friendly model label without its catalog provider prefix', async () => {
+    state.config.agencyConfig.heterogeneousProvider.type = 'opencode';
+    const view = render(<AgentModelSettings agentId="agt_one" />);
+    await userEvent.setup().click(view.getByRole('combobox'));
+    expect(view.getByRole('option', { name: 'Model One' })).toBeTruthy();
+    expect(view.queryByText('Provider/Model One')).toBeNull();
   });
 });
 

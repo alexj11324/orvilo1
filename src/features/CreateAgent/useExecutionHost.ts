@@ -42,7 +42,7 @@ export const useExecutionHost = (visibility?: 'private' | 'public') => {
       active = false;
     };
   }, [identityAttempt]);
-  const pickable = eligibleExecutionDevices(devices ?? [], workspaceId, visibility);
+  const pickable = eligibleExecutionDevices(devices ?? [], workspaceId ?? undefined, visibility);
   const allowLocal = !workspaceId || visibility === 'private';
   const localId = allowLocal ? localDeviceId : undefined;
   const deviceId = selectedId ?? localId ?? pickable[0]?.deviceId;

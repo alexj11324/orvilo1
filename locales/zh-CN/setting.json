@@ -930,6 +930,7 @@
   "settingAgent.list.configure": "配置",
   "settingAgent.list.configured": "已配置",
   "settingAgent.list.empty": "当前范围内暂无 Agent，创建一个即可开始。",
+  "settingAgent.list.error": "无法加载配置",
   "settingAgent.list.loading": "正在加载配置…",
   "settingAgent.list.needsConfiguration": "待配置",
   "settingAgent.list.noDevice": "未选择执行位置",

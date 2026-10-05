@@ -275,7 +275,7 @@
   "reui.workspace.successTitle": "{{name}} is ready",
   "reui.workspace.teamSize": "How many people will use this workspace?",
   "reui.workspace.url": "Workspace URL",
-  "reui.workspace.urlDescription": "Your workspace will open at orvilo.aspectlylabs.com/{{slug}}.",
+  "reui.workspace.urlDescription": "Your workspace will open at /{{slug}}.",
   "setup.account": "Account settings",
   "setup.agent.description": "Connect an Agent, then enter your workspace.",
   "setup.agent.enter": "Check Agent and enter workspace",

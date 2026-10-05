@@ -31,7 +31,10 @@ import {
   getEffortLabelKeys,
   getModeLabelKey,
 } from '@/features/ChatInput/ControlBar/HeteroModel/labels';
-import { getStaticModelOptions } from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
+import {
+  getStaticModelOptions,
+  modelDisplayLabel,
+} from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
 import { resolveModelSwitchSelection } from '@/features/ChatInput/ControlBar/HeteroModel/selectorView';
 import { useModelCatalog } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
 import { AgentModelPicker } from '@/features/CreateAgent/AgentModelPicker';
@@ -237,9 +240,11 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
 
     return [
       { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...(staleCurrent ? [{ label: model, title: model, value: model }] : []),
+      ...(staleCurrent
+        ? [{ label: modelDisplayLabel({ id: model, modelId: model }), title: model, value: model }]
+        : []),
       ...models.map((item) => ({
-        label: item.label ?? item.modelId,
+        label: modelDisplayLabel(item),
         title: `${item.label ?? item.modelId} ${item.id}`,
         value: item.id,
       })),

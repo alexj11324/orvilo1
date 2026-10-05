@@ -155,6 +155,10 @@ export const CreateGroupChatContent = ({
                 <Select
                   disabled={pending || !!createdId}
                   value={selectedVisibility}
+                  items={[
+                    { value: 'private', label: t('group.create.privateScope') },
+                    { value: 'public', label: t('group.create.workspaceScope') },
+                  ]}
                   onValueChange={(value) => {
                     if (value !== 'private' && value !== 'public') return;
                     if (value === selectedVisibility) return;

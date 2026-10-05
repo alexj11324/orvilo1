@@ -1,7 +1,6 @@
 'use client';
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import type { AgentItem } from '@orvilo/types';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -33,7 +32,7 @@ export interface CreateAgentPanelProps {
   initialType?: HeterogeneousAgentType;
   lockVisibility?: boolean;
   onCancel?: () => void;
-  onCreated?: (agentId: string, config?: Partial<AgentItem>) => void | Promise<void>;
+  onCreated?: (agentId: string, config?: CreateAgentParams['config']) => void | Promise<void>;
   visibility?: 'private' | 'public';
 }
 

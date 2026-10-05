@@ -1,12 +1,12 @@
 'use client';
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import type { AgentItem } from '@orvilo/types';
 import { t as i18nT } from 'i18next';
 
 import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
 import { openNewConversation } from '@/features/Conversation/selectAgent';
 import CreateAgentPanel from '@/features/CreateAgent/CreateAgentPanel';
+import type { CreateAgentParams } from '@/services/agent';
 import type { FirstAgentCreationCheckpoint } from '@/services/agentOnboarding';
 
 export interface OpenConnectAgentModalOptions {
@@ -15,7 +15,7 @@ export interface OpenConnectAgentModalOptions {
   groupId?: string;
   /** Pre-picked harness (composer picker hand-off). */
   initialType?: HeterogeneousAgentType;
-  onCreated?: (agentId: string, config?: Partial<AgentItem>) => Promise<void> | void;
+  onCreated?: (agentId: string, config?: CreateAgentParams['config']) => Promise<void> | void;
   visibility?: 'private' | 'public';
 }
 

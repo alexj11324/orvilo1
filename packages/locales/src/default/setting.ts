@@ -4287,4 +4287,5 @@ export default {
   'settingAgent.list.configure': 'Configure',
   'settingAgent.list.noDevice': 'No execution target',
   'settingAgent.list.unavailable': 'Agent unavailable',
+  'settingAgent.list.error': 'Could not load configuration',
 };

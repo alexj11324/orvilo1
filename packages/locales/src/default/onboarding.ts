@@ -330,7 +330,7 @@ export default {
   'reui.workspace.name': 'Workspace name',
   'reui.workspace.teamSize': 'How many people will use this workspace?',
   'reui.workspace.url': 'Workspace URL',
-  'reui.workspace.urlDescription': 'Your workspace will open at orvilo.aspectlylabs.com/{{slug}}.',
+  'reui.workspace.urlDescription': 'Your workspace will open at /{{slug}}.',
   'reui.workspace.successDescription': 'Your workspace is set up and ready for the first project.',
   'reui.workspace.successTitle': '{{name}} is ready',
 

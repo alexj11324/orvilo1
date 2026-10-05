@@ -1,7 +1,7 @@
 {
   "guide.agents.replaceBtn": "换一批",
   "guide.agents.title": "新增智能体推荐：",
-  "guide.defaultMessage": "我是你的智能智能体 {{appName}}。从任何想法开始都可以。<br />如需更专业的智能体，可以点击 <plus /> 创建",
+  "guide.defaultMessage": "我是你的智能体 {{appName}}。从任何想法开始都可以。<br />如需更专业的智能体，可以点击 <plus /> 创建",
   "guide.defaultMessageWithoutCreate": "这里是 {{appName}}。从一句话开始，把目标说清楚就行",
   "guide.groupActivities.analysis.codeReview.description": "对代码变更和实现进行技术讨论和同行评审",
   "guide.groupActivities.analysis.codeReview.emoji": "💻",

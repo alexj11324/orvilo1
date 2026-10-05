@@ -1,6 +1,7 @@
 import { type ConnectionConfig } from '@lobehub/market-types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { CodeBlock } from '@/components/ui/code-block';
 import { genServerConfig } from '@/features/MCP/utils';
@@ -23,6 +24,7 @@ interface PlatformProps {
 }
 
 const Platform = memo<PlatformProps>(({ lite, identifier, connection }) => {
+  const { t } = useTranslation('discover');
   const serverConfig = genServerConfig(identifier, connection);
 
   return (
@@ -30,7 +32,7 @@ const Platform = memo<PlatformProps>(({ lite, identifier, connection }) => {
       <CodeBlock
         className={cx(lite && styles.lite)}
         code={serverConfig}
-        label="MCP server config"
+        label={t('mcp.details.deployment.serverConfig')}
         language="json"
         style={{
           fontSize: 12,

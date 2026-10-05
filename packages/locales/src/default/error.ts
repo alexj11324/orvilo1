@@ -1,7 +1,7 @@
 export default {
   'deviceAdmission.required':
-    'Connect a device, then select it in Execution Device before sending again.',
-  'deviceAdmission.selectionRequired': 'Select a device in Execution Device before sending again.',
+    'Connect a device, then pick it in the device selector before sending again.',
+  'deviceAdmission.selectionRequired': 'Pick a device in the device selector before sending again.',
   'deviceAdmission.denied':
     'You do not have access to this device. Choose a device you can use or ask its owner for access.',
   'deviceAdmission.configure': 'Manage devices',
@@ -16,10 +16,11 @@ export default {
   'saveState.retry': 'Retry',
   'saveState.saveFailed': 'Failed to save your changes. Please try again.',
   'error.backHome': 'Back to Home',
+  'error.backToSignIn': 'Back to sign in',
   'error.desc': 'Give it a try later, or go back to the known world.',
   'error.stack': 'Error Stack',
   'error.retry': 'Reload',
-  'error.title': 'Oops, something went wrong..',
+  'error.title': 'Something went wrong',
   'fetchError.detail': 'Error details',
   'fetchError.title': 'Request failed',
   'import.importConfigFile.description': 'Error reason: {{reason}}',
@@ -113,7 +114,7 @@ export default {
     'The conversation has exceeded the context window limit. You can compact the context to compress history and continue chatting.',
   'exceededContext.title': 'Context Window Exceeded',
 
-  'unknownError.copyTraceId': 'Trace ID Copied',
+  'unknownError.copyTraceId': 'Trace ID copied',
   'unknownError.copyTraceIdTooltip': 'Click to copy',
   'unknownError.desc': 'An unexpected error occurred. You can retry or report on',
   'unknownError.retry': 'Retry',

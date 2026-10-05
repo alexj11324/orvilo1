@@ -368,7 +368,7 @@
   "run.empty.descriptionBenchmark": "Start your first evaluation run on this benchmark",
   "run.empty.title": "No runs yet",
   "run.error.start": "Failed to start run",
-  "run.external.hint": "Running completed. Waiting for external system to submit evaluation results ...",
+  "run.external.hint": "Running completed. Waiting for the external system to submit evaluation results…",
   "run.filter.active": "Active",
   "run.filter.empty": "No runs match the current filter.",
   "run.idle.hint": "Click Start to begin evaluation",

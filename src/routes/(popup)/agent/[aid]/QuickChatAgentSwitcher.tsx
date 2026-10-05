@@ -6,6 +6,7 @@ import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import Avatar from '@/components/Avatar';
@@ -158,6 +159,7 @@ const useSwitchItems = (): SwitchItem[] => {
 };
 
 const QuickChatAgentSwitcher = memo(() => {
+  const { t } = useTranslation('chat');
   // Popup window has its own SPA boot — main sidebar's fetch never fires here,
   // so we trigger the agent list fetch ourselves.
   useFetchAgentList();
@@ -225,7 +227,11 @@ const QuickChatAgentSwitcher = memo(() => {
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger
             render={
-              <button aria-label={'More agents'} className={styles.more} type={'button'}>
+              <button
+                aria-label={t('agentSwitcher.moreAgents')}
+                className={styles.more}
+                type={'button'}
+              >
                 <MoreHorizontalIcon size={16} />
               </button>
             }
@@ -233,7 +239,7 @@ const QuickChatAgentSwitcher = memo(() => {
           <PopoverContent align="center" className={styles.popover} side="bottom">
             <div className={styles.popoverContent}>
               <Input
-                placeholder={'Search agents...'}
+                placeholder={t('agentSwitcher.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

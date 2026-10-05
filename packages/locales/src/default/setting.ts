@@ -2,6 +2,7 @@ export default {
   'devices.connectWizard.cli.unavailable':
     'This release does not include a CLI installer yet. Check Releases for an available installer.',
   'devices.connectWizard.cli.viewReleases': 'View Releases',
+  'codingPlan': 'Coding Plan',
   'providerBindings.runtime': 'Runtime',
   'providerBindings.engine': 'Adapter',
   'providerBindings.effort': 'Reasoning effort',
@@ -88,7 +89,7 @@ export default {
   'accountDeletion.cancelButton': 'Cancel Deletion',
   'accountDeletion.cancelConfirmTitle': 'Cancel account deletion request?',
   'accountDeletion.cancelFailed': 'Failed to cancel deletion request',
-  'accountDeletion.cancelSuccess': 'Deletion request cancelled',
+  'accountDeletion.cancelSuccess': 'Deletion request canceled',
   'accountDeletion.confirmCheckbox':
     'I have read and understood the above, and confirm to proceed with account deletion',
   'accountDeletion.confirmContent':
@@ -145,11 +146,11 @@ export default {
   'artworkStudio.direction.placeholder':
     'Add a detail — "a boy with glasses", "cyberpunk mechanic" (optional)',
   'artworkStudio.diyTitle': 'Make your own',
-  'artworkStudio.enableModel': 'Enable a model',
+  'artworkStudio.enableModel': 'Enable a model first',
   'artworkStudio.generate.avatar': 'Generate',
   'artworkStudio.generate.fullBody': 'Generate',
   'artworkStudio.generate.characterSet': 'Generate both images',
-  'artworkStudio.framePreview': 'Preview what home shows',
+  'artworkStudio.framePreview': 'Home preview',
   'artworkStudio.generateFailed': 'Could not generate the image. Try again.',
   'artworkStudio.generateTitle': 'Generate with AI',
   'artworkStudio.generatingHint':
@@ -160,7 +161,7 @@ export default {
   'artworkStudio.reference.title': 'Reference',
   'artworkStudio.remove': 'Remove',
   'artworkStudio.style.anime': 'Anime',
-  'artworkStudio.style.lineArt': 'Hand-drawn Lines',
+  'artworkStudio.style.lineArt': 'Line art',
   'artworkStudio.style.orvilo': 'Orvilo Style',
   'artworkStudio.style.painterly': 'Hand-painted',
   'artworkStudio.style.pixel': 'Pixel Art',
@@ -272,6 +273,7 @@ export default {
   'agentInfoDescription.model.title': 'Model Settings',
   'agentInfoDescription.model.topP': 'Top P Value',
   'agentInfoDescription.plugins.count': 'Skill Settings ({{count}})',
+  'agentSkillDetail.noContent': 'No content',
   'agentInfoDescription.plugins.empty': 'No Skills installed yet',
   'agentInfoDescription.plugins.title': 'Installed Skills',
   'agentInfoDescription.role.systemRole': 'Agent Profile',
@@ -322,6 +324,10 @@ export default {
   'agentSkillModal.url.title': 'Import from URL',
   'agentSkillModal.url.urlPlaceholder': 'https://example.com/path/to/SKILL.md',
   'agentSkillTag': 'Agent Skill',
+  'agentConnectors.empty': 'No connectors connected yet. Go to Connectors to add one.',
+  'agentConnectors.toolCount_one': '{{count}} tool',
+  'agentConnectors.toolCount_other': '{{count}} tools',
+  'agentTab.connector': 'Connectors',
   'agentTab.graph': 'Graph Runtime',
   'agentTab.opening': 'Opening Settings',
   'agentTab.plugin': 'Skill Settings',
@@ -410,7 +416,7 @@ export default {
     'Members can only use the device you set for this group',
   'permission.page.groupDevicePolicyMemberDesc': 'Members can set their own execution device',
   'permission.page.groupDevicePolicyUnset':
-    'Pick an execution device for the orchestrator first, then you can fix it here.',
+    'Pick an execution device for the group host first, then you can fix it here.',
   'permission.page.groupGeneralAccessDesc':
     'What every workspace member can do with this group. The same level is applied to the member agents the group owns. The creator and workspace owners always keep full access.',
   'permission.page.groupPersonalDesc':
@@ -581,7 +587,7 @@ export default {
   'creds.personalSection.desc':
     'These are your own credentials. Turn on sharing to make one available to this workspace.',
   'creds.share.error': 'Failed to update sharing for this credential. Please try again.',
-  'creds.share.toggle': 'Share to workspace',
+  'creds.share.toggle': 'Share with workspace',
   'creds.share.visibility.private': 'Private',
   'creds.share.visibility.public': 'Public',
   'creds.tabs.personal': 'Personal',
@@ -625,7 +631,7 @@ export default {
   'creds.types.all': 'All',
   'creds.types.file': 'File',
   'creds.types.kv-env': 'Environment',
-  'creds.types.kv-header': 'Header',
+  'creds.types.kv-header': 'HTTP header',
   'creds.types.oauth': 'OAuth',
   'creds.view.error': 'Failed to load credential',
   'creds.view.noValues': 'No Values',
@@ -660,8 +666,8 @@ export default {
   'devices.capabilities.tools.title': 'Call system tools',
   'devices.connectWizard.button': 'Connect Device',
   'devices.connectWizard.cli.connectDesc':
-    'Start the background daemon to keep the device online and listening for remote operations.',
-  'devices.connectWizard.cli.connectTitle': 'Start the daemon',
+    'Keep the helper running in the background so the device stays connected and ready for remote work.',
+  'devices.connectWizard.cli.connectTitle': 'Start the helper',
   'devices.connectWizard.cli.installTitle': 'Install the CLI',
   'devices.connectWizard.cli.loginTitle': 'Sign in',
   'devices.connectWizard.desktop.downloadLink': 'Download Orvilo Desktop',
@@ -712,7 +718,7 @@ export default {
   'devices.osPermissions.title': 'System permissions',
   'devices.remove.confirm': 'Remove this device?',
   'devices.remove.confirmDesc':
-    'This disconnects the device from your account. It does not sign the device out, and it can re-register on next connect.',
+    'This disconnects the device from your account. It does not sign the device out, and it can re-register the next time it connects.',
   'devices.remove.currentSessionWarning':
     "This includes the device you're using right now — removing it disconnects your current session.",
   'devices.selection.total': '{{count}} devices',
@@ -721,17 +727,18 @@ export default {
   'devices.share.confirm': 'Share',
   'devices.share.detailLabel': 'Shared to workspaces',
   'devices.share.done': 'Done',
-  'devices.share.empty': "You haven't joined any workspace yet.",
+  'devices.share.empty':
+    "You haven't joined a workspace yet — join or create one to share devices.",
   'devices.share.goToTarget': 'Go to {{name}}',
   'devices.share.menu': 'Share to Workspace…',
   'devices.share.modalDesc':
     'Pick a workspace to share this device into. Members can dispatch agent runs to it while it stays online.',
-  'devices.share.modalTitle': 'Share Device to Workspace',
+  'devices.share.modalTitle': 'Share device with workspace',
   'devices.share.offlineDesc': 'The device must be online to share',
   'devices.share.overwriteConfirmDesc':
-    'This machine is already enrolled in this workspace with {{current}} access. Continue to change it to {{next}} and link it to this device.',
+    'This device is already shared with {{name}} as "{{current}}". Sharing again will change access to "{{next}}".',
   'devices.share.overwriteConfirmOk': 'Overwrite',
-  'devices.share.overwriteConfirmTitle': 'Already in {{name}} — overwrite?',
+  'devices.share.overwriteConfirmTitle': '{{name}} already has this device — replace it?',
   'devices.share.revoke': 'Unshare',
   'devices.share.revokeConfirmDesc':
     'This removes the device from that workspace. Members can no longer dispatch runs to it; you can share it again anytime.',
@@ -752,12 +759,12 @@ export default {
   'devices.visibility.publishConfirmTitle': 'Publish this device to the workspace?',
   'devices.visibilityTabs.private': 'Private',
   'devices.visibilityTabs.workspace': 'Workspace',
-  'devices.workingDirectory': 'Working dir: {{path}}',
+  'devices.workingDirectory': 'Working directory: {{path}}',
   'checkingPermissions': 'Checking permissions...',
   'danger.reset.action': 'Reset Now',
   'danger.reset.confirm': 'Reset all settings?',
   'danger.reset.currentVersion': 'Current Version',
-  'danger.reset.desc': 'Restore all settings to defaults. Your data wont be deleted.',
+  'danger.reset.desc': "Restore all settings to defaults. Your data won't be deleted.",
   'danger.reset.success': 'All settings have been reset',
   'danger.reset.title': 'Reset All Settings',
   'defaultAgent.model.desc': 'Model used when creating new agents',
@@ -790,7 +797,7 @@ export default {
   'hotkey.conflicts': 'Conflicts with existing hotkeys',
   'hotkey.errors.CONFLICT': 'Hotkey conflict: This hotkey is already assigned to another function',
   'hotkey.errors.INVALID_FORMAT':
-    'Invalid hotkey format: Please use the correct format (e.g., CommandOrControl+E)',
+    'Invalid shortcut format — use a combination like Ctrl+S or Cmd+Shift+K.',
   'hotkey.errors.INVALID_ID': 'Invalid hotkey ID',
   'hotkey.errors.NO_MODIFIER': 'Hotkey must include a modifier key (Ctrl, Alt, Shift, etc.)',
   'hotkey.errors.SYSTEM_OCCUPIED': 'Hotkey is occupied by the system or another application',
@@ -827,10 +834,10 @@ export default {
     'Enter the display name of the model, such as ChatGPT, GPT-4, etc.',
   'llm.customModelCards.modelConfig.displayName.title': 'Model Display Name',
   'llm.customModelCards.modelConfig.files.extra':
-    'The current file upload implementation is merely a hack solution and is intended for personal experimentation only. Please wait for a complete file upload capability in future updates.',
+    'File upload is experimental — whether it works depends on the model.',
   'llm.customModelCards.modelConfig.files.title': 'Support File Upload',
   'llm.customModelCards.modelConfig.functionCall.extra':
-    'This only enables Skill calling in the app. Whether the model actually supports Skill calling depends on the model itself—please test it.',
+    'Enables tool-use capability only; whether the model actually calls tools depends on the model itself.',
   'llm.customModelCards.modelConfig.functionCall.title': 'Supports Skill calling',
   'llm.customModelCards.modelConfig.id.extra': 'Will be displayed as the model label',
   'llm.customModelCards.modelConfig.id.placeholder':
@@ -1020,7 +1027,7 @@ export default {
   'settingAgent.slug.error.invalid': 'Use lowercase letters, numbers and hyphens only',
   'settingAgent.slug.error.reserved': 'This identifier is reserved',
   'settingAgent.slug.error.taken': 'This identifier is already in use',
-  'settingAgent.slug.placeholder': 'url-identifier',
+  'settingAgent.slug.placeholder': 'e.g. code-reviewer',
   'settingAgent.slug.openWith': 'Open it directly with /agent/{{slug}}',
   'settingAgent.slug.tooltip': 'The agent’s url identifier — open it with /agent/<slug>',
   'settingAgent.prompt.desc':
@@ -1089,7 +1096,7 @@ export default {
   'settingAgent.generalSettings.title': 'General',
   'settingAgent.modelPolicy.title': 'Model',
   'settingAgent.modelSettings.bindAction': 'Bind a provider',
-  'settingAgent.modelSettings.catalogError': 'Could not load models from the selected machine.',
+  'settingAgent.modelSettings.catalogError': 'Could not load models from the selected device.',
   'settingAgent.modelSettings.catalogPending':
     'Models load from the selected machine once an execution target is set.',
   'settingAgent.modelSettings.effortLabel': 'Reasoning effort',
@@ -1177,10 +1184,10 @@ export default {
   'settingChat.chatStyleType.type.docs': 'Page Mode',
   'settingChat.compressThreshold.desc':
     'When the uncompressed history messages exceed this value, compression will be applied',
-  'settingChat.compressThreshold.title': 'History Message Length Compression Threshold',
+  'settingChat.compressThreshold.title': 'History length compression threshold',
   'settingChat.enableAutoScrollOnStreaming.desc': 'Override global setting for this agent',
   'settingChat.enableAutoScrollOnStreaming.title': 'Auto-scroll During AI Response',
-  'settingChat.enableCompressHistory.title': 'Enable Automatic Summary of Chat History',
+  'settingChat.enableCompressHistory.title': 'Enable auto context compression',
   'settingChat.enableFollowUpChips.desc':
     'After each reply, show one-click follow-up reply chips below the message. Requires the global Follow-up model to be configured.',
   'settingChat.enableFollowUpChips.notConfiguredHint':
@@ -1194,7 +1201,8 @@ export default {
   'settingChat.enableStreaming.desc':
     'Enable streaming output to display responses in real-time. When disabled, only the complete response is shown.',
   'settingChat.enableStreaming.title': 'Enable Streaming Output',
-  'settingChat.historyCount.desc': 'Number of historical messages carried with each request',
+  'settingChat.historyCount.desc':
+    'Number of past messages sent with each request — the newest message counts, and each question and its answer count as one',
   'settingChat.historyCount.title': 'Attached History Message Count',
   'settingChat.inputTemplate.desc': "The user's latest message will be filled into this template",
   'settingChat.inputTemplate.placeholder':
@@ -1264,7 +1272,7 @@ export default {
   'settingGroupChat.model.desc':
     'Group members aren’t affected. Some models can’t be used as the Orchestrator model.',
   'settingGroupChat.model.title': 'Orchestrator model',
-  'settingGroupChat.orchestratorTitle': 'Orchestrator',
+  'settingGroupChat.orchestratorTitle': 'Group host',
   'settingGroupChat.responseOrder.desc': 'Agents reply based on their order in the chat',
   'settingGroupChat.responseOrder.options.natural': 'Natural',
   'settingGroupChat.responseOrder.options.sequential': 'Sequential',
@@ -1607,7 +1615,7 @@ export default {
   'storageOverage.toggle': 'Enable overage billing',
   'storageOverage.unlimited': 'Unlimited',
   'storageOverage.usage.current': 'Usage',
-  'storageOverage.usage.estimatedCharge': 'Est. Cycle Charge',
+  'storageOverage.usage.estimatedCharge': 'Estimated charge this cycle',
   'storageOverage.usage.incurredCharge': 'Incurred This Cycle',
   'storageOverage.usage.overage': 'Overage',
   'sync.device.deviceName.hint': 'Add a name for easy identification',
@@ -1662,7 +1670,7 @@ export default {
     'When creating a new agent, the default agent settings will be used as preset values.',
   'systemAgent.historyCompress.label': 'Model',
   'systemAgent.historyCompress.modelDesc': 'Model used to compress conversation history',
-  'systemAgent.historyCompress.title': 'Conversation History Compression',
+  'systemAgent.historyCompress.title': 'Auto context compression',
   'systemAgent.inputCompletion.label': 'Model',
   'systemAgent.inputCompletion.modelDesc':
     'Suggests text while you type. When enabled, this model generates the suggestions.',
@@ -1758,6 +1766,9 @@ export default {
   'tab.stats': 'Analytics',
   'tab.storage': 'Storage',
   'tab.sync': 'Cloud Sync',
+  'systemTools.cliTest.customArgs': 'Custom args',
+  'systemTools.cliTest.customArgsPlaceholder': 'Custom args (e.g. connect --help)',
+  'systemTools.cliTest.title': 'CLI Embedded Test',
   'tab.systemTools': 'System Tools',
   'tab.tts': 'Text-to-Speech',
   'tab.uploadZip': 'Upload Zip',
@@ -1821,7 +1832,7 @@ export default {
   'workspace.billingPage.billing.banner.cancelledTitle': 'Subscription pending cancellation',
   'workspace.billingPage.billing.banner.expiredDesc':
     'Your subscription has ended. Re-subscribe to restore Pro features, or downgrade to Free.',
-  'workspace.billingPage.billing.banner.expiredTitle': 'Subscription cancelled',
+  'workspace.billingPage.billing.banner.expiredTitle': 'Subscription canceled',
   'workspace.billingPage.billing.banner.inactiveDesc':
     'Subscription is inactive — credits will not refresh until you re-subscribe.',
   'workspace.billingPage.billing.banner.inactiveTitle': 'Subscription inactive',
@@ -2034,8 +2045,8 @@ export default {
   'workspace.billingPage.billing.monthlyFeeLabel': '/ month',
   'workspace.billingPage.billing.intervalFeeLabel': '/ {{interval}}',
   'workspace.billingPage.billing.planBadge.active': 'Active',
-  'workspace.billingPage.billing.planBadge.cancelled': 'Cancelled',
-  'workspace.billingPage.billing.planBadge.cancelling': 'Cancelling',
+  'workspace.billingPage.billing.planBadge.cancelled': 'Canceled',
+  'workspace.billingPage.billing.planBadge.cancelling': 'Canceling',
   'workspace.billingPage.billing.planBadge.free': 'Free',
   'workspace.billingPage.billing.planBadge.inactive': 'Inactive',
   'workspace.billingPage.billing.pending.cancelCta': 'Cancel',
@@ -2245,7 +2256,7 @@ export default {
   'workspace.billingPage.plans.modelsTitle': 'Featured models',
   'workspace.billingPage.plans.perMonth': '/ month',
   'workspace.billingPage.plans.payOnceChangeUnsupported':
-    'One-time plans cannot be downgraded or cancelled. You can switch plans after the current period ends.',
+    'One-time plans cannot be downgraded or canceled. You can switch plans after the current period ends.',
   'workspace.billingPage.plans.payOnceSeatOption': '+${{seatFee}} / seat',
   'workspace.billingPage.plans.seatPriceCaptionYearly': '${{seatFee}}/seat/year',
   'workspace.billingPage.plans.payOncePurchaseNotice':
@@ -2272,7 +2283,7 @@ export default {
   'workspace.billingPage.plans.upgradeBusinessCta': 'Upgrade',
   'workspace.billingPage.plans.upgradeCta': 'Upgrade',
   'workspace.billingPage.plans.upgradeFailed': 'Failed to start checkout',
-  'workspace.billingPage.summary.cancelling': 'Cancelling',
+  'workspace.billingPage.summary.cancelling': 'Canceling',
   'workspace.billingPage.summary.upgradeCta': 'See plans',
   'workspace.billingPage.summary.viewFullCta': 'View full billing',
   'workspace.billingPage.usage.activity.filterByMember': 'Filter member',
@@ -2399,7 +2410,7 @@ export default {
   'workspace.auditLog.actions.subscription.activated': 'Subscription activated',
   'workspace.auditLog.actions.subscription.cancellation_resumed': 'Subscription resumed',
   'workspace.auditLog.actions.subscription.cancellation_scheduled': 'Cancellation scheduled',
-  'workspace.auditLog.actions.subscription.cancelled': 'Subscription cancelled',
+  'workspace.auditLog.actions.subscription.cancelled': 'Subscription canceled',
   'workspace.auditLog.actions.subscription.grace_period_started': 'Grace period started',
   'workspace.auditLog.actions.subscription.updated': 'Subscription updated',
   'workspace.auditLog.actions.workspace.account_upgraded': 'Workspace account upgraded',
@@ -2411,7 +2422,7 @@ export default {
   'workspace.auditLog.actions.workspace.frozen': 'Workspace frozen',
   'workspace.auditLog.actions.workspace.ownership_transfer_accepted': 'Ownership transfer accepted',
   'workspace.auditLog.actions.workspace.ownership_transfer_cancelled':
-    'Ownership transfer cancelled',
+    'Ownership transfer canceled',
   'workspace.auditLog.actions.workspace.ownership_transfer_declined': 'Ownership transfer declined',
   'workspace.auditLog.actions.workspace.ownership_transfer_expired': 'Ownership transfer expired',
   'workspace.auditLog.actions.workspace.ownership_transfer_requested':
@@ -3137,7 +3148,7 @@ export default {
   'workspace.wizard.step1.features.sharedAssets': 'Shared agents, files & knowledge bases',
   'workspace.wizard.step1.features.sharedCredits': 'Shared team credits pool',
   'workspace.wizard.step1.formSubtitle': 'Give your workspace a name and URL.',
-  'workspace.wizard.step1.formTitle': 'Setup Your Workspace',
+  'workspace.wizard.step1.formTitle': 'Set Up Your Workspace',
   'workspace.wizard.step1.name.label': 'Workspace name',
   'workspace.wizard.step1.name.placeholder': 'Example Team',
   'workspace.wizard.step1.name.required': 'Workspace name is required',
@@ -3606,7 +3617,7 @@ export default {
     'Review failed durable work and safely retry rows that are no longer running.',
   'workspaceSetting.linear.operations.status': 'Installation status',
   'workspaceSetting.linear.operations.failed': 'Failed',
-  'workspaceSetting.linear.operations.deadLetter': 'Dead letter',
+  'workspaceSetting.linear.operations.deadLetter': 'Undeliverable',
   'workspaceSetting.linear.operations.outcomeUnknown': 'Outcome unknown',
   'workspaceSetting.linear.operations.lastSafeError': 'Last safe error',
   'workspaceSetting.linear.operations.empty': 'No failed Linear operations need attention.',
@@ -3779,7 +3790,7 @@ export default {
   'workspaceSetting.members.transferBannerOutgoing':
     'Waiting for {{name}} to accept ownership of this workspace.',
   'workspaceSetting.members.transferCancel': 'Cancel transfer',
-  'workspaceSetting.members.transferCancelled': 'Transfer request cancelled.',
+  'workspaceSetting.members.transferCancelled': 'Transfer request canceled.',
   'workspaceSetting.members.transferConfirmContent':
     '{{name}} must accept before ownership moves. Until then you stay the owner.',
   'workspaceSetting.members.transferConfirmTitle': 'Transfer ownership to {{name}}?',
@@ -3881,8 +3892,8 @@ export default {
   'tools.builtins.orvilo-agent-management.description': 'Create, manage, and orchestrate AI agents',
   'tools.builtins.orvilo-agent-management.title': 'Agent Management',
   'tools.builtins.orvilo-agent.description':
-    'Built-in Orvilo Agent capabilities: plan and todo management, sub-agent dispatch, and multimodal media analysis',
-  'tools.builtins.orvilo-agent.title': 'Orvilo Agent',
+    'Built-in Orvilo AI capabilities: plan and todo management, sub-agent dispatch, and multimodal media analysis',
+  'tools.builtins.orvilo-agent.title': 'Orvilo AI',
   'tools.builtins.orvilo-brief.description':
     'Report progress, deliver results, and request user decisions',
   'tools.builtins.orvilo-brief.title': 'Brief Tools',
@@ -3944,7 +3955,7 @@ export default {
     'Task management and execution — create, track, review, and complete tasks via CLI.',
   'tools.builtins.task.title': 'Task',
   'tools.builtins.configure': 'Configure',
-  'tools.builtins.notInstalled': 'Not Installed',
+  'tools.builtins.notInstalled': 'Not installed',
   'tools.builtins.uninstall': 'Uninstall',
   'tools.builtins.uninstallConfirm.desc':
     'Are you sure you want to uninstall {{name}}? This skill will be removed from the current agent.',
@@ -4156,7 +4167,9 @@ export default {
   'tools.orviloSkill.providers.vercel.readme':
     'Connect to Vercel to manage your deployments, monitor project status, and control your infrastructure. Deploy applications, check build logs, manage environment variables, and scale your projects through conversational AI.',
 
-  'tools.notInstalled': 'Not Installed',
+  'tools.installed.empty': 'No skills enabled',
+  'tools.desktopOnly': 'Desktop Only',
+  'tools.notInstalled': 'Not installed',
   'tools.notInstalledWarning':
     'This skill is not currently installed, which may affect agent functionality.',
   'tools.plugins.enabled': 'Enabled: {{num}}',
@@ -4216,7 +4229,7 @@ export default {
   'workspaceSetting.import.category.todo': 'Todo',
   'workspaceSetting.import.category.in_progress': 'In Progress',
   'workspaceSetting.import.category.done': 'Done',
-  'workspaceSetting.import.category.canceled': 'Cancelled',
+  'workspaceSetting.import.category.canceled': 'Canceled',
   'workspaceSetting.import.data': 'Linear data',
   'workspaceSetting.import.migrating': 'Migrating',
   'workspaceSetting.import.issues': 'Issues',

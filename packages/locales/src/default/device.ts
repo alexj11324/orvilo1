@@ -69,6 +69,9 @@ export default {
   'workingDirectory.pathNotExist': "This path doesn't exist on the device",
   'workingDirectory.placeholder': 'Enter directory path, e.g. /Users/name/projects',
   'workingDirectory.prTooltipWithExtra': '{{title}} (+{{count}} more open PR on this branch)',
+  'workingDirectory.prTooltipWithExtra_one': '{{title}} (+{{count}} more open PR on this branch)',
+  'workingDirectory.prTooltipWithExtra_other':
+    '{{title}} (+{{count}} more open PRs on this branch)',
   'workingDirectory.pullAction': 'Click to pull {{count}} commit(s) from {{upstream}}',
   'workingDirectory.pullFailed': 'Pull failed',
   'workingDirectory.pullInProgress': 'Pulling…',

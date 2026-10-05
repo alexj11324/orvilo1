@@ -92,12 +92,14 @@ export default {
 
   'mcp.details.deployment.table.name': 'Name',
 
+  'mcp.details.deployment.serverConfig': 'MCP server config',
   'mcp.details.deployment.table.required': 'Required',
 
   'mcp.details.deployment.table.type': 'Type',
 
   'mcp.details.deployment.title': 'Installation Method',
 
+  'mcp.details.githubBadge.title': 'GitHub Badge',
   'mcp.details.githubBadge.desc':
     'Orvilo regularly scans code repositories and documentation to: - Confirm MCP server operational status.\n- Extract server features such as tools, resources, prompts, and required parameters.\n- Our badge helps users quickly assess MCP server security, feature set, and installation instructions. Please copy the following code into your `README.md` file:',
 

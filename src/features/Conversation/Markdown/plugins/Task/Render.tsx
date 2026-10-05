@@ -2,6 +2,7 @@ import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardList } from 'lucide-react';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { type MarkdownElementProps } from '../type';
 import { useTaskCardScope } from './context';
@@ -130,6 +131,7 @@ interface TaskRenderProps extends MarkdownElementProps {
 }
 
 const Render = memo<TaskRenderProps>(({ children }) => {
+  const { t } = useTranslation('chat');
   const enabled = useTaskCardScope();
   const text = typeof children === 'string' ? children : String(children ?? '');
   const parsed = useMemo<ParsedTaskContent>(() => parseTaskContent(text), [text]);
@@ -160,7 +162,7 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         <>
           <div className={styles.divider} />
           <div className="flex flex-col gap-1">
-            <div className="text-[12px] text-muted-foreground">Instruction</div>
+            <div className="text-[12px] text-muted-foreground">{t('task.card.instruction')}</div>
             <div className={styles.instruction}>{parsed.instruction}</div>
           </div>
         </>
@@ -168,9 +170,9 @@ const Render = memo<TaskRenderProps>(({ children }) => {
 
       {(parsed.description || parsed.dependencies || parsed.review) && (
         <div className="flex flex-col gap-1">
-          <FieldRow label="Description" value={parsed.description} />
-          <FieldRow label="Dependencies" value={parsed.dependencies} />
-          <FieldRow label="Review" value={parsed.review} />
+          <FieldRow label={t('task.card.description')} value={parsed.description} />
+          <FieldRow label={t('task.card.dependencies')} value={parsed.dependencies} />
+          <FieldRow label={t('task.card.review')} value={parsed.review} />
         </div>
       )}
 
@@ -179,10 +181,10 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         parsed.workspace?.length ||
         parsed.reviewRubrics?.length) && (
         <div className="flex flex-col gap-1">
-          <RawSection items={parsed.subtasks ?? []} label="Subtasks" />
-          <RawSection items={parsed.activities ?? []} label="Activities" />
-          <RawSection items={parsed.workspace ?? []} label="Workspace" />
-          <RawSection items={parsed.reviewRubrics ?? []} label="Review rubrics" />
+          <RawSection items={parsed.subtasks ?? []} label={t('task.card.subtasks')} />
+          <RawSection items={parsed.activities ?? []} label={t('task.card.activities')} />
+          <RawSection items={parsed.workspace ?? []} label={t('task.card.workspace')} />
+          <RawSection items={parsed.reviewRubrics ?? []} label={t('task.card.reviewRubrics')} />
         </div>
       )}
     </div>

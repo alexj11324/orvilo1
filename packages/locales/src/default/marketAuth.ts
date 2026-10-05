@@ -48,7 +48,7 @@ export default {
   'errors.stateMismatch': 'Authorization state mismatch. Please try again.',
   'errors.stateMissing': 'Authorization state not found. Please try again.',
   'messages.authorizationFailed':
-    'Authorization ran into an issue. Retry, or check if you finished signing in in your browser.',
+    'Authorization ran into an issue. Retry, or check if you finished signing in on your browser.',
   'messages.authorized': 'Orvilo service authorized successfully',
   'messages.handoffTimeout': 'Authorization timed out. Finish it in your browser, then retry.',
   'messages.loading': 'Starting authorization process...',
@@ -56,7 +56,7 @@ export default {
     'Authorization successful! You can now install the Cloud MCP skill.',
   'profileSetup.cancel': 'Cancel',
   'profileSetup.descriptionEdit': 'Update your community profile information.',
-  'profileSetup.descriptionFirstTime': 'Set up your profile to complete your community profile.',
+  'profileSetup.descriptionFirstTime': 'Set up your community profile.',
   'profileSetup.errors.fileTooLarge': 'File size cannot exceed 2MB',
   'profileSetup.errors.notAuthenticated': 'Please sign in first',
   'profileSetup.errors.updateFailed': 'Failed to update profile. Please try again',

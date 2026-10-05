@@ -203,7 +203,7 @@ export const useSessionGroupMenuItems = () => {
                 await createGroup(
                   {
                     config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
-                    title: 'New Group Chat',
+                    title: t('newGroupTitle'),
                   },
                   selectedAgents,
                 );

@@ -1,20 +1,19 @@
 export default {
   'consent.buttons.accept': 'Authorize',
   'consent.buttons.deny': 'Deny',
-  'consent.description':
-    'The application {{clientName}} is requesting authorization for your account',
+  'consent.description': '{{clientName}} wants to access your Orvilo account',
   'consent.error.sessionInvalid.message':
     'The authorization session has expired or is invalid. Please restart the authorization process.',
   'consent.error.sessionInvalid.title': 'Invalid Authorization Session',
   'consent.error.title': 'An Error Occurred',
   'consent.error.unknown.message': 'An unknown error occurred while loading authorization details.',
-  'consent.error.unsupportedInteraction.message': 'Unsupported interaction type: {{promptName}}',
-  'consent.error.unsupportedInteraction.title': 'Unsupported Interaction Type',
+  'consent.error.unsupportedInteraction.message': 'This sign-in flow is not supported.',
+  'consent.error.unsupportedInteraction.title': 'Unsupported sign-in flow',
   'consent.permissionsTitle': 'Requesting the following permissions:',
   'consent.redirectUri': 'You will be redirected to after successful authorization',
   'consent.redirecting': 'Authorization successful, redirecting...',
   'consent.scope.email': 'Access your email address',
-  'consent.scope.offline_access': 'Allow the client to access your data',
+  'consent.scope.offline_access': 'Stay signed in to your account',
   'consent.scope.openid': 'Authenticate using your Orvilo account',
   'consent.scope.profile': 'Access your basic profile information (name, avatar, etc.)',
   'consent.scope.sync-read': 'Read your synchronized data',
@@ -31,8 +30,9 @@ export default {
   'device.confirm.description': '{{clientName}} is requesting access',
   'device.confirm.title': 'Authorize Device',
   'device.error.aborted': 'Authorization was denied.',
-  'device.error.alreadyUsed': 'This code has already been used. Please request a new code.',
-  'device.error.expired': 'This code has expired. Please request a new code.',
+  'device.error.alreadyUsed':
+    'This code has already been used — request a new one from your device.',
+  'device.error.expired': 'This code has expired — request a new one from your device.',
   'device.error.noCode': 'No device code was provided. Please enter a valid code.',
   'device.error.notFound': 'Invalid code. Please check and try again.',
   'device.error.unknown': 'An error occurred. Please try again.',
@@ -51,7 +51,7 @@ export default {
   'handoff.desc.processing':
     'The application is processing the authorization and will redirect to the next page soon...',
   'handoff.desc.success':
-    'An attempt has been made to open the desktop application. If it does not open automatically, please switch manually. You can close this browser window later.',
+    'An attempt has been made to open the desktop application. If it does not open automatically, please switch manually. You can close this window now.',
   'handoff.title.processing': 'Authorization in progress...',
   'handoff.title.success': 'Authorization completed',
   'login.button': 'Confirm Sign In',

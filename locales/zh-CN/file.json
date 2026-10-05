@@ -295,7 +295,7 @@
   "uploadDock.uploadStatus.success": "上传完成",
   "uploadDock.uploadStatus.uploading": "正在上传",
   "work.agentEmpty.desc": "请选择其他 Agent 查看其产物。",
-  "work.agentEmpty.title": "这个 Agent 暂无产物",
+  "work.agentEmpty.title": "这个智能体暂无产物",
   "work.agentFilter.all": "全部",
   "work.count_one": "{{count}} 个产物",
   "work.count_other": "{{count}} 个产物",

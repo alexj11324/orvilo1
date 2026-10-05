@@ -72,7 +72,7 @@
   "togetherai.description": "Together AI 提供领先性能的创新模型，支持广泛定制、快速扩展与简便部署，满足企业需求。",
   "unsloth.description": "Unsloth 是一个用于本地微调与运行大语言模型的框架，可将加载的 GGUF 模型通过 OpenAI 兼容 API 对外提供服务。",
   "upstage.description": "Upstage 构建面向商业需求的 AI 模型，包括 Solar LLM 与文档 AI，其聊天 API 支持函数调用、翻译、向量化与行业场景应用。",
-  "v0.description": "v0 是一款配对编程助手，可将自然语言想法转化为项目中的代码与界面。",
+  "v0.description": "v0 是一款配对编程智能体，可将自然语言想法转化为项目中的代码与界面。",
   "vercelaigateway.description": "Vercel AI Gateway 提供统一 API，支持 100 多个模型（包括 OpenAI、Anthropic、Google 等），具备预算控制、使用监控、负载均衡与故障转移功能。",
   "vertexai.description": "Google 的 Gemini 系列是其最先进的通用 AI，由 Google DeepMind 构建，支持文本、代码、图像、音频与视频的多模态应用，具备从数据中心到移动设备的高效扩展能力。",
   "vllm.description": "vLLM 是一个快速、易用的大模型推理与服务库。",

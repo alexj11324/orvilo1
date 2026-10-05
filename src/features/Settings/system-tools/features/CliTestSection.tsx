@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ interface CommandResult {
 }
 
 const CliTestSection = memo(() => {
+  const { t } = useTranslation('setting');
   const [results, setResults] = useState<CommandResult[]>([]);
   const [running, setRunning] = useState(false);
   const [customCmd, setCustomCmd] = useState('');
@@ -35,7 +37,7 @@ const CliTestSection = memo(() => {
 
   return (
     <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 16, marginTop: 24 }}>
-      <span style={{ fontSize: 18, fontWeight: 600 }}>CLI Embedded Test</span>
+      <span style={{ fontSize: 18, fontWeight: 600 }}>{t('systemTools.cliTest.title')}</span>
       <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         {presetCommands.map((cmd) => (
           <Button
@@ -52,8 +54,8 @@ const CliTestSection = memo(() => {
       </div>
       <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 8 }}>
         <Input
-          aria-label="Custom args"
-          placeholder="Custom args (e.g. connect --help)"
+          aria-label={t('systemTools.cliTest.customArgs')}
+          placeholder={t('systemTools.cliTest.customArgsPlaceholder')}
           style={{ flex: 1 }}
           value={customCmd}
           onChange={(e) => setCustomCmd(e.target.value)}

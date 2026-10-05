@@ -218,6 +218,55 @@ describe('executeDeviceRpc', () => {
     ).rejects.toThrow('does not support heterogeneous agent model discovery');
   });
 
+  describe('device-scoped MCP queries', () => {
+    it('delegates the manifest + installability probes to injected deps', async () => {
+      const deps = makeDeps();
+      deps.getStreamableMcpServerManifest = vi.fn(async () => ({ api: [] }));
+      deps.getStdioMcpServerManifest = vi.fn(async () => ({ api: [] }));
+      deps.checkMcpInstallable = vi.fn(async () => ({ success: true }));
+
+      await executeDeviceRpc(
+        'getStreamableMcpServerManifest',
+        { identifier: 'mcp-a', url: 'http://localhost:3000/mcp' },
+        deps,
+      );
+      expect(deps.getStreamableMcpServerManifest).toHaveBeenCalledWith({
+        identifier: 'mcp-a',
+        url: 'http://localhost:3000/mcp',
+      });
+
+      await executeDeviceRpc(
+        'getStdioMcpServerManifest',
+        { args: ['s.js'], command: 'node', name: 'mcp-b' },
+        deps,
+      );
+      expect(deps.getStdioMcpServerManifest).toHaveBeenCalledWith({
+        args: ['s.js'],
+        command: 'node',
+        name: 'mcp-b',
+      });
+
+      await executeDeviceRpc('checkMcpInstallable', { deploymentOptions: [{}] }, deps);
+      expect(deps.checkMcpInstallable).toHaveBeenCalledWith({ deploymentOptions: [{}] });
+    });
+
+    it('a host without an MCP runtime rejects honestly — never fabricates', async () => {
+      // The CLI daemon (and any host not wiring the deps) cannot answer a
+      // localhost probe or a toolchain check — the throw must name the
+      // limitation, not guess an answer on the wrong machine.
+      const deps = makeDeps();
+      await expect(executeDeviceRpc('getStreamableMcpServerManifest', {}, deps)).rejects.toThrow(
+        'does not support MCP manifest queries',
+      );
+      await expect(executeDeviceRpc('getStdioMcpServerManifest', {}, deps)).rejects.toThrow(
+        'does not support MCP manifest queries',
+      );
+      await expect(executeDeviceRpc('checkMcpInstallable', {}, deps)).rejects.toThrow(
+        'does not support MCP installability checks',
+      );
+    });
+  });
+
   it('delegates project file and preview methods to injected deps', async () => {
     const deps = makeDeps();
     await executeDeviceRpc('getProjectFileIndex', { scope: root }, deps);

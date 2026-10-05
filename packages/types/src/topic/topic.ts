@@ -170,6 +170,15 @@ export interface ChatTopicMetadata {
     summarizedAt: string;
     version: number;
   };
+  /**
+   * Monotonic epoch of the device-binding triple (`boundDeviceId` +
+   * `executionConfig.boundDeviceId`/`executionTarget`). Server-owned: stamped
+   * by `bindTopicDeviceAtomically` and `topic.repairDeviceBinding`, never
+   * writable through `updateTopicMetadata` — callers present it as the CAS
+   * expectation so a repair cannot overwrite a binding written in the
+   * meantime (same pattern as `providerBinding.revision`).
+   */
+  bindingRevision?: number;
   bot?: ChatTopicBotContext;
   boundDeviceId?: string;
   cronJobId?: string;

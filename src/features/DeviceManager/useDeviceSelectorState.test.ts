@@ -150,14 +150,31 @@ describe('useDeviceSelectorState', () => {
       expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['p']);
     });
 
-    it('workspace scope selects only workspace-visible devices', () => {
+    it('workspace scope selects private + shared workspace devices (F07)', () => {
+      // Private enrollments are legal for their enroller — the chat switcher
+      // already judged them candidates; settings must see the identical set.
       setInventory([
         buildDevice({ deviceId: 'p' }),
         workspaceDevice('w'),
         buildDevice({ deviceId: 'wp', scope: 'workspace', visibility: 'private' }),
       ]);
       const { result } = renderState({ scope: 'workspace' });
-      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['w']);
+      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['wp', 'w']);
+      // private + shared = 2 candidates → the selector formula opens.
+      expect(result.current.showDeviceSelector).toBe(true);
+    });
+
+    it('a binding into a private workspace device is valid for its enroller', () => {
+      setInventory([buildDevice({ deviceId: 'wp', scope: 'workspace', visibility: 'private' })]);
+      const { result } = renderState({ boundDeviceId: 'wp', scope: 'workspace' });
+      expect(result.current.bindingState).toBe('valid');
+    });
+
+    it('a private workspace device alone still counts as one candidate', () => {
+      setInventory([buildDevice({ deviceId: 'wp', scope: 'workspace', visibility: 'private' })]);
+      const { result } = renderState({ scope: 'workspace' });
+      expect(result.current.selectableDevices).toHaveLength(1);
+      expect(result.current.showDeviceSelector).toBe(false);
     });
   });
 

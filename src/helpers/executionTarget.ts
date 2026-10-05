@@ -2,6 +2,7 @@ import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type {
   AgentDeviceOverride,
   DeviceExecutionTarget,
+  DeviceListItem,
   ExecutionPlan,
   OrviloAgentAgencyConfig,
   OrviloAgentChatConfig,
@@ -18,6 +19,50 @@ export const resolveWorkspaceScoped = (
   isWorkspaceAgent: boolean,
   deviceOverride: AgentDeviceOverride | null | undefined,
 ): boolean => isWorkspaceAgent && deviceOverride?.executionTarget === undefined;
+
+/**
+ * Group the device inventory into the display buckets the execution-target
+ * UI renders. Grouping is a DISPLAY concern only — surfaces may split rows
+ * into Private/Workspace sections, but the candidate set a binding is judged
+ * against comes from {@link executionTargetDeviceCandidates}, never from
+ * picking one of these buckets.
+ */
+export const groupExecutionTargetDevices = (devices: DeviceListItem[] | undefined) => ({
+  personal: (devices ?? []).filter((device) => device.scope === 'personal'),
+  privateWorkspace: (devices ?? []).filter(
+    (device) => device.scope === 'workspace' && device.visibility === 'private',
+  ),
+  publicWorkspace: (devices ?? []).filter(
+    (device) => device.scope === 'workspace' && device.visibility === 'public',
+  ),
+  workspace: (devices ?? []).filter(
+    (device) => device.scope === 'workspace' && device.visibility !== 'private',
+  ),
+});
+
+/**
+ * The ONE execution-device candidate set for a scope — the pool every
+ * surface (chat switcher, agent settings, connect flow, blocked-run repair)
+ * must judge a binding against, identical to the server-side admission
+ * resolution (`resolveExecutionDevice`).
+ *
+ * `workspace` scope includes BOTH the shared-pool devices and the caller's
+ * own private enrollments (`visibility === 'private'`): a private device is
+ * legal for its enroller, so any surface that excluded it computed a
+ * different candidate set than the run would — a private-enrolled device
+ * appeared bindable in chat but invalid/missing in settings (and vice versa
+ * for binding validity). Membership is the contract; section labels are not.
+ *
+ * Offline devices STAY in the set (offline ≠ removed) — they gate launch,
+ * never membership.
+ */
+export const executionTargetDeviceCandidates = (
+  devices: DeviceListItem[] | undefined,
+  scope: 'personal' | 'workspace',
+): DeviceListItem[] => {
+  const { personal, privateWorkspace, workspace } = groupExecutionTargetDevices(devices);
+  return scope === 'workspace' ? [...privateWorkspace, ...workspace] : personal;
+};
 
 /**
  * The agent's tool mode — explicit `chatConfig.toolMode` wins; otherwise derive

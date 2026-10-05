@@ -5,12 +5,15 @@ import debug from 'debug';
 import { produce } from 'immer';
 import { gt, valid } from 'semver';
 
+import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { type MCPErrorData } from '@/libs/mcp/types';
 import { parseStdioErrorMessage } from '@/libs/mcp/types';
 import { discoverService } from '@/services/discover';
-import { mcpService } from '@/services/mcp';
+import { type McpDeviceScope, mcpScopeCacheKey, mcpService } from '@/services/mcp';
 import { pluginService } from '@/services/plugin';
 import { type StoreSetter } from '@/store/types';
+import { getUserStoreState } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 import {
   type CheckMcpInstallResult,
   type McpConnectionParams,
@@ -41,6 +44,45 @@ const doesConfigSchemaRequireInput = (configSchema?: any) => {
     );
 
   return hasRequiredArray || hasRequiredProperty;
+};
+
+/**
+ * Non-secret cache-key material for a connection blob / config blob. A short
+ * DJB2-style hash keeps tokens and endpoint values out of the store keys
+ * while still separating operations whose inputs differ.
+ */
+const stableConfigKey = (input: unknown): string => {
+  if (!input) return 'none';
+  const raw = JSON.stringify(input) ?? '';
+  let hash = 5381;
+  for (let i = 0; i < raw.length; i += 1) {
+    hash = ((hash << 5) + hash + raw.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(16);
+};
+
+/**
+ * Scope-complete cache key for an MCP operation: principal + workspace +
+ * device scope + plugin + connection identity + config fingerprint. Two
+ * scopes never share a slot — a connection test under a topic scope can
+ * never surface (or abort) the settings-local one.
+ */
+const mcpOperationCacheKey = (params: {
+  config?: unknown;
+  connection?: unknown;
+  identifier: string;
+  scope?: McpDeviceScope;
+}): string => {
+  const principalId = userProfileSelectors.userId(getUserStoreState()) ?? 'anonymous';
+  const workspaceId = getActiveWorkspaceId() ?? 'personal';
+  return [
+    `principal:${principalId}`,
+    `workspace:${workspaceId}`,
+    mcpScopeCacheKey(params.scope),
+    `mcp:${params.identifier}`,
+    `conn:${stableConfigKey(params.connection)}`,
+    `config:${stableConfigKey(params.config)}`,
+  ].join('|');
 };
 
 const toNonEmptyStringRecord = (input?: Record<string, any>) => {
@@ -146,16 +188,23 @@ export class PluginMCPStoreActionImpl {
     this.#get = get;
   }
 
+  // Resolve the scope-complete operation key an identifier currently owns —
+  // operation state is stored under the composite key, never a bare
+  // identifier, so two scopes can't read or cancel each other's rows.
+  #operationKey = (identifier: string): string =>
+    this.#get().mcpOperationKeyByIdentifier[identifier] ?? identifier;
+
   cancelInstallMCPPlugin = async (identifier: string): Promise<void> => {
+    const operationKey = this.#operationKey(identifier);
     // Get and cancel AbortController
-    const abortController = this.#get().mcpInstallAbortControllers[identifier];
+    const abortController = this.#get().mcpInstallAbortControllers[operationKey];
     if (abortController) {
       abortController.abort();
 
       // Clean up AbortController storage
       this.#set(
         produce((draft: MCPStoreState) => {
-          delete draft.mcpInstallAbortControllers[identifier];
+          delete draft.mcpInstallAbortControllers[operationKey];
         }),
         false,
         n('cancelInstallMCPPlugin/clearController'),
@@ -168,16 +217,17 @@ export class PluginMCPStoreActionImpl {
   };
 
   cancelMcpConnectionTest = (identifier: string): void => {
-    const abortController = this.#get().mcpTestAbortControllers[identifier];
+    const operationKey = this.#operationKey(identifier);
+    const abortController = this.#get().mcpTestAbortControllers[operationKey];
     if (abortController) {
       abortController.abort();
 
       // Clean up state
       this.#set(
         produce((draft: MCPStoreState) => {
-          draft.mcpTestLoading[identifier] = false;
-          delete draft.mcpTestAbortControllers[identifier];
-          delete draft.mcpTestErrors[identifier];
+          draft.mcpTestLoading[operationKey] = false;
+          delete draft.mcpTestAbortControllers[operationKey];
+          delete draft.mcpTestErrors[operationKey];
         }),
         false,
         n('cancelMcpConnectionTest'),
@@ -187,10 +237,31 @@ export class PluginMCPStoreActionImpl {
 
   installMCPPlugin = async (
     identifier: string,
-    options: { config?: Record<string, any>; resume?: boolean; skipDepsCheck?: boolean } = {},
+    options: {
+      config?: Record<string, any>;
+      resume?: boolean;
+      scope?: McpDeviceScope;
+      skipDepsCheck?: boolean;
+    } = {},
   ): Promise<boolean | undefined> => {
     const { resume = false, config, skipDepsCheck } = options;
+    // The dependency check, manifest probe and install all run in ONE device
+    // scope. Settings installs run on this machine's proven local device; a
+    // caller that names a scope gets the same scope end-to-end — the
+    // operation never falls back to whichever device happens to be local.
+    const scope: McpDeviceScope = options.scope ?? { kind: 'local' };
     const normalizedConfig = toNonEmptyStringRecord(config);
+    const computedKey = mcpOperationCacheKey({
+      config: normalizedConfig,
+      identifier,
+      scope,
+    });
+    // A resume continues the paused operation under its stored key — the new
+    // config is input to the same operation, not a different one.
+    const operationKey = resume
+      ? (this.#get().mcpOperationKeyByIdentifier[identifier] ?? computedKey)
+      : computedKey;
+
     const detail = await discoverService.getMcpDetail({ identifier });
     if (!detail) return;
 
@@ -205,10 +276,11 @@ export class PluginMCPStoreActionImpl {
     // Create AbortController for canceling installation
     const abortController = new AbortController();
 
-    // Store AbortController
+    // Store AbortController + the identifier -> operation-key index
     this.#set(
       produce((draft: MCPStoreState) => {
-        draft.mcpInstallAbortControllers[identifier] = abortController;
+        draft.mcpOperationKeyByIdentifier[identifier] = operationKey;
+        draft.mcpInstallAbortControllers[operationKey] = abortController;
       }),
       false,
       n('installMCPPlugin/setController'),
@@ -225,8 +297,9 @@ export class PluginMCPStoreActionImpl {
       }
 
       if (resume) {
-        // Resume mode: get previous info from storage
-        const configInfo = this.#get().mcpInstallProgress[identifier];
+        // Resume mode: get previous info from storage — the row lives under
+        // the paused operation's scope-complete key.
+        const configInfo = this.#get().mcpInstallProgress[operationKey];
         if (!configInfo) {
           console.error('No config info found for resume');
           return;
@@ -356,7 +429,10 @@ export class PluginMCPStoreActionImpl {
             return;
           }
 
-          result = await mcpService.checkInstallation(data, abortController.signal);
+          result = await mcpService.checkInstallation(data, {
+            scope,
+            signal: abortController.signal,
+          });
 
           if (!result.success) {
             updateMCPInstallProgress(identifier, undefined);
@@ -463,7 +539,7 @@ export class PluginMCPStoreActionImpl {
             name: identifier, // Pass config as environment variables (in resume mode)
           },
           { avatar: plugin.icon, description: plugin.description, name: data.name },
-          abortController.signal,
+          { scope, signal: abortController.signal },
         );
       }
       if (connection?.type === 'http') {
@@ -478,7 +554,7 @@ export class PluginMCPStoreActionImpl {
             },
             url: connection.url!,
           },
-          abortController.signal,
+          { scope, signal: abortController.signal },
         );
       }
       if (connection?.type === 'cloud') {
@@ -570,7 +646,7 @@ export class PluginMCPStoreActionImpl {
       // Clean up AbortController
       this.#set(
         produce((draft: MCPStoreState) => {
-          delete draft.mcpInstallAbortControllers[identifier];
+          delete draft.mcpInstallAbortControllers[operationKey];
         }),
         false,
         n('installMCPPlugin/clearController'),
@@ -637,7 +713,7 @@ export class PluginMCPStoreActionImpl {
       // Clean up AbortController
       this.#set(
         produce((draft: MCPStoreState) => {
-          delete draft.mcpInstallAbortControllers[identifier];
+          delete draft.mcpInstallAbortControllers[operationKey];
         }),
         false,
         n('installMCPPlugin/clearController'),
@@ -645,8 +721,14 @@ export class PluginMCPStoreActionImpl {
     }
   };
 
-  testMcpConnection = async (params: McpConnectionParams): Promise<TestMcpConnectionResult> => {
+  testMcpConnection = async (
+    params: McpConnectionParams & { scope?: McpDeviceScope },
+  ): Promise<TestMcpConnectionResult> => {
     const { identifier, connection, metadata } = params;
+    // Same scope rule as install: the probe runs on the device that will
+    // serve the connection — the settings test defaults to the local device.
+    const scope: McpDeviceScope = params.scope ?? { kind: 'local' };
+    const operationKey = mcpOperationCacheKey({ connection, identifier, scope });
 
     // Create AbortController for canceling test
     const abortController = new AbortController();
@@ -654,9 +736,10 @@ export class PluginMCPStoreActionImpl {
     // Store AbortController and set loading state
     this.#set(
       produce((draft: MCPStoreState) => {
-        draft.mcpTestAbortControllers[identifier] = abortController;
-        draft.mcpTestLoading[identifier] = true;
-        draft.mcpTestErrors[identifier] = '';
+        draft.mcpOperationKeyByIdentifier[identifier] = operationKey;
+        draft.mcpTestAbortControllers[operationKey] = abortController;
+        draft.mcpTestLoading[operationKey] = true;
+        draft.mcpTestErrors[operationKey] = '';
       }),
       false,
       n('testMcpConnection/start'),
@@ -678,7 +761,7 @@ export class PluginMCPStoreActionImpl {
             metadata,
             url: connection.url,
           },
-          abortController.signal,
+          { scope, signal: abortController.signal },
         );
       } else if (connection.type === 'stdio') {
         if (!connection.command) {
@@ -693,7 +776,7 @@ export class PluginMCPStoreActionImpl {
             name: identifier,
           },
           metadata,
-          abortController.signal,
+          { scope, signal: abortController.signal },
         );
       } else {
         throw new Error('Invalid MCP connection type');
@@ -707,9 +790,9 @@ export class PluginMCPStoreActionImpl {
       // Clean up state
       this.#set(
         produce((draft: MCPStoreState) => {
-          draft.mcpTestLoading[identifier] = false;
-          delete draft.mcpTestAbortControllers[identifier];
-          delete draft.mcpTestErrors[identifier];
+          draft.mcpTestLoading[operationKey] = false;
+          delete draft.mcpTestAbortControllers[operationKey];
+          delete draft.mcpTestErrors[operationKey];
         }),
         false,
         n('testMcpConnection/success'),
@@ -730,9 +813,9 @@ export class PluginMCPStoreActionImpl {
       // Set error state
       this.#set(
         produce((draft: MCPStoreState) => {
-          draft.mcpTestLoading[identifier] = false;
-          draft.mcpTestErrors[identifier] = originalMessage;
-          delete draft.mcpTestAbortControllers[identifier];
+          draft.mcpTestLoading[operationKey] = false;
+          draft.mcpTestErrors[operationKey] = originalMessage;
+          delete draft.mcpTestAbortControllers[operationKey];
         }),
         false,
         n('testMcpConnection/error'),
@@ -751,9 +834,13 @@ export class PluginMCPStoreActionImpl {
     identifier: string,
     progress: MCPInstallProgress | undefined,
   ): void => {
+    const operationKey = this.#operationKey(identifier);
     this.#set(
       produce((draft: MCPStoreState) => {
-        draft.mcpInstallProgress[identifier] = progress;
+        draft.mcpInstallProgress[operationKey] = progress;
+        if (progress === undefined) {
+          delete draft.mcpOperationKeyByIdentifier[identifier];
+        }
       }),
       false,
       n(`updateMCPInstallProgress/${progress?.step || 'clear'}`),

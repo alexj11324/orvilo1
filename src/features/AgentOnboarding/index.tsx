@@ -6,7 +6,7 @@ import { createStaticStyles } from 'antd-style';
 import { Loader2, RefreshCw, TerminalIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import { ProductLogo } from '@/components/Branding';
@@ -19,6 +19,7 @@ import {
   openNewConversation,
   selectAgentForConversation,
 } from '@/features/Conversation/selectAgent';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import {
   createOnboardingAgentOnce,
   type FirstAgentCreationCheckpoint,
@@ -174,7 +175,10 @@ const OnboardingBody = ({
 }) => {
   const { t } = useTranslation('chat');
   const { scan, state } = useAgentScan();
-  const navigate = useNavigate();
+  // Plain useNavigate resolves the root router; on Electron page content lives
+  // in per-tab routers, so a gated user's settings buttons would be dead
+  // clicks. The workspace-aware navigator drives the tab router there.
+  const navigate = useWorkspaceAwareNavigate();
   const { pathname } = useLocation();
   const bindings = useProviderBindingStore((s) => s.bindings);
   const [apiSetup, setApiSetup] = useState(false);

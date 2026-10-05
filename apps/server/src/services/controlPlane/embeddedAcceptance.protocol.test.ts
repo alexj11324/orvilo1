@@ -250,6 +250,58 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)
   );
 
   it(
+    'accepts the full init-policy slice + lists and resumes persisted sessions',
+    { timeout: 60_000 },
+    async () => {
+      const { params: initParams, root } = await makeInitParams();
+      const runner = spawnRunner();
+      try {
+        // Every host-pinnable field on the contract is admitted in one shot.
+        const ack = (await runner.transport.request('harness.init', {
+          ...initParams,
+          autonomous: { enabled: false },
+          goal: { objective: 'investigate the bug', tokenBudget: 500 },
+          rlm: { maxDepth: 2 },
+          thinkingLevel: 'low',
+          toolPolicy: { active: ['ipython'], allowed: ['ipython'] },
+        })) as HarnessInitAck;
+        expect(ack.protocolVersion).toBe(HARNESS_PROTOCOL_VERSION);
+        expect(ack.capabilities.tools).toContain('ipython');
+
+        // Persistent SessionManager: the live session is on disk under
+        // stateDir — session.list enumerates the resumable set.
+        const listed = (await runner.transport.request('session.list', {
+          sessionId: ack.sessionId,
+        })) as { sessions: string[] };
+        expect(listed.sessions).toContain(ack.sessionId);
+
+        // A missing id resumes=false — and it still rebinds the runner to
+        // the fresh session it built, so later calls must address THAT id
+        // (the runner's own oracle: the ack carries the truth).
+        const missing = (await runner.transport.request('session.resume', {
+          resumeSessionId: 'no-such-session',
+          sessionId: ack.sessionId,
+        })) as { resumed: boolean; sessionId: string };
+        expect(missing.resumed).toBe(false);
+        expect(missing.sessionId).not.toBe(ack.sessionId);
+        // The original session's jsonl persists — resuming back by its id
+        // reopens it verbatim (same upstream id, resumed=true).
+        const resumed = (await runner.transport.request('session.resume', {
+          resumeSessionId: ack.sessionId,
+          sessionId: missing.sessionId,
+        })) as { resumed: boolean; sessionId: string };
+        expect(resumed).toEqual({ resumed: true, sessionId: ack.sessionId });
+
+        runner.transport.close();
+        expect(await runner.exited).toBe(0);
+      } finally {
+        runner.child.kill('SIGKILL');
+        await rm(root, { force: true, recursive: true });
+      }
+    },
+  );
+
+  it(
     'runner echoes only the compiled-in pin — host-side drift is undetectable to it',
     { timeout: 30_000 },
     async () => {

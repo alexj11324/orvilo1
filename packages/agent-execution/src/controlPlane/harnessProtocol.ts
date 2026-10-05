@@ -68,8 +68,49 @@ export interface HarnessInitModel {
   reasoning?: boolean;
 }
 
+/**
+ * Upstream autonomous-continuation policy (AgentAutonomousConfig). Absent →
+ * disabled: the host owns the turn lifecycle, so continuation stays an
+ * explicit host decision rather than an upstream default.
+ */
+export interface HarnessInitAutonomousConfig {
+  continuationPrompt?: string;
+  enabled?: boolean;
+  gates?: {
+    commands?: string[];
+    maxRetries?: number;
+    timeoutMs?: number;
+  };
+  maxContinuations?: number;
+  maxTokens?: number;
+  maxTurns?: number;
+  subagentKeepAliveMs?: number;
+  timeoutMs?: number;
+}
+
+/** Seed goal for a new depth-0 session (upstream initialGoal). */
+export interface HarnessInitGoal {
+  objective: string;
+  tokenBudget?: number;
+}
+
+/**
+ * Host-pinnable subset of the upstream tool surface. `allowed` caps the
+ * tools the session may ever activate (upstream `allowedToolNames`);
+ * `active` overrides the initial active set (upstream
+ * `initialActiveToolNames`, default `['ipython']`).
+ */
+export interface HarnessInitToolPolicy {
+  active?: string[];
+  allowed?: string[];
+}
+
 export interface HarnessInitParams {
+  /** Autonomous-continuation policy pass-through; absent keeps it disabled. */
+  autonomous?: HarnessInitAutonomousConfig;
   controlPlaneVersion: number;
+  /** Seed goal for a fresh top-level session; ignored on resume. */
+  goal?: HarnessInitGoal;
   model: HarnessInitModel;
   /** Source pin echo — the runner must return it verbatim. */
   pin: { commit: string; version: string; license: string };
@@ -81,12 +122,54 @@ export interface HarnessInitParams {
    * reports which branch happened (equal id = resumed, new id = rebuilt).
    */
   resumeSessionId?: string;
+  /** RLM sub-agent policy. `maxDepth` pins upstream `rlmMaxDepth`
+   * (upstream default 2); children always spawn under device stateDir. */
+  rlm?: { maxDepth?: number };
   /** Host-supplied runner state dir. Optional for embedded parity — the
    * runner falls back to its local default when the host does not supply
    * one; device hosts always pass an explicit device-resolved path. */
   stateDir?: string;
+  /** Reasoning effort for the session (upstream `thinkingLevel`). */
+  thinkingLevel?: string;
+  /** Host-pinnable tool allowlist/active subset; absent → upstream defaults. */
+  toolPolicy?: HarnessInitToolPolicy;
   workspace: string;
 }
+
+/**
+ * The host-pinnable slice of `harness.init` — policy fields a composer may
+ * set without re-deriving the handshake identity fields (pin/model/versions/
+ * workspace). Binding rows, descriptors and embedded compositions carry this
+ * shape; the init request spreads it under the identity fields.
+ */
+export type HarnessInitPolicy = Pick<
+  HarnessInitParams,
+  'autonomous' | 'goal' | 'rlm' | 'thinkingLevel' | 'toolPolicy'
+>;
+
+/**
+ * Product effort pin (`provider_bindings.config.selection.effort`) → upstream
+ * `ThinkingLevel` (`'minimal'|'low'|'medium'|'high'|'xhigh'|'max'`). `'default'`
+ * maps to `undefined` — upstream's own clamp keeps the model's default level;
+ * `'ultra'` clamps to upstream's ceiling `'max'`.
+ */
+export const thinkingLevelForEffort = (effort?: string): string | undefined => {
+  switch (effort) {
+    case 'low':
+    case 'medium':
+    case 'high':
+    case 'xhigh':
+    case 'max': {
+      return effort;
+    }
+    case 'ultra': {
+      return 'max';
+    }
+    default: {
+      return undefined;
+    }
+  }
+};
 
 export interface HarnessInitAck {
   capabilities: {
@@ -143,8 +226,21 @@ export interface HarnessAbortParams {
 
 // ---------- runner → host notifications ----------
 
+/**
+ * Provenance for an event that originated inside an RLM sub-agent session
+ * rather than the run's root session. `childId` is the spawn's stable
+ * identifier (the RLM child node id) — it plays the same Thread-routing role
+ * as hetero's `parent_tool_use_id` on subagent stream chunks.
+ */
+export interface HarnessSubagentContext {
+  childId: string;
+  name?: string;
+  /** Upstream session id of the spawning parent, when known. */
+  parentId?: string;
+}
+
 export type HarnessSessionEvent =
-  | { kind: 'text'; text: string }
+  | { kind: 'text'; text: string; subagent?: HarnessSubagentContext }
   | {
       kind: 'usage';
       inputTokens: number;
@@ -157,11 +253,13 @@ export type HarnessSessionEvent =
         cacheWrite?: number;
         total?: number;
       };
+      subagent?: HarnessSubagentContext;
     }
   | {
       /** Model reasoning text (thinking block delta). */
       kind: 'thinking';
       text: string;
+      subagent?: HarnessSubagentContext;
     }
   | {
       /** A tool call entered execution inside the runner (tool_execution_start). */
@@ -169,6 +267,7 @@ export type HarnessSessionEvent =
       kind: 'tool_call';
       toolCallId: string;
       toolName: string;
+      subagent?: HarnessSubagentContext;
     }
   | {
       /** In-flight partial result while a tool call executes (tool_execution_update). */
@@ -176,6 +275,7 @@ export type HarnessSessionEvent =
       partialResult: unknown;
       toolCallId: string;
       toolName: string;
+      subagent?: HarnessSubagentContext;
     }
   | {
       /** A tool call finished executing inside the runner (tool_execution_end). */
@@ -184,6 +284,39 @@ export type HarnessSessionEvent =
       result: unknown;
       toolCallId: string;
       toolName: string;
+      subagent?: HarnessSubagentContext;
+    }
+  | {
+      /**
+       * Lifecycle/status snapshot of an RLM sub-agent (upstream
+       * `rlm_child_update`). `prompt` is present only on the first update —
+       * it seeds the subagent Thread's user message the way hetero
+       * `spawnMetadata.prompt` does.
+       */
+      child: {
+        id: string;
+        parentId?: string;
+        activeSessionId?: string;
+        sessionName?: string;
+        model?: string;
+        label?: string;
+        status: 'queued' | 'running' | 'done' | 'error' | 'cancelled';
+        activity?: { kind: 'waiting' | 'writing' | 'executing'; toolName?: string };
+        durationMs?: number;
+        answerPreview?: string;
+        toolUseCount?: number;
+        progressNote?: string;
+        error?: string;
+        sessionDir?: string;
+        prompt?: string;
+      };
+      kind: 'subagent_update';
+      /**
+       * Emitting scope when this update arrives on a child's own stream
+       * (a sub-agent reporting on ITS child) — the ledger routes it into
+       * the emitter's Thread rather than the snapshot subject's.
+       */
+      subagent?: HarnessSubagentContext;
     }
   | {
       /**
@@ -192,6 +325,7 @@ export type HarnessSessionEvent =
        * normal path for negotiated tools.
        */
       kind: 'tool-violation';
+      subagent?: HarnessSubagentContext;
       toolName: string;
       event:
         | 'tool_execution_start'
@@ -201,7 +335,7 @@ export type HarnessSessionEvent =
         | 'toolcall_delta'
         | 'toolcall_end';
     }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; subagent?: HarnessSubagentContext };
 
 export interface HarnessEventParams {
   event: HarnessSessionEvent;

@@ -22,6 +22,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ControlError, ControlResult } from '@orvilo/agent-execution/controlPlane';
+import { thinkingLevelForEffort } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type { EmbeddedArtifactManifest } from '@orvilo/agent-execution/controlPlane/server';
 import { isEmbeddedArtifactManifest } from '@orvilo/agent-execution/controlPlane/server';
 import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
@@ -138,6 +139,9 @@ export const composeDevicePrimeRun = async (
   }
 
   let binding: CanonicalRunBinding | undefined;
+  /** Task subjects seed `goal.objective` off the task title — the same
+   * upstream `initialGoal` slot the embedded path fills. */
+  let taskTitle: string | undefined;
   if (input.task) {
     // Same canonical rows as the embedded prepare: task contract current,
     // dispatch contract current, grant/epoch claimed, device-owned
@@ -155,6 +159,7 @@ export const composeDevicePrimeRun = async (
       task.deletedAt
     )
       return failure('stale_fence', 'Task contract is not current');
+    taskTitle = task.name ?? undefined;
     const taskWorkspaceId = task.workspaceId;
     const dispatch = await new TaskDispatchModel(db, taskWorkspaceId).findById(
       input.task.dispatchId,
@@ -265,6 +270,16 @@ export const composeDevicePrimeRun = async (
           version: manifest.prime.version,
         },
         broker: { credential },
+        init: {
+          // The binding's effort pin → session thinking level; the task
+          // title seeds `initialGoal`; RLM stays pinned at the upstream
+          // default depth.
+          ...(taskTitle ? { goal: { objective: taskTitle } } : {}),
+          rlm: { maxDepth: 2 },
+          ...(thinkingLevelForEffort(resolved.config?.selection?.effort)
+            ? { thinkingLevel: thinkingLevelForEffort(resolved.config?.selection?.effort) }
+            : {}),
+        },
         lease: { ttlMs: DEVICE_SIDE_LEASE_TTL_MS },
         model: {
           id: capability.modelRoute,

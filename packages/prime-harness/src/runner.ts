@@ -61,6 +61,7 @@ import type { BrokerBridge } from './broker';
 import { createBrokerBridge } from './broker';
 import { mapAgentSessionEvent, mapStopReason } from './events';
 import { RunnerLink } from './ndjson';
+import { PrimeRlmFamily } from './rlmHost';
 
 /** The runner MUST echo this pin or the host refuses the handshake. */
 const RUNNER_PIN = {
@@ -132,7 +133,23 @@ const isInitParams = (params: unknown): params is HarnessInitParams =>
   Number.isSafeInteger(params.model.maxOutputTokens) &&
   params.model.maxOutputTokens >= 1 &&
   (params.stateDir === undefined || typeof params.stateDir === 'string') &&
-  (params.resumeSessionId === undefined || typeof params.resumeSessionId === 'string');
+  (params.resumeSessionId === undefined || typeof params.resumeSessionId === 'string') &&
+  (params.autonomous === undefined || isRecord(params.autonomous)) &&
+  (params.goal === undefined ||
+    (isRecord(params.goal) && isNonEmptyString(params.goal.objective))) &&
+  (params.rlm === undefined ||
+    (isRecord(params.rlm) &&
+      (params.rlm.maxDepth === undefined ||
+        (typeof params.rlm.maxDepth === 'number' && Number.isSafeInteger(params.rlm.maxDepth))))) &&
+  (params.thinkingLevel === undefined || typeof params.thinkingLevel === 'string') &&
+  (params.toolPolicy === undefined ||
+    (isRecord(params.toolPolicy) &&
+      (params.toolPolicy.active === undefined ||
+        (Array.isArray(params.toolPolicy.active) &&
+          params.toolPolicy.active.every(isNonEmptyString))) &&
+      (params.toolPolicy.allowed === undefined ||
+        (Array.isArray(params.toolPolicy.allowed) &&
+          params.toolPolicy.allowed.every(isNonEmptyString)))));
 
 /**
  * Build the upstream session. When `resumeSessionId` names an existing
@@ -203,23 +220,76 @@ const buildSession = async (
     streamSimple: bridge.streamSimple,
   });
 
+  const resumed =
+    isNonEmptyString(resumeSessionId) && existsSync(sessionFilePath(sessionDir, resumeSessionId));
+
+  // The in-process RLM family — children spawn, persist under device
+  // stateDir, emit subagent-scoped wire events, and carry the agent_message /
+  // agent_observe / rlm_heartbeat controllers upstream registers off the
+  // controllers' presence. Egress stays broker-only: children inherit the
+  // broker streamFn.
+  const family = new PrimeRlmFamily({
+    agentDir,
+    allowedToolNames: init.toolPolicy?.allowed,
+    autonomous: init.autonomous,
+    cwd: init.workspace,
+    emit: (event) =>
+      link.notify(HARNESS_EVENT_NOTIFICATION, { sessionId: sessionId.current, event }),
+    rlmMaxDepth: init.rlm?.maxDepth,
+    rlmSessionDir: path.join(agentDir, 'rlm'),
+    services: { cwd: init.workspace, mcpManager, modelRegistry, resourceLoader, settingsManager },
+  });
+  const { controllers, ref } = family.makeControllers();
+
   const { session } = await createAgentSession({
     agentDir,
+    agentMessageController: controllers.agentMessageController,
+    agentObserveController: controllers.agentObserveController,
     authStorage,
+    autonomous: init.autonomous,
     cwd: init.workspace,
+    executionMode: 'rpc',
+    // Host pins ON for long sessions (upstream default = the compaction
+    // setting; this keeps it on even if the device settings file pins off).
+    includeCompactSkill: true,
+    includeGoals: true,
+    initialActiveToolNames: init.toolPolicy?.active,
+    allowedToolNames: init.toolPolicy?.allowed,
+    initialGoal: init.goal
+      ? { objective: init.goal.objective, tokenBudget: init.goal.tokenBudget }
+      : undefined,
     mcpManager,
     model,
     modelRegistry,
+    prewarmIpythonKernel: true,
     resourceLoader,
+    rlmDepth: 0,
+    rlmHeartbeatController: controllers.rlmHeartbeatController,
+    rlmMaxDepth: init.rlm?.maxDepth,
+    rlmSessionDir: path.join(agentDir, 'rlm'),
+    serializedRefine: true,
     sessionManager,
+    sessionStartEvent: {
+      type: 'session_start',
+      reason: resumed ? 'resume' : 'startup',
+      ...(resumed && resumeSessionId
+        ? { previousSessionFile: sessionFilePath(sessionDir, resumeSessionId) }
+        : {}),
+    },
     settingsManager,
-    // thinkingLevel intentionally omitted — upstream resolves saved-session →
-    // settings default → DEFAULT_THINKING_LEVEL, then clamps to model.reasoning.
+    subagentRuntimeHost: family.host,
+    telemetryDisabled: true,
+    // Host-provided effort wins when present; otherwise upstream resolves
+    // saved-session → settings default → DEFAULT_THINKING_LEVEL, clamped to
+    // model.reasoning.
+    thinkingLevel: init.thinkingLevel,
     // tools/noTools/customTools intentionally omitted — upstream default
     // initialActiveToolNames ('ipython') plus extension/acp-mcp surface.
   });
 
   sessionId.current = session.sessionId;
+  family.bindControllers(ref, session, 'top-level');
+  family.bindRoot(session);
 
   return {
     aborting: false,

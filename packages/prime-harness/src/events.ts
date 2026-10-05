@@ -112,6 +112,51 @@ export const mapAgentSessionEvent = (event: UpstreamEvent): HarnessSessionEvent 
         toolName: toolNameOf(event.toolName),
       };
     }
+    case 'rlm_child_update': {
+      // Snapshot of a child in this session's RLM tree — the parent's own
+      // stream carries these (grandchildren bubble up through each level).
+      const child = event.child;
+      if (!isRecord(child) || typeof child.id !== 'string' || child.id.length === 0) return null;
+      return {
+        child: {
+          id: child.id,
+          activeSessionId:
+            typeof child.activeSessionId === 'string' ? child.activeSessionId : undefined,
+          activity:
+            isRecord(child.activity) &&
+            (child.activity.kind === 'waiting' ||
+              child.activity.kind === 'writing' ||
+              child.activity.kind === 'executing')
+              ? {
+                  kind: child.activity.kind,
+                  toolName:
+                    typeof child.activity.toolName === 'string'
+                      ? child.activity.toolName
+                      : undefined,
+                }
+              : undefined,
+          answerPreview: typeof child.answerPreview === 'string' ? child.answerPreview : undefined,
+          durationMs: typeof child.durationMs === 'number' ? child.durationMs : undefined,
+          error: typeof child.error === 'string' ? child.error : undefined,
+          label: typeof child.label === 'string' ? child.label : undefined,
+          model: typeof child.model === 'string' ? child.model : undefined,
+          parentId: typeof child.parentId === 'string' ? child.parentId : undefined,
+          progressNote: typeof child.progressNote === 'string' ? child.progressNote : undefined,
+          sessionDir: typeof child.sessionDir === 'string' ? child.sessionDir : undefined,
+          sessionName: typeof child.sessionName === 'string' ? child.sessionName : undefined,
+          status:
+            child.status === 'running' ||
+            child.status === 'done' ||
+            child.status === 'error' ||
+            child.status === 'cancelled' ||
+            child.status === 'queued'
+              ? child.status
+              : 'queued',
+          toolUseCount: typeof child.toolUseCount === 'number' ? child.toolUseCount : undefined,
+        },
+        kind: 'subagent_update',
+      };
+    }
     default: {
       return null;
     }

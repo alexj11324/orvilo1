@@ -1420,6 +1420,13 @@
       "when": 1790974050382,
       "tag": "0202_pr_delivery_gate_workflow_category",
       "breakpoints": true
+    },
+    {
+      "idx": 203,
+      "version": "7",
+      "when": 1791162171349,
+      "tag": "0203_device_capability_snapshot",
+      "breakpoints": true
     }
   ]
 }

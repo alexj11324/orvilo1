@@ -142,9 +142,40 @@ export interface DeviceCandidateInventory {
 }
 
 /**
+ * How long a registry-stored capability report stays admissible as evidence.
+ * Registration refreshes `lastVerifiedAt` on every connect and every live
+ * probe rewrites it, so a row older than this describes a device that has
+ * not been heard from — its snapshot is treated as absent, never trusted.
+ */
+export const CAPABILITY_EVIDENCE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * `x[.y[.z]]` numeric-tuple comparison — `current` satisfies `min` when it is
+ * greater-or-equal segment by segment. Unparseable input never satisfies:
+ * an honest `pending` beats a coerced verdict.
+ */
+export const satisfiesMinAdapterVersion = (current: string, min: string): boolean => {
+  const parse = (value: string) => {
+    const match = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(value.trim());
+    return match ? [Number(match[1]), Number(match[2] ?? 0), Number(match[3] ?? 0)] : undefined;
+  };
+  const currentTuple = parse(current);
+  const minTuple = parse(min);
+  if (!currentTuple || !minTuple) return false;
+  for (let segment = 0; segment < 3; segment += 1) {
+    if (currentTuple[segment] !== minTuple[segment]) {
+      return currentTuple[segment] > minTuple[segment];
+    }
+  }
+  return true;
+};
+
+/**
  * One bounded capability/version verdict for one device. Registry evidence
- * (the enrollment row) plus optional live-probe evidence (`supportedTools`
- * from `queryDeviceSystemInfo`) — never a fabricated `true`.
+ * (the enrollment row, including the persisted capability snapshot and
+ * self-reported adapter version) plus optional live-probe evidence
+ * (`supportedTools` from `queryDeviceSystemInfo`) — never a fabricated
+ * `true`.
  */
 const verifyCandidate = (params: {
   deviceId: string;
@@ -153,12 +184,22 @@ const verifyCandidate = (params: {
   scopeSource: AdmissionDeviceCandidate['scopeSource'];
   /** Live evidence from a `queryDeviceSystemInfo` probe, when collected. */
   systemInfo?: { supportedTools?: string[] };
+  /** Persisted registry evidence from the devices row, when present. */
+  registryEvidence?: {
+    adapterVersion?: string | null;
+    capabilitySnapshot?: { supportedTools?: string[] } | null;
+    lastVerifiedAt?: Date | string | null;
+  };
   owner: { userId: string; workspaceId: string | null };
   isLocalMachine: boolean;
   online: boolean;
 }): AdmissionDeviceCandidate => {
   const { requiredOperation } = params;
   const checkedAt = new Date().toISOString();
+
+  const verifiedAt = params.registryEvidence?.lastVerifiedAt;
+  const evidenceFresh =
+    !!verifiedAt && Date.now() - new Date(verifiedAt).getTime() <= CAPABILITY_EVIDENCE_TTL_MS;
 
   let capabilityStatus: AdmissionVerificationStatus;
   let versionStatus: AdmissionVerificationStatus;
@@ -168,21 +209,38 @@ const verifyCandidate = (params: {
     // Agent-run contract: a registry-authorized (or verified-referenced) row
     // IS the capability evidence — the device enrolled as an execution host
     // and its own admission verifies the adapter/artifact at launch
-    // (PrimeRunDescriptor). An explicit minAdapterVersion cannot be proven
-    // from any stored signal yet — honest pending, never assumed.
+    // (PrimeRunDescriptor). `minAdapterVersion` is proven from the version
+    // the device reported at registration — absent or non-satisfying stays
+    // honest pending, never assumed.
     capabilityStatus = 'verified';
-    versionStatus = requiredOperation?.minAdapterVersion ? 'pending' : 'verified';
+    const storedAdapterVersion = params.registryEvidence?.adapterVersion;
+    const versionProven =
+      !!requiredOperation?.minAdapterVersion &&
+      !!storedAdapterVersion &&
+      evidenceFresh &&
+      satisfiesMinAdapterVersion(storedAdapterVersion, requiredOperation.minAdapterVersion);
+    versionStatus = requiredOperation?.minAdapterVersion
+      ? versionProven
+        ? 'verified'
+        : 'pending'
+      : 'verified';
     verification = {
       adapter: requiredOperation?.adapter ?? undefined,
       checkedAt,
-      delegated: true,
+      delegated: !versionProven,
       mode: 'registry',
-      source: params.scopeSource === 'referenced' ? 'registry:verified-reference' : 'registry:row',
+      source:
+        versionProven || (requiredOperation?.minAdapterVersion && storedAdapterVersion)
+          ? 'registry:adapterVersion'
+          : params.scopeSource === 'referenced'
+            ? 'registry:verified-reference'
+            : 'registry:row',
     };
   } else {
     // Tool/operation requirements need real per-device evidence — the live
-    // supportedTools probe. Advertised → verified; advertised-and-absent →
-    // incompatible; no probe or older client without the field → pending.
+    // supportedTools probe first, then the persisted registry snapshot when
+    // the device cannot answer right now. Advertised → verified;
+    // advertised-and-absent → incompatible; no evidence → pending.
     const required =
       requiredOperation.kind === 'device-tool-call'
         ? requiredOperation.toolName
@@ -196,12 +254,25 @@ const verifyCandidate = (params: {
         source: 'gateway:systemInfo',
       };
     } else {
-      capabilityStatus = 'pending';
-      verification = {
-        checkedAt,
-        mode: 'none',
-        source: params.systemInfo ? 'gateway:systemInfo (no supportedTools)' : undefined,
-      };
+      const snapshotTools =
+        evidenceFresh === true
+          ? params.registryEvidence?.capabilitySnapshot?.supportedTools
+          : undefined;
+      if (Array.isArray(snapshotTools)) {
+        capabilityStatus = snapshotTools.includes(required) ? 'verified' : 'incompatible';
+        verification = {
+          checkedAt,
+          mode: 'registry',
+          source: 'registry:snapshot',
+        };
+      } else {
+        capabilityStatus = 'pending';
+        verification = {
+          checkedAt,
+          mode: 'none',
+          source: params.systemInfo ? 'gateway:systemInfo (no supportedTools)' : undefined,
+        };
+      }
     }
     versionStatus = capabilityStatus === 'verified' ? 'verified' : 'pending';
   }
@@ -337,7 +408,16 @@ export const listAuthorizedDeviceCandidates = async (
     const toProbe = authorizedOnline.slice(0, PROBE_BUDGET).map((d) => d.deviceId);
     await Promise.all(
       toProbe.map(async (deviceId) => {
-        probedInfo.set(deviceId, await probeSystemInfo(deviceId).catch(() => undefined));
+        const info = await probeSystemInfo(deviceId).catch(() => undefined);
+        probedInfo.set(deviceId, info);
+        if (info?.supportedTools) {
+          // Refresh the stored snapshot so a later offline-but-authorized
+          // device can still be judged from evidence it actually reported.
+          // Fire-and-forget: a write failure must not stall admission.
+          void deviceModel
+            .updateCapabilityEvidence(deviceId, { supportedTools: info.supportedTools })
+            .catch(() => undefined);
+        }
       }),
     );
   }
@@ -351,6 +431,11 @@ export const listAuthorizedDeviceCandidates = async (
       isLocalMachine: row.deviceId === localDeviceId,
       online: !!live,
       owner: { userId: row.userId, workspaceId: row.workspaceId ?? null },
+      registryEvidence: {
+        adapterVersion: row.adapterVersion,
+        capabilitySnapshot: row.capabilitySnapshot,
+        lastVerifiedAt: row.lastVerifiedAt,
+      },
       requiredOperation,
       scopeSource: 'registry',
       systemInfo: probedInfo.get(row.deviceId),
@@ -403,7 +488,13 @@ export const listAuthorizedDeviceCandidates = async (
       const isOnline = !!liveById.get(ref.deviceId);
       // Probe a referenced device that needs live evidence and is online.
       if (probeNeeded && isOnline && !probedInfo.has(ref.deviceId)) {
-        probedInfo.set(ref.deviceId, await probeSystemInfo(ref.deviceId).catch(() => undefined));
+        const info = await probeSystemInfo(ref.deviceId).catch(() => undefined);
+        probedInfo.set(ref.deviceId, info);
+        if (info?.supportedTools) {
+          void deviceModel
+            .updateCapabilityEvidence(ref.deviceId, { supportedTools: info.supportedTools })
+            .catch(() => undefined);
+        }
       }
       candidates.push(
         verifyCandidate({
@@ -411,6 +502,11 @@ export const listAuthorizedDeviceCandidates = async (
           isLocalMachine: ref.deviceId === localDeviceId,
           online: isOnline,
           owner: { userId: verifiedRow.userId, workspaceId: verifiedRow.workspaceId ?? null },
+          registryEvidence: {
+            adapterVersion: verifiedRow.adapterVersion,
+            capabilitySnapshot: verifiedRow.capabilitySnapshot,
+            lastVerifiedAt: verifiedRow.lastVerifiedAt,
+          },
           requiredOperation,
           scopeSource: 'referenced',
           systemInfo: probedInfo.get(ref.deviceId),
@@ -708,6 +804,8 @@ export const resolveHeteroExecutionPlan = async (
  * The persisted device binding after the atomic first-bind attempt.
  */
 export interface TopicDeviceBindResult {
+  /** The binding epoch now persisted — the winner's revision on a CAS loss. */
+  bindingRevision: number;
   /** The binding now persisted — the winner's, which may differ from the request. */
   boundDeviceId: string;
   /** `bound`: this call installed the pin. `occupied`: the CAS lost — the
@@ -749,6 +847,8 @@ export const bindTopicDeviceAtomically = async (
         coalesce(${topics.metadata}, '{}'::jsonb)
         || jsonb_build_object(
           'boundDeviceId', to_jsonb(${params.deviceId}::text),
+          'bindingRevision',
+            to_jsonb(coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0) + 1),
           'executionConfig',
             coalesce(${topics.metadata} -> 'executionConfig', '{}'::jsonb)
             || jsonb_build_object(
@@ -771,10 +871,15 @@ export const bindTopicDeviceAtomically = async (
       ),
     )
     .returning({
+      bindingRevision: sql<number>`(${topics.metadata} ->> 'bindingRevision')::int`,
       boundDeviceId: sql<string>`${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId'`,
     });
   if (updated.length > 0) {
-    return { boundDeviceId: updated[0].boundDeviceId, outcome: 'bound' };
+    return {
+      bindingRevision: updated[0].bindingRevision,
+      boundDeviceId: updated[0].boundDeviceId,
+      outcome: 'bound',
+    };
   }
 
   // CAS lost — re-read the winner. Another writer (the picker, a concurrent
@@ -784,6 +889,9 @@ export const bindTopicDeviceAtomically = async (
   // row): surface that honestly instead of guessing.
   const rows = await serverDB
     .select({
+      bindingRevision: sql<
+        number | undefined
+      >`coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0)`,
       boundDeviceId: sql<
         string | undefined
       >`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId')`,
@@ -797,5 +905,130 @@ export const bindTopicDeviceAtomically = async (
       `Topic device bind rejected for ${params.topicId}: no binding persisted (topic missing or malformed)`,
     );
   }
-  return { boundDeviceId: winner, outcome: 'occupied' };
+  return {
+    bindingRevision: rows[0]?.bindingRevision ?? 0,
+    boundDeviceId: winner,
+    outcome: 'occupied',
+  };
+};
+
+// ─── Explicit repair ─────────────────────────────────────────────────────────
+
+/**
+ * Server-side CAS repair for a device binding — the counterpart of
+ * {@link bindTopicDeviceAtomically} for an EXISTING (stale/conflicted) pin.
+ * Rebinding an existing pin is an execution-identity decision, not content
+ * co-editing: the router gates it on the caller's device authorization, and
+ * this write is a real compare-and-swap on BOTH the effective binding AND
+ * (when supplied) its `bindingRevision` epoch — a repair can never clobber a
+ * binding that changed underneath it.
+ *
+ * The write installs the same canonical triple the first-bind persists
+ * (`executionConfig.boundDeviceId` + `executionTarget:'device'` + the legacy
+ * top-level mirror) PLUS `inheritWorkspaceScope:false` — a human repair pick
+ * must not be silently re-clamped by workspace-scope inheritance. The
+ * `heteroSession*` handles are REMOVED: the repaired device mints a fresh
+ * execution session; resurrecting another device's native session under a
+ * relabeled config is exactly what admission rejects.
+ *
+ * Returns the binding actually persisted — on a CAS loss the winner's pin is
+ * re-read and returned (`outcome:'occupied'`), so the caller compares instead
+ * of assuming. A write or re-read failure THROWS.
+ */
+export const repairTopicDeviceBinding = async (
+  serverDB: OrviloDatabase,
+  params: {
+    /** The device the caller is authorized to execute on and picked. */
+    deviceId: string;
+    /**
+     * The effective binding the caller observed (`errorData.deviceId`).
+     * `undefined`/`null` asserts NO binding was in place.
+     */
+    expectedBoundDeviceId?: string | null;
+    /**
+     * The `metadata.bindingRevision` epoch the caller observed (echoed in
+     * admission `errorData`). When present the CAS also requires it — a
+     * first-bind or another repair that landed in between invalidates the
+     * expectation. Omitted by pre-revision clients → epoch check skipped.
+     */
+    expectedBindingRevision?: number | null;
+    topicId: string;
+    workspaceId?: string;
+  },
+): Promise<TopicDeviceBindResult> => {
+  const expectedRevision = params.expectedBindingRevision ?? undefined;
+  const updated = await serverDB
+    .update(topics)
+    .set({
+      metadata: sql`
+        (coalesce(${topics.metadata}, '{}'::jsonb)
+          - 'heteroSessionId'
+          - 'heteroSessionBindingKey'
+          - 'heteroSessionIdByWorkingDirectory'
+          - 'heteroSessionBindingKeyByWorkingDirectory')
+        || jsonb_build_object(
+          'boundDeviceId', to_jsonb(${params.deviceId}::text),
+          'bindingRevision',
+            to_jsonb(coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0) + 1),
+          'executionConfig',
+            coalesce(${topics.metadata} -> 'executionConfig', '{}'::jsonb)
+            || jsonb_build_object(
+              'boundDeviceId', to_jsonb(${params.deviceId}::text),
+              'executionTarget', to_jsonb('device'::text),
+              'inheritWorkspaceScope', to_jsonb(false::boolean)
+            )
+        )`,
+    })
+    .where(
+      and(
+        eq(topics.id, params.topicId),
+        params.workspaceId
+          ? eq(topics.workspaceId, params.workspaceId)
+          : isNull(topics.workspaceId),
+        // Binding CAS: the effective pin must equal what the caller saw —
+        // `coalesce` collapses the canonical + mirror pins into the one truth
+        // the repair client read.
+        sql`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId', '') = ${params.expectedBoundDeviceId ?? ''}`,
+        ...(expectedRevision !== undefined
+          ? [
+              sql`coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0) = ${expectedRevision}`,
+            ]
+          : []),
+      ),
+    )
+    .returning({
+      bindingRevision: sql<number>`(${topics.metadata} ->> 'bindingRevision')::int`,
+      boundDeviceId: sql<string>`${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId'`,
+    });
+  if (updated.length > 0) {
+    return {
+      bindingRevision: updated[0].bindingRevision,
+      boundDeviceId: updated[0].boundDeviceId,
+      outcome: 'bound',
+    };
+  }
+
+  // CAS lost — re-read the winner (same convention as the first-bind CAS: the
+  // truth is the row, not the expectation).
+  const rows = await serverDB
+    .select({
+      bindingRevision: sql<
+        number | undefined
+      >`coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0)`,
+      boundDeviceId: sql<
+        string | undefined
+      >`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId')`,
+    })
+    .from(topics)
+    .where(eq(topics.id, params.topicId))
+    .limit(1);
+  const winner = rows[0];
+  if (!winner) {
+    throw new Error(`Topic device binding repair rejected for ${params.topicId}: topic missing`);
+  }
+  return {
+    bindingRevision: winner.bindingRevision ?? 0,
+    boundDeviceId: winner.boundDeviceId ?? '',
+    outcome: 'occupied',
+  };
 };

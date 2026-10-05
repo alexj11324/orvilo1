@@ -10,6 +10,7 @@ import type {
   WorkingDirEntry,
 } from '@orvilo/types';
 import { deriveWorktreePath, sortDevicesByActivity, workingDirConfigSchema } from '@orvilo/types';
+import { deserializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -119,6 +120,75 @@ const deviceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
 const workspaceFileInput = z.object({
   deviceId: z.string(),
   workingDirectory: z.string(),
+});
+
+/**
+ * MCP params for a tunneled call — mirrors `GatewayMcpParams` in
+ * `@orvilo/device-gateway-client` (stdio spawn params vs http endpoint +
+ * credentials), discriminated on `type`.
+ */
+const gatewayMcpParamsSchema = z.discriminatedUnion('type', [
+  z.object({
+    args: z.array(z.string()),
+    command: z.string(),
+    env: z.record(z.string(), z.string()).optional(),
+    name: z.string(),
+    type: z.literal('stdio'),
+  }),
+  z.object({
+    auth: z
+      .object({
+        accessToken: z.string().optional(),
+        token: z.string().optional(),
+        type: z.enum(['none', 'bearer', 'oauth2']),
+      })
+      .optional(),
+    headers: z.record(z.string(), z.string()).optional(),
+    name: z.string(),
+    type: z.literal('http'),
+    url: z.string(),
+  }),
+]);
+
+const deviceMcpFailure = (error: string | undefined): never => {
+  // An old device client has no MCP RPC surface — surface the same
+  // OPERATION_UNSUPPORTED contract the client's honest-degradation path
+  // throws, so the UI can offer the right affordance (upgrade, not retry).
+  if (error?.includes('does not support')) {
+    throw new TRPCError({
+      cause: { data: { code: 'OPERATION_UNSUPPORTED' } },
+      code: 'PRECONDITION_FAILED',
+      message: error,
+    });
+  }
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: error || 'Device MCP query failed',
+  });
+};
+
+/**
+ * `deviceProcedure` + the same device-addressability rule the repair gate
+ * uses: the named device must be in the caller's authorized registry —
+ * their personal row or a workspace row they can see. Without it a caller
+ * could aim MCP probe/call traffic at a deviceId they should not address.
+ */
+const deviceMcpProcedure = deviceProcedure.use(async (opts) => {
+  const { ctx } = opts;
+  const raw = (await opts.getRawInput()) as { deviceId?: unknown } | undefined;
+  if (typeof raw?.deviceId !== 'string' || !raw.deviceId) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'deviceId is required' });
+  }
+  const row =
+    (await ctx.deviceModel.findByDeviceId(raw.deviceId)) ??
+    (ctx.workspaceId ? await ctx.deviceModel.findWorkspaceDeviceById(raw.deviceId) : undefined);
+  if (!row) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'The requested device is not in your authorized device registry.',
+    });
+  }
+  return opts.next();
 });
 
 /**
@@ -1430,9 +1500,135 @@ export const deviceRouter = router({
    * `orvilo connect`). Upserts on (userId, deviceId); user-owned fields are
    * preserved on conflict.
    */
+  /**
+   * Device-scoped MCP manifest probe for streamable-HTTP servers — the
+   * remote counterpart of the desktop IPC. A localhost / LAN URL only
+   * resolves in the device's own network space, so the query executes ON
+   * the device via the gateway RPC relay.
+   */
+  getStreamableMcpServerManifest: deviceMcpProcedure
+    .input(
+      z.object({
+        deviceId: z.string(),
+        input: z.object({
+          auth: z
+            .object({
+              accessToken: z.string().optional(),
+              token: z.string().optional(),
+              type: z.enum(['none', 'bearer', 'oauth2']),
+            })
+            .optional(),
+          headers: z.record(z.string(), z.string()).optional(),
+          identifier: z.string(),
+          metadata: z
+            .object({
+              avatar: z.string().optional(),
+              description: z.string().optional(),
+              name: z.string().optional(),
+            })
+            .optional(),
+          url: z.string(),
+        }),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await deviceGateway.mcpGetStreamableManifest({
+        deviceId: input.deviceId,
+        input: input.input,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+      if (result.error) deviceMcpFailure(result.error);
+      return deserializeMcpIpcPayload(result.data);
+    }),
+
+  /** Device-scoped stdio MCP manifest probe — spawn + listManifests on the device. */
+  getStdioMcpServerManifest: deviceMcpProcedure
+    .input(
+      z.object({
+        deviceId: z.string(),
+        input: z.object({
+          args: z.array(z.string()).optional(),
+          command: z.string(),
+          env: z.record(z.string(), z.string()).optional(),
+          metadata: z
+            .object({
+              avatar: z.string().optional(),
+              description: z.string().optional(),
+              name: z.string().optional(),
+            })
+            .optional(),
+          name: z.string(),
+        }),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await deviceGateway.mcpGetStdioManifest({
+        deviceId: input.deviceId,
+        input: input.input,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+      if (result.error) deviceMcpFailure(result.error);
+      return deserializeMcpIpcPayload(result.data);
+    }),
+
+  /** Device-scoped MCP installability check — dependencies live where the server will run. */
+  checkMcpInstallable: deviceMcpProcedure
+    .input(
+      z.object({
+        deploymentOptions: z.array(z.any()),
+        deviceId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await deviceGateway.mcpCheckInstallable({
+        deploymentOptions: input.deploymentOptions,
+        deviceId: input.deviceId,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+      if (result.error) deviceMcpFailure(result.error);
+      return deserializeMcpIpcPayload(result.data);
+    }),
+
+  /**
+   * Tunnel an MCP tool call to the device — the explicit-target counterpart
+   * of `tools.mcp.callTool`. Stdio commands and localhost / LAN endpoints
+   * only run where the MCP server is, so the call rides the
+   * `/api/device/tool-call` relay (`type:'mcp'`) instead of the cloud's own
+   * MCP client. Executes tools with side effects — member role required in
+   * workspace scope.
+   */
+  callMcpTool: deviceMcpProcedure
+    .use(requireWorkspaceRole('member'))
+    .input(
+      z.object({
+        apiName: z.string(),
+        arguments: z.string(),
+        deviceId: z.string(),
+        identifier: z.string(),
+        params: gatewayMcpParamsSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await deviceGateway.callDeviceMcpTool({
+        apiName: input.apiName,
+        arguments: input.arguments,
+        deviceId: input.deviceId,
+        identifier: input.identifier,
+        params: input.params,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+      if (!result.success) deviceMcpFailure(result.error);
+      return result;
+    }),
+
   register: deviceProcedure
     .input(
       z.object({
+        adapterVersion: z.string().max(32).nullish(),
         deviceId: z.string().min(1).max(64),
         hostname: z.string().nullish(),
         identitySource: z.enum(['machine-id', 'fallback']),

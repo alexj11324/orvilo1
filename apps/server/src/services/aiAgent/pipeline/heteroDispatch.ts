@@ -630,6 +630,12 @@ export interface HeteroDispatchInput {
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
   /**
+   * The binding epoch read alongside `sessionBoundDeviceId`
+   * (`topic.metadata.bindingRevision`) — echoed in admission `errorData` so
+   * the repair client can CAS on the exact revision it was shown.
+   */
+  sessionBindingRevision?: number | null;
+  /**
    * The conversation's durable device pin — `topic.metadata.executionConfig`
    * `.boundDeviceId` (`turn.topicBoundDeviceId`). Unified admission consults
    * it FIRST as the session binding: a still-valid pin wins over every other
@@ -706,6 +712,7 @@ export const dispatchHeteroAgent = async (
     requestTrigger,
     requestedDeviceId,
     runAttachments,
+    sessionBindingRevision,
     sessionBoundDeviceId,
     selfMessageIds,
     skipTaskVerification,
@@ -997,6 +1004,10 @@ export const dispatchHeteroAgent = async (
     localDeviceId,
     memberDeviceOverride,
     requestTrigger,
+    // The operation this run needs: which harness adapter family the device
+    // must host — admission records it per candidate so a wrong-adapter
+    // device can never read as a verified pick.
+    requiredOperation: { adapter: resolveHarnessAdapter(heteroType), kind: 'agent-run' },
     sandboxExecutionAvailable: !isRemoteHetero && supportsCloudHeterogeneousSandbox(heteroType),
     sessionBoundDeviceId,
     userId: deps.userId,
@@ -1037,6 +1048,7 @@ export const dispatchHeteroAgent = async (
           assistantMessageId,
           detail: `DEVICE_BINDING_CONFLICT: this conversation was bound to another device (${persisted.boundDeviceId}) while the run was being admitted.`,
           errorData: {
+            bindingRevision: persisted.bindingRevision,
             code: 'DEVICE_BINDING_CONFLICT',
             deviceId: persisted.boundDeviceId,
             operationId,
@@ -1055,6 +1067,7 @@ export const dispatchHeteroAgent = async (
           createdAt: new Date().toISOString(),
           error: 'DEVICE_BINDING_CONFLICT',
           errorData: {
+            bindingRevision: persisted.bindingRevision,
             code: 'DEVICE_BINDING_CONFLICT',
             deviceId: persisted.boundDeviceId,
             operationId,
@@ -1308,6 +1321,7 @@ export const dispatchHeteroAgent = async (
       // the detail prose. `error` keeps the established 'No bound device'/
       // 'Device access denied' labels for compatibility.
       const admissionError: DeviceAdmissionErrorData = {
+        bindingRevision: sessionBindingRevision ?? undefined,
         code: blockedCode,
         deviceId:
           blockedCode === 'DEVICE_BINDING_INVALID'
@@ -1581,6 +1595,7 @@ export const dispatchHeteroAgent = async (
       // the detail prose. `error` keeps the established 'No bound device'/
       // 'Device access denied' labels for compatibility.
       const admissionError: DeviceAdmissionErrorData = {
+        bindingRevision: sessionBindingRevision ?? undefined,
         code: blockedCode,
         deviceId:
           blockedCode === 'DEVICE_BINDING_INVALID'

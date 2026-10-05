@@ -93,7 +93,7 @@ export default {
   'comparePlans': 'View Plans',
   'createSubscriptionError': 'Failed to create subscription',
   'currentPlan.cancelAlert':
-    'Subscription will be cancelled after {{canceledAt}}. You can still restore it before then',
+    'Subscription will be canceled after {{canceledAt}}. You can still restore it before then',
   'currentPlan.downgradeAlert': 'Will be downgraded to {{plan}} after {{downgradedAt}}.',
   'currentPlan.management': 'Manage Subscription',
   'currentPlan.notIncluded': 'Not included in current plan',
@@ -115,7 +115,7 @@ export default {
   'downgradePlans.alert':
     'You will still enjoy the benefits until the current plan expires ({{date}}). The new plan will take effect after the current plan expires.',
   'downgradePlans.desc': 'The plan change will take effect after the current plan expires.',
-  'downgradePlans.success': 'Subscription cancelled successfully',
+  'downgradePlans.success': 'Subscription canceled successfully',
   'downgradePlans.title': 'Switch to {{plan}}',
   'credits.autoTopUp.cardBindingGiftHint':
     '🎁 Add your first payment method and get 1M credits free',
@@ -458,7 +458,7 @@ export default {
     'Your subscription has been canceled. You cannot perform other operations until the cancellation is complete',
   'plans.downgradeWillCancel': 'This action will cancel your scheduled plan downgrade',
   'plans.cancelDowngrade': 'Cancel Scheduled Downgrade',
-  'plans.cancelDowngradeSuccess': 'Scheduled downgrade has been cancelled',
+  'plans.cancelDowngradeSuccess': 'Scheduled downgrade has been canceled',
   'plans.restoreSubscription': 'Restore Subscription',
   'plans.restoreSubscriptionError': 'Could not restore your subscription',
   'plans.restoreSubscriptionSuccess': 'Subscription has been restored',

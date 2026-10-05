@@ -1,3 +1,4 @@
+import { t as i18nT } from 'i18next';
 import { useTheme } from 'next-themes';
 import type { ComponentType, CSSProperties, ReactElement } from 'react';
 import { lazy, Suspense } from 'react';
@@ -25,7 +26,8 @@ const buttonStyle: CSSProperties = {
   padding: '6px 16px',
 };
 
-// Renders outside AuthShell (no i18n provider), so plain elements and English copy only
+// Renders outside AuthShell (no i18n provider): i18next resolves when it is
+// initialized, and the defaults below keep an English fallback when it is not.
 const AuthErrorBoundary = () => {
   const error = useRouteError() as Error;
   const { resolvedTheme } = useTheme();
@@ -52,10 +54,12 @@ const AuthErrorBoundary = () => {
         padding: 16,
       }}
     >
-      <h2 style={{ margin: 0 }}>Something went wrong</h2>
+      <h2 style={{ margin: 0 }}>
+        {i18nT('error.title', { defaultValue: 'Something went wrong', ns: 'error' })}
+      </h2>
       <div style={{ display: 'flex', gap: 12 }}>
         <button style={buttonStyle} type={'button'} onClick={() => window.location.reload()}>
-          Retry
+          {i18nT('error.retry', { defaultValue: 'Retry', ns: 'error' })}
         </button>
         <button
           style={buttonStyle}
@@ -64,7 +68,7 @@ const AuthErrorBoundary = () => {
             window.location.href = '/signin';
           }}
         >
-          Back to sign in
+          {i18nT('error.backToSignIn', { defaultValue: 'Back to sign in', ns: 'error' })}
         </button>
       </div>
     </div>

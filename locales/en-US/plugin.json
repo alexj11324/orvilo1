@@ -170,7 +170,7 @@
   "builtins.orvilo-agent.apiName.vent.rejected": "Not recorded",
   "builtins.orvilo-agent.subAgent.stats.tokens": "{{count}} tokens",
   "builtins.orvilo-agent.subAgent.stats.tools": "{{count}} tools",
-  "builtins.orvilo-agent.title": "Orvilo Agent",
+  "builtins.orvilo-agent.title": "Orvilo AI",
   "builtins.orvilo-agent.todos.allDone": "All tasks completed",
   "builtins.orvilo-agent.todos.completedStep": "Completed",
   "builtins.orvilo-agent.todos.currentStep": "Current step",

@@ -96,7 +96,7 @@ export default {
   'share.visitor.access.signInTitle': 'Sign in to continue',
   'share.visitor.errors.stopFailed': "Couldn't stop the run. Please try again.",
   'share.visitor.errors.unavailable':
-    'This conversation is no longer available. Try switching to another topic or starting a new one.',
+    'This conversation is no longer available. Switch to another one or start a new conversation.',
   'share.visitor.input.stop': 'Stop',
   'share.visitor.privacyNotice':
     'This conversation runs on the owner’s account and may be visible to them. Avoid sharing sensitive information.',

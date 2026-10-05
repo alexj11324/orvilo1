@@ -340,7 +340,7 @@ export default {
   'uploadDock.body.collapse': 'Collapse',
   'uploadDock.header.cancelAll': 'Cancel all',
   'uploadDock.body.item.cancel': 'Cancel',
-  'uploadDock.body.item.cancelled': 'Cancelled',
+  'uploadDock.body.item.cancelled': 'Canceled',
   'uploadDock.body.item.done': 'Uploaded',
   'uploadDock.body.item.error': 'Upload failed, please try again',
   'uploadDock.body.item.pending': 'Preparing to upload...',
@@ -350,7 +350,7 @@ export default {
   'uploadDock.fileQueueInfo':
     'Uploading the first {{count}} files, {{remaining}} remaining in queue',
   'uploadDock.totalCount': 'Total {{count}} items',
-  'uploadDock.uploadStatus.cancelled': 'Upload cancelled',
+  'uploadDock.uploadStatus.cancelled': 'Upload canceled',
   'uploadDock.uploadStatus.error': 'Upload error',
   'uploadDock.uploadStatus.pending': 'Waiting to upload',
   'uploadDock.uploadStatus.processing': 'Uploading',

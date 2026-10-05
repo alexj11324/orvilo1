@@ -2,7 +2,7 @@ export default {
   AccountDeactivated:
     'Your account has been deactivated or suspended. This may be due to policy, security, or account review reasons. Please contact the provider support for assistance.',
   AgentRuntimeError:
-    'Orvilo language model runtime execution error. Please troubleshoot or retry based on the following information.',
+    'Something went wrong in the model runtime. Details are below — you can retry or adjust the configuration.',
   CapabilityNotSupported:
     'Sorry, this model does not support the requested capability (such as vision input or tool calling). Please switch to a model that supports it.',
   ComfyUIBizError:
@@ -44,7 +44,7 @@ export default {
   InvalidVertexCredentials:
     'Vertex authentication failed. Please check your credentials and try again.',
   LocationNotSupportError:
-    "We're sorry, your current location does not support this model service. This may be due to regional restrictions or the service not being available. Please confirm if the current location supports using this service, or try using a different location.",
+    "This model isn't available in your region. Check the provider's availability or try another model.",
   ModelEmptyCompletion:
     'The model provider returned an empty response. Even without visible content, this request may still incur charges. You can retry or switch models and try again.',
   ModelEmptyCompletionWithCost:

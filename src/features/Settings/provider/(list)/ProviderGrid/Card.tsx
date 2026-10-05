@@ -78,7 +78,9 @@ const ProviderCard = memo<ProviderCardProps>(
                         title={name}
                       />
                     )}
-                    {isCodingPlanProvider(id) && <Tag color={'geekblue'}>{'Coding Plan'}</Tag>}
+                    {isCodingPlanProvider(id) && (
+                      <Tag color={'geekblue'}>{t('codingPlan', { ns: 'setting' })}</Tag>
+                    )}
                   </Flexbox>
                 ) : (
                   <Flexbox horizontal align={'center'} gap={12}>

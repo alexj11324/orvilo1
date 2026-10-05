@@ -224,7 +224,7 @@ export default {
 
   'cmdk.newTopic': 'New Topic in Current Agent',
 
-  'cmdk.noResults': 'No Results found',
+  'cmdk.noResults': 'No results',
 
   'cmdk.openSettings': 'Open Settings',
 
@@ -562,6 +562,7 @@ export default {
   'or': 'or',
   'pageSizeItem': '{{count}} items',
   'password': 'Password',
+  'poweredBy': 'Powered by {{name}}',
   'pin': 'Pin',
   'pinOff': 'Unpin',
   'privacy': 'Privacy Policy',
@@ -1196,7 +1197,7 @@ export default {
   'taskDock.group.publish': 'Publishing',
   'taskDock.group.upload': 'Uploads',
   'taskDock.open': 'Open',
-  'taskDock.status.cancelled': 'Cancelled',
+  'taskDock.status.cancelled': 'Canceled',
   'taskDock.status.error': 'Some tasks need attention',
   'taskDock.status.running': 'In progress',
   'taskDock.status.success': 'All done',

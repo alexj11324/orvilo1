@@ -116,7 +116,7 @@ export const useChatListActionsBar = ({
       export: {
         icon: DownloadIcon,
         key: 'export',
-        label: 'Export as PDF',
+        label: t('shareModal.exportPdf', { ns: 'chat' }),
         sfSymbol: 'square.and.arrow.up',
       },
       regenerate: {

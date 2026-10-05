@@ -4,6 +4,7 @@ import { Markdown } from '@lobehub/ui';
 import { type SkillItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { CodeBlock } from '@/components/ui/code-block';
 
@@ -175,12 +176,13 @@ interface ContentViewerProps {
 
 const ContentViewer = memo<ContentViewerProps>(
   ({ skillDetail, selectedFile, contentMap, liveContent }) => {
+    const { t } = useTranslation('setting');
     if (selectedFile === 'SKILL.md') {
       const displayContent = liveContent ?? skillDetail?.content;
       if (!displayContent) {
         return (
           <div className={styles.docWrapper}>
-            <p style={{ opacity: 0.45 }}>No content</p>
+            <p style={{ opacity: 0.45 }}>{t('agentSkillDetail.noContent')}</p>
           </div>
         );
       }

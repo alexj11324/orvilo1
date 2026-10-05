@@ -1,7 +1,7 @@
 export default {
   'azure.azureApiVersion.desc':
     'Azure API version, follow the format YYYY-MM-DD, check the [latest version](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#chat-completions)',
-  'azure.azureApiVersion.fetch': 'Fetch List',
+  'azure.azureApiVersion.fetch': 'Fetch list',
   'azure.azureApiVersion.title': 'Azure API Version',
   'azure.empty': 'Please enter a model ID to add the first model',
   'azure.endpoint.desc':
@@ -17,7 +17,7 @@ export default {
   'azure.token.title': 'API Key',
   'azureai.azureApiVersion.desc':
     'The API version for Azure, following the YYYY-MM-DD format. Refer to the [latest version](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#chat-completions)',
-  'azureai.azureApiVersion.fetch': 'Fetch List',
+  'azureai.azureApiVersion.fetch': 'Fetch list',
   'azureai.azureApiVersion.title': 'Azure API Version',
   'azureai.endpoint.desc':
     'Find the Azure AI model inference endpoint from the Azure AI project overview',
@@ -31,9 +31,9 @@ export default {
     'Enter your Amazon Bedrock API key. Short-term API keys are recommended for production workloads.',
   'bedrock.apiKey.placeholder': 'Amazon Bedrock API Key',
   'bedrock.apiKey.title': 'API Key',
-  'bedrock.accessKeyId.desc': 'Enter AWS Access Key Id',
-  'bedrock.accessKeyId.placeholder': 'AWS Access Key Id',
-  'bedrock.accessKeyId.title': 'AWS Access Key Id',
+  'bedrock.accessKeyId.desc': 'Enter AWS Access Key ID',
+  'bedrock.accessKeyId.placeholder': 'AWS Access Key ID',
+  'bedrock.accessKeyId.title': 'AWS Access Key ID',
   'bedrock.authMode.desc': 'Choose how requests authenticate with Amazon Bedrock',
   'bedrock.authMode.options.apiKey': 'API Key',
   'bedrock.authMode.options.awsCredentials': 'AWS Credentials',
@@ -130,7 +130,7 @@ export default {
   'github.personalAccessToken.desc':
     'Enter your GitHub PAT. Click [here](https://github.com/settings/tokens) to create one.',
   'github.personalAccessToken.placeholder': 'ghp_xxxxxx',
-  'github.personalAccessToken.title': 'GitHub PAT',
+  'github.personalAccessToken.title': 'GitHub personal access token',
   'huggingface.accessToken.desc':
     'Enter your HuggingFace Token, click [here](https://huggingface.co/settings/tokens) to create one',
   'huggingface.accessToken.placeholder': 'hf_xxxxxxxxx',
@@ -151,7 +151,7 @@ export default {
   'menu.searchProviders': 'Search Providers...',
   'menu.sort': 'Custom Sort',
   'newapi.apiKey.desc': 'API key provided by the New API platform',
-  'newapi.apiKey.placeholder': 'New API API Key',
+  'newapi.apiKey.placeholder': 'New API key',
   'newapi.apiKey.required': 'API key is required',
   'newapi.apiKey.title': 'API Key',
   'newapi.apiUrl.desc': 'API endpoint for the New API service, usually includes /v1',
@@ -175,7 +175,7 @@ export default {
   'ollama.download.speed': 'Speed',
   'ollama.download.title': 'Downloading model {{model}}',
   'ollama.endpoint.desc': 'Must include http(s)://; can be left blank if not specified locally.',
-  'ollama.endpoint.title': 'Interface proxy address',
+  'ollama.endpoint.title': 'Ollama server address',
   'ollama.title': 'Ollama',
   'ollama.unlock.cancel': 'Cancel Download',
   'ollama.unlock.confirm': 'Download',
@@ -345,11 +345,11 @@ export default {
   'providerModels.item.modelConfig.extendParams.previewFallback': 'Preview unavailable',
   'providerModels.item.modelConfig.extendParams.title': 'Extended Parameters',
   'providerModels.item.modelConfig.files.extra':
-    'The current file upload implementation is just a hack solution, limited to self-experimentation. Please wait for complete file upload capabilities in future implementations.',
+    'File upload is experimental — whether it works depends on the model.',
   'providerModels.item.modelConfig.files.title': 'File Upload Support',
   'providerModels.item.modelConfig.functionCall.extra':
-    "This configuration will only enable the model's ability to use tools, allowing for the addition of tool-type skills. However, whether the model can truly use the tools depends entirely on the model itself; please test for usability on your own.",
-  'providerModels.item.modelConfig.functionCall.title': 'Support for Tool Calling',
+    'Enables tool-use capability only; whether the model actually calls tools depends on the model itself.',
+  'providerModels.item.modelConfig.functionCall.title': 'Supports Tool Calling',
   'providerModels.item.modelConfig.id.duplicate':
     'A model with this ID already exists. Use a different model ID.',
   'providerModels.item.modelConfig.id.extra':
@@ -363,7 +363,7 @@ export default {
   'providerModels.item.modelConfig.modalTitle': 'Custom Model Configuration',
   'providerModels.item.modelConfig.reasoning.extra':
     "This configuration will enable the model's deep thinking capabilities, and the specific effects depend entirely on the model itself. Please test whether this model has usable deep thinking abilities.",
-  'providerModels.item.modelConfig.reasoning.title': 'Support Deep Thinking',
+  'providerModels.item.modelConfig.reasoning.title': 'Supports Deep Thinking',
   'providerModels.item.modelConfig.search.extra':
     "This setting enables the model's built-in web search capability. Whether the built-in search engine is supported depends on the model itself. Please test the model to verify the availability of this feature.",
   'providerModels.item.modelConfig.search.title': 'Supports Web Search',
@@ -388,10 +388,10 @@ export default {
   'providerModels.item.modelConfig.video.title': 'Supports Video Recognition',
   'providerModels.item.modelConfig.vision.extra':
     'This configuration will only enable image upload capabilities in the application. Whether recognition is supported depends entirely on the model itself. Please test the visual recognition capabilities of the model yourself.',
-  'providerModels.item.modelConfig.vision.title': 'Support Vision',
+  'providerModels.item.modelConfig.vision.title': 'Supports Vision',
   'providerModels.item.pricing.image': '${{amount}}/Image',
   'providerModels.item.pricing.inputCharts': '${{amount}}/M Characters',
-  'providerModels.item.pricing.inputMinutes': '${{amount}}/Minutes',
+  'providerModels.item.pricing.inputMinutes': '${{amount}}/min',
   'providerModels.item.pricing.inputTokens': 'Input ${{amount}}/M',
   'providerModels.item.pricing.outputTokens': 'Output ${{amount}}/M',
   'providerModels.item.releasedAt': 'Released at {{releasedAt}}',
@@ -410,8 +410,7 @@ export default {
   'providerModels.list.enabledActions.disableAll': 'Disable All',
   'providerModels.list.enabledActions.enableAll': 'Enable All',
   'providerModels.list.enabledActions.sort': 'Custom Model Sorting',
-  'providerModels.list.enabledEmpty':
-    'No enabled models available. Please enable your preferred models from the list below~',
+  'providerModels.list.enabledEmpty': 'No models enabled yet — enable one from the list below.',
   'providerModels.list.fetcher.clear': 'Clear fetched models',
   'providerModels.list.fetcher.duplicatesRemoved': 'Duplicate entries removed ({{count}}): {{ids}}',
   'providerModels.list.fetcher.duplicatesRemovedWithMore':
@@ -430,7 +429,7 @@ export default {
   'providerModels.list.search': 'Search Models...',
   'providerModels.list.searchResult': '{{count}} models found',
   'providerModels.list.title': 'Model List',
-  'providerModels.searchNotFound': 'No search results found',
+  'providerModels.searchNotFound': 'No results',
   'providerModels.tabs.all': 'All',
   'providerModels.tabs.asr': 'ASR',
   'providerModels.tabs.chat': 'Chat',
@@ -451,10 +450,10 @@ export default {
   'updateAiProvider.tooltip': 'Update provider basic configuration',
   'updateAiProvider.updateSuccess': 'Update successful',
   'updateCustomAiProvider.title': 'Update Custom AI Provider Configuration',
-  'vertexai.apiKey.desc': 'Enter your Vertex AI Keys',
+  'vertexai.apiKey.desc': 'Enter your Vertex AI API key',
   'vertexai.apiKey.placeholder':
     '{ "type": "service_account", "project_id": "xxx", "private_key_id": ... }',
-  'vertexai.apiKey.title': 'Vertex AI Keys',
+  'vertexai.apiKey.title': 'Vertex AI API key',
   'vertexai.region.desc':
     'Select the region for Vertex AI service. Some models like Gemini 2.5 are only available in specific regions (e.g., global)',
   'vertexai.region.placeholder': 'Select region',

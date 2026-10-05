@@ -85,7 +85,7 @@ const Score = memo(() => {
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <Title>GitHub Badge</Title>
+          <Title>{t('mcp.details.githubBadge.title')}</Title>
           <div
             className="flex flex-col gap-4 p-4"
             style={{

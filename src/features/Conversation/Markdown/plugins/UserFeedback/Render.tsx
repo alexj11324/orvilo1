@@ -2,6 +2,7 @@ import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { MessageSquareText } from 'lucide-react';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { type MarkdownElementProps } from '../type';
 import { type ParsedUserFeedbackComment, parseUserFeedback } from './parseUserFeedback';
@@ -79,12 +80,13 @@ const Comment = memo<{ comment: ParsedUserFeedbackComment }>(({ comment }) => (
 Comment.displayName = 'UserFeedbackComment';
 
 const Render = memo<MarkdownElementProps>(({ children }) => {
+  const { t } = useTranslation('chat');
   const text = typeof children === 'string' ? children : String(children ?? '');
   const comments = useMemo(() => parseUserFeedback(text), [text]);
 
   if (comments.length === 0) return null;
 
-  const countLabel = comments.length === 1 ? '1 comment' : `${comments.length} comments`;
+  const countLabel = t('userFeedback.commentCount', { count: comments.length });
 
   return (
     <details className={styles.root}>
@@ -94,7 +96,7 @@ const Render = memo<MarkdownElementProps>(({ children }) => {
             <MessageSquareText size={16} />
           </span>
           <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
-            <div className="truncate font-medium">User feedback</div>
+            <div className="truncate font-medium">{t('userFeedback.title')}</div>
             <span className={styles.countBadge}>{countLabel}</span>
           </div>
         </div>

@@ -51,6 +51,7 @@ import { heteroAgentDefaultName } from '@/store/agent/utils/heteroAgentDefaultNa
 import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
 
+import { connectErrorMessage } from './connectErrorMessage';
 import { getDeviceListState } from './deviceListState';
 import type { ConnectableProvider, ConnectAgentProfile } from './providers';
 import { buildConnectAgentConfig, CONNECTABLE_PROVIDERS } from './providers';
@@ -647,7 +648,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
               : t('connectAgent.create.doneTitleMany', { total: created.length }),
           );
         } catch (error) {
-          setCreateError(error instanceof Error ? error.message : String(error));
+          setCreateError(connectErrorMessage(error, t));
         } finally {
           setCreating(false);
         }
@@ -895,7 +896,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             <Alert variant="destructive">
               <CircleAlert />
               <AlertTitle>{t('connectAgent.create.scanFailed')}</AlertTitle>
-              <AlertDescription>{scanState.error}</AlertDescription>
+              <AlertDescription>{connectErrorMessage(scanState.error, t)}</AlertDescription>
               <AlertAction>
                 <Button size="sm" onClick={rescan}>
                   {t('connectAgent.create.rescan')}

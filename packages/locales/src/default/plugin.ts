@@ -86,7 +86,7 @@ export default {
   'builtins.orvilo-agent.apiName.callSubAgent': 'Call sub-agent',
   'builtins.orvilo-agent.subAgent.stats.tokens': '{{count}} tokens',
   'builtins.orvilo-agent.subAgent.stats.tools': '{{count}} tools',
-  'builtins.orvilo-agent.title': 'Orvilo Agent',
+  'builtins.orvilo-agent.title': 'Orvilo AI',
   'builtins.orvilo-claude-code.agent.instruction': 'Instruction',
   'builtins.orvilo-claude-code.agent.result': 'Result',
   'builtins.orvilo-claude-code.askUserQuestion.noAnswer':

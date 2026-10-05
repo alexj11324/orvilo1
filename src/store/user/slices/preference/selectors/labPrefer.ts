@@ -1,27 +1,23 @@
 import { DEFAULT_PREFERENCE } from '@orvilo/const';
 
 import { type UserState } from '@/store/user/initialState';
+import { type UserLab } from '@/types/user';
+
+/** Unset lab flags follow DEFAULT_PREFERENCE. An explicit false stays off. */
+const labEnabled =
+  (flag: keyof UserLab) =>
+  (state: UserState): boolean =>
+    state.preference.lab?.[flag] ?? DEFAULT_PREFERENCE.lab?.[flag] ?? true;
 
 export const labPreferSelectors = {
-  enableAgentGraphConfig: (s: UserState): boolean =>
-    s.preference.lab?.enableAgentGraphConfig ??
-    DEFAULT_PREFERENCE.lab?.enableAgentGraphConfig ??
-    false,
-  enableArtifactDeployment: (s: UserState): boolean =>
-    s.preference.lab?.enableArtifactDeployment ?? false,
-  enableDesktopSplitView: (s: UserState): boolean =>
-    s.preference.lab?.enableDesktopSplitView ?? false,
-  enableHeteroSessionImport: (s: UserState): boolean =>
-    s.preference.lab?.enableHeteroSessionImport ?? false,
-  enableInputMarkdown: (s: UserState): boolean =>
-    s.preference.lab?.enableInputMarkdown ?? DEFAULT_PREFERENCE.lab?.enableInputMarkdown ?? true,
-  enableMessageTextSelectionActions: (s: UserState): boolean =>
-    s.preference.lab?.enableMessageTextSelectionActions ??
-    DEFAULT_PREFERENCE.lab?.enableMessageTextSelectionActions ??
-    false,
-  enableSelfLearning: (s: UserState): boolean => s.preference.lab?.enableSelfLearning ?? false,
-  enableProjects: (s: UserState): boolean => s.preference.lab?.enableProjects ?? false,
-  enableTaskVerify: (s: UserState): boolean => s.preference.lab?.enableTaskVerify ?? false,
-  enableTopicAcceptance: (s: UserState): boolean =>
-    s.preference.lab?.enableTopicAcceptance ?? false,
+  enableAgentGraphConfig: labEnabled('enableAgentGraphConfig'),
+  enableArtifactDeployment: labEnabled('enableArtifactDeployment'),
+  enableDesktopSplitView: labEnabled('enableDesktopSplitView'),
+  enableHeteroSessionImport: labEnabled('enableHeteroSessionImport'),
+  enableInputMarkdown: labEnabled('enableInputMarkdown'),
+  enableMessageTextSelectionActions: labEnabled('enableMessageTextSelectionActions'),
+  enableSelfLearning: labEnabled('enableSelfLearning'),
+  enableProjects: labEnabled('enableProjects'),
+  enableTaskVerify: labEnabled('enableTaskVerify'),
+  enableTopicAcceptance: labEnabled('enableTopicAcceptance'),
 };

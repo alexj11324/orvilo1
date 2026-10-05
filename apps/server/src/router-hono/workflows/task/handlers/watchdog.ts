@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
+import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
 import { sweepDevicePrimeRunReconcile } from '@/server/services/devicePrimeReconcile';
 import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
@@ -82,16 +83,19 @@ export async function watchdog(c: Context) {
     // A missing event migration must not stop cancellation/watchdog recovery.
     let eventInbox: unknown;
     let eventSubscriptions: unknown;
+    let eventMaintenanceHealthy = true;
     try {
       eventSubscriptions = await sweepMcpEventSubscriptions(db);
     } catch {
       eventSubscriptions = { status: 'unavailable' };
+      eventMaintenanceHealthy = false;
       console.error('[task/watchdog] MCP event subscription maintenance unavailable');
     }
     try {
       eventInbox = await sweepMcpEventInbox(db);
     } catch {
       eventInbox = { status: 'unavailable' };
+      eventMaintenanceHealthy = false;
       console.error('[task/watchdog] MCP event inbox sweep unavailable');
     }
     // Post-ack device rejections never reach the server — the reconcile sweep

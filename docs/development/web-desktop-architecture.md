@@ -50,6 +50,31 @@
    （`errorData.code` + `deviceId`/`repairCandidates`/`retryable`/`scope`/
    `workspaceId`/`operationId`/`bindingRevision`）下发，不嵌在 detail 文案里。
 
+## 客户端调度统一入口不变式（FIX-C）
+
+`agentDispatcher.ts` 的 `selectRuntimeType` 是客户端唯一的路由决策点，
+任何修改必须保持：
+
+1. **全表面收敛**。`send`/`resume`/`regenerate`/`continue`/subtask dispatch/
+   `cancel`/`reconnect` 全部经由同一个 `selectRuntimeType` 结果分发；
+   它永远**不**返回 `'hetero'`——`'hetero'` 仅作为传输 / 事件标记
+   （设备侧 ingest 归因）存在，不是路由结果。
+2. **网络状态不参与授权**。`RuntimeSelectionContext` 不含
+   `deviceGatewayConnected`；socket 断连 / 设备不可达 → `errorData` 通道
+   的类型化 blocked 结果（如 `DEVICE_REQUIRED`，`DEVICE_NOT_CONNECTED`/
+   `DEVICE_OFFLINE` 见契约变更请求），绝不改走本地 IPC。
+3. **拒绝 ≠ 换传输**。服务端 admission 拒绝永远是 blocked 结果，
+   不会 "被拒 → 回落本地 IPC"。
+4. **IPC 只是带身份证明的传输**。`executeHeterogeneousAgent` 与
+   `transports/hetero/*` 保留为已文档化的 seam（仅当未来出现显式开关的
+   offline 模式时才允许启用）；它们携带经服务端核验的执行身份 + 设备
+   授权 + 同一 generation + 共享持久化生命周期 —— 不是第二个业务调度器。
+   当前没有任何产品入口可达这些符号。
+5. **旧数据不复活旧路径**。持久化的 `parentRuntime:'hetero'` 一律
+   coerce 为 `'gateway'`；`heterogeneousProvider` 绑定一律解析为
+   `'gateway'`—— 存量 hetero 会话在 web 接管或桌面重连时走同一个
+   operationId/deviceId/generation，不派生第二执行。
+
 ## 显式设备作用域与候选集语义（FIX-D）
 
 MCP 设备操作与执行候选集的语义，任何修改必须保持：
@@ -125,3 +150,33 @@ entry ─┐            ├─ HostPort（宿主动作：窗口/更新/原生对
 
 回滚只退回兼容控制界面；绑定 B 的任务绝不改到 A 或后端。旧客户端缺新协议
 能力时 fail closed 并提示升级。
+
+## 候选集与修复语义（FIX-B）
+
+- **唯一候选集**。`executionTargetDeviceCandidates(devices, scope)`
+  （`src/helpers/executionTarget.ts`）是所有页面判断设备绑定合法性的唯一
+  池：personal → 个人设备；workspace → `privateWorkspace + workspace`
+  （本人私有注册对注册者合法，绝不能被任何页面剔除）。UI 分组可以分桶，
+  候选成员资格不允许分叉。离线 ≠ 移除 —— 离线设备仍是候选，只拦截启动。
+- **选择器公式共享**。聊天输入条与设置页读取同一个 `useDeviceSelectorState`
+  → `shouldShowDeviceSelector`：`permissionsLoaded && deviceInventoryComplete
+&& canSelectDevice && selectableDevices.length > 1`。0 候选 → 连接 / 阻断
+  提示（绝不出选择器，绝不静默回落）；1 候选 → 无下拉，但仍展示只读
+  "runs on: <device>" 摘要；>1 → 仅 `canSelectDevice` 时可选。
+- **挂载不写入**。组合器挂载 / 重渲染 / StrictMode / 刷新产生零次
+  `selectExecutionTarget` 写入 —— 绑定只能由显式用户选择或服务端原子
+  first-bind 创建。设备清单查询失败 / 未完成 = `pending`，绝非 0 候选。
+- **结构化准入错误 → 唯一动作**。`error.body` 原样携带 `code`，UI 只分支
+  `code`、绝不解析 detail 文案：INVENTORY_INCOMPLETE → 重试清单查询；
+  REQUIRED / NOT_FOUND (无候选) → 连接设备；ACCESS_DENIED /
+  REQUEST_UNAUTHORIZED → 设备授权页；BINDING_INVALID / BINDING_CONFLICT /
+  SELECTION_REQUIRED / EXECUTION_TARGET_NONE / NOT_FOUND (有候选) → 修复
+  （选择器限定 `repairCandidates`，单候选 = 单个 "修复绑定到 X" 按钮）；
+  DISPATCH_ADMISSION_PERSIST_FAILED → 查看运行状态。
+- **修复写 = 校验后写**。修复写入与服务端 first-bind CAS 同形的绑定三元组
+  （`executionConfig.boundDeviceId` + `executionTarget:'device'` + 顶层
+  `boundDeviceId`），并清空 `heteroSession*`—— 修复后的下一次运行必须
+  在新设备上建全新执行会话，绝不复用另一台设备的原生会话 id。服务端
+  尚无专用修复 CAS（已作为契约变更请求提出），客户端以
+  `getTopicDetail` 重读 + `expectedBoundDeviceId` 校验近似 CAS，期间绑定
+  被并发改写则拒绝落笔。

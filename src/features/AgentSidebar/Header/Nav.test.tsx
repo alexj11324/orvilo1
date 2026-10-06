@@ -3,7 +3,7 @@
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type * as React from 'react';
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { toast } from '@/components/toast';
@@ -20,6 +20,8 @@ vi.mock('@/components/toast', async (importOriginal) => {
   return { ...actual, toast: { ...actual.toast, error: vi.fn() } };
 });
 
+const appNavigateMock = vi.hoisted(() => vi.fn());
+const useActiveWorkspaceSlugMock = vi.hoisted(() => vi.fn());
 const mutateMock = vi.hoisted(() => vi.fn());
 const openNewTopicOrSaveTopicMock = vi.hoisted(() => vi.fn());
 const pushMock = vi.hoisted(() => vi.fn());
@@ -50,22 +52,37 @@ vi.mock('react-router', async () => {
   };
 });
 
+vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
+  useActiveWorkspaceSlug: useActiveWorkspaceSlugMock,
+}));
+
+vi.mock('@/features/Electron/navigation/appNavigate', () => ({
+  appNavigate: appNavigateMock,
+}));
+
 vi.mock('@/features/NavPanel/components/NavItem', () => ({
   default: ({
     active,
     disabled,
+    href,
     onClick,
     title,
   }: {
     active?: boolean;
     disabled?: boolean;
-    onClick?: () => void;
+    href?: string;
+    onClick?: MouseEventHandler<HTMLElement>;
     title: ReactNode;
-  }) => (
-    <button data-active={String(active)} disabled={disabled} type="button" onClick={onClick}>
-      {title}
-    </button>
-  ),
+  }) =>
+    href ? (
+      <a href={href} onClick={onClick}>
+        {title}
+      </a>
+    ) : (
+      <button data-active={String(active)} disabled={disabled} type="button" onClick={onClick}>
+        {title}
+      </button>
+    ),
 }));
 
 vi.mock('@/hooks/useQueryRoute', () => ({
@@ -139,6 +156,8 @@ vi.mock('@/store/user/selectors', () => ({
 
 describe('Agent sidebar header nav', () => {
   beforeEach(() => {
+    appNavigateMock.mockReset();
+    useActiveWorkspaceSlugMock.mockReset().mockReturnValue(null);
     chatState.activeTopicId = undefined;
     mutateMock.mockReset().mockImplementation((data) => data);
     openNewTopicOrSaveTopicMock.mockReset();
@@ -269,16 +288,6 @@ describe('Agent sidebar header nav', () => {
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
-  it('navigates to the agent goals page', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
-    render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'goalList.title' }));
-
-    expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
-    expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/goals');
-  });
-
   it('opens workspace tasks from a new conversation without an agent route parameter', () => {
     useParamsMock.mockReturnValue({});
     usePathnameMock.mockReturnValue('/chat/new');
@@ -311,44 +320,37 @@ describe('Agent sidebar header nav', () => {
     },
   );
 
-  it('navigates to the agent self-learning page', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
-    render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'title' }));
-
-    expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
-    expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/self-evolving');
-  });
-
-  // The surface is opt-in WIP, so the entry must disappear with the Labs toggle
-  // rather than lead everyone to a page whose data pipeline isn't running yet.
-  it('hides the self-learning entry when the labs toggle is off', () => {
-    labMock.enableSelfLearning = false;
+  it('removes goals and self-learning entries even when their labs toggles are enabled', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
     render(<Nav />);
 
-    expect(screen.queryByRole('button', { name: 'title' })).toBeNull();
+    expect(screen.queryByText('goalList.title')).toBeNull();
+    expect(screen.queryByText('title')).toBeNull();
   });
 
-  it('keeps the self-learning entry active on its own route', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/self-evolving');
+  it('orders home, new topic, search, and tasks in one navigation list', () => {
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
-    render(<Nav />);
+    const { container } = render(<Nav />);
 
-    expect(screen.getByRole('button', { name: 'title' })).toHaveAttribute('data-active', 'true');
+    expect(Array.from(container.querySelectorAll('a, button'), (item) => item.textContent)).toEqual(
+      ['tab.home', 'actions.addNewTopic', 'tab.search', 'tab.tasks'],
+    );
   });
 
-  // The profile entry was dropped from this nav on 2026-10-03: the sidebar is a
-  // flat list of destinations, with no trailing "about this agent" row.
-  it('orders self-learning, goals, and tasks in the agent navigation', () => {
+  it.each([
+    [null, '/'],
+    ['acme', '/acme/'],
+  ])('returns home in workspace %s with its native link destination', (slug, href) => {
+    useActiveWorkspaceSlugMock.mockReturnValue(slug);
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
     render(<Nav />);
+    const home = screen.getByRole('link', { name: 'tab.home' });
+    expect(home).toHaveAttribute('href', href);
+    fireEvent.click(home);
 
-    const labels = screen.getAllByRole('button').map((button) => button.textContent);
-    expect(labels.indexOf('title')).toBeLessThan(labels.indexOf('goalList.title'));
-    expect(labels.indexOf('goalList.title')).toBeLessThan(labels.indexOf('tab.tasks'));
+    expect(appNavigateMock).toHaveBeenCalledWith(href, { escape: true });
   });
 });

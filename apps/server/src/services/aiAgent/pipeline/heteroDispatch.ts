@@ -847,10 +847,13 @@ export const dispatchHeteroAgent = async (
   const heteroService = new HeterogeneousAgentService(deps.db, deps.userId, {
     workspaceId: deps.workspaceId,
   });
-  const resumeSessionId = await heteroService.getHeterogeneousResumeSessionId(
-    topicId,
-    getNativeHeteroSessionBindingKey(heteroType),
-  );
+  // An isolation thread shares the topic, but must not resume its live parent's provider session.
+  const resumeSessionId = appContext?.isolationThread
+    ? undefined
+    : await heteroService.getHeterogeneousResumeSessionId(
+        topicId,
+        getNativeHeteroSessionBindingKey(heteroType),
+      );
   // Sign an operation-scoped JWT so the CLI can authenticate against
   // heteroIngest / heteroFinish without full user credentials.
   let operationJwt: string;

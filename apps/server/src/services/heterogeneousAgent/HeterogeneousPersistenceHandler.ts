@@ -153,6 +153,7 @@ interface OperationState {
    * Recovered on a cold replica from the current assistant's stamped metadata.
    */
   heteroSessionId: string | undefined;
+  isolationThread: boolean;
   /** Last DB-confirmed tool-state seq, scoped to this operation. */
   lastAppliedToolStateSeqByCallId: Map<string, number>;
   lastStepIndex: number;
@@ -523,6 +524,8 @@ export class HeterogeneousPersistenceHandler {
    * clobber `runningOperation` / `workingDirectory` / other peer fields.
    */
   private async persistSessionId(state: OperationState, sessionId: string): Promise<void> {
+    // Isolation-thread provenance stays on its messages; the topic belongs to the parent run.
+    if (state.isolationThread) return;
     try {
       const topic =
         state.workingDirectory === undefined
@@ -668,6 +671,7 @@ export class HeterogeneousPersistenceHandler {
       publishedKeys: new Set(),
       toolMsgIdByCallId: new Map(),
       threadId: running?.threadId ?? undefined,
+      isolationThread: toRecord(operation?.appContext)?.isolationThread === true,
       topicId,
     };
     await this.refreshToolMessageIndex(state);

@@ -25,6 +25,7 @@ import { E2E_PRIME_MODEL } from './seedOrviloProviderBinding';
 import { TEST_USER } from './seedTestUser';
 
 export const E2E_DEVICE_ID = 'e2e-mock-device';
+export const E2E_PRIME_AGENT_TITLE = 'Orvilo AI (E2E Prime)';
 let primeAgentId: string | undefined;
 
 interface TrpcData<T> {
@@ -63,7 +64,7 @@ export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Prom
       },
       model: E2E_PRIME_MODEL,
       provider: 'deepseek',
-      title: 'Orvilo AI',
+      title: E2E_PRIME_AGENT_TITLE,
     },
     visibility: 'private',
   });

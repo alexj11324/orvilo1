@@ -12,7 +12,33 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 
 import { llmMockManager } from '../../mocks/llm';
+import { E2E_PRIME_AGENT_TITLE } from '../../support/bindExecutionDevice';
 import type { CustomWorld } from '../../support/world';
+
+async function createConversationFromCommandMenu(world: CustomWorld) {
+  await world.page.waitForURL((url) => /\/chat\/tpc_[^/]+$/.test(url.pathname), {
+    timeout: 30_000,
+  });
+  const agentSelector = world.page
+    .locator('[data-testid="chat-input"]:visible')
+    .getByRole('button', { exact: true, name: E2E_PRIME_AGENT_TITLE });
+  await expect(agentSelector).toBeVisible();
+
+  await world.page.keyboard.press(`${world.modKey}+k`);
+  const newConversation = world.page.locator(
+    '[cmdk-root] [cmdk-item][data-value="create new conversation"]',
+  );
+  await expect(newConversation).toBeVisible();
+  await expect(newConversation).toHaveAttribute('aria-disabled', 'false');
+  await newConversation.click();
+
+  await world.page.waitForURL((url) => /\/chat\/new$/.test(url.pathname));
+  await expect(world.page.locator('[cmdk-root]')).toBeHidden();
+  await expect(world.page.locator('.message-wrapper')).toHaveCount(0);
+  // The blank composer uses the last sent Agent, so the fixture must keep
+  // its Prime Agent rather than silently falling back to another provider.
+  await expect(agentSelector).toBeVisible();
+}
 
 // A send fired while another turn's agent_operation is live gets held
 // client-side until that op goes terminal — under a CI Postgres stall the
@@ -150,28 +176,9 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   // Store first conversation reference
   this.testContext.firstConversation = 'first';
 
-  // Create new topic and second conversation
+  // Create the second conversation through the retained command palette.
   console.log('   📍 Creating second conversation...');
-  // svg → Center wrapper → NavItem Block row (which carries the disabled
-  // opacity style and owns the click handler).
-  const addTopicButton = this.page
-    .locator('svg.lucide-message-square-plus')
-    .first()
-    .locator('xpath=../..');
-  await expect(addTopicButton, 'new-topic button is not rendered').toBeVisible({
-    timeout: 30_000,
-  });
-
-  // The new-topic NavItem ignores clicks while a new-topic send is in flight
-  // (isNewTopicSendInFlight) — it only dims (opacity 0.5), never errors, so a
-  // bare sleep raced the flag under load and the "second" message silently
-  // landed on topic 1. Wait for the send to settle before clicking.
-  await expect
-    .poll(async () => (await addTopicButton.getAttribute('style')) ?? '', {
-      message: 'new-topic button stayed disabled — in-flight send never settled',
-      timeout: 60_000,
-    })
-    .not.toContain('opacity: 0.5');
+  await createConversationFromCommandMenu(this);
 
   const sendSecondMessage = async () => {
     await chatInputContainer.locator('[contenteditable="true"]').first().click();
@@ -180,24 +187,9 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     await this.page.keyboard.press('Enter');
   };
 
-  // The new-topic button opens the blank composer at `/chat/new`. The click
-  // can still land while the row is mid-re-render after the settled poll, so
-  // retry it once when the first navigation never fires.
-  await addTopicButton.click();
-  try {
-    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
-      timeout: 30_000,
-    });
-  } catch {
-    await addTopicButton.click();
-    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
-      timeout: 30_000,
-    });
-  }
-  await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();
 
-  // The new-topic click remounts the conversation view; an Enter fired while
+  // Opening a new conversation remounts the view; an Enter fired while
   // the composer re-mounts is swallowed and no user row is ever committed
   // (pg showed topics=1 on CI). Verify the optimistic bubble exists and retry
   // the send once if it was dropped.
@@ -274,27 +266,9 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
 // When Steps
 // ============================================
 
-When('用户点击新建对话按钮', async function (this: CustomWorld) {
-  console.log('   📍 Step: 点击新建对话按钮...');
-
-  // The add topic button uses MessageSquarePlusIcon from lucide-react
-  const addTopicButton = this.page.locator('svg.lucide-message-square-plus').locator('..');
-
-  if ((await addTopicButton.count()) > 0) {
-    await addTopicButton.first().click();
-    console.log('   ✅ 已点击新建对话按钮');
-  } else {
-    // Fallback: look for button with "新建" or "add" in title
-    const addButton = this.page.locator('button[title*="新建"], button[title*="add"]');
-    if ((await addButton.count()) > 0) {
-      await addButton.first().click();
-      console.log('   ✅ 已点击新建对话按钮 (fallback)');
-    } else {
-      throw new Error('New topic button not found');
-    }
-  }
-
-  await this.page.waitForTimeout(500);
+When('用户通过命令菜单新建对话', { timeout: 90_000 }, async function (this: CustomWorld) {
+  await createConversationFromCommandMenu(this);
+  console.log('   ✅ 已通过命令菜单新建对话');
 });
 
 When('用户点击另一个对话', { timeout: 90_000 }, async function (this: CustomWorld) {

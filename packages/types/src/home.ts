@@ -62,9 +62,9 @@ export interface SidebarAgentItem {
    */
   groupAvatar?: string | null;
   /**
-   * Heterogeneous agent runtime type (e.g. `claude-code`) when the agent is
-   * driven by an external CLI. `null` / absent means it's a regular Orvilo
-   * agent. Present so sidebar / list items can render an "External" tag
+   * Saved agent runtime type (e.g. `claude-code` or `orvilo`). Explicit Prime
+   * profiles carry `orvilo`; null / absent does not establish a configured
+   * runtime. Present so lists and onboarding can identify saved runtimes
    * without per-item agent config lookups.
    */
   heterogeneousType?: string | null;

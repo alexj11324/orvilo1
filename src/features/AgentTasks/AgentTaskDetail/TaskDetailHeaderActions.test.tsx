@@ -121,94 +121,21 @@ describe('TaskDetailHeaderActions', () => {
     expect(mocks.dropdownItems.map((item) => item?.key)).toContain('copy-task');
   });
 
-  it('shows "publish to workspace" only for private tasks inside a workspace', () => {
-    render(<TaskDetailHeaderActions />);
+  it.each(['private', 'public'] as const)(
+    'offers no privacy transition for %s tasks',
+    (visibility) => {
+      mocks.taskState.taskDetailMap = {
+        'T-1': { createdByUserId: 'user-1', visibility },
+      };
+      render(<TaskDetailHeaderActions />);
 
-    expect(mocks.dropdownItems.map((item) => item?.key)).toContain('publishToWorkspace');
-  });
-
-  it('hides "publish to workspace" once the task is already public', () => {
-    mocks.taskState.taskDetailMap = { 'T-1': { visibility: 'public' } };
-    render(<TaskDetailHeaderActions />);
-
-    expect(mocks.dropdownItems.map((item) => item?.key)).not.toContain('publishToWorkspace');
-  });
-
-  it('hides "publish to workspace" in personal mode (no workspace)', () => {
-    mocks.activeWorkspaceId = undefined;
-    render(<TaskDetailHeaderActions />);
-
-    expect(mocks.dropdownItems.map((item) => item?.key)).not.toContain('publishToWorkspace');
-  });
-
-  it('shows "make private" on public tasks for the creator', () => {
-    mocks.taskState.taskDetailMap = {
-      'T-1': { createdByUserId: 'user-1', visibility: 'public' },
-    };
-    render(<TaskDetailHeaderActions />);
-
-    expect(mocks.dropdownItems.map((item) => item?.key)).toContain('makePrivate');
-  });
-
-  it('hides "make private" from a workspace owner who is not the creator ', () => {
-    mocks.isWorkspaceOwner = true;
-    mocks.taskState.taskDetailMap = {
-      'T-1': { createdByUserId: 'someone-else', visibility: 'public' },
-    };
-    render(<TaskDetailHeaderActions />);
-
-    expect(mocks.dropdownItems.map((item) => item?.key)).not.toContain('makePrivate');
-  });
-
-  it('hides "make private" from non-creator members', () => {
-    mocks.taskState.taskDetailMap = {
-      'T-1': { createdByUserId: 'someone-else', visibility: 'public' },
-    };
-    render(<TaskDetailHeaderActions />);
-
-    expect(mocks.dropdownItems.map((item) => item?.key)).not.toContain('makePrivate');
-  });
-
-  it('hides "make private" on private tasks', () => {
-    mocks.taskState.taskDetailMap = {
-      'T-1': { createdByUserId: 'user-1', visibility: 'private' },
-    };
-    render(<TaskDetailHeaderActions />);
-
-    expect(mocks.dropdownItems.map((item) => item?.key)).not.toContain('makePrivate');
-  });
-
-  it('make-private action opens a destructive confirmation and updates visibility', () => {
-    mocks.taskState.taskDetailMap = {
-      'T-1': { createdByUserId: 'user-1', visibility: 'public' },
-    };
-    render(<TaskDetailHeaderActions />);
-    const item = mocks.dropdownItems.find((i) => i?.key === 'makePrivate') as
-      { onClick?: () => void } | undefined;
-    item?.onClick?.();
-
-    expect(mocks.confirmModal).toHaveBeenCalledTimes(1);
-    const opts = mocks.confirmModal.mock.calls[0][0] as {
-      okButtonProps?: { danger?: boolean };
-      onOk: () => Promise<void>;
-      title: string;
-    };
-    expect(opts.title).toBe('makePrivate.confirm.title');
-    expect(opts.okButtonProps?.danger).toBe(true);
-    return opts.onOk().then(() => {
-      expect(mocks.updateTaskVisibility).toHaveBeenCalledWith('T-1', 'private');
-    });
-  });
-
-  it('publish action opens a one-way confirmation modal', () => {
-    render(<TaskDetailHeaderActions />);
-    const publishItem = mocks.dropdownItems.find((i) => i?.key === 'publishToWorkspace') as
-      { onClick?: () => void } | undefined;
-    publishItem?.onClick?.();
-
-    expect(mocks.confirmModal).toHaveBeenCalledTimes(1);
-    const opts = mocks.confirmModal.mock.calls[0][0] as { okText: string; title: string };
-    expect(opts.title).toBe('taskDetail.publishToWorkspace.confirmTitle');
-    expect(opts.okText).toBe('taskDetail.publishToWorkspace.confirmOk');
-  });
+      const keys = mocks.dropdownItems.map((item) => item?.key);
+      expect(keys).not.toContain('publishToWorkspace');
+      expect(keys).not.toContain('makePrivate');
+      expect(keys).toEqual(
+        expect.arrayContaining(['copyId', 'copyLink', 'transfer-task', 'copy-task', 'delete']),
+      );
+      expect(mocks.updateTaskVisibility).not.toHaveBeenCalled();
+    },
+  );
 });

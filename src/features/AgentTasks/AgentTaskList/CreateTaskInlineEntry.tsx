@@ -34,7 +34,7 @@ import { taskService } from '@/services/task';
 import { useGlobalStore } from '@/store/global';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { labPreferSelectors } from '@/store/user/selectors';
 import { shinyTextStyles } from '@/styles';
 
 import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
@@ -42,8 +42,6 @@ import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskVisibilityChipLabel from '../features/TaskVisibilityChipLabel';
-import TaskVisibilityTag from '../features/TaskVisibilityTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
@@ -60,12 +58,7 @@ import TaskIntentReview from './TaskIntentReview';
 interface CreateTaskInlineEntryProps {
   agentId?: string;
   autoFocus?: boolean;
-  /**
-   * Baseline visibility for a fresh composer. Top-level creates default to
-   * workspace-visible; the subtask composer passes its parent's visibility so
-   * a child under a private parent doesn't default to a combination the server
-   * rejects (a subtask cannot be more public than its parent).
-   */
+  /** Legacy parent input; workspace tasks are always shared. */
   defaultVisibility?: 'private' | 'public';
   /**
    * Locks the assignee to `agentId` and hides the agent picker. Used on the
@@ -88,7 +81,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
   const {
     agentId,
     autoFocus,
-    defaultVisibility = 'public',
     lockAssignee,
     onCollapse,
     onCreated,
@@ -123,10 +115,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
   const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>();
   const [instruction, setInstruction] = useState('');
   const [hasAttachments, setHasAttachments] = useState(false);
-  // Default to workspace-visible (or the parent's visibility for subtasks).
-  // In personal mode the chip is hidden and the value is never sent.
-  const [visibility, setVisibility] = useState<'private' | 'public'>(defaultVisibility);
-
   // Reading the draft is what submit does now. It only stops for confirmation
   // when it found something the user alone can settle, so the escape hatch is
   // the dropdown's "create directly" rather than a setting nobody would find.
@@ -143,13 +131,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
   // The appended Q&A block is then already redundant — leaving it on would put
   // the answers in the brief twice, once woven in and once as a list.
   const [isSynthesizing, setIsSynthesizing] = useState(false);
-
-  const selfUserId = useUserStore(userProfileSelectors.userId);
-  const isOtherMemberAssignee = Boolean(assigneeUserId) && assigneeUserId !== selfUserId;
-
-  useEffect(() => {
-    if (isOtherMemberAssignee && visibility === 'private') setVisibility('public');
-  }, [isOtherMemberAssignee, visibility]);
 
   const editor = useEditor();
 
@@ -213,7 +194,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     // Reset to baseline for the new scope before hydrating.
     editor.cleanDocument?.();
     setPriority(0);
-    setVisibility(defaultVisibility);
     if (!lockAssignee) setAssigneeAgentId(agentId);
     setAssigneeUserId(undefined);
 
@@ -230,7 +210,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         assigneeUserId?: string;
         markdown?: string;
         priority?: number;
-        visibility?: 'private' | 'public';
       };
       if (draft.markdown) editor.setDocument?.('markdown', draft.markdown);
       if (typeof draft.priority === 'number') setPriority(draft.priority);
@@ -241,7 +220,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       ) {
         setAssigneeUserId(draft.assigneeUserId);
       }
-      if (draft.visibility) setVisibility(draft.visibility);
     } catch {
       /* ignore a malformed draft */
     }
@@ -249,7 +227,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     activeWorkspaceId,
     agentId,
     assignableMemberIds,
-    defaultVisibility,
     draftHydratedKey,
     draftStorageKey,
     editor,
@@ -275,7 +252,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
           assigneeUserId,
           markdown,
           priority,
-          visibility,
         }),
       );
     } catch {
@@ -290,7 +266,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     instruction,
     lockAssignee,
     priority,
-    visibility,
   ]);
 
   const handleCollapse = useCallback(() => {
@@ -320,7 +295,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     setAssigneeAgentId(agentId);
     setAssigneeUserId(undefined);
     setInstruction('');
-    setVisibility(defaultVisibility);
     setAnalysis(null);
     setIntentAnswers({});
     editor?.cleanDocument?.();
@@ -331,7 +305,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         /* ignore */
       }
     }
-  }, [agentId, defaultVisibility, draftStorageKey, editor]);
+  }, [agentId, draftStorageKey, editor]);
 
   /** What the composer currently holds, or null when there is nothing to create. */
   const readDraft = useCallback(() => {
@@ -392,7 +366,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
           projectId,
           // Only send visibility in workspace mode; personal mode lets the server
           // fall through to the schema default ('public', inert in personal mode).
-          visibility: activeWorkspaceId ? visibility : undefined,
+          visibility: activeWorkspaceId ? 'public' : undefined,
         });
 
         if (result) {
@@ -462,7 +436,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       priority,
       projectId,
       resetComposer,
-      visibility,
     ],
   );
 
@@ -717,11 +690,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             </TaskPriorityTag>
 
             {activeWorkspaceId && (
-              <AssigneeMemberSelector
-                currentUserId={assigneeUserId}
-                taskVisibility={visibility}
-                onChange={handleMemberChange}
-              >
+              <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
                 <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeUserId ? (
                     <>
@@ -774,25 +743,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
           </div>
 
           <div className="flex items-center gap-1">
-            {activeWorkspaceId && (
-              <TaskVisibilityTag
-                visibility={visibility}
-                lockedReason={
-                  isOtherMemberAssignee
-                    ? t('createTask.visibility.memberAssigneeLocked', {
-                        defaultValue: 'A task assigned to a member stays visible to the workspace.',
-                      })
-                    : undefined
-                }
-                onChange={setVisibility}
-              >
-                <TaskVisibilityChipLabel
-                  style={{ height: 24, paddingBlock: 3 }}
-                  visibility={visibility}
-                />
-              </TaskVisibilityTag>
-            )}
-
             <div className="flex items-center gap-0.5">
               {/* The shimmer is a text-clipped gradient in the foreground color, so
                   it only reads on a light surface. Dropping the filled style while

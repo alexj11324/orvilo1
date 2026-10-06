@@ -16,7 +16,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ModalHost } from '@/components/Modal';
 import { canGoNative } from '@/libs/contextMenu/canGoNative';
 
+import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
+
+const memberDirectoryMock = vi.hoisted(() => ({
+  workspaceId: 'workspace-1' as string | undefined,
+}));
+
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useActiveWorkspaceId: () => memberDirectoryMock.workspaceId,
+}));
+
+vi.mock('@/business/client/hooks/useFetchWorkspaceMembers', () => ({
+  useFetchWorkspaceMembers: () => ({ isLoading: false }),
+}));
+
+vi.mock('@/business/client/hooks/useWorkspaceMembers', () => ({
+  useWorkspaceMembers: () => [
+    { role: 'member', userId: 'creator-1' },
+    { role: 'member', userId: 'member-2' },
+    { role: 'viewer', userId: 'viewer-3' },
+  ],
+}));
 
 const mocks = vi.hoisted(() => ({
   closeContextMenu: vi.fn(),
@@ -117,6 +139,33 @@ vi.mock('react-i18next', () => ({
       options?.defaultValue ?? key,
   }),
 }));
+
+describe('task member privacy compatibility', () => {
+  it('offers every assignable workspace member for a legacy private task', () => {
+    memberDirectoryMock.workspaceId = 'workspace-1';
+    const { result } = renderHook(() =>
+      useAssigneeMenuItems(undefined, vi.fn(), { creatorId: 'creator-1', visibility: 'private' }),
+    );
+
+    expect(result.current.map((item) => (item && 'key' in item ? item.key : undefined))).toEqual([
+      'assignee:unassigned',
+      'assignee:creator-1',
+      'assignee:member-2',
+    ]);
+  });
+
+  it('offers no workspace members in personal scope', () => {
+    memberDirectoryMock.workspaceId = undefined;
+    const { result } = renderHook(() =>
+      useAssigneeMenuItems(undefined, vi.fn(), { visibility: 'private' }),
+    );
+
+    expect(result.current.map((item) => (item && 'key' in item ? item.key : undefined))).toEqual([
+      'assignee:unassigned',
+    ]);
+    memberDirectoryMock.workspaceId = 'workspace-1';
+  });
+});
 
 describe('useTaskItemContextMenu', () => {
   beforeEach(() => {

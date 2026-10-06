@@ -218,7 +218,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     </IssueRowChip>
   ) : null;
 
-  const isPrivate = task.visibility === 'private';
+  const isPrivate = !activeWorkspaceId && task.visibility === 'private';
 
   // Linear's row grammar: priority, identifier, one status mark, title. The
   // status mark is the workflow state when the task has one. A nameless task

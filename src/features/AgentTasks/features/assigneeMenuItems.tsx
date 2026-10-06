@@ -39,15 +39,14 @@ export interface AssigneeMenuSelect {
  * The flat "Assignee" member list Linear exposes inside its issue context menu
  * and its bulk-action menu — one builder so the row context menu and the
  * My-issues Actions menu stay identical. It mirrors `AssigneeMemberSelector`'s
- * roster rules (assignable roles only, private tasks restricted to the
- * creator, self pinned under Unassigned) as plain menu items — `ContextMenuItem`
+ * roster rules (assignable roles only, self pinned under Unassigned) as plain
+ * menu items — `ContextMenuItem`
  * and `DropdownItem` are the same `BaseMenuItemType`, so the result feeds both.
  */
 export const useAssigneeMenuItems = (
   currentUserId: string | null | undefined,
   onSelect: AssigneeMenuSelect,
   options?: {
-    /** Private tasks only ever offer their creator — same rule as the selector. */
     creatorId?: string | null;
     disabled?: boolean;
     visibility?: 'private' | 'public' | null;
@@ -61,19 +60,13 @@ export const useAssigneeMenuItems = (
   useFetchWorkspaceMembers();
   const allMembers = useWorkspaceMembers();
   const selfUserId = useUserStore(userProfileSelectors.userId);
-  const creatorId = options?.creatorId ?? selfUserId;
   const disabled = Boolean(options?.disabled);
-  const visibility = options?.visibility;
 
   return useMemo(() => {
     const assignable = hasWorkspaceMemberDirectory(activeWorkspaceId)
       ? allMembers.filter((member) => canWorkspaceRoleBeTaskAssignee(member.role))
       : [];
-    const visible =
-      visibility === 'private'
-        ? assignable.filter((member) => member.userId === creatorId)
-        : assignable;
-    const { others, self } = partitionSelfMember(visible, selfUserId);
+    const { others, self } = partitionSelfMember(assignable, selfUserId);
 
     const memberItem = (member: Member): NativeContextMenuItem => ({
       disabled,
@@ -109,15 +102,5 @@ export const useAssigneeMenuItems = (
       ...(self ? [memberItem(self)] : []),
       ...others.map(memberItem),
     ];
-  }, [
-    activeWorkspaceId,
-    allMembers,
-    creatorId,
-    currentUserId,
-    disabled,
-    onSelect,
-    selfUserId,
-    t,
-    visibility,
-  ]);
+  }, [activeWorkspaceId, allMembers, currentUserId, disabled, onSelect, selfUserId, t]);
 };

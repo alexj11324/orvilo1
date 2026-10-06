@@ -117,19 +117,6 @@ export const nextKanbanGroupLimit = (
   );
 
 /**
- * Map the UI-side filter chip value to the server-side `visibility` enum.
- * 'all' has no server filter (undefined), 'workspace' translates to the DB
- * 'public' value, and 'private' passes through unchanged.
- */
-const filterToServerVisibility = (
-  filter: 'all' | 'private' | 'workspace',
-): 'private' | 'public' | undefined => {
-  if (filter === 'all') return undefined;
-  if (filter === 'workspace') return 'public';
-  return 'private';
-};
-
-/**
  * `complete` mode paging. The server caps one `task.list` page at 100 rows, so
  * the full list is assembled from consecutive pages; the ceiling bounds the
  * fan-out for very large workspaces (10 requests) — past it the store keeps
@@ -429,7 +416,7 @@ export class TaskListSliceActionImpl {
               }),
           projectId,
           scope,
-          visibility: filterToServerVisibility(listVisibility),
+          visibility: undefined,
         });
       },
       {
@@ -680,7 +667,7 @@ export class TaskListSliceActionImpl {
           orderBy,
           projectId,
           statuses: statuses?.length ? [...statuses] : undefined,
-          visibility: filterToServerVisibility(listVisibility),
+          visibility: undefined,
         };
         return complete ? this.fetchCompleteTaskList(params) : this.fetchTaskList(params);
       },

@@ -1,0 +1,15 @@
+# Task privacy controls
+
+Workspace Tasks have no private visibility choice. This UI layer removes the create-form chip and privacy state, list filters, detail publish/private actions and privacy-based member restrictions. Saved old private drafts keep their text, priority and assignees while their obsolete visibility is ignored. Workspace create requests send public; personal scope leaves visibility unspecified and has no member directory. Member-role and edit-permission checks remain active.
+
+This follows backend PR #481, which canonicalizes legacy rows and old-client payloads while preserving scope, team and execution restrictions. Board marker changes and collaboration metadata for cards are a separate three-file PR #480. This layer contains 18 source/test files, without duplicating the Board changes.
+
+The 18 delivered files match the frozen files tested and reviewed on local candidate `6818b5c0fae2a08030965ee6bd54080282aa2cca`: 179 focused tests passed and scoped lint was clean. Independent code and TypeScript review found no UI blockers. Backend HTTP proof on that candidate is recorded in [workspace Task metadata](./workspace-task-metadata.md); it proves API behavior and does not prove form interactions.
+
+Native UI acceptance was completed on the isolated Electron fixture on 2026-10-06. The [modal capture](./task-privacy-controls-evidence/task-modal-6818.png) shows a real human Owner and private Journey Agent selected with no Task privacy chip. Creating it produced T-13 with public Task visibility; reopening and [reloading](./task-privacy-controls-evidence/task-reload-6818.png) retained its title, Owner and Journey assignment. The [detail menu](./task-privacy-controls-evidence/task-detail-menu-6818.png) contains copy ID, copy link and delete, with no private/publish action.
+
+In the main inline form, hiding and reopening restored the draft text, human Owner and Journey selection, as shown in the [restored draft capture](./task-privacy-controls-evidence/task-main-draft-restored-6818.png). More Create → Direct Create (without AI) then created T-14 and reset the form. The subtask draft is intentionally transient; this evidence does not claim that closing it preserves its draft.
+
+All four images are uncropped native captures in zh-CN, dark mode, 100% zoom, with a 1291 × 886 CSS window and 2582 × 1772 images. The original `.png` filenames are preserved; the files contain JPEG data. They carry the original candidate identifier `6818b5c0fae2a08030965ee6bd54080282aa2cca`. A programmatic SHA-256 comparison of all 18 delivered UI source/test files at `ac20b959b0a4422379220ca28adb3b9ff92e26cc` against the frozen runtime map for `d78fa1eb2678fa8508f8c861d49e9e71dec7c6d9` found all unchanged. Moving the isolated window onto the visible display restored ScreenCaptureKit capture after error `-3812`; this does not establish a TCC permission change. Light/narrow sidebar checks remain with PR #478.
+
+This update attaches existing runtime evidence only; it changes no product code and requires no new test or runtime run.

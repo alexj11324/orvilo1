@@ -1,46 +1,26 @@
-import {
-  CopyIcon,
-  EyeOffIcon,
-  GitBranchIcon,
-  LinkIcon,
-  MoreHorizontal,
-  Trash,
-  UsersIcon,
-} from 'lucide-react';
+import { CopyIcon, GitBranchIcon, LinkIcon, MoreHorizontal, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
-import { toast } from '@/components/toast';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
-import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
-import { useTaskDetailSelector } from './TaskDetailScope';
 import { useTaskCopyActions } from './useTaskCopyActions';
 
 const TaskDetailHeaderActions = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
 
   const navigate = useWorkspaceAwareNavigate();
-  const activeWorkspaceId = useActiveWorkspaceId();
   const { allowed: canEditTask } = usePermission('create_content');
   const { copyBranch, copyId, copyLink, hasBranch, taskId } = useTaskCopyActions();
-  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
-  const createdByUserId = useTaskDetailSelector(taskDetailSelectors.taskCreatedByUserId);
-  const currentUserId = useUserStore(userProfileSelectors.userId);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const updateTaskVisibility = useTaskStore((s) => s.updateTaskVisibility);
   const transferItems = useTaskTransferMenuItem(taskId) as SidebarDropdownMenuProps['items'] | null;
 
   const triggerDelete = useCallback(() => {
@@ -57,53 +37,6 @@ const TaskDetailHeaderActions = memo(() => {
       title: t('taskDetail.deleteConfirm.title'),
     });
   }, [canEditTask, taskId, t, deleteTask, navigate]);
-
-  const triggerPublish = useCallback(() => {
-    if (!canEditTask) return;
-    if (!taskId) return;
-    confirmModal({
-      cancelText: t('cancel', { ns: 'common' }),
-      content: (
-        <>
-          <VisibilityConfirmContent variant="publish" />
-          <div style={{ marginTop: 8, opacity: 0.7 }}>
-            {t('taskDetail.publishToWorkspace.confirmHint')}
-          </div>
-        </>
-      ),
-      okText: t('taskDetail.publishToWorkspace.confirmOk'),
-      onOk: async () => {
-        try {
-          await updateTaskVisibility(taskId, 'public');
-        } catch {
-          // store action already surfaced a targeted toast; swallow so the
-          // confirm modal doesn't bubble a second error to base-ui.
-        }
-      },
-      title: t('taskDetail.publishToWorkspace.confirmTitle'),
-    });
-  }, [canEditTask, taskId, t, updateTaskVisibility]);
-
-  const triggerMakePrivate = useCallback(() => {
-    if (!canEditTask) return;
-    if (!taskId) return;
-    confirmModal({
-      cancelText: t('cancel', { ns: 'common' }),
-      content: <VisibilityConfirmContent variant="makePrivate" />,
-      okButtonProps: { danger: true },
-      okText: t('makePrivate.confirm.ok', { ns: 'common' }),
-      onOk: async () => {
-        try {
-          await updateTaskVisibility(taskId, 'private');
-          toast.success(t('makePrivate.success', { ns: 'common' }));
-        } catch {
-          // store action already surfaced a targeted toast; swallow so the
-          // confirm modal doesn't bubble a second error to base-ui.
-        }
-      },
-      title: t('makePrivate.confirm.title', { ns: 'common' }),
-    });
-  }, [canEditTask, taskId, t, updateTaskVisibility]);
 
   const menuItems = useMemo<SidebarDropdownMenuProps['items']>(() => {
     if (!taskId) return [];
@@ -143,65 +76,26 @@ const TaskDetailHeaderActions = memo(() => {
       onClick: triggerDelete,
     };
 
-    // Publish-to-workspace only surfaces on private tasks inside a workspace;
-    // personal mode has no workspace to publish to.
-    const publishItem =
-      activeWorkspaceId && visibility === 'private'
-        ? {
-            disabled: !canEditTask,
-            icon: <UsersIcon />,
-            key: 'publishToWorkspace',
-            label: t('taskDetail.publishToWorkspace.menuLabel'),
-            onClick: triggerPublish,
-          }
-        : null;
-
-    // Inverse transition: only the task creator can pull a
-    // published task back to private ( — an owner demoting another
-    // member's task would appropriate it into the creator's private list);
-    // everyone else doesn't see the entry at all (the server enforces the
-    // same rule as a backstop).
-    const canMakePrivate = !!currentUserId && createdByUserId === currentUserId;
-    const makePrivateItem =
-      activeWorkspaceId && visibility === 'public' && canMakePrivate
-        ? {
-            disabled: !canEditTask,
-            icon: <EyeOffIcon />,
-            key: 'makePrivate',
-            label: t('makePrivate', { ns: 'common' }),
-            onClick: triggerMakePrivate,
-          }
-        : null;
-
-    const visibilityItem = publishItem ?? makePrivateItem;
-
     const resolvedTransferItems =
       typeof transferItems === 'function' ? transferItems() : transferItems;
 
-    const transferGroup =
-      resolvedTransferItems && resolvedTransferItems.length > 0
-        ? [...resolvedTransferItems, ...(visibilityItem ? [visibilityItem] : [])]
-        : visibilityItem
-          ? [visibilityItem]
-          : [];
+    if (!resolvedTransferItems?.length) return [...copyItems, { type: 'divider' }, deleteItem];
 
-    if (transferGroup.length === 0) return [...copyItems, { type: 'divider' }, deleteItem];
-
-    return [...copyItems, { type: 'divider' }, ...transferGroup, { type: 'divider' }, deleteItem];
+    return [
+      ...copyItems,
+      { type: 'divider' },
+      ...resolvedTransferItems,
+      { type: 'divider' },
+      deleteItem,
+    ];
   }, [
     taskId,
     copyId,
     copyLink,
     copyBranch,
     hasBranch,
-    activeWorkspaceId,
-    visibility,
-    createdByUserId,
-    currentUserId,
     t,
     triggerDelete,
-    triggerPublish,
-    triggerMakePrivate,
     canEditTask,
     transferItems,
   ]);

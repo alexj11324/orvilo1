@@ -1,7 +1,7 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -12,7 +12,7 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { type AgentRuntimeConfig, requestAgentRuntime } from '@/features/CreateAgent';
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import AddGroupMemberModal from '@/routes/(main)/group/_layout/Sidebar/AddGroupMemberModal';
@@ -25,6 +25,7 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useGroupProfileStore } from '@/store/groupProfile';
 
 import { CoordinatorSummary } from './CoordinatorSummary';
+import { useGroupSettingsDraft } from './useGroupSettingsDraft';
 
 const GroupSettings = ({ groupId }: { groupId: string }) => {
   const { t } = useTranslation(['chat', 'common', 'setting']);
@@ -35,29 +36,16 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
   const [selectedMember, setSelectedMember] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>();
-  const [runtime, setRuntime] = useState<AgentRuntimeConfig>();
-  const [prompt, setPrompt] = useState('');
-  const [opening, setOpening] = useState('');
-  const [questions, setQuestions] = useState('');
   const coordinator = group?.agents.find((agent) => agent.isSupervisor);
+  const { runtime, setRuntime, prompt, setPrompt, opening, setOpening, questions, setQuestions } =
+    useGroupSettingsDraft(
+      coordinator,
+      group?.config?.openingMessage,
+      group?.config?.openingQuestions,
+    );
   const validCoordinator =
     runtime?.agencyConfig?.heterogeneousProvider?.type === 'orvilo' && !!runtime.model;
   const members = group?.agents.filter((agent) => !agent.isSupervisor) ?? [];
-
-  useEffect(() => {
-    setRuntime(
-      coordinator
-        ? {
-            agencyConfig: coordinator.agencyConfig ?? undefined,
-            model: coordinator.model ?? undefined,
-            provider: coordinator.provider ?? undefined,
-          }
-        : undefined,
-    );
-    setPrompt(coordinator?.systemRole ?? '');
-    setOpening(group?.config?.openingMessage ?? '');
-    setQuestions(group?.config?.openingQuestions?.join('\n') ?? '');
-  }, [groupId, coordinator, group?.config?.openingMessage, group?.config?.openingQuestions]);
 
   const save = async () => {
     if (!group || pending) return;
@@ -122,7 +110,7 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
               ),
             )}
           </TabsList>
-          <TabsContent value="basic">
+          <TabsContent keepMounted value="basic">
             <BasicSettings />
           </TabsContent>
           <TabsContent className="flex flex-col gap-4" value="members">

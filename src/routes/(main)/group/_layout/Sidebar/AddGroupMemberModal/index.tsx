@@ -2,19 +2,18 @@
 
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import useSWR from 'swr';
 
+import AsyncError from '@/components/AsyncError';
 import ImperativeModal from '@/components/ImperativeModal';
 import { Separator } from '@/components/ui/separator';
-import { groupKeys } from '@/libs/swr/keys';
-import { agentService } from '@/services/agent';
 
 import { type AgentItemData } from './AgentItem';
 import AvailableAgentList from './AvailableAgentList';
 import SelectedAgentList from './SelectedAgentList';
 import { useAgentSelectionStore } from './store';
+import { useGroupMemberAddition } from './useGroupMemberAddition';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -49,10 +48,15 @@ const AddGroupMemberModal = memo<AddGroupMemberModalProps>(
     const clearSelection = useAgentSelectionStore((s) => s.clearSelection);
 
     // Fetch agents from the new API (non-virtual agents only)
-    const { data: allAgents = [], isLoading: isLoadingAgents } = useSWR(
-      open ? groupKeys.queryAgents() : null,
-      () => agentService.queryAgents(),
-    );
+    const {
+      agents: allAgents,
+      isLoading: isLoadingAgents,
+      loadError,
+      mutate,
+      isAdding,
+      addError,
+      submit,
+    } = useGroupMemberAddition(open, onConfirm);
 
     // Filter out existing members
     const availableAgents = useMemo<AgentItemData[]>(() => {
@@ -66,18 +70,8 @@ const AddGroupMemberModal = memo<AddGroupMemberModalProps>(
       }
     }, [open, clearSelection]);
 
-    const [isAdding, setIsAdding] = useState(false);
-
     const handleConfirm = async () => {
-      try {
-        setIsAdding(true);
-        await onConfirm(selectedAgentIds);
-        clearSelection();
-      } catch (error) {
-        console.error('Failed to add members:', error);
-      } finally {
-        setIsAdding(false);
-      }
+      if (await submit(selectedAgentIds)) clearSelection();
     };
 
     const handleCancel = () => {
@@ -85,7 +79,8 @@ const AddGroupMemberModal = memo<AddGroupMemberModalProps>(
       onCancel();
     };
 
-    const isConfirmDisabled = selectedAgentIds.length === 0 || isAdding;
+    const isConfirmDisabled =
+      selectedAgentIds.length === 0 || isAdding || !!loadError || isLoadingAgents;
 
     return (
       <ImperativeModal
@@ -100,13 +95,29 @@ const AddGroupMemberModal = memo<AddGroupMemberModalProps>(
       >
         <div className={cn('flex gap-2', styles.container)}>
           {/* Left Column - Available Agents */}
-          <AvailableAgentList agents={availableAgents} isLoading={isLoadingAgents} />
+          {loadError ? (
+            <AsyncError
+              error={loadError}
+              retrying={isLoadingAgents}
+              onRetry={() => void mutate()}
+            />
+          ) : (
+            <AvailableAgentList agents={availableAgents} isLoading={isLoadingAgents} />
+          )}
 
           <Separator orientation={'vertical'} style={{ height: '100%' }} />
 
           {/* Right Column - Selected Agents */}
           <SelectedAgentList agents={allAgents} />
         </div>
+        {addError !== undefined && (
+          <AsyncError
+            error={addError}
+            retrying={isAdding}
+            variant="inline"
+            onRetry={() => void handleConfirm()}
+          />
+        )}
       </ImperativeModal>
     );
   },

@@ -3,6 +3,7 @@ import type {
   ProviderConfigurationBroker,
   ProviderConfigurationScope,
 } from '@orvilo/agent-execution/controlPlane';
+import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
 import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 

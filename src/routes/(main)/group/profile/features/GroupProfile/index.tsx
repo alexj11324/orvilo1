@@ -1,8 +1,8 @@
 'use client';
 
 import { useTheme } from 'antd-style';
-import { MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MoreHorizontalIcon, UsersIcon } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import urlJoin from 'url-join';
@@ -11,22 +11,23 @@ import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentG
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import ActionIcon from '@/components/ActionIcon';
+import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
-import { EditorCanvas } from '@/features/EditorCanvas';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import AccessLevelTag from '@/features/ResourcePermission/AccessLevelTag';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
+import { useSaveState } from '@/hooks/useSaveState';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useGroupProfileStore } from '@/store/groupProfile';
 
-import AutoSaveHint from '../Header/AutoSaveHint';
-import GroupHeader from './GroupHeader';
+import { useBasicSettingsDraft } from './useBasicSettingsDraft';
 
 // Stable lock RPC binding for the chatGroup resource.
 const groupLockClient: EditLockClient = {
@@ -37,12 +38,12 @@ const groupLockClient: EditLockClient = {
   },
 };
 
-const GroupProfile = memo(() => {
-  const { t } = useTranslation(['setting', 'chat']);
+const GroupProfile = () => {
+  const { t } = useTranslation(['setting', 'chat', 'agentGroup', 'common']);
   const { allowed: hasEditPermission } = usePermission('edit_own_content');
   const theme = useTheme();
   const { gid } = useParams<{ gid: string }>();
-  const groupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
+  const groupId = gid;
   const hasActiveWorkspace = useHasActiveWorkspace();
   const currentGroup = useAgentGroupStore((s) => agentGroupSelectors.getGroupById(gid ?? '')(s));
   const updateGroup = useAgentGroupStore((s) => s.updateGroup);
@@ -99,145 +100,128 @@ const GroupProfile = memo(() => {
     transferToMemberItem,
   ]);
 
-  // Collaborative edit lock for workspace groups (same model as pages): read-only
-  // when another member is editing; acquired implicitly on the first edit.
+  const { draft, setDraft, dirty } = useBasicSettingsDraft(
+    currentGroup?.title ?? '',
+    currentGroup?.content ?? '',
+  );
   const [edited, setEdited] = useState(false);
-  const groupIdRef = useRef(groupId);
-  // The description canvas only mounts on demand — a fresh group renders a
-  // compact affordance instead of a page-high empty editor.
-  const [contentRevealed, setContentRevealed] = useState(false);
-  if (groupIdRef.current !== groupId) {
-    groupIdRef.current = groupId;
-    setEdited(false);
-    setContentRevealed(false);
-  }
   const lock = useEditLock({
     client: groupLockClient,
-    // Only workspace groups lock — personal (non-workspace) groups stay fully
-    // editable with no peek/pending, matching the server's workspace gating.
     enabled: Boolean(groupId && canEdit && currentGroup?.workspaceId),
     isDirty: edited,
     resourceId: groupId ?? undefined,
   });
-  // Read-only until the lock resolves, so the user can't start typing on a group
-  // that turns out to be locked and get bounced mid-edit.
-  const editable = canEdit && !lock.lockedByOther && !lock.pending;
-
-  const editor = useGroupProfileStore((s) => s.editor);
-  const handleContentChange = useGroupProfileStore((s) => s.handleContentChange);
+  const editable = canEdit && !lock.lockedByOther && !lock.pending && lock.health === 'healthy';
+  const { lastSavedAt, save, status } = useSaveState();
   const agentBuilderContentUpdate = useGroupProfileStore((s) => s.agentBuilderContentUpdate);
   const setAgentBuilderContent = useGroupProfileStore((s) => s.setAgentBuilderContent);
 
-  // Create save callback that captures latest groupId
-  const saveContent = useCallback(
-    async (payload: { content: string; editorData: Record<string, any> }) => {
-      if (!canEdit) return;
-      if (!groupId) return;
-      await updateGroup(groupId, {
-        content: payload.content,
-        editorData: payload.editorData,
-      });
-    },
-    [canEdit, updateGroup, groupId],
-  );
-
-  const onContentChange = useCallback(() => {
-    if (!editable) return;
-
-    setEdited(true);
-    handleContentChange(saveContent);
-  }, [editable, handleContentChange, saveContent]);
-
-  // Stabilize editorData object reference to prevent unnecessary re-renders
-  const editorData = useMemo(
-    () => ({
-      content: currentGroup?.content ?? undefined,
-      editorData: currentGroup?.editorData,
-    }),
-    [currentGroup?.content, currentGroup?.editorData],
-  );
-
-  // Watch for agent builder content updates and apply them directly to the editor
   useEffect(() => {
-    if (!editor || !agentBuilderContentUpdate || !groupId) return;
-    if (agentBuilderContentUpdate.entityId !== groupId) return;
-
-    // The builder is writing the description — surface the canvas for it.
-    setContentRevealed(true);
-    // Directly set the editor content
-    editor.setDocument('markdown', agentBuilderContentUpdate.content);
-
-    // Clear the update after processing to prevent re-applying
+    if (!agentBuilderContentUpdate || agentBuilderContentUpdate.entityId !== groupId) return;
+    setDraft((current) => ({ ...current, content: agentBuilderContentUpdate.content }));
+    setEdited(true);
     setAgentBuilderContent('', '');
-  }, [editor, agentBuilderContentUpdate, groupId, setAgentBuilderContent]);
+  }, [agentBuilderContentUpdate, groupId, setAgentBuilderContent, setDraft]);
+
+  const saveSettings = () => {
+    if (!editable || !groupId || !draft.title.trim() || status === 'saving') return;
+    void save(async () => {
+      if (currentGroup?.workspaceId) {
+        const acquired = await groupLockClient.acquire(groupId);
+        if (acquired.lockedByOther) throw new Error('Group is being edited by another member');
+      }
+      await updateGroup(groupId, {
+        content: draft.content,
+        // Markdown is now edited directly; do not restore obsolete rich-text JSON.
+        editorData: {},
+        title: draft.title,
+      });
+    });
+  };
 
   return (
-    <>
-      <div
-        className="flex flex-col"
-        style={{ cursor: 'default', marginBottom: 12 }}
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <div className="flex flex-col" style={{ height: 66, width: '100%' }}>
-          <div className="flex items-center gap-2 py-3">
-            <AutoSaveHint />
-            <AccessLevelTag
-              resourceType={'agentGroup'}
-              resourceId={
-                hasActiveWorkspace && currentGroup?.visibility !== 'private'
-                  ? (groupId ?? undefined)
-                  : undefined
-              }
-            />
-          </div>
+    <form
+      className="flex flex-col gap-6 pt-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        saveSettings();
+      }}
+    >
+      {((hasActiveWorkspace && currentGroup?.visibility !== 'private') ||
+        lock.lockedByOther ||
+        (canEdit && lock.pending)) && (
+        <div className="flex items-center gap-2">
+          <AccessLevelTag
+            resourceType="agentGroup"
+            resourceId={
+              hasActiveWorkspace && currentGroup?.visibility !== 'private'
+                ? (groupId ?? undefined)
+                : undefined
+            }
+          />
+          <EditingIndicator
+            holderId={lock.lockedByOther ? lock.holderId : null}
+            pending={canEdit && lock.pending}
+          />
         </div>
-        {/* Header: Group Avatar + Title */}
-        <GroupHeader />
-        <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
+      )}
+      <label className="flex flex-col gap-2 text-sm font-medium">
+        {t('group.create.name', { ns: 'chat' })}
+        <Input
+          required
+          disabled={!editable || status === 'saving'}
+          placeholder={t('name.placeholder', { ns: 'agentGroup' })}
+          value={draft.title}
+          onChange={(event) => {
+            setEdited(true);
+            setDraft((current) => ({ ...current, title: event.target.value }));
+          }}
+        />
+      </label>
+      <label className="flex flex-col gap-2 text-sm font-medium">
+        {t('group.create.instructions', { ns: 'chat' })}
+        <Textarea
+          className="min-h-40 font-normal"
+          disabled={!editable || status === 'saving'}
+          placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
+          rows={6}
+          value={draft.content}
+          onChange={(event) => {
+            setEdited(true);
+            setDraft((current) => ({ ...current, content: event.target.value }));
+          }}
+        />
+      </label>
+      <div className="flex items-center justify-between gap-4">
+        <div aria-live="polite" className="flex items-center gap-2">
+          {(status === 'saving' || status === 'failed' || (status === 'saved' && !dirty)) && (
+            <AutoSaveHint lastUpdatedTime={lastSavedAt} saveStatus={status} />
+          )}
           {moreMenuItems.length > 0 && (
             <SidebarDropdownMenu items={moreMenuItems}>
               <ActionIcon
                 icon={MoreHorizontalIcon}
-                size={'small'}
+                size="small"
                 style={{ color: theme.colorTextSecondary }}
               />
             </SidebarDropdownMenu>
           )}
         </div>
-      </div>
-      <Separator />
-      {/* Group Content Editor — hidden until the group actually has a
-          description or the user asks for one, so the column never renders a
-          large empty editor. */}
-      <EditingIndicator
-        holderId={lock.lockedByOther ? lock.holderId : null}
-        pending={canEdit && lock.pending}
-      />
-      {currentGroup?.content?.trim() || contentRevealed ? (
-        <EditorCanvas
-          disabled={!canEdit}
-          editable={!lock.lockedByOther && !lock.pending}
-          editor={editor}
-          editorData={editorData}
-          entityId={groupId}
-          placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
-          onContentChange={onContentChange}
-        />
-      ) : canEdit ? (
         <Button
-          className="w-full justify-start"
-          style={{ borderStyle: 'dashed', color: theme.colorTextSecondary }}
-          variant="outline"
-          onClick={() => setContentRevealed(true)}
+          loading={status === 'saving'}
+          type="submit"
+          disabled={
+            !editable ||
+            !draft.title.trim() ||
+            status === 'saving' ||
+            (!dirty && status !== 'failed')
+          }
         >
-          <PlusIcon data-icon="inline-start" />
-          {t('group.profile.addInstructions', { ns: 'chat' })}
+          {t(status === 'failed' ? 'retry' : 'save', { ns: 'common' })}
         </Button>
-      ) : null}
-    </>
+      </div>
+    </form>
   );
-});
+};
 
 export default GroupProfile;

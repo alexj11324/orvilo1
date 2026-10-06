@@ -1,7 +1,8 @@
 'use client';
 
+import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName } from '@orvilo/types';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -12,7 +13,9 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { requestAgentRuntime } from '@/features/CreateAgent';
+import type { AgentRuntimeConfig } from '@/features/CreateAgent';
+import ConfiguredOrchestratorSelector from '@/features/Orchestrator/ConfiguredOrchestratorSelector';
+import { copyOrchestratorWorkingDirectory } from '@/features/Orchestrator/copyWorkingDirectory';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import AddGroupMemberModal from '@/routes/(main)/group/_layout/Sidebar/AddGroupMemberModal';
@@ -36,7 +39,11 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
   const [selectedMember, setSelectedMember] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>();
+  const [orchestratorId, setOrchestratorId] = useState<string>();
+  const pendingWorkingDirectorySource = useRef<string | undefined>(undefined);
+  const [orchestratorReady, setOrchestratorReady] = useState<boolean>();
   const coordinator = group?.agents.find((agent) => agent.isSupervisor);
+  const selectedOrchestratorId = orchestratorId ?? coordinator?.params?.orchestratorSourceAgentId;
   const { runtime, setRuntime, prompt, setPrompt, opening, setOpening, questions, setQuestions } =
     useGroupSettingsDraft(
       coordinator,
@@ -44,11 +51,25 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
       group?.config?.openingQuestions,
     );
   const validCoordinator =
-    runtime?.agencyConfig?.heterogeneousProvider?.type === 'orvilo' && !!runtime.model;
+    !!runtime &&
+    (!selectedOrchestratorId || orchestratorReady === true) &&
+    canRunGroupSupervisorRuntime(runtime.agencyConfig?.heterogeneousProvider) &&
+    (runtime.agencyConfig?.heterogeneousProvider?.type !== 'orvilo' || !!runtime.model);
+  const selectOrchestrator = useCallback(
+    (agentId: string, config: AgentRuntimeConfig, explicit = false) => {
+      setOrchestratorReady(true);
+      if (!explicit && agentId === coordinator?.params?.orchestratorSourceAgentId) return;
+      setOrchestratorId(agentId);
+      if (explicit) pendingWorkingDirectorySource.current = agentId;
+      setRuntime(config);
+    },
+    [setRuntime, coordinator?.params?.orchestratorSourceAgentId],
+  );
+  const invalidateOrchestrator = useCallback(() => setOrchestratorReady(false), []);
   const members = group?.agents.filter((agent) => !agent.isSupervisor) ?? [];
 
   const save = async () => {
-    if (!group || pending) return;
+    if (!group || pending || (tab === 'coordinator' && !validCoordinator)) return;
     setPending(true);
     setError(undefined);
     try {
@@ -56,9 +77,20 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
         await agentService.updateAgentConfig(coordinator.id, {
           agencyConfig: runtime.agencyConfig,
           model: runtime.model ?? undefined,
+          params: {
+            ...coordinator.params,
+            ...(selectedOrchestratorId && { orchestratorSourceAgentId: selectedOrchestratorId }),
+          },
           provider: runtime.provider ?? undefined,
           systemRole: prompt,
         });
+        if (pendingWorkingDirectorySource.current) {
+          await copyOrchestratorWorkingDirectory(
+            pendingWorkingDirectorySource.current,
+            coordinator.id,
+          );
+          pendingWorkingDirectorySource.current = undefined;
+        }
         await useAgentGroupStore.getState().refreshGroupDetail(groupId);
       } else if (tab === 'opening') {
         await useAgentGroupStore.getState().updateGroup(groupId, {
@@ -193,20 +225,14 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
           </TabsContent>
           <TabsContent className="flex flex-col gap-5" value="coordinator">
             <CoordinatorSummary config={runtime} />
-            <Button
-              className="self-start"
+            <ConfiguredOrchestratorSelector
               disabled={pending}
-              variant="outline"
-              onClick={async () => {
-                const config = await requestAgentRuntime({
-                  builtinOnly: true,
-                  visibility: group.visibility,
-                });
-                if (config) setRuntime(config);
-              }}
-            >
-              {t('group.create.configureCoordinator')}
-            </Button>
+              value={selectedOrchestratorId}
+              visibility={group.visibility}
+              workspaceId={group.workspaceId ?? null}
+              onSelect={selectOrchestrator}
+              onUnavailable={invalidateOrchestrator}
+            />
             <label className="flex flex-col gap-2 text-sm font-medium">
               {t('group.settings.coordinationInstructions')}
               <Textarea

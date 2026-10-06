@@ -3,6 +3,7 @@ import type { OrviloDatabase } from '@orvilo/database';
 import { type AgentConfigSnapshot, resolveAgentConfig } from '@orvilo/mecha';
 import type { AgentModelOverride, MessageMapScope, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { getDisabledPluginIds, resolveAgentAgencyConfig } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
@@ -10,6 +11,7 @@ import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSetti
 import type { AgentConfigWithId } from '@/server/services/agent';
 import { isResourceAuthorOrAdmin } from '@/server/services/resourcePermission';
 
+import { buildGroupAgentSystemContext, resolveGroupRunContext } from '../helpers/groupContext';
 import type { InternalExecAgentParams } from '../types';
 
 const log = debug('orvilo-server:ai-agent-service');
@@ -48,6 +50,8 @@ export interface ResolvedRunAgentConfig {
   conversationAgentId: string;
   /** Tri-state disabled plugin identifiers, captured before pinned-id collapse. */
   disabledPluginIds: string[];
+  groupSystemContext?: string;
+  isGroupSupervisor: boolean;
   isPublicWorkspaceAgent: boolean;
   memberDeviceOverride?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   /** Persistence-attribution agent id (Agent Signal marker aware). */
@@ -165,8 +169,18 @@ export const resolveRunAgentConfig = async (
   } = input;
 
   // --- gather the snapshot ---
-  const row = await deps.resolveAgentConfigOrThrow(identifier);
+  const row = structuredClone(await deps.resolveAgentConfigOrThrow(identifier));
   const resolvedAgentId = row.id;
+  if (appContext?.orchestrationRole === 'supervisor' && !appContext.groupId) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Group supervisor requires a group' });
+  }
+  const groupRun = appContext?.groupId
+    ? await resolveGroupRunContext(deps, {
+        agentId: resolvedAgentId,
+        claimedRole: appContext.orchestrationRole,
+        groupId: appContext.groupId,
+      })
+    : undefined;
   const agentWorkspaceId = row.workspaceId ?? deps.workspaceId;
   const isPublicWorkspaceAgent = !!agentWorkspaceId && row.visibility !== 'private';
 
@@ -199,6 +213,8 @@ export const resolveRunAgentConfig = async (
     agentConfig: row,
     canManage: canManageAgent,
     chatConfig: row.chatConfig,
+    group: groupRun?.group,
+    groupMembers: groupRun?.groupMembers,
     memberModeOverride: overrides.mode,
     memberModelOverride: overrides.model,
     slug: row.slug ?? undefined,
@@ -216,7 +232,7 @@ export const resolveRunAgentConfig = async (
         ...(modelOverride ? { model: modelOverride } : {}),
         ...(providerOverride ? { provider: providerOverride } : {}),
       },
-      scope: (appContext?.scope ?? undefined) as MessageMapScope | undefined,
+      scope: (groupRun ? 'group' : (appContext?.scope ?? undefined)) as MessageMapScope | undefined,
     },
     snapshot,
   );
@@ -307,6 +323,14 @@ export const resolveRunAgentConfig = async (
     conversationAgentId,
     disabledPluginIds,
     isPublicWorkspaceAgent,
+    isGroupSupervisor: groupRun?.isGroupSupervisor ?? false,
+    groupSystemContext:
+      [
+        groupRun?.isGroupSupervisor ? agentConfig.systemRole : undefined,
+        buildGroupAgentSystemContext(groupRun?.groupContext),
+      ]
+        .filter(Boolean)
+        .join('\n\n') || undefined,
     memberDeviceOverride: overrides.device,
     persistAgentId,
     resolvedAgentId,

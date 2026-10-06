@@ -14,11 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
-import { isDesktop } from '@/const/version';
 import CreateAgentPanel from '@/features/CreateAgent/CreateAgentPanel';
-import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import { agentService } from '@/services/agent';
+import ConfiguredOrchestratorSelector from '@/features/Orchestrator/ConfiguredOrchestratorSelector';
 import { ensureFirstAgentInWorkspace } from '@/services/agentOnboarding';
+import {
+  getOnboardingAgentConfig,
+  resolveOnboardingAgentHost,
+  verifyOnboardingOrchestrator,
+} from '@/services/orchestrator';
 import { useUserStore } from '@/store/user';
 import {
   clearStaleOnboardingCallbackUrl,
@@ -48,6 +51,9 @@ function OnboardingSetup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [firstAgentId, setFirstAgentId] = useState(setup?.firstAgentId);
+  const [agentVerified, setAgentVerified] = useState(false);
+  const [orchestratorAgentId, setOrchestratorAgentId] = useState(setup?.orchestratorAgentId);
+  const [orchestratorReady, setOrchestratorReady] = useState(false);
 
   const saveWorkspace = async (candidate: { id: string; slug: string }) => {
     const state = useUserStore.getState();
@@ -95,15 +101,9 @@ function OnboardingSetup() {
       await state.updateOnboarding({
         setup: { ...state.onboarding?.setup, firstAgentId: agentId },
       });
-      const saved = await agentService.getAgentConfigById(agentId);
+      const saved = await getOnboardingAgentConfig(agentId, workspace.id);
       if (!saved?.agencyConfig?.heterogeneousProvider) throw new Error('FIRST_AGENT_REQUIRED');
-      const executionTarget =
-        isDesktop &&
-        saved.agencyConfig.executionTarget === 'local' &&
-        !isBuiltinEngineType(saved.agencyConfig.heterogeneousProvider.type)
-          ? 'local'
-          : 'device';
-      const boundDeviceId = saved.agencyConfig.boundDeviceId;
+      const { executionTarget, boundDeviceId } = resolveOnboardingAgentHost(saved.agencyConfig);
       await state.updateOnboarding({
         setup: {
           ...useUserStore.getState().onboarding?.setup,
@@ -112,15 +112,55 @@ function OnboardingSetup() {
           firstAgentExecutionTarget: executionTarget,
         },
       });
+      await ensureFirstAgentInWorkspace(agentId, workspace.id, { executionTarget, boundDeviceId });
+      const selectedId = useUserStore.getState().onboarding?.setup?.orchestratorAgentId ?? agentId;
+      await state.updateOnboarding({
+        setup: { ...useUserStore.getState().onboarding?.setup, orchestratorAgentId: selectedId },
+      });
+      setOrchestratorAgentId(selectedId);
+      setAgentVerified(true);
+    } catch (error) {
+      setError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selectOrchestrator = async (agentId: string) => {
+    setOrchestratorAgentId(agentId);
+    setOrchestratorReady(false);
+    setBusy(true);
+    setError(undefined);
+    try {
+      const state = useUserStore.getState();
+      await state.updateOnboarding({
+        setup: { ...state.onboarding?.setup, orchestratorAgentId: agentId },
+      });
+      setOrchestratorReady(true);
+    } catch (cause) {
+      setError(cause);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const finish = async () => {
+    if (!workspace || !orchestratorAgentId || !orchestratorReady || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const state = useUserStore.getState();
+      await state.updateOnboarding({
+        setup: { ...state.onboarding?.setup, orchestratorAgentId },
+      });
       await finishOnboardingAndNavigate(
         state.finishOnboarding,
         navigate,
-        () =>
-          ensureFirstAgentInWorkspace(agentId, workspace.id, { executionTarget, boundDeviceId }),
-        agentId,
+        () => verifyOnboardingOrchestrator(orchestratorAgentId, workspace.id),
+        firstAgentId,
       );
-    } catch (error) {
-      setError(error);
+    } catch (cause) {
+      setError(cause);
     } finally {
       setBusy(false);
     }
@@ -130,8 +170,8 @@ function OnboardingSetup() {
     <main className="orvilo-entry-surface bg-background text-foreground flex min-h-[var(--onboarding-viewport-height,100svh)] w-full flex-col">
       <OnboardingHeader
         canGoBack={false}
-        currentStep={workspace ? 2 : 1}
-        totalSteps={2}
+        currentStep={agentVerified ? 3 : workspace ? 2 : 1}
+        totalSteps={3}
         onBack={() => {}}
       />
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-10">
@@ -146,18 +186,36 @@ function OnboardingSetup() {
             {t('setup.step.workspace')}
           </li>
           <li
-            aria-current={workspace ? 'step' : undefined}
-            className={workspace ? 'text-foreground font-medium' : ''}
+            aria-current={workspace && !agentVerified ? 'step' : undefined}
+            className={workspace && !agentVerified ? 'text-foreground font-medium' : ''}
           >
             {t('setup.step.agent')}
+          </li>
+          <li
+            aria-current={agentVerified ? 'step' : undefined}
+            className={agentVerified ? 'text-foreground font-medium' : ''}
+          >
+            {t('setup.step.orchestrator')}
           </li>
         </ol>
         <div className="flex flex-col gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {t(workspace ? 'setup.agent.title' : 'setup.workspace.title')}
+            {t(
+              agentVerified
+                ? 'setup.orchestrator.title'
+                : workspace
+                  ? 'setup.agent.title'
+                  : 'setup.workspace.title',
+            )}
           </h1>
           <p className="text-muted-foreground text-sm leading-6">
-            {t(workspace ? 'setup.agent.description' : 'setup.workspace.description')}
+            {t(
+              agentVerified
+                ? 'setup.orchestrator.description'
+                : workspace
+                  ? 'setup.agent.description'
+                  : 'setup.workspace.description',
+            )}
           </p>
         </div>
         {error !== undefined && <AsyncError error={error} />}
@@ -211,6 +269,33 @@ function OnboardingSetup() {
               {t('reui.action.continue')}
             </Button>
           </form>
+        ) : agentVerified ? (
+          <>
+            <ConfiguredOrchestratorSelector
+              disabled={busy}
+              value={orchestratorAgentId}
+              workspaceId={workspace.id}
+              onSelect={(id) => void selectOrchestrator(id)}
+              onUnavailable={() => setOrchestratorReady(false)}
+              onCreated={async (id) => {
+                const saved = await getOnboardingAgentConfig(id, workspace.id);
+                const { executionTarget, boundDeviceId } = resolveOnboardingAgentHost(
+                  saved?.agencyConfig,
+                );
+                await ensureFirstAgentInWorkspace(id, workspace.id, {
+                  executionTarget,
+                  boundDeviceId,
+                });
+              }}
+            />
+            <Button
+              disabled={busy || !orchestratorReady}
+              loading={busy}
+              onClick={() => void finish()}
+            >
+              {t('setup.orchestrator.finish')}
+            </Button>
+          </>
         ) : firstAgentId ? (
           <Button disabled={busy} onClick={() => void completeAgent(firstAgentId)}>
             {busy && <Spinner data-icon="inline-start" />}

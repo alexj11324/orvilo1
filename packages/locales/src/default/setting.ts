@@ -1,4 +1,18 @@
 export default {
+  'tab.orchestrator': 'Orchestrator',
+  'orchestrator.description':
+    'Choose a configured Agent to coordinate new groups and projects. Existing conversations keep their current coordinator.',
+  'orchestrator.workspaceScope': 'Applies to your new groups and projects in this Workspace.',
+  'orchestrator.personalScope': 'Applies to your new personal groups and projects.',
+  'orchestrator.select': 'Choose Orchestrator Agent',
+  'orchestrator.unsupported': 'This engine cannot coordinate groups. Choose a supported Agent.',
+  'orchestrator.empty': 'Create and configure an Agent to choose an Orchestrator.',
+  'orchestrator.selectionUnavailable':
+    'The selected Agent is unavailable. Configure it or choose another Agent.',
+  'orchestrator.create': 'Create Agent',
+  'orchestrator.ready': 'Ready',
+  'orchestrator.saved': 'Orchestrator saved',
+
   'devices.connectWizard.cli.unavailable':
     'This release does not include a CLI installer yet. Check Releases for an available installer.',
   'devices.connectWizard.cli.viewReleases': 'View Releases',

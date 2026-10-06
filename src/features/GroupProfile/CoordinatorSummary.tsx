@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILTIN_HETEROGENEOUS_AGENT_CONFIGS, HETEROGENEOUS_AGENT_CONFIGS } from '@orvilo/types';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -10,6 +11,15 @@ import { deviceService } from '@/services/device';
 
 export const CoordinatorSummary = ({ config }: { config?: AgentRuntimeConfig }) => {
   const { t } = useTranslation('chat');
+  const runtimeProvider = config?.agencyConfig?.heterogeneousProvider;
+  const engine =
+    [...HETEROGENEOUS_AGENT_CONFIGS, ...BUILTIN_HETEROGENEOUS_AGENT_CONFIGS].find(
+      (item) => item.type === runtimeProvider?.type,
+    )?.title ?? runtimeProvider?.type;
+  const model =
+    runtimeProvider?.type === 'orvilo'
+      ? (config?.model ?? runtimeProvider.model)
+      : (runtimeProvider?.model ?? config?.model);
   const deviceId = config?.agencyConfig?.boundDeviceId;
   const { data, isLoading, error } = useSWR(deviceId ? 'group-coordinator-devices' : null, () =>
     deviceService.listDevices(),
@@ -28,13 +38,16 @@ export const CoordinatorSummary = ({ config }: { config?: AgentRuntimeConfig }) 
         : t('group.create.notConfigured');
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="text-sm font-medium">{t('group.settings.coordinatorName')}</h3>
+      <h3 className="text-sm font-medium">
+        {config?.title?.trim() || t('group.settings.coordinatorName')}
+      </h3>
       <p className="text-xs text-muted-foreground">{t('group.create.coordinatorDescription')}</p>
       <p className="mt-2 text-sm">
+        {t('group.settings.engine')}: {engine ?? t('group.create.notConfigured')}
+      </p>
+      <p className="text-sm">
         {t('group.settings.model')}:{' '}
-        {config?.model
-          ? modelDisplayLabel({ id: config.model, modelId: config.model })
-          : t('group.create.notConfigured')}
+        {model ? modelDisplayLabel({ id: model, modelId: model }) : t('group.create.notConfigured')}
       </p>
       <p className="text-sm">
         {t('group.settings.device')}: {error ? t('group.settings.deviceUnavailable') : target}

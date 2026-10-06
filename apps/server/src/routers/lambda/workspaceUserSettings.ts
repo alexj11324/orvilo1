@@ -13,6 +13,8 @@ import { EditLockService } from '@/server/services/editLock';
 import { assertCanEditResource } from '@/server/services/resourcePermission';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 
+import { getResourceConfigAccess } from './_helpers/resourceConfigGuard';
+
 /**
  * Per-user preferences scoped to the current workspace. Every procedure is
  * scoped to `(ctx.workspaceId, ctx.userId)` — the caller can only ever read
@@ -32,6 +34,7 @@ const workspaceUserSettingsProcedure = wsCompatProcedure.use(serverDatabase).use
       // re-declare with the narrowed type so downstream procedures see a
       // guaranteed string instead of the compat middleware's nullable field
       workspaceId: ctx.workspaceId,
+      preferenceAgentModel: new AgentModel(ctx.serverDB, ctx.userId, ctx.workspaceId),
       workspaceUserSettingsModel: new WorkspaceUserSettingsModel(
         ctx.serverDB,
         ctx.userId,
@@ -44,7 +47,10 @@ const workspaceUserSettingsProcedure = wsCompatProcedure.use(serverDatabase).use
 // Kept loose (`.passthrough().partial()`) so a future field addition to
 // `WorkspaceUserPreference` doesn't need a coupled zod-schema bump — the
 // type layer already constrains the write paths.
-const preferencePatchSchema = z.object({}).passthrough().partial();
+const preferencePatchSchema = z
+  .object({ orchestratorAgentId: z.string().min(1).max(128).nullish() })
+  .passthrough()
+  .partial();
 
 export const workspaceUserSettingsRouter = router({
   /**
@@ -74,6 +80,28 @@ export const workspaceUserSettingsRouter = router({
   updatePreference: workspaceUserSettingsProcedure
     .input(preferencePatchSchema)
     .mutation(async ({ ctx, input }) => {
+      if (input.orchestratorAgentId) {
+        const access = await getResourceConfigAccess(
+          {
+            db: ctx.serverDB,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+            grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+              .workspacePermissionCodes,
+          },
+          'agent',
+          input.orchestratorAgentId,
+        );
+        if (access !== 'full')
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Agent runtime configuration is unavailable',
+          });
+        await ctx.preferenceAgentModel.inheritRuntimeForCreation(input.orchestratorAgentId, {
+          purpose: 'orchestrator',
+          visibility: 'private',
+        });
+      }
       // Compat for pre-shared-sidebar clients: their "Move to Category" still
       // patches the deprecated per-member `sidebarGroupAssignments` map here,
       // which the sidebar no longer reads — so for as long as such a bundle

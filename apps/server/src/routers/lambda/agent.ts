@@ -648,6 +648,7 @@ export const agentRouter = router({
     .input(
       z.object({
         agentId: z.string(),
+        purpose: z.literal('orchestrator').optional(),
         visibility: z.enum(['private', 'public']).optional(),
         model: z.string().optional(),
         provider: z.string().optional(),

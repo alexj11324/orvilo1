@@ -118,6 +118,7 @@ interface AgentGroupMembershipImpactRef {
 class AgentService {
   getRuntimeForCreation = async (params: {
     agentId: string;
+    purpose?: 'orchestrator';
     visibility?: 'private' | 'public';
     model?: string;
     provider?: string;

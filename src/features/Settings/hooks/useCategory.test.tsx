@@ -92,6 +92,7 @@ describe('settings useCategory', () => {
 
     expect(keysOf(SettingsGroupKey.UsageAndCost)).toContain(SettingsTabs.Stats);
     expect(keysOf(SettingsGroupKey.Data)).toContain(SettingsTabs.Devices);
+    expect(keysOf(SettingsGroupKey.Agent)).toContain(SettingsTabs.Orchestrator);
 
     // The skill marketplace and the OAuth-app console were both retired, so the
     // tools group is exactly the two tabs that are still live.

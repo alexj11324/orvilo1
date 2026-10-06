@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { issueRelationsWithParent, LinearSyncWorker, projectLinearRelation } from './worker';
 
+vi.mock('@/server/services/agent/orchestratorRuntimeCreation', () => ({
+  resolveOrchestratorRuntimeForCreation: vi.fn(),
+}));
+
 const mocks = vi.hoisted(() => ({
   addComment: vi.fn(),
   capture: vi.fn(),

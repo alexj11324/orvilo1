@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as WorkspaceModelModule from '@/database/models/workspace';
+
 // serverDatabase middleware calls getServerDB(); stub it (the model mocks
 // ignore the db handle anyway).
 vi.mock('@/database/core/db-adaptor', () => ({
@@ -13,7 +15,7 @@ const mockUpdatePreference = vi.fn();
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModelModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 
@@ -26,12 +28,19 @@ vi.mock('@/database/models/workspaceUserSettings', () => ({
 }));
 
 const mockUpdateSessionGroupId = vi.fn();
+const mockInheritRuntime = vi.fn();
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(function () {
     return {
       updateSessionGroupId: mockUpdateSessionGroupId,
+      inheritRuntimeForCreation: mockInheritRuntime,
     };
   }),
+}));
+
+const mockConfigAccess = vi.fn();
+vi.mock('../_helpers/resourceConfigGuard', () => ({
+  getResourceConfigAccess: (...args: any[]) => mockConfigAccess(...args),
 }));
 
 const mockHasPermission = vi.fn();
@@ -75,6 +84,41 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     mockAssertCanEdit.mockResolvedValue(undefined);
     mockGetBlockingHolder.mockResolvedValue(null);
     mockChatGroupUpdate.mockResolvedValue({ id: 'cg_1' });
+    mockConfigAccess.mockResolvedValue('full');
+    mockInheritRuntime.mockResolvedValue({});
+  });
+
+  it('validates an explicit Orchestrator before saving the member preference', async () => {
+    await workspaceUserSettingsRouter
+      .createCaller(ctx)
+      .updatePreference({ orchestratorAgentId: 'agt_1' });
+    expect(mockInheritRuntime).toHaveBeenCalledWith('agt_1', {
+      purpose: 'orchestrator',
+      visibility: 'private',
+    });
+    expect(mockUpdatePreference).toHaveBeenCalledWith({ orchestratorAgentId: 'agt_1' });
+  });
+
+  it('does not save an Orchestrator whose runtime configuration is unavailable', async () => {
+    mockConfigAccess.mockResolvedValue('none');
+    await expect(
+      workspaceUserSettingsRouter
+        .createCaller(ctx)
+        .updatePreference({ orchestratorAgentId: 'agt_1' }),
+    ).rejects.toThrow('Agent runtime configuration is unavailable');
+    expect(mockInheritRuntime).not.toHaveBeenCalled();
+    expect(mockUpdatePreference).not.toHaveBeenCalled();
+  });
+
+  it('does not save an invalid runtime and permits clearing the selection', async () => {
+    mockInheritRuntime.mockRejectedValueOnce(new Error('ORCHESTRATOR_RUNTIME_UNSUPPORTED'));
+    const caller = workspaceUserSettingsRouter.createCaller(ctx);
+    await expect(caller.updatePreference({ orchestratorAgentId: 'agt_1' })).rejects.toThrow(
+      'ORCHESTRATOR_RUNTIME_UNSUPPORTED',
+    );
+    expect(mockUpdatePreference).not.toHaveBeenCalled();
+    await caller.updatePreference({ orchestratorAgentId: null });
+    expect(mockUpdatePreference).toHaveBeenCalledWith({ orchestratorAgentId: null });
   });
 
   describe('legacy sidebarGroupAssignments compat for "Move to Category"', () => {

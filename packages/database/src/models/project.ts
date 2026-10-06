@@ -326,7 +326,10 @@ export class ProjectModel {
       : and(this.readable(), eq(projects.userId, this.userId));
   }
 
-  async create(input: CreateProjectInput) {
+  async create(
+    input: CreateProjectInput,
+    selectedRuntime?: Awaited<ReturnType<AgentModel['getOrchestratorRuntimeForCreation']>>,
+  ) {
     const identifier = input.identifier.trim().toUpperCase();
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
@@ -455,10 +458,15 @@ export class ProjectModel {
         name: input.name,
       });
       const agentModel = new AgentModel(db, this.userId, this.workspaceId);
-      const runtime = await agentModel.getPrimeRuntimeForCreation({ visibility: input.visibility });
+      const runtime =
+        selectedRuntime ??
+        (await agentModel.getOrchestratorRuntimeForCreation({
+          visibility: input.visibility,
+        }));
       const coordinator = await agentModel.create({
         ...coordinatorConfig,
         ...runtime,
+        params: { ...coordinatorConfig.params, ...runtime.params },
         visibility: input.visibility,
         virtual: true,
       });

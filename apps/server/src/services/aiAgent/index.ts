@@ -1,9 +1,9 @@
 import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { builtinSkills } from '@orvilo/builtin-skills';
-import { isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
+import { groupSupervisorToolIds, isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
-import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
+import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -53,6 +53,7 @@ import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
+import { resolveGroupRunContext } from './helpers/groupContext';
 import { createGroupActionMemberBridgeHook } from './hooks/threadRunHooks';
 import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
@@ -653,7 +654,7 @@ export class AiAgentService {
       agentId,
       slug,
       prompt,
-      appContext,
+      appContext: requestedAppContext,
       beforeOperationStart,
       createdThreadId,
       clientIp,
@@ -691,6 +692,7 @@ export class AiAgentService {
       selectedToolIds,
       suppressUserMessage,
     } = params;
+    let appContext = requestedAppContext;
 
     // Honour client-minted row ids on a FRESH send only. Resume / regeneration
     // replays reach this method too (resumeApproval, resumeToolResult,
@@ -772,6 +774,8 @@ export class AiAgentService {
       canManageAgent,
       conversationAgentId,
       isPublicWorkspaceAgent,
+      isGroupSupervisor,
+      groupSystemContext,
       memberDeviceOverride,
       persistAgentId,
       resolvedAgentId,
@@ -793,6 +797,26 @@ export class AiAgentService {
         toolModeOverride,
       },
     );
+
+    if (appContext?.groupId) {
+      appContext = {
+        ...appContext,
+        scope: 'group',
+        orchestrationRole: isGroupSupervisor ? 'supervisor' : 'member',
+      };
+    }
+    if (appContext?.groupId && appContext.topicId) {
+      const groupTopic = await this.topicModel.findById(appContext.topicId);
+      if (groupTopic && groupTopic.groupId !== appContext.groupId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Topic does not belong to this group',
+        });
+      }
+    }
+    const effectiveRequiredToolIds = isGroupSupervisor
+      ? [...new Set([...(requiredToolIds ?? []), ...groupSupervisorToolIds])]
+      : requiredToolIds;
 
     let resumeParentMessage: Awaited<ReturnType<MessageModel['findById']>>;
 
@@ -991,7 +1015,7 @@ export class AiAgentService {
       ...new Set([
         ...(additionalPluginIds ?? []),
         ...(exclusivePluginIds ?? []),
-        ...(requiredToolIds ?? []),
+        ...(effectiveRequiredToolIds ?? []),
         ...(selectedToolIds ?? []),
         ...getActivePluginIds(agentConfig.plugins),
       ]),
@@ -1016,14 +1040,14 @@ export class AiAgentService {
       enableAgentMode: agentConfig.chatConfig?.enableAgentMode,
       exclusivePluginIds,
       externalTools,
-      requiredToolIds,
+      requiredToolIds: effectiveRequiredToolIds,
       selectedToolIds,
       // MCP-mountable harnesses are the standard-ACP runtimes whose adapter
       // delivers `session/new` mcpServers; remote platform types, the
       // non-standard adapters (cursor/devin/droid/grok/trae) and bridges that
       // drop the payload (pi-acp) never see a spec, so they never advertise
       // uncallable tools.
-      supportsBuiltinToolMount: canMountBuiltinToolSurface({
+      supportsBuiltinToolMount: canRunGroupSupervisorRuntime({
         type: turn.heteroType,
       }),
     });
@@ -1052,8 +1076,9 @@ export class AiAgentService {
         // ride the ACP system-context channel — the retired loop consumed them
         // as live tool definitions / `evalContext` during operation prep.
         extraSystemContext:
-          [toolSurface.capabilityContext, evalContext?.envPrompt].filter(Boolean).join('\n\n') ||
-          undefined,
+          [groupSystemContext, toolSurface.capabilityContext, evalContext?.envPrompt]
+            .filter(Boolean)
+            .join('\n\n') || undefined,
         heteroType: turn.heteroType,
         heterogeneousProvider: turn.heterogeneousProvider,
         hooks,
@@ -1104,13 +1129,25 @@ export class AiAgentService {
    * 2. Delegate to execAgent for the rest
    */
   async execGroupAgent(params: ExecGroupAgentParams): Promise<ExecGroupAgentResult> {
-    const { agentId, groupId, message, topicId: inputTopicId, newTopic } = params;
+    const {
+      agentId,
+      groupId,
+      message,
+      topicId: inputTopicId,
+      newTopic,
+      initialTopicMetadata,
+    } = params;
 
     log(
       'execGroupAgent: agentId=%s, groupId=%s, message=%s',
       agentId,
       groupId,
       message.slice(0, 50),
+    );
+
+    await resolveGroupRunContext(
+      { db: this.db, userId: this.userId, workspaceId: this.workspaceId },
+      { agentId, groupId, claimedRole: 'supervisor' },
     );
 
     // 1. Create topic with groupId if needed
@@ -1129,6 +1166,7 @@ export class AiAgentService {
       const snapshot = resolveNewTopicSnapshot(agentConfig);
       const topicItem = await this.topicModel.create({
         ...snapshot,
+        metadata: { ...snapshot.metadata, ...initialTopicMetadata },
         agentId,
         groupId,
         messages: newTopic?.topicMessageIds,
@@ -1146,7 +1184,7 @@ export class AiAgentService {
     // metadata and drives supervisor-flavored UI rendering.
     const result = await this.execAgent({
       agentId,
-      appContext: { groupId, orchestrationRole: 'supervisor', topicId },
+      appContext: { groupId, scope: 'group', orchestrationRole: 'supervisor', topicId },
       autoStart: true,
       prompt: message,
       trigger: RequestTrigger.Chat,

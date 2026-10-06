@@ -59,6 +59,7 @@ import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 
 import type { BrokerBridge } from './broker';
 import { createBrokerBridge } from './broker';
+import { withPrimeBuiltinMcp } from './builtinMcp';
 import { mapAgentSessionEvent, mapStopReason } from './events';
 import { RunnerLink } from './ndjson';
 import { PrimeRlmFamily } from './rlmHost';
@@ -410,6 +411,16 @@ const handleRequest = async (
         return;
       }
       const text = params.text;
+      const builtinMcp = params.builtinMcp;
+      if (
+        builtinMcp !== undefined &&
+        (!isRecord(builtinMcp) ||
+          !isNonEmptyString(builtinMcp.operationId) ||
+          !isNonEmptyString(builtinMcp.url))
+      ) {
+        link.respondError(id, -32602, 'Invalid builtin MCP mount');
+        return;
+      }
       let lastStopReason: string | undefined;
       const trackStop = entry.session.subscribe((event) => {
         if (
@@ -423,7 +434,9 @@ const handleRequest = async (
       });
       const prompt = (async () => {
         try {
-          await entry.session.promptAndWait(text);
+          await withPrimeBuiltinMcp(entry.session, builtinMcp, () =>
+            entry.session.promptAndWait(text),
+          );
         } finally {
           trackStop();
         }

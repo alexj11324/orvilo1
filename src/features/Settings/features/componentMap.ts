@@ -20,6 +20,9 @@ export const componentMap = {
   [SettingsTabs.Agents]: dynamic(() => import('../agents'), {
     loading: loading('Settings > Agents'),
   }),
+  [SettingsTabs.Orchestrator]: dynamic(() => import('@/features/Orchestrator/Settings'), {
+    loading: loading('Settings > Orchestrator'),
+  }),
   [SettingsTabs.Provider]: dynamic(() => import('../provider'), {
     loading: loading('Settings > Provider'),
   }),

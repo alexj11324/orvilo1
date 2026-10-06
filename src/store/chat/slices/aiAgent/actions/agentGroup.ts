@@ -1,6 +1,6 @@
 // Disable the auto sort key eslint rule to make the code more logic and readable
 import { LOADING_FLAT } from '@orvilo/const';
-import { type SendGroupMessageParams } from '@orvilo/types';
+import { type ExecGroupAgentParams, type SendGroupMessageParams } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
 
@@ -8,6 +8,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { type StreamEvent } from '@/services/agentExecution';
 import { agentStreamClient } from '@/services/agentExecution';
 import { type ChatStore } from '@/store/chat/store';
+import { snapshotAgentWorkingDirectory } from '@/store/chat/utils/snapshotAgentWorkingDirectory';
 import { type StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
 
@@ -92,8 +93,21 @@ export class ChatGroupChatActionImpl {
     try {
       // 2. Call backend execGroupAgent - creates messages and triggers Agent
       // Pass AbortSignal to allow cancellation during the API call
+      // The group API precreates its topic, so it must receive the same explicit
+      // directory snapshot as single-chat first sends. Existing topics keep their pin.
+      let initialTopicMetadata: ExecGroupAgentParams['initialTopicMetadata'];
+      if (!topicId) {
+        initialTopicMetadata = snapshotAgentWorkingDirectory(agentId);
+      }
       const result = await lambdaClient.aiAgent.execGroupAgent.mutate(
-        { agentId, files: fileIds, groupId, message, topicId },
+        {
+          agentId,
+          files: fileIds,
+          groupId,
+          message,
+          topicId,
+          ...(initialTopicMetadata ? { initialTopicMetadata } : {}),
+        },
         { signal: execAbortController.signal },
       );
 

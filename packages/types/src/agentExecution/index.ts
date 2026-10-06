@@ -449,6 +449,11 @@ export interface ExecGroupAgentParams {
   files?: string[];
   /** The Group ID */
   groupId: string;
+  /** Directory selected before this group topic exists; ignored for existing topics. */
+  initialTopicMetadata?: Pick<
+    NonNullable<ExecAgentAppContext['initialTopicMetadata']>,
+    'workingDirectory' | 'workingDirectoryConfig'
+  >;
   /** User message content */
   message: string;
   /** Optional: Create a new topic */

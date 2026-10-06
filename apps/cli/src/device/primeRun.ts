@@ -40,6 +40,7 @@ import {
 } from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
 import { openPrimeDeviceRun, type PrimeDeviceRun } from '@orvilo/device-prime-host';
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
+import type { AcpBuiltinToolSpec } from '@orvilo/types';
 
 import { createLambdaClient } from '../api/client';
 import { saveTask } from '../daemon/taskRegistry';
@@ -47,6 +48,7 @@ import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 import type { AgentRunAckResult, SpawnHeteroAgentRunParams } from './agentRun';
 import { registerAgentRun } from './agentRunRegistry';
+import { openPrimeBuiltinMcp } from './primeBuiltinMcp';
 
 interface PrimeRunLogger {
   error?: (msg: string) => void;
@@ -264,6 +266,7 @@ const settleOperation = async (
 
 interface PrimeRunOpInput {
   assistantMessageId?: string;
+  builtinTools?: AcpBuiltinToolSpec[];
   jwt: string;
   operationId: string;
   promptText: string;
@@ -334,13 +337,33 @@ const runOperationOnSession = async (
   const aborted = new Promise<'aborted'>((resolve) => {
     op.waiters.push(() => resolve('aborted'));
   });
+  let builtinMcp: Awaited<ReturnType<typeof openPrimeBuiltinMcp>>;
   const outcome = await Promise.race([
-    session.run.prompt(input.promptText).then((r) => {
+    (async () => {
+      try {
+        builtinMcp = await openPrimeBuiltinMcp(input);
+        return await (builtinMcp
+          ? session.run.prompt(input.promptText, builtinMcp.mount)
+          : session.run.prompt(input.promptText));
+      } catch (error) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'runtime_failed' as const,
+            retryable: false,
+            message: error instanceof Error ? error.message : String(error),
+          },
+        };
+      } finally {
+        await builtinMcp?.close();
+      }
+    })().then((r) => {
       promptResult = r;
       return 'prompt' as const;
     }),
     aborted,
   ]);
+  if (outcome === 'aborted') await builtinMcp?.close();
   await drainTurnEvents(session);
 
   let result: PrimeRunResult = 'success';
@@ -544,6 +567,7 @@ export const admitPrimeDeviceRun = async (
   // Queue the turn onto the session — the runner rejects concurrent prompts,
   // so resumed ops run strictly after the in-flight turn.
   const opInput: PrimeRunOpInput = {
+    builtinTools: params.builtinTools,
     assistantMessageId,
     jwt,
     operationId,
@@ -580,6 +604,7 @@ export const admitPrimeDeviceRun = async (
  * resume): the same serialized op path the adapter uses internally.
  */
 export const drivePrimeRun = async (input: {
+  builtinTools?: AcpBuiltinToolSpec[];
   assistantMessageId?: string;
   jwt: string;
   operationId: string;
@@ -595,6 +620,7 @@ export const drivePrimeRun = async (input: {
   primeSessions.set(input.run.activation.sessionId, session);
   startSessionPump(session);
   return runOperationOnSession(session, {
+    builtinTools: input.builtinTools,
     assistantMessageId: input.assistantMessageId,
     jwt: input.jwt,
     operationId: input.operationId,

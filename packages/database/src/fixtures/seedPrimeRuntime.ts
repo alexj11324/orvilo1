@@ -1,16 +1,17 @@
+import { UserModel } from '../models/user';
+import { WorkspaceUserSettingsModel } from '../models/workspaceUserSettings';
 import { agents, credentials, devices, providerBindings } from '../schemas';
 import type { OrviloDatabase } from '../type';
 
 /**
- * Project creation auto-provisions a coordinator agent through Prime runtime
- * inheritance, which resolves only when the caller already owns an executable
- * orvilo runtime: a Prime agent bound to a resolvable host device, plus an
- * enabled provider binding backed by an owned credential.
+ * Establish a configured Prime Orchestrator default for resource creation:
+ * a saved agent bound to a resolvable host, plus an enabled provider binding
+ * backed by an owned credential.
  *
  * Personal scope (`workspaceId` omitted) binds a private caller-owned host;
  * workspace scope needs a public workspace-filed host to satisfy the strict
- * workspace host rule. Idempotent — a repeated call for the same scope only
- * adds another candidate Prime agent, never collides on row ids.
+ * workspace host rule. Repeated calls select a new saved source Agent without
+ * colliding on credential or device row ids.
  */
 export const seedPrimeRuntime = async (
   db: OrviloDatabase,
@@ -67,15 +68,23 @@ export const seedPrimeRuntime = async (
           },
     )
     .onConflictDoNothing();
-  await db.insert(agents).values({
-    agencyConfig: {
-      boundDeviceId: deviceId,
-      executionTarget: 'device' as const,
-      heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' as const },
-    },
-    model: 'gpt-4',
-    provider: 'openai',
-    title: 'Prime Seed',
-    userId,
-  });
+  const [source] = await db
+    .insert(agents)
+    .values({
+      agencyConfig: {
+        boundDeviceId: deviceId,
+        executionTarget: 'device' as const,
+        heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' as const },
+      },
+      model: 'gpt-4',
+      provider: 'openai',
+      title: 'Prime Seed',
+      userId,
+      workspaceId,
+    })
+    .returning();
+  const preference = { orchestratorAgentId: source.id };
+  if (workspaceId)
+    await new WorkspaceUserSettingsModel(db, userId, workspaceId).updatePreference(preference);
+  else await new UserModel(db, userId).updatePreference(preference);
 };

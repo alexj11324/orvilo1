@@ -147,7 +147,7 @@ export {
 } from './registry';
 export type { HeterogeneousAgentScanMap, HeterogeneousAgentScanStatus } from './scan/types';
 export { ACP_MCP_MOUNT_AGENT_TYPES, ACP_RUNTIME_AGENT_TYPES } from './spawn/acpRuntime';
-export { canMountBuiltinToolSurface } from './spawn/builtinToolMount';
+export { canMountBuiltinToolSurface, canRunGroupSupervisorRuntime } from './spawn/builtinToolMount';
 export {
   classifyHeteroProcessFailure,
   isHeteroStatusGuideErrorData,

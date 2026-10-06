@@ -18,12 +18,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { type AgentRuntimeConfig, requestAgentRuntime } from '@/features/CreateAgent';
-import { CoordinatorSummary } from '@/features/GroupProfile/CoordinatorSummary';
+import type { AgentRuntimeConfig } from '@/features/CreateAgent';
+import ConfiguredOrchestratorSelector from '@/features/Orchestrator/ConfiguredOrchestratorSelector';
+import { copyOrchestratorWorkingDirectory } from '@/features/Orchestrator/copyWorkingDirectory';
+import { useOrchestratorPreference } from '@/features/Orchestrator/useOrchestratorPreference';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { agentService, type AvailableAgentItem } from '@/services/agent';
+import { useAgentGroupStore } from '@/store/agentGroup';
+import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useHomeStore } from '@/store/home';
 
 import { useGroupChatCreation } from './useGroupChatCreation';
@@ -44,6 +48,7 @@ export const CreateGroupChatContent = ({
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canCreate } = usePermission('create_content');
   const hasWorkspace = useHasActiveWorkspace();
+  const orchestratorPreference = useOrchestratorPreference();
   const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(
     visibility ?? 'private',
   );
@@ -57,7 +62,31 @@ export const CreateGroupChatContent = ({
   const [instructions, setInstructions] = useState('');
   const [agents, setAgents] = useState<AvailableAgentItem[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [runtime, setRuntime] = useState<AgentRuntimeConfig>();
+  const [orchestrator, setOrchestrator] = useState<{
+    agentId: string;
+    runtime?: AgentRuntimeConfig;
+    visibility: 'private' | 'public';
+    workspaceId: string | null | undefined;
+  }>();
+  const sameScope =
+    !!orchestrator && orchestrator.workspaceId === orchestratorPreference.workspaceId;
+  const orchestratorId = sameScope ? orchestrator?.agentId : orchestratorPreference.agentId;
+  const runtime =
+    sameScope && orchestrator?.visibility === selectedVisibility ? orchestrator.runtime : undefined;
+  const selectOrchestrator = useCallback(
+    (agentId: string, config: AgentRuntimeConfig) => {
+      setOrchestrator({
+        agentId,
+        runtime: config,
+        visibility: selectedVisibility,
+        workspaceId: orchestratorPreference.workspaceId,
+      });
+    },
+    [selectedVisibility, orchestratorPreference.workspaceId],
+  );
+  const clearOrchestratorRuntime = useCallback(() => {
+    setOrchestrator((current) => (current?.runtime ? { ...current, runtime: undefined } : current));
+  }, []);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<unknown>();
   const { create: finishSetup, createdId, pending, error: createError } = useGroupChatCreation();
@@ -88,11 +117,6 @@ export const CreateGroupChatContent = ({
       );
       if (request !== loadRequest.current) return;
       setAgents(configured.flatMap((item) => (item ? [item.agent] : [])));
-      const prime = configured.find(
-        (item) =>
-          item?.config.model && item.config.agencyConfig?.heterogeneousProvider?.type === 'orvilo',
-      );
-      if (prime) setRuntime((previous) => previous ?? prime.config);
     } catch (err) {
       if (request !== loadRequest.current) return;
       console.error('Failed to load group participants:', err);
@@ -107,13 +131,7 @@ export const CreateGroupChatContent = ({
   }, [load]);
 
   const create = async () => {
-    if (
-      !canCreate ||
-      !runtime ||
-      runtime.agencyConfig?.heterogeneousProvider?.type !== 'orvilo' ||
-      !title.trim()
-    )
-      return;
+    if (!canCreate || !runtime || !title.trim()) return;
     const id = await finishSetup(
       {
         content: instructions,
@@ -121,6 +139,7 @@ export const CreateGroupChatContent = ({
         supervisorConfig: {
           agencyConfig: runtime.agencyConfig,
           model: runtime.model ?? undefined,
+          params: { orchestratorSourceAgentId: orchestratorId },
           provider: runtime.provider ?? undefined,
         },
         title: title.trim(),
@@ -129,6 +148,10 @@ export const CreateGroupChatContent = ({
       selected,
     );
     if (id) {
+      const group = agentGroupSelectors.getGroupById(id)(useAgentGroupStore.getState());
+      const coordinator = group?.agents.find((agent) => agent.isSupervisor);
+      if (orchestratorId && coordinator)
+        await copyOrchestratorWorkingDirectory(orchestratorId, coordinator.id);
       navigate(`/group/${id}`);
       close();
     }
@@ -166,7 +189,6 @@ export const CreateGroupChatContent = ({
                     setSelectedVisibility(value);
                     setSelected([]);
                     setAgents([]);
-                    setRuntime(undefined);
                     setLoadError(undefined);
                     setLoading(true);
                   }}
@@ -233,22 +255,17 @@ export const CreateGroupChatContent = ({
           )}
         </section>
         <section className="flex flex-col gap-3 rounded-lg border p-4">
-          <CoordinatorSummary config={runtime} />
-          <Button
-            className="self-start"
-            disabled={pending || !!createdId}
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              const config = await requestAgentRuntime({
-                builtinOnly: true,
-                visibility: selectedVisibility,
-              });
-              if (config) setRuntime(config);
-            }}
-          >
-            {t('group.create.configureCoordinator')}
-          </Button>
+          <ConfiguredOrchestratorSelector
+            disabled={pending || !!createdId || orchestratorPreference.loading}
+            value={orchestratorId}
+            visibility={selectedVisibility}
+            workspaceId={orchestratorPreference.workspaceId}
+            onSelect={selectOrchestrator}
+            onUnavailable={clearOrchestratorRuntime}
+          />
+          {!!orchestratorPreference.error && (
+            <AsyncError error={orchestratorPreference.error} variant="inline" />
+          )}
         </section>
         <details>
           <summary className="cursor-pointer text-sm">{t('group.create.instructions')}</summary>
@@ -285,8 +302,15 @@ export const CreateGroupChatContent = ({
           {t('cancel', { ns: 'common' })}
         </Button>
         <Button
-          disabled={!canCreate || pending || loading || !runtime || !title.trim()}
           loading={pending}
+          disabled={
+            !canCreate ||
+            pending ||
+            loading ||
+            orchestratorPreference.loading ||
+            !runtime ||
+            !title.trim()
+          }
           onClick={() => void create()}
         >
           {t(createdId ? 'group.create.finish' : 'group.create.submit')}

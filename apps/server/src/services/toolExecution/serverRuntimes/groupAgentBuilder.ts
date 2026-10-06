@@ -53,6 +53,7 @@ import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import { AgentGroupRepository } from '@/database/repositories/agentGroup';
 import { DEFAULT_RESOURCE_ACCESS_LEVELS } from '@/database/schemas';
 import type { ChatGroupConfig } from '@/database/types/chatGroup';
+import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 import { AgentGroupService } from '@/server/services/agentGroup';
 import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
 
@@ -236,21 +237,17 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
 
       createGroup: async (
         params: CreateGroupParams,
-        ctx: ToolExecutionContext,
+        _ctx: ToolExecutionContext,
       ): Promise<ToolExecutionResult> => {
         try {
-          if (!ctx.agentId) throw new Error('Agent setup required: invoking agent is missing');
-          const runtimeConfig = await agentModel.inheritRuntimeForCreation(ctx.agentId, {
-            deviceId: ctx.activeDeviceId,
-            model: params.supervisor?.model,
-            provider: params.supervisor?.provider,
-            visibility: 'private',
-          });
-          if (runtimeConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo') {
-            throw new Error(
-              'Group supervisor runtime unsupported: an admitted Prime Agent is required',
-            );
-          }
+          const runtimeConfig = await resolveOrchestratorRuntimeForCreation(
+            { db: serverDB, userId, workspaceId },
+            {
+              model: params.supervisor?.model,
+              provider: params.supervisor?.provider,
+              visibility: 'private',
+            },
+          );
           const groupConfig: ChatGroupConfig = {
             ...(params.openingMessage !== undefined && { openingMessage: params.openingMessage }),
             ...(params.openingQuestions !== undefined && {
@@ -278,6 +275,7 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
               // schema type is optional-but-never-null.
               agencyConfig: runtimeConfig.agencyConfig ?? undefined,
             },
+            runtimeConfig,
           );
 
           if (workspaceId && group.visibility !== 'private') {

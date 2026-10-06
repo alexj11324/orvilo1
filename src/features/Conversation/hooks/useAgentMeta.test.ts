@@ -47,7 +47,7 @@ describe('useAgentMeta', () => {
 
     const { result } = renderHook(() => useAgentMeta());
 
-    expect(result.current).toEqual(mockMeta);
+    expect(result.current).toMatchObject({ ...mockMeta, agentId: mockAgentId });
     expect(result.current.title).toBe('My Custom Agent');
     expect(result.current.avatar).toBe('agent-avatar.png');
   });

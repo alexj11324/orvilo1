@@ -1,15 +1,14 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext } from '@orvilo/types';
-import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon, MessageSquarePlus } from 'lucide-react';
 import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import UnreadDot from '@/components/UnreadDot';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
 import Time from '@/features/Home/components/Time';
@@ -180,16 +179,7 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
           onClick={toggle}
         >
           {read ? <span className={styles.dotPlaceholder} /> : <UnreadDot />}
-          {agent && (
-            <Avatar
-              avatar={agent.avatar}
-              background={agent.backgroundColor}
-              shape={'circle'}
-              size={AVATAR_SIZE}
-              style={{ flex: 'none' }}
-              title={agentDisplayName(agent)}
-            />
-          )}
+          {agent && <AssigneeAvatar agentId={topic.agentId} size={AVATAR_SIZE} />}
           <div
             className={cn('truncate', 'block', homeType.itemTitle)}
             style={{ flex: 1, fontWeight: read ? 400 : undefined, minWidth: 0 }}

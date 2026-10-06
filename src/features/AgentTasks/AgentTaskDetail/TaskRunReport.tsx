@@ -11,6 +11,7 @@ import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useTaskStore } from '@/store/task';
 
+import AssigneeAvatar from '../features/AssigneeAvatar';
 import RunReplyEditor from './RunReplyEditor';
 import { useTaskDetailTaskId } from './TaskDetailScope';
 
@@ -63,7 +64,11 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
       {/* Who is reporting, at the top where a report names its author — not a
           footnote under the text it wrote. */}
       <div className="flex items-center gap-2">
-        <Avatar avatar={activity.author?.avatar || DEFAULT_AVATAR} size={24} />
+        {activity.author?.type === 'agent' ? (
+          <AssigneeAvatar agentId={activity.author.id} size={24} />
+        ) : (
+          <Avatar avatar={activity.author?.avatar || DEFAULT_AVATAR} size={24} />
+        )}
         <div className="font-medium">
           {activity.author?.name ?? t('taskDetail.reportedByAgent')}
         </div>

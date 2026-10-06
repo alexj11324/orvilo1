@@ -2,10 +2,12 @@
  * @vitest-environment happy-dom
  */
 import type { TaskDetailActivity } from '@orvilo/types';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { useHomeStore } from '@/store/home';
 
 import TopicCard from './TopicCard';
 
@@ -46,6 +48,42 @@ const activity = {
 } as unknown as TaskDetailActivity;
 
 describe('TopicCard', () => {
+  afterEach(() => {
+    cleanup();
+    useHomeStore.setState({ ungroupedAgents: [] });
+  });
+
+  it('renders runtime branding for an agent author whose avatar is initials', () => {
+    useHomeStore.setState({
+      ungroupedAgents: [
+        {
+          id: 'runtime-author',
+          name: 'JV',
+          title: 'Developer',
+          avatar: 'JV',
+          heterogeneousType: 'codex',
+          type: 'agent',
+          pinned: false,
+        },
+      ],
+    });
+    render(
+      <TopicCard
+        activity={{
+          ...activity,
+          author: {
+            id: 'runtime-author',
+            name: 'JV',
+            avatar: 'JV',
+            type: 'agent',
+          },
+        }}
+      />,
+    );
+    const brand = screen.getByRole('img', { name: /: JV$/ });
+    expect(brand.querySelector('svg title')?.textContent).toBe('Codex');
+    expect(brand.textContent).not.toContain('JV');
+  });
   /**
    * The budget is matched to the work because the work cannot be moved.
    * Measured across two identical runs: 3628ms and 564ms, of which the first

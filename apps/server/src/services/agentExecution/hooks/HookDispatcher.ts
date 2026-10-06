@@ -295,6 +295,9 @@ export class HookDispatcher {
 }
 
 /**
- * Singleton instance — shared across the application
+ * Next instrumentation and route layers evaluate this module separately; local hooks share one instance.
  */
-export const hookDispatcher = new HookDispatcher();
+const hookGlobal = globalThis as { __orviloHookDispatcher?: HookDispatcher };
+export const hookDispatcher = isQueueAgentRuntimeEnabled()
+  ? new HookDispatcher()
+  : (hookGlobal.__orviloHookDispatcher ??= new HookDispatcher());

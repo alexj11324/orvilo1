@@ -70,6 +70,44 @@ describe('HookDispatcher', () => {
   });
 
   describe('dispatch (local mode)', () => {
+    it('delivers and cleans up hooks across separately evaluated Next module layers', async () => {
+      const instrument = await import('../HookDispatcher');
+      const handler = vi.fn();
+      instrument.hookDispatcher.register(operationId, [
+        {
+          handler,
+          id: 'task-on-complete',
+          type: 'onComplete',
+          webhook: {
+            delivery: 'hatchet',
+            fallback: 'none',
+            url: '/api/workflows/task/on-topic-complete',
+          },
+        },
+      ]);
+      const serialized = instrument.hookDispatcher.getSerializedHooks(operationId);
+      vi.resetModules();
+      const rsc = await import('../HookDispatcher');
+      try {
+        expect(instrument.HookDispatcher).not.toBe(rsc.HookDispatcher);
+        await rsc.hookDispatcher.dispatch(operationId, 'onComplete', makeEvent(), serialized);
+        expect(handler).toHaveBeenCalledOnce();
+
+        rsc.hookDispatcher.unregister(operationId);
+        expect(instrument.hookDispatcher.hasHooks(operationId)).toBe(false);
+        await instrument.hookDispatcher.dispatch(
+          operationId,
+          'onComplete',
+          makeEvent(),
+          serialized,
+        );
+        expect(handler).toHaveBeenCalledOnce();
+      } finally {
+        instrument.hookDispatcher.unregister(operationId);
+        rsc.hookDispatcher.unregister(operationId);
+      }
+    });
+
     it('should call handler for matching hook type', async () => {
       const handler = vi.fn();
       dispatcher.register(operationId, [{ handler, id: 'test', type: 'onComplete' }]);
@@ -151,6 +189,28 @@ describe('HookDispatcher', () => {
 
     afterEach(() => {
       vi.restoreAllMocks();
+    });
+
+    it('keeps queue dispatchers and critical errors local to their module layer', async () => {
+      vi.resetModules();
+      const instrument = await import('../HookDispatcher');
+      vi.resetModules();
+      const rsc = await import('../HookDispatcher');
+      expect(instrument.hookDispatcher).not.toBe(rsc.hookDispatcher);
+      mockTriggerHatchetWorkflow.mockRejectedValueOnce(new Error('queue delivery unavailable'));
+      await expect(
+        rsc.hookDispatcher.dispatch(operationId, 'onComplete', makeEvent(), [
+          {
+            id: 'task-on-complete',
+            type: 'onComplete',
+            webhook: {
+              delivery: 'hatchet',
+              fallback: 'none',
+              url: '/api/agent/webhooks/group-member-callback',
+            },
+          },
+        ]),
+      ).rejects.toBeInstanceOf(rsc.CriticalHookDeliveryError);
     });
 
     it('should deliver webhook for hooks with webhook config', async () => {

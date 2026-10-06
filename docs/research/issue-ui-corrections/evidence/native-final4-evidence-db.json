@@ -1,0 +1,138 @@
+{
+  "messages": [
+    {
+      "id": "msg_1dD1NUcJx32LSpZe7V",
+      "role": "tool",
+      "content": "{\"result\":{\"Which scope should I use?\":\"Narrow\"}}",
+      "metadata": {
+        "heteroSessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec"
+      },
+      "tool_call_id": "call_00_dBzo5EnuYamouWslJXoJ5977",
+      "api_name": "askUserQuestion",
+      "intervention": {
+        "status": "approved"
+      },
+      "state": {
+        "askUserAnswers": {
+          "Which scope should I use?": "Narrow"
+        },
+        "heterogeneousIntervention": {
+          "summary": "Which scope should I use?",
+          "deadline": 1791302434900,
+          "provider": "claude-code",
+          "transition": "resolved",
+          "interactionKind": "question",
+          "resolutionRequestId": "4235f3ea-5602-4129-a5e2-486c81140467",
+          "notificationTransition": "resolved"
+        }
+      }
+    },
+    {
+      "id": "msg_9RurFj78VAVbFR0VqI",
+      "role": "assistant",
+      "content": "INBOX_NATIVE_CONTINUED:Narrow",
+      "metadata": {
+        "heteroSessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "heteroTextSnapshotSeq": 3
+      },
+      "tool_call_id": null,
+      "api_name": null,
+      "intervention": null,
+      "state": null
+    }
+  ],
+  "operations": [
+    {
+      "id": "op_1791301825262_agt_DbyaKzsbqpMu_tpc_tSDikMTIlTVq_e2QgX4Cp",
+      "status": "done",
+      "completion_reason": "done",
+      "topic_id": "tpc_tSDikMTIlTVq",
+      "task_id": "task_hVFOSrgDeDzg",
+      "trigger": "task",
+      "created_at": "2026-10-06T15:50:25.283Z",
+      "completed_at": "2026-10-06T15:51:30.821Z"
+    }
+  ],
+  "stream": [
+    {
+      "id": "1791301835240-0",
+      "type": "agent_intervention_request",
+      "timestamp": "1791301835240",
+      "data": {
+        "apiName": "askUserQuestion",
+        "arguments": "{\"questions\":[{\"header\":\"Scope\",\"multiSelect\":false,\"options\":[{\"description\":\"使用窄范围（仅限最小必要范围）。\",\"label\":\"Narrow\"},{\"description\":\"使用完整范围（覆盖全部范围）。\",\"label\":\"Full\"}],\"question\":\"Which scope should I use?\"}]}",
+        "deadline": 1791302434900,
+        "identifier": "claude-code",
+        "interactionKind": "question",
+        "provider": "claude-code",
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977"
+      }
+    },
+    {
+      "id": "1791301888543-0",
+      "type": "agent_intervention_response",
+      "timestamp": "1791301888542",
+      "data": {
+        "producerAck": false,
+        "result": {
+          "Which scope should I use?": "Narrow"
+        },
+        "resolutionRequestId": "4235f3ea-5602-4129-a5e2-486c81140467",
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977"
+      }
+    },
+    {
+      "id": "1791301888829-0",
+      "type": "agent_intervention_response",
+      "timestamp": "1791301888829",
+      "data": {
+        "producerAck": true,
+        "result": {
+          "Which scope should I use?": "Narrow"
+        },
+        "resolutionRequestId": "4235f3ea-5602-4129-a5e2-486c81140467",
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977"
+      }
+    },
+    {
+      "id": "1791301888832-0",
+      "type": "tool_end",
+      "timestamp": "1791301888831"
+    },
+    {
+      "id": "1791301890394-0",
+      "type": "stream_end",
+      "timestamp": "1791301890393"
+    },
+    {
+      "id": "1791301890628-0",
+      "type": "stream_end",
+      "timestamp": "1791301890627"
+    },
+    {
+      "id": "1791301890638-0",
+      "type": "visible_output_end",
+      "timestamp": "1791301890637"
+    },
+    {
+      "id": "1791301890644-0",
+      "type": "agent_runtime_end",
+      "timestamp": "1791301890643"
+    },
+    {
+      "id": "1791301890718-0",
+      "type": "agent_runtime_end",
+      "timestamp": "1791301890717"
+    }
+  ],
+  "taskTopics": [
+    {
+      "id": "103f1c92-270a-4dcc-b116-b6b5c0696397",
+      "operation_id": "op_1791301825262_agt_DbyaKzsbqpMu_tpc_tSDikMTIlTVq_e2QgX4Cp",
+      "status": "completed",
+      "run_state": "succeeded",
+      "topic_id": "tpc_tSDikMTIlTVq"
+    }
+  ],
+  "verifiedDeliverySourceCommit": "21a46d9c4c0bdfa14c352e6272d5bf8b468676a7"
+}

@@ -1,0 +1,131 @@
+{
+  "comments": {
+    "notifications": [
+      {
+        "id": "b817c053-9023-488b-8ed3-e4a48443a3b2",
+        "user_id": "user_agent_testing_001",
+        "type": "task_comment",
+        "metadata": {
+          "actor": {
+            "name": "Inbox acceptance member",
+            "userId": "user_inbox_comment_fixture_20261006"
+          }
+        },
+        "resource_id": "task_19msOcD29Usf",
+        "is_read": false,
+        "resolved_at": null
+      },
+      {
+        "id": "988a71b8-3b4b-4f79-b051-7224bf4e9942",
+        "user_id": "user_agent_testing_001",
+        "type": "mention",
+        "metadata": {
+          "actor": {
+            "name": "Inbox acceptance member",
+            "userId": "user_inbox_comment_fixture_20261006"
+          }
+        },
+        "resource_id": "task_19msOcD29Usf",
+        "is_read": false,
+        "resolved_at": null
+      }
+    ],
+    "ownerOnly": true,
+    "lexicalMention": {
+      "root": {
+        "type": "root",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Local acceptance real member mention ",
+                "type": "text"
+              },
+              {
+                "type": "mention",
+                "label": "Inbox owner",
+                "metadata": {
+                  "id": "user_agent_testing_001",
+                  "type": "member"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "privateTaskWriteDenied": "NOT_FOUND",
+    "originalMembershipRestored": true,
+    "restoredRosterSha256": "2480620b72b1de46ad7d54e2abefe2d8d18482e780d339fa61b5b5f842d2f015",
+    "temporaryAuthSessionsAndCookieFilesRemoved": true
+  },
+  "deliverySourceCommit": "21a46d9c4c0bdfa14c352e6272d5bf8b468676a7",
+  "group": {
+    "createAgentCountBefore": 13,
+    "createAgentCountAfter": 13,
+    "deleteApiSucceeded": true,
+    "deletedVirtualAgentIds": [],
+    "agentsBeforeDelete": {
+      "agentIds": [
+        "agt_2aTjLHOrGRBI",
+        "agt_5B85P8lgQbHp",
+        "agt_AWkzonGx15Rz",
+        "agt_BRGGIwMNxruV",
+        "agt_CavGqhuOw6g1",
+        "agt_DbyaKzsbqpMu",
+        "agt_e30ByWMVf2qN",
+        "agt_JbG11nrILBty",
+        "agt_lLfJjQSHQPpJ",
+        "agt_poz597Bug0nw",
+        "agt_QL3Sr0J2YPKc",
+        "agt_rVPuItAcDJps",
+        "agt_sYEzNGuXyCOz",
+        "agt_vwRot1hNoASK"
+      ],
+      "agentContentHash": "9c6660de6671874024b2c00d4be72fa9",
+      "agentAclHash": "13ef1ea971fa69b34467a24849852098"
+    },
+    "agentsAfterDelete": {
+      "agentIds": [
+        "agt_2aTjLHOrGRBI",
+        "agt_5B85P8lgQbHp",
+        "agt_AWkzonGx15Rz",
+        "agt_BRGGIwMNxruV",
+        "agt_CavGqhuOw6g1",
+        "agt_DbyaKzsbqpMu",
+        "agt_e30ByWMVf2qN",
+        "agt_JbG11nrILBty",
+        "agt_lLfJjQSHQPpJ",
+        "agt_poz597Bug0nw",
+        "agt_QL3Sr0J2YPKc",
+        "agt_rVPuItAcDJps",
+        "agt_sYEzNGuXyCOz",
+        "agt_vwRot1hNoASK"
+      ],
+      "agentContentHash": "9c6660de6671874024b2c00d4be72fa9",
+      "agentAclHash": "13ef1ea971fa69b34467a24849852098"
+    },
+    "descriptionPersisted": "Description 已保存；协调 Agent 引用已有成员，群组名称与权限保持原值。"
+  },
+  "notification": {
+    "id": "7321e5be-518e-49d7-a1c1-3d3c92b8f670",
+    "unreadReadback": "f|0|1",
+    "readReadback": "t|1|1",
+    "readbackColumns": ["isRead", "readCount", "rowCount"],
+    "snoozeReadback": "t|t|2026-10-07 11:57:50.975-04",
+    "snoozeColumns": ["isRead", "isSnoozed", "snoozedUntil"],
+    "countAfterDismiss": 0,
+    "countAfterProjectorReplay": 0,
+    "projectorRuns": ["dispatched=3 projected=3 realtime=0", "dispatched=0 projected=0 realtime=0"]
+  },
+  "project": {
+    "persistedStatus": "planned",
+    "persistedPriority": 4,
+    "membersRemovedPersistently": true,
+    "commentFailedWithDraftRetainedAcrossReload": true,
+    "successfulFinalCommentCount": 1,
+    "successfulFinalCommentDraftEmptyAfterReload": true
+  },
+  "scope": "isolated local fixture; real production route handlers and database models"
+}

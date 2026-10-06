@@ -1,7 +1,7 @@
 # Inbox native Agent questions and Issue notifications
 
 Targets: WorkInbox, existing notification projection/model/router, existing native intervention projection and reply transport. Do not own native runtime implementations unless root approves a necessary gap.
-Private live Linear evidence: /private/tmp/linear-readonly-8SYJeW/inbox-issue-detail.json/.png and inbox-actions.json; Inbox detail reuses actual Issue content; single actions read/unread, snooze, Delete notification. Native Agent question UI explicit Orvilo exception.
+Authenticated live Linear reference: Inbox detail reuses actual Issue content; single actions read/unread, snooze, Delete notification. Native Agent question UI is an explicit Orvilo exception. Private reference captures are not published.
 Acceptance: real ACP question -> durable Inbox item -> correct linked Issue + original question -> answer to ORIGINAL operation/toolCallId/session -> original Agent continues. Preserve native pending/response protocol, no new task/session, no alternative taskInputs-only queue or pretend success.
 Existing native AskUserBridge/standardAcpSession elicitation + desktop conversationControl reply work. Reuse plugin intervention.pending and canonical question renderer; durable notification is a projection of its same identity. Send response via existing local/remote operation transport. Permission vs clarification remain distinct.
 Existing server actionSources acp_intervention is generic approve/decline/no resourceId, OSS notification/reply slots no-op. Identify actual concrete path, implement smallest real shared producer/consumer seam, fail visibly on stale/unsupported transport, no success on no-op.

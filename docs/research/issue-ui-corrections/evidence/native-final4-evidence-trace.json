@@ -1,0 +1,225 @@
+{
+  "candidateSourceHashes": {
+    "src/store/chat/slices/agentRun/actions/entries/conversationControl.ts": "8fbfb946011866e9c3482c69a84b581f71ec5ed1d2cc1c9ce72b8bbb27fefacb",
+    "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts": "da2b3c508b4a30cb59c1658ffa09d738cdcd07251a4132a5caf2a8efe612ea32",
+    "apps/cli/dist/index.js": "eaaace8249510b96a32e6bc588d40e1f988e4916d887639bb803f7a64889afdb"
+  },
+  "candidateSourceUncommitted": true,
+  "continuation": {
+    "chunks": [
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "IN"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "BOX"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "_N"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "ATIVE"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "_CONT"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "IN"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "U"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "ED"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": ":N"
+      },
+      {
+        "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+        "text": "arrow"
+      }
+    ],
+    "joinedText": "INBOX_NATIVE_CONTINUED:Narrow"
+  },
+  "createPhases": [
+    "Saved lockfile",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=validate-cwd durationMs=3 totalMs=3",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=settings durationMs=36 totalMs=39",
+    "[session/query] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec resume=none apiType=native baseUrl=native",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=prepare-query durationMs=5 totalMs=44",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=sdk-initialize durationMs=1573 totalMs=1618",
+    "[session/models] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=set-model durationMs=10 model=opus outcome=success",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=models durationMs=12 totalMs=1630",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=modes durationMs=1 totalMs=1631",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=agents durationMs=0 totalMs=1631",
+    "[session/create] sessionId=9be96679-9ca1-461e-9a8a-c64df6431fec phase=register durationMs=1 totalMs=1632"
+  ],
+  "nativeQuestionAndCompletion": [
+    {
+      "method": "session/update",
+      "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+      "update": {
+        "_meta": {
+          "claudeCode": {
+            "toolName": "AskUserQuestion"
+          }
+        },
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977",
+        "sessionUpdate": "tool_call",
+        "rawInput": {},
+        "status": "pending",
+        "title": "Asking for your input",
+        "kind": "other",
+        "content": []
+      }
+    },
+    {
+      "method": "session/update",
+      "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+      "update": {
+        "_meta": {
+          "claudeCode": {
+            "toolName": "AskUserQuestion"
+          }
+        },
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977",
+        "sessionUpdate": "tool_call_update",
+        "rawInput": {
+          "questions": [
+            {
+              "question": "Which scope should I use?",
+              "header": "Scope",
+              "multiSelect": false,
+              "options": [
+                {
+                  "label": "Narrow",
+                  "description": "使用窄范围（仅限最小必要范围）。"
+                },
+                {
+                  "label": "Full",
+                  "description": "使用完整范围（覆盖全部范围）。"
+                }
+              ]
+            }
+          ]
+        },
+        "title": "Which scope should I use?",
+        "kind": "other",
+        "content": [
+          {
+            "type": "content",
+            "content": {
+              "type": "text",
+              "text": "Which scope should I use?"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "elicitation/create",
+      "id": 0,
+      "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+      "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977",
+      "mode": "form",
+      "question": "Which scope should I use?"
+    },
+    {
+      "method": "session/update",
+      "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+      "update": {
+        "_meta": {
+          "claudeCode": {
+            "toolResponse": {
+              "questions": [
+                {
+                  "question": "Which scope should I use?",
+                  "header": "Scope",
+                  "options": [
+                    {
+                      "label": "Narrow",
+                      "description": "使用窄范围（仅限最小必要范围）。"
+                    },
+                    {
+                      "label": "Full",
+                      "description": "使用完整范围（覆盖全部范围）。"
+                    }
+                  ],
+                  "multiSelect": false
+                }
+              ],
+              "answers": {
+                "Which scope should I use?": "Narrow"
+              }
+            },
+            "toolName": "AskUserQuestion"
+          }
+        },
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977",
+        "sessionUpdate": "tool_call_update"
+      }
+    },
+    {
+      "method": "session/update",
+      "sessionId": "9be96679-9ca1-461e-9a8a-c64df6431fec",
+      "update": {
+        "_meta": {
+          "claudeCode": {
+            "toolName": "AskUserQuestion"
+          }
+        },
+        "toolCallId": "call_00_dBzo5EnuYamouWslJXoJ5977",
+        "sessionUpdate": "tool_call_update",
+        "status": "completed",
+        "rawOutput": "Your questions have been answered: \"Which scope should I use?\"=\"Narrow\". You can now continue with these answers in mind.",
+        "content": [
+          {
+            "type": "content",
+            "content": {
+              "type": "text",
+              "text": "Your questions have been answered: \"Which scope should I use?\"=\"Narrow\". You can now continue with these answers in mind."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "responseId": 4,
+      "result": {
+        "stopReason": "end_turn"
+      }
+    }
+  ],
+  "operationId": "op_1791301825262_agt_DbyaKzsbqpMu_tpc_tSDikMTIlTVq_e2QgX4Cp",
+  "rpcResponseInventory": [
+    {
+      "id": 1,
+      "resultKeys": ["protocolVersion", "agentCapabilities", "agentInfo", "authMethods", "_meta"]
+    },
+    {
+      "id": 2,
+      "resultKeys": ["sessionId", "modes", "configOptions"]
+    },
+    {
+      "id": 3,
+      "resultKeys": ["configOptions"]
+    },
+    {
+      "id": 4,
+      "resultKeys": ["stopReason", "usage", "_meta"]
+    }
+  ],
+  "sessionIds": ["9be96679-9ca1-461e-9a8a-c64df6431fec"],
+  "sourceSha": "e95673222c6e1a2e3059e5c0177321aad075c066",
+  "traceFiles": ["attempt-1.stderr.log", "attempt-1.stdout.jsonl", "meta.json"],
+  "verifiedDeliverySourceCommit": "21a46d9c4c0bdfa14c352e6272d5bf8b468676a7"
+}

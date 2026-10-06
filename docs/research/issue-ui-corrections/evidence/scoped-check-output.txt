@@ -1,0 +1,30 @@
+native-question-final-check.log
+$ bun run .agents/scripts/check/cli.ts --lint --test apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts apps/server/src/services/heterogeneousAgent/__tests__/HeterogeneousPersistenceHandler.eventBranches.test.ts
+✓ 2 files · lint clean · tests 93 passed
+
+type-repair-unit.log
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v5.0.0 <candidate-checkout>
+
+
+ Test Files  7 passed (7)
+      Tests  177 passed (177)
+   Start at  12:36:42
+   Duration  29.75s (transform 42%, import 41%, tests 10%, environment 4%, setup 3%)
+
+
+type-repair-database.log
+
+ RUN  v5.0.0 <candidate-checkout>/packages/database
+
+
+ Test Files  2 passed (2)
+      Tests  3 passed | 239 skipped (242)
+   Start at  12:37:00
+   Duration  10.36s (import 78%, transform 20%, tests 1%, setup 1%)
+
+
+type-repair-lint-final.log
+$ bun run .agents/scripts/check/cli.ts --lint src/features/AgentSidebar/Header/Nav.tsx "src/routes/(main)/group/_layout/Sidebar/Header/Nav.tsx" src/features/HomeSidebar/hooks/useSessionGroupMenuItems.tsx src/features/Projects/Workspace/ProjectPlanningFields.tsx src/features/AgentTasks/shared/useAgentDisplayMeta.test.ts src/services/chat/mecha/contextEngineering.test.ts src/store/agent/slices/agent/action.test.ts src/store/agentGroup/selectors/byId.test.ts packages/database/src/models/__tests__/agent.test.ts packages/database/src/repositories/agentGroup/index.test.ts
+✓ 10 files · lint clean

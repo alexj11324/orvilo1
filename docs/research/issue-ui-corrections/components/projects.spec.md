@@ -1,7 +1,7 @@
 # Project properties and activity
 
 Targets: src/features/Projects (excluding backend policy retirement) and project icon owners.
-Private reference: /private/tmp/linear-readonly-8SYJeW/project-status.json and project-status-menu.png; user candidate screenshots.
+Reference: measured status trigger/menu from an authenticated isolated Linear session and user candidate screenshots; private reference captures are not published.
 Interaction: click property to open chooser, hover/focus paint only. Read JSON measured states before editing.
 Status trigger: 28px high, padding3px6px, border0, radius9999, transparent default, muted theme hover. Project status uses16px hexagonal glyph family; Issue uses circular14px. Reuse existing ProjectStatusIcon and ProjectActiveStatusIcon first, don't replace Project status model with Issue enums.
 Priority/lead/members/labels must use canonical existing Issue property-trigger/picker components when contracts fit; preserve source callbacks and accessible name/selected member avatar. No static outlined Select/Combobox inputs as property displays. Pills hug content; choices/search remain in popover, never disabled wrapper-shrink or stretch to full rail.

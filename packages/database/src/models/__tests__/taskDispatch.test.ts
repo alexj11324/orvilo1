@@ -1022,6 +1022,46 @@ describe('TaskDispatchModel', () => {
     ).resolves.toMatchObject({ phase: 'dispatched' });
   });
 
+  it.each(['schedule', 'heartbeat'] as const)(
+    'cancels a claimed %s dispatch when the automation pauses before dispatch',
+    async (trigger) => {
+      const task = await createTask('RUN-PAUSE', 74);
+      await db.update(tasks).set({ automationMode: trigger }).where(eq(tasks.id, task.id));
+      const model = new TaskDispatchModel(db, workspaceId);
+      const requested = await model.request({
+        idempotencyKey: `${trigger}:RUN-PAUSE:request-1`,
+        requestedBy: userId,
+        taskId: task.id,
+        trigger,
+      });
+      if (requested.state === 'busy') throw new Error('unexpected busy');
+      const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+      if (!claim) throw new Error('dispatch was not claimed');
+      await db
+        .update(tasks)
+        .set({
+          context: { execution: { parked: { at: new Date().toISOString(), reason: 'paused' } } },
+        })
+        .where(eq(tasks.id, task.id));
+
+      await expect(
+        model.transition({
+          dispatchId: requested.dispatch.id,
+          expected: ['claimed'],
+          fence: claim.fence,
+          owner: 'worker-a',
+          phase: 'dispatched',
+        }),
+      ).resolves.toBeNull();
+      await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+        fence: claim.fence + 1,
+        leaseOwner: null,
+        phase: 'canceled',
+        waitingReason: 'automation_inactive',
+      });
+    },
+  );
+
   it('fences cancellation and makes completion replay idempotent', async () => {
     const task = await createTask('RUN-8', 8);
     const model = new TaskDispatchModel(db, workspaceId);

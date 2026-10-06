@@ -1385,7 +1385,7 @@ export class TaskDispatchModel {
         const automationWaitingReason =
           task &&
           ['event', 'heartbeat', 'schedule'].includes(requestedTrigger) &&
-          (executionParkedReason(task) ||
+          (executionParkedReason(task.context) ||
             task.automationMode !== requestedTrigger ||
             task.workflowCategory === 'done' ||
             task.workflowCategory === 'canceled')

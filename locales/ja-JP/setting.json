@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "チームメンバーを管理するには追加の権限が必要です",
   "workspace.members.invite.partialSuccess": "{{success}}人が招待され、{{failed}}人が失敗しました。アドレスを確認して再試行してください。",
   "workspace.members.invite.roleLabel": "役割",
-  "workspace.members.invite.seatInsufficient": "残り{{remaining}}シートのみです。{{required}}人の新しいメンバーを招待するには、さらにシートを購入してください。",
-  "workspace.members.invite.seatInsufficientNoBuy": "残り{{remaining}}シートのみです。ワークスペースオーナーにシートの追加購入を依頼してください。",
   "workspace.members.invite.seatLimitReached": "すべての席が使用中です。席を追加購入するか、ビューアーとして招待してください（ビューアーは席を使用しません）。",
   "workspace.members.invite.seatLimitReachedFreePlan": "無料ワークスペースのすべての席が使用中です。席を増やすにはProにアップグレードするか、ビューアーとして招待してください（ビューアーは席を使用しません）。",
   "workspace.members.invite.seatLimitReachedNoBuy": "すべての席が使用中です。ワークスペースの所有者に席を追加購入するよう依頼するか、ビューアーとして招待してください（ビューアーは席を使用しません）。",

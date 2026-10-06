@@ -16,8 +16,10 @@ export default {
   'acceptance.review.writeFeedback': 'Write feedback',
   'acceptance.review.mobileDrawHint': 'Drag to mark an issue',
   'acceptance.review.mobileBrowseHint': 'Swipe to switch · scroll to read',
-  'acceptance.review.mobileDrawnHint':
-    '{{count}} region(s) marked · drag to move, corner dot to resize',
+  'acceptance.review.mobileDrawnHint_other':
+    '{{count}} regions marked · drag to move, corner dot to resize',
+  'acceptance.review.mobileDrawnHint_one':
+    '{{count}} region marked · drag to move, corner dot to resize',
   'acceptance.review.draftSaved': 'Your draft is saved on this device.',
   'acceptance.review.removeAttachment': 'Remove attachment',
   'acceptance.review.regionImage': 'Image {{image}} · Region {{region}}',
@@ -82,7 +84,8 @@ export default {
 
   'acceptance.accept.exceptionsHint':
     'Accepting means you have seen these exceptions and take the delivery with them.',
-  'acceptance.accept.exceptionsTitle': '{{count}} exception(s) still unresolved:',
+  'acceptance.accept.exceptionsTitle_other': '{{count}} exceptions still unresolved:',
+  'acceptance.accept.exceptionsTitle_one': '{{count}} exception still unresolved:',
   'acceptance.accept.summary':
     'Mark "{{title}}" as accepted: every verification round and its evidence is archived as the acceptance record.',
   'acceptance.actionError': 'The acceptance could not be updated. Try again.',
@@ -94,13 +97,18 @@ export default {
   'acceptance.actions.confirmReject': 'Reject and start the next round',
   'acceptance.actions.reject': 'Reject delivery',
   'acceptance.banner.accepted': 'Accepted · confirmed by you at {{time}}',
-  'acceptance.banner.acceptedHint':
-    '{{count}} verification round(s) archived as the acceptance record',
-  'acceptance.banner.clean': 'All {{count}} round(s) passed — awaiting your acceptance',
+  'acceptance.banner.acceptedHint_other':
+    '{{count}} verification rounds archived as the acceptance record',
+  'acceptance.banner.acceptedHint_one':
+    '{{count}} verification round archived as the acceptance record',
+  'acceptance.banner.clean_other': 'All {{count}} rounds passed — awaiting your acceptance',
+  'acceptance.banner.clean_one': 'All {{count}} round passed — awaiting your acceptance',
   'acceptance.banner.decisionHint':
     'The verdict is a recommendation; the acceptance decision is yours.',
-  'acceptance.banner.exceptions':
-    'Verification settled with {{count}} exception(s) for you to judge',
+  'acceptance.banner.exceptions_other':
+    'Verification settled with {{count}} exceptions for you to judge',
+  'acceptance.banner.exceptions_one':
+    'Verification settled with {{count}} exception for you to judge',
   'acceptance.banner.liveHint':
     'You can inspect finished checks now; the decision comes once the round settles.',
   'acceptance.banner.rejected': 'Rejected',
@@ -165,7 +173,8 @@ export default {
   'acceptance.comments.addReaction': 'Add reaction',
   'acceptance.comments.resolve': 'Mark resolved',
   'acceptance.comments.reopen': 'Reopen',
-  'acceptance.comments.resolvedSummary': 'Resolved · {{name}} · {{count}} message(s)',
+  'acceptance.comments.resolvedSummary_other': 'Resolved · {{name}} · {{count}} messages',
+  'acceptance.comments.resolvedSummary_one': 'Resolved · {{name}} · {{count}} message',
   'acceptance.comments.collapseThread': 'Collapse',
   'acceptance.comments.commented': 'commented {{time}}',
   'acceptance.comments.copyLink': 'Copy link',
@@ -185,8 +194,10 @@ export default {
   'acceptance.comments.roundCompletedBy': '{{name}} completed round {{round}}',
   'acceptance.comments.approvedBy': '{{name}} approved this delivery',
   'acceptance.comments.approvedByAtRound': '{{name}} approved round {{round}}',
-  'acceptance.comments.historicalRegions':
-    '{{count}} region note(s) on evidence a later round replaced',
+  'acceptance.comments.historicalRegions_other':
+    '{{count}} region notes on evidence a later round replaced',
+  'acceptance.comments.historicalRegions_one':
+    '{{count}} region note on evidence a later round replaced',
   'acceptance.comments.empty': 'No discussion yet.',
   'acceptance.comments.readOnly': 'You can read the discussion; sign in to take part.',
   'acceptance.comments.region': 'Region',
@@ -195,7 +206,8 @@ export default {
   'acceptance.comments.regionModalTitle': 'Circle the spot you mean',
   'acceptance.comments.regionHint': 'Drag a box on the image, then write your note.',
   'acceptance.comments.regionMissing': 'Circle a region first.',
-  'acceptance.comments.regionCount': '{{count}} region note(s)',
+  'acceptance.comments.regionCount_other': '{{count}} region notes',
+  'acceptance.comments.regionCount_one': '{{count}} region note',
   'acceptance.comments.approve': 'Approve this delivery',
   'acceptance.comments.approveDescription':
     'Your review opinion. It does not change the acceptance status — only the owner accepts the delivery.',
@@ -208,7 +220,8 @@ export default {
   'acceptance.comments.approvedAtRound': 'Approved (round {{round}})',
   'acceptance.comments.youApproved': 'You approved round {{round}}',
   'acceptance.comments.youApprovedNoRound': 'You approved this delivery',
-  'acceptance.comments.approvalCount': '{{count}} reviewer(s) approved',
+  'acceptance.comments.approvalCount_other': '{{count}} reviewers approved',
+  'acceptance.comments.approvalCount_one': '{{count}} reviewer approved',
   'acceptance.comments.participants': 'Participants',
   'acceptance.comments.author.agent': 'Agent',
   'acceptance.comments.author.former': 'Former member',
@@ -220,11 +233,16 @@ export default {
   'acceptance.comments.updateFailed': 'Failed to update the comment. Please try again.',
   'acceptance.evidence.empty':
     'No evidence artifacts were submitted for this check in this round — only the verifier’s recorded observation.',
-  'acceptance.evidence.audio': '{{count}} audio evidence item(s)',
-  'acceptance.evidence.file': '{{count}} text evidence item(s)',
-  'acceptance.evidence.image': '{{count}} image evidence item(s)',
-  'acceptance.evidence.video': '{{count}} video evidence item(s)',
-  'acceptance.feedback.annotations': '{{count}} region(s)',
+  'acceptance.evidence.audio_other': '{{count}} audio evidence items',
+  'acceptance.evidence.audio_one': '{{count}} audio evidence item',
+  'acceptance.evidence.file_other': '{{count}} text evidence items',
+  'acceptance.evidence.file_one': '{{count}} text evidence item',
+  'acceptance.evidence.image_other': '{{count}} image evidence items',
+  'acceptance.evidence.image_one': '{{count}} image evidence item',
+  'acceptance.evidence.video_other': '{{count}} video evidence items',
+  'acceptance.evidence.video_one': '{{count}} video evidence item',
+  'acceptance.feedback.annotations_other': '{{count}} regions',
+  'acceptance.feedback.annotations_one': '{{count}} region',
   'acceptance.feedback.current': 'Queued for the next round ({{count}})',
   'acceptance.feedback.empty': 'No feedback recorded this round yet.',
   'acceptance.feedback.global': 'Overall feedback',
@@ -331,18 +349,22 @@ export default {
   'acceptance.review.annotateHint':
     'Drag on the image to circle a region, then leave a note for it.',
   'acceptance.review.annotationPlaceholder': 'What is wrong in region {{index}}…',
-  'acceptance.predict.allClear':
-    'AI reviewed {{count}} pending check(s) and agrees with the current verdicts — nothing new to flag.',
+  'acceptance.predict.allClear_other':
+    'AI reviewed {{count}} pending checks and agrees with the current verdicts — nothing new to flag.',
+  'acceptance.predict.allClear_one':
+    'AI reviewed {{count}} pending check and agrees with the current verdicts — nothing new to flag.',
   'acceptance.predict.inconclusive':
     'AI could not form an opinion — no readable screenshot evidence, or the review call failed.',
   'acceptance.predict.nonePending': 'Nothing left to review — every check already has a verdict.',
-  'acceptance.predict.proposals': 'AI review finished: {{count}} check(s) flagged for you.',
+  'acceptance.predict.proposals_other': 'AI review finished: {{count}} checks flagged for you.',
+  'acceptance.predict.proposals_one': 'AI review finished: {{count}} check flagged for you.',
   'acceptance.predict.stillRunning':
     'AI review is still running — refresh in a moment to see the results.',
   'acceptance.proposal.confirm': 'Confirm and send back',
   'acceptance.proposal.misidentified': 'Real problem, wrong spot',
   'acceptance.proposal.notAnIssue': 'Not a problem',
-  'acceptance.proposal.regionCount': '{{count}} marked region(s)',
+  'acceptance.proposal.regionCount_other': '{{count}} marked regions',
+  'acceptance.proposal.regionCount_one': '{{count}} marked region',
   'acceptance.proposal.regionUnnamed': 'Marked region',
   'acceptance.proposal.request': 'Ask AI to review the pending checks',
   'acceptance.proposal.title': 'AI review · may not be met',
@@ -376,7 +398,8 @@ export default {
   'acceptance.review.zoomIn': 'Zoom in',
   'acceptance.review.zoomOut': 'Zoom out',
   'acceptance.round': 'Round {{round}}',
-  'acceptance.roundCount': '{{count}} verification round(s)',
+  'acceptance.roundCount_other': '{{count}} verification rounds',
+  'acceptance.roundCount_one': '{{count}} verification round',
   'acceptance.roundStatus.errored': 'Errored',
   'acceptance.roundStatus.failed': 'Verify failed',
   'acceptance.roundStatus.passed': 'Verify passed',
@@ -448,21 +471,29 @@ export default {
   'acceptance.workspace.actions.status': 'Status',
   'acceptance.workspace.batch.accept': 'Accept',
   'acceptance.workspace.batch.close': 'Close',
-  'acceptance.workspace.batch.deleteConfirmDescription':
-    'Delete the {{count}} selected acceptance(s)? Their verification rounds are kept — they detach into standalone reports.',
-  'acceptance.workspace.batch.deleteConfirmTitle': 'Delete {{count}} acceptance(s)?',
-  'acceptance.workspace.batch.deleteSuccess': '{{count}} acceptance(s) deleted',
+  'acceptance.workspace.batch.deleteConfirmDescription_other':
+    'Delete the {{count}} selected acceptances? Their verification rounds are kept — they detach into standalone reports.',
+  'acceptance.workspace.batch.deleteConfirmDescription_one':
+    'Delete the {{count}} selected acceptance? Their verification rounds are kept — they detach into standalone reports.',
+  'acceptance.workspace.batch.deleteConfirmTitle_other': 'Delete {{count}} acceptances?',
+  'acceptance.workspace.batch.deleteConfirmTitle_one': 'Delete {{count}} acceptance?',
+  'acceptance.workspace.batch.deleteSuccess_other': '{{count}} acceptances deleted',
+  'acceptance.workspace.batch.deleteSuccess_one': '{{count}} acceptance deleted',
   'acceptance.workspace.batch.enter': 'Select multiple',
   'acceptance.workspace.batch.error': 'The batch action failed. Try again.',
   'acceptance.workspace.batch.exit': 'Done',
   'acceptance.workspace.batch.move': 'Move to',
   'acceptance.workspace.batch.partial': '{{count}} updated, {{failed}} unchanged',
-  'acceptance.workspace.batch.projectRemoveSuccess':
-    '{{count}} acceptance(s) removed from their projects',
-  'acceptance.workspace.batch.projectSuccess': '{{count}} acceptance(s) moved to the project',
+  'acceptance.workspace.batch.projectRemoveSuccess_other':
+    '{{count}} acceptances removed from their projects',
+  'acceptance.workspace.batch.projectRemoveSuccess_one':
+    '{{count}} acceptance removed from their projects',
+  'acceptance.workspace.batch.projectSuccess_other': '{{count}} acceptances moved to the project',
+  'acceptance.workspace.batch.projectSuccess_one': '{{count}} acceptance moved to the project',
   'acceptance.workspace.batch.selectAll': 'Select all',
   'acceptance.workspace.batch.selected': '{{count}} selected',
-  'acceptance.workspace.batch.statusSuccess': '{{count}} acceptance(s) updated',
+  'acceptance.workspace.batch.statusSuccess_other': '{{count}} acceptances updated',
+  'acceptance.workspace.batch.statusSuccess_one': '{{count}} acceptance updated',
   'acceptance.workspace.checkCount': '{{count}} checks',
   'acceptance.workspace.deleteConfirm.files': 'Evidence files',
   'acceptance.workspace.deleteConfirm.filesValue':
@@ -516,7 +547,8 @@ export default {
   'acceptance.workspace.groups.time.week': 'Last 7 days',
   'acceptance.workspace.groups.time.yesterday': 'Yesterday',
   'acceptance.workspace.searchDeeper': 'Search further back',
-  'acceptance.workspace.searchScope': 'Searched the {{count}} loaded acceptance(s).',
+  'acceptance.workspace.searchScope_other': 'Searched the {{count}} loaded acceptances.',
+  'acceptance.workspace.searchScope_one': 'Searched the {{count}} loaded acceptance.',
   'acceptance.workspace.listEmpty':
     'Ingest a verification report with the CLI and its acceptance will show up here.',
   'acceptance.workspace.listEmptyTitle': 'No acceptances yet',

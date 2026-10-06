@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Permissões adicionais são necessárias para gerenciar os Membros da Equipe",
   "workspace.members.invite.partialSuccess": "{{success}} convidados, {{failed}} falharam. Verifique os endereços e tente novamente.",
   "workspace.members.invite.roleLabel": "Função",
-  "workspace.members.invite.seatInsufficient": "Apenas {{remaining}} assento(s) restante(s). Compre mais assentos para convidar {{required}} novo(s) membro(s).",
-  "workspace.members.invite.seatInsufficientNoBuy": "Apenas {{remaining}} assento(s) restante(s). Peça ao proprietário do workspace para comprar mais assentos.",
   "workspace.members.invite.seatLimitReached": "Todos os assentos estão em uso. Compre mais assentos para continuar convidando ou convide visualizadores (eles não ocupam um assento).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Todos os assentos no seu espaço de trabalho gratuito estão em uso. Faça o upgrade para o Pro para obter mais assentos ou convide visualizadores (eles não ocupam um assento).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Todos os assentos estão em uso. Peça ao proprietário do espaço de trabalho para comprar mais assentos ou convide visualizadores (eles não ocupam um assento).",

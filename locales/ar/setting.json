@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "تتطلب أذونات إضافية لإدارة أعضاء الفريق",
   "workspace.members.invite.partialSuccess": "{{success}} تمت دعوتهم، {{failed}} فشلوا. تحقق من العناوين وحاول مرة أخرى.",
   "workspace.members.invite.roleLabel": "الدور",
-  "workspace.members.invite.seatInsufficient": "تبقى فقط {{remaining}} مقعد(مقاعد). اشترِ المزيد من المقاعد لدعوة {{required}} عضو(أعضاء) جديد(جدد).",
-  "workspace.members.invite.seatInsufficientNoBuy": "تبقى فقط {{remaining}} مقعد(مقاعد). اطلب من مالك مساحة العمل شراء المزيد من المقاعد.",
   "workspace.members.invite.seatLimitReached": "جميع المقاعد مستخدمة. اشترِ المزيد من المقاعد للاستمرار في الدعوة، أو قم بدعوة المشاهدين بدلاً من ذلك (لا يشغلون مقعدًا).",
   "workspace.members.invite.seatLimitReachedFreePlan": "جميع المقاعد في مساحة العمل المجانية الخاصة بك مستخدمة. قم بالترقية إلى Pro للحصول على المزيد من المقاعد، أو قم بدعوة المشاهدين بدلاً من ذلك (لا يشغلون مقعدًا).",
   "workspace.members.invite.seatLimitReachedNoBuy": "جميع المقاعد مستخدمة. اطلب من مالك مساحة العمل شراء المزيد من المقاعد، أو قم بدعوة المشاهدين بدلاً من ذلك (لا يشغلون مقعدًا).",

@@ -149,36 +149,58 @@ export default {
   'transferRequest.incomingTitle': '{{name}} wants to transfer this agent to you',
   'transferRequest.itemIncoming': '{{name}} wants to transfer this to you',
   'transferRequest.itemOutgoing': 'Waiting for {{name}} to accept',
-  'transferRequest.manifest.cronJobs':
-    '{{count}} scheduled job(s) transfer with it, disabled until you re-enable them',
+  'transferRequest.manifest.cronJobs_other':
+    '{{count}} scheduled jobs transfer with it, disabled until you re-enable them',
+  'transferRequest.manifest.cronJobs_one':
+    '{{count}} scheduled job transfer with it, disabled until you re-enable them',
   'transferRequest.manifest.deviceReset':
     'Device bindings you cannot access will be reset on transfer',
-  'transferRequest.manifest.expertiseAdjust':
-    '{{count}} private expertise domain(s) adjust — agent-exclusive ones transfer to you, shared ones unbind',
-  'transferRequest.manifest.connectorsReset':
-    '{{count}} connector(s) will be disconnected — reauthorize them with your own account',
-  'transferRequest.manifest.knowledgeDetach':
-    '{{count}} knowledge base / file attachment(s) you cannot access will be detached',
+  'transferRequest.manifest.expertiseAdjust_other':
+    '{{count}} private expertise domains adjust — agent-exclusive ones transfer to you, shared ones unbind',
+  'transferRequest.manifest.expertiseAdjust_one':
+    '{{count}} private expertise domain adjust — agent-exclusive ones transfer to you, shared ones unbind',
+  'transferRequest.manifest.connectorsReset_other':
+    '{{count}} connectors will be disconnected — reauthorize them with your own account',
+  'transferRequest.manifest.connectorsReset_one':
+    '{{count}} connector will be disconnected — reauthorize them with your own account',
+  'transferRequest.manifest.knowledgeDetach_other':
+    '{{count}} knowledge base / file attachments you cannot access will be detached',
+  'transferRequest.manifest.knowledgeDetach_one':
+    '{{count}} knowledge base / file attachment you cannot access will be detached',
   'transferRequest.manifest.hiddenMember':
     'This group references a private agent you cannot access — its owner must share it before you can accept',
-  'transferRequest.manifestInitiator.cronJobs':
-    '{{count}} scheduled job(s) transfer with it, disabled until the new owner re-enables them',
-  'transferRequest.manifestInitiator.groupsLeave':
-    'This private agent will leave {{count}} group(s) not owned by the recipient',
-  'transferRequest.manifestInitiator.projectsLeave':
-    'This private agent will leave {{count}} project(s) not owned by the recipient',
+  'transferRequest.manifestInitiator.cronJobs_other':
+    '{{count}} scheduled jobs transfer with it, disabled until the new owner re-enables them',
+  'transferRequest.manifestInitiator.cronJobs_one':
+    '{{count}} scheduled job transfer with it, disabled until the new owner re-enables them',
+  'transferRequest.manifestInitiator.groupsLeave_other':
+    'This private agent will leave {{count}} groups not owned by the recipient',
+  'transferRequest.manifestInitiator.groupsLeave_one':
+    'This private agent will leave {{count}} group not owned by the recipient',
+  'transferRequest.manifestInitiator.projectsLeave_other':
+    'This private agent will leave {{count}} projects not owned by the recipient',
+  'transferRequest.manifestInitiator.projectsLeave_one':
+    'This private agent will leave {{count}} project not owned by the recipient',
   'transferRequest.manifestInitiator.deviceReset':
     'Device bindings the new owner cannot access will be reset',
-  'transferRequest.manifestInitiator.expertiseAdjust':
-    '{{count}} private expertise domain(s) adjust — ones exclusive to this agent transfer with it, shared ones unbind',
-  'transferRequest.manifestInitiator.connectorsReset':
-    '{{count}} connector(s) will be disconnected — your credentials never transfer; the new owner reauthorizes with their own account',
-  'transferRequest.manifestInitiator.knowledgeDetach':
-    '{{count}} knowledge base / file attachment(s) the new owner cannot access will be detached',
+  'transferRequest.manifestInitiator.expertiseAdjust_other':
+    '{{count}} private expertise domains adjust — ones exclusive to this agent transfer with it, shared ones unbind',
+  'transferRequest.manifestInitiator.expertiseAdjust_one':
+    '{{count}} private expertise domain adjust — ones exclusive to this agent transfer with it, shared ones unbind',
+  'transferRequest.manifestInitiator.connectorsReset_other':
+    '{{count}} connectors will be disconnected — your credentials never transfer; the new owner reauthorizes with their own account',
+  'transferRequest.manifestInitiator.connectorsReset_one':
+    '{{count}} connector will be disconnected — your credentials never transfer; the new owner reauthorizes with their own account',
+  'transferRequest.manifestInitiator.knowledgeDetach_other':
+    '{{count}} knowledge base / file attachments the new owner cannot access will be detached',
+  'transferRequest.manifestInitiator.knowledgeDetach_one':
+    '{{count}} knowledge base / file attachment the new owner cannot access will be detached',
   'transferRequest.manifestInitiator.hiddenMember':
     'This group references a private agent the recipient cannot access — they cannot accept until its owner shares it',
-  'transferRequest.manifestInitiator.tasksDetach':
-    '{{count}} task assignment(s) on this private agent (yours or other members’) will be detached',
+  'transferRequest.manifestInitiator.tasksDetach_other':
+    '{{count}} task assignments on this private agent (yours or other members’) will be detached',
+  'transferRequest.manifestInitiator.tasksDetach_one':
+    '{{count}} task assignment on this private agent (yours or other members’) will be detached',
   'transferRequest.manifest.unavailable':
     'The transfer summary could not be loaded. Retry to review it before accepting.',
   'transferRequest.manifestInitiator.unavailable':

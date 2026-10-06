@@ -295,6 +295,7 @@ const TaskSubtasks = memo(() => {
           if (failed > 0) {
             toast.warning(
               t('taskDetail.runAll.partialFailure', {
+                count: failed,
                 failed,
                 ok: kicked,
                 total: kicked + failed,

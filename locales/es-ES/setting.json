@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Se requieren permisos adicionales para gestionar miembros del equipo",
   "workspace.members.invite.partialSuccess": "{{success}} invitado(s), {{failed}} fallido(s). Verifica las direcciones e inténtalo nuevamente.",
   "workspace.members.invite.roleLabel": "Rol",
-  "workspace.members.invite.seatInsufficient": "Solo quedan {{remaining}} asiento(s). Compra más asientos para invitar a {{required}} nuevo(s) miembro(s).",
-  "workspace.members.invite.seatInsufficientNoBuy": "Solo quedan {{remaining}} asiento(s). Pide al propietario del espacio de trabajo que compre más asientos.",
   "workspace.members.invite.seatLimitReached": "Todos los asientos están en uso. Compre más asientos para seguir invitando, o invite a espectadores en su lugar (no ocupan un asiento).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Todos los asientos en su espacio de trabajo gratuito están en uso. Actualice a Pro para obtener más asientos, o invite a espectadores en su lugar (no ocupan un asiento).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Todos los asientos están en uso. Pida al propietario del espacio de trabajo que compre más asientos, o invite a espectadores en su lugar (no ocupan un asiento).",

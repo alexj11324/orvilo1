@@ -1155,30 +1155,12 @@ export default {
     'Public agents can only reference workspace resources. Publish a private resource to the workspace first if you want to attach it.',
 
   // First-run onboarding (the conversation landing when nothing can run yet)
-  'onboarding.api.description':
-    'Use an OpenAI-compatible provider. Your API key is stored securely in your account.',
   'onboarding.api.endpoint': 'Service URL',
   'onboarding.api.model': 'Model ID',
   'onboarding.api.key': 'API key',
   'onboarding.account': 'Profile settings',
   'onboarding.api.configure': 'Add a provider connection',
-  'onboarding.api.create': 'Verify key and create agent',
-  'onboarding.api.failed':
-    'Setup could not finish. Check your API key, endpoint, and model, then retry — your entries are kept.',
-  'onboarding.prime.create': 'Create Orvilo AI',
-  'onboarding.prime.ready': 'A model provider is already set up — Orvilo AI is ready.',
-  'onboarding.prime.unavailable': 'Orvilo AI needs an API key from a supported model provider.',
-  'onboarding.builtin.action': 'Open settings',
-  'onboarding.builtin.desc': 'No model provider is configured yet, so it cannot run.',
-  'onboarding.builtin.group': 'Built-in agent',
-  'onboarding.builtin.unavailable': 'Unavailable',
   'onboarding.footerHint': 'Configure an Agent before starting a conversation.',
-  'onboarding.installCli.desc': 'Claude Code / Codex / OpenCode…',
-  'onboarding.installCli.hint': 'Come back here to check again once it is installed.',
-  'onboarding.installCli.title': 'Install an agent CLI',
-  'onboarding.provider.desc': 'Connect one with an API key to use Orvilo AI.',
-  'onboarding.provider.title': 'Configure a model provider',
-  'onboarding.rescan': 'Check again',
   'onboarding.title': 'Set up your first Agent',
 
   // Unified agent creation: one page — name, pick an agent, pick a model,
@@ -1247,12 +1229,10 @@ export default {
   'connectAgent.providerDesc.hermes': 'Personal agent platform',
 
   // Composer agent picker · harnesses installed on this desktop
-  'localHarness.connect': 'Connect',
-  'localHarness.hideMissing': 'Hide not installed',
+  'localHarness.connect': 'Create',
   'localHarness.noneInstalled': 'No agents installed on this device yet',
   'localHarness.scanFailed': 'Could not check this device',
-  'localHarness.scanning': 'Detecting installed Agents…',
-  'localHarness.showMissing': 'Show {{total}} not installed',
+  'localHarness.scanning': 'Detecting installed agents…',
   'localHarness.title': 'Installed on this device',
 
   // Connect agent device guard banner
@@ -1821,8 +1801,10 @@ export default {
   'taskDetail.status.scheduled': 'Scheduled',
   'taskDetail.statusCascade.applyFailed': 'Could not update the task status. Try again.',
   'taskDetail.statusCascade.cancel': 'Cancel',
-  'taskDetail.statusCascade.description':
-    'This task still has {{count}} open subtask(s). Update them to {{status}} too?',
+  'taskDetail.statusCascade.description_other':
+    'This task still has {{count}} open subtasks. Update them to {{status}} too?',
+  'taskDetail.statusCascade.description_one':
+    'This task still has {{count}} open subtask. Update it to {{status}} too?',
   'taskDetail.statusCascade.loadFailed': 'Could not check the subtask statuses. Try again.',
   'taskDetail.statusCascade.parentOnly': 'Update parent only',
   'taskDetail.statusCascade.title': 'Update open subtasks too?',
@@ -1837,19 +1819,28 @@ export default {
   'taskDetail.runAll.layer': 'Layer {{index}}',
   'taskDetail.runAll.layerHint.first': 'Starts immediately',
   'taskDetail.runAll.layerHint.next': 'Waits for layer {{prev}} to finish',
-  'taskDetail.runAll.skipped.alreadyDone':
-    '{{count}} task(s) already completed or canceled — skipped',
-  'taskDetail.runAll.skipped.ineligible': '{{count}} task(s) running or scheduled — skipped',
-  'taskDetail.runAll.skipped.blockedExternally':
-    '{{count}} task(s) waiting on a blocker outside this batch — will run automatically when unblocked',
+  'taskDetail.runAll.skipped.alreadyDone_other':
+    '{{count}} tasks already completed or canceled — skipped',
+  'taskDetail.runAll.skipped.alreadyDone_one':
+    '{{count}} task already completed or canceled — skipped',
+  'taskDetail.runAll.skipped.ineligible_other': '{{count}} tasks running or scheduled — skipped',
+  'taskDetail.runAll.skipped.ineligible_one': '{{count}} task running or scheduled — skipped',
+  'taskDetail.runAll.skipped.blockedExternally_other':
+    '{{count}} tasks waiting on a blocker outside this batch — will run automatically when unblocked',
+  'taskDetail.runAll.skipped.blockedExternally_one':
+    '{{count}} task waiting on a blocker outside this batch — will run automatically when unblocked',
   'taskDetail.runAll.cycleWarning':
     'Circular dependency detected. Tasks involved in or blocked by the cycle will not run: {{members}}',
   'taskDetail.runAll.empty':
     'Nothing to run — every subtask is already completed, in flight, or stuck in a cycle.',
-  'taskDetail.runAll.confirm': 'Run {{count}} subtask(s)',
+  'taskDetail.runAll.confirm_other': 'Run {{count}} subtasks',
+  'taskDetail.runAll.confirm_one': 'Run {{count}} subtask',
   'taskDetail.runAll.cancel': 'Cancel',
-  'taskDetail.runAll.kickedOff': 'Started {{count}} subtask(s); downstream layers will follow.',
-  'taskDetail.runAll.partialFailure': 'Started {{ok}} of {{total}} subtask(s); {{failed}} failed.',
+  'taskDetail.runAll.kickedOff_other': 'Started {{count}} subtasks; downstream layers will follow.',
+  'taskDetail.runAll.kickedOff_one': 'Started {{count}} subtask; downstream layers will follow.',
+  'taskDetail.runAll.partialFailure_other':
+    'Started {{ok}} of {{total}} subtasks; {{failed}} failed.',
+  'taskDetail.runAll.partialFailure_one': 'Started {{ok}} of {{total}} subtask; {{failed}} failed.',
   'taskDetail.runAll.loading': 'Loading subtask plan...',
   'taskDetail.reassignDisabled': 'Cannot reassign agent while task is running',
   'taskDetail.handoff.title': 'Transfer execution?',

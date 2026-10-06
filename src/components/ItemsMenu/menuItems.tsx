@@ -212,7 +212,7 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
               <MenuPrimitive.Popup
                 className={cn(
                   POPUP_Z_CLASS,
-                  'cn-menu-target cn-menu-translucent w-auto min-w-[96px] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 outline-none duration-100 data-[side=right]:slide-in-from-left-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+                  'cn-menu-target cn-menu-translucent max-h-(--available-height) w-max min-w-[96px] max-w-(--available-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 outline-none duration-100 data-[side=right]:slide-in-from-left-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
                 )}
               >
                 {item.header != null && <div className="px-1.5 py-1">{item.header}</div>}

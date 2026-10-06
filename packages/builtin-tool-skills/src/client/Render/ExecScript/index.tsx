@@ -4,7 +4,7 @@ import { type BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import type { ExecScriptParams, ExecScriptState } from '../../../types';
 
@@ -28,8 +28,14 @@ const ExecScript = memo<BuiltinRenderProps<ExecScriptParams, ExecScriptState>>(
             language={'sh'}
             style={{ paddingInline: 8 }}
             variant={'ghost'}
-          />
-          {content && <CodeBlock wrap code={content} language={'text'} variant={'default'} />}
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
+          {content && (
+            <CodeBlock wrap code={content} language={'text'} variant={'default'}>
+              <CodeBlockCopyButton />
+            </CodeBlock>
+          )}
         </div>
       </div>
     );

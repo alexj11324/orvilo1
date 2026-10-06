@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { FallbackArgumentRender } from '../Render/FallbacktArgumentRender';
 import Arguments from './index';
 
 vi.mock('@/components/ActionIcon', async (importOriginal) => ({
@@ -54,6 +55,21 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('Arguments', () => {
+  it.each(['', '{}'])('keeps one divider before a result when arguments are empty (%s)', (args) => {
+    const { container } = render(
+      <FallbackArgumentRender
+        content={'"Tool finished"'}
+        requestArgs={args}
+        toolCallId="tool-result"
+      />,
+    );
+
+    expect(screen.getByText('Arguments')).toBeInTheDocument();
+    expect(screen.getByText('debug.response')).toBeInTheDocument();
+    expect(screen.getByText('Tool finished')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="separator"]')).toHaveLength(1);
+  });
+
   it('keeps argument values collapsed by default and toggles wrapping', () => {
     render(<Arguments arguments={JSON.stringify({ file_path: '/very/long/path/to/file.ts' })} />);
 

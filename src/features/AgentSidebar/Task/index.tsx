@@ -102,7 +102,7 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
     return (
       <AccordionItem value={itemKey}>
         {header}
-        <AccordionContent className="[&>div]:p-0">
+        <AccordionContent className="p-0">
           <SkeletonList />
         </AccordionContent>
       </AccordionItem>
@@ -112,7 +112,7 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
   return (
     <AccordionItem value={itemKey}>
       {header}
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         {orderedGroups.length === 0 ? (
           <div className="text-[12px] text-muted-foreground" style={{ padding: '8px 12px' }}>
             {t('taskList.kanban.emptyColumn')}

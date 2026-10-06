@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
 import { Button } from '@/components/ui/button';
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton, parseUnifiedDiff } from '@/components/ui/code-block';
 
 import { type OperationEditedFile, summarizeEditedFilesTotals } from './deriveEditedFiles';
 import { useOpenEditedFile } from './useOpenEditedFile';
@@ -196,6 +196,25 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+const EditedFileDiff = ({ patch, fileName }: { patch: string; fileName: string }) => {
+  const files = parseUnifiedDiff(patch).filter((file) => file.lines.length > 0);
+  return files.length > 0 ? (
+    files.map((file) => (
+      <CodeBlock
+        showLineNumbers
+        key={file.file}
+        label={fileName}
+        lines={file.lines}
+        variant="ghost"
+      >
+        <CodeBlockCopyButton value={patch} />
+      </CodeBlock>
+    ))
+  ) : (
+    <CodeBlock code={patch} label={fileName} language="diff" variant="ghost" />
+  );
+};
+
 const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ entry, onOpen }) => {
   const { t } = useTranslation('chat');
   const [expanded, setExpanded] = useState(false);
@@ -260,7 +279,7 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
       {hasDiff && expanded && (
         <div className={styles.patch}>
           {entry.diffTexts.map((patch, index) => (
-            <CodeBlock code={patch} key={index} label={fileName} language="diff" variant="ghost" />
+            <EditedFileDiff fileName={fileName} key={index} patch={patch} />
           ))}
         </div>
       )}
@@ -343,13 +362,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
         {hasDiff && showDiff && (
           <div className={styles.patch}>
             {entry.diffTexts.map((patch, index) => (
-              <CodeBlock
-                code={patch}
-                key={index}
-                label={fileName}
-                language="diff"
-                variant="ghost"
-              />
+              <EditedFileDiff fileName={fileName} key={index} patch={patch} />
             ))}
           </div>
         )}

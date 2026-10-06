@@ -3,7 +3,7 @@
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 interface EditLocalFileParams {
   all?: boolean;
@@ -30,7 +30,9 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
           language={'text'}
           style={{ padding: '4px 8px' }}
           variant={'default'}
-        />
+        >
+          <CodeBlockCopyButton />
+        </CodeBlock>
       </div>
       <div className="flex flex-col gap-1">
         <div className="text-muted-foreground" style={{ fontSize: 12 }}>
@@ -42,7 +44,9 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
           language={'text'}
           style={{ padding: '4px 8px' }}
           variant={'default'}
-        />
+        >
+          <CodeBlockCopyButton />
+        </CodeBlock>
       </div>
     </div>
   );

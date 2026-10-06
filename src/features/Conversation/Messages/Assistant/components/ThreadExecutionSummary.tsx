@@ -44,7 +44,10 @@ const ThreadExecutionSummary = memo<ThreadExecutionSummaryProps>(({ messageId })
   return (
     <Accordion multiple value={[]} onValueChange={handleValueChange}>
       <AccordionItem value="execution-record">
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+        <AccordionTrigger
+          className="hover:no-underline"
+          style={{ paddingBlock: 4, paddingInline: 4 }}
+        >
           <div className="text-muted-foreground">{label}</div>
         </AccordionTrigger>
         <AccordionContent>{null}</AccordionContent>

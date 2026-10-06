@@ -83,7 +83,7 @@ const Members = memo<MembersProps>(({ itemKey }) => {
           </div>
         </div>
       </div>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <div className="flex flex-col" style={{ gap: 1, paddingBlock: 1 }}>
           <GroupMember
             addModalOpen={addModalOpen}

@@ -3,7 +3,7 @@
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 interface ExecuteCodeParams {
   code?: string;
@@ -25,7 +25,11 @@ export const ExecuteCodeStreaming = memo<BuiltinStreamingProps<ExecuteCodeParams
   // Don't render if no code yet
   if (!code) return null;
 
-  return <CodeBlock wrap code={code} language={displayLanguage} />;
+  return (
+    <CodeBlock wrap code={code} language={displayLanguage}>
+      <CodeBlockCopyButton />
+    </CodeBlock>
+  );
 });
 
 ExecuteCodeStreaming.displayName = 'ExecuteCodeStreaming';

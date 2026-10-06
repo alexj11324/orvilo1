@@ -35,7 +35,11 @@ vi.mock('@/components/ui/accordion', () => ({
   },
   AccordionContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   AccordionItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  AccordionTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AccordionTrigger: ({ children }: { children?: ReactNode }) => (
+    <button data-testid="workflow-trigger" type="button">
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock('motion/react', () => ({
@@ -304,6 +308,7 @@ describe('WorkflowCollapse', () => {
     render(<WorkflowCollapse assistantMessageId="msg-1" blocks={makeBlocks()} />);
 
     const toggleButton = screen.getByRole('button', { name: 'Expand fully' });
+    expect(toggleButton.closest('[data-testid="workflow-trigger"]')).toBeNull();
     expect(getExpandedKeys()).toBe('["workflow"]');
 
     act(() => {

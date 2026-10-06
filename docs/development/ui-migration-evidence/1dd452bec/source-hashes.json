@@ -1,0 +1,8 @@
+{
+  "files": {
+    "src/components/reui/code-block/code-block-highlight.tsx": "280c7c190b0c20e92da817e614ab6b043e1e42cb3e00ef4ede06b21c216e7363",
+    "src/components/ui/code-block.tsx": "67f7add5103248ecb8754e3e85d9aac8364c80dc7dd38343418598acbb98eef8",
+    "src/components/reui/code-block/code-block.tsx": "67f7add5103248ecb8754e3e85d9aac8364c80dc7dd38343418598acbb98eef8"
+  },
+  "source": "1dd452becde9cc2dfbdfd24c360db7be80eccce4"
+}

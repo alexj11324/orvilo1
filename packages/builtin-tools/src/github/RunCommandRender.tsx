@@ -4,7 +4,7 @@ import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import {
   getGithubOutput,
@@ -76,7 +76,9 @@ const GithubRunCommandRender = memo<
             language={'sh'}
             style={{ maxHeight: 160, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
         </div>
       )}
       {outputBody && (
@@ -88,7 +90,9 @@ const GithubRunCommandRender = memo<
             language={outputLanguage}
             style={{ maxHeight: 360, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
-          />
+          >
+            {outputLanguage === 'json' ? undefined : <CodeBlockCopyButton />}
+          </CodeBlock>
         </div>
       )}
       {stderr && (
@@ -102,7 +106,9 @@ const GithubRunCommandRender = memo<
             language={'text'}
             style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
         </div>
       )}
     </div>

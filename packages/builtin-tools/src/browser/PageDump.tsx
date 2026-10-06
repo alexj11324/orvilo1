@@ -3,7 +3,7 @@
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import type { BrowserReadPageState, BrowserSnapshotState } from './types';
 
@@ -22,7 +22,9 @@ export const PageDump = memo<BuiltinRenderProps<unknown, BrowserPageDumpState, s
         language={'text'}
         style={{ maxHeight: 360 }}
         variant="ghost"
-      />
+      >
+        <CodeBlockCopyButton />
+      </CodeBlock>
     );
   },
 );

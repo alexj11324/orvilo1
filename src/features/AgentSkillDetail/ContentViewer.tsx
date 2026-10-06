@@ -6,9 +6,9 @@ import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockContent } from '@/components/ui/code-block';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
+const styles = createStaticStyles(({ css }) => ({
   codeWrapper: css`
     position: relative;
     overflow-x: auto;
@@ -17,30 +17,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     pre {
       margin: 0;
-    }
-
-    code {
-      counter-reset: line;
-    }
-
-    .line {
-      width: 100% !important;
-      margin-inline: 0 !important;
-      padding-inline: 0 !important;
-    }
-
-    .line::before {
-      content: counter(line);
-      counter-increment: line;
-      user-select: none;
-
-      display: inline-block;
-
-      width: 4ch;
-      margin-inline-end: 2ch;
-
-      color: ${cssVar.colorTextQuaternary};
-      text-align: end;
     }
   `,
   docWrapper: css`
@@ -209,7 +185,14 @@ const ContentViewer = memo<ContentViewerProps>(
 
     return (
       <div className={styles.codeWrapper}>
-        <CodeBlock code={content} language={getLanguage(selectedFile)} variant={'ghost'} />
+        <CodeBlock
+          showLineNumbers
+          code={content}
+          language={getLanguage(selectedFile)}
+          variant={'ghost'}
+        >
+          <CodeBlockContent />
+        </CodeBlock>
       </div>
     );
   },

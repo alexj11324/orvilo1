@@ -25,7 +25,7 @@ export interface MenuProps {
 
 const POPUP_CLASSES = cn(
   POPUP_Z_CLASS,
-  'cn-menu-target cn-menu-translucent min-w-32 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none',
+  'cn-menu-target cn-menu-translucent max-h-(--available-height) w-max min-w-48 max-w-(--available-width) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none',
 );
 
 export interface DropdownMenuProps {

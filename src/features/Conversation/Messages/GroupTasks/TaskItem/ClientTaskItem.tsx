@@ -144,7 +144,10 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
       onValueChange={(value) => setExpanded(value.includes(id))}
     >
       <AccordionItem value={id}>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+        <AccordionTrigger
+          className="hover:no-underline"
+          style={{ paddingBlock: 4, paddingInline: 4 }}
+        >
           {
             <TaskTitle
               metrics={metrics}

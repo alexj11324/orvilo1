@@ -5,7 +5,7 @@ import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import type { WebSearchArgs, WebSearchPluginState, WebSearchResult } from '../../../types';
 
@@ -105,7 +105,9 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
           language={'text'}
           style={{ maxHeight: 240, overflow: 'auto' }}
           variant={'ghost'}
-        />
+        >
+          <CodeBlockCopyButton />
+        </CodeBlock>
       );
     }
 

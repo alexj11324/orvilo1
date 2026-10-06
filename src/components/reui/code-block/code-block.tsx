@@ -24,6 +24,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type {
   CodeBlockDiffSpec,
@@ -1088,7 +1089,8 @@ function CodeBlock({
   /* Detected from the element type rather than a `:has()` selector. This repo
      has measured `:has()` at 85-120ms of style invalidation per DOM mutation,
      and a streaming block mutates on every chunk, so the primitive uses none. */
-  const hasHeader = containsElementType(children, CodeBlockHeader);
+  const hasHeader =
+    (children == null && Boolean(language)) || containsElementType(children, CodeBlockHeader);
 
   const [lineActions, setLineActions] = useState<CodeBlockLineActionsRender | null>(null);
   const [actionsSide, setActionsSide] = useState<CodeBlockLineActionsSide>('end');
@@ -1191,7 +1193,17 @@ function CodeBlock({
             {...props}
           >
             <CodeBlockSurfacePropsContext value={surfaceProps}>
-              {children}
+              {children ??
+                (language ? (
+                  <CodeBlockHeader
+                    className={cn('justify-between', variant === 'ghost' && 'border-0')}
+                  >
+                    <CodeBlockLanguage />
+                    <CodeBlockCopyButton />
+                  </CodeBlockHeader>
+                ) : (
+                  <CodeBlockCopyButton />
+                ))}
               {!hasContent && <CodeBlockSurface {...surfaceProps} />}
             </CodeBlockSurfacePropsContext>
           </div>
@@ -1618,8 +1630,8 @@ function CodeBlockSurface({
 /* -------------------------------------------------------------------------- */
 
 /**
- * Opt-in header. Absent, the block renders no chrome, so it nests in a Card or
- * Frame without a doubled bar. Presence flips `data-has-header` on the root,
+ * Shorthand blocks supply this header when a language is specified; composed
+ * blocks own their chrome. Presence flips `data-has-header` on the root,
  * detected from the element type rather than a `:has()` selector.
  */
 function CodeBlockHeader({ className, ...props }: ComponentProps<'div'>) {
@@ -1738,6 +1750,7 @@ function CodeBlockCopyButton({
   children,
   ...props
 }: CodeBlockCopyButtonProps) {
+  const { t } = useTranslation('common');
   const context = use(CodeBlockConfigContext);
   const inHeader = use(CodeBlockHeaderContext);
   const [copied, setCopied] = useState(false);
@@ -1792,7 +1805,7 @@ function CodeBlockCopyButton({
 
   return (
     <Button
-      aria-label={copied ? (labels?.copied ?? 'Copied') : (labels?.copy ?? 'Copy code')}
+      aria-label={copied ? (labels?.copied ?? t('copySuccess')) : (labels?.copy ?? t('copy'))}
       data-copied={copied || undefined}
       data-copy-failed={copyFailed || undefined}
       data-position={resolvedPosition}

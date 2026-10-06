@@ -48,6 +48,7 @@ const DAEMON_COMMAND = '/usr/local/bin/node /path/to/cli.js connect --daemon-chi
 
 describe('daemon manager', () => {
   beforeEach(async () => {
+    vi.stubEnv('ORVILO_CLI_HOME', undefined);
     await mkdir(mockDir, { recursive: true });
     // Default: any inspected PID looks like our daemon. Tests that need a
     // reused / unrelated PID override this per-case.
@@ -55,6 +56,7 @@ describe('daemon manager', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     fs.rmSync(tmpDir, { force: true, recursive: true });
   });
 

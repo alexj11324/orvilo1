@@ -100,6 +100,8 @@ const checkDirectory = async (cwd?: string): Promise<boolean> => {
  */
 export async function checkAutomationReadinessOnHost(
   input: AutomationReadinessRequest,
+  /** Execution artifact resolved by the trusted host, never by the remote request. */
+  primeArtifact?: string | null,
 ): Promise<AutomationReadinessResult> {
   const params = automationReadinessRequestSchema.parse(input);
   const executor =
@@ -119,7 +121,10 @@ export async function checkAutomationReadinessOnHost(
   // Device handlers support Prime descriptors. Installation remains separate
   // evidence; provider credentials are attested by the server broker.
   if (executor === 'prime') {
-    result.installed = (await probePrimeArtifactInstallation()).installed;
+    result.installed =
+      primeArtifact === null
+        ? false
+        : (await probePrimeArtifactInstallation(primeArtifact)).installed;
     result.unattended = true;
     return result;
   }

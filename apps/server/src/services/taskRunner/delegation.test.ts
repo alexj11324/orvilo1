@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 
@@ -14,6 +15,9 @@ import { TaskRunnerService } from './index';
 
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
+vi.mock('@/database/utils/agent-access', () => ({
+  assertAgentUsableBy: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('./buildTaskPrompt', () => ({
   buildTaskPrompt: vi.fn().mockResolvedValue({
     acceptanceEnabled: false,
@@ -22,7 +26,10 @@ vi.mock('./buildTaskPrompt', () => ({
   }),
 }));
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.mocked(assertAgentUsableBy).mockReset().mockResolvedValue(undefined);
+  vi.restoreAllMocks();
+});
 
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
@@ -123,6 +130,42 @@ const runParams = {
 };
 
 describe('TaskRunnerService delegated runs', () => {
+  it('rejects an inaccessible Agent before any shared task mutation or dispatch', async () => {
+    const task = baseTask({ visibility: 'public' });
+    setupHappyPath(task, { operationId: 'op-1', success: true, topicId: 'tpc_1' });
+    vi.mocked(assertAgentUsableBy).mockRejectedValueOnce(
+      new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' }),
+    );
+    const { service } = newRunner();
+
+    await expect(service.runTask({ ...runParams, delegation: undefined })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    expect(TaskModel.prototype.updateTaskConfig).not.toHaveBeenCalled();
+    expect(TaskModel.prototype.claimRunKickoff).not.toHaveBeenCalled();
+    expect(TaskDispatchService.prototype.prepare).not.toHaveBeenCalled();
+    expect(TaskTopicModel.prototype.startRun).not.toHaveBeenCalled();
+    expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
+  });
+
+  it('allows the owner to execute a shared task with their usable personal Agent', async () => {
+    const task = baseTask({ visibility: 'public' });
+    const { execAgent } = setupHappyPath(task, {
+      operationId: 'op-1',
+      success: true,
+      topicId: 'tpc_1',
+    });
+    const { service } = newRunner();
+
+    await service.runTask({ ...runParams, delegation: undefined });
+
+    expect(assertAgentUsableBy).toHaveBeenCalledWith(expect.anything(), 'agt_assignee', {
+      userId: 'user-1',
+      workspaceId: 'ws-1',
+    });
+    expect(execAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agt_assignee' }));
+  });
+
   it('executes as the grant agent — not the stored assignee — and fences the run row', async () => {
     const task = baseTask();
     const { execAgent } = setupHappyPath(task, {
@@ -133,6 +176,11 @@ describe('TaskRunnerService delegated runs', () => {
     const { agentModel, delegationService, service } = newRunner();
 
     await service.runTask(runParams);
+
+    expect(assertAgentUsableBy).toHaveBeenCalledWith(expect.anything(), 'agt_delegate', {
+      userId: 'user-1',
+      workspaceId: 'ws-1',
+    });
 
     // The dispatch binds the delegate — the stored assignee never executes.
     expect(execAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agt_delegate' }));

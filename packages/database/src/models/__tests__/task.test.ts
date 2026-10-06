@@ -3680,11 +3680,7 @@ describe('TaskModel', () => {
       expect(await alice.getComments(task.id)).toHaveLength(1);
     });
 
-    it('should count tasks blocking agent demotion (public + other creators, even private)', async () => {
-      // Backs the agent demotion guard. Blocking: public tasks by any member,
-      // and other members' tasks of ANY visibility (their creators lose the
-      // assignee after demotion). Non-blocking: the agent owner's own private
-      // tasks and tasks assigned elsewhere.
+    it('should count only other creators tasks blocking agent demotion, even private', async () => {
       const alice = new TaskModel(serverDB, userId, wsId);
       const bob = new TaskModel(serverDB, userId2, wsId);
       const agentId = 'count-assignee-agent';
@@ -3703,12 +3699,13 @@ describe('TaskModel', () => {
       });
       expect(await alice.countTasksBlockingAgentDemotion(agentId, userId)).toBe(0);
 
-      // Public tasks block regardless of creator.
+      // Owner keeps Agent execution rights even when the task is shared.
       await alice.create({
         assigneeAgentId: agentId,
         instruction: 'Alice public',
         visibility: 'public',
       });
+      expect(await alice.countTasksBlockingAgentDemotion(agentId, userId)).toBe(0);
       // Bob's PRIVATE task blocks too — invisible to Alice, but Bob would
       // lose the assignee.
       await bob.create({
@@ -3719,7 +3716,7 @@ describe('TaskModel', () => {
       // Unrelated public task does not count.
       await alice.create({ instruction: 'Unassigned public', visibility: 'public' });
 
-      expect(await alice.countTasksBlockingAgentDemotion(agentId, userId)).toBe(2);
+      expect(await alice.countTasksBlockingAgentDemotion(agentId, userId)).toBe(1);
 
       // Personal mode: guard is inert.
       const personal = new TaskModel(serverDB, userId);

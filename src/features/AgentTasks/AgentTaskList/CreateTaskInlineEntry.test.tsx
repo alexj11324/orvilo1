@@ -190,6 +190,7 @@ vi.mock('../features/AssigneeAgentSelector', () => ({
     <div data-current-agent-id={currentAgentId ?? ''} data-testid="agent-selector">
       {children}
       <span data-testid="select-agent" onClick={() => onChange?.('agent-1')} />
+      <span data-testid="select-private-agent" onClick={() => onChange?.('agent-private')} />
     </div>
   ),
 }));
@@ -227,16 +228,19 @@ vi.mock('../features/TaskVisibilityTag', () => ({
   default: ({
     children,
     lockedReason,
+    onChange,
     visibility,
   }: {
     children?: ReactNode;
     lockedReason?: string;
+    onChange?: (visibility: 'private' | 'public') => void;
     visibility: 'private' | 'public';
   }) => (
     <button
       data-locked={String(Boolean(lockedReason))}
       data-testid="visibility-trigger"
       data-visibility={visibility}
+      onClick={() => !lockedReason && onChange?.(visibility === 'public' ? 'private' : 'public')}
     >
       {children}
     </button>
@@ -301,12 +305,27 @@ describe('CreateTaskInlineEntry', () => {
     expect(focusMock).not.toHaveBeenCalled();
   });
 
-  it('clears the private-agent visibility lock when switching to the all-tasks create form', () => {
+  it('submits a shared task with its private agent and responsible member', async () => {
+    editorMarkdownMock.value = 'Coordinate the release';
     const { rerender } = render(
       <CreateTaskInlineEntry lockAssignee agentId="agent-private" variant="hero" />,
     );
 
-    expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-locked', 'true');
+    expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-locked', 'false');
+    expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-visibility', 'public');
+
+    fireEvent.click(screen.getByTestId('select-member'));
+    fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
+
+    await waitFor(() =>
+      expect(createTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assigneeAgentId: 'agent-private',
+          assigneeUserId: 'user-1',
+          visibility: 'public',
+        }),
+      ),
+    );
 
     rerender(<CreateTaskInlineEntry variant="hero" />);
 
@@ -403,13 +422,13 @@ describe('CreateTaskInlineEntry', () => {
     });
   });
 
-  it('drops an incompatible restored member when the assigned agent is private', async () => {
+  it('restores a shared draft with both a private agent and its responsible member', async () => {
     localStorage.setItem(
       'orvilo:task-create-draft:workspace-1:all',
       JSON.stringify({
         assigneeAgentId: 'agent-private',
         assigneeUserId: 'user-1',
-        markdown: 'Coordinate a private task',
+        markdown: 'Coordinate a shared task',
         visibility: 'public',
       }),
     );
@@ -421,11 +440,54 @@ describe('CreateTaskInlineEntry', () => {
         'data-current-agent-id',
         'agent-private',
       );
-      expect(screen.getByTestId('member-selector')).toHaveAttribute('data-current-user-id', '');
-      expect(screen.getByTestId('visibility-trigger')).toHaveAttribute(
-        'data-visibility',
-        'private',
+      expect(screen.getByTestId('member-selector')).toHaveAttribute(
+        'data-current-user-id',
+        'user-1',
       );
+      expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-visibility', 'public');
+    });
+  });
+
+  it('preserves an explicit private task choice when switching assigned agents', async () => {
+    editorMarkdownMock.value = 'Keep my task private';
+    render(<CreateTaskInlineEntry variant="hero" />);
+
+    fireEvent.click(screen.getByTestId('visibility-trigger'));
+    fireEvent.click(screen.getByTestId('select-private-agent'));
+    expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-locked', 'false');
+    expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-visibility', 'private');
+
+    fireEvent.click(screen.getByTestId('select-agent'));
+    fireEvent.click(screen.getByTestId('select-private-agent'));
+    fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
+
+    await waitFor(() =>
+      expect(createTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({ assigneeAgentId: 'agent-private', visibility: 'private' }),
+      ),
+    );
+  });
+
+  it('keeps a restored task shared when it has another responsible member', async () => {
+    localStorage.setItem(
+      'orvilo:task-create-draft:workspace-1:all',
+      JSON.stringify({
+        assigneeAgentId: 'agent-private',
+        assigneeUserId: 'user-1',
+        markdown: 'Coordinate a shared task',
+        visibility: 'private',
+      }),
+    );
+
+    render(<CreateTaskInlineEntry variant="hero" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('member-selector')).toHaveAttribute(
+        'data-current-user-id',
+        'user-1',
+      );
+      expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-visibility', 'public');
+      expect(screen.getByTestId('visibility-trigger')).toHaveAttribute('data-locked', 'true');
     });
   });
 

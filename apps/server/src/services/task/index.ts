@@ -131,8 +131,7 @@ export interface CreateTaskInput {
    */
   triageStatus?: TaskTriageStatus;
   // Explicit visibility for the new task. When omitted, the service derives it
-  // from `parentTaskId` (if present) or `assigneeAgentId`'s visibility, and
-  // finally falls back to the schema default ('public').
+  // from `parentTaskId` (if present), otherwise defaults to workspace-visible.
   visibility?: 'private' | 'public';
   /** Workflow-category preset — a work-query board column's `+`. */
   workflowCategory?: TaskWorkflowCategory;
@@ -234,34 +233,13 @@ export class TaskService {
     // association may be applied after creation and must take precedence over
     // the then-current project or team default.
 
-    // Pull the model/provider snapshot and the agent's visibility in a single
-    // SQL — both are needed for the same `tasks.create` row, and a second
-    // round-trip would just retrace the same primary-key path.
-    let agentVisibility: 'private' | 'public' | null = null;
+    // Snapshot the execution model independently of the task's audience.
     if (input.assigneeAgentId) {
       const agentInfo = await this.agentModel.getAgentSnapshotForTaskCreate(input.assigneeAgentId);
-      if (agentInfo) {
-        if (agentInfo.snapshot) createData.config = { ...agentInfo.snapshot, ...createData.config };
-        agentVisibility = agentInfo.visibility;
-      }
+      if (agentInfo?.snapshot) createData.config = { ...agentInfo.snapshot, ...createData.config };
     }
 
-    // Resolve visibility precedence: explicit caller value > parent task
-    // (subtasks inherit) > assignee agent (private agent → private task) >
-    // schema default ('public').
-    if (createData.visibility === undefined) {
-      if (parentVisibility) {
-        createData.visibility = parentVisibility;
-      } else if (agentVisibility === 'private') {
-        createData.visibility = 'private';
-      }
-    }
-
-    // Invariant: a public task can never be executed by a private agent. The
-    // explicit-override branch above can produce this combination if the
-    // caller passes `visibility='public'` while picking a private agent, so
-    // we have to assert here even though the inference path can't.
-    this.assertAgentVisibilityCompat(createData.visibility, agentVisibility);
+    createData.visibility ??= parentVisibility ?? 'public';
 
     // Invariant: a private task can only be assigned to its creator — the
     // resolved visibility (explicit, inherited, or agent-derived) is what
@@ -300,30 +278,6 @@ export class TaskService {
       code: 'BAD_REQUEST',
       message:
         'A subtask cannot be more public than its parent. Promote the parent task first, or make this subtask private.',
-    });
-  }
-
-  /**
-   * Enforces the invariant: a public task must never be assigned to a private
-   * agent. Throws `BAD_REQUEST` on violation. The reverse combination
-   * (private task + public agent) is allowed by design — a workspace agent
-   * may execute owner-only tasks without leaking, since task content stays
-   * scoped to the creator via `ownership()`.
-   *
-   * `agentVisibility = null` means either no assignee or the agent could not
-   * be resolved (e.g. caller cannot see it). In both cases the combo is
-   * unconstrained because no private agent is actually involved.
-   */
-  assertAgentVisibilityCompat(
-    taskVisibility: 'private' | 'public' | undefined,
-    agentVisibility: 'private' | 'public' | null,
-  ): void {
-    if (taskVisibility !== 'public') return;
-    if (agentVisibility !== 'private') return;
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message:
-        'A public task cannot be assigned to a private agent. Either pick a workspace agent or make the task private first.',
     });
   }
 
@@ -1449,7 +1403,6 @@ export class TaskService {
       : null;
     if (input.toAgentId !== null) {
       await this.assertAssigneeAgentBelongsToUser(input.toAgentId);
-      this.assertAgentVisibilityCompat(task.visibility, successorAgentInfo?.visibility ?? null);
     }
 
     const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);

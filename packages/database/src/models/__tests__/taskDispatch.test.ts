@@ -249,6 +249,62 @@ const seedEventEvidence = async (taskId: string) => {
 };
 
 describe('TaskDispatchModel', () => {
+  it('authorizes the current executor as the runner user, honoring delegation over assignee', async () => {
+    const task = await createTask('AUTH-1', 1);
+    await db.insert(agents).values([
+      { id: 'agt-owner-private', userId, workspaceId, visibility: 'private' },
+      { id: 'agt-delegate-private', userId: otherUserId, workspaceId, visibility: 'private' },
+    ]);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'agt-owner-private' })
+      .where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = { taskId: task.id, trigger: 'manual' as const, requestedBy: 'audit-actor' };
+
+    await expect(
+      model.request({
+        ...input,
+        idempotencyKey: 'auth-denied',
+        executionUserId: otherUserId,
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(
+      await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
+    ).toHaveLength(0);
+    expect(
+      (await db.select().from(tasks).where(eq(tasks.id, task.id)))[0].executionGeneration,
+    ).toBe(0);
+
+    expect(
+      (
+        await model.request({
+          ...input,
+          idempotencyKey: 'auth-owner',
+          executionUserId: userId,
+        })
+      ).state,
+    ).toBe('created');
+
+    const delegatedTask = await createTask('AUTH-2', 2);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'agt-owner-private' })
+      .where(eq(tasks.id, delegatedTask.id));
+    expect(
+      (
+        await model.request({
+          taskId: delegatedTask.id,
+          trigger: 'manual',
+          requestedBy: 'audit-actor',
+          idempotencyKey: 'auth-delegate',
+          executionUserId: otherUserId,
+          delegatedAgentId: 'agt-delegate-private',
+        })
+      ).state,
+    ).toBe('created');
+  });
+
   it('persists event identity and applies project admission on duplicate delivery', async () => {
     const task = await createTask('EVT-1', 101);
     const [project] = await db

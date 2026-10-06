@@ -35,7 +35,6 @@ import TaskVisibilityChipLabel from '../features/TaskVisibilityChipLabel';
 import TaskVisibilityTag from '../features/TaskVisibilityTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
-import { useAgentVisibility } from '../shared/useAgentVisibility';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 
 export interface CreateTaskContentProps {
@@ -115,23 +114,12 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     const [pickedTeamId, setPickedTeamId] = useState<string | undefined>(teamId);
     useEffect(() => setPickedTeamId(teamId), [teamId]);
 
-    const assigneeVisibility = useAgentVisibility(assigneeAgentId);
-    const isPrivateAgent = assigneeVisibility === 'private';
     const selfUserId = useUserStore(userProfileSelectors.userId);
     const isOtherMemberAssignee = Boolean(assigneeUserId) && assigneeUserId !== selfUserId;
 
-    // Resolve the two visibility constraints in one place so an old draft or an
-    // externally privatized agent cannot make separate effects toggle forever.
-    // A private agent is the stronger constraint, so drop an incompatible member.
     useEffect(() => {
-      if (isPrivateAgent) {
-        if (isOtherMemberAssignee) setAssigneeUserId(undefined);
-        if (visibility === 'public') setVisibility('private');
-        return;
-      }
-
       if (isOtherMemberAssignee && visibility === 'private') setVisibility('public');
-    }, [isOtherMemberAssignee, isPrivateAgent, visibility]);
+    }, [isOtherMemberAssignee, visibility]);
 
     const editor = useEditor();
     const instructionRef = useRef('');
@@ -404,11 +392,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 <div className="text-[12px]">{assigneeMeta?.title}</div>
               </div>
             ) : (
-              <AssigneeAgentSelector
-                currentAgentId={assigneeAgentId}
-                taskVisibility={isOtherMemberAssignee ? 'public' : undefined}
-                onChange={handleAgentChange}
-              >
+              <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
                 <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeAgentId ? (
                     <>
@@ -442,16 +426,11 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               <TaskVisibilityTag
                 visibility={visibility}
                 lockedReason={
-                  isPrivateAgent
-                    ? t('createTask.visibility.privateAgentLocked', {
-                        defaultValue: 'Private agents can only run private tasks.',
+                  isOtherMemberAssignee
+                    ? t('createTask.visibility.memberAssigneeLocked', {
+                        defaultValue: 'A task assigned to a member stays visible to the workspace.',
                       })
-                    : isOtherMemberAssignee
-                      ? t('createTask.visibility.memberAssigneeLocked', {
-                          defaultValue:
-                            'A task assigned to a member stays visible to the workspace.',
-                        })
-                      : undefined
+                    : undefined
                 }
                 onChange={setVisibility}
               >

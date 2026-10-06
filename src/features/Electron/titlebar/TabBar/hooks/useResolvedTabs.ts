@@ -33,7 +33,8 @@ export const resolveTab = (
   liveDynamic?: DynamicRouteMeta | null,
   liveDynamicUrl?: string | null,
 ): ResolvedTab => {
-  const staticMeta = matchRouteMeta(routes, tab.url).static;
+  const matched = matchRouteMeta(routes, tab.url);
+  const staticMeta = matched.static;
   const titleKey = staticMeta.tabTitleKey ?? staticMeta.titleKey;
 
   const live =
@@ -55,6 +56,7 @@ export const resolveTab = (
   return {
     isActive,
     meta: {
+      agentId: matched.params.aid,
       avatar,
       backgroundColor,
       icon: staticMeta.icon ?? FALLBACK_ICON,

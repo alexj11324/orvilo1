@@ -74,14 +74,10 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
         >
           {
             <TaskTitle
+              agent={agent ? { id: agentId } : undefined}
               metrics={metrics}
               status={status}
               title={title}
-              agent={
-                agent
-                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
-                  : undefined
-              }
             />
           }
         </AccordionTrigger>

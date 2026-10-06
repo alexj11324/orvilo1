@@ -1,12 +1,11 @@
-import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -88,14 +87,9 @@ const StackedAgentAvatar = memo<{ agentId: string }>(({ agentId }) => {
   if (!agent) return null;
 
   return (
-    <Avatar
-      avatar={agent.avatar}
-      background={agent.backgroundColor}
-      className={styles.stackedAvatar}
-      shape={'circle'}
-      size={AVATAR_SIZE}
-      title={agentDisplayName(agent)}
-    />
+    <span className={styles.stackedAvatar}>
+      <AssigneeAvatar agentId={agentId} size={AVATAR_SIZE} />
+    </span>
   );
 });
 

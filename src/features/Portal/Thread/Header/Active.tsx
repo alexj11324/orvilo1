@@ -4,19 +4,16 @@ import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
 import BubblesLoading from '@/components/BubblesLoading';
 import { Badge } from '@/components/reui/badge';
 import { LOADING_FLAT } from '@/const/message';
-import { useAgentStore } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors } from '@/store/chat/selectors';
 import { oneLineEllipsis } from '@/styles';
 
 const Active = memo(() => {
   const currentThread = useChatStore(portalThreadSelectors.portalCurrentThread, isEqual);
-  const agentMeta = useAgentStore(agentSelectors.getAgentMetaById(currentThread?.agentId || ''));
 
   if (!currentThread) return null;
 
@@ -27,7 +24,7 @@ const Active = memo(() => {
 
   return (
     <div className="flex flex-row items-center gap-2" style={{ marginInlineStart: 4 }}>
-      <Avatar {...agentMeta} size={24} />
+      <AssigneeAvatar agentId={currentThread.agentId} size={24} />
       <div
         className={cn('truncate min-w-0', oneLineEllipsis)}
         style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}

@@ -5,7 +5,7 @@ import { getConnectableProvider } from '@/features/ConnectAgent/providers';
 
 /** Runtime branding is independent of an agent's editable name and avatar. */
 const AgentRuntimeIcon = memo<{ size?: number; type?: string | null }>(({ size = 24, type }) => {
-  if (!type || type === 'orvilo') {
+  if (type === 'orvilo') {
     return (
       <img
         aria-hidden

@@ -19,14 +19,15 @@ export async function githubEventsWebhook(c: Context): Promise<Response> {
       inbox: new SqlMcpEventInbox(database),
     });
     const response = await receiver.receive(c.req.raw, token);
+    const code = (await response.clone().json()).code;
     if (
-      response.status === 202 &&
-      ['accepted', 'duplicate'].includes((await response.clone().json()).code)
+      (response.status === 200 && code === 'verified') ||
+      (response.status === 202 && ['accepted', 'duplicate'].includes(code))
     ) {
       try {
         await scheduleMcpEventInboxSweep();
       } catch {
-        console.error('[github-events] Inbox wake-up unavailable; receipt remains queued');
+        console.error('[github-events] Inbox wake-up unavailable');
       }
     }
     return response;

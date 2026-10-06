@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatSettingsTabs } from '@/store/global/initialState';
+import { useUserStore } from '@/store/user';
 
 import Content from './Content';
 
@@ -74,6 +75,9 @@ vi.mock('@/store/serverConfig', () => ({
 
 describe('AgentSettings Content', () => {
   beforeEach(() => {
+    useUserStore.setState({
+      preference: { lab: { enableAgentGraphConfig: false, enableSelfLearning: false } },
+    });
     mocks.agentState.isInbox = true;
     mocks.serverState.featureFlags.enableAgentSelfIteration = true;
   });

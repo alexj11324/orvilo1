@@ -39,8 +39,7 @@ import {
 } from '../schemas/workAttention';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
-import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
-import { buildWorkspaceWhere } from '../utils/workspace';
+import { buildTaskReadableWhere } from '../utils/taskTeamReadable';
 import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
 
 export class NotificationBulkError extends Error {
@@ -84,27 +83,15 @@ export class NotificationModel {
   };
 
   /**
-   * Private-team tasks stay readable in Inbox only when the viewer can still
-   * see the team, administer the workspace, or personally own the work
-   * (assignee / reviewer / creator). Leaving the team must drop stored titles
-   * (SEC06) even when `tasks.visibility` is public.
-   */
-  private taskTeamReadable = (): SQL => buildTaskTeamReadableWhere(this.db, this.userId);
-
-  /**
    * Live ACL: a historical delivery is not proof the recipient can still read
    * the object. Missing/unknown resource types stay visible (system cards).
    * Projects reuse `ProjectModel.readable` (visibility plus membership grant).
    */
   private resourceReadable = (): SQL => {
-    const taskVisible = buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId ?? undefined },
-      {
-        userId: tasks.createdByUserId,
-        visibility: tasks.visibility,
-        workspaceId: tasks.workspaceId,
-      },
-    );
+    const taskVisible = buildTaskReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId ?? undefined,
+    });
     const projectVisible = buildProjectReadableWhere(this.db, {
       userId: this.userId,
       workspaceId: this.workspaceId ?? undefined,
@@ -112,7 +99,7 @@ export class NotificationModel {
     return or(
       isNull(notifications.resourceType),
       sql`${notifications.resourceType} not in ('task', 'project')`,
-      sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${taskVisible} and ${this.taskTeamReadable()}))`,
+      sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${taskVisible}))`,
       sql`(${notifications.resourceType} = 'project' and exists (select 1 from ${projects} where ${projects.id} = ${notifications.resourceId} and ${projectVisible}))`,
     )!;
   };

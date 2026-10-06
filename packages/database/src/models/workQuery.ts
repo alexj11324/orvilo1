@@ -62,8 +62,7 @@ import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
-import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
-import { buildWorkspaceWhere } from '../utils/workspace';
+import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
 import {
@@ -1003,15 +1002,7 @@ const attentionGroupExpr = (ctx: {
     WHERE attention_dep.depends_on_id = ${tasks.id}
       AND attention_dep.type = 'blocks'
       AND ${ATTENTION_OPEN_ALIAS_WORKFLOW}
-      AND ${buildWorkspaceWhere(
-        { userId: ctx.userId, workspaceId: ctx.workspaceId },
-        {
-          userId: attentionBlockedTasks.createdByUserId,
-          visibility: attentionBlockedTasks.visibility,
-          workspaceId: attentionBlockedTasks.workspaceId,
-        },
-      )}
-      AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks as unknown as typeof tasks)}
+      AND ${buildTaskReadableWhere(ctx.db, { userId: ctx.userId, workspaceId: ctx.workspaceId }, attentionBlockedTasks as unknown as typeof tasks)}
   ) THEN 'blocking'
   ELSE ${tasks.workflowCategory}
 END`;
@@ -1305,14 +1296,7 @@ export class WorkQueryModel {
   ) {}
 
   private ownership = () =>
-    buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId },
-      {
-        userId: tasks.createdByUserId,
-        visibility: tasks.visibility,
-        workspaceId: tasks.workspaceId,
-      },
-    );
+    buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
 
   private listReadableTeamIds = async (): Promise<Set<string>> => {
     if (!this.workspaceId) return new Set();
@@ -1350,13 +1334,7 @@ export class WorkQueryModel {
     const rows = await this.db
       .select({ id: tasks.id, identifier: tasks.identifier, name: tasks.name })
       .from(tasks)
-      .where(
-        and(
-          inArray(tasks.id, ids),
-          this.ownership(),
-          buildTaskTeamReadableWhere(this.db, this.userId),
-        ),
-      );
+      .where(and(inArray(tasks.id, ids), this.ownership()));
     return new Map(rows.map((row) => [row.id, { identifier: row.identifier, name: row.name }]));
   };
 
@@ -1410,7 +1388,7 @@ export class WorkQueryModel {
     mode: MyWorkMode | undefined,
     readableTeamIds: ReadonlySet<string>,
   ) => {
-    const conditions: SQL[] = [this.ownership(), buildTaskTeamReadableWhere(this.db, this.userId)];
+    const conditions: SQL[] = [this.ownership()];
     const filterSql = compileFilter(query.filter, this.compileCtx('task', readableTeamIds));
     if (filterSql) conditions.push(filterSql);
     if (mode === 'subscribed') {
@@ -1525,6 +1503,7 @@ export class WorkQueryModel {
     const rows = await this.db
       .select({
         ...getTableColumns(tasks),
+        visibility: taskVisibilitySql(),
         // mapWith: a raw SQL timestamp arrives as a driver string otherwise.
         activityAt: activityOrdered
           ? sql<Date | null>`${activityExpr}`.mapWith(tasks.updatedAt)
@@ -1685,6 +1664,7 @@ export class WorkQueryModel {
           ? await this.db
               .select({
                 ...getTableColumns(tasks),
+                visibility: taskVisibilitySql(),
                 activityAt: sql<Date | null>`${axisCtx.activity}`.mapWith(tasks.updatedAt),
               })
               .from(tasks)
@@ -1692,7 +1672,7 @@ export class WorkQueryModel {
               .orderBy(...orderBy)
               .limit(params.limit + 1)
           : await this.db
-              .select()
+              .select({ ...getTableColumns(tasks), visibility: taskVisibilitySql() })
               .from(tasks)
               .where(and(...groupConditions))
               .orderBy(...orderBy)
@@ -2045,7 +2025,6 @@ export class WorkQueryModel {
       .where(
         and(
           this.ownership(),
-          buildTaskTeamReadableWhere(this.db, this.userId),
           or(
             sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
             sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,

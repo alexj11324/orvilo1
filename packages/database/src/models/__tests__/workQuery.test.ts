@@ -185,6 +185,41 @@ describe('validateWorkQuery', () => {
 });
 
 describe('WorkQueryModel', () => {
+  it('reads legacy private workspace metadata across flat, grouped, search and count queries', async () => {
+    await serverDB.insert(tasksTable).values({
+      id: 'wq-legacy-private',
+      identifier: 'LEG-1',
+      instruction: 'Legacy metadata',
+      name: 'Legacy metadata',
+      seq: 1,
+      createdByUserId: otherUserId,
+      workspaceId,
+      visibility: 'private',
+    });
+    await serverDB.insert(tasksTable).values({
+      id: 'wq-legacy-personal',
+      identifier: 'LEG-2',
+      instruction: 'Personal',
+      seq: 2,
+      createdByUserId: otherUserId,
+      visibility: 'private',
+    });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const query = { entityType: 'task' as const, schemaVersion: 1 as const };
+    const flat = await model.queryTasks({ query: { ...query, groupBy: 'none' } });
+    expect(flat.tasks).toEqual([
+      expect.objectContaining({ id: 'wq-legacy-private', visibility: 'public' }),
+    ]);
+    const grouped = await model.queryTasks({ query: { ...query, groupBy: 'status' } });
+    expect(grouped.groups?.flatMap((group) => group.tasks).map((row) => row.id)).toEqual([
+      'wq-legacy-private',
+    ]);
+    expect((await model.searchTasks('Legacy')).map((row) => row.id)).toEqual(['wq-legacy-private']);
+    expect(await new WorkQueryModel(serverDB, userId).queryTasks({ query })).toMatchObject({
+      total: 0,
+    });
+  });
+
   it('lists assigned tasks for the visitor, not the view owner', async () => {
     const mine = await createTask(userId, { assigneeUserId: userId, name: 'Mine' });
     await createTask(userId, { assigneeUserId: otherUserId, name: 'Theirs' });
@@ -249,7 +284,10 @@ describe('WorkQueryModel', () => {
         identifier: parent.identifier,
         name: 'Handoff parent',
       });
-      expect(rows.get(orphaned.id)?.parent).toBeNull();
+      expect(rows.get(orphaned.id)?.parent).toEqual({
+        identifier: hidden.identifier,
+        name: 'Secret parent',
+      });
       expect(rows.get(root.id)?.parent).toBeNull();
     }
   });
@@ -1187,7 +1225,7 @@ describe('WorkQueryModel', () => {
     expect(result.groups!.map((group) => group.key)).not.toContain('paused');
   });
 
-  it('keeps terminal rows and unreadable downstreams out of attention buckets', async () => {
+  it('keeps terminal rows out of attention buckets and reads legacy private downstreams', async () => {
     const model = new WorkQueryModel(serverDB, userId, workspaceId);
     // A completed urgent issue is not an "Urgent issue" — terminal rows stay
     // in their workflow bucket.
@@ -1211,13 +1249,16 @@ describe('WorkQueryModel', () => {
       name: 'Still open',
       status: 'backlog',
     });
-    // A blocker whose only downstream is invisible to the caller must NOT be
-    // promoted — an unreadable task cannot change what the caller sees.
+    // Legacy private workspace metadata contributes to the blocking bucket.
     const hiddenDownstream = await createTask(otherUserId, {
       name: 'Other member private task',
       status: 'backlog',
       visibility: 'private',
     });
+    await serverDB
+      .update(tasksTable)
+      .set({ visibility: 'private' })
+      .where(eq(tasksTable.id, hiddenDownstream.id));
     const blockerOfHidden = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Blocks hidden task',
@@ -1248,15 +1289,15 @@ describe('WorkQueryModel', () => {
     const byKey = new Map(result.groups!.map((group) => [group.key, group]));
 
     expect(byKey.get('urgent')?.total ?? 0).toBe(0);
-    expect(byKey.get('blocking')?.total ?? 0).toBe(0);
+    expect(byKey.get('blocking')?.total ?? 0).toBe(1);
     expect(
       byKey
         .get('done')
         ?.tasks.map((task) => task.id)
         .sort(),
     ).toEqual([doneBlocker.id, urgentDone.id].sort());
-    expect(byKey.get('in_progress')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
-    // The private downstream row itself never leaks into the caller's list.
+    expect(byKey.get('blocking')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
+    // The downstream is unassigned, so it stays out of this assigned-work list.
     expect(result.groups!.flatMap((group) => group.tasks.map((task) => task.id))).not.toContain(
       hiddenDownstream.id,
     );

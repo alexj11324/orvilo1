@@ -399,19 +399,6 @@ function collectTaskCommentRecipients(params: {
   return [...byUserId].map(([userId, kind]) => ({ kind, userId }));
 }
 
-/**
- * Whether a notification deep-linking to `task` would land on a page `userId`
- * cannot open. Mirrors `TaskModel.ownership()`: public tasks are visible to
- * every member, private ones only to their creator. Membership is a separate
- * check (`filterActiveWorkspaceMemberIds`).
- */
-function isTaskHiddenFrom(
-  task: { createdByUserId: string | null; visibility: 'private' | 'public' },
-  userId: string,
-): boolean {
-  return task.visibility === 'private' && task.createdByUserId !== userId;
-}
-
 interface TaskNotificationCtx {
   serverDB: OrviloDatabase;
   taskModel: TaskModel;
@@ -421,8 +408,8 @@ interface TaskNotificationCtx {
 /**
  * Re-authorize every recipient against the task before any id reaches the
  * delivery slot (same contract as topic and document comments): a member
- * @mentioned on a private task they cannot see must not receive its title and
- * link, and the creator / assignee rows can outlive workspace membership.
+ * @mentioned on a private-team task they cannot see must not receive its
+ * title and link. Creator / assignee rows can outlive workspace membership.
  */
 async function filterRecipientsByTaskAccess(
   ctx: TaskNotificationCtx,
@@ -433,7 +420,7 @@ async function filterRecipientsByTaskAccess(
   const task = await ctx.taskModel.findById(taskId);
   if (!task) return [];
 
-  const visible = recipients.filter(({ userId }) => !isTaskHiddenFrom(task, userId));
+  const visible = recipients;
   const activeUserIds = new Set(
     await filterActiveWorkspaceMemberIds(
       ctx.serverDB,
@@ -441,7 +428,17 @@ async function filterRecipientsByTaskAccess(
       visible.map(({ userId }) => userId),
     ),
   );
-  return visible.filter(({ userId }) => activeUserIds.has(userId));
+  const activeRecipients = visible.filter(({ userId }) => activeUserIds.has(userId));
+  const readable = await Promise.all(
+    activeRecipients.map(async (recipient) =>
+      (await new TaskModel(ctx.serverDB, recipient.userId, ctx.workspaceId).findById(taskId))
+        ? recipient
+        : null,
+    ),
+  );
+  return readable.filter(
+    (recipient): recipient is TaskCommentActivityRecipient => recipient !== null,
+  );
 }
 
 /**
@@ -468,8 +465,7 @@ function notifyCommentActivityBestEffort(
 /**
  * Assignment ping (Linear-style), delivered after the response as best-effort
  * work. Silent for self-assignment; the assignee lock already guarantees the
- * member is active and can open the task (`assertAssigneeUserVisibilityCompat`
- * rejects private tasks assigned to anyone but their creator). Callers decide
+ * member is active, and the task read policy admits its human assignee. Callers decide
  * whether the assignee actually changed.
  */
 function notifyAssignedBestEffort(
@@ -2185,38 +2181,12 @@ export const taskRouter = router({
           }
         }
 
-        // A private task can only be assigned to its creator — the assignee
-        // would otherwise never see the task. `null` clears and is always safe.
-        ctx.taskService.assertAssigneeUserVisibilityCompat(
-          resolved.visibility,
-          data.assigneeUserId,
-          resolved.createdByUserId ?? ctx.userId,
-        );
-
-        // The reviewer is the human accountable at review — same workspace
-        // membership and private-visibility rules as the member assignee.
-        // `null` clears and is always safe.
         await ctx.taskService.assertAssigneeUserAssignable(data.reviewerUserId);
-        ctx.taskService.assertAssigneeUserVisibilityCompat(
-          resolved.visibility,
-          data.reviewerUserId,
-          resolved.createdByUserId ?? ctx.userId,
-        );
 
         const resolvedParentTaskId =
           parentTaskId === undefined
             ? undefined
             : await resolveSafeParentTaskId(model, resolved.id, parentTaskId);
-
-        // Reparenting a public task under a private one breaks the parent
-        // visibility invariant — a subtask cannot be more public than its
-        // parent (otherwise workspace members would still see the child while
-        // its new parent is hidden). `undefined` means "no change"; `null`
-        // clears the parent and is always safe.
-        if (resolvedParentTaskId) {
-          const newParent = await model.findById(resolvedParentTaskId);
-          ctx.taskService.assertParentVisibilityCompat(resolved.visibility, newParent?.visibility);
-        }
 
         const updateData = {
           ...data,
@@ -2311,10 +2281,7 @@ export const taskRouter = router({
       try {
         const resolved = await resolveOrThrow(ctx.taskModel, input.id);
 
-        // Mirror the edit-lock contract from `update`: reject visibility flips
-        // while another workspace member is actively editing this task. Without
-        // this check a collaborator could silently retitle a private task to
-        // public (or vice versa) while you're mid-edit.
+        // Preserve the ordinary mutation edit-lock contract for legacy clients.
         if (ctx.workspaceId) {
           const blockedBy = await ctx.editLockService.getBlockingHolder('task', resolved.id);
           if (blockedBy) {
@@ -2324,73 +2291,6 @@ export const taskRouter = router({
               message: 'Task is being edited by another user',
             });
           }
-        }
-
-        // The creator can always change visibility on their own tasks. In
-        // workspace mode, workspace owners may still promote other members'
-        // tasks (mirrors the transferTask policy at line ~1166), but demoting
-        // to private stays creator-only: the task would land in
-        // the creator's private list, so an owner-initiated demotion just
-        // appropriates another member's data.
-        if (ctx.workspaceId && resolved.createdByUserId !== ctx.userId) {
-          if (input.visibility === 'private') {
-            throw new TRPCError({
-              code: 'FORBIDDEN',
-              message: 'Only the task creator can make this task private',
-            });
-          }
-          const canOverride = await hasWorkspaceScopedPermission({
-            action: 'AGENT_UPDATE',
-            db: ctx.serverDB,
-            scopes: ['ALL'],
-            userId: ctx.userId,
-            workspaceId: ctx.workspaceId,
-          });
-          if (!canOverride) {
-            throw new TRPCError({
-              code: 'FORBIDDEN',
-              message: 'Only the task creator or workspace owner can change visibility',
-            });
-          }
-        }
-
-        // Demoting a mixed-creator subtree would fracture it: each descendant
-        // stays owned by its creator, so the root creator loses other
-        // members' subtasks while those members keep orphaned children whose
-        // parent is hidden. Reject early — the subtree must be single-creator
-        // to go private.
-        if (input.visibility === 'private') {
-          const hasOtherCreators = await ctx.taskModel.subtreeHasOtherCreators(
-            resolved.id,
-            resolved.createdByUserId ?? ctx.userId,
-          );
-          if (hasOtherCreators) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message:
-                'Cannot make this task private while it has subtasks created by other members. Reassign or remove those subtasks first.',
-            });
-          }
-        }
-
-        // Demoting a member-assigned task to private would strand the
-        // assignee: the task disappears from their view while still carrying
-        // their name. Reject early — unassign first, then demote.
-        if (input.visibility === 'private') {
-          ctx.taskService.assertAssigneeUserVisibilityCompat(
-            input.visibility,
-            resolved.assigneeUserId,
-            resolved.createdByUserId ?? ctx.userId,
-          );
-        }
-
-        // Promoting a subtask to public while its parent is still private
-        // would orphan the child in the workspace view — a subtask cannot
-        // be more public than its parent. The user must promote the parent
-        // chain first, or keep the subtask private.
-        if (input.visibility === 'public' && resolved.parentTaskId) {
-          const parent = await ctx.taskModel.findById(resolved.parentTaskId);
-          ctx.taskService.assertParentVisibilityCompat(input.visibility, parent?.visibility);
         }
 
         const updated = await ctx.taskModel.updateVisibility(resolved.id, input.visibility, {

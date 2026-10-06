@@ -608,11 +608,6 @@ export class LinearPlanningWorker {
               if (!exists) throw new Error('Planning proposal assignee Agent is not available');
             }
             await taskService.assertAssigneeUserAssignable(action.assigneeUserId);
-            taskService.assertAssigneeUserVisibilityCompat(
-              task.visibility,
-              action.assigneeUserId,
-              task.createdByUserId ?? '',
-            );
             const updated = await taskService.updateTaskWithAssigneeLock(
               action.taskId,
               {

@@ -12,13 +12,14 @@ import {
   type WorkVisibility,
 } from '@orvilo/types';
 import type { SQL } from 'drizzle-orm';
-import { and, desc, eq, exists, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, desc, eq, exists, inArray, isNull, lt, ne, or } from 'drizzle-orm';
 
 import { documents } from '../../schemas/file';
 import { projectWorks } from '../../schemas/projectWork';
-import { tasks } from '../../schemas/task';
+import { tasks, taskTopics } from '../../schemas/task';
 import { topics } from '../../schemas/topic';
 import { works, workVersions } from '../../schemas/work';
+import { buildWorkspaceWhere } from '../../utils/workspace';
 import { type WorkContext, workOwnership } from './context';
 import { getTotalCostByWorkIds } from './cost';
 import {
@@ -27,6 +28,7 @@ import {
   currentVersions,
   currentWorkListFields,
   documentSummaryJoin,
+  effectiveWorkVisibility,
   resourceDeletedField,
   taskSummaryJoin,
 } from './internal';
@@ -354,7 +356,9 @@ export const listByWorkspace = async (
           ),
       ),
     );
-  if (ctx.workspaceId && params.visibility) filters.push(eq(works.visibility, params.visibility));
+  if (ctx.workspaceId && params.visibility) {
+    filters.push(eq(effectiveWorkVisibility, params.visibility));
+  }
   // User-visible gallery tabs stay per-provider (Linear / GitHub) but filter by
   // provider — its resource types — over the unified `external` Work type.
   if (params.provider) {
@@ -401,7 +405,34 @@ export const listByWorkspace = async (
     // render it as "document deleted" and offer removal instead of showing a
     // live-looking card that 404s on click.
     .leftJoin(documents, documentSummaryJoin)
-    .leftJoin(topics, eq(works.originTopicId, topics.id))
+    .leftJoin(
+      topics,
+      and(
+        eq(works.originTopicId, topics.id),
+        or(
+          ne(works.resourceType, 'task'),
+          and(
+            buildWorkspaceWhere(ctx, topics),
+            or(
+              eq(topics.userId, ctx.userId),
+              exists(
+                ctx.db
+                  .select({ id: taskTopics.id })
+                  .from(taskTopics)
+                  .where(
+                    and(
+                      eq(taskTopics.topicId, topics.id),
+                      eq(taskTopics.taskId, works.resourceId),
+                      eq(taskTopics.workspaceId, works.workspaceId),
+                      buildWorkspaceWhere(ctx, taskTopics),
+                    ),
+                  ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
     .where(and(...filters))
     .orderBy(desc(works.updatedAt), desc(works.id))
     .limit(limit + 1);

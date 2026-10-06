@@ -133,6 +133,13 @@ export const currentVersionEventSelection = {
   version: currentVersions.version,
 };
 
+/** Only live workspace Task resources override a legacy private Work mirror. */
+export const effectiveWorkVisibility = sql<WorkItem['visibility']>`case
+  when ${works.resourceType} = 'task' and exists (
+    select 1 from ${tasks} where ${tasks.id} = ${works.resourceId}
+      and ${tasks.workspaceId} = ${works.workspaceId}
+  ) then 'public' else ${works.visibility} end`;
+
 /** Stable Work columns shared by current-card and historical-event projections. */
 const workIdentityFields = {
   createdAt: works.createdAt,
@@ -149,7 +156,7 @@ const workIdentityFields = {
   updatedAt: works.updatedAt,
   url: works.url,
   userId: works.userId,
-  visibility: works.visibility,
+  visibility: effectiveWorkVisibility,
   workspaceId: works.workspaceId,
 };
 

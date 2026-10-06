@@ -1140,7 +1140,7 @@ describe('NotificationModel (integration)', () => {
       expect((await model.listFeed()).map((row) => row.title)).toEqual(['System card']);
     });
 
-    it('stops listing a title after workspace visibility is revoked', async () => {
+    it('keeps workspace task titles after a legacy private visibility change', async () => {
       const workspaceId = 'notification-acl-ws';
       await serverDB.insert(workspaces).values({
         id: workspaceId,
@@ -1172,8 +1172,8 @@ describe('NotificationModel (integration)', () => {
         .set({ visibility: 'private' })
         .where(eq(tasksTable.id, task.id));
 
-      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
-      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Hidden later']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
     });
 
     it('stops listing a private-team task title after the viewer leaves the team', async () => {

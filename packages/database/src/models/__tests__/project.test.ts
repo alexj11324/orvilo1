@@ -723,6 +723,62 @@ describe('ProjectModel', () => {
     expect(await model.list({ limit: 1, offset: 1 })).toHaveLength(1);
   });
 
+  it('shares legacy private workspace task metadata while retaining team and personal isolation', async () => {
+    const workspaceId = 'legacy-project-task-ws';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Legacy', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB
+      .insert(projects)
+      .values({ id: 'legacy-project', identifier: 'LEGACY', name: 'Legacy', userId, workspaceId });
+    await serverDB.insert(teams).values({
+      id: 'legacy-private-team',
+      key: 'LPT',
+      name: 'Private',
+      visibility: 'private',
+      workspaceId,
+    });
+    await serverDB.insert(tasks).values([
+      {
+        id: 'legacy-shared-task',
+        identifier: 'LEG-1',
+        instruction: 'Shared',
+        seq: 1,
+        createdByUserId: userId,
+        projectId: 'legacy-project',
+        workspaceId,
+        visibility: 'private',
+      },
+      {
+        id: 'legacy-team-task',
+        identifier: 'LEG-2',
+        instruction: 'Team',
+        seq: 2,
+        createdByUserId: userId,
+        projectId: 'legacy-project',
+        workspaceId,
+        visibility: 'private',
+        teamId: 'legacy-private-team',
+      },
+      {
+        id: 'legacy-personal-task',
+        identifier: 'LEG-3',
+        instruction: 'Personal',
+        seq: 3,
+        createdByUserId: userId,
+        projectId: 'legacy-project',
+        visibility: 'private',
+      },
+    ]);
+    const member = new ProjectModel(serverDB, otherUserId, workspaceId);
+    expect((await member.listTasks('legacy-project'))?.map((row) => row.id)).toEqual([
+      'legacy-shared-task',
+    ]);
+    expect((await member.listTasks('legacy-project'))?.[0].visibility).toBe('public');
+    expect(await member.list()).toEqual([expect.objectContaining({ taskCount: 1 })]);
+    expect(await new ProjectModel(serverDB, otherUserId).listTasks('legacy-project')).toBeNull();
+  });
+
   it('counts only tasks the caller can actually read', async () => {
     const workspaceId = 'project-task-count-ws';
     await serverDB.insert(workspaces).values({
@@ -764,21 +820,19 @@ describe('ProjectModel', () => {
       projectId: project.id,
     });
     await serverDB.update(tasks).set({ isDeleted: true }).where(eq(tasks.id, deleted.id));
-    // Another member's private task never surfaces in the count.
+    // Legacy private flags do not hide workspace task metadata.
     await new TaskModel(serverDB, otherUserId, workspaceId).create({
       instruction: 'Member private',
       projectId: project.id,
       visibility: 'private',
     });
 
-    // member sees the public task and their own private task — not the
-    // private-team row, not the soft-deleted row.
+    // The member sees shared tasks, excluding private-team and deleted rows.
     const memberRows = await member.list();
     expect(memberRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 2 })]);
-    // The owner (team creator) sees the team task but not the deleted row or
-    // the member's private task.
+    // The owner sees shared and team tasks, excluding the deleted row.
     const ownerRows = await owner.list();
-    expect(ownerRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 2 })]);
+    expect(ownerRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 3 })]);
     // Once the member joins the private team its task becomes readable.
     await serverDB.insert(teamMembers).values({
       role: 'member',

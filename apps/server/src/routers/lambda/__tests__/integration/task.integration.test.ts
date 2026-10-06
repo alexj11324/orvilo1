@@ -605,6 +605,37 @@ describe('Task Router Integration', () => {
       };
     };
 
+    it('normalizes old private workspace requests and allows members and legacy-private parents', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { workspaceId, wsCaller } = await setupWorkspace();
+      const parent = await wsCaller.create({
+        instruction: 'Old private parent',
+        visibility: 'private',
+        assigneeUserId: otherUserId,
+      });
+      expect(parent.data.visibility).toBe('public');
+      await serverDB
+        .update(tasks)
+        .set({ visibility: 'private' })
+        .where(eq(tasks.id, parent.data.id));
+      const child = await wsCaller.create({
+        instruction: 'Old private child',
+        visibility: 'private',
+        parentTaskId: parent.data.id,
+        assigneeUserId: otherUserId,
+      });
+      expect(child.data.visibility).toBe('public');
+      const memberCaller = taskRouter.createCaller({
+        ...createTestContext(otherUserId),
+        workspaceId,
+      });
+      expect((await memberCaller.detail({ id: parent.data.id })).data.visibility).toBe('public');
+      expect(
+        (await memberCaller.updateVisibility({ id: parent.data.id, visibility: 'private' })).data
+          .visibility,
+      ).toBe('public');
+    });
+
     it('rejects an Agent reassigned to private between member preflight and locked dispatch admission', async () => {
       otherUserId = await createTestUser(serverDB);
       const { workspaceId, wsAgentId, wsCaller } = await setupWorkspace();
@@ -700,18 +731,12 @@ describe('Task Router Integration', () => {
       ).toHaveLength(0);
       expect(mockExecAgent).not.toHaveBeenCalled();
 
-      await expect(
-        wsCaller.updateVisibility({ id: created.data.id, visibility: 'private' }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-      // Explicit privacy still requires clearing an assignee who would lose access.
-      await wsCaller.update({
+      const normalized = await wsCaller.updateVisibility({
         id: created.data.id,
-        assigneeUserId: null,
-        expectedDomainRevision: await revisionOf(created.data.id),
+        visibility: 'private',
       });
-      await wsCaller.updateVisibility({ id: created.data.id, visibility: 'private' });
-      expect(await teammate.findById(created.data.id)).toBeNull();
-      await wsCaller.updateVisibility({ id: created.data.id, visibility: 'public' });
+      expect(normalized.data.visibility).toBe('public');
+      expect(normalized.data.assigneeUserId).toBe(otherUserId);
       expect(await teammate.findById(created.data.id)).toMatchObject({ visibility: 'public' });
     });
 
@@ -820,7 +845,7 @@ describe('Task Router Integration', () => {
       expect(topLevel.data.parentTaskId).toBeNull();
     });
 
-    it('should reject reparenting a public task under a private parent', async () => {
+    it('allows same-owner personal reparenting regardless of visibility flags', async () => {
       const privateParent = await caller.create({
         instruction: 'Private parent',
         name: 'Private Parent',
@@ -837,7 +862,7 @@ describe('Task Router Integration', () => {
           id: publicChild.data.identifier,
           parentTaskId: privateParent.data.identifier,
         }),
-      ).rejects.toThrow('subtask cannot be more public than its parent');
+      ).resolves.toMatchObject({ data: { parentTaskId: privateParent.data.id } });
     });
 
     it('should reject reparenting a task to itself or its descendant', async () => {
@@ -1326,18 +1351,25 @@ describe('Task Router Integration', () => {
       expect(mockNotifyTaskCommentActivity).toHaveBeenCalledTimes(1);
     });
 
-    it('should never notify members who cannot open a private task', async () => {
+    it('never notifies workspace members who cannot open a private-team task', async () => {
       otherUserId = await createTestUser(serverDB);
       const thirdUserId = await createTestUser(serverDB);
       const { wsCaller, workspaceId } = await setupWorkspace();
-      const { workspaceMembers } = await import('@/database/schemas');
+      const { workspaceMembers, teams } = await import('@/database/schemas');
       await serverDB
         .insert(workspaceMembers)
         .values({ role: 'member', userId: thirdUserId, workspaceId });
-      // A private task is visible to its creator only (assigning it to another
-      // member is rejected upstream), yet the creator can still @mention anyone.
+      const teamId = 'task-notification-private-team';
+      await serverDB.insert(teams).values({
+        id: teamId,
+        key: 'SEC',
+        name: 'Private team',
+        visibility: 'private',
+        workspaceId,
+      });
       const task = await wsCaller.create({
         instruction: 'Secret',
+        teamId,
         name: 'Secret',
         visibility: 'private',
       });
@@ -2701,7 +2733,7 @@ describe('Task Router Integration', () => {
       expect(strandedCreate).toHaveLength(0);
     });
 
-    it('should keep private tasks creator-only for human assignees', async () => {
+    it('keeps workspace human assignment usable despite old private requests', async () => {
       otherUserId = await createTestUser(serverDB);
       const workspaceId = 'task-private-assignee-workspace';
       const { workspaces, workspaceMembers } = await import('@/database/schemas');
@@ -2717,49 +2749,23 @@ describe('Task Router Integration', () => {
       ]);
       const wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
 
-      // Creating a private task assigned to another member is rejected.
-      await expect(
-        wsCaller.create({
-          assigneeUserId: otherUserId,
-          instruction: 'Private cross-member create',
-          visibility: 'private',
-        }),
-      ).rejects.toThrow('A private task can only be assigned to its creator');
-
-      // A private task can still be self-assigned; assigning another member is rejected.
-      const privateTask = await wsCaller.create({
-        assigneeUserId: userId,
-        instruction: 'Private task',
-        visibility: 'private',
-      });
-      expect(privateTask.data.assigneeUserId).toBe(userId);
-      await expect(
-        wsCaller.update({
-          assigneeUserId: otherUserId,
-          expectedDomainRevision: await revisionOf(privateTask.data.id),
-          id: privateTask.data.id,
-        }),
-      ).rejects.toThrow('A private task can only be assigned to its creator');
-
-      // Demoting a member-assigned public task to private is rejected until unassigned.
-      const publicTask = await wsCaller.create({
+      const created = await wsCaller.create({
         assigneeUserId: otherUserId,
-        instruction: 'Public task assigned to member',
-        visibility: 'public',
-      });
-      await expect(
-        wsCaller.updateVisibility({ id: publicTask.data.id, visibility: 'private' }),
-      ).rejects.toThrow('A private task can only be assigned to its creator');
-      await wsCaller.update({
-        assigneeUserId: null,
-        expectedDomainRevision: await revisionOf(publicTask.data.id),
-        id: publicTask.data.id,
-      });
-      const demoted = await wsCaller.updateVisibility({
-        id: publicTask.data.id,
+        instruction: 'Old private cross-member request',
         visibility: 'private',
       });
-      expect(demoted.data.visibility).toBe('private');
+      expect(created.data).toMatchObject({ visibility: 'public', assigneeUserId: otherUserId });
+      const normalized = await wsCaller.updateVisibility({
+        id: created.data.id,
+        visibility: 'private',
+      });
+      expect(normalized.data).toMatchObject({ visibility: 'public', assigneeUserId: otherUserId });
+      const assigned = await wsCaller.update({
+        id: created.data.id,
+        assigneeUserId: userId,
+        expectedDomainRevision: await revisionOf(created.data.id),
+      });
+      expect(assigned.data).toMatchObject({ visibility: 'public', assigneeUserId: userId });
     });
 
     it('should preserve the responsible assignee independently of automation', async () => {

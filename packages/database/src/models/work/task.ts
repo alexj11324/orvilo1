@@ -86,7 +86,7 @@ export const registerTaskWork = async (ctx: WorkContext, params: RegisterTaskWor
       resourceType: 'task',
       type: 'task',
       userId: task.createdByUserId ?? task.createdBySubjectId ?? 'system',
-      visibility: task.visibility,
+      visibility: task.workspaceId ? 'public' : task.visibility,
     },
     params,
     () => ({ display: taskDisplayColumns(task) }),

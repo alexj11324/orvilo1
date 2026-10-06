@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   messages,
   taskDispatches,
+  tasks,
+  taskTopics,
+  teams,
   topics,
   works,
   workspaces,
@@ -897,116 +900,153 @@ describe('WorkModel · workspace task visibility', () => {
     });
   };
 
-  it('hides another member private-task Work from every list path', async () => {
+  it('shares legacy private workspace Task Works across every list path', async () => {
     await seedWorkspace();
-    const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
-    const ownerWorks = new WorkModel(serverDB, userId, workspaceId);
-    const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
-
-    const task = await ownerTasks.create({
-      instruction: 'Secret instruction',
-      name: 'Secret task',
-      visibility: 'private',
+    const task = await new TaskModel(serverDB, userId, workspaceId).create({
+      instruction: 'Shared legacy instruction',
+      name: 'Legacy workspace task',
     });
+    const ownerWorks = new WorkModel(serverDB, userId, workspaceId);
     const work = await ownerWorks.registerTask({
       changeType: 'created',
+      toolName: 'createTask',
+      toolIdentifier: 'orvilo-task',
       rootOperationId: 'op-private-visibility',
       toolCallId: 'tool-call-private-visibility',
-      toolName: 'createTask',
-      toolIdentifier: 'orvilo-task',
       taskId: task.id,
       topicId,
     });
-
-    // The registrant keeps full access.
-    expect(await ownerWorks.listByConversation({ topicId })).toHaveLength(1);
-
-    // The other member sees nothing on any list path.
-    expect(await memberWorks.listByConversation({ topicId })).toHaveLength(0);
-    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
-    expect(
-      await memberWorks.listSummariesByRootOperations({
-        rootOperationIds: ['op-private-visibility'],
-      }),
-    ).toEqual({ 'op-private-visibility': [] });
-    expect(await memberWorks.listVersions(work!.id)).toHaveLength(0);
-  });
-
-  it('keeps public-task Works member-visible until the task flips private', async () => {
-    await seedWorkspace();
-    const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
-    const ownerWorks = new WorkModel(serverDB, userId, workspaceId);
+    // Persisted legacy rows must work without a migration.
+    await serverDB.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, task.id));
+    await serverDB.update(works).set({ visibility: 'private' }).where(eq(works.id, work!.id));
     const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
 
-    const task = await ownerTasks.create({
-      instruction: 'Shared instruction',
-      name: 'Shared task',
-      visibility: 'public',
-    });
-    await ownerWorks.registerTask({
-      changeType: 'created',
-      rootOperationId: 'op-public-visibility',
-      toolCallId: 'tool-call-public-visibility',
-      toolName: 'createTask',
-      toolIdentifier: 'orvilo-task',
+    await serverDB
+      .update(topics)
+      .set({ title: 'Private execution title', workspaceId })
+      .where(eq(topics.id, topicId));
+    await serverDB.insert(taskTopics).values({
       taskId: task.id,
       topicId,
-    });
-
-    const memberView = await memberWorks.listByConversation({ topicId });
-    expect(memberView).toHaveLength(1);
-    expect(expectTaskListItem(memberView[0]).task.name).toBe('Shared task');
-
-    // The task transition mirrors visibility onto Work in the same transaction.
-    await ownerTasks.updateVisibility(task.id, 'private');
-
-    const [mirrored] = await serverDB
-      .select({ visibility: works.visibility })
-      .from(works)
-      .where(eq(works.resourceId, task.id));
-    expect(mirrored.visibility).toBe('private');
-
-    expect(await memberWorks.listByConversation({ topicId })).toHaveLength(0);
-    expect(await ownerWorks.listByConversation({ topicId })).toHaveLength(1);
-  });
-
-  it('does not let a member register a Work against another member private task', async () => {
-    await seedWorkspace();
-    const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
-    const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
-
-    const privateTask = await ownerTasks.create({
-      instruction: 'Private register target',
+      userId,
+      workspaceId,
+      seq: 1,
       visibility: 'private',
     });
-    const publicTask = await ownerTasks.create({
-      instruction: 'Public register target',
-      visibility: 'public',
-    });
 
+    const conversation = await memberWorks.listByConversation({ topicId });
+    expect(conversation).toHaveLength(1);
+    expect(expectTaskListItem(conversation[0]).task.name).toBe('Legacy workspace task');
+    expect(conversation[0].visibility).toBe('public');
+    const memberGallery = (await memberWorks.listByWorkspace({ visibility: 'public' })).items;
+    expect(memberGallery).toHaveLength(1);
+    expect(memberGallery[0].originTopicTitle).toBeNull();
+    expect((await ownerWorks.listByWorkspace({})).items[0].originTopicTitle).toBe(
+      'Private execution title',
+    );
+    expect((await memberWorks.listByWorkspace({ visibility: 'private' })).items).toHaveLength(0);
+    expect(
+      (
+        await memberWorks.listSummariesByRootOperations({
+          rootOperationIds: ['op-private-visibility'],
+        })
+      )['op-private-visibility'],
+    ).toHaveLength(1);
+    expect(
+      (
+        await memberWorks.listByRootOperations({
+          rootOperationIds: ['op-private-visibility'],
+        })
+      )['op-private-visibility'],
+    ).toHaveLength(1);
+    expect(await memberWorks.listVersions(work!.id)).toHaveLength(1);
+    expect(await ownerWorks.listByConversation({ topicId })).toHaveLength(1);
+    await serverDB
+      .update(taskTopics)
+      .set({ visibility: 'public' })
+      .where(eq(taskTopics.taskId, task.id));
+    expect((await memberWorks.listByWorkspace({})).items[0].originTopicTitle).toBe(
+      'Private execution title',
+    );
+    await serverDB.delete(taskTopics).where(eq(taskTopics.taskId, task.id));
+    expect((await memberWorks.listByWorkspace({})).items[0].originTopicTitle).toBeNull();
+    await serverDB.insert(workspaces).values({
+      id: 'work-origin-foreign',
+      name: 'Foreign origin',
+      primaryOwnerId: userId,
+      slug: 'work-origin-foreign',
+    });
+    await serverDB
+      .update(topics)
+      .set({ workspaceId: 'work-origin-foreign' })
+      .where(eq(topics.id, topicId));
+    expect((await ownerWorks.listByWorkspace({})).items[0].originTopicTitle).toBeNull();
+  });
+
+  it('registers another member legacy private workspace Task as a public Work', async () => {
+    await seedWorkspace();
+    const task = await new TaskModel(serverDB, userId, workspaceId).create({
+      instruction: 'Legacy registration target',
+    });
+    await serverDB.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, task.id));
+    const registered = await new WorkModel(serverDB, userId2, workspaceId).registerTask({
+      changeType: 'updated',
+      toolName: 'updateTask',
+      toolIdentifier: 'orvilo-task',
+      toolCallId: 'tool-call-member-private',
+      taskId: task.id,
+      topicId,
+    });
+    expect(registered).toMatchObject({ userId, visibility: 'public' });
+  });
+
+  it('keeps private-team and foreign-workspace Task Works hidden despite public mirrors', async () => {
+    await seedWorkspace();
+    await serverDB.insert(teams).values({
+      id: 'work-private-team',
+      key: 'WPT',
+      name: 'Private Work team',
+      visibility: 'private',
+      workspaceId,
+    });
+    const task = await new TaskModel(serverDB, userId, workspaceId).create({
+      instruction: 'Private team task',
+      teamId: 'work-private-team',
+    });
+    const work = await new WorkModel(serverDB, userId, workspaceId).registerTask({
+      changeType: 'created',
+      toolName: 'createTask',
+      toolIdentifier: 'orvilo-task',
+      toolCallId: 'team-work',
+      taskId: task.id,
+      topicId,
+    });
+    const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
+    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
+    expect(await memberWorks.listVersions(work!.id)).toHaveLength(0);
     expect(
       await memberWorks.registerTask({
-        changeType: 'updated',
-        toolCallId: 'tool-call-member-private',
         toolName: 'updateTask',
         toolIdentifier: 'orvilo-task',
-        taskId: privateTask.id,
+        changeType: 'updated',
+        toolCallId: 'forbidden-team-work',
+        taskId: task.id,
         topicId,
       }),
     ).toBeNull();
 
-    const memberRegisteredPublicWork = await memberWorks.registerTask({
-      changeType: 'updated',
-      toolCallId: 'tool-call-member-public',
-      toolName: 'updateTask',
-      toolIdentifier: 'orvilo-task',
-      taskId: publicTask.id,
-      topicId,
+    await serverDB.insert(workspaces).values({
+      id: 'work-foreign-workspace',
+      name: 'Foreign',
+      primaryOwnerId: userId,
+      slug: 'work-foreign',
     });
-    expect(memberRegisteredPublicWork).toMatchObject({
-      userId,
-      visibility: 'public',
-    });
+    await serverDB
+      .update(tasks)
+      .set({ teamId: null, workspaceId: 'work-foreign-workspace' })
+      .where(eq(tasks.id, task.id));
+    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
+    expect(await memberWorks.listVersions(work!.id)).toHaveLength(0);
   });
 
   it('hides an orphaned private-task Work from other members but keeps it for the registrant', async () => {

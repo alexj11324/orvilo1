@@ -153,9 +153,6 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
           // control's activation — the row must not fire a second one.
           if (event.target !== event.currentTarget) return;
           if (event.key !== 'Enter' && event.key !== ' ') return;
-          // A nested button handles its own Enter/Space activation — letting
-          // the row's handler fire too would open the connect flow twice.
-          if (event.target !== event.currentTarget) return;
           event.preventDefault();
           onConnect(provider.type);
         }}

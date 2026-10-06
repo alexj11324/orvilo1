@@ -34,7 +34,7 @@ export interface OptimisticUpdateContext {
 
 /**
  * Optimistic update operations
- * All methods follow the pattern: update frontend first, then persist to database
+ * Creates and updates publish optimistically; deletes publish confirmed server messages.
  */
 
 type Setter = StoreSetter<ChatStore>;
@@ -109,7 +109,6 @@ export class MessageOptimisticUpdateActionImpl {
     id: string,
     context?: OptimisticUpdateContext,
   ): Promise<void> => {
-    this.#get().internal_dispatchMessage({ id, type: 'deleteMessage' }, context);
     const ctx = this.#get().internal_getConversationContext(context);
     const result = await messageService.removeMessage(id, ctx);
     if (result?.success && result.messages) {
@@ -121,7 +120,6 @@ export class MessageOptimisticUpdateActionImpl {
     ids: string[],
     context?: OptimisticUpdateContext,
   ): Promise<void> => {
-    this.#get().internal_dispatchMessage({ ids, type: 'deleteMessages' }, context);
     const ctx = this.#get().internal_getConversationContext(context);
     const result = await messageService.removeMessages(ids, ctx);
     if (result?.success && result.messages) {

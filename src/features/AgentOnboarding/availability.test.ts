@@ -1,6 +1,8 @@
 import type { ProviderBinding } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
+import { collectConnectedHarnessTypes } from '@/features/ChatInput/ActionBar/Agent/localHarnessRows';
+
 import {
   collectInstalledHarnessTypes,
   collectRunnableCliHarnessTypes,
@@ -110,9 +112,20 @@ describe('resolveAgentAvailability', () => {
 
   it('accepts a persisted Prime agent with an embedded route', () => {
     expect(
-      resolveAgentAvailability({ bindings: [binding({})], connectedTypes: new Set(['orvilo']) })
-        .usable,
+      resolveAgentAvailability({
+        bindings: [binding({})],
+        connectedTypes: collectConnectedHarnessTypes([{ heterogeneousType: 'orvilo' }]),
+      }).usable,
     ).toBe(true);
+  });
+
+  it('does not treat an unstamped sidebar row as configured Prime when a route exists', () => {
+    expect(
+      resolveAgentAvailability({
+        bindings: [binding({})],
+        connectedTypes: collectConnectedHarnessTypes([{}, { heterogeneousType: null }]),
+      }).usable,
+    ).toBe(false);
   });
 
   it('rejects a persisted Prime agent without a usable route', () => {

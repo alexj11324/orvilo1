@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DEFAULT_PREFERENCE } from '@/const/user';
 import { getAppPainted, setAppPainted } from '@/spa/atoms/app';
 import { useUserStore } from '@/store/user';
 import { writeUserDisplaySnapshot } from '@/store/user/displaySnapshot';
@@ -32,13 +33,23 @@ describe('UserUpdater', () => {
     setAppPainted(true);
     localStorage.clear();
     useSessionMock.mockReset();
-    useUserStore.setState({ user: undefined, isSignedIn: false, isLoaded: false });
+    useUserStore.setState({
+      user: undefined,
+      isSignedIn: false,
+      isLoaded: false,
+      preference: DEFAULT_PREFERENCE,
+    });
   });
 
   afterEach(() => {
     localStorage.clear();
     vi.useRealTimers();
-    useUserStore.setState({ user: undefined, isSignedIn: false, isLoaded: false });
+    useUserStore.setState({
+      user: undefined,
+      isSignedIn: false,
+      isLoaded: false,
+      preference: DEFAULT_PREFERENCE,
+    });
   });
 
   it.each([400, 403, 404])(
@@ -102,7 +113,7 @@ describe('UserUpdater', () => {
   it('does not restore another user display snapshot or authenticate from a cache entry', () => {
     writeUserDisplaySnapshot('u1', {
       avatar: '/private-avatar.webp',
-      preference: { lab: { enableProjects: true } },
+      preference: { lab: { enableProjects: !DEFAULT_PREFERENCE.lab?.enableProjects } },
     });
     useSessionMock.mockReturnValue({ data: null, error: null, isPending: true });
     const { unmount } = render(<UserUpdater />);
@@ -113,7 +124,7 @@ describe('UserUpdater', () => {
     useSessionMock.mockReturnValue(sampleSession({ id: 'u2' }));
     render(<UserUpdater />);
     expect(useUserStore.getState().user?.avatar).toBe('');
-    expect(useUserStore.getState().preference.lab?.enableProjects).not.toBe(true);
+    expect(useUserStore.getState().preference).toEqual(DEFAULT_PREFERENCE);
   });
 
   it('retries a transient cold-start session failure without confirming sign-out', async () => {

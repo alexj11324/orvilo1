@@ -21,7 +21,7 @@ describe('executeToolCall', () => {
     fs.rmSync(tmpDir, { force: true, recursive: true });
   });
 
-  it('dispatches read-only automation readiness without claiming Prime is available', async () => {
+  it('dispatches read-only Prime capability with separate installation evidence', async () => {
     const result = await executeToolCall(
       'checkAutomationReadiness',
       JSON.stringify({ agentType: 'native', cwd: tmpDir }),
@@ -32,8 +32,7 @@ describe('executeToolCall', () => {
       executor: 'prime',
       repositoryAccessible: true,
       requiredToolsSupported: true,
-      unattended: false,
-      blockers: ['EXECUTOR_UNSUPPORTED'],
+      unattended: true,
     });
   });
 

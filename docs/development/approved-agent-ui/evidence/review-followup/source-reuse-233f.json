@@ -1,0 +1,45 @@
+{
+  "combinedCandidate": "233f3cbe04467e6aea252faacec56b93c43f7df9",
+  "files": {
+    "apps/server/src/routers/lambda/task.ts": "9647e03fb11e60caf2f2cd4508ff129c711787f22d6f88e165df036ca56154cf",
+    "apps/server/src/services/toolExecution/serverRuntimes/task.ts": "c77714be712c58620c794ac32c9868bcf3e20ddbe69f8ad7a8fd38820131d985",
+    "packages/builtin-tool-task/src/client/executor/index.ts": "54332b3ba085e6d4fe0cde2f8b89a4f06bb77ac6e87a870eb52fc046db4aae7b",
+    "src/services/task.ts": "c2a444eaa8cfade5883c5a924dbf95c7cb01a32ef7d2ec7aad4173d178ca0a9b",
+    "src/store/task/slices/detail/action.ts": "52c8e8bea606154cc359abae5a12fd9adeea534ab506914058d803d4071bdf0c",
+    "packages/heterogeneous-agents/src/scan/automationReadiness.ts": "0b5e80ec5b9cd84b8415e1a2c46b56d6dd299e4f74930938c505f121a88b95d4",
+    "apps/server/src/services/aiAgent/pipeline/resolveRunAgentConfig.ts": "ca38492a0ee1cb299e67797c7906c0d247598db8ccc1a716b142a1e46b9f19ff",
+    "src/features/CreateAgent/RuntimeFields.tsx": "1b58df701b12ca793e5432935b4fbedc0c17f05fb4a816071f2d2002a9b0fc2e",
+    "src/features/Projects/CreateProjectContent.tsx": "6a06408a4aa6179d119e18efae104965302f801e1b9401f4f10f336dd507da96",
+    "src/features/Projects/createProjectForm.ts": "54271ad629a4bc7ef6e6373ba5ad8655375909977db958ced400df0823bc2d23",
+    "src/features/GroupProfile/index.tsx": "1f56ea6233c0a85f27f23f95f4ef81eaa8dbf013e53d5a7c5e4a326eb3689beb",
+    "src/services/agent.ts": "0acbf1e7d5a8f4d30656b9a396173a78ad64b3e27078d2dfb007581c2802803e",
+    "apps/server/src/routers/lambda/agent.ts": "a48594705994c78c6dfdbdd9fc29bb4180e1f481fbde8a3f81d5b8ae2bc5a0b3",
+    "apps/server/src/services/agent/index.ts": "5e6628996a7b3630b927937a9075e2ecc7f0f5724875ecc5d2cd2ac1c70d1951",
+    "packages/database/src/models/agent.ts": "0dbd38c3f0cd1856cc47dad0a42772118e5eb24e14b586c7ef3af89380978f80",
+    "apps/desktop/src/main/controllers/GatewayConnectionCtr.ts": "e9186ea6bcf6a66900fbc4b7228c5aeda93d1158a24d8ff2b44479375800af0d",
+    "apps/cli/src/tools/index.ts": "a0131f5f5cdb5f6a055aafe53daca66da81602bb11a21af3340084de3093c5fb"
+  },
+  "freshNativeRecheckRequired": [
+    "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+    "src/features/CreateAgent/RuntimeFields.tsx",
+    "apps/desktop/src/main/controllers/GatewayConnectionCtr.ts",
+    "apps/cli/src/tools/index.ts"
+  ],
+  "parentSource": "efc1ed7b724e059e642123a43392962018c5bd75",
+  "previousProofSource": "1dd452becde9cc2dfbdfd24c360db7be80eccce4",
+  "unchangedPreviousFiles": [
+    "apps/server/src/routers/lambda/task.ts",
+    "apps/server/src/services/toolExecution/serverRuntimes/task.ts",
+    "packages/builtin-tool-task/src/client/executor/index.ts",
+    "src/services/task.ts",
+    "src/store/task/slices/detail/action.ts",
+    "apps/server/src/services/aiAgent/pipeline/resolveRunAgentConfig.ts",
+    "src/features/Projects/CreateProjectContent.tsx",
+    "src/features/Projects/createProjectForm.ts",
+    "src/features/GroupProfile/index.tsx",
+    "src/services/agent.ts",
+    "apps/server/src/routers/lambda/agent.ts",
+    "apps/server/src/services/agent/index.ts",
+    "packages/database/src/models/agent.ts"
+  ]
+}

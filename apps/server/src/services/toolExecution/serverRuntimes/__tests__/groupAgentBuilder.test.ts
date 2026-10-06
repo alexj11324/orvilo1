@@ -37,6 +37,7 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(function () {
     return {
       inheritRuntimeForCreation: mockInheritRuntime,
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue('saved-orchestrator'),
       batchCreate: mockBatchCreate,
       getAgentConfigById: mockGetAgentConfigById,
       queryAgents: vi.fn(async () => []),
@@ -124,7 +125,8 @@ describe('groupAgentBuilderRuntime', () => {
   });
 
   describe('createGroup supervisor admission', () => {
-    it('requires invoking source before group creation', async () => {
+    it('requires a saved default before group creation', async () => {
+      mockInheritRuntime.mockRejectedValueOnce(new Error('Orchestrator setup required'));
       const result = await createRuntime().createGroup({ title: 'Team' }, {} as never);
       expect(result.success).toBe(false);
       expect(result.content).toContain('setup');
@@ -132,9 +134,7 @@ describe('groupAgentBuilderRuntime', () => {
     });
 
     it('rejects imported runtimes that cannot execute supervisor builtin tools', async () => {
-      mockInheritRuntime.mockResolvedValueOnce({
-        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-      });
+      mockInheritRuntime.mockRejectedValueOnce(new Error('Orchestrator runtime unsupported'));
       const result = await createRuntime().createGroup({ title: 'Team' }, groupCtx);
       expect(result.success).toBe(false);
       expect(result.content).toContain('unsupported');
@@ -164,6 +164,10 @@ describe('groupAgentBuilderRuntime', () => {
         expect.objectContaining({ title: 'Team', visibility: 'private' }),
         [],
         expect.objectContaining({ ...admitted, title: 'Lead' }),
+        expect.objectContaining({
+          ...admitted,
+          params: { orchestratorSourceAgentId: 'saved-orchestrator' },
+        }),
       );
     });
   });

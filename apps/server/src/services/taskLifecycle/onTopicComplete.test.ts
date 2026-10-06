@@ -426,6 +426,99 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
 
+    it('settles a successful dispatch through its immutable contract after legacy status becomes backlog', async () => {
+      const task = baseTask({
+        automationMode: null,
+        status: 'backlog',
+        workflowCategory: 'in_progress',
+        assigneeAgentId: 'agent-1',
+        executionGeneration: 1,
+        requirementRevision: 2,
+        policyRevision: 1,
+      });
+      findById.mockResolvedValue(task);
+      reviewRequired.mockResolvedValue(true);
+      settleDispatch.mockResolvedValue({
+        currentContract: true,
+        currentGeneration: true,
+        state: 'already_settled',
+        dispatch: {
+          id: 'dispatch-1',
+          fence: 1,
+          generation: 1,
+          requirementRevision: 2,
+          policyRevision: 1,
+          agentId: 'agent-1',
+        },
+      });
+      await service.onTopicComplete({
+        dispatchId: 'dispatch-1',
+        dispatchFence: 1,
+        executionGeneration: 1,
+        operationId: 'op-1',
+        reason: 'done',
+        taskId: task.id,
+        taskIdentifier: task.identifier,
+        topicId: 'topic-1',
+      });
+      expect(updateTopicStatus).toHaveBeenCalledWith(
+        task.id,
+        'topic-1',
+        'op-1',
+        'completed',
+        'done',
+        { dispatchId: 'dispatch-1', fence: 1, generation: 1 },
+      );
+      expect(TaskModel.prototype.updateStatusForExecutionContract).toHaveBeenCalledWith(
+        task.id,
+        'paused',
+        expect.objectContaining({
+          assigneeAgentId: 'agent-1',
+          executionGeneration: 1,
+          requirementRevision: 2,
+          policyRevision: 1,
+          runReservationId: 'completion:op-1',
+        }),
+        expect.objectContaining({ workflowCategory: 'in_review' }),
+      );
+    });
+
+    it('releases the interrupted run completion lease without advancing its business workflow', async () => {
+      const task = baseTask({
+        automationMode: null,
+        status: 'paused',
+        workflowCategory: 'in_progress',
+      });
+      findById.mockResolvedValue(task);
+      settleDispatch.mockResolvedValue({
+        currentContract: true,
+        currentGeneration: true,
+        state: 'settled',
+        dispatch: {
+          id: 'dispatch-1',
+          fence: 1,
+          generation: 1,
+          requirementRevision: 2,
+          policyRevision: 1,
+        },
+      });
+      await service.onTopicComplete({
+        dispatchId: 'dispatch-1',
+        dispatchFence: 1,
+        executionGeneration: 1,
+        operationId: 'op-1',
+        reason: 'interrupted',
+        taskId: task.id,
+        taskIdentifier: task.identifier,
+        topicId: 'topic-1',
+      });
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalledWith(
+        task.id,
+        'completion:op-1',
+      );
+      expect(updateStatus).not.toHaveBeenCalled();
+    });
+
     it('archives a stale generation result without advancing the current task', async () => {
       settleDispatch.mockResolvedValue({
         currentContract: false,

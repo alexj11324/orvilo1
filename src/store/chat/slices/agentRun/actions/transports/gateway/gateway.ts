@@ -1109,6 +1109,7 @@ export class GatewayActionImpl {
       // notification) at `agent_runtime_end` / `error`.
       runLifecycle: buildRunLifecycle(this.#get, {
         context: resolvedMessageContext,
+        isCreateNewTopic,
         parentMessageId: result.assistantMessageId,
         parentMessageType: 'assistant',
         runId: gatewayOpId,

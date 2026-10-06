@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { agentStreamClient } from '@/services/agentExecution';
+import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat/store';
 
 // Mock lambdaClient
@@ -303,6 +304,43 @@ describe('agentGroup actions', () => {
     });
 
     describe('backend integration', () => {
+      it.each([null, TEST_IDS.TOPIC_ID])(
+        'snapshots selected cwd only for blank group topic %s',
+        async (topicId) => {
+          useAgentStore.setState({
+            agentMap: {
+              [TEST_IDS.AGENT_ID]: {
+                id: TEST_IDS.AGENT_ID,
+                agencyConfig: {
+                  heterogeneousProvider: { type: 'opencode' },
+                  executionTarget: 'local',
+                },
+              } as any,
+            },
+            localAgentWorkingDirectoryMap: { [TEST_IDS.AGENT_ID]: '/tmp/group-picked' },
+          });
+          vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
+            createMockExecGroupAgentResponse(),
+          );
+          await act(async () => {
+            await useChatStore.getState().sendGroupMessage({
+              context: createTestContext({ topicId }),
+              message: TEST_CONTENT.GROUP_MESSAGE,
+            });
+          });
+          const input = vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mock.calls[0][0];
+          expect(input.initialTopicMetadata).toEqual(
+            topicId
+              ? undefined
+              : {
+                  workingDirectory: '/tmp/group-picked',
+                  workingDirectoryConfig: { path: '/tmp/group-picked' },
+                },
+          );
+          useAgentStore.setState({ agentMap: {}, localAgentWorkingDirectoryMap: {} });
+        },
+      );
+
       it('should call execGroupAgent with correct parameters', async () => {
         const { result } = renderHook(() => useChatStore());
 

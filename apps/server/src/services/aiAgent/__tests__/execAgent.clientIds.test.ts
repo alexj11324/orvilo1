@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
-const { mockDispatchHeteroAgent, mockMessageCreate, mockTopicCreate } = vi.hoisted(() => ({
-  mockDispatchHeteroAgent: vi.fn(),
-  mockMessageCreate: vi.fn(),
-  mockTopicCreate: vi.fn(),
-}));
+const { mockDispatchHeteroAgent, mockMessageCreate, mockTopicCreate, mockTopicFindById } =
+  vi.hoisted(() => ({
+    mockDispatchHeteroAgent: vi.fn(),
+    mockMessageCreate: vi.fn(),
+    mockTopicCreate: vi.fn(),
+    mockTopicFindById: vi.fn(),
+  }));
 
 // Mock trusted client to avoid server-side env access
 vi.mock('@/libs/trusted-client', () => ({
@@ -93,7 +95,7 @@ vi.mock('@/database/models/topic', () => ({
       findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       armScheduledRun: vi.fn().mockResolvedValue(undefined),
       create: mockTopicCreate,
-      findById: vi.fn().mockResolvedValue(undefined),
+      findById: mockTopicFindById,
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       updateMetadata: vi.fn().mockResolvedValue(undefined),
@@ -118,8 +120,13 @@ vi.mock('@/database/models/thread', () => ({
 vi.mock('@/database/models/chatGroup', () => ({
   ChatGroupModel: vi.fn().mockImplementation(function () {
     return {
-      findById: vi.fn().mockResolvedValue(undefined),
-      getGroupAgentsWithMeta: vi.fn().mockResolvedValue([]),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: 'group-1', title: 'Review team', content: 'Coordinate review.' }),
+      getGroupAgentsWithMeta: vi.fn().mockResolvedValue([
+        { agentId: 'agent-1', role: 'supervisor', title: 'Coordinator' },
+        { agentId: 'agent-2', role: 'participant', title: 'Reviewer' },
+      ]),
     };
   }),
 }));
@@ -220,6 +227,7 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTopicFindById.mockResolvedValue(undefined);
     mockMessageCreate.mockClear();
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
     mockTopicCreate.mockClear();
@@ -269,6 +277,41 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     },
   );
 
+  it.each([undefined, 'topic-1'])(
+    'keeps group directory authority for topic %s',
+    async (topicId) => {
+      const runSpy = vi
+        .spyOn(service, 'execAgent')
+        .mockResolvedValue({} as Awaited<ReturnType<AiAgentService['execAgent']>>);
+      const initialTopicMetadata = {
+        workingDirectory: '/repo/worktree',
+        workingDirectoryConfig: { path: '/repo', git: { activeWorktree: '/repo/worktree' } },
+      };
+      await service.execGroupAgent({
+        agentId: 'agent-1',
+        groupId: 'group-1',
+        message: 'Group',
+        topicId,
+        initialTopicMetadata,
+      });
+      if (!topicId)
+        expect(mockTopicCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ metadata: expect.objectContaining(initialTopicMetadata) }),
+        );
+      else expect(mockTopicCreate).not.toHaveBeenCalled();
+      expect(runSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appContext: expect.objectContaining({
+            groupId: 'group-1',
+            topicId: topicId || 'topic-server-minted',
+          }),
+        }),
+      );
+      expect(runSpy.mock.calls[0][0].appContext?.initialTopicMetadata).toBeUndefined();
+      runSpy.mockRestore();
+    },
+  );
+
   it('keeps the execution-binding pin when a chat-model override is scheduled', async () => {
     // 'override-model' is not a heterogeneous model id, so the run falls back
     // to the deployment's default 'orvilo' binding.
@@ -283,6 +326,53 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       model: 'default',
       provider: 'claude-code',
     });
+  });
+
+  it('admits real group tools and ACP role context for the verified supervisor', async () => {
+    await service.execAgent({
+      agentId: 'agent-1',
+      prompt: 'Ask the Reviewer to inspect this change.',
+      appContext: { groupId: 'group-1', orchestrationRole: 'supervisor' },
+    });
+    const [, run, dispatch] = mockDispatchHeteroAgent.mock.calls[0];
+    expect(run.appContext).toMatchObject({
+      groupId: 'group-1',
+      scope: 'group',
+      orchestrationRole: 'supervisor',
+    });
+    expect(
+      dispatch.builtinToolSpecs.find(
+        (spec: { identifier: string }) => spec.identifier === 'orvilo-group-management',
+      ),
+    ).toBeDefined();
+    expect(dispatch.extraSystemContext).toContain('supervisor');
+    expect(dispatch.extraSystemContext).toContain('agent-2');
+    expect(dispatch.extraSystemContext).toContain('Reviewer');
+  });
+
+  it('rejects routing a group supervisor into another group topic', async () => {
+    mockTopicFindById.mockResolvedValue({
+      id: 'topic-other',
+      groupId: 'group-other',
+      agentId: 'agent-1',
+    });
+    await expect(
+      service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Write in another group',
+        appContext: { groupId: 'group-1', topicId: 'topic-other', orchestrationRole: 'supervisor' },
+      }),
+    ).rejects.toThrow('Topic does not belong to this group');
+    expect(mockMessageCreate).not.toHaveBeenCalled();
+    expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
+  });
+
+  it('rejects a spoofed supervisor before creating a group topic', async () => {
+    await expect(
+      service.execGroupAgent({ agentId: 'agent-2', groupId: 'group-1', message: 'Claim control' }),
+    ).rejects.toThrow('Only the group supervisor');
+    expect(mockTopicCreate).not.toHaveBeenCalled();
+    expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
   });
 
   it('does not recreate or snapshot an existing group topic', async () => {

@@ -137,6 +137,24 @@ describe('AiGenerationService.generateObject', () => {
       });
     });
 
+    it('retains the source topic from metadata or tracing for a judgment run', async () => {
+      const ai = new AiGenerationService({} as never, 'user-1', 'ws-1');
+      await ai.generateObject(
+        { messages: [], model: 'm', provider: 'p' },
+        {
+          ...judgmentOptions,
+          metadata: { topicId: 'metadata-topic' },
+          tracing: { topicId: 'traced-topic' },
+        },
+      );
+      expect(mocks.runAcpJudgment.mock.calls[0][2].judgment.sourceTopicId).toBe('metadata-topic');
+      await ai.generateObject(
+        { messages: [], model: 'm', provider: 'p' },
+        { ...judgmentOptions, tracing: { topicId: 'traced-topic' } },
+      );
+      expect(mocks.runAcpJudgment.mock.calls[1][2].judgment.sourceTopicId).toBe('traced-topic');
+    });
+
     it('rejects tools on the judgment path instead of silently downgrading', async () => {
       const ai = new AiGenerationService({} as never, 'user-1');
       await expect(

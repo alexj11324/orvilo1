@@ -857,3 +857,14 @@ describe('human assignee formatting', () => {
     expect(formatWorkspaceMembers([])).toBe('No workspace members can be assigned tasks.');
   });
 });
+
+it('formatTaskDetail exposes the observed revision for a fenced edit', () => {
+  const output = formatTaskDetail({
+    identifier: 'T-1',
+    instruction: 'Review change',
+    status: 'backlog',
+    domainRevision: 7,
+  });
+  expect(output).toContain('Domain revision: 7');
+  expect(output).toContain('expectedDomainRevision');
+});

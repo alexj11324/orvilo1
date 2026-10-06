@@ -1,4 +1,4 @@
-import type { TaskStatus } from './task';
+import type { TaskDispatchPhase, TaskStatus } from './task';
 
 export type WorkType = 'document' | 'external' | 'file' | 'task';
 export type LinearWorkResourceType = 'linear_document' | 'linear_issue';
@@ -171,6 +171,7 @@ export interface TaskWorkListItem extends WorkListBaseItem {
     name: string | null;
     priority: number | null;
     status: TaskStatus | string | null;
+    dispatchPhase?: TaskDispatchPhase | null;
   };
   type: 'task';
 }

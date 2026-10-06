@@ -1,3 +1,4 @@
+import type { WorkingDirConfig } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -64,11 +65,13 @@ const setupStores = ({
   deviceDefaultCwd,
   legacyWorkingDirectory,
   topicWorkingDirectory,
+  topicWorkingDirectoryConfig,
 }: {
   agencyConfig?: unknown;
   deviceDefaultCwd?: string;
   legacyWorkingDirectory?: string;
   topicWorkingDirectory?: string;
+  topicWorkingDirectoryConfig?: WorkingDirConfig;
 } = {}) => {
   effectiveAgencyConfig.agencyConfig = agencyConfig;
 
@@ -77,7 +80,12 @@ const setupStores = ({
       ? { 'agent-1': legacyWorkingDirectory }
       : {},
   };
-  const chatState = { topicMetadata: undefined, topicWorkingDirectory };
+  const chatState = {
+    topicMetadata: topicWorkingDirectoryConfig
+      ? { workingDirectoryConfig: topicWorkingDirectoryConfig }
+      : undefined,
+    topicWorkingDirectory,
+  };
   const deviceState = { deviceDefaultCwd, useFetchDevices: vi.fn() };
   const electronState = { gatewayDeviceInfo: { deviceId: 'device-A' } };
   const userState = {};
@@ -157,21 +165,42 @@ describe('useEffectiveWorkingDirectory', () => {
     expect(result.current).toBe('/repo/split-pane-topic');
   });
 
-  it('does not inherit the active topic directory for a new-topic pane', () => {
-    setupStores({
-      agencyConfig: { workingDirByDevice: { 'device-A': '/repo/agent-default' } },
-      topicWorkingDirectory: '/repo/other-pane-topic',
-    });
+  it.each([undefined, '/repo/agent-default'])(
+    'ignores active topic config for a null topic with saved directory %s',
+    (savedDirectory) => {
+      setupStores({
+        agencyConfig: savedDirectory
+          ? { workingDirByDevice: { 'device-A': savedDirectory } }
+          : undefined,
+        topicWorkingDirectory: '/repo/other-pane-topic',
+        topicWorkingDirectoryConfig: {
+          path: '/repo/other-pane-topic',
+          git: { activeWorktree: '/repo/other-pane-worktree' },
+        },
+      });
+      const { result } = renderHook(() =>
+        useEffectiveWorkingDirectory('agent-1', { homeFallback: false, topicId: null }),
+      );
+      expect(result.current).toBe(savedDirectory);
+    },
+  );
 
-    const { result } = renderHook(() =>
-      useEffectiveWorkingDirectory('agent-1', {
-        homeFallback: false,
-        topicId: null,
-      }),
-    );
-
-    expect(result.current).toBe('/repo/agent-default');
-  });
+  it.each([undefined, 'route-topic'])(
+    'keeps topic working-directory config when topic is %s',
+    (topicId) => {
+      setupStores({
+        agencyConfig: { workingDirByDevice: { 'device-A': '/repo/agent-default' } },
+        topicWorkingDirectoryConfig: {
+          path: '/repo/topic',
+          git: { activeWorktree: '/repo/topic-worktree' },
+        },
+      });
+      const { result } = renderHook(() =>
+        useEffectiveWorkingDirectory('agent-1', { homeFallback: false, topicId }),
+      );
+      expect(result.current).toBe('/repo/topic-worktree');
+    },
+  );
 
   it('keeps the device default cwd with homeFallback disabled', () => {
     setupStores({ deviceDefaultCwd: '/repo/device-default' });

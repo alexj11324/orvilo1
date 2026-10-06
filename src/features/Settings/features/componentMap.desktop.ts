@@ -2,6 +2,7 @@ import Billing from '@/business/client/BusinessSettingPages/Billing';
 import Credits from '@/business/client/BusinessSettingPages/Credits';
 import Plans from '@/business/client/BusinessSettingPages/Plans';
 import Usage from '@/business/client/BusinessSettingPages/Usage';
+import Orchestrator from '@/features/Orchestrator/Settings';
 import { SettingsTabs } from '@/store/global/initialState';
 
 import About from '../about';
@@ -31,6 +32,7 @@ export const componentMap = {
   [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,
   [SettingsTabs.Agents]: Agents,
+  [SettingsTabs.Orchestrator]: Orchestrator,
   [SettingsTabs.Provider]: Provider,
   [SettingsTabs.ServiceModel]: ServiceModel,
   [SettingsTabs.Memory]: Memory,

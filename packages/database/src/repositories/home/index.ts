@@ -348,7 +348,10 @@ export class HomeRepository {
           backgroundColor: a.backgroundColor,
           description: a.description,
           groupId: a.sessionGroupId,
-          heterogeneousType: runtimeType === 'orvilo' ? null : runtimeType,
+          heterogeneousType:
+            runtimeType === 'orvilo' && a.agencyConfig?.heterogeneousProvider?.type !== 'orvilo'
+              ? null
+              : runtimeType,
           id: a.id,
           isPrivate: visibility === 'private',
           labels: agentLabelsMap.get(a.id),

@@ -13,9 +13,7 @@ import { ACP_MCP_MOUNT_AGENT_TYPES } from './acpRuntime';
  * is transport-capable and mount-incapable. Remote platform types and the
  * non-standard adapters (cursor/devin/droid/grok/trae) are in neither set.
  *
- * The builtin `'orvilo'` agent's fixed Prime adapter mounts no tools
- * (`noTools: 'all'` on the runner session) — it is never in the
- * mount-capable set.
+ * Prime uses a native MCP bridge rather than the ACP session/new mount.
  */
 export const canMountBuiltinToolSurface = (
   binding: { type?: string | null } | null | undefined,
@@ -23,3 +21,8 @@ export const canMountBuiltinToolSurface = (
   const cliType = resolveHeteroCliAgentType(binding?.type ? { type: binding.type } : undefined);
   return !!cliType && ACP_MCP_MOUNT_AGENT_TYPES.has(cliType);
 };
+
+/** Orchestrators use either Prime's native per-run MCP bridge or MCP-capable ACP. */
+export const canRunGroupSupervisorRuntime = (
+  binding: { type?: string | null } | null | undefined,
+): boolean => binding?.type === 'orvilo' || canMountBuiltinToolSurface(binding);

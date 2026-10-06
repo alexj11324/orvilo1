@@ -210,7 +210,7 @@ export default {
 
   'cmdk.navigate': 'Navigate',
 
-  'cmdk.newAgent': 'Create New Agent',
+  'cmdk.newAgent': 'New Agent',
 
   'cmdk.newAgentTeam': 'Create New Group',
 
@@ -1268,4 +1268,9 @@ export default {
   'reuiShell9.collapse': 'Collapse',
   'reuiShell9.expand': 'Expand',
   'reuiShell9.markAllReadFailed': 'Couldn’t mark notifications as read',
+
+  'navPanel.newGoal': 'New goal',
+  'cmdk.newConversation': 'New conversation',
+  'cmdk.newGroupChat': 'New group chat',
+  'cmdk.newGoal': 'New goal',
 };

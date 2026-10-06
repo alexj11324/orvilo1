@@ -972,7 +972,7 @@ describe('AgentSlice Actions', () => {
       expect(toast.error).toHaveBeenCalled();
       // Optimistic value must not survive a rejected write — refetch server truth.
       expect(refreshSpy).toHaveBeenCalledWith('agent-1');
-      expect(result.current.saveStatus).toBe('idle');
+      expect(result.current.saveStatus).toBe('failed');
     });
 
     it('should let a scoped editor own config failure feedback', async () => {
@@ -992,7 +992,7 @@ describe('AgentSlice Actions', () => {
       });
 
       expect(toast.error).not.toHaveBeenCalled();
-      expect(result.current.saveStatus).toBe('idle');
+      expect(result.current.saveStatus).toBe('failed');
     });
   });
 
@@ -1325,6 +1325,78 @@ describe('AgentSlice Actions', () => {
   });
 
   describe('optimisticUpdateAgentMeta', () => {
+    it('keeps a previous Agent failure from replacing the current Agent save and retry', async () => {
+      const { result } = renderHook(() => useAgentStore());
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      let rejectPrevious!: (error: Error) => void;
+      let rejectCurrent!: (error: Error) => void;
+      vi.mocked(agentService.updateAgentMeta)
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, reject) => {
+              rejectPrevious = reject;
+            }),
+        )
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, reject) => {
+              rejectCurrent = reject;
+            }),
+        )
+        .mockResolvedValueOnce({ success: true, agent: { id: 'agent-b', name: 'B' } } as any);
+      let previous!: Promise<void>;
+      let current!: Promise<void>;
+      act(() => {
+        previous = result.current.optimisticUpdateAgentMeta('agent-a', { name: 'A' });
+        current = result.current.optimisticUpdateAgentMeta('agent-b', { name: 'B' });
+      });
+      await act(async () => {
+        rejectPrevious(new Error('A failed'));
+        await previous;
+      });
+      expect(result.current.saveAgentId).toBe('agent-b');
+      expect(result.current.saveStatus).toBe('saving');
+      await act(async () => {
+        rejectCurrent(new Error('B failed'));
+        await current;
+      });
+      await act(async () => {
+        await result.current.retryAgentSave();
+      });
+      expect(agentService.updateAgentMeta).toHaveBeenLastCalledWith(
+        'agent-b',
+        { name: 'B' },
+        expect.anything(),
+      );
+      expect(result.current.saveStatus).toBe('saved');
+    });
+
+    it('preserves a rejected name edit for retry and only reports saved after persistence', async () => {
+      const { result } = renderHook(() => useAgentStore());
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(agentService.updateAgentMeta)
+        .mockRejectedValueOnce(new Error('save failed'))
+        .mockResolvedValueOnce({
+          agent: { id: 'agent-1', name: 'Code helper' } as any,
+          success: true,
+        });
+
+      await act(async () => {
+        await expect(
+          result.current.updateAgentMetaById('agent-1', { name: 'Code helper' }, { rethrow: true }),
+        ).rejects.toThrow('save failed');
+      });
+      expect(result.current.saveStatus).toBe('failed');
+      expect(result.current.agentMap['agent-1']?.name).toBe('Code helper');
+
+      await act(async () => {
+        await result.current.retryAgentSave();
+      });
+      expect(result.current.saveStatus).toBe('saved');
+      expect(agentService.updateAgentMeta).toHaveBeenCalledTimes(2);
+      expect(result.current.agentMap['agent-1']?.name).toBe('Code helper');
+    });
+
     it('should perform optimistic update and then use API result', async () => {
       const { result } = renderHook(() => useAgentStore());
 

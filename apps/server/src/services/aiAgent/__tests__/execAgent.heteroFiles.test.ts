@@ -745,6 +745,41 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
+  it.each([
+    [false, false],
+    [false, true],
+    [true, true],
+  ])(
+    'keeps the parent provider session separate when isolationThread=%s and threaded=%s',
+    async (isolated, threaded) => {
+      mockGetHeterogeneousResumeSessionId.mockResolvedValue('parent-opencode-session');
+      heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'device-1',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode' },
+      } as any;
+
+      await service.execAgent({
+        agentId: 'agent-1',
+        appContext: {
+          isolationThread: isolated,
+          orchestrationRole: isolated ? 'member' : undefined,
+          threadId: threaded ? 'thread-1' : undefined,
+          topicId: 'topic-1',
+        },
+        parentOperationId: isolated ? 'parent-operation' : undefined,
+        prompt: 'Run in the appropriate provider conversation',
+      });
+
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resumeSessionId: isolated ? undefined : 'parent-opencode-session',
+        }),
+      );
+      if (isolated) expect(mockGetHeterogeneousResumeSessionId).not.toHaveBeenCalled();
+    },
+  );
+
   it('resumes Amp natively without loading or injecting fallback history', async () => {
     mockGetHeterogeneousResumeSessionId.mockResolvedValue('amp-thread-existing');
     heteroAgentConfig.model = 'amp';

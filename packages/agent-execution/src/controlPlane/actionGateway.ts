@@ -247,9 +247,9 @@ export function createActionGateway(deps: {
           request,
           async (snapshot): Promise<ControlResult<DurableReceipt>> => {
             const admitted = validate(request, snapshot, now());
-            if (!admitted.ok) return admitted;
+            if (admitted.ok === false) return admitted;
             const scoped = await deps.executor.authorize(request, snapshot);
-            if (!scoped.ok) return scoped;
+            if (scoped.ok === false) return scoped;
             const timestamp = now();
             const key = keyOf(request);
             const receipt: DurableReceipt = {
@@ -268,7 +268,7 @@ export function createActionGateway(deps: {
             const reserved = await deps.receipts.reserve(key, receipt);
             if (!reserved.claimed) {
               const replayAdmission = validate(request, snapshot, now());
-              if (!replayAdmission.ok) return replayAdmission;
+              if (replayAdmission.ok === false) return replayAdmission;
               if (reserved.receipt.requestDigest !== receipt.requestDigest)
                 return failure('idempotency_conflict', 'Key already used by another request');
               if (reserved.receipt.status === 'verified')
@@ -289,7 +289,7 @@ export function createActionGateway(deps: {
             }
             // Persistence can take time; fail closed if the lease/grant expired meanwhile.
             const rechecked = validate(request, snapshot, now());
-            if (!rechecked.ok) {
+            if (rechecked.ok === false) {
               receipt.status = 'failed';
               receipt.error = rechecked.error;
               receipt.updatedAt = now();
@@ -297,8 +297,9 @@ export function createActionGateway(deps: {
               return rechecked;
             }
             const rescoped = await deps.executor.authorize(request, snapshot);
-            const finalAdmission = rescoped.ok ? validate(request, snapshot, now()) : rescoped;
-            if (!finalAdmission.ok) {
+            const finalAdmission =
+              rescoped.ok === true ? validate(request, snapshot, now()) : rescoped;
+            if (finalAdmission.ok === false) {
               receipt.status = 'failed';
               receipt.error = finalAdmission.error;
               receipt.updatedAt = now();
@@ -442,13 +443,13 @@ export function createActionReceiptRecovery(deps: {
           return failure('unsupported_version', 'Unsupported action schema');
         return await deps.authority.withAdmission(request, async (snapshot) => {
           const admitted = validate(request, snapshot, now());
-          if (!admitted.ok) return admitted;
+          if (admitted.ok === false) return admitted;
           const scoped = await deps.verifier.authorize(request, snapshot);
-          if (!scoped.ok) return scoped;
+          if (scoped.ok === false) return scoped;
           const key = keyOf(request);
           const receipt = await deps.receipts.read(key);
           const rechecked = validate(request, snapshot, now());
-          if (!rechecked.ok) return rechecked;
+          if (rechecked.ok === false) return rechecked;
           if (!receipt) return failure('outcome_unknown', 'No durable receipt exists');
           if (
             receipt.requestDigest !== hash(canonical(request)) ||
@@ -470,10 +471,10 @@ export function createActionReceiptRecovery(deps: {
           // Rotating reservation ownership prevents late original persistence. The
           // authoritative admission lock must also drain any original target effect.
           const beforeVerify = validate(request, snapshot, now());
-          if (!beforeVerify.ok) return beforeVerify;
+          if (beforeVerify.ok === false) return beforeVerify;
           const checked = await deps.verifier.verify(request, snapshot.commitment);
           const finalAdmission = validate(request, snapshot, now());
-          if (!finalAdmission.ok) return finalAdmission;
+          if (finalAdmission.ok === false) return finalAdmission;
           if (
             !checked.passed ||
             !checked.evidence.length ||

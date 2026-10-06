@@ -3,6 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { UserPreferenceSchema } from './preference';
 
 describe('UserPreferenceSchema', () => {
+  it('preserves a selected Orchestrator and allows clearing it', () => {
+    expect(UserPreferenceSchema.parse({ orchestratorAgentId: 'agent-1' })).toMatchObject({
+      orchestratorAgentId: 'agent-1',
+    });
+    expect(UserPreferenceSchema.parse({ orchestratorAgentId: null })).toMatchObject({
+      orchestratorAgentId: null,
+    });
+  });
+
   // `user.updatePreference` validates its input with this schema, and zod
   // strips unknown keys rather than rejecting them. A field that exists on the
   // TypeScript interface but is missing here therefore fails silently: the

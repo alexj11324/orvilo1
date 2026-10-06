@@ -1,0 +1,33 @@
+{
+  "acceptance": "Pending successful fresh first-run automatic journey; first startup attempt failed.",
+  "cliSha256": "627424d37665f520dc3645d6bb66df5d14a47319eb135d1cd2bed5450f86b285",
+  "concurrentTitleOperation": {
+    "id": "op_1791271721264_agt_AB0VcTFshbq8_tpc_8wSdg6cE49Av_LyNXjfuc",
+    "purpose": "outputJSON.topic_title",
+    "startedAt": "2026-10-06T07:28:41.264Z",
+    "completedAt": "2026-10-06T07:29:10.283Z",
+    "status": "done"
+  },
+  "limits": [
+    "The exact SQLite statement and historical lock holder PID were not observed.",
+    "T5 generation1 likewise overlapped another OpenCode run, but that older run's title role is unconfirmed.",
+    "No standalone provider probe, retry, global database write or new prompt was issued by the observer."
+  ],
+  "mainOperation": {
+    "id": "op_1791271719069_agt_AB0VcTFshbq8_tpc_POb32rAXcWDC_rjGtzOQ7",
+    "topicId": "tpc_POb32rAXcWDC",
+    "startedAt": "2026-10-06T07:28:39.071Z",
+    "completedAt": "2026-10-06T07:28:44.983Z",
+    "status": "error",
+    "errorMessage": "OpenCode ACP exited unexpectedly (code 1, signal null)",
+    "stderr": "Unexpected error: database is locked",
+    "stderrBytes": 57,
+    "incomingAcpFrames": 0,
+    "toolCalls": 0
+  },
+  "officialRuntimeVersion": "1.18.29",
+  "runtime": "opencode",
+  "sourceHead": "5e1c2462af7835b77f58dc9669f9900e07d9f08b",
+  "taskCreated": false,
+  "workingDirectory": "journey-demo"
+}

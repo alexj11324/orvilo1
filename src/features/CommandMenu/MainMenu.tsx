@@ -4,11 +4,13 @@ import { Command } from 'cmdk';
 import {
   Bot,
   FeatherIcon,
+  LayersIcon,
   LibraryBig,
   ListTodo,
   MessageSquarePlusIcon,
   Monitor,
   Star,
+  TargetIcon,
 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +31,7 @@ import RecentsCommands from './RecentsCommands';
 import { useCommandMenu } from './useCommandMenu';
 
 const MainMenu = memo(() => {
-  const { pathname, menuContext, setPages, pages, onClose } = useCommandMenuContext();
+  const { pathname, menuContext, setPages, pages, onClose, onCreateView } = useCommandMenuContext();
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
@@ -40,6 +42,8 @@ const MainMenu = memo(() => {
 
   const {
     handleCreateSession,
+    handleCreateConversation,
+    handleCreateGoal,
     handleCreateTopic,
     handleCreateLibrary,
     handleCreateProject,
@@ -57,54 +61,70 @@ const MainMenu = memo(() => {
       <ContextCommands />
 
       <Command.Group heading={t('cmdk.actions')}>
-        {/* Creating a task leads the list: the product's default working surface
-            is the task board, so the palette's first command should be the one
-            that puts work into it. */}
         <CommandItem
-          disabled={!canCreate}
-          icon={<ListTodo />}
-          keywords={['task', 'todo', 'create', 'new', 'kanban', 'board']}
-          value="create new task"
-          onSelect={handleCreateTask}
+          disabled={!canCreate || isNewTopicSendInFlight}
+          icon={<MessageSquarePlusIcon />}
+          value="create new conversation"
+          onSelect={handleCreateConversation}
         >
-          {t('cmdk.newTask')}
+          {t('cmdk.newConversation')}
         </CommandItem>
-
-        <CommandItem
-          disabled={!canCreate}
-          icon={<PROJECT_ENTITY_ICON />}
-          keywords={['project', 'create', 'new', 'initiative', 'milestone']}
-          value="create new project"
-          onSelect={handleCreateProject}
-        >
-          {t('cmdk.newProject')}
-        </CommandItem>
-
         <CommandItem
           disabled={!canCreate}
           icon={<Bot />}
-          unpinned={menuContext === 'agent'}
+          value="create new group chat"
+          onSelect={handleCreateAgentTeam}
+        >
+          {t('cmdk.newGroupChat')}
+        </CommandItem>
+        <Command.Separator />
+        <CommandItem
+          disabled={!canCreate}
+          icon={<Bot />}
           value="create new agent assistant"
           onSelect={handleCreateSession}
         >
           {t('cmdk.newAgent')}
         </CommandItem>
-
+        <Command.Separator />
         <CommandItem
           disabled={!canCreate}
-          icon={<Bot />}
-          unpinned={menuContext === 'agent'}
-          value="create new agent team"
-          onSelect={handleCreateAgentTeam}
+          icon={<ListTodo />}
+          keywords={['task', 'todo', 'new']}
+          value="create new task"
+          onSelect={handleCreateTask}
         >
-          {t('cmdk.newAgentTeam')}
+          {t('cmdk.newTask')}
         </CommandItem>
-
+        <CommandItem
+          disabled={!canCreate}
+          icon={<TargetIcon />}
+          value="create new goal"
+          onSelect={handleCreateGoal}
+        >
+          {t('cmdk.newGoal')}
+        </CommandItem>
+        <CommandItem
+          disabled={!canCreate}
+          icon={<PROJECT_ENTITY_ICON />}
+          value="create new project"
+          onSelect={handleCreateProject}
+        >
+          {t('cmdk.newProject')}
+        </CommandItem>
+        <CommandItem
+          disabled={!canCreate}
+          icon={<LayersIcon />}
+          value="create new view"
+          onSelect={onCreateView}
+        >
+          {t('savedViews.newView')}
+        </CommandItem>
         {menuContext === 'agent' && (
           <CommandItem
+            unpinned
             disabled={!canCreate || isNewTopicSendInFlight}
             icon={<MessageSquarePlusIcon />}
-            unpinned={menuContext !== 'agent'}
             value="create new topic"
             onSelect={handleCreateTopic}
           >

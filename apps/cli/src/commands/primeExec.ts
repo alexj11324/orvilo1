@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import { openPrimeDeviceRun } from '@orvilo/device-prime-host';
+import { decodeAcpBuiltinToolSpecs } from '@orvilo/heterogeneous-agents/builtinMcp';
 import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 import type { Command } from 'commander';
 
@@ -152,6 +153,7 @@ const primeExec = async (options: PrimeExecOptions): Promise<void> => {
     options.runGeneration === undefined ? undefined : Number.parseInt(options.runGeneration, 10);
 
   const result = await drivePrimeRun({
+    builtinTools: decodeAcpBuiltinToolSpecs(process.env.ORVILO_BUILTIN_TOOLS),
     assistantMessageId: options.assistantMessageId,
     jwt: token,
     operationId: options.operationId,

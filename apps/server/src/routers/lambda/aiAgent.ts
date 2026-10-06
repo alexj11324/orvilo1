@@ -1245,6 +1245,12 @@ const ExecGroupAgentSchema = z.object({
   files: z.array(z.string()).optional(),
   /** The Group ID */
   groupId: z.string(),
+  initialTopicMetadata: z
+    .object({
+      workingDirectory: z.string().optional(),
+      workingDirectoryConfig: workingDirConfigSchema.optional(),
+    })
+    .optional(),
   /** User message content */
   message: z.string(),
   /** Optional: Create a new topic */
@@ -2547,7 +2553,7 @@ export const aiAgentRouter = router({
   execGroupAgent: aiAgentWriteProcedure
     .input(ExecGroupAgentSchema)
     .mutation(async ({ input, ctx }) => {
-      const { agentId, groupId, message, files, topicId, newTopic } = input;
+      const { agentId, groupId, message, files, topicId, newTopic, initialTopicMetadata } = input;
 
       log('execGroupAgent: agentId=%s, groupId=%s', agentId, groupId);
 
@@ -2571,6 +2577,7 @@ export const aiAgentRouter = router({
           agentId,
           files,
           groupId,
+          initialTopicMetadata,
           message,
           newTopic,
           topicId,

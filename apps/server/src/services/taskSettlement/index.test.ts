@@ -119,6 +119,22 @@ describe('settleTaskExecution', () => {
     );
   });
 
+  it.each([{ completionRequestedByOperation: true }, { runTrigger: 'goal' as const }])(
+    'keeps successful completion intent behind required human review: %j',
+    async (context) => {
+      mocks.resolveTaskReviewRequirement.mockResolvedValue(true);
+
+      const result = await settle({ context, outcome: 'succeeded' });
+
+      expect(result).toMatchObject({
+        applied: true,
+        attention: 'review_required',
+        decision: { type: 'review' },
+        workflowCategory: 'in_review',
+      });
+    },
+  );
+
   it('agent waiting → workflow stays in_progress, execution=waiting, attention=needs_input', async () => {
     const result = await settle({ outcome: 'waiting_for_input' });
 
@@ -209,6 +225,68 @@ describe('settleTaskExecution', () => {
 
     expect(result).toMatchObject({ applied: false, skippedReason: 'stale_generation' });
     noWrites();
+  });
+
+  it('uses the immutable contract and completion lease when a completed dispatch projects backlog', async () => {
+    mocks.findById.mockResolvedValue(runningTask({ status: 'backlog' }));
+    mocks.resolveTaskReviewRequirement.mockResolvedValue(true);
+    const contract = {
+      assigneeAgentId: 'agent-1',
+      executionGeneration: 1,
+      policyRevision: 1,
+      requirementRevision: 2,
+    };
+    const result = await settle({
+      outcome: 'succeeded',
+      context: { expectedContract: contract, reservationId: 'completion:op-1' },
+    });
+    expect(result).toMatchObject({ applied: true, workflowCategory: 'in_review' });
+    expect(mocks.updateStatusForExecutionContract).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      { ...contract, runReservationId: 'completion:op-1' },
+      expect.objectContaining({ workflowCategory: 'in_review' }),
+    );
+  });
+
+  it('does not treat the current failed dispatch projection as a completed business issue', async () => {
+    mocks.findById.mockResolvedValue(runningTask({ status: 'failed' }));
+    const result = await settle({
+      outcome: 'failed',
+      context: {
+        expectedContract: {
+          assigneeAgentId: 'agent-1',
+          executionGeneration: 1,
+          policyRevision: 1,
+          requirementRevision: 2,
+        },
+      },
+    });
+    expect(result).toMatchObject({
+      applied: true,
+      attention: 'execution_failed',
+      workflowCategory: 'in_progress',
+    });
+  });
+
+  it('a superseded immutable contract declines the review write', async () => {
+    mocks.updateStatusForExecutionContract.mockResolvedValue(null);
+    mocks.resolveTaskReviewRequirement.mockResolvedValue(true);
+    const result = await settle({
+      outcome: 'succeeded',
+      context: {
+        expectedContract: {
+          assigneeAgentId: 'agent-1',
+          executionGeneration: 1,
+          policyRevision: 1,
+          requirementRevision: 2,
+        },
+        reservationId: 'completion:op-1',
+      },
+    });
+    expect(result).toMatchObject({ applied: false, skippedReason: 'stale_generation' });
+    expect(mocks.updateStatusIfReservation).not.toHaveBeenCalled();
+    expect(mocks.updateStatus).not.toHaveBeenCalled();
   });
 
   it('settle on a canceled task is a no-op', async () => {

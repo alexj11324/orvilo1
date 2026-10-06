@@ -58,21 +58,45 @@ interface Journal {
 const readJournal = (folder: string): Journal =>
   JSON.parse(readFileSync(path.join(folder, 'meta/_journal.json'), 'utf8'));
 
+// These entries reached canary with colliding idx values and older timestamps.
+// Preserve their shipped identities; 0205 repairs the storage staged upgrades skipped.
+const historicalEntries: JournalEntry[] = [
+  { breakpoints: true, idx: 198, tag: '0198_mcp_events', version: '7', when: 1790794374893 },
+  {
+    breakpoints: true,
+    idx: 199,
+    tag: '0199_core_execution_authority',
+    version: '7',
+    when: 1790795715648,
+  },
+];
+const isHistoricalEntry = (entry: JournalEntry) =>
+  historicalEntries.some((historical) => historical.tag === entry.tag);
+
 describe('migration journal integrity', () => {
   const journal = readJournal(migrationsFolder);
+  const canonicalEntries = journal.entries.filter((entry) => !isHistoricalEntry(entry));
+
+  it('pins exactly the two shipped journal exceptions at their original positions', () => {
+    expect(journal.entries.filter(isHistoricalEntry)).toEqual(historicalEntries);
+    expect(journal.entries.slice(204, 206)).toEqual(historicalEntries);
+  });
 
   it('keeps idx strictly increasing and gap-free', () => {
-    journal.entries.forEach((entry, i) => {
-      if (i === 0) return;
-      const prev = journal.entries[i - 1];
+    canonicalEntries.forEach((entry, i) => {
+      if (i === 0) {
+        expect(entry.idx).toBe(0);
+        return;
+      }
+      const prev = canonicalEntries[i - 1];
       expect(entry.idx, `entry ${entry.tag} idx`).toBe(prev.idx + 1);
     });
   });
 
   it('keeps `when` strictly increasing so staged upgrades never skip an entry', () => {
-    journal.entries.forEach((entry, i) => {
+    canonicalEntries.forEach((entry, i) => {
       if (i === 0) return;
-      const prev = journal.entries[i - 1];
+      const prev = canonicalEntries[i - 1];
       expect(
         entry.when,
         `${entry.tag} (${entry.when}) must sort after ${prev.tag} (${prev.when}); ` +
@@ -185,6 +209,72 @@ const stageMigrationsFolder = (entries: JournalEntry[]): string => {
   writeFileSync(path.join(dir, 'meta/_journal.json'), JSON.stringify({ entries, version: '6' }));
   return dir;
 };
+
+describe('Core storage forward repair (PGlite)', () => {
+  it.each(['0203_device_capability_snapshot', '0204_automation_occurrences_forward_repair'])(
+    'repairs storage skipped past %s and preserves rows on replay',
+    async (boundaryTag) => {
+      const boundary = realEntries.find((entry) => entry.tag === boundaryTag)!;
+      const repair = journalEntry('0205_core_execution_storage_forward_repair');
+      const folder = stageMigrationsFolder([...historicalEntries, repair]);
+      const client = new PGlite();
+      const db = pgliteDrizzle({ client });
+      try {
+        await db.execute(sql`CREATE SCHEMA "drizzle"`);
+        await db.execute(sql`
+          CREATE TABLE "drizzle"."__drizzle_migrations" (
+            id serial PRIMARY KEY, hash text NOT NULL, created_at bigint
+          )
+        `);
+        await db.execute(sql`
+          INSERT INTO "drizzle"."__drizzle_migrations" (hash, created_at)
+          VALUES ('previous-boundary', ${boundary.when})
+        `);
+        await pgliteMigrate(db, { migrationsFolder: folder });
+        expect(
+          (
+            await client.query(`SELECT to_regclass('action_receipts') AS receipts,
+          to_regclass('core_session_snapshots') AS snapshots`)
+          ).rows,
+        ).toEqual([{ receipts: 'action_receipts', snapshots: 'core_session_snapshots' }]);
+        await client.exec(`
+          INSERT INTO action_receipts (id, reservation_key, owner_token, receipt)
+          VALUES ('receipt', 'reservation', 'owner', '{"preserved":true}');
+          INSERT INTO core_session_snapshots
+            (id, workspace_id, user_id, task_id, topic_id, registration_id, epoch,
+             captured_at, digest, snapshot)
+          VALUES ('snapshot', 'workspace', 'user', 'task', 'topic', 'registration',
+            1, 2, 'digest', '{"preserved":true}');
+        `);
+        const repairSql = readMigrationFiles({ migrationsFolder: folder }).at(-1)!.sql;
+        for (const statement of repairSql) await db.execute(sql.raw(statement));
+        await pgliteMigrate(db, { migrationsFolder: folder });
+        expect((await client.query('SELECT receipt FROM action_receipts')).rows).toEqual([
+          { receipt: { preserved: true } },
+        ]);
+        expect((await client.query('SELECT snapshot FROM core_session_snapshots')).rows).toEqual([
+          { snapshot: { preserved: true } },
+        ]);
+        await expect(
+          client.exec(`INSERT INTO action_receipts
+          (id, reservation_key, owner_token, receipt)
+          VALUES ('duplicate', 'reservation', 'owner', '{}')`),
+        ).rejects.toThrow();
+        expect(
+          (
+            await client.query(
+              'SELECT created_at FROM "drizzle"."__drizzle_migrations" ORDER BY created_at',
+            )
+          ).rows,
+        ).toEqual([{ created_at: boundary.when }, { created_at: repair.when }]);
+      } finally {
+        await client.close();
+        rmSync(folder, { force: true, recursive: true });
+      }
+    },
+    120_000,
+  );
+});
 
 interface FenceSeqColumn {
   column_default: string | null;
@@ -411,7 +501,8 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     assertTestDatabaseUrl(adminUrl);
 
     const journal = readJournal(migrationsFolder);
-    const boundary = journal.entries.at(-2)!;
+    const stageEntries = journal.entries.slice(0, -1).filter((entry) => !isHistoricalEntry(entry));
+    const boundaryWhen = Math.max(...stageEntries.map((entry) => entry.when));
 
     // Scratch database so the real migrator runs against a clean slate.
     const scratchName = `orvilo_mig_stage_${process.pid}_${Math.floor(Math.random() * 1e6)}`;
@@ -426,9 +517,8 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     const pool = new Pool({ connectionString: scratchUrl.toString() });
     const db = nodeDrizzle(pool);
 
-    // Stage A: journal truncated at the previous boundary — the on-disk folder
-    // an old deploy would have seen. SQL/snapshot files are symlinked into a
-    // temp dir so the full journal copy is unnecessary.
+    // Stage A excludes the historical entries a staged deploy skipped. Preserve
+    // their old timestamps in Stage B so only the forward repair can fill the gap.
     const stageDir = mkdtempSync(path.join(tmpdir(), 'orvilo-mig-stage-'));
     mkdirSync(path.join(stageDir, 'meta'));
     for (const file of readdirSync(migrationsFolder)) {
@@ -441,7 +531,7 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     }
     writeFileSync(
       path.join(stageDir, 'meta/_journal.json'),
-      JSON.stringify({ entries: journal.entries.slice(0, -1), version: '6' }, null, 2),
+      JSON.stringify({ entries: stageEntries, version: '6' }, null, 2),
     );
 
     try {
@@ -450,7 +540,13 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
       const applied = await pool.query<{ created_at: string }>(
         'SELECT MAX(created_at) AS created_at FROM "drizzle"."__drizzle_migrations"',
       );
-      expect(Number(applied.rows[0]?.created_at)).toBe(boundary.when);
+      expect(Number(applied.rows[0]?.created_at)).toBe(boundaryWhen);
+      expect(
+        (
+          await pool.query(`SELECT to_regclass('action_receipts') AS receipts,
+        to_regclass('core_session_snapshots') AS snapshots`)
+        ).rows,
+      ).toEqual([{ receipts: null, snapshots: null }]);
 
       // Stage B: real folder — the deploy carrying the tail migration.
       await nodeMigrate(db, { migrationsFolder });
@@ -458,18 +554,19 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
       const appliedAfter = await pool.query<{ count: string }>(
         'SELECT COUNT(*) AS count FROM "drizzle"."__drizzle_migrations"',
       );
-      expect(Number(appliedAfter.rows[0]?.count)).toBe(journal.entries.length);
+      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + 1);
 
-      // The tail migration is the one staged upgrades used to lose.
-      const col = await pool.query(
-        `SELECT column_name FROM information_schema.columns
-         WHERE table_name = 'integration_leases' AND column_name = 'fence_seq'`,
-      );
-      expect(col.rows).toHaveLength(1);
+      expect(
+        (
+          await pool.query(`SELECT to_regclass('action_receipts') AS receipts,
+        to_regclass('core_session_snapshots') AS snapshots`)
+        ).rows,
+      ).toEqual([{ receipts: 'action_receipts', snapshots: 'core_session_snapshots' }]);
     } finally {
       await pool.end();
       await admin.query(`DROP DATABASE IF EXISTS "${scratchName}"`);
       await admin.end();
+      rmSync(stageDir, { force: true, recursive: true });
     }
   }, 300_000);
 });

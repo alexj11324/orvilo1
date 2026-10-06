@@ -618,15 +618,19 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
           metadata: { executionPlan: { workingDirectoryBinding: '/repo/worktree' } },
         })),
       } as any;
-      const service = new HeterogeneousAgentService({} as any, 'user-1', {
-        agentOperationModel,
-        topicModel,
-        persistenceHandler: {
-          finish: vi.fn(),
-          ingest: vi.fn(),
-        } as unknown as HeterogeneousPersistenceHandler,
-        streamEventManager: createSilentStreamManager(),
-      });
+      const service = new HeterogeneousAgentService(
+        { query: { threads: { findFirst: vi.fn(async () => undefined) } } } as any,
+        'user-1',
+        {
+          agentOperationModel,
+          topicModel,
+          persistenceHandler: {
+            finish: vi.fn(),
+            ingest: vi.fn(),
+          } as unknown as HeterogeneousPersistenceHandler,
+          streamEventManager: createSilentStreamManager(),
+        },
+      );
       return { agentOperationModel, service, topic, topicModel, updateMetadata };
     };
 
@@ -682,6 +686,101 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
         '/repo/other': 'native:v1:codex',
       });
     });
+
+    it.each([false, true])(
+      'keeps thread finish session ownership when isolationThread=%s',
+      async (isolated) => {
+        const { agentOperationModel, service, topic, updateMetadata } = setupScopedRun();
+        agentOperationModel.findById.mockResolvedValue({
+          appContext: { isolationThread: isolated },
+          threadId: 'member-thread',
+          metadata: { executionPlan: { workingDirectoryBinding: '/repo/worktree' } },
+        });
+
+        await service.heteroFinish({
+          agentType: 'opencode',
+          operationId: 'op-scoped',
+          topicId: 'topic-scoped',
+          result: 'success',
+          sessionId: 'member-session',
+        });
+
+        const expectedSession = isolated ? 'claude-old' : 'member-session';
+        expect(updateMetadata).toHaveBeenCalledTimes(isolated ? 0 : 1);
+        expect(topic.metadata.heteroSessionId).toBe(expectedSession);
+        expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/worktree']).toBe(
+          expectedSession,
+        );
+        expect(
+          await service.getHeterogeneousResumeSessionId(
+            'topic-scoped',
+            isolated ? 'native:v1:claude-code' : 'native:v1:opencode',
+          ),
+        ).toBe(expectedSession);
+      },
+    );
+
+    it.each([false, true])(
+      'keeps thread stream session ownership and message provenance when isolationThread=%s',
+      async (isolated) => {
+        const { agentOperationModel, topic, topicModel, updateMetadata } = setupScopedRun();
+        agentOperationModel.findById.mockResolvedValue({
+          appContext: { isolationThread: isolated },
+          metadata: { executionPlan: { workingDirectoryBinding: '/repo/worktree' } },
+        });
+        topic.metadata.runningOperation.childOperations = [
+          {
+            assistantMessageId: 'member-asst',
+            operationId: 'member-op',
+            threadId: 'member-thread',
+          },
+        ];
+        const create = vi.fn(async () => ({ id: 'member-answer' }));
+        const handler = new HeterogeneousPersistenceHandler({
+          agentOperationModel,
+          messageModel: {
+            create,
+            findById: vi.fn(async () => null),
+            getLatestSpineMessageId: vi.fn(async () => null),
+            listMessagePluginsByTopic: vi.fn(async () => []),
+            update: vi.fn(async () => ({ success: true })),
+          } as any,
+          threadModel: {} as any,
+          topicModel,
+        });
+
+        await handler.ingest({
+          agentType: 'opencode',
+          operationId: 'member-op',
+          topicId: 'topic-scoped',
+          events: [
+            {
+              type: 'stream_start',
+              operationId: 'member-op',
+              stepIndex: 0,
+              timestamp: 1,
+              data: { sessionId: 'member-session', messageId: 'member-turn', newStep: true },
+            },
+          ],
+        });
+
+        expect(updateMetadata.mock.calls.some(([, patch]) => 'heteroSessionId' in patch)).toBe(
+          !isolated,
+        );
+        const expectedSession = isolated ? 'claude-old' : 'member-session';
+        expect(topic.metadata.heteroSessionId).toBe(expectedSession);
+        expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/worktree']).toBe(
+          expectedSession,
+        );
+        expect(create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            threadId: 'member-thread',
+            metadata: expect.objectContaining({ heteroSessionId: 'member-session' }),
+          }),
+          expect.any(String),
+        );
+      },
+    );
 
     it('writes a stream-start session under its admitted execution cwd', async () => {
       const { agentOperationModel, service, topic, topicModel } = setupScopedRun();

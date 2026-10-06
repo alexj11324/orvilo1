@@ -1,0 +1,163 @@
+{
+  "agentProgressComments": [],
+  "briefObservation": {
+    "observedAt": "2026-10-06T08:13:58.605Z",
+    "taskId": "task_7gRFReNArxAC",
+    "operations": [],
+    "briefs": []
+  },
+  "businessArtifact": {
+    "bytes": 21,
+    "sha256": "3f9501865360d1d834edd7a76a7cae0bf71ed671d1b800f3a9bacf1a697d6474"
+  },
+  "completionReceipts": [
+    {
+      "traceLine": 56,
+      "callId": "call_6ee209b760c84b08a1e9c84e",
+      "status": "completed",
+      "receipt": "Task T-7 completion requested. It will be finalized when the current run finishes.",
+      "frameTimestamp": null
+    }
+  ],
+  "cwd": {
+    "directory": "journey-demo",
+    "topicAndExecutionCwdMatch": true,
+    "observedOperationStatus": "running"
+  },
+  "cwdObservationStage": "during first automatic run; operation_status was running at this observation",
+  "cwdObservedAt": "2026-10-06T08:06:54.679Z",
+  "dispatches": [
+    {
+      "id": "dsp_UJt4yLwA9qX9",
+      "phase": "succeeded",
+      "generation": 1,
+      "requirement_revision": 2,
+      "policy_revision": 1,
+      "operation_id": "op_1791273936960_agt_AB0VcTFshbq8_tpc_4I9go7LyB8Oc_IYOUP6Hn",
+      "agent_id": "agt_AB0VcTFshbq8"
+    }
+  ],
+  "finalLedgerObservedAt": "2026-10-06T08:12:56.805Z",
+  "humanReviewAcceptancePerformed": false,
+  "limits": [
+    "Normal second watchdog tick used the existing durable dispatch recovery after the main operation had already finished. This is the automatic path under test.",
+    "Comments and persisted briefs are empty for this run; no agent comment or brief synthesis is claimed.",
+    "Completion receipt frames have no timestamps; the operation interval and exact persisted completion pointer identify the qualified run.",
+    "Group delegation acceptance remains separate and pending."
+  ],
+  "manualCallbackReplay": false,
+  "manualRun": false,
+  "nativeScreenshot": "t7-first-automatic-review-904b.jpg",
+  "nativeTitleOrdering": {
+    "foreground": {
+      "id": "op_1791273743483_agt_AB0VcTFshbq8_tpc_OrmCtLonvFkq_Spzd3Yrb",
+      "status": "done",
+      "started_at": "2026-10-06T08:02:23.495Z",
+      "completed_at": "2026-10-06T08:04:09.221Z",
+      "purpose": null
+    },
+    "title": {
+      "id": "op_1791273850632_agt_AB0VcTFshbq8_tpc_rPwGGcVITkos_uakAJxMs",
+      "topic_id": "tpc_rPwGGcVITkos",
+      "task_id": null,
+      "status": "done",
+      "started_at": "2026-10-06T08:04:10.633Z",
+      "completed_at": "2026-10-06T08:04:50.402Z",
+      "purpose": "outputJSON.topic_title"
+    },
+    "titleStartsAfterForegroundDone": true,
+    "differenceMs": 1412
+  },
+  "normalWatchdogTicks": [
+    {
+      "time": "2026-10-06T08:05:37.083Z",
+      "status": 200,
+      "intakeStarted": 1,
+      "recoveredDispatches": 0,
+      "success": true
+    },
+    {
+      "time": "2026-10-06T08:10:40.426Z",
+      "status": 200,
+      "intakeStarted": 0,
+      "recoveredDispatches": 1,
+      "success": true
+    }
+  ],
+  "observerBusinessMutation": false,
+  "operations": [
+    {
+      "id": "op_1791273936960_agt_AB0VcTFshbq8_tpc_4I9go7LyB8Oc_IYOUP6Hn",
+      "status": "done",
+      "started_at": "2026-10-06T08:05:36.989Z",
+      "completed_at": "2026-10-06T08:08:35.263Z"
+    }
+  ],
+  "qualifiedFirstAutomaticRun": true,
+  "rawTraceIncluded": false,
+  "settlement": {
+    "at": "2026-10-06T08:12:56.918Z",
+    "task": [
+      {
+        "id": "task_7gRFReNArxAC",
+        "run_reservation_expires_at": null,
+        "project_requires_review": true,
+        "task_review_enabled": null,
+        "reservationKind": null
+      }
+    ],
+    "dispatches": [
+      {
+        "id": "dsp_UJt4yLwA9qX9",
+        "phase": "succeeded",
+        "generation": 1,
+        "fence": 1,
+        "lease_expires_at": null
+      }
+    ],
+    "topics": [
+      {
+        "topic_id": "tpc_4I9go7LyB8Oc",
+        "status": "completed",
+        "run_state": "succeeded",
+        "execution_generation": 1,
+        "dispatch_fence": 1,
+        "contract_versions": {
+          "planRevision": null,
+          "taskRevision": 2,
+          "policyRevision": 1,
+          "executionGeneration": 1,
+          "requirementRevision": 2
+        },
+        "brief_decision": null
+      }
+    ]
+  },
+  "sourceHead": "904b928d0e49da4338575d25f37b6546a2ab1757",
+  "task": {
+    "id": "task_7gRFReNArxAC",
+    "identifier": "T-7",
+    "name": "Journey - automatic review after fix T7",
+    "workflow_category": "in_review",
+    "domain_revision": 3,
+    "requirement_revision": 2,
+    "policy_revision": 1,
+    "execution_generation": 1,
+    "completion_requested_by_operation_id": "op_1791273936960_agt_AB0VcTFshbq8_tpc_4I9go7LyB8Oc_IYOUP6Hn",
+    "reviewerAssigned": true,
+    "assignedAgentAndPrivateProjectPreserved": true
+  },
+  "topics": [
+    {
+      "topic_id": "tpc_4I9go7LyB8Oc",
+      "operation_id": "op_1791273936960_agt_AB0VcTFshbq8_tpc_4I9go7LyB8Oc_IYOUP6Hn",
+      "status": "completed",
+      "run_state": "succeeded",
+      "dispatch_id": "dsp_UJt4yLwA9qX9",
+      "requirement_revision": 2,
+      "policy_revision": 1,
+      "execution_generation": 1
+    }
+  ],
+  "traceSha256": "e8e487ba8613c5b626e3d682a4ef7ee1273ef1838bbe54505a5a759b9b097fae"
+}

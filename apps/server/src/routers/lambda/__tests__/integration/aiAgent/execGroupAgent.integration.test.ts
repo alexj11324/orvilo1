@@ -7,7 +7,7 @@
  * InMemory implementations when Redis is not available (test environment).
  */
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, chatGroups, messages, topics } from '@orvilo/database/schemas';
+import { agents, chatGroups, chatGroupsAgents, messages, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -93,6 +93,13 @@ beforeEach(async () => {
     })
     .returning();
   testGroupId = group.id;
+  await serverDB.insert(chatGroupsAgents).values({
+    agentId: testAgentId,
+    chatGroupId: testGroupId,
+    enabled: true,
+    role: 'supervisor',
+    userId,
+  });
 
   let opCounter = 0;
   mockDispatchHeteroAgent.mockImplementation(async (_deps, ctx) => ({
@@ -315,6 +322,14 @@ describe('execGroupAgent', () => {
           userId,
         })
         .returning();
+
+      await serverDB.insert(chatGroupsAgents).values({
+        agentId: testAgentId,
+        chatGroupId: group2.id,
+        enabled: true,
+        role: 'supervisor',
+        userId,
+      });
 
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
 

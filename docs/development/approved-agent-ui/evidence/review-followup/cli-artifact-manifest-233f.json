@@ -1,0 +1,150 @@
+{
+  "after": {
+    "sourceSha": "233f3cbe04467e6aea252faacec56b93c43f7df9",
+    "clean": true,
+    "sourceFiles": [
+      {
+        "path": "apps/cli/src/tools/index.ts",
+        "bytes": 3409,
+        "sha256": "a0131f5f5cdb5f6a055aafe53daca66da81602bb11a21af3340084de3093c5fb"
+      },
+      {
+        "path": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+        "bytes": 7945,
+        "sha256": "0b5e80ec5b9cd84b8415e1a2c46b56d6dd299e4f74930938c505f121a88b95d4"
+      },
+      {
+        "path": "apps/cli/scripts/ensureWorkspaceLinks.ts",
+        "bytes": 4186,
+        "sha256": "cfd60365944dd4062b15faf4e577d548cd5fa11172bf6c337089f4325726d089"
+      },
+      {
+        "path": "apps/cli/scripts/stagePrimeRunner.ts",
+        "bytes": 2308,
+        "sha256": "37fd2e53303413deb1ebabc771533186d2d9e59d076db41d8ecf8e22109919b1"
+      },
+      {
+        "path": "apps/cli/tsdown.config.ts",
+        "bytes": 1614,
+        "sha256": "f79aa4209a4148c1d3dcccac263699d3b0400c603612a64eac6419374590a307"
+      }
+    ],
+    "primeArtifacts": [
+      {
+        "path": "packages/prime-harness/dist/runner.mjs",
+        "bytes": 17228500,
+        "sha256": "6e52ec3464a3e61896f76c8e9b52375c549356001b4f752e5abe1dd944e9e22e"
+      },
+      {
+        "path": "packages/prime-harness/dist/runner.manifest.json",
+        "bytes": 275,
+        "sha256": "1fc134d3bb7309a3c33c793bcc424548cd37f7615da0b97d1170bd599ced71c6"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "apps/cli/dist/index.js",
+      "bytes": 13024016,
+      "sha256": "751094a3a7ad8c32433bd9850d7091c3df78cee5200ec1eace6c3155dd3a0110"
+    },
+    {
+      "path": "apps/cli/dist/runner.mjs",
+      "bytes": 17228500,
+      "sha256": "6e52ec3464a3e61896f76c8e9b52375c549356001b4f752e5abe1dd944e9e22e"
+    },
+    {
+      "path": "apps/cli/dist/runner.manifest.json",
+      "bytes": 275,
+      "sha256": "1fc134d3bb7309a3c33c793bcc424548cd37f7615da0b97d1170bd599ced71c6"
+    }
+  ],
+  "before": {
+    "sourceSha": "233f3cbe04467e6aea252faacec56b93c43f7df9",
+    "clean": true,
+    "sourceFiles": [
+      {
+        "path": "apps/cli/src/tools/index.ts",
+        "bytes": 3409,
+        "sha256": "a0131f5f5cdb5f6a055aafe53daca66da81602bb11a21af3340084de3093c5fb"
+      },
+      {
+        "path": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+        "bytes": 7945,
+        "sha256": "0b5e80ec5b9cd84b8415e1a2c46b56d6dd299e4f74930938c505f121a88b95d4"
+      },
+      {
+        "path": "apps/cli/scripts/ensureWorkspaceLinks.ts",
+        "bytes": 4186,
+        "sha256": "cfd60365944dd4062b15faf4e577d548cd5fa11172bf6c337089f4325726d089"
+      },
+      {
+        "path": "apps/cli/scripts/stagePrimeRunner.ts",
+        "bytes": 2308,
+        "sha256": "37fd2e53303413deb1ebabc771533186d2d9e59d076db41d8ecf8e22109919b1"
+      },
+      {
+        "path": "apps/cli/tsdown.config.ts",
+        "bytes": 1614,
+        "sha256": "f79aa4209a4148c1d3dcccac263699d3b0400c603612a64eac6419374590a307"
+      }
+    ],
+    "primeArtifacts": [
+      {
+        "path": "packages/prime-harness/dist/runner.mjs",
+        "bytes": 17228500,
+        "sha256": "6e52ec3464a3e61896f76c8e9b52375c549356001b4f752e5abe1dd944e9e22e"
+      },
+      {
+        "path": "packages/prime-harness/dist/runner.manifest.json",
+        "bytes": 275,
+        "sha256": "1fc134d3bb7309a3c33c793bcc424548cd37f7615da0b97d1170bd599ced71c6"
+      }
+    ]
+  },
+  "expectedSourceSha": "233f3cbe04467e6aea252faacec56b93c43f7df9",
+  "finishedAt": "2026-10-06T11:19:35.995513+00:00",
+  "primeRebuilt": false,
+  "primeReusedUnchanged": true,
+  "providerExecution": false,
+  "sourceFilesUnchanged": true,
+  "stagedPrimeMatchesPackage": true,
+  "stages": [
+    {
+      "name": "ensure-workspace-links",
+      "exitCode": 0,
+      "log": "ensure-workspace-links-233f.log"
+    },
+    {
+      "name": "tsdown",
+      "exitCode": 0,
+      "log": "tsdown-233f.log"
+    },
+    {
+      "name": "stage-prime",
+      "exitCode": 0,
+      "log": "stage-prime-233f.log"
+    },
+    {
+      "name": "syntax",
+      "exitCode": 0,
+      "log": "syntax-233f.log",
+      "outputBytes": 0
+    },
+    {
+      "name": "version",
+      "exitCode": 0,
+      "log": "version-233f.log",
+      "outputBytes": 7
+    },
+    {
+      "name": "prime-exec-help",
+      "exitCode": 0,
+      "log": "prime-exec-help-233f.log",
+      "outputBytes": 3103
+    }
+  ],
+  "startedAt": "2026-10-06T11:19:30.855108+00:00",
+  "status": "passed",
+  "testsOrTypesRun": false
+}

@@ -9,6 +9,7 @@ const {
   mockCreateOperation,
   mockDispatchHeteroAgent,
   mockGetAgentConfig,
+  mockGroupRoster,
   mockGetPreference,
   mockMessageCreate,
   mockTopicCreate,
@@ -18,6 +19,7 @@ const {
   mockCreateOperation: vi.fn(),
   mockDispatchHeteroAgent: vi.fn(),
   mockGetAgentConfig: vi.fn(),
+  mockGroupRoster: vi.fn(),
   mockGetPreference: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockTopicCreate: vi.fn().mockResolvedValue({ id: 'topic-1' }),
@@ -36,8 +38,8 @@ vi.mock('@/libs/trusted-client', () => ({
 
 vi.mock('@/database/models/chatGroup', () => ({
   ChatGroupModel: class {
-    findById = vi.fn().mockResolvedValue(undefined);
-    getGroupAgentsWithMeta = vi.fn().mockResolvedValue([]);
+    findById = vi.fn().mockResolvedValue({ id: 'group-1', title: 'Review team' });
+    getGroupAgentsWithMeta = mockGroupRoster;
   },
 }));
 
@@ -228,6 +230,9 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       success: true,
       topicId: 'topic-1',
     });
+    mockGroupRoster.mockResolvedValue([
+      { agentId: 'agent-1', role: 'supervisor', title: 'Coordinator' },
+    ]);
     mockGetPreference.mockResolvedValue({});
     mockIsResourceAuthorOrAdmin.mockResolvedValue(false);
     mockTopicFindById.mockResolvedValue(null);
@@ -373,6 +378,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
   });
 
   it('keeps group members on their own model instead of the supervisor topic pin', async () => {
+    mockGroupRoster.mockResolvedValue([
+      { agentId: 'supervisor', role: 'supervisor', title: 'Coordinator' },
+      { agentId: 'agent-1', role: 'participant', title: 'Reviewer' },
+    ]);
     mockGetAgentConfig.mockResolvedValue({ ...defaultAgentConfig });
     mockTopicFindById.mockResolvedValue({
       agentId: 'supervisor',

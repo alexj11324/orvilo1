@@ -17,6 +17,7 @@ import { useHomeStore } from '@/store/home';
 import { useAgentModal } from '../../ModalProvider';
 import Actions from '../Item/Actions';
 import { usePreservedAgentUrl } from '../usePreservedAgentUrl';
+import Avatar from './Avatar';
 import { useAgentDropdownMenu } from './useDropdownMenu';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({

@@ -2,16 +2,19 @@ import { createHash } from 'node:crypto';
 
 import { computePromptHash, resolveScenario } from '@orvilo/llm-generation-tracing';
 import type { GenerateObjectPayload, GenerateObjectSchema } from '@orvilo/model-runtime';
-import type { AgentOperationStatus, OpenAIChatMessage } from '@orvilo/types';
-import { isTerminalAgentOperationStatus } from '@orvilo/types';
+import type { AgentOperationStatus, ExecAgentAppContext, OpenAIChatMessage } from '@orvilo/types';
+import { getWorkingDirEffectivePath, isTerminalAgentOperationStatus } from '@orvilo/types';
 import Ajv from 'ajv';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
+import { TopicModel } from '@/database/models/topic';
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import type { OrviloDatabase } from '@/database/type';
+import { assertCanViewTopicTargets } from '@/server/routers/lambda/_helpers/conversationResourceGuard';
+import { resolveDeviceWorkingDirectoryConfig } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
 import { getLLMGenerationTracingService } from '@/server/services/llmGenerationTracing';
 
 const log = debug('orvilo-server:ai-generation:judgment');
@@ -306,6 +309,8 @@ export interface AcpJudgmentRunParams {
   purpose: string;
   /** Wall-clock abort from the caller. */
   signal?: AbortSignal;
+  /** Authorized source conversation whose working-directory binding this judgment inherits. */
+  sourceTopicId?: string;
   /** Task linkage recorded on the operation row. */
   taskId?: string;
   /** Wall-clock wait budget before the run is interrupted. */
@@ -519,6 +524,38 @@ export const runAcpJudgment = async <T = unknown>(
   const binding = await resolveAcpJudgmentAgent(db, userId, judgment.binding, workspaceId);
   if (!binding) throw new AcpJudgmentBindingError(judgment.purpose);
 
+  let initialTopicMetadata: ExecAgentAppContext['initialTopicMetadata'];
+  if (judgment.sourceTopicId) {
+    await assertCanViewTopicTargets({ db, userId, workspaceId }, [judgment.sourceTopicId]);
+    const sourceTopic = await new TopicModel(db, userId, workspaceId).findById(
+      judgment.sourceTopicId,
+    );
+    if (!sourceTopic)
+      throw new AcpJudgmentBindingError(
+        judgment.purpose,
+        'Source topic is unavailable in this user/workspace scope',
+      );
+    const isTitle =
+      judgment.purpose === 'topic.title' || judgment.purpose === 'outputJSON.topic_title';
+    if (
+      isTitle &&
+      sourceTopic.agentId &&
+      'agentId' in binding &&
+      sourceTopic.agentId !== binding.agentId
+    ) {
+      throw new AcpJudgmentBindingError(
+        judgment.purpose,
+        'Source topic belongs to a different agent',
+      );
+    }
+    const workingDirectoryConfig = resolveDeviceWorkingDirectoryConfig({
+      topicWorkingDirectory: sourceTopic.metadata?.workingDirectory,
+      topicWorkingDirectoryConfig: sourceTopic.metadata?.workingDirectoryConfig,
+    });
+    const workingDirectory = getWorkingDirEffectivePath(workingDirectoryConfig);
+    if (workingDirectory) initialTopicMetadata = { workingDirectory, workingDirectoryConfig };
+  }
+
   const { instructions, prompt } = serializeJudgmentMessages(input.messages);
   const body = buildJudgmentPrompt(prompt, input.schema);
 
@@ -549,6 +586,7 @@ export const runAcpJudgment = async <T = unknown>(
           // business instance: same prompt under a different agent/slug, model
           // override, or file set is a different judgment — never deduped.
           binding,
+          ...(judgment.sourceTopicId ? { sourceTopicId: judgment.sourceTopicId } : {}),
           fileIds: judgment.fileIds ?? null,
           messages: input.messages,
           model: judgment.model ?? null,
@@ -943,6 +981,7 @@ export const runAcpJudgment = async <T = unknown>(
     ? new AiAgentService(db, userId, { workspaceId }).execAgent({
         ...binding,
         appContext: {
+          ...(initialTopicMetadata ? { initialTopicMetadata } : {}),
           judgment: {
             attempt: judgment.attempt,
             budget: { maxSteps, maxWaitMs: timeoutMs },

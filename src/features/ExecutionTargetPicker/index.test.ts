@@ -106,6 +106,16 @@ describe('ExecutionTargetPicker helpers', () => {
         }),
       ).toEqual({ target: 'sandbox' });
     });
+
+    it('shows an explicitly stored local target as selected', () => {
+      expect(
+        resolveExecutionTargetSelection({
+          configuredTarget: 'local',
+          devices: [],
+          isHeterogeneous: true,
+        }),
+      ).toEqual({ target: 'local' });
+    });
   });
 
   it('allows only server-resolvable targets as shared defaults', () => {

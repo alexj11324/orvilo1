@@ -246,6 +246,10 @@ export const formatTaskDetail = (t: TaskDetailData): string => {
     `Instruction: ${t.instruction}`,
   ];
 
+  if (t.domainRevision !== undefined) {
+    lines.push(`Domain revision: ${t.domainRevision} (use as expectedDomainRevision when editing)`);
+  }
+  if (t.projectId) lines.push(`Project: ${t.projectId}`);
   if (t.agentId) lines.push(`Agent: ${t.agentId}`);
   // `userId` on the detail payload is the human assignee (workspace member).
   if (t.userId) lines.push(`Assignee (member): ${t.userId}`);

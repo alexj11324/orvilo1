@@ -1,0 +1,154 @@
+{
+  "currentGroupBackend": {
+    "sourceHead": "7c47a19cc059f5617b26652d7faf9706e949f162",
+    "files": [
+      {
+        "path": "apps/server/src/services/aiAgent/pipeline/heteroDispatch.ts",
+        "sha256": "38c727fd74722ff39ccb39c6717a3b6d4696b2b7431e193fe2be335f74f785e4",
+        "observedSha256": "38c727fd74722ff39ccb39c6717a3b6d4696b2b7431e193fe2be335f74f785e4",
+        "matches": true
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
+        "sha256": "8529916f41de2dbc3a2560c2da3b517ef61b58392561e004dac47fc332ed055b",
+        "observedSha256": "8529916f41de2dbc3a2560c2da3b517ef61b58392561e004dac47fc332ed055b",
+        "matches": true
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/index.ts",
+        "sha256": "b05ffc5e6d5efa9a960a7c50f3b68ba6ca06db9785cd6dbb58492cd8f592d9c7",
+        "observedSha256": "b05ffc5e6d5efa9a960a7c50f3b68ba6ca06db9785cd6dbb58492cd8f592d9c7",
+        "matches": true
+      },
+      {
+        "path": "apps/server/src/services/aiAgent/__tests__/execAgent.heteroFiles.test.ts",
+        "sha256": "39faf9c37725a485aa941404c3fba30947a221708cf70842c2a7351ed044a13a",
+        "observedSha256": "39faf9c37725a485aa941404c3fba30947a221708cf70842c2a7351ed044a13a",
+        "matches": true
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/__tests__/sessionResume.test.ts",
+        "sha256": "176dd2b06004a6d985880717721359b52e857afe39a6b259c5070230812fa0ce",
+        "observedSha256": "176dd2b06004a6d985880717721359b52e857afe39a6b259c5070230812fa0ce",
+        "matches": true
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/__tests__/HeterogeneousPersistenceHandler.test.ts",
+        "sha256": "0103c2e0fcb4a133eeba0668b9897347da73b9b552616a0e316982324229f9c7",
+        "observedSha256": "0103c2e0fcb4a133eeba0668b9897347da73b9b552616a0e316982324229f9c7",
+        "matches": true
+      }
+    ]
+  },
+  "groupAssociation": {
+    "sourceHead": "7c47a19cc059f5617b26652d7faf9706e949f162",
+    "files": [
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
+        "sha256": "8529916f41de2dbc3a2560c2da3b517ef61b58392561e004dac47fc332ed055b"
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/__tests__/HeterogeneousPersistenceHandler.test.ts",
+        "sha256": "0103c2e0fcb4a133eeba0668b9897347da73b9b552616a0e316982324229f9c7"
+      }
+    ]
+  },
+  "groupNavigation": {
+    "sourceHead": "6bcc5eb154a461c60f2018c8396ef3721402e163",
+    "observedAt": "2026-10-06T08:26:11.859Z",
+    "files": [
+      {
+        "path": "src/features/CreateGroupChat/index.tsx",
+        "sha256": "4254b9e4ae96ca1bd92f89ca7ff9f466c453c7d88faca36b42b002bbdbc6d072",
+        "observedSha256": "4254b9e4ae96ca1bd92f89ca7ff9f466c453c7d88faca36b42b002bbdbc6d072",
+        "matches": true
+      },
+      {
+        "path": "src/features/CreateGroupChat/index.test.tsx",
+        "sha256": "d737fac80fff3c059a1e1802bf5742b2195fd201a27903bb3f9df1b30119c9ab",
+        "observedSha256": "d737fac80fff3c059a1e1802bf5742b2195fd201a27903bb3f9df1b30119c9ab",
+        "matches": true
+      },
+      {
+        "path": "src/features/Electron/ActiveConversationBridge/navigation.ts",
+        "sha256": "4ac66e826e2438140a9417664e77a8b0dca2b1ca534049ddfdfd01be1fb2a99f",
+        "observedSha256": "4ac66e826e2438140a9417664e77a8b0dca2b1ca534049ddfdfd01be1fb2a99f",
+        "matches": true
+      },
+      {
+        "path": "src/features/Electron/ActiveConversationBridge/navigation.test.ts",
+        "sha256": "cf634d6493bc839f30cdd49e1aa5a2510f9cf18b1f514bd43fe916afbda49631",
+        "observedSha256": "cf634d6493bc839f30cdd49e1aa5a2510f9cf18b1f514bd43fe916afbda49631",
+        "matches": true
+      }
+    ]
+  },
+  "historicalGroupSessionIsolation": {
+    "sourceHead": "3dab813d7172c4db8ef2fb98c5ed2482739de7cc",
+    "baseSourceHead": "6bcc5eb154a461c60f2018c8396ef3721402e163",
+    "files": [
+      {
+        "path": "apps/server/src/services/aiAgent/pipeline/heteroDispatch.ts",
+        "sha256": "38c727fd74722ff39ccb39c6717a3b6d4696b2b7431e193fe2be335f74f785e4"
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
+        "sha256": "c7d25599cb948bdf9a136e9f4cb3eadc7adeeb562aced267270b01ebfd266299"
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/index.ts",
+        "sha256": "b05ffc5e6d5efa9a960a7c50f3b68ba6ca06db9785cd6dbb58492cd8f592d9c7"
+      },
+      {
+        "path": "apps/server/src/services/aiAgent/__tests__/execAgent.heteroFiles.test.ts",
+        "sha256": "39faf9c37725a485aa941404c3fba30947a221708cf70842c2a7351ed044a13a"
+      },
+      {
+        "path": "apps/server/src/services/heterogeneousAgent/__tests__/sessionResume.test.ts",
+        "sha256": "176dd2b06004a6d985880717721359b52e857afe39a6b259c5070230812fa0ce"
+      }
+    ],
+    "limit": "Historical freeze; HeterogeneousPersistenceHandler changed again in association repair. Do not compare this historical handler hash as current."
+  },
+  "titleOrdering": {
+    "sourceHead": "904b928d0e49da4338575d25f37b6546a2ab1757",
+    "files": [
+      {
+        "path": "src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts",
+        "sha256": "cef5165fce30c13d12e234ca34d3e51f8f3b5228d2e1b4fb6646f56847c3b4cc",
+        "observedSha256": "cef5165fce30c13d12e234ca34d3e51f8f3b5228d2e1b4fb6646f56847c3b4cc",
+        "matches": true
+      },
+      {
+        "path": "src/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle.ts",
+        "sha256": "aede1e3f14fd0f48aa0d3262cf8f374d22e8ed440fbb71518f7ab242aa3802bc",
+        "observedSha256": "aede1e3f14fd0f48aa0d3262cf8f374d22e8ed440fbb71518f7ab242aa3802bc",
+        "matches": true
+      },
+      {
+        "path": "src/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle.test.ts",
+        "sha256": "f45f6f296a179391637b399c221390c880951cbf27c096d9f29b16ebbadb1f50",
+        "observedSha256": "f45f6f296a179391637b399c221390c880951cbf27c096d9f29b16ebbadb1f50",
+        "matches": true
+      },
+      {
+        "path": "src/store/chat/slices/agentRun/actions/transports/gateway/gateway.ts",
+        "sha256": "0837b4f70a16abf74ff3aa080282c1c8ac6d8295dd8db5528171fd5b59fbe4b6",
+        "observedSha256": "0837b4f70a16abf74ff3aa080282c1c8ac6d8295dd8db5528171fd5b59fbe4b6",
+        "matches": true
+      },
+      {
+        "path": "src/store/chat/slices/agentRun/actions/__tests__/gateway.test.ts",
+        "sha256": "8c4eb6a1a6c8de511d4d713056514671ab0a3d6e51c35e96ae32d13dbac2c86b",
+        "observedSha256": "8c4eb6a1a6c8de511d4d713056514671ab0a3d6e51c35e96ae32d13dbac2c86b",
+        "matches": true
+      },
+      {
+        "path": "src/store/chat/slices/agentRun/actions/__tests__/conversationLifecycle.test.ts",
+        "sha256": "89cb6acab8cd864bfbf479b23ba5d29f33c3e26d8103a504db2c2ba181a909ba",
+        "observedSha256": "89cb6acab8cd864bfbf479b23ba5d29f33c3e26d8103a504db2c2ba181a909ba",
+        "matches": true
+      }
+    ]
+  }
+}

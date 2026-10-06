@@ -1,29 +1,27 @@
 'use client';
 
-import { LayersIcon, PlusIcon, SquarePenIcon } from 'lucide-react';
+import { LayersIcon, PlusIcon, SquarePenIcon, TargetIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { createGoalModal } from '@/features/AgentGoals/CreateGoalModal';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
+import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 
-/**
- * Linear's standalone `+` row: opens the quick-create menu. Every action maps
- * to a real product surface — create-task modal, saved-view modal, and the
- * project create modal. There is no "new draft" entry on purpose: an issue
- * draft domain does not exist yet (v5/F38), so no fake entry is rendered.
- */
 const CreateRow = memo(() => {
   const { t } = useTranslation(['common', 'project']);
+  const { createTopLevelMenuItems } = useCreateMenuItems();
   const [creatingView, setCreatingView] = useState(false);
 
   const items = useMemo<SidebarMenuItems>(
     () => [
+      ...createTopLevelMenuItems(),
       {
         icon: <SquarePenIcon />,
         key: 'task',
@@ -31,10 +29,10 @@ const CreateRow = memo(() => {
         onClick: () => createTaskModal(),
       },
       {
-        icon: <LayersIcon />,
-        key: 'view',
-        label: t('savedViews.newView'),
-        onClick: () => setCreatingView(true),
+        icon: <TargetIcon />,
+        key: 'goal',
+        label: t('navPanel.newGoal'),
+        onClick: () => createGoalModal(),
       },
       {
         icon: <PROJECT_ENTITY_ICON />,
@@ -42,8 +40,14 @@ const CreateRow = memo(() => {
         label: t('project:create.action'),
         onClick: () => openCreateProjectModal(),
       },
+      {
+        icon: <LayersIcon />,
+        key: 'view',
+        label: t('savedViews.newView'),
+        onClick: () => setCreatingView(true),
+      },
     ],
-    [t],
+    [t, createTopLevelMenuItems],
   );
 
   return (

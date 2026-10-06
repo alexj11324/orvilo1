@@ -2,7 +2,14 @@
 import type { ProjectOrchestrationPolicy } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
-import { CircleAlertIcon, RefreshCwIcon, SaveIcon, ShieldCheckIcon } from 'lucide-react';
+import {
+  CircleAlertIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  SaveIcon,
+  ShieldCheckIcon,
+  XIcon,
+} from 'lucide-react';
 import { createElement, memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +39,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import AssigneeAgentSelector from '@/features/AgentTasks/features/AssigneeAgentSelector';
 import { usePermission } from '@/hooks/usePermission';
 import type { ProjectDetail, ProjectOrchestrationPolicyView } from '@/store/project';
 import { useProjectStore } from '@/store/project';
@@ -139,6 +147,14 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
     canManagePolicy,
   );
   const savePolicy = useProjectStore((state) => state.updateProjectOrchestrationPolicy);
+  const addAgent = useProjectStore((state) => state.addProjectAgent);
+  const removeAgent = useProjectStore((state) => state.removeProjectAgent);
+  const refreshDetail = useProjectStore((state) => state.refreshProjectDetail);
+  const rosterPending = useProjectStore((state) =>
+    state.pendingProjectAgentIds.includes(projectId),
+  );
+  const [rosterError, setRosterError] = useState<string | null>(null);
+  const [rosterRetry, setRosterRetry] = useState<(() => Promise<void>) | null>(null);
   const [draft, setDraft] = useState<PolicyDraft>();
   const [savedDraftKey, setSavedDraftKey] = useState('');
   const [saving, setSaving] = useState(false);
@@ -229,6 +245,24 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
   };
 
   const coordinatorPickerOptions = participantOptions;
+  const changeParticipant = async (agentId: string, remove = false) => {
+    setRosterError(null);
+    setRosterRetry(null);
+    try {
+      const result = await (remove ? removeAgent : addAgent)(projectId, agentId);
+      if (result.refreshError) {
+        setRosterError(t('orchestration.participantsRefreshError'));
+        setRosterRetry(() => async () => {
+          await refreshDetail(projectId);
+          setRosterError(null);
+          setRosterRetry(null);
+        });
+      }
+    } catch (error) {
+      setRosterError(errorMessage(error, t('orchestration.participantsSaveError')));
+      setRosterRetry(() => () => changeParticipant(agentId, remove));
+    }
+  };
   const agentPickerOptions = participantOptions;
   const rolePickerOptions = roleOptions;
   const replanPickerOptions = [
@@ -251,7 +285,7 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
           </div>
           <Button
             aria-busy={saving}
-            disabled={!isDirty || saving || stale || !draft || saving}
+            disabled={!isDirty || saving || stale || !draft || rosterPending}
             variant="default"
             onClick={() => void handleSave()}
           >
@@ -324,6 +358,77 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
             </div>
 
             <div className={cn('flex flex-col', styles.section)} style={{ gap: 12 }}>
+              <div className="flex items-center justify-between gap-4">
+                <span className={styles.fieldLabel}>{t('orchestration.participantsLabel')}</span>
+                <AssigneeAgentSelector
+                  disabled={saving || rosterPending}
+                  taskVisibility={detail.project.visibility}
+                  onChange={(agentId) => {
+                    if (agentId) void changeParticipant(agentId);
+                  }}
+                >
+                  <Button disabled={saving || rosterPending} size="sm" variant="outline">
+                    {rosterPending ? <Spinner /> : <PlusIcon size={16} />}
+                    {t('orchestration.addParticipant')}
+                  </Button>
+                </AssigneeAgentSelector>
+              </div>
+              {(detail.agents ?? []).map(({ agent, binding }) => (
+                <div className="flex items-center justify-between gap-4" key={agent.id}>
+                  <span className="text-sm">{agent.name ?? agent.title ?? agent.id}</span>
+                  {!binding.enabled ? (
+                    <Button
+                      disabled={saving || rosterPending}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void changeParticipant(agent.id)}
+                    >
+                      {t('orchestration.enableParticipant')}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      title={t('orchestration.removeParticipantHint')}
+                      variant="ghost"
+                      aria-label={t('orchestration.removeParticipant', {
+                        agent: agent.name ?? agent.title ?? agent.id,
+                      })}
+                      disabled={
+                        saving ||
+                        rosterPending ||
+                        agent.id === view.coordinatorAgentId ||
+                        agent.id === draft.coordinatorAgentId ||
+                        view.orchestrationPolicy.allowedAgentIds?.includes(agent.id) ||
+                        draft.orchestrationPolicy.allowedAgentIds?.includes(agent.id)
+                      }
+                      onClick={() => void changeParticipant(agent.id, true)}
+                    >
+                      <XIcon size={16} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {rosterError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{rosterError}</AlertDescription>
+                  <AlertAction>
+                    <Button
+                      disabled={rosterPending}
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        void rosterRetry?.().catch((error) =>
+                          setRosterError(
+                            errorMessage(error, t('orchestration.participantsRefreshError')),
+                          ),
+                        )
+                      }
+                    >
+                      {t('orchestration.retry')}
+                    </Button>
+                  </AlertAction>
+                </Alert>
+              )}
               <div className={cn('flex flex-col', styles.grid)} style={{ gap: 12 }}>
                 <div className={styles.field}>
                   <span className={cn('text-sm', styles.fieldLabel)}>
@@ -674,7 +779,7 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
               <div className={styles.status}>
                 <Badge variant="secondary">
                   <ShieldCheckIcon size={13} />
-                  {humanReviewRequired
+                  {humanReviewRequired || draft.orchestrationPolicy.requireHumanReview
                     ? t('orchestration.humanReviewRequiredTag')
                     : t('orchestration.humanReviewOptionalTag')}
                 </Badge>

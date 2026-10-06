@@ -1354,6 +1354,11 @@ export class TaskService {
     actor: { agentId?: string | null; userId?: string | null } = {},
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
+    if (data.projectId) {
+      const project = await this.projectModel.findManageableById(data.projectId);
+      if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+    }
+
     const invalidatesActiveRun =
       // An execution-transfer assignee write only happens after the incumbent
       // was fenced — its run reservation must not block the successor.
@@ -2076,6 +2081,7 @@ export class TaskService {
         };
       }),
       description: task.description,
+      domainRevision: task.domainRevision,
       dueDate: task.dueDate,
       editorData: task.editorData ?? undefined,
       error: task.error,
@@ -2108,6 +2114,7 @@ export class TaskService {
       reviewerUserId: task.reviewerUserId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: heartbeatStatus ?? task.status,
+      dispatchPhase: task.dispatchPhase,
       userId: task.assigneeUserId,
       verify: acceptance
         ? { ...acceptance.config, requirement: acceptance.requirement }

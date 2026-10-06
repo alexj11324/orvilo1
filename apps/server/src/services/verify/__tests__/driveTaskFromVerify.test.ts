@@ -36,6 +36,7 @@ const {
   taskReleaseRunReservation,
   taskRenewRunReservation,
   taskTopicFindByOperationId,
+  taskTopicMarkResultReady,
   taskUpdateStatus,
   taskUpdateStatusForExecutionContract,
   taskUpdateStatusIfReservation,
@@ -44,6 +45,7 @@ const {
   serviceUpdateStatus,
   statusRecompute,
   deliverMock,
+  enqueueSettledResult,
   rearmHeartbeatAfterVerify,
   scheduleCapReached,
   integrateOnComplete,
@@ -54,6 +56,7 @@ const {
   briefCreate: vi.fn(),
   briefModelConstruct: vi.fn(),
   deliverMock: vi.fn(),
+  enqueueSettledResult: vi.fn(),
   rearmHeartbeatAfterVerify: vi.fn(),
   scheduleCapReached: vi.fn(),
   integrateOnComplete: vi.fn(),
@@ -70,6 +73,7 @@ const {
   taskReleaseRunReservation: vi.fn(),
   taskRenewRunReservation: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
+  taskTopicMarkResultReady: vi.fn(),
   taskUpdateStatus: vi.fn(),
   taskUpdateStatusForExecutionContract: vi.fn(),
   taskUpdateStatusIfReservation: vi.fn(),
@@ -99,6 +103,7 @@ vi.mock('@/database/models/taskTopic', () => ({
     return {
       findByOperationId: taskTopicFindByOperationId,
       findByTopicId: topicFindByTopicId,
+      markResultReady: taskTopicMarkResultReady,
     };
   }),
 }));
@@ -137,6 +142,11 @@ vi.mock('@/server/services/task', () => ({
 vi.mock('@/server/services/taskResultBridge', () => ({
   TaskResultBridgeService: vi.fn(function () {
     return { deliver: deliverMock };
+  }),
+}));
+vi.mock('@/server/services/automationResultDelivery', () => ({
+  AutomationResultDeliveryService: vi.fn(function () {
+    return { enqueueSettledResult };
   }),
 }));
 vi.mock('@/server/services/taskIntegration', () => ({
@@ -277,6 +287,7 @@ describe('driveTaskFromVerify', () => {
       taskReleaseRunReservation,
       taskRenewRunReservation,
       taskTopicFindByOperationId,
+      taskTopicMarkResultReady,
       taskUpdateStatus,
       taskUpdateStatusForExecutionContract,
       taskUpdateStatusIfReservation,
@@ -285,6 +296,7 @@ describe('driveTaskFromVerify', () => {
       serviceUpdateStatus,
       statusRecompute,
       deliverMock,
+      enqueueSettledResult,
       rearmHeartbeatAfterVerify,
       scheduleCapReached,
       integrateOnComplete,
@@ -329,6 +341,8 @@ describe('driveTaskFromVerify', () => {
       status: 'running',
     });
     taskTopicFindByOperationId.mockResolvedValue(null);
+    taskTopicMarkResultReady.mockResolvedValue(true);
+    enqueueSettledResult.mockResolvedValue(undefined);
   });
   afterEach(() => vi.restoreAllMocks());
 
@@ -355,7 +369,16 @@ describe('driveTaskFromVerify', () => {
       expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
     // Deferred creator callback fires here (not in onTopicComplete), reason 'done'.
+    expect(taskTopicMarkResultReady).toHaveBeenCalledWith(
+      'task-1',
+      'topic-done',
+      'op-1',
+      'succeeded',
+    );
     expect(deliverMock).toHaveBeenCalledTimes(1);
+    expect(enqueueSettledResult).toHaveBeenCalledWith(
+      expect.objectContaining({ operationId: 'op-1', reason: 'done', taskId: 'task-1' }),
+    );
     expect(deliverMock.mock.calls[0][0]).toMatchObject({
       reason: 'done',
       taskId: 'task-1',

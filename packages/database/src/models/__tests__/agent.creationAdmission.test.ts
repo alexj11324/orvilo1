@@ -7,6 +7,8 @@ import { getTestDB } from '../../core/getTestDB';
 import { agents, credentials, devices, providerBindings, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
+import { UserModel } from '../user';
+import { WorkspaceUserSettingsModel } from '../workspaceUserSettings';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'agent-admission-owner';
@@ -76,6 +78,109 @@ afterEach(async () => {
 });
 
 describe('Agent creation admission', () => {
+  it('requires a configured scope-specific Orchestrator instead of choosing Prime', async () => {
+    await model.create({ ...prime, title: 'Prime exists' });
+    await expect(
+      model.getOrchestratorRuntimeForCreation({ visibility: 'private' }),
+    ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
+  });
+
+  it('keeps personal and workspace/member defaults separate and snapshots only chosen runtime', async () => {
+    const source = await model.create({
+      agencyConfig: {
+        boundDeviceId: 'saved-host',
+        executionTarget: 'local',
+        localSandbox: true,
+        localSandboxNetwork: false,
+        workingDirByDevice: { 'saved-host': '/repo/chosen-orchestrator' },
+        heterogeneousProvider: {
+          command: 'opencode',
+          model: 'mimo-free',
+          type: 'opencode',
+          permission: { configId: 'approval', value: 'ask' },
+          systemContext: 'Original source persona',
+          env: { PRIVATE_TOKEN: 'fixture-only' },
+        },
+        enableGraphMode: true,
+      },
+      title: 'Chosen OpenCode',
+    });
+    const [original] = await db.select().from(agents).where(eq(agents.id, source.id));
+    await new UserModel(db, userId).updatePreference({ orchestratorAgentId: source.id });
+    const selected = await model.getOrchestratorRuntimeForCreation({ visibility: 'private' });
+    expect(selected.params.orchestratorSourceAgentId).toBe(source.id);
+    expect(selected.agencyConfig?.heterogeneousProvider).toMatchObject({
+      type: 'opencode',
+      model: 'mimo-free',
+      permission: { configId: 'approval', value: 'ask' },
+    });
+    expect(selected.agencyConfig).toMatchObject({
+      boundDeviceId: 'saved-host',
+      executionTarget: 'local',
+      localSandbox: true,
+      localSandboxNetwork: false,
+      workingDirByDevice: { 'saved-host': '/repo/chosen-orchestrator' },
+    });
+    expect(selected.agencyConfig?.heterogeneousProvider?.env).toBeUndefined();
+    expect(selected.agencyConfig?.heterogeneousProvider?.systemContext).toBeUndefined();
+    expect(selected.agencyConfig?.enableGraphMode).toBeUndefined();
+    expect((await db.select().from(agents).where(eq(agents.id, source.id)))[0]).toEqual(original);
+    const workspaceModel = new AgentModel(db, userId, workspaceId);
+    await expect(
+      workspaceModel.getOrchestratorRuntimeForCreation({ visibility: 'private' }),
+    ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
+    await new WorkspaceUserSettingsModel(db, userId, workspaceId).updatePreference({
+      orchestratorAgentId: source.id,
+    });
+    await expect(
+      workspaceModel.getOrchestratorRuntimeForCreation({ visibility: 'private' }),
+    ).rejects.toThrow('ORCHESTRATOR_SCOPE_MISMATCH');
+    await expect(
+      new AgentModel(db, otherUserId, workspaceId).getOrchestratorRuntimeForCreation({
+        visibility: 'private',
+      }),
+    ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
+  });
+
+  it('does not publish a private source runtime into a public resource', async () => {
+    const source = await new AgentModel(db, userId, workspaceId).create({
+      ...prime,
+      visibility: 'private',
+    });
+    await expect(
+      new AgentModel(db, userId, workspaceId).inheritRuntimeForCreation(source.id, {
+        purpose: 'orchestrator',
+        visibility: 'public',
+        deviceId: 'shared-host',
+      }),
+    ).rejects.toThrow('ORCHESTRATOR_SOURCE_PRIVATE');
+  });
+
+  it('rejects unsupported or virtual Orchestrator sources and cross-scope fallback', async () => {
+    const unsupported = await model.create({
+      agencyConfig: {
+        boundDeviceId: 'saved-host',
+        executionTarget: 'local',
+        heterogeneousProvider: { type: 'pi' },
+      },
+    });
+    await expect(
+      model.inheritRuntimeForCreation(unsupported.id, { purpose: 'orchestrator' }),
+    ).rejects.toThrow('ORCHESTRATOR_RUNTIME_UNSUPPORTED');
+    const virtual = await model.create({ ...prime, virtual: true });
+    await expect(
+      model.inheritRuntimeForCreation(virtual.id, { purpose: 'orchestrator' }),
+    ).rejects.toThrow('ORCHESTRATOR_AGENT_REQUIRED');
+    const source = await model.create(prime);
+    const workspaceModel = new AgentModel(db, userId, workspaceId);
+    await expect(
+      workspaceModel.inheritRuntimeForCreation(source.id, {
+        purpose: 'orchestrator',
+        visibility: 'private',
+      }),
+    ).rejects.toThrow('ORCHESTRATOR_SCOPE_MISMATCH');
+  });
+
   it.each([{ title: 'Fake Agent' }, { title: 'Fake Agent', avatar: '🤖', virtual: true }])(
     'refuses metadata-only creation before insert: %j',
     async (config) => {

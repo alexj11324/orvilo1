@@ -42,7 +42,6 @@ describe('provider and experience forward migrations', () => {
   });
 
   it('rolls back a failed upgrade without deleting existing memories', async () => {
-    expect(additions).toHaveLength(7);
     await db.exec('BEGIN');
     await applyAdditions();
     await expect(

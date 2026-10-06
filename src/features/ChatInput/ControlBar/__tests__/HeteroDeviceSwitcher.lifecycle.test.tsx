@@ -18,6 +18,26 @@ const targetFixture = vi.hoisted(() => ({
   canSelectPersonalDevice: false,
   listeners: new Set<() => void>(),
 }));
+const buildDevice = (
+  deviceId: string,
+  overrides: Partial<DeviceListItem> = {},
+): DeviceListItem => ({
+  deviceId,
+  channels: [],
+  defaultCwd: null,
+  enroller: null,
+  friendlyName: deviceId,
+  hostname: deviceId,
+  identitySource: 'installation',
+  lastSeen: '2026-10-04T07:00:00Z',
+  online: true,
+  platform: null,
+  registered: true,
+  scope: 'personal',
+  visibility: null,
+  workingDirs: [],
+  ...overrides,
+});
 const selectTargetMock = vi.hoisted(() => vi.fn());
 vi.mock('@orvilo/const', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -100,7 +120,7 @@ const view = (mode: 'visible' | 'hidden') => (
 
 beforeEach(() => {
   targetFixture.executionTarget = 'none';
-  targetFixture.devices = [];
+  targetFixture.devices = [buildDevice('first-personal'), buildDevice('second-personal')];
   targetFixture.workspaceId = undefined;
   targetFixture.boundDeviceId = undefined;
   targetFixture.memberSelectedDeviceId = undefined;
@@ -109,20 +129,28 @@ beforeEach(() => {
 });
 
 describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
+  it.each([0, 1])('keeps the picker read-only with %s legitimate candidates', async (count) => {
+    targetFixture.devices = Array.from({ length: count }, (_, index) =>
+      buildDevice(`node-${index}`),
+    );
+    const user = userEvent.setup();
+    render(<HeteroDeviceSwitcher agentId="agent-1" />);
+
+    const chip = screen.getByText('heteroAgent.executionTarget.none');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    await user.click(chip);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(selectTargetMock).not.toHaveBeenCalled();
+  });
+
   it.each(['machine', 'another-machine'])(
     'identifies %s by ID and separates local and gateway routes',
     async (deviceId) => {
       targetFixture.workspaceId = 'workspace';
       targetFixture.canSelectPersonalDevice = true;
       targetFixture.devices = [
-        {
-          deviceId,
-          scope: 'personal',
-          registered: true,
-          online: true,
-          friendlyName: 'My Mac',
-          channels: [],
-        } as unknown as DeviceListItem,
+        buildDevice(deviceId, { friendlyName: 'My Mac' }),
+        buildDevice('second-personal'),
       ];
       const user = userEvent.setup();
       render(<HeteroDeviceSwitcher agentId="agent-1" />);
@@ -162,14 +190,8 @@ describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
     targetFixture.executionTarget = 'device';
     targetFixture.canSelectPersonalDevice = true;
     targetFixture.devices = [
-      {
-        deviceId: 'personal-node',
-        scope: 'personal',
-        registered: true,
-        online: true,
-        friendlyName: 'My Node',
-        channels: [],
-      } as unknown as DeviceListItem,
+      buildDevice('personal-node', { friendlyName: 'My Node' }),
+      buildDevice('second-personal'),
     ];
     const user = userEvent.setup();
     render(<HeteroDeviceSwitcher agentId="agent-1" />);
@@ -212,7 +234,8 @@ describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
       },
     ];
     render(<HeteroDeviceSwitcher agentId="agent-1" />);
-    expect(screen.getByRole('button', { name: 'My Node' })).toBeInTheDocument();
+    expect(screen.getByText('My Node')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'My Node' })).not.toBeInTheDocument();
     expect(
       screen.queryByText('heteroAgent.executionTarget.bindingInvalid'),
     ).not.toBeInTheDocument();

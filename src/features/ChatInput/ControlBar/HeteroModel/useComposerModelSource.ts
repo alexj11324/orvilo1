@@ -25,7 +25,7 @@ import { useFetchProviderBindings, useProviderBindingStore } from '@/store/provi
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
-import { getStaticModelOptions } from './modelOptions';
+import { getStaticModelOptions, modelDisplayLabel } from './modelOptions';
 import { COMPOSER_DEFAULT_MODEL_LABEL_KEY, withDefaultModelOption } from './resolveComposerModel';
 import { useModelCatalog } from './useModelCatalog';
 
@@ -174,7 +174,7 @@ export const useComposerModelSource = ({
         id: type,
         name,
         options: withDefaultModelOption(
-          models.map((model) => ({ title: model.label || model.id, value: model.id })),
+          models.map((model) => ({ title: modelDisplayLabel(model), value: model.id })),
           t(COMPOSER_DEFAULT_MODEL_LABEL_KEY),
         ),
       };

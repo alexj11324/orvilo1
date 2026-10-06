@@ -434,7 +434,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           {shows('priority') ? (
             <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           ) : null}
-          <TaskExecutionBadge size={13} status={status} />
+          <TaskExecutionBadge dispatchPhase={task.dispatchPhase} size={13} status={status} />
           <LinearTaskSyncStatus taskId={task.id} />
           {shows('project') && projectName ? (
             <Tag size="sm" variant="primary-outline">

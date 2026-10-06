@@ -49,3 +49,15 @@ describe('TaskManifest human assignee (assigneeUserId)', () => {
     );
   });
 });
+
+describe('Task edit concurrency contract', () => {
+  it('exposes the observed domain revision and existing project assignment', () => {
+    const edit = TaskManifest.api.find((api) => api.name === TaskApiName.editTask);
+    expect(edit?.parameters).toMatchObject({
+      properties: {
+        expectedDomainRevision: { type: 'integer', minimum: 0 },
+        projectId: { type: ['string', 'null'] },
+      },
+    });
+  });
+});

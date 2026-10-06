@@ -86,11 +86,16 @@ export default {
   'create.identifierPlaceholder': 'ORVILO',
   'create.nameLabel': 'Project name',
   'create.namePlaceholder': 'What are you working on?',
+  'create.orchestratorPrivate':
+    'The selected Orchestrator is private. Set this project’s visibility to Private, or select a workspace-shared Agent in Settings → Orchestrator, then try again.',
   'create.slugDescription': 'Used for the project URL and generated from the project name.',
   'create.slugInvalid': 'Use lowercase letters, numbers, and single hyphens only.',
   'create.slugLabel': 'Slug (optional)',
   'create.slugPlaceholder': 'my-project',
   'create.title': 'New project',
+  'create.visibilityLabel': 'Visibility',
+  'create.visibilityPrivate': 'Private',
+  'create.visibilityPublic': 'Workspace members',
   'disabled.action': 'Enable in Labs',
   'disabled.title': 'Project workspaces are an Alpha experiment',
   'goals.create': 'Create goal',
@@ -357,6 +362,15 @@ export default {
   'orchestration.allowedAgentsHint':
     'Leave empty to allow any eligible project participant, or choose a bounded set.',
   'orchestration.allowedAgentsLabel': 'Allowed agents',
+  'orchestration.addParticipant': 'Add Agent',
+  'orchestration.enableParticipant': 'Enable Agent',
+  'orchestration.participantsLabel': 'Project Agents',
+  'orchestration.participantsSaveError': 'Could not update project Agents. Retry the change.',
+  'orchestration.participantsRefreshError':
+    'Project Agents changed, but the list could not refresh. Reload the list.',
+  'orchestration.removeParticipant': 'Remove {{agent}} from the project',
+  'orchestration.removeParticipantHint':
+    'To remove a coordinator or allowed Agent, update and save the policy first.',
   'orchestration.allowedAgentsPlaceholder': 'All eligible participants',
   'orchestration.allowedRolesHint': 'Only enabled participant roles can be selected.',
   'orchestration.allowedRolesLabel': 'Allowed roles',

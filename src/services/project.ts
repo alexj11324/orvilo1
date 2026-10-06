@@ -13,6 +13,24 @@ import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 const PROJECT_PAGE_SIZE = 100;
 
 class ProjectService {
+  addAgent = async (id: string, agentId: string, workspaceId?: string | null) =>
+    (workspaceId ? createWorkspaceLambdaClient(workspaceId) : lambdaClient).project.addAgent.mutate(
+      {
+        agentId,
+        enabled: true,
+        id,
+      },
+    );
+
+  removeAgent = async (id: string, agentId: string, workspaceId?: string | null) =>
+    (workspaceId
+      ? createWorkspaceLambdaClient(workspaceId)
+      : lambdaClient
+    ).project.removeAgent.mutate({
+      agentId,
+      id,
+    });
+
   listLinks = async (id: string) => lambdaClient.project.listLinks.query({ id });
   saveLink = async (id: string, input: { linkId?: string; title?: string; url: string }) =>
     lambdaClient.project.saveLink.mutate({ id, ...input });

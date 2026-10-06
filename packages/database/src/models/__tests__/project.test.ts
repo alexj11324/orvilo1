@@ -26,6 +26,8 @@ import type { CreateProjectInput } from '../project';
 import { ProjectModel } from '../project';
 import { ProviderBindingModel } from '../providerBinding';
 import { TaskModel } from '../task';
+import { UserModel } from '../user';
+import { WorkspaceUserSettingsModel } from '../workspaceUserSettings';
 
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'project-model-user';
@@ -122,10 +124,20 @@ describe('ProjectModel', () => {
             userId: actor.id,
             workspaceId: scope,
             visibility: 'public',
-            virtual: true,
+            virtual: false,
             title: 'Runtime fixture',
           })
           .onConflictDoNothing();
+        const preference = {
+          orchestratorAgentId: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
+        };
+        if (scope) {
+          await new WorkspaceUserSettingsModel(serverDB, actor.id, scope).updatePreference(
+            preference,
+          );
+        } else {
+          await new UserModel(serverDB, actor.id).updatePreference(preference);
+        }
       }
     }
   };

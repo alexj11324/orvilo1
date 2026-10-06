@@ -20,6 +20,7 @@ import useSWR from 'swr';
 
 import { toast } from '@/components/toast';
 import { LOADING_FLAT } from '@/const/message';
+import { resolveIsGroupSupervisor } from '@/helpers/topicExecutionConfig';
 import { mutate, useClientDataSWRWithSync } from '@/libs/swr';
 import { cronKeys, deviceKeys, topicKeys } from '@/libs/swr/keys';
 import { aiChatService } from '@/services/aiChat';
@@ -32,6 +33,7 @@ import { aiModelSelectors } from '@/store/aiInfra/slices/aiModel/selectors';
 import { type ChatStore } from '@/store/chat';
 import { evictMessageCache } from '@/store/chat/utils/evictMessageCache';
 import { snapshotAgentModel, snapshotAgentReasoning } from '@/store/chat/utils/snapshotAgentModel';
+import { snapshotAgentWorkingDirectory } from '@/store/chat/utils/snapshotAgentWorkingDirectory';
 import {
   topicMapKey,
   type TopicMapScope,
@@ -225,7 +227,7 @@ export class ChatTopicActionImpl {
   };
 
   createTopic = async (agentId?: string): Promise<string | undefined> => {
-    const { activeAgentId, internal_createTopic } = this.#get();
+    const { activeAgentId, activeGroupId, internal_createTopic } = this.#get();
 
     const messages = displayMessageSelectors.activeDisplayMessages(this.#get());
 
@@ -242,9 +244,18 @@ export class ChatTopicActionImpl {
       composerEffort === undefined
         ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
         : { heteroEffort: composerEffort };
+    const groupId = resolveIsGroupSupervisor(targetAgentId, activeGroupId)
+      ? activeGroupId
+      : undefined;
+    const workingDirectoryMetadata = groupId
+      ? snapshotAgentWorkingDirectory(targetAgentId)
+      : undefined;
     const topicId = await internal_createTopic({
       ...modelSnapshot,
-      ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),
+      ...(groupId ? { groupId } : {}),
+      ...(reasoningSnapshot || workingDirectoryMetadata
+        ? { metadata: { ...reasoningSnapshot, ...workingDirectoryMetadata } }
+        : {}),
       // The inbox pseudo-id is a session slug, not an agent row — the topic must
       // land fully unscoped (legacy inbox), never agent_id='inbox'.
       agentId: targetAgentId === INBOX_SESSION_ID ? undefined : targetAgentId,

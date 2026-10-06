@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as TaskTriggerModule from '../features/TaskTriggerTag';
 import TaskSubtasks from './TaskSubtasks';
 
 const mocks = vi.hoisted(() => ({
@@ -303,4 +304,25 @@ describe('TaskSubtasks', () => {
 
     expect(screen.getByTestId('execution-badge')).toBeTruthy();
   });
+});
+
+describe('TaskTriggerTag event mode', () => {
+  it.each(['inline', 'tag'] as const)(
+    'shows an event trigger in %s with stale scheduling fields',
+    async (mode) => {
+      const { default: TaskTriggerTag } = await vi.importActual<typeof TaskTriggerModule>(
+        '../features/TaskTriggerTag',
+      );
+      render(
+        <TaskTriggerTag
+          automationMode="event"
+          heartbeatInterval={60}
+          mode={mode}
+          schedulePattern="0 9 * * *"
+        />,
+      );
+      expect(screen.getByText('taskDetail.runTrigger.event')).toBeInTheDocument();
+      expect(screen.queryByText('taskSchedule.tag.add')).not.toBeInTheDocument();
+    },
+  );
 });

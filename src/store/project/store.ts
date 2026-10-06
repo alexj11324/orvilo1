@@ -26,6 +26,7 @@ const listKey = (scope: string) => [LIST_KEY, scope] as const;
 const detailKey = (scope: string, id: string) => ['project/detail', scope, id] as const;
 
 interface ProjectStore {
+  addProjectAgent: (id: string, agentId: string) => Promise<{ refreshError?: unknown }>;
   createMilestone: (
     id: string,
     input: Parameters<typeof projectService.createMilestone>[1],
@@ -40,11 +41,13 @@ interface ProjectStore {
     Awaited<ReturnType<typeof projectService.deleteMilestone>> & { refreshError?: unknown }
   >;
   deleteProject: (id: string) => Promise<void>;
+  pendingProjectAgentIds: string[];
   pendingProjectLinkKeys: string[];
   projectDetails: Record<string, Record<string, ProjectDetail>>;
   projectLists: Record<string, ProjectListItem[]>;
   refreshProjectDetail: (id: string) => Promise<void>;
   refreshProjectList: () => Promise<void>;
+  removeProjectAgent: (id: string, agentId: string) => Promise<{ refreshError?: unknown }>;
   removeProjectLink: (
     id: string,
     linkId: string,
@@ -125,7 +128,12 @@ const refreshLinksAfterWrite = async (scope: string, id: string) => {
 const refreshDetailAfterWrite = async (scope: string, id: string) => {
   if (scope !== getCacheScope()) return {};
   try {
-    await mutate(detailKey(scope, id));
+    const references = Object.entries(useProjectStore.getState().projectDetails[scope] ?? {})
+      .filter(([, detail]) => detail.project.id === id)
+      .map(([reference]) => reference);
+    await Promise.all(
+      [...new Set([id, ...references])].map((reference) => mutate(detailKey(scope, reference))),
+    );
     return {};
   } catch (refreshError) {
     return { refreshError };
@@ -134,6 +142,29 @@ const refreshDetailAfterWrite = async (scope: string, id: string) => {
 
 export const useProjectStore = createWithEqualityFn<ProjectStore>()(
   devtools((set, get) => ({
+    pendingProjectAgentIds: [],
+    addProjectAgent: async (id, agentId) => {
+      const scope = getCacheScope();
+      if (get().pendingProjectAgentIds.includes(id)) throw new Error('Agent change in progress');
+      set({ pendingProjectAgentIds: [...get().pendingProjectAgentIds, id] });
+      try {
+        await projectService.addAgent(id, agentId, getActiveWorkspaceId());
+        return await refreshDetailAfterWrite(scope, id);
+      } finally {
+        set({ pendingProjectAgentIds: get().pendingProjectAgentIds.filter((key) => key !== id) });
+      }
+    },
+    removeProjectAgent: async (id, agentId) => {
+      const scope = getCacheScope();
+      if (get().pendingProjectAgentIds.includes(id)) throw new Error('Agent change in progress');
+      set({ pendingProjectAgentIds: [...get().pendingProjectAgentIds, id] });
+      try {
+        await projectService.removeAgent(id, agentId, getActiveWorkspaceId());
+        return await refreshDetailAfterWrite(scope, id);
+      } finally {
+        set({ pendingProjectAgentIds: get().pendingProjectAgentIds.filter((key) => key !== id) });
+      }
+    },
     pendingProjectLinkKeys: [],
     useFetchProjectLinks: (id) => {
       const scope = useCacheScope();
@@ -218,7 +249,8 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
     projectDetails: {},
     projectLists: {},
     refreshProjectDetail: async (id) => {
-      await mutate(detailKey(getCacheScope(), id));
+      const result = await refreshDetailAfterWrite(getCacheScope(), id);
+      if (result.refreshError) throw result.refreshError;
     },
     refreshProjectList: async () => mutate(listKey(getCacheScope())),
     updateProjectOrchestrationPolicy: async ({ id, ...input }) => {

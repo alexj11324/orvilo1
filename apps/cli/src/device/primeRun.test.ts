@@ -10,6 +10,9 @@ vi.mock('@orvilo/device-prime-host', () => ({
   openPrimeDeviceRun: openPrimeDeviceRunMock,
 }));
 
+const { openBuiltinMock } = vi.hoisted(() => ({ openBuiltinMock: vi.fn() }));
+vi.mock('./primeBuiltinMcp', () => ({ openPrimeBuiltinMcp: openBuiltinMock }));
+
 const { saveTaskMock } = vi.hoisted(() => ({ saveTaskMock: vi.fn() }));
 vi.mock('../daemon/taskRegistry', () => ({
   getTask: vi.fn(),
@@ -151,7 +154,49 @@ describe('admitPrimeDeviceRun', () => {
     finishCalls.length = 0;
     pushedEvents.length = 0;
   });
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    openBuiltinMock.mockResolvedValue(undefined);
+  });
+
+  it('gives resumed turns their own builtin callback and closes each after prompting', async () => {
+    const first = makeFakeRun('builtin-resume');
+    openPrimeDeviceRunMock.mockResolvedValue({ ok: true, value: first.run });
+    const active = new Set<string>();
+    const closed: string[] = [];
+    openBuiltinMock.mockImplementation(async (input: { operationId: string }) => {
+      active.add(input.operationId);
+      return {
+        close: async () => {
+          active.delete(input.operationId);
+          closed.push(input.operationId);
+        },
+        mount: {
+          operationId: input.operationId,
+          url: `http://127.0.0.1:4567/mcp?op=${input.operationId}`,
+        },
+      };
+    });
+    first.runImpl.prompt.mockImplementation(
+      async (_text: string, mount: { operationId: string }) => {
+        expect([...active]).toEqual([mount.operationId]);
+        return { ok: true, value: { stopReason: 'end_turn' } };
+      },
+    );
+    for (const operationId of ['builtin-first', 'builtin-second']) {
+      await admitPrimeDeviceRun(
+        params({
+          operationId,
+          resumeSessionId: operationId === 'builtin-second' ? 'builtin-resume' : undefined,
+        }),
+        '/tmp/work',
+      );
+      await waitPrimeSessionIdle('builtin-resume');
+      expect(active.size).toBe(0);
+    }
+    expect(closed).toEqual(['builtin-first', 'builtin-second']);
+    expect(openPrimeDeviceRunMock).toHaveBeenCalledTimes(1);
+  });
 
   it('reuses the live session when resumeSessionId matches instead of spawning', async () => {
     const first = makeFakeRun('sess-1');

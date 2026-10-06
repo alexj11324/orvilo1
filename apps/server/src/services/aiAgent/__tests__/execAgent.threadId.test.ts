@@ -113,8 +113,11 @@ vi.mock('@/database/models/thread', () => ({
 vi.mock('@/database/models/chatGroup', () => ({
   ChatGroupModel: vi.fn().mockImplementation(function () {
     return {
-      findById: vi.fn().mockResolvedValue(undefined),
-      getGroupAgentsWithMeta: vi.fn().mockResolvedValue([]),
+      findById: vi.fn().mockResolvedValue({ id: 'group-1', title: 'Review team' }),
+      getGroupAgentsWithMeta: vi.fn().mockResolvedValue([
+        { agentId: 'supervisor', role: 'supervisor', title: 'Coordinator' },
+        { agentId: 'agent-1', role: 'participant', title: 'Reviewer' },
+      ]),
     };
   }),
 }));

@@ -12,6 +12,7 @@ import {
   EllipsisIcon,
   EthernetPort,
   FlaskConical,
+  GitBranchIcon,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -146,6 +147,11 @@ export const useCategory = () => {
             icon: BotMessageSquareIcon,
             key: SettingsTabs.Agents,
             label: t('tab.agents'),
+          },
+          offered(SettingsTabs.Orchestrator) && {
+            icon: GitBranchIcon,
+            key: SettingsTabs.Orchestrator,
+            label: t('tab.orchestrator'),
           },
           // Provider settings should not depend on Advanced tools: new users may need
           // non-LobeHub providers, and desktop users often bring their own API keys.

@@ -1,0 +1,26 @@
+{
+  "associationFailureAfterIsolationRepair": {
+    "sourceHead": "3dab813d7172c4db8ef2fb98c5ed2482739de7cc",
+    "providerSessionsEqual": false,
+    "callbackDeliveredAndAcked": true,
+    "coordinatorExactTwoLineResult": true,
+    "finalAssistantGroupId": null,
+    "groupScopedUiVisibilityAccepted": false,
+    "cause": "The streamed final assistant omitted the trusted Group association; Group-scoped query excluded it."
+  },
+  "limits": [
+    "These are historical negative attempts in an existing Group; the final native repetition used a fresh normal topic.",
+    "No model culpability or historical lock/session internals beyond the observed facts are asserted."
+  ],
+  "sessionIsolationFailure": {
+    "sourceHead": "6bcc5eb154a461c60f2018c8396ef3721402e163",
+    "providerSessionsEqual": true,
+    "sessionHash": "b0a1c1dcbd85054e07d653774e3ad5b52a7405d25117f44e0d18803d0436f6e2",
+    "memberCompleted": true,
+    "callbackDeliveredAndAcked": true,
+    "coordinatorAssistantCharacters": 0,
+    "coordinatorStopReason": "end_turn",
+    "completeJourneyPassed": false,
+    "operatorMistake": "During later UI inspection, a mis-hit delete action hard-deleted two fixture supervisor/tool messages. The operator disclosed this; no DB restoration was performed. Immutable pre-delete callback evidence remains, but no final coordinator/UI success is claimed for this attempt."
+  }
+}

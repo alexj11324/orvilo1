@@ -10,6 +10,8 @@ import { useSessionGroupMenuItems } from './useSessionGroupMenuItems';
 const mocks = vi.hoisted(() => ({
   createAgent: vi.fn(),
   requestAgentRuntime: vi.fn(),
+  openConnectAgentModal: vi.fn(),
+  openCreateGroupChatModal: vi.fn(),
   createGroup: vi.fn(),
   createGroupWithMembers: vi.fn(),
   navigate: vi.fn(),
@@ -37,7 +39,11 @@ vi.mock('@/features/Conversation/selectAgent', () => ({
 vi.mock('@/features/CreateAgent', () => ({ requestAgentRuntime: mocks.requestAgentRuntime }));
 
 vi.mock('@/features/ConnectAgent', () => ({
-  openConnectAgentModal: vi.fn(),
+  openConnectAgentModal: mocks.openConnectAgentModal,
+}));
+
+vi.mock('@/features/CreateGroupChat', () => ({
+  openCreateGroupChatModal: mocks.openCreateGroupChatModal,
 }));
 
 vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
@@ -94,131 +100,95 @@ vi.mock('@/components/toast', () => ({
   toast: { error: vi.fn(), success: mocks.toastSuccess },
 }));
 
-describe('useCreateMenuItems.createAgent', () => {
+describe('unified creation entries', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requestAgentRuntime.mockResolvedValue({
-      agencyConfig: {
-        executionTarget: 'device',
-        boundDeviceId: 'host-1',
-        heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
-      },
-      model: 'prime-model',
-      provider: 'openai',
-      title: 'Orvilo AI',
-    });
-    mocks.createAgent.mockResolvedValue({ agentId: 'agent-9' });
+    mocks.canCreate.current = true;
     mocks.refreshAgentList.mockResolvedValue(undefined);
   });
 
-  it('creates Prime only after the user selects its host and executable model', async () => {
+  it('opening or dismissing creation never creates an Agent or changes navigation', async () => {
     const { result } = renderHook(() => useCreateMenuItems());
     await result.current.createAgent();
-
-    expect(mocks.createAgent).toHaveBeenCalledTimes(1);
-    const params = mocks.createAgent.mock.calls[0][0];
-    expect(params.clientRequestId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(params.config.agencyConfig.heterogeneousProvider).toEqual({
-      type: 'orvilo',
-      model: 'prime-model',
-    });
-    expect(params.config.agencyConfig.boundDeviceId).toBe('host-1');
-    expect(params.config.provider).toBe('openai');
-    expect(params.config.model).toBe('prime-model');
-    expect(params.config.title).toBe('Orvilo AI');
-    expect(params.config.systemRole).toBeUndefined();
-    expect(params.config).not.toHaveProperty('purpose');
-  });
-
-  it('creates nothing and leaves navigation unchanged when runtime selection is dismissed', async () => {
-    mocks.requestAgentRuntime.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent();
+    expect(mocks.openConnectAgentModal).toHaveBeenCalledTimes(1);
+    expect(mocks.requestAgentRuntime).not.toHaveBeenCalled();
     expect(mocks.createAgent).not.toHaveBeenCalled();
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
-    expect(mocks.navigate).not.toHaveBeenCalled();
     expect(mocks.openNewConversation).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it('uses an explicitly selected imported runtime instead of inventing a builtin binding', async () => {
-    mocks.requestAgentRuntime.mockResolvedValue({
-      agencyConfig: {
-        executionTarget: 'device',
-        boundDeviceId: 'host-2',
-        heterogeneousProvider: {
-          type: 'codex',
-          command: 'codex',
-        },
-      },
-      title: 'Codex',
-      model: 'gpt-model',
-      provider: 'codex',
+  it.each(['chat', 'settings'] as const)(
+    'completing creation returns to its %s origin',
+    async (origin) => {
+      const { result } = renderHook(() => useCreateMenuItems());
+      await result.current.createAgent({ origin });
+      const options = mocks.openConnectAgentModal.mock.calls[0][0];
+      await act(async () => {
+        await options.onCreated('agent-9', { name: 'Code helper' });
+      });
+      if (origin === 'settings') {
+        expect(mocks.navigate).toHaveBeenCalledWith('/settings/agents/agent-9');
+        expect(mocks.openNewConversation).not.toHaveBeenCalled();
+      } else {
+        expect(mocks.openNewConversation).toHaveBeenCalledWith({ agentId: 'agent-9' });
+        expect(mocks.navigate).not.toHaveBeenCalled();
+      }
+      expect(mocks.refreshAgentList).toHaveBeenCalledTimes(1);
+      expect(mocks.createAgent).not.toHaveBeenCalled();
+      const toast = mocks.toastSuccess.mock.calls[0][0];
+      toast.actions[0].onClick();
+      expect(mocks.removeAgent).toHaveBeenCalledWith('agent-9');
+    },
+  );
+
+  it('keeps category, visibility and chosen Agent in the shared form', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent({
+      groupId: 'g1',
+      visibility: 'private',
+      initialType: 'opencode',
     });
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent();
-    expect(mocks.createAgent.mock.calls[0][0].config.agencyConfig.heterogeneousProvider.type).toBe(
-      'codex',
+    expect(mocks.openConnectAgentModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupId: 'g1',
+        visibility: 'private',
+        initialType: 'opencode',
+      }),
     );
-    expect(mocks.createAgent.mock.calls[0][0].config.agencyConfig.boundDeviceId).toBe('host-2');
-  });
-
-  it('a fresh clientRequestId per click — the key exists on every call', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent();
-    await result.current.createAgent();
-
-    const [a, b] = mocks.createAgent.mock.calls.map(([params]) => params.clientRequestId);
-    expect(a).toBeTruthy();
-    expect(b).toBeTruthy();
-    expect(a).not.toBe(b);
-  });
-
-  it('chat origin selects the new agent and opens a blank conversation', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent({ origin: 'chat' });
-
-    expect(mocks.openNewConversation).toHaveBeenCalledWith({ agentId: 'agent-9' });
-    expect(mocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it('settings origin stays in the new agent’s settings without touching chat', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent({ origin: 'settings' });
-
-    expect(mocks.navigate).toHaveBeenCalledWith('/settings/agents/agent-9');
-    expect(mocks.openNewConversation).not.toHaveBeenCalled();
-  });
-
-  it('announces the create with a delete-undo action', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent();
-
-    expect(mocks.toastSuccess).toHaveBeenCalledTimes(1);
-    const [options] = mocks.toastSuccess.mock.calls[0];
-    expect(options.title).toBe('agentCreated');
-    expect(options.actions).toHaveLength(1);
-    options.actions[0].onClick();
-    expect(mocks.removeAgent).toHaveBeenCalledWith('agent-9');
-  });
-
-  it('forwards groupId and visibility without minting anything extra', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createAgent({ groupId: 'g1', visibility: 'private' });
-
-    const params = mocks.createAgent.mock.calls[0][0];
-    expect(params.groupId).toBe('g1');
-    expect(params.visibility).toBe('private');
-    expect(mocks.requestAgentRuntime).toHaveBeenCalledWith({ visibility: 'private' });
     expect(mocks.createGroup).not.toHaveBeenCalled();
   });
 
-  it('creates nothing when the caller lacks create permission', async () => {
+  it('denies opening creation without create permission', async () => {
     mocks.canCreate.current = false;
     const { result } = renderHook(() => useCreateMenuItems());
     await result.current.createAgent();
+    expect(mocks.openConnectAgentModal).not.toHaveBeenCalled();
     expect(mocks.createAgent).not.toHaveBeenCalled();
-    expect(mocks.requestAgentRuntime).not.toHaveBeenCalled();
-    mocks.canCreate.current = true;
+  });
+
+  it('group creation opens prerequisites instead of creating an empty group immediately', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createEmptyGroup({ groupId: 'g1', visibility: 'private' });
+    expect(mocks.openCreateGroupChatModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupId: 'g1',
+        visibility: 'private',
+      }),
+    );
+    expect(mocks.createGroup).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('lists conversation, group chat and Agent creation in the approved order', () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    expect(result.current.createTopLevelMenuItems().map((item) => item.key ?? item.type)).toEqual([
+      'newConversation',
+      'newGroupChat',
+      'divider',
+      'newAgent',
+      'divider',
+    ]);
   });
 });
 

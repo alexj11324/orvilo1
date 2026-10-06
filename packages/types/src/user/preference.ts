@@ -76,6 +76,8 @@ export interface WorkspaceUserPreference {
    * personal notification settings no longer apply to them.
    */
   notification?: NotificationSettings;
+  /** This member's default Orchestrator in this workspace; null clears it. */
+  orchestratorAgentId?: string | null;
   /**
    * Per-member sidebar sections layout (order + hidden sections). Written as
    * a complete object on every update — partial patches would drop the
@@ -237,6 +239,8 @@ export interface UserPreference {
    * context. Stored as id (not slug) so workspace renames don't invalidate it.
    */
   lastWorkspaceId?: string | null;
+  /** Default saved Agent for future personal Orchestrator creation; null clears it. */
+  orchestratorAgentId?: string | null;
   /** Whether teammates can see this user's pointer and presence on the issue they are viewing. */
   showInCollaboration?: boolean;
   /**
@@ -321,6 +325,7 @@ export interface SSOProvider {
 export const UserPreferenceSchema = z
   .object({
     defaultOpenInApp: z.string().optional(),
+    orchestratorAgentId: z.string().min(1).max(128).nullish(),
     fontFamily: z.string().optional(),
     guide: UserGuideSchema.optional(),
     hideSyncAlert: z.boolean().optional(),

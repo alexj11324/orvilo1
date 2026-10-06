@@ -56,7 +56,11 @@ export const settleTaskExecution = async (
   if (!task) {
     return noWrite({ type: 'hold' }, null, 'no_task');
   }
-  if (TERMINAL_LEGACY_STATUSES.has(task.status)) {
+  if (
+    task.workflowCategory === 'done' ||
+    task.workflowCategory === 'canceled' ||
+    (TERMINAL_LEGACY_STATUSES.has(task.status) && !context?.expectedContract)
+  ) {
     return noWrite({ type: 'hold' }, null, 'terminal');
   }
 

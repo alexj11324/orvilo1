@@ -5,12 +5,12 @@ import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { isDesktop } from '@/const/version';
+import { createGoalModal } from '@/features/AgentGoals/CreateGoalModal';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
 import { lambdaClient } from '@/libs/trpc/client';
 import { getHostPort } from '@/platform';
 import { omitPersonalTeamItems } from '@/services/recent';
@@ -57,8 +57,7 @@ export const useCommandMenu = () => {
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const { openGroupWizard } = useGroupWizard();
-  const { createAgent, createGroupWithMembers, createGroupFromTemplate } = useCreateMenuItems();
+  const { createAgent, createEmptyGroup } = useCreateMenuItems();
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
@@ -190,9 +189,8 @@ export const useCommandMenu = () => {
     // One-click Orvilo create — fixed type + idempotency key + deterministic
     // naming + the openNewConversation destination all live in the shared
     // create path (docs/development/device-execution-contract.md).
-    await createAgent();
-
     onClose();
+    await createAgent();
   }, [canCreate, createAgent, onClose]);
 
   const openNewTopicOrSaveTopic = useChatStore((s) => s.openNewTopicOrSaveTopic);
@@ -239,25 +237,31 @@ export const useCommandMenu = () => {
     openCreateProjectModal();
   }, [canCreate, onClose]);
 
-  const handleCreateAgentTeam = useCallback(() => {
+  const handleCreateAgentTeam = useCallback(async () => {
     if (!canCreate) return;
-
     onClose();
-    openGroupWizard({
-      onCreateCustom: async (selectedAgents) => {
-        await createGroupWithMembers(selectedAgents);
-      },
-      onCreateFromTemplate: async (templateId, selectedMemberTitles) => {
-        await createGroupFromTemplate(templateId, selectedMemberTitles);
-      },
-    });
-  }, [canCreate, onClose, openGroupWizard, createGroupWithMembers, createGroupFromTemplate]);
+    await createEmptyGroup();
+  }, [canCreate, onClose, createEmptyGroup]);
+
+  const handleCreateConversation = useCallback(() => {
+    if (!canCreate || topicSelectors.isNewTopicSendInFlight(useChatStore.getState())) return;
+    onClose();
+    navigate('/chat/new');
+  }, [canCreate, onClose, navigate]);
+
+  const handleCreateGoal = useCallback(() => {
+    if (!canCreate) return;
+    onClose();
+    createGoalModal();
+  }, [canCreate, onClose]);
 
   return {
     closeCommandMenu,
     handleAskOrviloAI,
     handleBack,
     handleCreateAgentTeam,
+    handleCreateConversation,
+    handleCreateGoal,
     handleCreateLibrary,
     handleCreateProject,
     handleCreateSession,

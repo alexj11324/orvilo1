@@ -57,9 +57,11 @@ export const useEffectiveWorkingDirectory = (
   );
   const topicWorkingDirectory = useChatStore(topicSelectors.getTopicWorkingDirectory(topicId));
   const topicWorkingDirectoryConfig = useChatStore((s) =>
-    topicId
-      ? topicSelectors.getTopicById(topicId)(s)?.metadata?.workingDirectoryConfig
-      : topicSelectors.currentTopicMetadata(s)?.workingDirectoryConfig,
+    topicId === null
+      ? undefined
+      : topicId
+        ? topicSelectors.getTopicById(topicId)(s)?.metadata?.workingDirectoryConfig
+        : topicSelectors.currentTopicMetadata(s)?.workingDirectoryConfig,
   );
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const targetDeviceId = resolveTargetDeviceId(agencyConfig, currentDeviceId, {

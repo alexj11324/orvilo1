@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { canMountBuiltinToolSurface } from './builtinToolMount';
+import { canMountBuiltinToolSurface, canRunGroupSupervisorRuntime } from './builtinToolMount';
 
 describe('canMountBuiltinToolSurface', () => {
   it('accepts the runtimes that deliver session/new mcpServers to the agent', () => {
@@ -28,9 +28,8 @@ describe('canMountBuiltinToolSurface', () => {
     }
   });
 
-  it('rejects the builtin orvilo family — Prime mounts no tools', () => {
-    // The embedded Prime harness runs `noTools: 'all'`; a pre-cutover
-    // `engine` stamp is dead data and does not make the row mountable.
+  it('keeps native Prime outside the ACP mount family', () => {
+    // Prime's native per-run MCP bridge does not use ACP session/new.
     const preCutoverRow = { engine: 'claude-sdk', type: 'orvilo' };
     expect(canMountBuiltinToolSurface(preCutoverRow)).toBe(false);
     expect(canMountBuiltinToolSurface({ type: 'orvilo' })).toBe(false);
@@ -39,5 +38,16 @@ describe('canMountBuiltinToolSurface', () => {
   it('rejects a binding with no type to resolve', () => {
     expect(canMountBuiltinToolSurface(undefined)).toBe(false);
     expect(canMountBuiltinToolSurface({})).toBe(false);
+  });
+});
+
+describe('canRunGroupSupervisorRuntime', () => {
+  it('accepts Prime native MCP and the mounted ACP runtimes', () => {
+    expect(canRunGroupSupervisorRuntime({ type: 'orvilo' })).toBe(true);
+    expect(canRunGroupSupervisorRuntime({ type: 'opencode' })).toBe(true);
+    expect(canRunGroupSupervisorRuntime({ type: 'codex' })).toBe(true);
+    expect(canRunGroupSupervisorRuntime({ type: 'pi' })).toBe(false);
+    expect(canRunGroupSupervisorRuntime({ type: 'cursor' })).toBe(false);
+    expect(canRunGroupSupervisorRuntime(undefined)).toBe(false);
   });
 });

@@ -613,7 +613,7 @@ describe('thread action', () => {
       // written straight to the title, which leaked `{"title":"..."}`.
       expect((aiChatService.generateJSON as Mock).mock.calls[0][0]).toMatchObject({
         schema: { name: 'topic_title' },
-        tracing: { scenario: 'topic_title' },
+        tracing: { scenario: 'topic_title', topicId: 'test-topic-id' },
       });
       expect(internalUpdateSpy).toHaveBeenCalledWith('thread-id', {
         title: 'New Generated Title',

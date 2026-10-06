@@ -19,6 +19,7 @@ interface CommandMenuContextValue {
   menuContext: MenuContext;
   mounted: boolean;
   onClose: () => void;
+  onCreateView?: () => void;
   /**
    * Push a result's action submenu onto the page stack, remembering the
    * search that produced it so popping back restores the result list.
@@ -50,10 +51,16 @@ const CommandMenuContext = createContext<CommandMenuContextValue | undefined>(un
 interface CommandMenuProviderProps {
   children: ReactNode;
   onClose: () => void;
+  onCreateView?: () => void;
   pathname: string | null;
 }
 
-export const CommandMenuProvider = ({ children, onClose, pathname }: CommandMenuProviderProps) => {
+export const CommandMenuProvider = ({
+  children,
+  onClose,
+  onCreateView,
+  pathname,
+}: CommandMenuProviderProps) => {
   const [pages, setPages] = useState<PageType[]>([]);
   const [search, setSearchState] = useState('');
   const [typeFilter, setTypeFilterState] = useState<ValidSearchType | undefined>(undefined);
@@ -126,6 +133,7 @@ export const CommandMenuProvider = ({ children, onClose, pathname }: CommandMenu
       menuContext,
       mounted: true, // Always true after initial render since provider only mounts on client
       onClose,
+      onCreateView,
       openResultActions,
       page,
       pages,
@@ -146,6 +154,7 @@ export const CommandMenuProvider = ({ children, onClose, pathname }: CommandMenu
       activeAgentId,
       menuContext,
       onClose,
+      onCreateView,
       openResultActions,
       page,
       pages,

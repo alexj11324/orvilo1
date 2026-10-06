@@ -7,6 +7,7 @@ import type {
   TaskActivityLogType,
   TaskAutomationMode,
   TaskAutomationSnapshot,
+  TaskDispatchPhase,
   TaskDomainEventSource,
   TaskDomainEventType,
   TaskItem,
@@ -76,6 +77,7 @@ import {
   isAutomationArmed,
   isExecutionParked,
   isParked,
+  latestDispatchPhase,
   legacyStatusExpr,
   parkMarkerClear,
   parkMarkerSet,
@@ -94,6 +96,7 @@ import { workflowCategoryForLegacyStatus } from './workflowMove';
 const taskRowColumns = {
   ...getTableColumns(tasks),
   status: sql<TaskStatus>`${legacyStatusExpr}`,
+  dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
 };
 
 /** Columns whose change is worth a line in the task activity feed. */
@@ -1608,6 +1611,7 @@ export class TaskModel {
         .select({
           ...getTableColumns(tasks),
           status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
+          dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`.as('dispatch_phase'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
             sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
@@ -1694,6 +1698,7 @@ export class TaskModel {
         .select({
           ...getTableColumns(tasks),
           status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
+          dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`.as('dispatch_phase'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
             sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
@@ -3843,7 +3848,11 @@ export class TaskModel {
       .update(tasks)
       .set({
         domainRevision: sql`${tasks.domainRevision} + 1`,
-        requirementRevision: sql`${tasks.requirementRevision} + 1`,
+        // Agent progress does not change the dispatched requirements.
+        requirementRevision:
+          (input.mutation?.source ?? input.source) === 'agent'
+            ? tasks.requirementRevision
+            : sql`${tasks.requirementRevision} + 1`,
         updatedAt: new Date(),
       })
       .where(and(eq(tasks.id, input.taskId), this.ownership()))
@@ -3947,7 +3956,7 @@ export class TaskModel {
         commentId: comment.id,
         externalMappingId: externalMapping?.id,
         mutation,
-        source: comment.authorAgentId ? 'agent' : 'user',
+        source: 'user',
         taskId: comment.taskId,
       });
       return true;
@@ -3976,7 +3985,7 @@ export class TaskModel {
         comment,
         commentId: comment.id,
         mutation: opts?.mutation,
-        source: comment.authorAgentId ? 'agent' : 'user',
+        source: 'user',
         taskId: comment.taskId,
       });
       return comment;

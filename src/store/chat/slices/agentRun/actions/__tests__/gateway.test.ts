@@ -10,6 +10,7 @@ import { topicService } from '@/services/topic';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import type { ChatTopic } from '@/types/topic';
 
+import * as runLifecycleModule from '../lifecycle/buildRunLifecycle';
 import type { GatewayConnection } from '../transports/gateway/gateway';
 import { GatewayActionImpl } from '../transports/gateway/gateway';
 
@@ -631,6 +632,52 @@ describe('GatewayActionImpl', () => {
         updateTopicStatus,
       };
     }
+
+    it.each([null, 'existing-topic'])(
+      'captures title creation intent and the canonical thread before subscribing (%s)',
+      async (topicId) => {
+        const { action, connectToGateway } = createExecuteTestAction();
+        const buildLifecycle = vi.spyOn(runLifecycleModule, 'buildRunLifecycle');
+        vi.mocked(aiAgentService.execAgentTask).mockResolvedValue({
+          agentId: 'agent-1',
+          assistantMessageId: 'ast-1',
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          createdThreadId: 'created-thread',
+          message: 'ok',
+          operationId: 'server-op-1',
+          status: 'created',
+          success: true,
+          timestamp: new Date().toISOString(),
+          token: 'test-token',
+          topicId: topicId ?? 'topic-created',
+          userMessageId: 'usr-1',
+        } as any);
+        try {
+          await action.executeGatewayAgent({
+            context: { agentId: 'agent-1', topicId, threadId: null, scope: 'main' },
+            message: 'Hello',
+          });
+          expect(buildLifecycle).toHaveBeenCalledWith(
+            expect.any(Function),
+            expect.objectContaining({
+              context: expect.objectContaining({
+                topicId: topicId ?? 'topic-created',
+                threadId: 'created-thread',
+              }),
+              isCreateNewTopic: topicId === null,
+              runScope: 'top_level',
+              runtimeType: 'gateway',
+            }),
+          );
+          expect(buildLifecycle.mock.invocationCallOrder[0]).toBeLessThan(
+            connectToGateway.mock.invocationCallOrder[0],
+          );
+        } finally {
+          buildLifecycle.mockRestore();
+        }
+      },
+    );
 
     afterEach(() => {
       delete (globalThis as any).window;

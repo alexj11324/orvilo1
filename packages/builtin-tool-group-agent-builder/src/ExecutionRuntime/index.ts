@@ -123,21 +123,9 @@ export class GroupAgentBuilderExecutionRuntime {
    */
   async createGroup(
     args: CreateGroupParams,
-    context?: { agentId?: string },
+    _context?: { agentId?: string },
   ): Promise<BuiltinToolResult> {
     try {
-      if (!context?.agentId) throw new Error('Agent setup required: invoking agent is missing');
-      const runtimeConfig = await agentService.getRuntimeForCreation({
-        agentId: context.agentId,
-        model: args.supervisor?.model,
-        provider: args.supervisor?.provider,
-        visibility: 'private',
-      });
-      if (runtimeConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo') {
-        throw new Error(
-          'Group supervisor runtime unsupported: an admitted Prime Agent is required',
-        );
-      }
       const state = getChatGroupStoreState();
       const groupConfig = {
         ...(args.openingMessage !== undefined && { openingMessage: args.openingMessage }),
@@ -152,7 +140,7 @@ export class GroupAgentBuilderExecutionRuntime {
         description: args.description,
         title: args.title,
         visibility: 'private',
-        supervisorConfig: { ...args.supervisor, ...runtimeConfig },
+        supervisorConfig: args.supervisor,
       });
 
       state.internal_dispatchChatGroup({ payload: group, type: 'addGroup' });

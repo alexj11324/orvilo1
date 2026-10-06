@@ -78,6 +78,7 @@ const AutomationSettingsTab = memo(() => {
   const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const refresh = useTaskStore((s) => s.internal_refreshTaskDetail);
   const canManage = useCanManageAutomation(detail?.createdByUserId);
+  const taskId = detail?.id;
   const outputs =
     (detail?.config as { resultWebhooks?: AutomationResultWebhookConfig[] } | undefined)
       ?.resultWebhooks ?? [];
@@ -90,13 +91,13 @@ const AutomationSettingsTab = memo(() => {
           <TriggerCard />
         </Section>
       )}
-      {detail ? (
+      {taskId ? (
         <ResultWebhookSettings
-          key={detail.id}
+          key={taskId}
           readOnly={!canManage}
-          taskId={detail.id}
+          taskId={taskId}
           value={outputs}
-          onSaved={() => refresh(detail.id)}
+          onSaved={() => refresh(taskId)}
         />
       ) : null}
       <Section title={t('instructions.section')}>

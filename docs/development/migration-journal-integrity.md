@@ -18,6 +18,13 @@ leave an inversion. Do this _before_ release; after an entry has been applied
 anywhere, repair forward with an idempotent migration instead of rewriting
 history.
 
+Two immutable exceptions landed on canary: `0198_mcp_events` and
+`0199_core_execution_authority` were appended after `0203_device_capability_snapshot`
+with their original idx/timestamps. The integrity tests pin both complete entries
+and their positions, while enforcing the invariant for every other entry.
+`0205_core_execution_storage_forward_repair` restores the receipt and session-snapshot
+tables skipped by staged upgrades; existing SQL, snapshots, and timestamps stay unchanged.
+
 ## Guard
 
 `packages/database/src/core/__tests__/migrationJournal.test.ts` enforces the
@@ -44,8 +51,8 @@ The boundary cluster:
 | ---- | ------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0181 | `0181_task_workspace_claims`         | 1790004826709 | creates `task_workspace_claims` + `task_workspace_recoveries`                                                                                                          |
 | 0182 | `0182_lean_metal_master`             | 1790004827709 | adds `integration_leases.fence_seq` — `when` was originally **below** 0181's (the journal-order bug); it is also non-idempotent (`ADD COLUMN` without `IF NOT EXISTS`) |
-| 0183 | `0183_task_dispatch_origin`          | 1790004828709 | `task_dispatches` origin/initiator/source\_dispatch\_id/settlement\_grant                                                                                              |
-| 0184 | `0184_task_workspace_claim_identity` | 1790004829709 | `task_workspace_claims` repo\_common\_dir/base\_branch                                                                                                                 |
+| 0183 | `0183_task_dispatch_origin`          | 1790004828709 | `task_dispatches` origin/initiator/source_dispatch_id/settlement_grant                                                                                                 |
+| 0184 | `0184_task_workspace_claim_identity` | 1790004829709 | `task_workspace_claims` repo_common_dir/base_branch                                                                                                                    |
 | 0185 | `0185_fence_seq_forward_repair`      | 1790004830709 | conditional `fence_seq` repair + definition verification                                                                                                               |
 
 Full inventory as of this writing: 189 journal entries, `0000`–`0188`, gap-free.

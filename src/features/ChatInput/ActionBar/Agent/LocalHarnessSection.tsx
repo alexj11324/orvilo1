@@ -78,15 +78,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
-  subtitle: css`
-    overflow: hidden;
-
-    font-size: 11px;
-    line-height: 14px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
   text: css`
     display: flex;
     flex: 1;
@@ -154,10 +145,6 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
 
   const renderRow = (row: LocalHarnessRow) => {
     const { provider } = row;
-    // The subtitle is the whole reason a row exists here: the version proves
-    // the probe really found the binary, and the failure text says why a
-    // harness the user knows is installed did not answer.
-    const subtitle = row.version ?? row.reason;
 
     return (
       <div
@@ -167,6 +154,9 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
         tabIndex={0}
         onClick={() => onConnect(provider.type)}
         onKeyDown={(event) => {
+          // A keyboard event that started on a nested control is that
+          // control's activation — the row must not fire a second one.
+          if (event.target !== event.currentTarget) return;
           if (event.key !== 'Enter' && event.key !== ' ') return;
           event.preventDefault();
           onConnect(provider.type);
@@ -175,7 +165,6 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
         <provider.brand.Avatar size={20} />
         <div className={styles.text}>
           <div className={styles.name}>{provider.title}</div>
-          {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
         </div>
         <span className={styles.connect}>{t('localHarness.connect')}</span>
       </div>

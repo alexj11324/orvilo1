@@ -1,0 +1,34 @@
+{
+  "businessArtifact": {
+    "name": "NATIVE_JOURNEY_T6.md",
+    "bytes": 21,
+    "sha256": "d45c2688cc57119f5fc857c7e570b5c1aa154a8f218f81e6a493fba1a4e37edd",
+    "mtime": "2026-10-06T06:58:14.874119Z",
+    "doesNotProveReview": true
+  },
+  "cliArtifactSha256AtFailingRun": "231cc73a53403acf6892b4c20e7158c52a14d48f6b1144f2a6933a5e4330798c",
+  "comments": 0,
+  "dispatchId": "dsp_fRTO8EHs6hwR",
+  "dispatchPhase": "canceled",
+  "earliestConfirmedBoundary": "Agent CLI completion used human terminal mutation, causing self cancellation and bypassing required review.",
+  "executionSourceHeadObservedAtIntake": "074f002a34e54638b214d662375cf0c6e828defe",
+  "generation": 1,
+  "identifier": "T-6",
+  "laterFixedProof": "t5-generation2-native-review-proof.json; T6 state was not rewritten.",
+  "observerBusinessWrites": false,
+  "operationId": "op_1791269840141_agt_AB0VcTFshbq8_tpc_0ulvlcat8TqO_t9s72T6r",
+  "operationStatus": "interrupted",
+  "policyRevision": 1,
+  "requirementRevision": 3,
+  "reviewerAssigned": false,
+  "sqliteLockObservedThisRun": false,
+  "taskWorkflow": "done",
+  "terminalAt": "2026-10-06T06:59:31.305Z",
+  "topicRunState": "canceled",
+  "trigger": {
+    "tool": "shell",
+    "invocation": "bare orvilo task complete targeting T-6",
+    "lastCallStatus": "in_progress",
+    "sourceRoute": "CLI lifecycle complete \u2192 user getTrpcClient task.updateStatus completed, rather than operation-scoped builtin completion request"
+  }
+}

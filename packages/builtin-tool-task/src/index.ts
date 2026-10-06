@@ -16,6 +16,7 @@ export { systemPrompt } from './systemRole';
 export type {
   CreateGoalParams,
   CreateGoalState,
+  EditTaskParams,
   GoalCriterionDraft,
   ListWorkspaceMembersParams,
   ListWorkspaceMembersState,

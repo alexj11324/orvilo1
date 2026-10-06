@@ -1,0 +1,132 @@
+{
+  "agentProgressComments": [
+    {
+      "id": "cmt_H8P3oKyIN5Dh",
+      "authorType": "agent",
+      "authorUserAbsent": true,
+      "createdAt": "2026-10-06T07:20:33.834Z"
+    }
+  ],
+  "businessArtifact": {
+    "name": "NATIVE_JOURNEY_T5.md",
+    "bytes": 20,
+    "sha256": "76bda695d8d459980d5443e6550a79da72790e006eb2a0b04284dfa0f95acf57",
+    "exactRequestedMarker": true
+  },
+  "cliArtifactSha256": "627424d37665f520dc3645d6bb66df5d14a47319eb135d1cd2bed5450f86b285",
+  "cliSourceCommit": "be127a7ad6aac1c4fa5d9fb1b90b12b51823f28f",
+  "completionReceipts": [
+    {
+      "traceLine": 163,
+      "callId": "call_fd3b362f4f1e4e8a9de7585d",
+      "status": "completed",
+      "receipt": "Task T-5 completion requested. It will be finalized when the current run finishes.",
+      "frameTimestamp": null
+    }
+  ],
+  "cwd": {
+    "directory": "journey-demo",
+    "topicAndExecutionCwdMatch": true,
+    "operationStatus": "done"
+  },
+  "finalLedgerObservedAt": "2026-10-06T07:24:51.235Z",
+  "generation1FailurePreserved": {
+    "id": "dsp_FSoJXESz3aWv",
+    "phase": "failed",
+    "generation": 1,
+    "requirement_revision": 2,
+    "policy_revision": 1,
+    "operation_id": "op_1791265261100_agt_AB0VcTFshbq8_tpc_ovg37mcISIjG_tfexWOyx",
+    "agent_id": "agt_AB0VcTFshbq8"
+  },
+  "generation2": {
+    "id": "dsp_0Da1ZENhkV7a",
+    "phase": "succeeded",
+    "generation": 2,
+    "requirement_revision": 2,
+    "policy_revision": 1,
+    "operation_id": "op_1791271138721_agt_AB0VcTFshbq8_tpc_l4Lk7eYIdFVY_G4fsKxHD",
+    "agent_id": "agt_AB0VcTFshbq8"
+  },
+  "humanReviewAcceptancePerformed": false,
+  "limits": [
+    "Original T5 generation1 SQLite failure remains; T6 earlier self-completion negative remains separate.",
+    "Review arrived after normal asynchronous brief judgment/synthesis; execution success preceded workflow Review.",
+    "Completion receipt frame has no own timestamp; operation interval and persisted completion pointer establish its run."
+  ],
+  "manualCallbackReplay": false,
+  "naturalPostRunJudgments": [
+    {
+      "purpose": "brief decision",
+      "operationId": "op_1791271259726_agt_AB0VcTFshbq8_tpc_NzEpefPVyxOc_uTal9j5x",
+      "startedAt": "2026-10-06T07:20:59.727Z",
+      "completedAt": "2026-10-06T07:21:30.522Z"
+    },
+    {
+      "purpose": "brief synthesis",
+      "operationId": "op_1791271291604_agt_AB0VcTFshbq8_tpc_qRri19VnqrF2_TrNPpN8k",
+      "startedAt": "2026-10-06T07:21:31.604Z",
+      "completedAt": "2026-10-06T07:22:35.133Z"
+    }
+  ],
+  "normalNativeTaskRun": true,
+  "observerBusinessMutation": false,
+  "operations": [
+    {
+      "id": "op_1791265261100_agt_AB0VcTFshbq8_tpc_ovg37mcISIjG_tfexWOyx",
+      "status": "error",
+      "started_at": "2026-10-06T05:41:01.187Z",
+      "completed_at": "2026-10-06T05:41:14.172Z"
+    },
+    {
+      "id": "op_1791271138721_agt_AB0VcTFshbq8_tpc_l4Lk7eYIdFVY_G4fsKxHD",
+      "status": "done",
+      "started_at": "2026-10-06T07:18:58.782Z",
+      "completed_at": "2026-10-06T07:20:59.410Z"
+    }
+  ],
+  "sourceHead": "5e1c2462af7835b77f58dc9669f9900e07d9f08b",
+  "task": {
+    "id": "task_NSTyftJV7YJK",
+    "identifier": "T-5",
+    "name": "Journey - native final review flow",
+    "workflow_category": "in_review",
+    "domain_revision": 5,
+    "requirement_revision": 2,
+    "policy_revision": 1,
+    "execution_generation": 2,
+    "completion_requested_by_operation_id": "op_1791271138721_agt_AB0VcTFshbq8_tpc_l4Lk7eYIdFVY_G4fsKxHD",
+    "reviewerAssigned": true,
+    "assignedAgentAndPrivateProjectPreserved": true
+  },
+  "topLevelBusinessFileDelta": {
+    "scope": "Ordinary top-level files; excludes runtime telemetry directories.",
+    "priorHashProvenance": "Earlier read-only observer output during T6 run; transcribed here later, not an original persisted pre-run snapshot.",
+    "priorFilesUnchanged": true,
+    "addedNames": ["NATIVE_JOURNEY_T5.md"],
+    "removedNames": []
+  },
+  "topicRecords": [
+    {
+      "topic_id": "tpc_ovg37mcISIjG",
+      "operation_id": "op_1791265261100_agt_AB0VcTFshbq8_tpc_ovg37mcISIjG_tfexWOyx",
+      "status": "failed",
+      "run_state": "failed",
+      "dispatch_id": "dsp_FSoJXESz3aWv",
+      "requirement_revision": 2,
+      "policy_revision": 1,
+      "execution_generation": 1
+    },
+    {
+      "topic_id": "tpc_l4Lk7eYIdFVY",
+      "operation_id": "op_1791271138721_agt_AB0VcTFshbq8_tpc_l4Lk7eYIdFVY_G4fsKxHD",
+      "status": "completed",
+      "run_state": "succeeded",
+      "dispatch_id": "dsp_0Da1ZENhkV7a",
+      "requirement_revision": 2,
+      "policy_revision": 1,
+      "execution_generation": 2
+    }
+  ],
+  "trigger": "Human clicked the existing scoped Task Run action; subsequent execution and Review settlement completed naturally."
+}

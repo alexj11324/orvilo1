@@ -847,10 +847,13 @@ export const dispatchHeteroAgent = async (
   const heteroService = new HeterogeneousAgentService(deps.db, deps.userId, {
     workspaceId: deps.workspaceId,
   });
-  const resumeSessionId = await heteroService.getHeterogeneousResumeSessionId(
-    topicId,
-    getNativeHeteroSessionBindingKey(heteroType),
-  );
+  // An isolation thread shares the topic, but must not resume its live parent's provider session.
+  const resumeSessionId = appContext?.isolationThread
+    ? undefined
+    : await heteroService.getHeterogeneousResumeSessionId(
+        topicId,
+        getNativeHeteroSessionBindingKey(heteroType),
+      );
   // Sign an operation-scoped JWT so the CLI can authenticate against
   // heteroIngest / heteroFinish without full user credentials.
   let operationJwt: string;
@@ -1010,7 +1013,10 @@ export const dispatchHeteroAgent = async (
     // must host — admission records it per candidate so a wrong-adapter
     // device can never read as a verified pick.
     requiredOperation: { adapter: resolveHarnessAdapter(heteroType), kind: 'agent-run' },
-    sandboxExecutionAvailable: !isRemoteHetero && supportsCloudHeterogeneousSandbox(heteroType),
+    sandboxExecutionAvailable:
+      Boolean(enableCloudSandbox) &&
+      !isRemoteHetero &&
+      supportsCloudHeterogeneousSandbox(heteroType),
     sessionBoundDeviceId,
     userId: deps.userId,
     workspaceId: deps.workspaceId,
@@ -1822,7 +1828,10 @@ export const dispatchHeteroAgent = async (
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
-            env: aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : undefined,
+            env: {
+              ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
+              ORVILO_AGENT_ID: resolvedAgentId,
+            },
             // The device dedupes agent_run_request on this key (= the task id
             // it already tracks for cancelHeteroTask), so a gateway retry can
             // never spawn a duplicate execution of this operation.
@@ -2171,7 +2180,10 @@ export const dispatchHeteroAgent = async (
         ...heteroParams,
         agentType: heteroType as 'claude-code' | 'codex',
         args: heteroExecArgs,
-        env: aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : undefined,
+        env: {
+          ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
+          ORVILO_AGENT_ID: resolvedAgentId,
+        },
         jwt: sandboxJwt,
         marketService,
         // `heteroParams.jwt` (the operation token) is overridden above for

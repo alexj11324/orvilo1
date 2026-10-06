@@ -243,6 +243,22 @@ export function createCoreEventDispatchAdmission(dependencies: {
 
       try {
         const result = await new TaskDispatchModel(dependencies.db, request.workspaceId).request({
+          eventEvidence: {
+            causationIds: [request.causationId, request.rootDispatchId].filter(
+              (id): id is string => typeof id === 'string' && id.length > 0,
+            ),
+            eventId: request.eventId,
+            idempotencyKey: request.idempotencyKey,
+            inboxRef: request.inboxRef,
+            sourceId: request.sourceId,
+            subscriptionId: request.subscriptionId,
+            tenantId: request.tenantId,
+            triggerId: request.triggerId,
+            triggerRevision: request.triggerRevision,
+            triggerRunId: run.id,
+            userId: request.userId,
+            workspaceId: request.workspaceId,
+          },
           idempotencyKey: request.idempotencyKey,
           initiator: `mcp-event:${request.triggerId}`,
           requestedBy: request.userId,

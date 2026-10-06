@@ -21,6 +21,7 @@ import {
   taskDispatches,
   tasks,
   taskTopics,
+  userConnectors,
   users,
   workspaceMembers,
   workspaces,
@@ -49,6 +50,7 @@ describe('core event dispatch admission', () => {
   let taskId: string;
   let otherTaskId: string;
   let tenantId: string;
+  let connectorId: string;
   let bindingId: string;
   let triggerId: string;
   let inboxId: string;
@@ -61,7 +63,7 @@ describe('core event dispatch admission', () => {
     idempotencyKey: runKey,
     inboxRef: inboxId,
     schemaVersion: CONTROL_PLANE_VERSION,
-    sourceId: 'connector',
+    sourceId: connectorId,
     subscriptionId: bindingId,
     taskId,
     tenantId,
@@ -90,13 +92,14 @@ describe('core event dispatch admission', () => {
 
   beforeEach(async () => {
     db = await getTestDB();
-    now = 1_700_000_000_000;
+    now = Date.now();
     userId = `user_${randomUUID()}`;
     workspaceId = `ws_${randomUUID()}`;
     agentId = `agt_${randomUUID()}`;
     taskId = `tsk_${randomUUID()}`;
     otherTaskId = `tsk_${randomUUID()}`;
     tenantId = `tenant_${randomUUID()}`;
+    connectorId = randomUUID();
     bindingId = `binding_${randomUUID()}`;
     triggerId = `trigger_${randomUUID()}`;
     inboxId = `inbox_${randomUUID()}`;
@@ -110,6 +113,15 @@ describe('core event dispatch admission', () => {
       slug: workspaceId,
     });
     await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await db.insert(userConnectors).values({
+      id: connectorId,
+      identifier: 'mcp-source',
+      name: 'Event source',
+      sourceType: 'custom',
+      status: 'connected',
+      userId,
+      workspaceId,
+    });
     await db.insert(agents).values({
       id: agentId,
       slug: agentId,
@@ -118,6 +130,7 @@ describe('core event dispatch admission', () => {
     });
     await db.insert(tasks).values([
       {
+        automationMode: 'event',
         createdByUserId: userId,
         id: taskId,
         identifier: 'EVT-1',
@@ -137,7 +150,7 @@ describe('core event dispatch admission', () => {
     const binding: McpEventBinding = {
       callbackToken: bindingId,
       callbackUrl: 'https://receiver.test/events/token',
-      connectorId: 'connector',
+      connectorId,
       cursor: null,
       eventArguments: {},
       eventName: 'message',
@@ -165,7 +178,7 @@ describe('core event dispatch admission', () => {
       filters: [{ operator: 'contains', path: ['text'], value: 'hello' }],
       id: triggerId,
       revision: 0,
-      sourceId: 'connector',
+      sourceId: connectorId,
       subscriptionId: bindingId,
       taskId,
       tenantId,
@@ -174,10 +187,10 @@ describe('core event dispatch admission', () => {
     });
     await db.insert(mcpEventInbox).values({
       availableAt: now,
-      connectorId: 'connector',
+      connectorId,
       delivery: {
         bindingRevision: 0,
-        connectorId: 'connector',
+        connectorId,
         event: {
           data: { text: 'hello' },
           eventId: 'event-1',
@@ -233,6 +246,7 @@ describe('core event dispatch admission', () => {
     await db.delete(executionGrants).where(eq(executionGrants.workspaceId, workspaceId));
     await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
     await db.delete(agents).where(eq(agents.userId, userId));
+    await db.delete(userConnectors).where(eq(userConnectors.workspaceId, workspaceId));
     await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
     await db.delete(users).where(eq(users.id, userId));
   });

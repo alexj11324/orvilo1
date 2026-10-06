@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
-import React, { memo, type MouseEvent, Suspense, useCallback, useMemo } from 'react';
+import React, { memo, type MouseEvent, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
@@ -12,7 +12,6 @@ import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 
-import { useCreateMenuItems } from '../../hooks';
 import Actions from '../Agent/Actions';
 import { useAgentModal } from '../Agent/ModalProvider';
 import PrivateList from './List';
@@ -22,55 +21,12 @@ interface PrivateProps {
   itemKey: string;
 }
 
-// Top-level "Private" sidebar section, structurally mirroring the Agent
-// accordion. Everything created from the `+` button is hard-pinned to
-// `visibility: 'private'`, so users get a predictable bucket for personal
-// work without ever having to think about visibility flags.
-//
-// Sidebar-level controls (manage groups, move up/down, customize sidebar)
-// live in the "More" dropdown so private management stays consistent with
-// the workspace-public Agent section.
+// Private Agent navigation; creation belongs to the Agents page.
 const Private = memo<PrivateProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const { isRevalidating } = useFetchAgentList();
 
   const { openConfigGroupModal } = useAgentModal();
-
-  const {
-    createAgentListMenuItem,
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-    isLoading,
-  } = useCreateMenuItems();
-
-  // Mirror the public Agent "+" menu so the create surface is consistent
-  // across both buckets — heterogeneous and platform agents are hard-pinned
-  // to private here. Session-group creation lives in the "More" dropdown.
-  const addMenuItems = useMemo(() => {
-    const connectItem = createConnectAgentMenuItem({ visibility: 'private' });
-    const groupFromDescription = createGroupFromDescriptionMenuItem({
-      visibility: 'private',
-    });
-
-    return [
-      createAgentMenuItem({ visibility: 'private' }),
-      createGroupChatMenuItem({ visibility: 'private' }),
-      ...(groupFromDescription ? [groupFromDescription] : []),
-      ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
-      // Same discovery entries as the workspace-public section — the agent
-      // list opens on the Private tab so the surface matches this bucket.
-      { type: 'divider' as const },
-      createAgentListMenuItem({ visibility: 'private' }),
-    ];
-  }, [
-    createAgentListMenuItem,
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-  ]);
 
   const handleOpenConfigGroupModal = useCallback(() => {
     openConfigGroupModal('private');
@@ -115,11 +71,7 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
             >
               <ArrowRight />
             </Button>
-            <Actions
-              addMenuItems={addMenuItems}
-              dropdownMenu={dropdownMenu}
-              isLoading={isLoading}
-            />
+            <Actions dropdownMenu={dropdownMenu} />
           </div>
         </div>
       </SidebarContextMenu>

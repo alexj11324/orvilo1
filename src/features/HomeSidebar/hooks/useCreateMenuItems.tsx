@@ -1,32 +1,16 @@
-import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import { CHAT_NEW_URL } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import {
-  BotIcon,
-  FolderCogIcon,
-  FolderPlus,
-  ListPlusIcon,
-  MessageSquarePlus,
-  SparklesIcon,
-} from 'lucide-react';
+import { BotIcon, FolderCogIcon, ListPlusIcon, MessageSquarePlus } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import { toast } from '@/components/toast';
-import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { openNewConversation } from '@/features/Conversation/selectAgent';
-import { requestAgentRuntime } from '@/features/CreateAgent';
-import { openCreateGroupChatModal } from '@/features/CreateGroupChat';
-import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import type { GroupMemberConfig } from '@/services/chatGroup';
-import { chatGroupService } from '@/services/chatGroup';
-import { useAgentGroupStore } from '@/store/agentGroup';
 import { useHomeStore } from '@/store/home';
 
 const stopMenuItemDomEvent = (domEvent: unknown) => {
@@ -69,20 +53,10 @@ interface CreateAgentOptions {
 export const useCreateMenuItems = () => {
   const { t } = useTranslation(['chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
-  const groupTemplates = useGroupTemplates();
   const { allowed: canCreate } = usePermission('create_content');
 
-  const [addGroup, refreshAgentList, switchToGroup, removeAgent] = useHomeStore((s) => [
-    s.addGroup,
-    s.refreshAgentList,
-    s.switchToGroup,
-    s.removeAgent,
-  ]);
-  const privateGroups = useHomeStore((s) => s.privateAgentGroups);
-  const [createGroup, loadGroups] = useAgentGroupStore((s) => [s.createGroup, s.loadGroups]);
+  const [refreshAgentList, removeAgent] = useHomeStore((s) => [s.refreshAgentList, s.removeAgent]);
 
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [isCreatingSessionGroup, setIsCreatingSessionGroup] = useState(false);
   const [isMutatingAgent, setIsMutatingAgent] = useState(false);
 
   const createAgent = useCallback(
@@ -113,122 +87,6 @@ export const useCreateMenuItems = () => {
       });
     },
     [canCreate, navigate, refreshAgentList, removeAgent, t],
-  );
-
-  /**
-   * Create group from template
-   * Uses backend batch creation for better performance and consistency
-   */
-  const createGroupFromTemplate = useCallback(
-    async (templateId: string, selectedMemberTitles?: string[], options?: CreateAgentOptions) => {
-      if (!canCreate) return false;
-
-      setIsCreatingGroup(true);
-      try {
-        const template = groupTemplates.find((t) => t.id === templateId);
-        if (!template) {
-          throw new Error(`Template ${templateId} not found`);
-        }
-
-        const membersToCreate =
-          typeof selectedMemberTitles === 'undefined'
-            ? template.members
-            : template.members.filter((m) => selectedMemberTitles.includes(m.title));
-
-        const visibility = options?.groupId
-          ? privateGroups.some((group) => group.id === options.groupId)
-            ? 'private'
-            : 'public'
-          : (options?.visibility ?? 'private');
-        const runtimeConfig = await requestAgentRuntime({ visibility });
-        if (!runtimeConfig) return false;
-
-        // Prepare member configs for batch creation
-        const memberConfigs: GroupMemberConfig[] = membersToCreate.map((member) => ({
-          ...runtimeConfig,
-          avatar: member.avatar,
-          backgroundColor: member.backgroundColor,
-          plugins: member.plugins,
-          systemRole: member.systemRole,
-          title: member.title,
-        }));
-
-        // Use batch creation endpoint - creates all agents and group in one request
-        const { groupId } = await chatGroupService.createGroupWithMembers(
-          {
-            title: template.title,
-            groupId: options?.groupId,
-            visibility,
-          },
-          memberConfigs,
-        );
-
-        // Switch to the new group
-        switchToGroup(groupId);
-
-        // Refresh data after creation
-        await refreshAgentList();
-        await loadGroups();
-
-        return true;
-      } catch (error) {
-        console.error('Failed to create group from template:', error);
-        toast.error(t('sessionGroup.createGroupFailed'));
-        return false;
-      } finally {
-        setIsCreatingGroup(false);
-      }
-    },
-    [canCreate, groupTemplates, refreshAgentList, loadGroups, switchToGroup, privateGroups, t],
-  );
-
-  /**
-   * Create group with members
-   */
-  const createGroupWithMembers = useCallback(
-    async (selectedAgents: string[], groupTitle?: string) => {
-      if (!canCreate) return false;
-
-      setIsCreatingGroup(true);
-      try {
-        const title = groupTitle || t('defaultGroupChat');
-
-        await createGroup(
-          {
-            config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
-            title,
-          },
-          selectedAgents,
-        );
-
-        return true;
-      } catch (error) {
-        console.error('Failed to create group:', error);
-        toast.error(t('sessionGroup.createGroupFailed'));
-        return false;
-      } finally {
-        setIsCreatingGroup(false);
-      }
-    },
-    [canCreate, createGroup, t],
-  );
-
-  const agentModal = useOptionalAgentModal();
-  const openCreateModal = agentModal?.openCreateModal;
-  const openCreateGroupModal = agentModal?.openCreateGroupModal;
-
-  const createEmptyGroup = useCallback(
-    async (options?: CreateAgentOptions & { title?: string }) => {
-      if (!canCreate) return;
-      openCreateGroupChatModal({
-        groupId: options?.groupId,
-        visibility: options?.visibility ?? 'private',
-        onGenerate: openCreateModal
-          ? (context) => openCreateModal('group', { ...options, ...context })
-          : undefined,
-      });
-    },
-    [canCreate, openCreateModal],
   );
 
   /**
@@ -281,84 +139,6 @@ export const useCreateMenuItems = () => {
   );
 
   /**
-   * Create group chat menu item
-   * Primary flow: create a generic group room immediately — no purpose prompt —
-   * and land in its conversation.
-   */
-  const createGroupChatMenuItem = useCallback(
-    (options?: CreateAgentOptions): MenuItem => ({
-      icon: <GroupBotSquareIcon size={14} />,
-      disabled: !canCreate,
-      key: options?.visibility === 'private' ? 'newPrivateGroupChat' : 'newGroupChat',
-      label: t('newGroupChat'),
-      sfSymbol: 'person.2',
-      onClick: async (info) => {
-        stopMenuItemDomEvent(info.domEvent);
-        if (!canCreate) return;
-
-        await createEmptyGroup(options);
-      },
-    }),
-    [canCreate, t, createEmptyGroup],
-  );
-
-  /**
-   * Optional secondary affordance: generate the group from a written description
-   * (the create modal's purpose prompt, which still runs the builder flow).
-   * Only offered where the create modal can actually open.
-   */
-  const createGroupFromDescriptionMenuItem = useCallback(
-    (options?: CreateAgentOptions): MenuItem | null => {
-      if (!openCreateModal) return null;
-      return {
-        icon: <SparklesIcon size={14} />,
-        disabled: !canCreate,
-        key: 'newGroupChatFromDescription',
-        label: t('newGroupChatFromDescription'),
-        sfSymbol: 'sparkles',
-        onClick: (info) => {
-          stopMenuItemDomEvent(info.domEvent);
-          if (!canCreate) return;
-
-          openCreateModal('group', {
-            ...(options?.groupId ? { groupId: options.groupId } : {}),
-            ...(options?.visibility ? { visibility: options.visibility } : {}),
-          });
-        },
-      };
-    },
-    [canCreate, t, openCreateModal],
-  );
-
-  /**
-   * Add session group menu item
-   */
-  const createSessionGroupMenuItem = useCallback(
-    (options?: { visibility?: 'private' | 'public' }): MenuItem => ({
-      icon: <FolderPlus size={14} />,
-      disabled: !canCreate,
-      key: options?.visibility === 'private' ? 'addPrivateSessionGroup' : 'addSessionGroup',
-      label: t('sessionGroup.createGroup'),
-      sfSymbol: 'folder.badge.plus',
-      onClick: async (info) => {
-        stopMenuItemDomEvent(info.domEvent);
-        if (!canCreate) return;
-
-        if (openCreateGroupModal) {
-          // Let the user name the group at creation time
-          openCreateGroupModal(undefined, options?.visibility);
-          return;
-        }
-
-        setIsCreatingSessionGroup(true);
-        await addGroup(t('sessionGroup.newGroup'), options?.visibility);
-        setIsCreatingSessionGroup(false);
-      },
-    }),
-    [canCreate, t, addGroup, openCreateGroupModal],
-  );
-
-  /**
    * Config menu item
    */
   const configMenuItem = useCallback(
@@ -391,12 +171,11 @@ export const useCreateMenuItems = () => {
   const createTopLevelMenuItems = useCallback(
     (): MenuItem[] => [
       createConversationMenuItem(),
-      createGroupChatMenuItem(),
       { type: 'divider' as const },
       createAgentMenuItem(),
       { type: 'divider' as const },
     ],
-    [createConversationMenuItem, createGroupChatMenuItem, createAgentMenuItem],
+    [createConversationMenuItem, createAgentMenuItem],
   );
 
   return {
@@ -406,19 +185,10 @@ export const useCreateMenuItems = () => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createConversationMenuItem,
-    createEmptyGroup,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-    createGroupFromTemplate,
-    createGroupWithMembers,
-    createSessionGroupMenuItem,
     createTopLevelMenuItems,
-    openCreateModal,
 
     // Loading states
-    isCreatingGroup,
-    isCreatingSessionGroup,
-    isLoading: isMutatingAgent || isCreatingGroup || isCreatingSessionGroup,
+    isLoading: isMutatingAgent,
     isMutatingAgent,
   };
 };

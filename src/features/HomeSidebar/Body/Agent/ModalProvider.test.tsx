@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModalProvider, useAgentModal } from './ModalProvider';
@@ -70,13 +70,10 @@ vi.mock('./Modals/CreateGroupModal', () => ({
 }));
 
 const OpenCreateAgentModalButton = () => {
-  const { openCreateModal, openGroupWizardModal, openMemberSelectionModal } = useAgentModal();
+  const { openGroupWizardModal, openMemberSelectionModal } = useAgentModal();
 
   return (
     <>
-      <button type="button" onClick={() => openCreateModal('group')}>
-        Open create group modal
-      </button>
       <button type="button" onClick={() => openGroupWizardModal({})}>
         Open group wizard
       </button>
@@ -103,27 +100,6 @@ describe('AgentModalProvider', () => {
 
   afterEach(() => {
     cleanup();
-  });
-
-  it('routes the description create modal to the group flow only', async () => {
-    renderProvider();
-
-    fireEvent.click(screen.getByText('Open create group modal'));
-    await waitFor(() => expect(mocks.createAgentModalProps).toBeDefined());
-
-    // The retired 'agent' type can no longer reach the renderer — the modal
-    // always opens as a group create.
-    expect(mocks.createAgentModalProps!.type).toBe('group');
-
-    await mocks.createAgentModalProps!.onCreateBlank();
-
-    await waitFor(() => {
-      expect(mocks.sendAsGroup).toHaveBeenCalledWith({
-        groupId: undefined,
-        message: '',
-        visibility: undefined,
-      });
-    });
   });
 
   it('loads deferred selection modals when their interactions request them', async () => {

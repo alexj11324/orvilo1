@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
-import React, { memo, type MouseEvent, Suspense, useCallback, useMemo } from 'react';
+import React, { memo, type MouseEvent, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
@@ -13,7 +13,6 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 
-import { useCreateMenuItems } from '../../hooks';
 import Actions from './Actions';
 import List from './List';
 import { useAgentModal } from './ModalProvider';
@@ -31,11 +30,6 @@ const Agent = memo<AgentProps>(({ itemKey }) => {
   const titleKey = 'navPanel.agent';
 
   const { openConfigGroupModal } = useAgentModal();
-
-  // Create menu items
-  const { createTopLevelMenuItems, isLoading } = useCreateMenuItems();
-
-  const addMenuItems = useMemo(() => createTopLevelMenuItems(), [createTopLevelMenuItems]);
 
   const handleOpenConfigGroupModal = useCallback(() => {
     openConfigGroupModal();
@@ -82,11 +76,7 @@ const Agent = memo<AgentProps>(({ itemKey }) => {
             >
               <ArrowRight />
             </Button>
-            <Actions
-              addMenuItems={addMenuItems}
-              dropdownMenu={dropdownMenu}
-              isLoading={isLoading}
-            />
+            <Actions dropdownMenu={dropdownMenu} />
           </div>
         </div>
       </SidebarContextMenu>

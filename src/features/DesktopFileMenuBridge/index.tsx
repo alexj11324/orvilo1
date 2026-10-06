@@ -4,7 +4,6 @@ import { AGENT_CHAT_URL } from '@orvilo/const';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { useCallback } from 'react';
 
-import { useCreateMenuItems } from '@/features/HomeSidebar/hooks/useCreateMenuItems';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
@@ -12,10 +11,9 @@ import { useChatStore } from '@/store/chat';
 
 /**
  * Bridge component for handling File menu actions from Electron main process
- * Listens to broadcast events for creating new topics, agents, and agent groups
+ * Listens to the native conversation action; Agent and Group creation belong to their pages.
  */
 const DesktopFileMenuBridge = () => {
-  const { createAgent, createEmptyGroup } = useCreateMenuItems();
   const navigate = useWorkspaceAwareNavigate();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
@@ -33,19 +31,7 @@ const DesktopFileMenuBridge = () => {
     navigate(AGENT_CHAT_URL(inboxAgentId, false));
   }, [activeAgentId, inboxAgentId, navigate]);
 
-  // Handle create new agent from File menu
-  const handleCreateNewAgent = useCallback(async () => {
-    await createAgent();
-  }, [createAgent]);
-
-  // Handle create new agent group from File menu
-  const handleCreateNewAgentGroup = useCallback(async () => {
-    await createEmptyGroup();
-  }, [createEmptyGroup]);
-
   useWatchBroadcast('createNewTopic', handleCreateNewTopic);
-  useWatchBroadcast('createNewAgent', handleCreateNewAgent);
-  useWatchBroadcast('createNewAgentGroup', handleCreateNewAgentGroup);
 
   return null;
 };

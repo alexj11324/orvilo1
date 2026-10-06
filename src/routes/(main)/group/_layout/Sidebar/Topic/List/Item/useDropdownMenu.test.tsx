@@ -99,7 +99,7 @@ describe('group useTopicItemDropdownMenu', () => {
     );
     const items = result.current();
 
-    for (const key of ['archive', 'autoRename', 'rename', 'duplicate', 'delete']) {
+    for (const key of ['archive', 'autoRename', 'rename', 'delete']) {
       expect(getMenuItem(items, key)).toMatchObject({ disabled: true });
     }
 

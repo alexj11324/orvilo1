@@ -43,7 +43,7 @@ describe('useAgentActionsDropdownMenu', () => {
       item && typeof item === 'object' && 'key' in item && item.key ? [item.key] : [],
     );
 
-    expect(keys).toEqual(['addSessionGroup', 'config', 'show', 'customizeSidebar']);
+    expect(keys).toEqual(['config', 'show', 'customizeSidebar']);
     expect(keys).not.toContain('moveUp');
     expect(keys).not.toContain('moveDown');
   });

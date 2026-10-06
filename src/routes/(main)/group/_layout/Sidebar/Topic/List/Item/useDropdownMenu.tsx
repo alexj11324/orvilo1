@@ -6,7 +6,6 @@ import {
   ExternalLink,
   Hash,
   Link2,
-  LucideCopy,
   PanelTop,
   PencilLine,
   Trash,
@@ -44,7 +43,6 @@ export const useTopicItemDropdownMenu = ({
 
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
-  const { allowed: canCreateTopic } = usePermission('create_content');
   const { allowed: canEditTopic } = usePermission('edit_own_content');
 
   const openGroupTopicInNewWindow = useGlobalStore((s) => s.openGroupTopicInNewWindow);
@@ -52,14 +50,12 @@ export const useTopicItemDropdownMenu = ({
   const addTab = useElectronStore((s) => s.addTab);
   const appOrigin = useAppOrigin();
 
-  const [autoRenameTopicTitle, duplicateTopic, removeTopic, archiveTopic, unarchiveTopic] =
-    useChatStore((s) => [
-      s.autoRenameTopicTitle,
-      s.duplicateTopic,
-      s.removeTopic,
-      s.archiveTopic,
-      s.unarchiveTopic,
-    ]);
+  const [autoRenameTopicTitle, removeTopic, archiveTopic, unarchiveTopic] = useChatStore((s) => [
+    s.autoRenameTopicTitle,
+    s.removeTopic,
+    s.archiveTopic,
+    s.unarchiveTopic,
+  ]);
 
   const isArchived = status === 'archived';
 
@@ -157,15 +153,6 @@ export const useTopicItemDropdownMenu = ({
         },
       },
       {
-        disabled: !canCreateTopic,
-        icon: <LucideCopy />,
-        key: 'duplicate',
-        label: t('actions.duplicate'),
-        onClick: () => {
-          duplicateTopic(id);
-        },
-      },
-      {
         type: 'divider' as const,
       },
       {
@@ -188,13 +175,11 @@ export const useTopicItemDropdownMenu = ({
   }, [
     id,
     isArchived,
-    canCreateTopic,
     canEditTopic,
     activeGroupId,
     activeWorkspaceSlug,
     appOrigin,
     autoRenameTopicTitle,
-    duplicateTopic,
     archiveTopic,
     unarchiveTopic,
     removeTopic,

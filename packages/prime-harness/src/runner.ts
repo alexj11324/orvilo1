@@ -41,6 +41,7 @@ import { McpManager } from '@earendil-works/pi-coding-agent/core/mcp/mcp-manager
 import { getDefaultSessionDir } from '@earendil-works/pi-coding-agent/core/session-manager.js';
 import type {
   HarnessInitParams,
+  HarnessPromptParams,
   HarnessResumeParams,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import {
@@ -412,18 +413,18 @@ const handleRequest = async (
       }
       const text = params.text;
       const builtinMcp = params.builtinMcp;
-      if (
-        builtinMcp !== undefined &&
-        (!isRecord(builtinMcp) ||
+      let builtinMount: HarnessPromptParams['builtinMcp'];
+      if (builtinMcp !== undefined) {
+        if (
+          !isRecord(builtinMcp) ||
           !isNonEmptyString(builtinMcp.operationId) ||
-          !isNonEmptyString(builtinMcp.url))
-      ) {
-        link.respondError(id, -32602, 'Invalid builtin MCP mount');
-        return;
+          !isNonEmptyString(builtinMcp.url)
+        ) {
+          link.respondError(id, -32602, 'Invalid builtin MCP mount');
+          return;
+        }
+        builtinMount = { operationId: builtinMcp.operationId, url: builtinMcp.url };
       }
-      const builtinMount = builtinMcp
-        ? { operationId: builtinMcp.operationId, url: builtinMcp.url }
-        : undefined;
       let lastStopReason: string | undefined;
       const trackStop = entry.session.subscribe((event) => {
         if (

@@ -806,11 +806,12 @@ export const taskRouter = router({
     }),
 
   deleteComment: taskProcedureWrite
-    .input(z.object({ commentId: z.string() }))
+    .input(z.object({ actorAgentId: z.string().optional(), commentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       try {
+        const actor = await resolveActivityActor(ctx, input.actorAgentId);
         const deleted = await ctx.taskModel.deleteComment(input.commentId, {
-          source: ctx.actingAgentId ? 'agent' : 'user',
+          source: actor.agentId ? 'agent' : 'user',
         });
         if (!deleted) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
@@ -833,6 +834,7 @@ export const taskRouter = router({
   updateComment: taskProcedureWrite
     .input(
       z.object({
+        actorAgentId: z.string().optional(),
         commentId: z.string(),
         content: z.string().min(1),
         editorData: z.unknown().optional(),
@@ -840,6 +842,7 @@ export const taskRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
+        const actor = await resolveActivityActor(ctx, input.actorAgentId);
         const workspaceId = ctx.workspaceId ?? undefined;
         const previous = await ctx.taskModel.findCommentById(input.commentId);
         if (!previous) {
@@ -859,7 +862,7 @@ export const taskRouter = router({
         }
         const comment = await ctx.taskModel.updateComment(input.commentId, input.content, {
           editorData: input.editorData === undefined ? null : input.editorData,
-          mutation: { source: ctx.actingAgentId ? 'agent' : 'user' },
+          mutation: { source: actor.agentId ? 'agent' : 'user' },
         });
         if (!comment) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });

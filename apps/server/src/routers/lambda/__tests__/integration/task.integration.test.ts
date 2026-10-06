@@ -832,14 +832,17 @@ describe('Task Router Integration', () => {
         assigneeAgentId: testAgentId,
         projectId,
       });
+      const dependency = await caller.create({ instruction: 'Dependency' });
       await expect(
         runtime.editTask({
           identifier: task.data.identifier,
           assigneeAgentId: null,
+          addDependencies: [dependency.data.identifier],
           expectedDomainRevision: before!.domainRevision,
         }),
       ).rejects.toMatchObject({ code: 'CONFLICT' });
       expect((await model.findById(task.data.id))?.assigneeAgentId).toBe(testAgentId);
+      expect(await model.getDependencies(task.data.id)).toHaveLength(0);
       await expect(
         runtime.editTask({
           identifier: task.data.identifier,
@@ -873,6 +876,52 @@ describe('Task Router Integration', () => {
   });
 
   describe('comments', () => {
+    it('preserves the requirement fence for client-first agent comment edits and deletes', async () => {
+      const task = await caller.create({ instruction: 'Test' });
+      const model = new TaskModel(serverDB, userId);
+      const before = await model.findById(task.data.id);
+      const comment = await caller.addComment({
+        authorAgentId: testAgentId,
+        content: 'Progress',
+        id: task.data.id,
+      });
+      await caller.updateComment({
+        actorAgentId: testAgentId,
+        commentId: comment.data.id,
+        content: 'Updated progress',
+      });
+      expect((await model.findById(task.data.id))?.requirementRevision).toBe(
+        before?.requirementRevision,
+      );
+      await caller.deleteComment({ actorAgentId: testAgentId, commentId: comment.data.id });
+      expect((await model.findById(task.data.id))?.requirementRevision).toBe(
+        before?.requirementRevision,
+      );
+    });
+
+    it('rejects foreign actor claims before mutating a comment', async () => {
+      const task = await caller.create({ instruction: 'Test' });
+      const comment = await caller.addComment({ content: 'Original', id: task.data.id });
+      otherUserId = await createTestUser(serverDB);
+      const foreignAgentId = await createTestAgent(serverDB, otherUserId);
+      await expect(
+        caller.updateComment({
+          actorAgentId: foreignAgentId,
+          commentId: comment.data.id,
+          content: 'Changed',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(
+        caller.deleteComment({
+          actorAgentId: foreignAgentId,
+          commentId: comment.data.id,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(
+        (await new TaskModel(serverDB, userId).findCommentById(comment.data.id))?.content,
+      ).toBe('Original');
+    });
+
     it('should add and retrieve comments', async () => {
       const task = await caller.create({ instruction: 'Test' });
 
@@ -906,6 +955,25 @@ describe('Task Router Integration', () => {
 
       expect(comment.data.authorAgentId).toBe(testAgentId);
       expect(comment.data.authorUserId).toBeNull();
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe(before?.requirementRevision);
+      await agentCaller.updateComment({
+        actorAgentId: 'unusable-agent-claim',
+        commentId: comment.data.id,
+        content: 'Agent updates progress',
+      });
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe(before?.requirementRevision);
+      const extraComment = await agentCaller.addComment({
+        content: 'Extra progress',
+        id: task.data.id,
+      });
+      await agentCaller.deleteComment({
+        actorAgentId: 'unusable-agent-claim',
+        commentId: extraComment.data.id,
+      });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
       ).toBe(before?.requirementRevision);

@@ -224,8 +224,12 @@ export class TaskDetailSliceActionImpl {
     return result;
   };
 
-  deleteComment = async (commentId: string, taskId?: string): Promise<void> => {
-    await taskService.deleteComment(commentId);
+  deleteComment = async (
+    commentId: string,
+    taskId?: string,
+    opts?: { actorAgentId?: string },
+  ): Promise<void> => {
+    await taskService.deleteComment(commentId, opts);
     const id = taskId ?? this.#get().activeTaskId;
     if (id) await this.internal_refreshTaskDetail(id);
   };
@@ -233,7 +237,7 @@ export class TaskDetailSliceActionImpl {
   updateComment = async (
     commentId: string,
     content: string,
-    opts?: { editorData?: unknown; taskId?: string },
+    opts?: { actorAgentId?: string; editorData?: unknown; taskId?: string },
   ): Promise<void> => {
     const { taskId, ...rest } = opts ?? {};
     await taskService.updateComment(commentId, content, rest);

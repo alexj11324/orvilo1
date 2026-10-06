@@ -368,7 +368,9 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
   ): Promise<BuiltinToolResult> => {
     try {
       log('[TaskExecutor] deleteTaskComment - commentId:', params.commentId);
-      await getTaskStoreState().deleteComment(params.commentId, ctx?.taskId ?? undefined);
+      await getTaskStoreState().deleteComment(params.commentId, ctx?.taskId ?? undefined, {
+        ...(ctx?.agentId ? { actorAgentId: ctx.agentId } : {}),
+      });
 
       return {
         content: `Comment ${params.commentId} deleted.`,
@@ -461,15 +463,15 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
         // `external` is the default, but keep it explicit because editTask must
         // bump the mounted editor's content revision rather than look like an
         // autosave echo.
-        ops.push(
-          store.updateTask(identifier, updateData, {
-            // Client-first runtime: name the agent so the feed does not credit
-            // the user for what the agent did (the gateway path carries it
-            // server-side instead).
-            ...(ctx?.agentId ? { actorAgentId: ctx.agentId } : {}),
-            source: 'external',
-          }),
-        );
+        // Complete the revision-fenced field write before starting dependency
+        // mutations: a stale edit must leave the dependency graph untouched.
+        await store.updateTask(identifier, updateData, {
+          // Client-first runtime: name the agent so the feed does not credit
+          // the user for what the agent did (the gateway path carries it
+          // server-side instead).
+          ...(ctx?.agentId ? { actorAgentId: ctx.agentId } : {}),
+          source: 'external',
+        });
       }
 
       if (addDependencies?.length) {
@@ -915,6 +917,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
     try {
       log('[TaskExecutor] updateTaskComment - commentId:', params.commentId);
       await getTaskStoreState().updateComment(params.commentId, params.content, {
+        ...(ctx?.agentId ? { actorAgentId: ctx.agentId } : {}),
         taskId: ctx?.taskId ?? undefined,
       });
 

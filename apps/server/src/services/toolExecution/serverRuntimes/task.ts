@@ -394,7 +394,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         projectId?: string | null;
       } = {};
       const changes: string[] = [];
-      const ops: Promise<unknown>[] = [];
 
       if (args.name !== undefined) {
         updateData.name = args.name;
@@ -445,15 +444,14 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       if (Object.keys(updateData).length > 0) {
         // Attribution rides the caller's context, not this payload — see
         // `AuthContext.actingAgentId`.
-        ops.push(
-          taskCaller().update({
-            id: task.id,
-            ...updateData,
-            ...(args.expectedDomainRevision !== undefined
-              ? { expectedDomainRevision: args.expectedDomainRevision }
-              : {}),
-          }),
-        );
+        // A rejected revision-fenced edit must not start dependency mutations.
+        await taskCaller().update({
+          id: task.id,
+          ...updateData,
+          ...(args.expectedDomainRevision !== undefined
+            ? { expectedDomainRevision: args.expectedDomainRevision }
+            : {}),
+        });
       }
 
       const applyDeps = async (
@@ -502,11 +500,11 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         );
       }
 
-      if (ops.length === 0 && depResults.length === 0) {
+      if (Object.keys(updateData).length === 0 && depResults.length === 0) {
         return { content: 'No fields provided; nothing to update.', success: false };
       }
 
-      const [, depErrors] = await Promise.all([Promise.all(ops), Promise.all(depResults)]);
+      const depErrors = await Promise.all(depResults);
       const firstDepError = depErrors.find((e) => e);
       if (firstDepError) return { content: firstDepError, success: false };
 

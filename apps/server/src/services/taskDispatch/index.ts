@@ -110,8 +110,10 @@ export class TaskDispatchService {
   }
 
   async prepare(input: {
+    delegatedAgentId?: string;
     /** Server-verified admission evidence when `trigger === 'event'`. */
     eventEvidence?: EventDispatchEvidence;
+    executionUserId?: string;
     idempotencyKey: string;
     /** Raw actor identity persisted separately from `requestedBy`. */
     initiator?: string;
@@ -127,7 +129,9 @@ export class TaskDispatchService {
     let requested;
     try {
       requested = await this.model.request({
+        delegatedAgentId: input.delegatedAgentId,
         eventEvidence: input.eventEvidence,
+        executionUserId: input.executionUserId,
         idempotencyKey: input.idempotencyKey,
         initiator: input.initiator,
         origin: input.origin,

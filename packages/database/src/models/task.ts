@@ -1420,16 +1420,9 @@ export class TaskModel {
   }
 
   /**
-   * Count workspace tasks that would break if the given agent were demoted to
-   * private:
-   *   - public tasks assigned to it — a public task must never reference a
-   *     private agent (`assertAgentVisibilityCompat`);
-   *   - tasks created by anyone other than the agent's owner (any visibility)
-   *     — after demotion those creators can no longer resolve the assignee,
-   *     so their runs and assignee updates fail.
-   * Deliberately workspace-wide and visibility-blind (NOT `ownership()`):
-   * other members' private tasks are invisible to the caller but still lose
-   * their assignee. Backs the router-level agent demotion guard.
+   * Other creators lose execution rights when their assigned agent becomes
+   * private. Count their tasks workspace-wide, including private tasks;
+   * the agent owner's own shared tasks retain owner-only execution rights.
    */
   async countTasksBlockingAgentDemotion(
     assigneeAgentId: string,
@@ -1443,7 +1436,7 @@ export class TaskModel {
         and(
           eq(tasks.workspaceId, this.workspaceId),
           eq(tasks.assigneeAgentId, assigneeAgentId),
-          or(eq(tasks.visibility, 'public'), ne(tasks.createdByUserId, agentOwnerUserId)),
+          ne(tasks.createdByUserId, agentOwnerUserId),
         ),
       );
     return Number(row?.count ?? 0);

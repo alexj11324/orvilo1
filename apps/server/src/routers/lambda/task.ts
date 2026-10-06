@@ -159,9 +159,7 @@ const createSchema = z.object({
   status: z.enum(TASK_STATUSES).optional(),
   /** Owning team for workspace tasks — the team's issue-seq allocates the identifier. */
   teamId: z.string().optional(),
-  // When omitted, the server derives visibility from the parent task or the
-  // assignee agent's visibility (private agent → private task). UI surfaces
-  // such as the top-level "Tasks" create form pass it explicitly.
+  // When omitted, subtasks inherit their parent; other tasks default to public.
   visibility: z.enum(['private', 'public']).optional(),
   /** Workflow-category preset — a work-query board column's `+`; resolved to
    *  the team's mapped workflow state below when exactly one matches. */
@@ -2187,15 +2185,6 @@ export const taskRouter = router({
           }
         }
 
-        // Reject changing the assignee to a private agent on a public task —
-        // a public task must never be assigned to a private agent.
-        // `undefined` means "no change"; `null` clears the assignee and is
-        // always safe.
-        if (data.assigneeAgentId) {
-          const agentVisibility = await ctx.agentModel.getAgentVisibility(data.assigneeAgentId);
-          ctx.taskService.assertAgentVisibilityCompat(resolved.visibility, agentVisibility);
-        }
-
         // A private task can only be assigned to its creator — the assignee
         // would otherwise never see the task. `null` clears and is always safe.
         ctx.taskService.assertAssigneeUserVisibilityCompat(
@@ -2393,14 +2382,6 @@ export const taskRouter = router({
             resolved.assigneeUserId,
             resolved.createdByUserId ?? ctx.userId,
           );
-        }
-
-        // Promoting a task to public while a private agent is its assignee
-        // breaks the visibility invariant. Reject early — the user should
-        // reassign first, then promote.
-        if (input.visibility === 'public' && resolved.assigneeAgentId) {
-          const agentVisibility = await ctx.agentModel.getAgentVisibility(resolved.assigneeAgentId);
-          ctx.taskService.assertAgentVisibilityCompat(input.visibility, agentVisibility);
         }
 
         // Promoting a subtask to public while its parent is still private

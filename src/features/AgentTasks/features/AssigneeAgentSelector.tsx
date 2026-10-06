@@ -86,7 +86,7 @@ const triggerStyle: CSSProperties = {
 };
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
-  ({ children, currentAgentId, disabled, onChange, onHandoff, taskIdentifier, taskVisibility }) => {
+  ({ children, currentAgentId, disabled, onChange, onHandoff, taskIdentifier }) => {
     const { t } = useTranslation(['chat', 'common', 'topic']);
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [open, setOpen] = useState(false);
@@ -140,12 +140,11 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     }, [pinnedAgents, agentGroups, ungroupedAgents, inboxAgentId, inboxMeta, t]);
 
     const privateAgents = useMemo<SidebarAgentItem[]>(() => {
-      if (taskVisibility === 'public') return [];
       const groupedItems = privateAgentGroups.flatMap((group) => group.items);
       return [...privatePinnedAgents, ...groupedItems, ...privateUngroupedAgents].filter(
         (agent) => agent.type === 'agent',
       );
-    }, [privateAgentGroups, privatePinnedAgents, privateUngroupedAgents, taskVisibility]);
+    }, [privateAgentGroups, privatePinnedAgents, privateUngroupedAgents]);
 
     const query = search.trim().toLowerCase();
     const filteredPrivate = useMemo(

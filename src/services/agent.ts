@@ -263,9 +263,10 @@ class AgentService {
     agentId: string,
     config: PartialDeep<OrviloAgentConfig>,
     signal?: AbortSignal,
+    replaceRuntime?: boolean,
   ) => {
     return lambdaClient.agent.updateAgentConfig.mutate(
-      { agentId, value: config },
+      { agentId, value: config, replaceRuntime },
       { context: { showNotification: false }, signal },
     );
   };

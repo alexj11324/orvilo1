@@ -136,6 +136,8 @@ it('retains source B after a failed refresh and retries prompt saving without co
         systemRole: 'Updated instructions only',
         model: 'codex-model-b',
       }),
+      undefined,
+      true,
     );
     expect(api.update.mock.calls.every(([id]) => id === 'owned-coordinator')).toBe(true);
     expect(api.copyDirectory).toHaveBeenCalledOnce();

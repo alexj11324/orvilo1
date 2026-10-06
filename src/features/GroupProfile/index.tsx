@@ -74,16 +74,21 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
     setError(undefined);
     try {
       if (tab === 'coordinator' && coordinator && runtime && validCoordinator) {
-        await agentService.updateAgentConfig(coordinator.id, {
-          agencyConfig: runtime.agencyConfig,
-          model: runtime.model ?? undefined,
-          params: {
-            ...coordinator.params,
-            ...(selectedOrchestratorId && { orchestratorSourceAgentId: selectedOrchestratorId }),
+        await agentService.updateAgentConfig(
+          coordinator.id,
+          {
+            agencyConfig: runtime.agencyConfig,
+            model: runtime.model ?? undefined,
+            params: {
+              ...coordinator.params,
+              ...(selectedOrchestratorId && { orchestratorSourceAgentId: selectedOrchestratorId }),
+            },
+            provider: runtime.provider ?? undefined,
+            systemRole: prompt,
           },
-          provider: runtime.provider ?? undefined,
-          systemRole: prompt,
-        });
+          undefined,
+          true,
+        );
         if (pendingWorkingDirectorySource.current) {
           await copyOrchestratorWorkingDirectory(
             pendingWorkingDirectorySource.current,

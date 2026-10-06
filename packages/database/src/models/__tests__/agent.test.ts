@@ -11,6 +11,8 @@ import {
   agentsFiles,
   agentsKnowledgeBases,
   agentsToSessions,
+  chatGroups,
+  chatGroupsAgents,
   credentials,
   devices,
   documents,
@@ -98,6 +100,79 @@ const fileList2 = [
 ];
 
 describe('agent runtime identity', () => {
+  it('replaces a group supervisor runtime snapshot without carrying old provider or device settings', async () => {
+    const coordinator = await agentModel.create(
+      await withRuntime({
+        virtual: true,
+        agencyConfig: {
+          heterogeneousProvider: {
+            type: 'opencode',
+            model: 'old-model',
+            args: ['--old'],
+            permission: { configId: 'approval', value: 'auto' },
+          },
+          workingDirByDevice: { 'creation-host-agent-model-test-user-id': '/old' },
+          modelSelectionPolicy: 'owner',
+        },
+      }),
+    );
+    const [group] = await serverDB.insert(chatGroups).values({ userId }).returning();
+    await serverDB
+      .insert(chatGroupsAgents)
+      .values({ agentId: coordinator.id, chatGroupId: group.id, userId, role: 'supervisor' });
+    const nextAgency = (
+      await withRuntime({
+        agencyConfig: { heterogeneousProvider: { type: 'opencode', model: 'new-model' } },
+      })
+    ).agencyConfig;
+    await agentModel.updateConfig(coordinator.id, { agencyConfig: nextAgency }, true);
+    const updated = await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) });
+    expect(updated?.agencyConfig).toEqual({ ...nextAgency, modelSelectionPolicy: 'owner' });
+    expect(updated?.model).toBeNull();
+    expect(updated?.provider).toBeNull();
+    const builtinRuntime = await withRuntime();
+    await agentModel.updateConfig(
+      coordinator.id,
+      {
+        agencyConfig: builtinRuntime.agencyConfig,
+        model: builtinRuntime.model,
+        provider: builtinRuntime.provider,
+      },
+      true,
+    );
+    expect(
+      (await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) }))
+        ?.agencyConfig?.heterogeneousProvider,
+    ).toEqual({ type: 'orvilo', model: 'gpt-4' });
+    await expect(
+      agentModel.updateConfig(
+        coordinator.id,
+        {
+          agencyConfig: {
+            heterogeneousProvider: { type: 'invented' },
+          } as unknown as OrviloAgentAgencyConfig,
+        },
+        true,
+      ),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await agentModel2.updateConfig(
+      coordinator.id,
+      { title: 'Unauthorized', agencyConfig: nextAgency },
+      true,
+    );
+    expect(
+      (await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) }))?.title,
+    ).not.toBe('Unauthorized');
+  });
+
+  it('keeps standalone runtime identity fixed when snapshot replacement is requested', async () => {
+    const agent = await agentModel.create(
+      await withRuntime({ agencyConfig: { heterogeneousProvider: { type: 'opencode' } } }),
+    );
+    await expect(
+      agentModel.updateConfig(agent.id, { agencyConfig: (await withRuntime()).agencyConfig }, true),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
   it('binds an explicitly configured new agent to the builtin runtime', async () => {
     const agent = await agentModel.create(await withRuntime({ name: 'My assistant' }));
     expect(agent.agencyConfig?.heterogeneousProvider).toEqual({ type: 'orvilo' });

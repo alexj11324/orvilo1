@@ -1433,6 +1433,7 @@ export const agentRouter = router({
     .input(
       z.object({
         agentId: z.string(),
+        replaceRuntime: z.boolean().optional(),
         value: z.object({}).passthrough().partial().superRefine(refuseRetiredAgencyConfigFields),
       }),
     )
@@ -1483,7 +1484,9 @@ export const agentRouter = router({
       }
 
       // Use AgentService to update and return the updated agent data
-      return ctx.agentService.updateAgentConfig(input.agentId, safeValue);
+      return input.replaceRuntime
+        ? ctx.agentService.updateAgentConfig(input.agentId, safeValue, true)
+        : ctx.agentService.updateAgentConfig(input.agentId, safeValue);
     }),
 
   /**

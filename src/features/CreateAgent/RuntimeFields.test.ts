@@ -2,26 +2,20 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-li
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { AgentScanState } from '@/features/ConnectAgent/useAgentScan';
+
 import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
 
 const state = vi.hoisted(() => ({
   host: { deviceId: 'local-device', isLocal: true, loading: false },
   scan: vi.fn().mockResolvedValue(undefined),
   reset: vi.fn(),
-  scanState: { agents: { codex: { available: true } }, status: 'success' },
+  scanState: { agents: { codex: { available: true } }, status: 'success' } as AgentScanState,
 }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => undefined,
 }));
 vi.mock('./useExecutionHost', () => ({ useExecutionHost: () => ({ devices: [], ...state.host }) }));
-vi.mock('@/components/ui/select', () => ({
-  Select: ({ value, onValueChange }: { value: string; onValueChange: (value: string) => void }) =>
-    createElement('button', { onClick: () => onValueChange('remote-device') }, value),
-  SelectContent: () => null,
-  SelectItem: () => null,
-  SelectTrigger: () => null,
-  SelectValue: () => null,
-}));
 vi.mock('@/features/ConnectAgent/useAgentScan', () => ({
   useAgentScan: () => ({ scan: state.scan, reset: state.reset, state: state.scanState }),
 }));
@@ -52,35 +46,49 @@ beforeEach(() => {
 });
 
 describe('shared Agent runtime form', () => {
-  it('preserves the selected harness, model and effort when changing host and blocks an unavailable harness', async () => {
-    const { result, rerender } = renderHook(() => useAgentRuntimeForm({ initialType: 'codex' }));
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    act(() => {
-      result.current.setModel('gpt-6-astra');
-      result.current.setEffort('max');
-    });
-    const select = vi.fn();
-    const view = render(
-      createElement(RuntimeFields, {
-        form: {
-          ...result.current,
-          host: { ...result.current.host, select },
-        },
-      }),
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'creation.runtime.host' }));
-    expect(select).toHaveBeenCalledWith('remote-device');
-    expect(result.current.choice).toBe('codex');
-    expect(result.current.model).toBe('gpt-6-astra');
-    expect(result.current.effort).toBe('max');
-    view.unmount();
-    state.host = { deviceId: 'remote-device', isLocal: false, loading: false };
-    state.scanState = { agents: { codex: { available: false } }, status: 'success' };
-    rerender();
-    await waitFor(() => expect(state.scan).toHaveBeenCalled());
-    expect(result.current.ready).toBe(false);
-    expect(result.current.choice).toBe('codex');
-  });
+  it.each([
+    ['opencode', 'OpenCode', 'mimo-v2-pro', 'default'],
+    ['codex', 'Codex', 'gpt-6-astra', 'max'],
+  ] as const)(
+    'preserves %s model and effort through real Select reconciliation during host scanning',
+    async (type, title, model, effort) => {
+      state.scanState = { agents: { [type]: { available: true } }, status: 'success' };
+      let form: ReturnType<typeof useAgentRuntimeForm> | undefined;
+      const Harness = () => {
+        form = useAgentRuntimeForm({});
+        return createElement(RuntimeFields, { form });
+      };
+      const view = render(createElement(Harness));
+      fireEvent.click(screen.getByRole('combobox', { name: 'createAgent.step.agent' }));
+      const option = await screen.findByRole('option', { name: title });
+      fireEvent.pointerDown(option, { pointerType: 'mouse' });
+      fireEvent.click(option);
+      await waitFor(() => expect(form?.choice).toBe(type));
+      act(() => {
+        form?.setModel(model);
+        form?.setEffort(effort);
+      });
+
+      state.host = { deviceId: 'remote-device', isLocal: false, loading: false };
+      state.scanState = { agents: null, status: 'scanning' };
+      await act(async () => view.rerender(createElement(Harness)));
+      expect(form?.choice).toBe(type);
+      expect(form?.model).toBe(model);
+      expect(form?.effort).toBe(effort);
+      expect(form?.ready).toBe(false);
+      expect(
+        screen.getByRole('combobox', { name: 'createAgent.step.agent' }).textContent,
+      ).toContain(title);
+
+      state.scanState = { agents: {}, status: 'success' };
+      await act(async () => view.rerender(createElement(Harness)));
+      expect(form?.choice).toBe(type);
+      expect(form?.model).toBe(model);
+      expect(form?.effort).toBe(effort);
+      expect(form?.ready).toBe(false);
+      expect(screen.getByText('createAgent.selectedUnavailable')).toBeTruthy();
+    },
+  );
   it('clears incompatible effort after choosing a different model', async () => {
     const { result } = renderHook(() => useAgentRuntimeForm({ initialType: 'codex' }));
     await waitFor(() => expect(result.current.ready).toBe(true));

@@ -1,12 +1,15 @@
 'use client';
 
-import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
+import { HomeIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { toast } from '@/components/toast';
+import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { usePermission } from '@/hooks/usePermission';
@@ -16,19 +19,15 @@ import { topicActionKeys } from '@/libs/swr/keys';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 const Nav = memo(() => {
   const { t } = useTranslation('chat');
   const { t: tTopic } = useTranslation('topic');
-  const { t: tSelfLearning } = useTranslation('selfLearning');
+  const activeSlug = useActiveWorkspaceSlug();
+  const homeHref = buildWorkspaceAwarePath('/', activeSlug);
   const params = useActiveRouteParams();
   const agentId = params.aid;
   const { pathname } = useActiveLocation();
-  const isGoalsActive = pathname.endsWith('/goals');
-  // 下钻页 /self-evolving/:domainId 也算在这个入口下，否则点进去侧边栏就失焦了
-  const isSelfLearningActive = pathname.includes('/self-evolving');
   const isTasksActive = pathname.endsWith('/tasks') || pathname.includes('/task/');
   const router = useQueryRoute();
   const { allowed: canCreateTopic } = usePermission('create_content');
@@ -36,8 +35,6 @@ const Nav = memo(() => {
   const switchTopic = useChatStore((s) => s.switchTopic);
   const [openNewTopicOrSaveTopic] = useChatStore((s) => [s.openNewTopicOrSaveTopic]);
   const isNewTopicSendInFlight = useChatStore(topicSelectors.isNewTopicSendInFlight);
-  const enableTopicAcceptance = useUserStore(labPreferSelectors.enableTopicAcceptance);
-  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const { mutate } = useActionSWR(topicActionKeys.openNewOrSave(), openNewTopicOrSaveTopic);
   const latestPathname = useRef(pathname);
@@ -74,6 +71,14 @@ const Nav = memo(() => {
   return (
     <div className="flex flex-col gap-[1px]" style={{ paddingInline: 4 }}>
       <NavItem
+        href={homeHref}
+        icon={HomeIcon}
+        title={t('tab.home')}
+        onClick={() => {
+          appNavigate(homeHref, { escape: true });
+        }}
+      />
+      <NavItem
         disabled={!canCreateTopic || isNewTopicSendInFlight || isOpeningTopic}
         icon={MessageSquarePlusIcon}
         title={tTopic('actions.addNewTopic')}
@@ -86,28 +91,6 @@ const Nav = memo(() => {
           toggleCommandMenu(true);
         }}
       />
-      {enableSelfLearning && (
-        <NavItem
-          active={isSelfLearningActive}
-          icon={DnaIcon}
-          title={tSelfLearning('title')}
-          onClick={() => {
-            switchTopic(null, { skipRefreshMessage: true });
-            router.push(urlJoin('/agent', agentId!, 'self-evolving'));
-          }}
-        />
-      )}
-      {enableTopicAcceptance && (
-        <NavItem
-          active={isGoalsActive}
-          icon={TargetIcon}
-          title={t('goalList.title')}
-          onClick={() => {
-            switchTopic(null, { skipRefreshMessage: true });
-            router.push(urlJoin('/agent', agentId!, 'goals'));
-          }}
-        />
-      )}
       <NavItem
         active={isTasksActive}
         icon={ListTodoIcon}

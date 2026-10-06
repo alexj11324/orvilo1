@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   updateTask: vi.fn(),
   readiness: vi.fn(),
+  pendingBinding: vi.fn(),
 }));
 vi.mock('@/server/services/mcpEvents/readiness', () => ({
   checkMcpAutomationReadiness: mocks.readiness,
@@ -36,16 +37,47 @@ vi.mock('@/database/models/task', () => ({
 }));
 vi.mock('@/database/models/connector', () => ({
   ConnectorModel: class {
-    findPublicById = mocks.connector;
-    queryPublic = mocks.sources;
+    findById = mocks.connector;
+    query = mocks.sources;
+    findPublicById = async (id: string) => {
+      const row = await mocks.connector(id);
+      if (!row) return row;
+      const { metadata: _metadata, credentials: _credentials, ...publicRow } = row;
+      return publicRow;
+    };
+    queryPublic = async () =>
+      (await mocks.sources()).map(
+        ({ metadata: _metadata, credentials: _credentials, ...row }: Record<string, unknown>) =>
+          row,
+      );
   },
 }));
 vi.mock('@/server/modules/KeyVaultsEncrypt', () => ({
-  KeyVaultsGateKeeper: { initWithEnvKey: async () => ({}) },
+  KeyVaultsGateKeeper: {
+    initWithEnvKey: async () => ({
+      encrypt: async () => 'encrypted-webhook-secret',
+      decrypt: async () => ({ wasAuthentic: true, plaintext: 'webhook-secret' }),
+    }),
+  },
+}));
+vi.mock('@/envs/app', () => ({ appEnv: { APP_URL: 'https://orvilo.example' } }));
+vi.mock('@/server/services/githubOAuth', () => ({
+  getValidGitHubAccessGrant: async () => ({
+    accessToken: 'private-access-token',
+    githubUserId: '123',
+    grantRevision: 'grant',
+  }),
+}));
+vi.mock('@/server/services/githubRepo', () => ({
+  verifyGithubRepository: async () => ({
+    remoteRepositoryId: '456',
+    coordinate: { owner: 'owner', name: 'repository' },
+  }),
 }));
 vi.mock('@/server/services/mcpEvents/database', () => ({ createMcpEventsSql: () => ({}) }));
 vi.mock('@/server/services/mcpEvents/inbox', () => ({
   SqlMcpEventBindingRepository: class {
+    createPending = mocks.pendingBinding;
     get = mocks.binding;
     revoke = mocks.revoke;
   },
@@ -113,6 +145,49 @@ beforeEach(() => {
 });
 
 describe('MCP Events router authorization decisions (auth transport mocked)', () => {
+  it('discovers, saves and configures native GitHub events without exposing private connector fields', async () => {
+    const source = {
+      id: 'source',
+      name: 'GitHub',
+      userId: 'user',
+      agentId: null,
+      isEnabled: true,
+      status: 'connected',
+      metadata: {
+        githubMcp: { type: 'github_user_connection', grantOwnerUserId: 'user' },
+      },
+      credentials: { accessToken: 'private-connector-token' },
+    };
+    mocks.connector.mockResolvedValue(source);
+    mocks.sources.mockResolvedValue([source]);
+    const sources = await caller().sources({ taskId: 'task' });
+    expect(sources.data).toEqual([{ id: 'source', name: 'GitHub' }]);
+    const discovered = await caller().discover(input);
+    expect(discovered.data.sourceType).toBe('github');
+    expect(discovered.data.events.map((event) => event.name)).toContain('github.pull_request');
+    const created = await caller().create({
+      ...input,
+      eventName: 'github.pull_request',
+      arguments: { repository: 'owner/repository' },
+    });
+    const binding = mocks.pendingBinding.mock.calls[0][0];
+    expect(binding).toMatchObject({ sourceType: 'github', state: 'pending' });
+    expect(mocks.discover).not.toHaveBeenCalled();
+    mocks.list.mockResolvedValue([
+      { sourceId: 'source', subscriptionId: binding.id, tenantId: 'workspace' },
+    ]);
+    mocks.binding.mockResolvedValue(binding);
+    const configuration = await caller().githubWebhookConfiguration({ taskId: 'task' });
+    expect(configuration.data).toMatchObject({
+      event: 'pull_request',
+      repository: 'owner/repository',
+      secret: 'webhook-secret',
+    });
+    const serialized = JSON.stringify({ sources, discovered, created, configuration });
+    expect(serialized).not.toContain('private-connector-token');
+    expect(serialized).not.toContain('private-access-token');
+    expect(serialized).not.toContain('grantOwnerUserId');
+  });
   it('resolves route identifiers (T-N) to the canonical task id for trigger lookups', async () => {
     mocks.task.mockResolvedValue({ id: 'task_canonical', createdByUserId: 'user' });
     mocks.list.mockResolvedValue([]);

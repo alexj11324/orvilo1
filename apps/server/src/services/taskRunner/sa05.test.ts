@@ -221,6 +221,25 @@ const useActualPromptBuilder = async () => {
 };
 
 describe('TaskRunnerService run intent (SA05-A)', () => {
+  it.each(['schedule', 'heartbeat'] as const)(
+    'refuses a parked %s automation before dispatch or runtime effects',
+    async (trigger) => {
+      const { execAgent, prepare } = setupHappyPath(
+        baseTask({
+          automationMode: trigger,
+          context: { execution: { parked: { at: new Date().toISOString(), reason: 'paused' } } },
+        }),
+      );
+
+      await expect(newRunner().runTask({ ...runParams, trigger })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: 'Automation is paused or no longer active.',
+      });
+      expect(prepare).not.toHaveBeenCalled();
+      expect(execAgent).not.toHaveBeenCalled();
+    },
+  );
+
   it('blocks unadmitted events before task lookup, dispatch or runtime effects', async () => {
     const { execAgent, prepare } = setupHappyPath(baseTask(), []);
     const resolve = vi.mocked(TaskModel.prototype.resolve);

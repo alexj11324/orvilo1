@@ -1,5 +1,5 @@
 import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { MessageSquareTextIcon } from 'lucide-react';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,11 +24,9 @@ import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
-import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
-import { TASK_VISIBILITY_ICONS } from '../features/taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from '../features/useTaskItemContextMenu';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
@@ -145,7 +143,7 @@ interface TaskBoardCardProps {
 /**
  * The Cordy board card, rebuilt on Orvilo's task fields: identifier row,
  * status-icon + two-line title, optional description preview, a chip row
- * (priority / schedule / privacy), and a meta row carrying the human owner
+ * (priority / schedule), and a meta row carrying the human owner
  * (reviewer while in review) plus live-run and subtask affordances.
  */
 const TaskBoardCard = memo<TaskBoardCardProps>(
@@ -206,26 +204,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       [navigate, routeScope],
     );
 
-    const isPrivate = task.visibility === 'private';
-    const privacyBadge = isPrivate ? (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span className="inline-flex">
-                {createElement(TASK_VISIBILITY_ICONS.private, {
-                  color: cssVar.colorTextDescription,
-                  size: 14,
-                })}
-              </span>
-            }
-          />
-          <TooltipContent>
-            {tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    ) : null;
+    const isPrivate = !activeWorkspaceId && task.visibility === 'private';
 
     // Executor slot (top-right): the agent — or the hover-revealed assign
     // affordance when the card has none. Mirrors Cordy's board card.
@@ -377,7 +356,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           >
             {task.identifier}
           </div>
-          {privacyBadge}
           <div className="flex shrink-0 items-center gap-1">{executorNode}</div>
         </div>
 
@@ -434,7 +412,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           {shows('priority') ? (
             <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           ) : null}
-          <TaskExecutionBadge dispatchPhase={task.dispatchPhase} size={13} status={status} />
           <LinearTaskSyncStatus taskId={task.id} />
           {shows('project') && projectName ? (
             <Tag size="sm" variant="primary-outline">

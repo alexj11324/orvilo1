@@ -12,6 +12,13 @@ import {
 import { formatProjectDate, getProjectDatePickerMode } from './projectPlanningDate';
 
 describe('createProjectForm', () => {
+  it('defaults project creation to private while preserving an explicit public choice', () => {
+    const draft = { identifier: 'NEW', name: 'New project', slug: '' };
+    expect(getCreateProjectInput(draft)).toMatchObject({ visibility: 'private' });
+    expect(getCreateProjectInput({ ...draft, visibility: 'public' })).toMatchObject({
+      visibility: 'public',
+    });
+  });
   it('preserves an explicitly private project in the creation request', () => {
     expect(
       getCreateProjectInput({
@@ -42,6 +49,7 @@ describe('createProjectForm', () => {
     };
     expect(getCreateProjectInput(draft)).toEqual({
       ...draft,
+      visibility: 'private',
       summary: 'Short summary',
       description: 'Project brief',
     });
@@ -79,6 +87,7 @@ describe('createProjectForm', () => {
         { projectId: 'project-a', type: 'blockedBy' },
         { projectId: 'project-b', type: 'blocking' },
       ],
+      visibility: 'private',
       identifier: 'NEW',
       labelIds: ['label-a'],
       memberIds: ['member-a', 'member-b'],
@@ -125,7 +134,7 @@ describe('createProjectForm', () => {
           slug: '',
           status,
         }),
-      ).toEqual({ identifier: 'NEW', name: 'Launch' });
+      ).toEqual({ identifier: 'NEW', name: 'Launch', visibility: 'private' });
     },
   );
 
@@ -184,6 +193,7 @@ describe('createProjectForm', () => {
       }),
     ).toEqual({
       identifier: 'ORVILO',
+      visibility: 'private',
       name: 'Orvilo Project',
       slug: 'orvilo-project',
     });
@@ -192,7 +202,7 @@ describe('createProjectForm', () => {
   it('omits an empty slug so the backend can generate one', () => {
     expect(
       getCreateProjectInput({ identifier: 'ORVILO', name: 'Orvilo Project', slug: '  ' }),
-    ).toEqual({ identifier: 'ORVILO', name: 'Orvilo Project' });
+    ).toEqual({ identifier: 'ORVILO', name: 'Orvilo Project', visibility: 'private' });
   });
 
   it('rejects malformed slugs', () => {

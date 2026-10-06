@@ -902,11 +902,24 @@ export class TaskDispatchModel {
         );
       }
 
+      // A terminal dispatch still owns its generation while completion writes
+      // the result. Only a verified internal takeover may replace that lease.
+      const completing =
+        input.origin !== 'internal' &&
+        task.runReservationId?.startsWith('completion:') &&
+        task.runReservationExpiresAt &&
+        task.runReservationExpiresAt.getTime() > Date.now();
       const [active] = await tx
         .select()
         .from(taskDispatches)
         .where(
-          and(eq(taskDispatches.taskId, task.id), inArray(taskDispatches.phase, ACTIVE_PHASES)),
+          and(
+            eq(taskDispatches.taskId, task.id),
+            or(
+              inArray(taskDispatches.phase, ACTIVE_PHASES),
+              completing ? eq(taskDispatches.generation, task.executionGeneration) : undefined,
+            ),
+          ),
         )
         .limit(1)
         .for('update');

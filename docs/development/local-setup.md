@@ -134,3 +134,18 @@ not provide an export named 'GlobeOff'` (or another recent icon): the
   version; if you see this on an older checkout, `pnpm install` inside
   `apps/desktop` after pulling, then `rm -rf node_modules/.vite/deps` to
   drop the stale optimized chunk.
+- **CI fails at "Install deps" with `ERR_PNPM_OUTDATED_LOCKFILE`** —
+  `apps/desktop` is a standalone pnpm workspace that commits its own
+  `apps/desktop/pnpm-lock.yaml`, and every test.yml job installs with
+  `--frozen-lockfile`. Adding a workspace package or a `workspace:*`
+  dependency under `packages/` changes the importer set and makes the
+  committed lockfile stale; CI then dies \~1 minute in and each leaf job's
+  fail-fast step cancels the run. Whenever you add or move a workspace
+  package or change a workspace dependency, regenerate the lockfile with
+  `pnpm install` inside `apps/desktop` and commit the result.
+- **`checkHostDeviceBoundaries` fails on untouched files** — new host-probe
+  modules (e.g. `heterogeneous-agents/src/scan/*`, `prime-harness/readiness.ts`)
+  enter the web entry closure before their edges are exempted. The gate wants
+  a precise `{rule, importer, target}` entry in
+  `scripts/ci/hostDeviceBoundariesAllowlist.json` mirroring the `spawn/*`
+  rows, not `--no-verify`.

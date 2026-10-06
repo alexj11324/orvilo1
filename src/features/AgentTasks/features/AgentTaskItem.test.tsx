@@ -279,14 +279,44 @@ describe('AgentTaskItem', () => {
       ).toBeTruthy();
     });
 
-    it('keeps the category mark while run state stays a separate badge', () => {
+    it('keeps the category mark without a separate execution badge', () => {
       render(<AgentTaskItem routeScope={'global'} task={createTask('agent-1')} />);
 
-      // No workflow state → the picker falls back to the category default;
-      // the execution state is the read-only badge beside it, never the mark.
       expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'category-default');
-      expect(screen.getByTestId('execution-badge')).toBeInTheDocument();
+      expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
     });
+
+    it.each([
+      { status: 'backlog' },
+      { status: 'scheduled' },
+      { status: 'running' },
+      { status: 'completed' },
+      { status: 'failed' },
+      { status: 'paused' },
+      { status: 'canceled' },
+      { dispatchPhase: 'outcome_unknown', status: 'backlog' },
+      { dispatchPhase: 'waiting', status: 'running' },
+    ])('keeps only the workflow mark for execution state %j', (execution) => {
+      render(<AgentTaskItem routeScope={'global'} task={{ ...workflowTask(), ...execution }} />);
+
+      expect(screen.getAllByTestId('status-mark')).toHaveLength(1);
+      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'WorkflowIcon(todo)');
+      expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps private row metadata without a lock beside the title', () => {
+    const { container } = render(
+      <AgentTaskItem task={{ ...createTask('agent-1'), visibility: 'private' }} />,
+    );
+
+    expect(container.querySelector('[data-collab-private]')).toHaveAttribute(
+      'data-collab-private',
+      'true',
+    );
+    expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
+    expect(container.querySelector('[data-tooltip="Private"]')).not.toBeInTheDocument();
+    expect(container.querySelector('.lucide-lock')).not.toBeInTheDocument();
   });
 
   it('places caller chips before the assignee and the date, as Linear orders them', () => {

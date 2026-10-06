@@ -1,5 +1,5 @@
 import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
@@ -34,11 +34,9 @@ import AssigneeUserAvatar from './AssigneeUserAvatar';
 import { formatTaskItemDate } from './formatTaskItemDate';
 import IssueStatusPicker from './IssueStatusPicker';
 import { SimpleTooltip } from './SimpleTooltip';
-import TaskExecutionBadge from './TaskExecutionBadge';
 import TaskPriorityTag from './TaskPriorityTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
 import TaskTriggerTag from './TaskTriggerTag';
-import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 
@@ -221,19 +219,10 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   ) : null;
 
   const isPrivate = task.visibility === 'private';
-  const PrivateIcon = TASK_VISIBILITY_ICONS.private;
-  const privacyBadge = isPrivate ? (
-    <SimpleTooltip
-      title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}
-    >
-      <PrivateIcon size={14} style={{ color: cssVar.colorTextDescription }} />
-    </SimpleTooltip>
-  ) : null;
 
   // Linear's row grammar: priority, identifier, one status mark, title. The
-  // status mark is the workflow state when the task has one — never a second
-  // badge beside the execution glyph. A nameless task has no separate title,
-  // so its identifier renders as the row text instead.
+  // status mark is the workflow state when the task has one. A nameless task
+  // has no separate title, so its identifier renders as the row text instead.
   const titleRow = (
     <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
@@ -256,9 +245,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           onChange={onStatusChange}
         />
       </span>
-      <TaskExecutionBadge dispatchPhase={task.dispatchPhase} size={13} status={status} />
       <LinearTaskSyncStatus taskId={task.id} />
-      {privacyBadge}
       <div className={cn('truncate', 'block', 'font-medium', styles.title)}>
         {hasName ? task.name : task.identifier}
       </div>

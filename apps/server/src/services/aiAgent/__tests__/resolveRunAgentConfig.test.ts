@@ -1,3 +1,4 @@
+import { resolveHeteroAgentSystemContext } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveRunAgentConfig } from '../pipeline/resolveRunAgentConfig';
@@ -145,31 +146,45 @@ describe('group execution authority', () => {
     ).rejects.toThrow('Only the group supervisor');
   });
 
-  it('builds the owned supervisor runtime and real roster without changing the source row', async () => {
-    const source = {
-      ...(webOnboardingRow() as object),
-      id: 'supervisor',
-      slug: null,
-      systemRole: 'Coordinate the review.',
-      agencyConfig: { heterogeneousProvider: { type: 'opencode' }, executionTarget: 'local' },
-    };
-    const original = structuredClone(source);
-    const result = await resolveRunAgentConfig(
-      { ...deps, resolveAgentConfigOrThrow: async () => source as never },
-      {
-        appContext: { groupId: 'group-1', scope: 'group', orchestrationRole: 'supervisor' },
-        identifier: 'supervisor',
-        throwIfExecutionAborted: async () => {},
-      },
-    );
-    expect(result.isGroupSupervisor).toBe(true);
-    expect(result.agentConfig.plugins).toContain('orvilo-group-management');
-    expect(result.groupSystemContext).toContain('Coordinator');
-    expect(result.groupSystemContext).toContain('member');
-    expect(result.groupSystemContext).toContain('Reviewer');
-    expect(result.agentConfig.agencyConfig?.heterogeneousProvider?.type).toBe('opencode');
-    expect(source).toEqual(original);
-  });
+  it.each(['opencode', 'orvilo'] as const)(
+    'composes the %s supervisor persona exactly once with its real roster',
+    async (type) => {
+      const source = {
+        ...(webOnboardingRow() as object),
+        id: 'supervisor',
+        slug: null,
+        systemRole: 'Coordinate the review.',
+        agencyConfig: { heterogeneousProvider: { type }, executionTarget: 'local' },
+      };
+      const original = structuredClone(source);
+      const result = await resolveRunAgentConfig(
+        { ...deps, resolveAgentConfigOrThrow: async () => source as never },
+        {
+          appContext: { groupId: 'group-1', scope: 'group', orchestrationRole: 'supervisor' },
+          identifier: 'supervisor',
+          throwIfExecutionAborted: async () => {},
+        },
+      );
+      expect(result.isGroupSupervisor).toBe(true);
+      expect(result.agentConfig.plugins).toContain('orvilo-group-management');
+      expect(result.groupSystemContext).toContain('Coordinator');
+      expect(result.groupSystemContext).toContain('member');
+      expect(result.groupSystemContext).toContain('Reviewer');
+      expect(result.agentConfig.agencyConfig?.heterogeneousProvider?.type).toBe(type);
+      const finalContext = [
+        resolveHeteroAgentSystemContext(
+          result.agentConfig.agencyConfig?.heterogeneousProvider,
+          result.agentConfig.systemRole,
+        ),
+        result.groupSystemContext,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      expect(finalContext.split(result.agentConfig.systemRole!).length - 1).toBe(1);
+      expect(finalContext.split('<group_context>').length - 1).toBe(1);
+      expect(source).toEqual(original);
+    },
+  );
 
   it('refuses a missing or inaccessible group instead of dispatching a claimed role', async () => {
     findGroupById.mockResolvedValue(undefined);

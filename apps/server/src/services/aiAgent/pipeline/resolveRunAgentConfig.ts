@@ -326,7 +326,10 @@ export const resolveRunAgentConfig = async (
     isGroupSupervisor: groupRun?.isGroupSupervisor ?? false,
     groupSystemContext:
       [
-        groupRun?.isGroupSupervisor ? agentConfig.systemRole : undefined,
+        groupRun?.isGroupSupervisor &&
+        agentConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo'
+          ? agentConfig.systemRole
+          : undefined,
         buildGroupAgentSystemContext(groupRun?.groupContext),
       ]
         .filter(Boolean)

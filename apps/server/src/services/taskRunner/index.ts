@@ -279,7 +279,7 @@ export class TaskRunnerService {
       isAutomationRunTrigger(trigger) &&
       !parentOperationId &&
       !replaceReservationId &&
-      (executionParkedReason(task) ||
+      (executionParkedReason(task.context) ||
         task.workflowCategory === 'done' ||
         task.workflowCategory === 'canceled')
     ) {

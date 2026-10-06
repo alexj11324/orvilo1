@@ -16,6 +16,14 @@ export interface McpEventBinding {
   eventArguments: Record<string, unknown>;
   eventName: string;
   expiresAt: number | null;
+  github?: {
+    repositoryId: string;
+    repositoryFullName: string;
+    githubUserId: string;
+    grantRevision: string;
+    /** AES-GCM ciphertext; disclosed only through an authorized setup action. */
+    encryptedSecret: string;
+  };
   id: string;
   maxAgeMs?: number;
   payloadSchema: Record<string, unknown>;
@@ -24,6 +32,8 @@ export interface McpEventBinding {
   revision: number;
   schemaId: string;
   signingKeys: { secret: string; expiresAt?: number }[];
+  /** Native sources share the durable event inbox, never the MCP wire protocol. */
+  sourceType?: 'mcp' | 'github';
   state: 'pending' | 'active' | 'revoked';
   tenantId: string;
   truncated: boolean;

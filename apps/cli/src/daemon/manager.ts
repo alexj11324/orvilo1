@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { x, xSync } from 'tinyexec';
 
-import { CLI_CONFIG_DIR_NAME } from '../constants/identity';
+import { resolveCliDirName } from '../constants/identity';
 
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB
 const STARTUP_TIMEOUT_MS = 30_000;
@@ -12,7 +12,7 @@ const STARTUP_TIMEOUT_MS = 30_000;
 type DaemonStartupMessage = { message: string; type: 'startup-error' } | { type: 'startup-ready' };
 
 function getOrviloDir() {
-  return path.join(os.homedir(), CLI_CONFIG_DIR_NAME);
+  return path.join(os.homedir(), resolveCliDirName());
 }
 
 function getPidPath() {

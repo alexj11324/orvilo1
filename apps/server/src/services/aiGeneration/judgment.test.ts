@@ -14,6 +14,8 @@ import {
 } from './judgment';
 
 const mocks = vi.hoisted(() => ({
+  assertCanViewTopicTargets: vi.fn(),
+  topicFindById: vi.fn(),
   agentExistsById: vi.fn(),
   agentGetBuiltin: vi.fn(),
   execAgent: vi.fn(),
@@ -30,6 +32,14 @@ const mocks = vi.hoisted(() => ({
   tracingRecord: vi.fn(),
 }));
 
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: vi.fn(function () {
+    return { findById: mocks.topicFindById };
+  }),
+}));
+vi.mock('@/server/routers/lambda/_helpers/conversationResourceGuard', () => ({
+  assertCanViewTopicTargets: mocks.assertCanViewTopicTargets,
+}));
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(function () {
     return {
@@ -101,6 +111,8 @@ const JUDGMENT_INPUT = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.assertCanViewTopicTargets.mockResolvedValue([]);
+  mocks.topicFindById.mockResolvedValue(undefined);
   delete process.env[ACP_JUDGMENT_AGENT_ENV];
   mocks.agentExistsById.mockResolvedValue(false);
   mocks.agentGetBuiltin.mockResolvedValue(null);
@@ -223,6 +235,97 @@ describe('runAcpJudgment', () => {
     expect(execArgs.instructions).toContain('You are a judge.');
     expect(execArgs.prompt).toContain('USER:\nDecide.');
     expect(execArgs.prompt).toContain('## Output contract');
+  });
+
+  it('inherits the authorized shared source topic working checkout instead of device defaults', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.topicFindById.mockResolvedValue({
+      agentId: 'agent-1',
+      id: 'source-topic',
+      userId: 'coworker',
+      workspaceId: 'ws-1',
+      metadata: {
+        workingDirectory: '/tmp/source-repo',
+        workingDirectoryConfig: {
+          path: '/tmp/source-repo',
+          git: { activeWorktree: '/tmp/source-checkout' },
+        },
+      },
+    });
+    await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      workspaceId: 'ws-1',
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        purpose: 'outputJSON.topic_title',
+        sourceTopicId: 'source-topic',
+      },
+    });
+    expect(mocks.assertCanViewTopicTargets).toHaveBeenCalledWith(
+      { db, userId: 'u1', workspaceId: 'ws-1' },
+      ['source-topic'],
+    );
+    expect(mocks.execAgent.mock.calls[0][0].appContext.initialTopicMetadata).toEqual({
+      workingDirectory: '/tmp/source-checkout',
+      workingDirectoryConfig: {
+        path: '/tmp/source-repo',
+        git: { activeWorktree: '/tmp/source-checkout' },
+      },
+    });
+  });
+
+  it('rejects an inaccessible private source before reading its metadata or spawning', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.assertCanViewTopicTargets.mockRejectedValueOnce(new Error('private topic unavailable'));
+    await expect(
+      runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        workspaceId: 'ws-1',
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          purpose: 'outputJSON.topic_title',
+          sourceTopicId: 'private-topic',
+        },
+      }),
+    ).rejects.toThrow('private topic unavailable');
+    expect(mocks.topicFindById).not.toHaveBeenCalled();
+    expect(mocks.execAgent).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing or cross-workspace source instead of falling back to host cwd', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    await expect(
+      runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        workspaceId: 'ws-1',
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          purpose: 'outputJSON.topic_title',
+          sourceTopicId: 'foreign-topic',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_NO_BINDING' });
+    expect(mocks.execAgent).not.toHaveBeenCalled();
+  });
+
+  it('rejects a title source belonging to a different requested agent', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.topicFindById.mockResolvedValue({
+      agentId: 'different-agent',
+      id: 'other-topic',
+      metadata: {},
+    });
+    await expect(
+      runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          purpose: 'outputJSON.topic_title',
+          sourceTopicId: 'other-topic',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_NO_BINDING' });
+    expect(mocks.execAgent).not.toHaveBeenCalled();
   });
 
   it('writes the llm_generation_tracing row linked to the operation', async () => {
@@ -966,7 +1069,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
     expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
   });
 
-  it('SC06 — the default intentKey distinguishes binding identity and attachments', async () => {
+  it('SC06 — the default intentKey distinguishes binding, attachments and source topics', async () => {
     mocks.agentExistsById.mockResolvedValue(true);
     const judgment = {
       binding: { agentId: 'agent-1' },
@@ -995,6 +1098,22 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
     // different business instance — never deduped onto one launch.
     expect(keyAgent1).not.toBe(keyAgent2);
     expect(keyAgent1).not.toBe(keyWithFile);
+    mocks.topicFindById.mockResolvedValue({
+      agentId: 'agent-1',
+      metadata: { workingDirectory: '/tmp/source' },
+    });
+    mocks.operationClaimLaunch.mockClear();
+    await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: { ...judgment, sourceTopicId: 'source-1' },
+    });
+    const keySource1 = mocks.operationClaimLaunch.mock.calls[0][0].intentKey;
+    mocks.operationClaimLaunch.mockClear();
+    await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: { ...judgment, sourceTopicId: 'source-2' },
+    });
+    expect(keySource1).not.toBe(mocks.operationClaimLaunch.mock.calls[0][0].intentKey);
   });
 });
 

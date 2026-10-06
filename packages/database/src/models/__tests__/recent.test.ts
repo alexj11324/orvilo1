@@ -250,6 +250,13 @@ describe('RecentModel', () => {
           { id: 'topic-cron', userId, agentId: 'agent-inbox', trigger: 'cron', updatedAt: now() },
           { id: 'topic-eval', userId, agentId: 'agent-inbox', trigger: 'eval', updatedAt: now() },
           {
+            id: 'topic-judgment',
+            userId,
+            agentId: 'agent-inbox',
+            trigger: 'acp_judgment',
+            updatedAt: now(),
+          },
+          {
             id: 'topic-task',
             userId,
             agentId: 'agent-inbox',

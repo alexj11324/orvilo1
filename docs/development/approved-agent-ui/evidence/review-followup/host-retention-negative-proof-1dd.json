@@ -1,0 +1,88 @@
+{
+  "after": {
+    "visibleAgentLabel": "Orvilo AI",
+    "name": "Orvilo AI",
+    "host": "UNAVAILABLE UI FIXTURE 1dd (no execution) · UNAVAILABLE-UI-FIXTURE-DENY-ALL",
+    "modelField": "AI 服务商与模型",
+    "modelLabel": "mimo-v2.6-flash-free",
+    "createButtonDisabled": false,
+    "axSelectValueCaveat": "First/stable AX kept stale OpenCode value while visible child label and form mode were Orvilo AI; do not treat that stale AX value as preserved choice."
+  },
+  "agentCreationAttempted": false,
+  "artifacts": [
+    {
+      "path": "host-before-actual-onchange-1dd.ax.txt",
+      "sha256": "c31aa4757a9559ef9c051cd6d33aa7b30bea43c54db0d33814b3bb1abe8e9cac",
+      "bytes": 1782
+    },
+    {
+      "path": "host-onchange-unavailable-1dd.ax.txt",
+      "sha256": "dfe707321db3bdeec71ef8653d0a571859f6edb242e2282d8c8923874c9ad677",
+      "bytes": 1896
+    },
+    {
+      "path": "host-unavailable-stable-negative-1dd.ax.txt",
+      "sha256": "dfe707321db3bdeec71ef8653d0a571859f6edb242e2282d8c8923874c9ad677",
+      "bytes": 1896
+    },
+    {
+      "path": "host-unavailable-stable-negative-1dd.jpg",
+      "sha256": "66677e3114d5367a8a533a4fb188d48cc70ff42aea0239e3a1dfd2cf7c78c271",
+      "bytes": 321154
+    },
+    {
+      "path": "served-runtime-fields-1dd.js",
+      "sha256": "db272875ec49b3c6d34c14a75d02cd3cb72c171bce54fcadf1189f05bcbccf80",
+      "bytes": 59177
+    },
+    {
+      "path": "ui-fixture-connection-1dd.json",
+      "sha256": "709defcae624c55af31c097309947c3781fa8687afaafa55df1acc3357682583",
+      "bytes": 334
+    },
+    {
+      "path": "ui-unavailable-device-cleanup-1dd-results.json",
+      "sha256": "832311c3e6c98247935196660f7a8c18455ccb4a52d6433ec2c4c04d78e2db64",
+      "bytes": 712
+    },
+    {
+      "path": "host-cleanup-readback-1dd.json",
+      "sha256": "7807dd2da7ce76ed5de97d344c8a26f66cb8e87f8abc646a4b53a5cd9484302c",
+      "bytes": 867
+    }
+  ],
+  "before": {
+    "agentLabel": "OpenCode",
+    "name": "OpenCode",
+    "host": "本机",
+    "modelLabel": "MiMo-V2.6-Flash Free",
+    "effort": "No OpenCode effort capability or control; default only"
+  },
+  "candidate": "1dd452becde9cc2dfbdfd24c360db7be80eccce4",
+  "inference": "The maintained Agent Select already ignores null values. A disappearing selected option during inventory reset may cause a non-null automatic fallback to the first Orvilo option; internal callback cause was not instrumented.",
+  "providerExecution": false,
+  "restoration": {
+    "nativeHostSwitchedToLocal": true,
+    "newFormCanceled": true,
+    "noAgentCreated": true,
+    "sameTemporaryDeviceRemovedNormally": true,
+    "originalInventoryAndSourceUnchanged": true,
+    "secondConnectionOrProbe": false
+  },
+  "result": "not accepted",
+  "servedModule": {
+    "url": "http://127.0.0.1:5199/src/features/CreateAgent/RuntimeFields.tsx",
+    "sha256": "db272875ec49b3c6d34c14a75d02cd3cb72c171bce54fcadf1189f05bcbccf80",
+    "hostExplicitBuiltinResetRemoved": true,
+    "limit": "Read-only fetched module plus interaction/source revision; no hidden React state or event callback instrumentation."
+  },
+  "timeline": {
+    "beforeAXTimestamp": null,
+    "beforeAXProvenance": "Captured by CUA immediately before actual fixture selection; persisted later from retained variable, not a new observation.",
+    "firstAfterCaptureAt": "2026-10-06T10:48:34.663Z",
+    "fixtureConnectedAt": "2026-10-06T10:44:48.116Z",
+    "fixtureDisconnectedAt": "2026-10-06T10:48:48.139Z",
+    "stableAfterCaptureAt": "2026-10-06T10:49:33.683Z",
+    "fixtureRequestsReceived": 0
+  }
+}

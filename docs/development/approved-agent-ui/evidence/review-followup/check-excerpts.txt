@@ -1,0 +1,59 @@
+Parent source: f4cc076c1c65c7428e49fc7c062bc16b76521cdd
+Combined UI source: 1dd452becde9cc2dfbdfd24c360db7be80eccce4
+Selected suites overlap; counts must not be added.
+No local tsgo or real Codex ACP was launched.
+
+Task router (88)
+Test Files  1 passed (1)
+Tests  88 passed (88)
+
+Server Task runtime (70)
+Test Files  1 passed (1)
+Tests  70 passed (70)
+
+Client Task executor (15)
+Test Files  1 passed (1)
+Tests  15 passed (15)
+
+Task store (47)
+Test Files  1 passed (1)
+Tests  47 passed (47)
+
+Prime readiness (26)
+Test Files  1 passed (1)
+Tests  26 passed (26)
+
+Supervisor config (7)
+Test Files  1 passed (1)
+Tests  7 passed (7)
+
+UI code/parser (26)
+Test Files  2 passed (2)
+Tests  26 passed (26)
+
+
+Artifact path and Select follow-up source: efc1ed7b724e059e642123a43392962018c5bd75
+
+host
+Test Files  1 passed (1)
+Tests  28 passed (28)
+
+desktop
+Test Files  1 passed (1)
+Tests  4 passed | 101 skipped (105)
+
+cli
+Test Files  1 passed (1)
+Tests  4 passed (4)
+
+cli-dispatch
+Test Files  1 passed (1)
+Tests  2 passed | 16 skipped (18)
+
+verifier
+Test Files  1 passed (1)
+Tests  4 passed (4)
+
+Real Select retention
+Test Files  1 passed (1)
+Tests  4 passed (4)

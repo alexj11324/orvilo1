@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-10-06T11:23:02.413Z",
+  "providerExecution": false,
+  "request": {
+    "agentType": "orvilo",
+    "scope": "personal",
+    "cwd": "/tmp/orvilo-approved-agent-ui/journey-demo",
+    "requiredTools": ["orvilo-task"]
+  },
+  "result": {
+    "content": "{\"authenticated\":\"unknown\",\"checkedAt\":\"2026-10-06T11:23:01.747Z\",\"executor\":\"prime\",\"installed\":true,\"repositoryAccessible\":true,\"requiredToolsSupported\":\"unknown\",\"unattended\":true}",
+    "state": {
+      "authenticated": "unknown",
+      "checkedAt": "2026-10-06T11:23:01.747Z",
+      "executor": "prime",
+      "installed": true,
+      "repositoryAccessible": true,
+      "requiredToolsSupported": "unknown",
+      "unattended": true
+    },
+    "success": true
+  },
+  "route": "real deviceGateway -> Go -> Electron GatewayConnectionCtr dynamic import",
+  "sourceHead": "233f3cbe04467e6aea252faacec56b93c43f7df9"
+}

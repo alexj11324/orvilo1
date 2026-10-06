@@ -13,6 +13,10 @@ import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
+import {
+  MODEL_LABELS,
+  modelDisplayLabel,
+} from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { type AgentRow, useHomeAgentRows } from '@/features/Home/AgentSelect/useHomeAgentRows';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
@@ -99,7 +103,11 @@ const AgentSettingsListRow = ({
           {provider
             ? (HETEROGENEOUS_TYPE_LABELS[provider.type] ?? provider.type)
             : t('settingAgent.generalSettings.legacyName')}{' '}
-          · {model || t('chat:heteroAgent.modelSelector.default')} · {deviceLabel}
+          ·{' '}
+          {model
+            ? (MODEL_LABELS[model] ?? modelDisplayLabel({ id: model, modelId: model }))
+            : t('chat:heteroAgent.modelSelector.default')}{' '}
+          · {deviceLabel}
         </div>
         {error ? (
           <AsyncError

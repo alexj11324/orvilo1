@@ -1020,6 +1020,7 @@ describe('LinearSyncModel', () => {
         projectId: project.id,
         seq: 1,
         workspaceId,
+        visibility: 'private',
       })
       .returning();
     const link = await model.createIssueLink({
@@ -1042,6 +1043,10 @@ describe('LinearSyncModel', () => {
       },
       syncState: 'conflict',
     });
+    expect((await model.lockIssueConflictContext(link.id))?.task.visibility).toBe('public');
+    expect(
+      await new LinearSyncModel(db, otherWorkspaceId).lockIssueConflictContext(link.id),
+    ).toBeNull();
     const failed = await model.queueOutbox({
       expectedLocalRevision: 3,
       installationId,

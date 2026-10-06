@@ -1206,6 +1206,7 @@ describe('RecentModel', () => {
           const outsiderRows = await outsider.queryRecent(20, ['task']);
           expect(outsiderRows.map((row) => row.title).sort()).toEqual([
             'Assigned recents task',
+            'Private-visibility recents task',
             'Public-team recents task',
           ]);
         });

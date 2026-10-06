@@ -40,6 +40,32 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe('task domain contract', () => {
+  it('normalizes legacy workspace flags on quiet context writes without publishing domain changes', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create({ instruction: 'Stable scheduler context' });
+    await db.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, task.id));
+    const eventsBefore = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.taskId, task.id));
+
+    const updated = await model.updateContext(task.id, { scheduler: { consecutiveFailures: 1 } });
+
+    expect(updated).toMatchObject({
+      visibility: 'public',
+      domainRevision: task.domainRevision,
+      requirementRevision: task.requirementRevision,
+      policyRevision: task.policyRevision,
+      context: { scheduler: { consecutiveFailures: 1 } },
+    });
+    expect((await db.select().from(tasks).where(eq(tasks.id, task.id)))[0].visibility).toBe(
+      'public',
+    );
+    expect(
+      await db.select().from(taskDomainEvents).where(eq(taskDomainEvents.taskId, task.id)),
+    ).toEqual(eventsBefore);
+  });
+
   it('retains a shared integration-created task without a user owner', async () => {
     await db.insert(tasks).values({
       createdBySnapshot: {

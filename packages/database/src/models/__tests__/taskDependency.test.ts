@@ -12,6 +12,7 @@ import {
   taskDispatches,
   taskDomainEvents,
   tasks,
+  teams,
   users,
   workspaces,
 } from '../../schemas';
@@ -377,7 +378,7 @@ describe('task prerequisite invariants', () => {
     expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(true);
   });
 
-  it('fails closed after visibility changes while allowing the dependent owner to remove the edge', async () => {
+  it('fails closed after private-team access changes while allowing the dependent owner to remove the edge', async () => {
     const workspaceId = 'prerequisite-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -390,13 +391,21 @@ describe('task prerequisite invariants', () => {
     const upstream = await owner.create({ instruction: 'Shared', status: 'completed' });
     const dependent = await member.create({ instruction: 'Dependent' });
     await member.addDependency(dependent.id, upstream.id);
-    await owner.updateVisibility(upstream.id, 'private');
+    const privateTeamId = `${workspaceId}-private-team`;
+    await db.insert(teams).values({
+      id: privateTeamId,
+      key: 'PRV',
+      name: 'Private prerequisites',
+      visibility: 'private',
+      workspaceId,
+    });
+    await owner.update(upstream.id, { teamId: privateTeamId });
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
     await member.removeDependency(dependent.id, upstream.id);
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
   });
 
-  it('keeps an outgoing related placeholder when its target becomes private', async () => {
+  it('keeps an outgoing related placeholder when its target moves into a private team', async () => {
     const workspaceId = 'related-private-target-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -409,7 +418,15 @@ describe('task prerequisite invariants', () => {
     const current = await owner.create({ instruction: 'Visible issue' });
     const target = await owner.create({ instruction: 'Later private issue' });
     await owner.addDependency(current.id, target.id, 'relates');
-    await owner.updateVisibility(target.id, 'private');
+    const privateTeamId = `${workspaceId}-private-team`;
+    await db.insert(teams).values({
+      id: privateTeamId,
+      key: 'PRV',
+      name: 'Private prerequisites',
+      visibility: 'private',
+      workspaceId,
+    });
+    await owner.update(target.id, { teamId: privateTeamId });
     expect(await member.findById(target.id)).toBeNull();
     expect(await member.getIssueRelations(current.id)).toMatchObject([
       { dependsOnId: target.id, type: 'relates' },
@@ -420,7 +437,7 @@ describe('task prerequisite invariants', () => {
     expect(await owner.getDependencies(current.id)).toEqual([]);
   });
 
-  it('keeps an incoming related placeholder removable when its source becomes private', async () => {
+  it('keeps an incoming related placeholder removable when its source moves into a private team', async () => {
     const workspaceId = 'related-private-source-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -433,7 +450,15 @@ describe('task prerequisite invariants', () => {
     const source = await owner.create({ instruction: 'Later private source' });
     const current = await member.create({ instruction: 'Visible issue' });
     await owner.addDependency(source.id, current.id, 'relates');
-    await owner.updateVisibility(source.id, 'private');
+    const privateTeamId = `${workspaceId}-private-team`;
+    await db.insert(teams).values({
+      id: privateTeamId,
+      key: 'PRV',
+      name: 'Private prerequisites',
+      visibility: 'private',
+      workspaceId,
+    });
+    await owner.update(source.id, { teamId: privateTeamId });
     expect(await member.findById(source.id)).toBeNull();
     expect(await member.getIssueRelations(current.id)).toMatchObject([
       { dependsOnId: source.id, type: 'relates' },
@@ -453,14 +478,23 @@ describe('prerequisite review regressions', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    const privateTeamId = `${workspaceId}-private-team`;
+    await db.insert(teams).values({
+      id: privateTeamId,
+      key: 'PRV',
+      name: 'Private prerequisites',
+      visibility: 'private',
+      workspaceId,
+    });
     return {
+      privateTeamId,
       owner: new TaskModel(db, userId, workspaceId),
       member: new TaskModel(db, otherUserId, workspaceId),
     };
   };
 
-  it('keeps legacy member-authored edges visible to the dependent owner after demotion', async () => {
-    const { owner, member } = await workspace();
+  it('keeps legacy member-authored edges visible to the dependent owner after a private-team move', async () => {
+    const { owner, member, privateTeamId } = await workspace();
     const upstream = await owner.create({ instruction: 'Upstream' });
     const dependent = await owner.create({ instruction: 'Shared dependent' });
     await member.addDependency(dependent.id, upstream.id);
@@ -469,7 +503,7 @@ describe('prerequisite review regressions', () => {
       .update(taskDependencies)
       .set({ userId: otherUserId })
       .where(eq(taskDependencies.taskId, dependent.id));
-    await owner.updateVisibility(dependent.id, 'private');
+    await owner.update(dependent.id, { teamId: privateTeamId });
     expect(await owner.getDependencies(dependent.id)).toHaveLength(1);
     expect(await member.getDependencies(dependent.id)).toEqual([]);
     await expect(owner.reserveRun(dependent.id, 'blocked')).rejects.toMatchObject({
@@ -482,11 +516,11 @@ describe('prerequisite review regressions', () => {
     expect(await owner.getDependencies(dependent.id)).toEqual([]);
   });
 
-  it('evaluates mixed-visibility readiness in the dependent owner scope regardless of the last completer', async () => {
-    const { owner, member } = await workspace();
+  it('evaluates mixed-team readiness in the dependent owner scope regardless of the last completer', async () => {
+    const { owner, member, privateTeamId } = await workspace();
     const privateTask = await owner.create({
       instruction: 'Private upstream',
-      visibility: 'private',
+      teamId: privateTeamId,
     });
     const publicTask = await member.create({ instruction: 'Public upstream' });
     const dependent = await owner.create({ instruction: 'Shared dependent' });

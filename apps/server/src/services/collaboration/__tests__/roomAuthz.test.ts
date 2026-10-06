@@ -3,6 +3,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { teamMembers, teams } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import {
   cleanupTestUser,
@@ -176,7 +177,7 @@ describe('assertRoomAccess (integration)', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
-  it("lets a member join a public task room but not another member's private task", async () => {
+  it('lets a member join public and legacy private workspace task rooms', async () => {
     const publicTask = await insertTask({ creatorId: ownerId, workspaceId });
     await expect(
       assertRoomAccess(db, { userId: memberId, workspaceId }, { id: publicTask.id, scope: 'task' }),
@@ -193,11 +194,38 @@ describe('assertRoomAccess (integration)', () => {
         { userId: memberId, workspaceId },
         { id: privateTask.id, scope: 'task' },
       ),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    // …but the creator keeps access to their own private task room.
+    ).resolves.toEqual({ projectId: undefined });
+    // The creator keeps access to the same workspace task room.
     await expect(
       assertRoomAccess(db, { userId: ownerId, workspaceId }, { id: privateTask.id, scope: 'task' }),
     ).resolves.toEqual({ projectId: undefined });
+  });
+
+  it('retains private-team, personal and cross-workspace isolation for task rooms', async () => {
+    const [team] = await db
+      .insert(teams)
+      .values({ name: 'Private', key: 'PRV', workspaceId, visibility: 'private' })
+      .returning();
+    const task = await insertTask({ creatorId: ownerId, workspaceId, visibility: 'private' });
+    await db.update(tasks).set({ teamId: team.id }).where(eq(tasks.id, task.id));
+    await expect(
+      assertRoomAccess(db, { userId: memberId, workspaceId }, { id: task.id, scope: 'task' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await db.insert(teamMembers).values({ teamId: team.id, userId: memberId, workspaceId });
+    await expect(
+      assertRoomAccess(db, { userId: memberId, workspaceId }, { id: task.id, scope: 'task' }),
+    ).resolves.toEqual({ projectId: undefined });
+    await db.update(tasks).set({ teamId: null, workspaceId: null }).where(eq(tasks.id, task.id));
+    await expect(
+      assertRoomAccess(db, { userId: memberId, workspaceId }, { id: task.id, scope: 'task' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      assertRoomAccess(db, { userId: ownerId, workspaceId }, { id: task.id, scope: 'task' }),
+    ).resolves.toEqual({ projectId: undefined });
+    await db.update(tasks).set({ workspaceId: otherWorkspaceId }).where(eq(tasks.id, task.id));
+    await expect(
+      assertRoomAccess(db, { userId: ownerId, workspaceId }, { id: task.id, scope: 'task' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('rejects a removed member even for the workspace room', async () => {

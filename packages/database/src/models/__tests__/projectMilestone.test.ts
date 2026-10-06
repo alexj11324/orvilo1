@@ -1,9 +1,9 @@
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
-import { users, workspaceMembers, workspaces } from '../../schemas';
+import { tasks, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
@@ -254,8 +254,8 @@ describe('ProjectModel milestone progress', () => {
     }
     await complete(ownerTasks, publicTask.id);
 
-    // Each reader counts their own scope over the same milestone: the owner
-    // sees both issues, the member only the public one.
+    await serverDB.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, privateTask.id));
+    // Both readers count workspace metadata, including persisted legacy private rows.
     expect(await readoutFromPlanning(owner, project.id, milestoneId)).toEqual({
       completed: 1,
       issues: 2,
@@ -263,8 +263,8 @@ describe('ProjectModel milestone progress', () => {
     });
     expect(await readoutFromPlanning(member, project.id, milestoneId)).toEqual({
       completed: 1,
-      issues: 1,
-      percent: 100,
+      issues: 2,
+      percent: 50,
     });
   });
 });

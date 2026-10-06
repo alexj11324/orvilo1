@@ -1,5 +1,5 @@
 import type { SQL } from 'drizzle-orm';
-import { and, eq, exists, ne, or, sql } from 'drizzle-orm';
+import { and, eq, exists, ne, not, or, sql } from 'drizzle-orm';
 
 import { agentDocuments } from '../../schemas/agentDocuments';
 import { documents } from '../../schemas/file';
@@ -7,6 +7,7 @@ import { tasks } from '../../schemas/task';
 import { works } from '../../schemas/work';
 import type { OrviloDatabase } from '../../type';
 import { buildDocumentReadableWhere } from '../../utils/documentAccess';
+import { buildTaskReadableWhere } from '../../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 /**
@@ -21,29 +22,27 @@ export interface WorkContext {
   workspaceId?: string;
 }
 
-/**
- * Row-level guard for task Works: visible iff the viewer registered the Work
- * themselves OR can see the live task under the public-or-owner rule.
- * `buildWorkspaceWhere` filters the mirrored `works.visibility`; this live
- * resource check is defense in depth for stale/moved resources and direct DB
- * mutations that bypass the visibility cascade. The registrant branch keeps
- * orphaned Works (task row hard-deleted outside the tool path) rendering from
- * their snapshot for their creator, while an orphan of a formerly-private task
- * never leaks its snapshot to other members — the trade-off is that other
- * members also lose orphan cards of public tasks, which is marginal. Write
- * paths sharing `workOwnership` are safe under the guard: a Work write is
- * always driven by a task mutation the actor performed, which the task tool
- * layer already gates with the same public-or-owner rule (see `TaskModel`'s
- * ownership predicate).
- */
+/** Live task ACL; only orphaned Task Works fall back to their registrant. */
 const taskVisibilityGuard = (ctx: WorkContext): SQL =>
   or(
     ne(works.resourceType, 'task'),
-    eq(works.userId, ctx.userId),
-    // Raw EXISTS instead of a `ctx.db.select()` subquery builder so the guard
-    // stays a pure predicate. NULL visibility predates the column and is
-    // treated as public, mirroring `buildWorkspaceWhere`.
-    sql`exists (select 1 from ${tasks} where ${tasks.id} = ${works.resourceId} and (${tasks.visibility} is null or ${tasks.visibility} = 'public' or ${tasks.createdByUserId} = ${ctx.userId}))`,
+    exists(
+      ctx.db
+        .select({ one: sql`1` })
+        .from(tasks)
+        .where(and(eq(tasks.id, works.resourceId), taskOwnership(ctx))),
+    ),
+    and(
+      eq(works.userId, ctx.userId),
+      not(
+        exists(
+          ctx.db
+            .select({ one: sql`1` })
+            .from(tasks)
+            .where(eq(tasks.id, works.resourceId)),
+        ),
+      ),
+    ),
   ) as SQL;
 
 /**
@@ -84,6 +83,26 @@ export const workOwnership = (ctx: WorkContext) =>
   and(
     or(
       buildWorkspaceWhere({ userId: ctx.userId, workspaceId: ctx.workspaceId }, works),
+      // Legacy Task Work mirrors may still be private. Only a live readable
+      // task in the same workspace can override that stored mirror.
+      ctx.workspaceId
+        ? and(
+            eq(works.resourceType, 'task'),
+            eq(works.workspaceId, ctx.workspaceId),
+            exists(
+              ctx.db
+                .select({ one: sql`1` })
+                .from(tasks)
+                .where(
+                  and(
+                    eq(tasks.id, works.resourceId),
+                    eq(tasks.workspaceId, works.workspaceId),
+                    taskOwnership(ctx),
+                  ),
+                ),
+            ),
+          )
+        : undefined,
       and(
         eq(works.resourceType, 'document'),
         eq(works.visibility, 'team'),
@@ -107,16 +126,8 @@ export const workOwnership = (ctx: WorkContext) =>
     documentVisibilityGuard(ctx),
   ) as SQL;
 
-/**
- * Public-or-owner predicate for the live `tasks` join/lookup — mirrors
- * `TaskModel`'s visibility-aware ownership so Work registration and the
- * summary join can never see a task the task tool layer itself would hide.
- */
-export const taskOwnership = (ctx: WorkContext) =>
-  buildWorkspaceWhere(
-    { userId: ctx.userId, workspaceId: ctx.workspaceId },
-    { userId: tasks.createdByUserId, visibility: tasks.visibility, workspaceId: tasks.workspaceId },
-  );
+/** Match the Task metadata reader for registration and live summary joins. */
+export const taskOwnership = (ctx: WorkContext) => buildTaskReadableWhere(ctx.db, ctx);
 
 export const documentOwnership = (ctx: WorkContext) =>
   buildDocumentReadableWhere(ctx.db, { userId: ctx.userId, workspaceId: ctx.workspaceId });

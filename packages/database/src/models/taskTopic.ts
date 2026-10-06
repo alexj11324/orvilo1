@@ -31,6 +31,7 @@ import type { TaskTopicItem } from '../schemas/task';
 import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
+import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { matchesDispatchAssignee, TaskDispatchModel } from './taskDispatch';
 import { isAutomationArmed, isParked, predicateForLegacyStatus } from './taskExecutionSql';
@@ -81,19 +82,12 @@ export class TaskTopicModel {
     );
 
   private taskOwnership = () =>
-    buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId },
-      {
-        userId: tasks.createdByUserId,
-        visibility: tasks.visibility,
-        workspaceId: tasks.workspaceId,
-      },
-    );
+    buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
 
   /** Look up the parent task's visibility so newly added topics mirror it. */
   private async getTaskVisibility(taskId: string): Promise<'private' | 'public'> {
     const row = await this.db
-      .select({ visibility: tasks.visibility })
+      .select({ visibility: taskVisibilitySql() })
       .from(tasks)
       .where(eq(tasks.id, taskId))
       .limit(1);

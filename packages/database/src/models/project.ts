@@ -49,7 +49,7 @@ import { users } from '../schemas/user';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
-import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
+import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
 import { ProjectMemberModel } from './projectMember';
@@ -307,15 +307,7 @@ export class ProjectModel {
    */
   private taskReadable() {
     return and(
-      buildWorkspaceWhere(
-        { userId: this.userId, workspaceId: this.workspaceId },
-        {
-          userId: tasks.createdByUserId,
-          visibility: tasks.visibility,
-          workspaceId: tasks.workspaceId,
-        },
-      ),
-      this.workspaceId ? buildTaskTeamReadableWhere(this.db, this.userId) : undefined,
+      buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
       sql`${tasks.isDeleted} IS NOT TRUE`,
     );
   }
@@ -1100,21 +1092,14 @@ export class ProjectModel {
   private projectTaskScope(projectId: string) {
     return and(
       eq(tasks.projectId, projectId),
-      buildWorkspaceWhere(
-        { userId: this.userId, workspaceId: this.workspaceId },
-        {
-          userId: tasks.createdByUserId,
-          visibility: tasks.visibility,
-          workspaceId: tasks.workspaceId,
-        },
-      ),
+      buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
     );
   }
 
   async listTasks(projectId: string) {
     if (!(await this.findById(projectId))) return null;
     const rows = await this.db
-      .select()
+      .select({ ...getTableColumns(tasks), visibility: taskVisibilitySql() })
       .from(tasks)
       .where(this.projectTaskScope(projectId))
       .orderBy(asc(tasks.sortOrder), asc(tasks.seq));
@@ -1233,7 +1218,7 @@ export class ProjectModel {
         .update(tasks)
         .set({ projectMilestoneId: milestoneId, updatedAt: new Date() })
         .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
-        .returning();
+        .returning({ ...getTableColumns(tasks), visibility: taskVisibilitySql() });
       return updated ?? null;
     });
   }
@@ -1404,14 +1389,7 @@ export class ProjectModel {
       .where(
         and(
           eq(tasks.id, taskId),
-          buildWorkspaceWhere(
-            { userId: this.userId, workspaceId: this.workspaceId },
-            {
-              userId: tasks.createdByUserId,
-              visibility: tasks.visibility,
-              workspaceId: tasks.workspaceId,
-            },
-          ),
+          buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
         ),
       )
       .limit(1);
@@ -1436,14 +1414,10 @@ export class ProjectModel {
 
   async moveTaskTree(projectId: string, taskId: string) {
     if (!(await this.findManageableById(projectId))) return null;
-    const taskScope = buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId },
-      {
-        userId: tasks.createdByUserId,
-        visibility: tasks.visibility,
-        workspaceId: tasks.workspaceId,
-      },
-    );
+    const taskScope = buildTaskReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
     const [root] = await this.db
       .select()
       .from(tasks)

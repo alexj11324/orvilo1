@@ -3,9 +3,9 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
 import type { OrviloDatabase } from '@/database/type';
+import { buildTaskReadableWhere } from '@/database/utils/taskTeamReadable';
 
 import {
-  buildWorkspaceWhere,
   getActiveWorkspaceMembershipRole,
   ProjectMemberModel,
   projects,
@@ -33,7 +33,7 @@ export interface RoomAccessGrant {
  * - `project:{id}`    → project must belong to the workspace and be visible to
  *   the caller (public, own private, or an explicit project_members row).
  * - `task:{id}`       → task must belong to the workspace and be visible via
- *   `buildWorkspaceWhere` semantics (public or creator-private).
+ *   workspace task metadata scope and private-team ACL.
  */
 export const assertRoomAccess = async (
   db: OrviloDatabase,
@@ -78,16 +78,7 @@ export const assertRoomAccess = async (
       const [task] = await db
         .select({ id: tasks.id, projectId: tasks.projectId })
         .from(tasks)
-        .where(
-          and(
-            eq(tasks.id, room.id),
-            buildWorkspaceWhere(ctx, {
-              userId: tasks.createdByUserId,
-              visibility: tasks.visibility,
-              workspaceId: tasks.workspaceId,
-            }),
-          ),
-        )
+        .where(and(eq(tasks.id, room.id), buildTaskReadableWhere(db, ctx)))
         .limit(1);
       if (!task) throw NOT_FOUND();
       return { projectId: task.projectId ?? undefined };

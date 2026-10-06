@@ -1,0 +1,259 @@
+{
+  "ACPInvoked": false,
+  "allAgentConfigFingerprintUnchanged": true,
+  "allDeviceConfigFingerprintUnchanged": true,
+  "apiCalls": [
+    {
+      "procedure": "task.find",
+      "status": 200,
+      "at": "2026-10-06T14:31:55.288Z"
+    },
+    {
+      "procedure": "task.list",
+      "status": 200,
+      "at": "2026-10-06T14:31:55.368Z"
+    },
+    {
+      "procedure": "task.groupList",
+      "status": 200,
+      "at": "2026-10-06T14:31:55.493Z"
+    },
+    {
+      "procedure": "task.groupList",
+      "status": 200,
+      "at": "2026-10-06T14:31:55.534Z"
+    },
+    {
+      "procedure": "task.groupList",
+      "status": 200,
+      "at": "2026-10-06T14:31:55.564Z"
+    },
+    {
+      "procedure": "task.find",
+      "status": 404,
+      "at": "2026-10-06T14:31:56.098Z"
+    },
+    {
+      "procedure": "agent.getAgentConfigById",
+      "status": 200,
+      "at": "2026-10-06T14:31:56.362Z"
+    },
+    {
+      "procedure": "task.run",
+      "status": 404,
+      "at": "2026-10-06T14:31:56.433Z"
+    },
+    {
+      "procedure": "task.create",
+      "status": 200,
+      "at": "2026-10-06T14:31:56.508Z"
+    },
+    {
+      "procedure": "task.updateVisibility",
+      "status": 200,
+      "at": "2026-10-06T14:31:56.544Z"
+    },
+    {
+      "procedure": "task.find",
+      "status": 200,
+      "at": "2026-10-06T14:31:56.571Z"
+    }
+  ],
+  "canonicalCreate": {
+    "responseVisibility": "public",
+    "persistenceVisibility": "public"
+  },
+  "canonicalUpdate": {
+    "success": true,
+    "visibility": "public"
+  },
+  "deliveredBackendSourceCommit": "94512f2899ba1bfb503106d3ecb6380f178a9b82",
+  "equivalentBackendTrees": {
+    "apps/server": "ed8f7e0fa2c42c89649a35bacfd31de66a18600a",
+    "packages/database": "0d6d8db5e200fd9883d52cb9f7500d96f54367a7"
+  },
+  "executionCounts": {
+    "dispatch": 0,
+    "topics": 0,
+    "operations": 0
+  },
+  "existingTaskWorkCount": 0,
+  "finalReadScriptSha256": "054f08640a3481af522b6b96065e0c126f561953db885c58365b7c48769376d3",
+  "foreignWorkspaceDenied": true,
+  "legacy": {
+    "rawPersistedVisibilityDuringReads": "private",
+    "metadataVisibility": "public",
+    "privateFilterIncludesPublicMetadata": true,
+    "groupModes": [
+      {
+        "groupBy": "assignee",
+        "visibility": "public"
+      },
+      {
+        "groupBy": "agent",
+        "visibility": "public"
+      },
+      {
+        "groupBy": "member",
+        "visibility": "public"
+      }
+    ],
+    "rawTupleUnchanged": true,
+    "originalTupleRestored": true
+  },
+  "maintainedTestProof": {
+    "path": "strict-task-backend-frozen.json",
+    "sha256": "6723786bbfeba8deb25a75d5d7df811bd44ea485537f2d2c2dd6dab442631c62"
+  },
+  "noRunSideEffects": true,
+  "observedAt": "2026-10-06T14:33:01.190Z",
+  "originalMembershipRestored": true,
+  "originalVerifiedSourceFileCount": 48,
+  "privateAgentConfigEmpty": true,
+  "privateProofSha256": "ee0d3b10cb51e6f48a479bc1aea749c12af7ef70c16d1598dbffc99854b523b3",
+  "projectionCoverage": "No existing TaskWork fixture; T11 and new fixture have no Project. Personal/private-team and projection boundaries covered by frozen maintained tests.",
+  "providerExecution": false,
+  "retainedNewFixtureCount": 1,
+  "run": {
+    "code": "NOT_FOUND",
+    "httpStatus": 404,
+    "message": "Agent not found"
+  },
+  "scriptManifest": {
+    "scope": "One T11 reversible legacy CAS; member find/list and ranked assignee/agent/member metadata must expose public; one early denied run; one canonical explicit-private create/update; membership exact cleanup; no provider/ACP.",
+    "scripts": [
+      {
+        "path": "acceptance.ts",
+        "sha256": "8f2c82e71b331bf71785f1f9abafa0366a910c4e082c53adb00810a371b41c70"
+      },
+      {
+        "path": "seed-temporary-member.ts",
+        "sha256": "13a87fe5c20407f38668bd26ad5c67bdb4f660474b9c504c4754ebe0201669f5"
+      },
+      {
+        "path": "cleanup-temporary-member.ts",
+        "sha256": "2e6ecfac97767d7bfe3ed63c5cc1922b0ffb3b567da9a1146dcde26cd3f8f663"
+      }
+    ]
+  },
+  "sourceFileCount": 28,
+  "sourceFiles": [
+    {
+      "path": "packages/database/src/utils/taskTeamReadable.ts",
+      "sha256": "b7bc76bb007896a3319fd70579e6579ae8a5cbc334bb0cc75ddc9fed28ba84d7"
+    },
+    {
+      "path": "packages/database/src/models/task.ts",
+      "sha256": "3a0c67629b7bd8c01b5c6cb659ea286eb2fcbd2ac2960df028823e253f2c1520"
+    },
+    {
+      "path": "packages/database/src/models/taskTopic.ts",
+      "sha256": "837ec67b168c7725456f26b9f781c3e0806b66fd57d165d9c2f0d282c8e4f3d6"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/task.test.ts",
+      "sha256": "7b03af2c26b60c19983f8bb7bf187d0a00ffb535f797af9e6c53b3f4a34c184b"
+    },
+    {
+      "path": "apps/server/src/services/task/index.ts",
+      "sha256": "0d37951eb5705bc05e3be4e6a7928822cbd21aaa57c22debb806a6f7d74a2f2d"
+    },
+    {
+      "path": "apps/server/src/services/task/index.test.ts",
+      "sha256": "909d7483db0a3509e8ef70a7a0491909d1753a07c2991b922e8eda996458c7ab"
+    },
+    {
+      "path": "apps/server/src/services/linearSync/planning.ts",
+      "sha256": "16f5b06e1b40e5c5605b607d55ff618600e7ed4382a670f9e8b398b973b879b4"
+    },
+    {
+      "path": "apps/server/src/routers/lambda/task.ts",
+      "sha256": "d6f02ec4fb5e24cd88576b6c85cd27b035e84e3cee6657eb26f2f65d70d57ff9"
+    },
+    {
+      "path": "apps/server/src/routers/lambda/__tests__/integration/task.integration.test.ts",
+      "sha256": "9cc11171845f4aa48a144d2303fe5a0f3549b429c1f7568f824b2c77ea18b147"
+    },
+    {
+      "path": "packages/database/src/models/linearSync.ts",
+      "sha256": "0d2f167377cbbb9cf5069811838599902c883ba04a60376b98c46afad39a11ee"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/linearSync.test.ts",
+      "sha256": "0636458bf3663968c542db2b37c9f255a1632cf6a2b07a5aadb475a21cc86d60"
+    },
+    {
+      "path": "packages/database/src/models/project.ts",
+      "sha256": "f30a12d7c9067c700f7795b930d039cdd0bd950e750317677d02def1d556ad91"
+    },
+    {
+      "path": "packages/database/src/models/recent.ts",
+      "sha256": "905f5945cd1c55bd3baf12d20f8bc07c06f1559a8e62efbd9131e03831137e7e"
+    },
+    {
+      "path": "packages/database/src/models/workQuery.ts",
+      "sha256": "0386f3c2e6f343d1cd6c26ea58c961165eff18c7817b725cd7b7ff47991346bd"
+    },
+    {
+      "path": "packages/database/src/models/notification.ts",
+      "sha256": "eaf2a9624ec4ed80fd9cf5e8a37690259b6f5fb9a77f2101cff03eb29ffd97c8"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/project.test.ts",
+      "sha256": "d7444e9e271c7043726ae1b5b49c9e503adda342e11cf880dd3f48dffdf7a487"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/projectMilestone.test.ts",
+      "sha256": "2438cd58a0cde64bf35635a3f2301d50e00071313091865523547382a27fb856"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/recent.test.ts",
+      "sha256": "6d409b73aaeb10f62e78ea4be3faa0a13f10aa9cbbb815826b4b3964b014b325"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/workQuery.test.ts",
+      "sha256": "5fd82b24c8b20ec67e2eb0b258d3b66285c83fd35581decdf3ee7b2e7ec2babc"
+    },
+    {
+      "path": "packages/database/src/models/__tests__/notification.test.ts",
+      "sha256": "8d80410c3846ab44b61fcd5dd9b04cda69928c3fba51efd68c862491a2aefd09"
+    },
+    {
+      "path": "apps/server/src/services/collaboration/roomAuthz.ts",
+      "sha256": "53c587218fdc0693387c58dac1ff5ec321472e46bf1baa37331f48f63ea4613d"
+    },
+    {
+      "path": "apps/server/src/services/collaboration/__tests__/roomAuthz.test.ts",
+      "sha256": "f9155007c7ff14ac95f51045112cf21363433c1aab82d5b4f684cf5377492c5a"
+    },
+    {
+      "path": "packages/database/src/models/work/context.ts",
+      "sha256": "8d20d192425070681ad4bb2e7621789898d5f16dbf50e12da783715396f860bc"
+    },
+    {
+      "path": "packages/database/src/models/work/queries.ts",
+      "sha256": "c2ff082b20f436d0ef8faacfa2a2c70642f449dda20ea1587a2f003b38827d3d"
+    },
+    {
+      "path": "packages/database/src/models/work/task.ts",
+      "sha256": "a434476e756ecf4f4e1e5f3c44349964f9d4b94a3960a5620807a10f4a17361c"
+    },
+    {
+      "path": "packages/database/src/models/work/internal.ts",
+      "sha256": "aa49a444efd6b6186c246664dad266fa421353b62c507766538664882ccb65c2"
+    },
+    {
+      "path": "packages/database/src/models/work/__tests__/task.test.ts",
+      "sha256": "4c729a0f485917332da0560b78151a810870fcf08718cbf5c92c42f07811661d"
+    },
+    {
+      "path": "packages/database/src/models/work/__tests__/workspace.test.ts",
+      "sha256": "e06d629f56003bcd41244b1a62a10ae0716cc7d5633f9a548e21457156732b4d"
+    }
+  ],
+  "sourceHashesVerifiedBeforeAndAfter": true,
+  "sourceHead": "6818b5c0fae2a08030965ee6bd54080282aa2cca",
+  "taskCreateCount": 1,
+  "taskRunCount": 1,
+  "temporaryMembershipAbsent": true
+}

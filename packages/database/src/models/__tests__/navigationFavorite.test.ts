@@ -1,9 +1,10 @@
 // @vitest-environment node
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
-import { users, workspaces } from '../../schemas';
+import { tasks, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
 import { ProjectModel } from '../project';
@@ -114,6 +115,15 @@ describe('NavigationFavoriteModel', () => {
       name: 'Private Team',
       visibility: 'private',
     });
+    await ownerTasks.update(hiddenTask.id, { teamId: privateTeam.id });
+    const legacyShared = await ownerTasks.create({
+      instruction: 'Legacy shared',
+      name: 'Legacy shared task',
+    });
+    await serverDB
+      .update(tasks)
+      .set({ visibility: 'private' })
+      .where(eq(tasks.id, legacyShared.id));
     const readableProject = await visitorProjects.create({
       identifier: 'FAV01',
       name: 'Roadmap',
@@ -126,6 +136,7 @@ describe('NavigationFavoriteModel', () => {
 
     await visitor.pin({ targetId: readableTask.id, targetType: 'task' });
     await visitor.pin({ targetId: hiddenTask.id, targetType: 'task' });
+    await visitor.pin({ targetId: legacyShared.id, targetType: 'task' });
     await visitor.pin({ targetId: publicTeam.id, targetType: 'team' });
     await visitor.pin({ targetId: privateTeam.id, targetType: 'team' });
     await visitor.pin({ targetId: readableProject.id, targetType: 'project' });
@@ -134,6 +145,9 @@ describe('NavigationFavoriteModel', () => {
     const listed = await visitor.list();
     expect(listed.find((row) => row.targetId === readableTask.id)?.title).toBe('Board picker');
     expect(listed.find((row) => row.targetId === hiddenTask.id)?.title).toBeNull();
+    expect(listed.find((row) => row.targetId === legacyShared.id)?.title).toBe(
+      'Legacy shared task',
+    );
     expect(listed.find((row) => row.targetId === publicTeam.id)?.title).toBe('Public Team');
     expect(listed.find((row) => row.targetId === privateTeam.id)?.title).toBeNull();
     expect(listed.find((row) => row.targetId === readableProject.id)?.title).toBe('Roadmap');

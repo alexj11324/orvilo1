@@ -8,6 +8,7 @@ import {
   taskCommentDrafts,
   taskComments,
   tasks,
+  teams,
   users,
   workspaces,
 } from '../../schemas';
@@ -158,7 +159,15 @@ describe('TaskCommentDraftModel', () => {
     const bobDrafts = new TaskCommentDraftModel(db, bob, workspaceA);
     expect(await bobDrafts.upsert(task.id, 'Work in progress')).not.toBeNull();
 
-    await db.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, task.id));
+    const teamId = 'draft-revoked-private-team';
+    await db.insert(teams).values({
+      id: teamId,
+      key: 'DRP',
+      name: 'Private draft task team',
+      workspaceId: workspaceA,
+      visibility: 'private',
+    });
+    await db.update(tasks).set({ teamId }).where(eq(tasks.id, task.id));
 
     expect(await bobDrafts.get(task.id)).toBeNull();
     expect(await bobDrafts.list()).toEqual([]);

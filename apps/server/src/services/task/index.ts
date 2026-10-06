@@ -130,8 +130,7 @@ export interface CreateTaskInput {
    * on team tasks, NULL otherwise).
    */
   triageStatus?: TaskTriageStatus;
-  // Explicit visibility for the new task. When omitted, the service derives it
-  // from `parentTaskId` (if present), otherwise defaults to workspace-visible.
+  // Compatibility field: workspace tasks are always public; personal scope stays owner-only.
   visibility?: 'private' | 'public';
   /** Workflow-category preset — a work-query board column's `+`. */
   workflowCategory?: TaskWorkflowCategory;
@@ -239,69 +238,13 @@ export class TaskService {
       if (agentInfo?.snapshot) createData.config = { ...agentInfo.snapshot, ...createData.config };
     }
 
-    createData.visibility ??= parentVisibility ?? 'public';
-
-    // Invariant: a private task can only be assigned to its creator — the
-    // resolved visibility (explicit, inherited, or agent-derived) is what
-    // counts, so this must run after the precedence chain above.
-    this.assertAssigneeUserVisibilityCompat(
-      createData.visibility,
-      createData.assigneeUserId,
-      this.userId,
-    );
-
-    // Invariant: a subtask can never be more public than its parent.
-    // Otherwise workspace members see an orphaned child whose parent is
-    // hidden, leaking the existence of a private task. The inference path
-    // already inherits parent visibility, but the explicit-override path can
-    // produce a `Private parent + Public child` combo if the caller insists.
-    this.assertParentVisibilityCompat(createData.visibility, parentVisibility);
+    createData.visibility = this.workspaceId
+      ? 'public'
+      : (createData.visibility ?? parentVisibility ?? 'public');
 
     const task = await this.createTaskWithAssigneeLock(createData, mutation);
 
     return task;
-  }
-
-  /**
-   * Enforces the invariant: a subtask cannot be more public than its parent.
-   * Promotion lattice is `private ≤ public`; child visibility ≤ parent
-   * visibility. Throws `BAD_REQUEST` on violation. No constraint when there
-   * is no parent.
-   */
-  assertParentVisibilityCompat(
-    childVisibility: 'private' | 'public' | undefined,
-    parentVisibility: 'private' | 'public' | undefined,
-  ): void {
-    if (parentVisibility !== 'private') return;
-    if (childVisibility !== 'public') return;
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message:
-        'A subtask cannot be more public than its parent. Promote the parent task first, or make this subtask private.',
-    });
-  }
-
-  /**
-   * Enforces the invariant: a private task can only be assigned to its
-   * creator. A private task is visible to nobody else (ownership is
-   * creator-based), so assigning another member would hand them a task they
-   * can never see. Throws `BAD_REQUEST` on violation. Applies symmetrically
-   * to assigning on a private task and to demoting a member-assigned task to
-   * private.
-   */
-  assertAssigneeUserVisibilityCompat(
-    taskVisibility: 'private' | 'public' | undefined,
-    assigneeUserId: string | null | undefined,
-    creatorUserId: string,
-  ): void {
-    if (!assigneeUserId) return;
-    if (taskVisibility !== 'private') return;
-    if (assigneeUserId === creatorUserId) return;
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message:
-        'A private task can only be assigned to its creator. Unassign the member or keep the task visible to the workspace.',
-    });
   }
 
   private interruptTaskOperation = async (service: AiAgentService, operationId: string) => {

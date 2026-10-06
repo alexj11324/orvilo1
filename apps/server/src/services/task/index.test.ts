@@ -2190,7 +2190,7 @@ describe('TaskService', () => {
       ).resolves.toMatchObject({ visibility: 'public' });
     });
 
-    it('allows creating a private task with a public agent', async () => {
+    it('normalizes an old private request with a public agent to workspace visibility', async () => {
       mockAgentModel.existsById.mockResolvedValue(true);
       mockAgentModel.getAgentSnapshotForTaskCreate.mockResolvedValue({
         snapshot: null,
@@ -2204,7 +2204,7 @@ describe('TaskService', () => {
         visibility: 'private',
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ visibility: 'private' }),
+        expect.objectContaining({ visibility: 'public' }),
         expect.anything(),
       );
     });
@@ -2237,61 +2237,23 @@ describe('TaskService', () => {
     });
   });
 
-  describe('parent ↔ child visibility compat', () => {
-    beforeEach(() => {
+  describe('workspace subtask visibility', () => {
+    it('normalizes old private requests under legacy private parents', async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'parent_id',
+        identifier: 'T-1',
+        visibility: 'private',
+      });
       mockTaskModel.create.mockImplementation(async (data: any) => ({
         ...data,
         id: 'task_test',
         identifier: 'T-2',
         seq: 2,
       }));
-    });
-
-    it('rejects creating a public subtask under a private parent', async () => {
-      mockTaskModel.resolve.mockResolvedValue({
-        id: 'parent_id',
-        identifier: 'T-1',
-        visibility: 'private',
-      });
-
       const service = new TaskService(db, userId, 'ws-1');
       await expect(
-        service.createTask({
-          instruction: 'leak attempt',
-          parentTaskId: 'T-1',
-          visibility: 'public',
-        }),
-      ).rejects.toThrow(/subtask cannot be more public than its parent/i);
-      expect(mockTaskModel.create).not.toHaveBeenCalled();
-    });
-
-    it('allows a private subtask under a public parent', async () => {
-      mockTaskModel.resolve.mockResolvedValue({
-        id: 'parent_id',
-        identifier: 'T-1',
-        visibility: 'public',
-      });
-
-      const service = new TaskService(db, userId, 'ws-1');
-      await service.createTask({
-        instruction: 'narrower scope',
-        parentTaskId: 'T-1',
-        visibility: 'private',
-      });
-      expect(mockTaskModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ visibility: 'private' }),
-        expect.anything(),
-      );
-    });
-
-    it('assertParentVisibilityCompat allows no parent', () => {
-      const service = new TaskService(db, userId, 'ws-1');
-      expect(() => service.assertParentVisibilityCompat('public', undefined)).not.toThrow();
-    });
-
-    it('assertParentVisibilityCompat allows public child under public parent', () => {
-      const service = new TaskService(db, userId, 'ws-1');
-      expect(() => service.assertParentVisibilityCompat('public', 'public')).not.toThrow();
+        service.createTask({ instruction: 'child', parentTaskId: 'T-1', visibility: 'private' }),
+      ).resolves.toMatchObject({ visibility: 'public', parentTaskId: 'parent_id' });
     });
   });
 

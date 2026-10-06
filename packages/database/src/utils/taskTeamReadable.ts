@@ -1,9 +1,40 @@
 import { and, eq, exists, isNull, or, type SQL, sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { tasks } from '../schemas/task';
 import { teamMembers, teams } from '../schemas/team';
 import { workspaceMembers, workspaces } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
+import { buildWorkspaceWhere } from './workspace';
+
+type TaskReadColumns = {
+  assigneeUserId: AnyPgColumn;
+  createdByUserId: AnyPgColumn;
+  reviewerUserId: AnyPgColumn;
+  teamId: AnyPgColumn;
+  workspaceId: AnyPgColumn;
+};
+
+/** Workspace tasks are shared work; team membership remains an independent ACL. */
+export const buildTaskReadableWhere = (
+  db: OrviloDatabase,
+  ctx: { userId: string; workspaceId?: string },
+  target: TaskReadColumns = tasks,
+): SQL => {
+  const scope = buildWorkspaceWhere(ctx, {
+    userId: target.createdByUserId,
+    workspaceId: target.workspaceId,
+  });
+  return ctx.workspaceId ? and(scope, buildTaskTeamReadableWhere(db, ctx.userId, target))! : scope;
+};
+
+/** Interpret legacy private flags without rewriting historical rows or execution topics. */
+export const taskVisibilitySql = (
+  target: { visibility: AnyPgColumn; workspaceId: AnyPgColumn } = tasks,
+) =>
+  sql<
+    'private' | 'public'
+  >`case when ${target.workspaceId} is not null then 'public' else ${target.visibility} end`;
 
 /**
  * Private-team tasks stay readable only when the viewer can still see the
@@ -17,7 +48,7 @@ import type { OrviloDatabase } from '../type';
 export const buildTaskTeamReadableWhere = (
   db: OrviloDatabase,
   userId: string,
-  target: typeof tasks = tasks,
+  target: TaskReadColumns = tasks,
 ): SQL =>
   or(
     isNull(target.teamId),

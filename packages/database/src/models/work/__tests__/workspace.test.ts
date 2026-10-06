@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { seedPrimeRuntime } from '../../../fixtures/seedPrimeRuntime';
-import { projectWorks, topics, works, workspaces } from '../../../schemas';
+import { projectWorks, tasks, topics, works, workspaces } from '../../../schemas';
 import { AgentDocumentModel } from '../../agentDocuments';
 import { ProjectModel } from '../../project';
 import { TaskModel } from '../../task';
@@ -237,7 +237,7 @@ describe('WorkModel · listByWorkspace', () => {
     expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
   });
 
-  it('separates private and public Works for the Resources mode switch', async () => {
+  it('puts legacy private Task Works in Workspace Resources only', async () => {
     const workspaceId = 'work-test-gallery-visibility-workspace';
     await serverDB.insert(workspaces).values({
       id: workspaceId,
@@ -277,6 +277,12 @@ describe('WorkModel · listByWorkspace', () => {
       topicId,
     });
 
+    await serverDB.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, privateTask.id));
+    await serverDB
+      .update(works)
+      .set({ visibility: 'private' })
+      .where(eq(works.id, privateWork!.id));
+
     const combined = await workModel.listByWorkspace({});
     const privateOnly = await workModel.listByWorkspace({ visibility: 'private' });
     const publicOnly = await workModel.listByWorkspace({ visibility: 'public' });
@@ -284,8 +290,10 @@ describe('WorkModel · listByWorkspace', () => {
     expect(combined.items.map((item) => item.id).sort()).toEqual(
       [privateWork!.id, publicWork!.id].sort(),
     );
-    expect(privateOnly.items.map((item) => item.id)).toEqual([privateWork!.id]);
-    expect(publicOnly.items.map((item) => item.id)).toEqual([publicWork!.id]);
+    expect(privateOnly.items).toHaveLength(0);
+    expect(publicOnly.items.map((item) => item.id).sort()).toEqual(
+      [privateWork!.id, publicWork!.id].sort(),
+    );
   });
 
   it('flags an orphaned task work whose task was deleted without the tool', async () => {

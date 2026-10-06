@@ -40,6 +40,7 @@ import {
   and,
   desc,
   eq,
+  getTableColumns,
   gt,
   inArray,
   isNotNull,
@@ -78,6 +79,7 @@ import {
   teamWorkflowStates,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { taskVisibilitySql } from '../utils/taskTeamReadable';
 
 export interface RecordTaskDomainEventInput {
   action?: string;
@@ -1379,7 +1381,7 @@ export class LinearSyncModel {
         binding: linearProjectBindings,
         installation: linearInstallations,
         issueLink: linearIssueLinks,
-        task: tasks,
+        task: { ...getTableColumns(tasks), visibility: taskVisibilitySql() },
       })
       .from(linearIssueLinks)
       .innerJoin(tasks, eq(tasks.id, linearIssueLinks.taskId))

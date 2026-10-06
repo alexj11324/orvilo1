@@ -169,6 +169,9 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       : undefined;
 
     const status = toTaskStatus(task.status);
+    const generating =
+      status === 'running' &&
+      (task.workflowCategory === 'in_progress' || task.workflowCategory === 'in_review');
     // One status mark per card: the workflow state when the task has one.
     const workflowGlyph = useTaskWorkflowGlyph({
       executionStatus: task.status,
@@ -495,13 +498,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
     // The overlay twin never opens menus — it only previews the dragged card.
     if (overlay) {
-      return <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
+      return <GeneratingBorder generating={generating}>{card}</GeneratingBorder>;
     }
 
     // The trigger has to clone the real DOM card: wrapping GeneratingBorder
     // (which does not forward props) drops the injected contextmenu handlers.
     return (
-      <GeneratingBorder generating={status === 'running'}>
+      <GeneratingBorder generating={generating}>
         <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
           {card}
         </SidebarContextMenu>

@@ -270,10 +270,28 @@ describe('TaskBoardCard', () => {
     expect(document.querySelector('[data-user-avatar="user-1"]')).not.toBeInTheDocument();
   });
 
-  it('lights the generating border while running', () => {
-    const { container } = render(<TaskBoardCard task={createTask({ status: 'running' })} />);
+  describe.each([false, true])('generating border (overlay: %s)', (overlay) => {
+    it.each([
+      ['running', 'in_progress', true],
+      ['running', 'in_review', true],
+      ['running', 'todo', false],
+      ['running', 'backlog', false],
+      ['running', 'triage', false],
+      ['running', 'done', false],
+      ['running', 'canceled', false],
+      ['running', undefined, false],
+      ['paused', 'in_progress', false],
+      ['completed', 'in_review', false],
+    ] as const)('status %s in category %s animates: %s', (status, workflowCategory, generating) => {
+      const { container } = render(
+        <TaskBoardCard overlay={overlay} task={createTask({ status, workflowCategory })} />,
+      );
 
-    expect(container.querySelector('[data-generating="true"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-generating]')).toHaveAttribute(
+        'data-generating',
+        String(generating),
+      );
+    });
   });
 
   it('exposes the open-run affordance for a running task with a live topic', () => {

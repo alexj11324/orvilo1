@@ -1,15 +1,13 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { useHover } from 'ahooks';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { X } from 'lucide-react';
-import { memo, useRef } from 'react';
+import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DEFAULT_AVATAR } from '@/const/meta';
 
 import { useAgentSelectionStore } from './store';
 
@@ -60,7 +58,9 @@ export interface AgentItemData {
   avatar: string | null;
   backgroundColor: string | null;
   description: string | null;
+  heterogeneousType?: string | null;
   id: string;
+  name?: string | null;
   title: string | null;
 }
 
@@ -72,16 +72,11 @@ interface AgentItemProps {
 }
 
 const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, showRemove }) => {
-  const ref = useRef(null);
-  const isHovering = useHover(ref);
-
   const isSelected = useAgentSelectionStore((s) => s.selectedAgentIds.includes(agent.id));
   const toggleAgent = useAgentSelectionStore((s) => s.toggleAgent);
   const removeAgent = useAgentSelectionStore((s) => s.removeAgent);
 
   const title = agentDisplayName(agent, defaultTitle);
-  const avatar = agent.avatar || DEFAULT_AVATAR;
-  const avatarBackground = agent.backgroundColor ?? undefined;
 
   const handleClick = () => {
     toggleAgent(agent.id);
@@ -95,7 +90,6 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
   return (
     <div
       className={styles.item}
-      ref={ref}
       style={{ cursor: showCheckbox ? 'pointer' : 'default' }}
       onClick={showCheckbox ? handleClick : undefined}
     >
@@ -110,13 +104,7 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
             }}
           />
         )}
-        <Avatar
-          animation={isHovering}
-          avatar={avatar}
-          background={avatarBackground}
-          shape="circle"
-          size={28}
-        />
+        <AgentRuntimeIcon size={28} type={agent.heterogeneousType} />
         <div className={cn('truncate', styles.title)}>{title}</div>
         {showRemove && (
           <div className={styles.removeButton} onClick={handleRemove}>

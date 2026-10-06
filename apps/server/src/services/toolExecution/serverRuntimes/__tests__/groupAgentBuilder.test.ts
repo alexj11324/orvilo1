@@ -124,50 +124,22 @@ describe('groupAgentBuilderRuntime', () => {
     expect(hasServerRuntime('orvilo-group-agent-builder')).toBe(true);
   });
 
-  describe('createGroup supervisor admission', () => {
-    it('requires a saved default before group creation', async () => {
-      mockInheritRuntime.mockRejectedValueOnce(new Error('Orchestrator setup required'));
-      const result = await createRuntime().createGroup({ title: 'Team' }, {} as never);
-      expect(result.success).toBe(false);
-      expect(result.content).toContain('setup');
-      expect(mockCreateGroupWithSupervisor).not.toHaveBeenCalled();
-    });
-
-    it('rejects imported runtimes that cannot execute supervisor builtin tools', async () => {
-      mockInheritRuntime.mockRejectedValueOnce(new Error('Orchestrator runtime unsupported'));
-      const result = await createRuntime().createGroup({ title: 'Team' }, groupCtx);
-      expect(result.success).toBe(false);
-      expect(result.content).toContain('unsupported');
-      expect(mockCreateGroupWithSupervisor).not.toHaveBeenCalled();
-    });
-
-    it('creates private group and supervisor with admitted Prime before insertion', async () => {
-      const admitted = {
-        agencyConfig: {
-          heterogeneousProvider: { type: 'orvilo', model: 'saved-model' },
-          boundDeviceId: 'host',
-        },
-        model: 'saved-model',
-        provider: 'saved-provider',
-      };
-      mockInheritRuntime.mockResolvedValueOnce(admitted);
-      mockCreateGroupWithSupervisor.mockResolvedValueOnce({
-        group: { id: 'new-group', visibility: 'private' },
-        supervisorAgentId: 'supervisor',
+  describe('createGroup references existing members', () => {
+    it('preserves the selected coordinator ID and does not copy runtime', async () => {
+      mockCreateGroupWithSupervisor.mockResolvedValue({
+        group: { id: 'group-new', visibility: 'private' },
+        supervisorAgentId: 'member-b',
       });
       const result = await createRuntime().createGroup(
-        { title: 'Team', supervisor: { title: 'Lead', model: 'requested' } },
+        { title: 'Team', memberAgentIds: ['member-a', 'member-b'], coordinatorAgentId: 'member-b' },
         groupCtx,
       );
       expect(result.success).toBe(true);
+      expect(result.state).toMatchObject({ groupId: 'group-new', supervisorAgentId: 'member-b' });
       expect(mockCreateGroupWithSupervisor).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Team', visibility: 'private' }),
-        [],
-        expect.objectContaining({ ...admitted, title: 'Lead' }),
-        expect.objectContaining({
-          ...admitted,
-          params: { orchestratorSourceAgentId: 'saved-orchestrator' },
-        }),
+        ['member-a', 'member-b'],
+        'member-b',
       );
     });
   });

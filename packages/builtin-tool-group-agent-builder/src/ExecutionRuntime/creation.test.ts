@@ -40,21 +40,24 @@ const admitted = {
   provider: 'saved-provider',
 };
 describe('group tool runtime creation admission', () => {
-  it('reports a missing selected default instead of falling back to the invoking Agent', async () => {
-    createGroup.mockRejectedValueOnce(new Error('ORCHESTRATOR_SETUP_REQUIRED'));
-    const result = await runtime.createGroup({ title: 'Team' }, { agentId: 'different-source' });
+  it('reports an inaccessible selected member without copying the invoking Agent runtime', async () => {
+    createGroup.mockRejectedValueOnce(new Error('Group members are unavailable in this scope'));
+    const result = await runtime.createGroup(
+      { title: 'Team', memberAgentIds: ['member'], coordinatorAgentId: 'member' },
+      { agentId: 'different-source' },
+    );
     expect(result.success).toBe(false);
-    expect(result.content).toContain('ORCHESTRATOR_SETUP_REQUIRED');
+    expect(result.content).toContain('unavailable');
     expect(getRuntimeForCreation).not.toHaveBeenCalled();
   });
 
-  it('lets the server create the selected Orchestrator and preserves caller metadata', async () => {
+  it('keeps the selected existing coordinator ID in the Group request', async () => {
     createGroup.mockResolvedValueOnce({
       group: { id: 'group', visibility: 'private' },
       supervisorAgentId: 'supervisor',
     });
     const result = await runtime.createGroup(
-      { title: 'Team', supervisor: { title: 'Lead', model: 'requested' } },
+      { title: 'Team', memberAgentIds: ['member'], coordinatorAgentId: 'member' },
       { agentId: 'different-source' },
     );
     expect(result.success).toBe(true);
@@ -63,7 +66,8 @@ describe('group tool runtime creation admission', () => {
       expect.objectContaining({
         title: 'Team',
         visibility: 'private',
-        supervisorConfig: { title: 'Lead', model: 'requested' },
+        agentIds: ['member'],
+        coordinatorAgentId: 'member',
       }),
     );
   });

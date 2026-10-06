@@ -1,4 +1,4 @@
-import { AgentPluginEntrySchema, CreateAgentSchema, InsertChatGroupSchema } from '@orvilo/types';
+import { AgentPluginEntrySchema, InsertChatGroupSchema } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -32,11 +32,9 @@ import {
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { type ChatGroupConfig } from '@/database/types/chatGroup';
-import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { GROUP_MEMBER_ROLES } from '@/database/utils/groupMembership';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 import { AgentGroupService } from '@/server/services/agentGroup';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
@@ -373,32 +371,16 @@ export const agentGroupRouter = router({
       return ctx.agentGroupRepo.checkAgentsBeforeRemoval(input.groupId, input.agentIds);
     }),
 
-  /**
-   * Create a group with a supervisor agent.
-   * The supervisor agent is automatically created as a virtual agent.
-   * Returns the groupId and supervisorAgentId.
-   */
+  /** Create a Group that references selected existing Agents. */
   createGroup: agentGroupProcedureWrite
     .input(
       InsertChatGroupSchema.extend({
-        supervisorConfig: CreateAgentSchema.optional().superRefine(refuseRetiredAgencyConfigFields),
+        agentIds: z.array(z.string().min(1)).min(1),
+        coordinatorAgentId: z.string().min(1),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const { supervisorConfig, ...groupInput } = input;
-      const folderVisibility = groupInput.groupId
-        ? await ctx.agentGroupRepo.getAssignableFolderVisibility(groupInput.groupId)
-        : undefined;
-      const sourceAgentId = supervisorConfig?.params?.orchestratorSourceAgentId;
-      const selectedRuntime =
-        (typeof sourceAgentId === 'string' && sourceAgentId) || !supervisorConfig?.agencyConfig
-          ? await resolveOrchestratorRuntimeForCreation(resourceConfigGuardCtx(ctx), {
-              sourceAgentId: typeof sourceAgentId === 'string' ? sourceAgentId : undefined,
-              visibility: groupInput.visibility ?? folderVisibility,
-              model: supervisorConfig?.model ?? undefined,
-              provider: supervisorConfig?.provider ?? undefined,
-            })
-          : undefined;
+      const { agentIds, coordinatorAgentId, ...groupInput } = input;
       const { group, supervisorAgentId } = await ctx.agentGroupRepo.createGroupWithSupervisor(
         {
           ...groupInput,
@@ -406,173 +388,48 @@ export const agentGroupRouter = router({
             input.config as ChatGroupConfig | null,
           ),
         },
-        [],
-        selectedRuntime
-          ? {
-              ...supervisorConfig,
-              ...selectedRuntime,
-              agencyConfig: selectedRuntime.agencyConfig ?? undefined,
-            }
-          : supervisorConfig,
-        selectedRuntime,
+        agentIds,
+        coordinatorAgentId,
       );
-
       if (ctx.workspaceId && group.visibility !== 'private') {
-        const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
-        await Promise.all([
-          permissionModel.setAccessLevel(
-            'agentGroup',
-            group.id,
-            DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
-            ctx.userId,
-          ),
-          permissionModel.setAccessLevel(
-            'agent',
-            supervisorAgentId,
-            DEFAULT_RESOURCE_ACCESS_LEVELS.agent,
-            ctx.userId,
-          ),
-        ]);
+        await new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId).setAccessLevel(
+          'agentGroup',
+          group.id,
+          DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
+          ctx.userId,
+        );
       }
-
       return { group, supervisorAgentId };
     }),
 
-  /**
-   * Create a group with virtual member agents in one request.
-   * This is the recommended way to create a group from a template.
-   * The backend will:
-   * 1. Create a supervisor agent (virtual)
-   * 2. Batch create virtual agents from member configs
-   * 3. Create the group with supervisor and member agents
-   * Returns the groupId, supervisorAgentId, and created member agentIds.
-   */
   createGroupWithMembers: agentGroupProcedureWrite
     .input(
       z.object({
         groupConfig: InsertChatGroupSchema,
-        members: z.array(agentMemberInputSchema),
-        supervisorConfig: z
-          .object({
-            agencyConfig: z.any().nullish(),
-            avatar: z.string().nullish(),
-            backgroundColor: z.string().nullish(),
-            chatConfig: z.any().nullish(),
-            description: z.string().nullish(),
-            model: z.string().nullish(),
-            params: z.any().nullish(),
-            plugins: z.array(AgentPluginEntrySchema).nullish(),
-            provider: z.string().nullish(),
-            systemRole: z.string().nullish(),
-            tags: z.array(z.string()).nullish(),
-            title: z.string().nullish(),
-          })
-          .optional(),
+        members: z.array(z.string().min(1)).min(1),
+        coordinatorAgentId: z.string().min(1),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Resolve the folder BEFORE creating the member agents. The same check
-      // runs inside `createGroupWithSupervisor`, but that happens after these
-      // inserts and outside their transaction, so a bad folder id would leave
-      // orphaned virtual agents behind.
-      const groupFolderId = input.groupConfig?.groupId;
-      let folderVisibility: 'private' | 'public' | undefined;
-
-      if (groupFolderId) {
-        folderVisibility = await ctx.agentGroupRepo.getAssignableFolderVisibility(groupFolderId);
-        const requested = input.groupConfig?.visibility;
-
-        if (requested && requested !== folderVisibility)
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `A ${requested} chat group cannot be created in a ${folderVisibility} folder`,
-          });
-      }
-
-      // The synthetic members inherit the group's visibility, the same way the
-      // supervisor does. Left to the column default they would be public
-      // workspace resources while their group is private — visible to
-      // permission checks that look agents up by id rather than through the
-      // group. Must match `createGroupWithSupervisor`'s own derivation.
-      const groupVisibility = input.groupConfig?.visibility ?? folderVisibility ?? undefined;
-
-      // 1. Batch create virtual member agents
-      const memberConfigs = input.members.map((member) => ({
-        ...member,
-        // See the `batchCreateAgentsInGroup` cast above for why this bridges
-        // to `string[]` instead of failing type-check.
-        plugins: member.plugins as unknown as string[] | undefined,
-        tags: member.tags as string[] | undefined,
-        virtual: true,
-        ...(groupVisibility ? { visibility: groupVisibility } : {}),
-      }));
-
-      const sourceAgentId = input.supervisorConfig?.params?.orchestratorSourceAgentId;
-      const selectedRuntime =
-        (typeof sourceAgentId === 'string' && sourceAgentId) ||
-        !input.supervisorConfig?.agencyConfig
-          ? await resolveOrchestratorRuntimeForCreation(resourceConfigGuardCtx(ctx), {
-              sourceAgentId: typeof sourceAgentId === 'string' ? sourceAgentId : undefined,
-              visibility: groupVisibility,
-            })
-          : undefined;
-      const runtime = selectedRuntime ?? input.supervisorConfig;
-      const supervisorConfig = { ...input.supervisorConfig, ...runtime };
-      await assertAgentRuntimeCreation(
-        ctx.serverDB,
-        { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-        { ...supervisorConfig, visibility: groupVisibility },
-        { purpose: 'orchestrator' },
-      );
-
-      const createdAgents = await ctx.agentModel.batchCreate(memberConfigs);
-      const memberAgentIds = createdAgents.map((agent) => agent.id);
-
-      // 2. Create group with supervisor and member agents
-      // Filter out null/undefined values from supervisorConfig
-      const normalizedConfig = ctx.agentGroupService.normalizeGroupConfig(
-        input.groupConfig.config as ChatGroupConfig | null,
-      );
-
       const { group, supervisorAgentId } = await ctx.agentGroupRepo.createGroupWithSupervisor(
         {
           ...input.groupConfig,
-          config: normalizedConfig,
+          config: ctx.agentGroupService.normalizeGroupConfig(
+            input.groupConfig.config as ChatGroupConfig | null,
+          ),
         },
-        memberAgentIds,
-        supervisorConfig as any,
-        selectedRuntime,
+        input.members,
+        input.coordinatorAgentId,
       );
-
       if (ctx.workspaceId && group.visibility !== 'private') {
-        const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
-        await Promise.all([
-          permissionModel.setAccessLevel(
-            'agentGroup',
-            group.id,
-            DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
-            ctx.userId,
-          ),
-          permissionModel.setAccessLevel(
-            'agent',
-            supervisorAgentId,
-            DEFAULT_RESOURCE_ACCESS_LEVELS.agent,
-            ctx.userId,
-          ),
-          ...createdAgents
-            .filter((agent) => agent.visibility !== 'private')
-            .map((agent) =>
-              permissionModel.setAccessLevel(
-                'agent',
-                agent.id,
-                DEFAULT_RESOURCE_ACCESS_LEVELS.agent,
-                ctx.userId,
-              ),
-            ),
-        ]);
+        await new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId).setAccessLevel(
+          'agentGroup',
+          group.id,
+          DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
+          ctx.userId,
+        );
       }
-
-      return { agentIds: memberAgentIds, groupId: group.id, supervisorAgentId };
+      return { agentIds: input.members, groupId: group.id, supervisorAgentId };
     }),
 
   deleteGroup: agentGroupProcedureWrite
@@ -618,7 +475,7 @@ export const agentGroupRouter = router({
 
   /**
    * Duplicate a chat group with all its members.
-   * Creates a new group with the same config, a new supervisor, and copies of virtual members.
+   * Copies legacy owned members and references shared members, including the coordinator.
    * Non-virtual members are referenced (not copied).
    */
   duplicateGroup: agentGroupProcedureWrite
@@ -643,20 +500,13 @@ export const agentGroupRouter = router({
       const result = await ctx.agentGroupRepo.duplicate(input.groupId, input.newTitle);
       if (ctx.workspaceId && result) {
         const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
-        await Promise.all([
-          permissionModel.setAccessLevel(
-            'agentGroup',
-            result.groupId,
-            DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
-            ctx.userId,
-          ),
-          permissionModel.setAccessLevel(
-            'agent',
-            result.supervisorAgentId,
-            DEFAULT_RESOURCE_ACCESS_LEVELS.agent,
-            ctx.userId,
-          ),
-        ]);
+        await applyGroupAccessLevel({
+          accessLevel: DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
+          ctx,
+          groupId: result.groupId,
+          permissionModel,
+          workspaceId: ctx.workspaceId,
+        });
       }
       return result;
     }),

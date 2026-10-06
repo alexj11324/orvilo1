@@ -52,9 +52,6 @@ import { ChatGroupModel } from '@/database/models/chatGroup';
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import { AgentGroupRepository } from '@/database/repositories/agentGroup';
 import { DEFAULT_RESOURCE_ACCESS_LEVELS } from '@/database/schemas';
-import type { ChatGroupConfig } from '@/database/types/chatGroup';
-import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
-import { AgentGroupService } from '@/server/services/agentGroup';
 import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
 
 import { type ToolExecutionContext, type ToolExecutionResult } from '../types';
@@ -89,7 +86,6 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
     const agentModel = new AgentModel(serverDB, userId, workspaceId);
     const chatGroupModel = new ChatGroupModel(serverDB, userId, workspaceId);
     const agentGroupRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
-    const agentGroupService = new AgentGroupService(serverDB, userId, workspaceId);
 
     // The edited group is carried by `editingGroupId`; `groupId` is kept as a
     // fallback for callers that legitimately run inside a group chat turn.
@@ -240,61 +236,17 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
         _ctx: ToolExecutionContext,
       ): Promise<ToolExecutionResult> => {
         try {
-          const runtimeConfig = await resolveOrchestratorRuntimeForCreation(
-            { db: serverDB, userId, workspaceId },
-            {
-              model: params.supervisor?.model,
-              provider: params.supervisor?.provider,
-              visibility: 'private',
-            },
-          );
-          const groupConfig: ChatGroupConfig = {
-            ...(params.openingMessage !== undefined && { openingMessage: params.openingMessage }),
-            ...(params.openingQuestions !== undefined && {
-              openingQuestions: params.openingQuestions,
-            }),
-          } as ChatGroupConfig;
-
           const { group, supervisorAgentId } = await agentGroupRepo.createGroupWithSupervisor(
             {
               avatar: params.avatar,
               backgroundColor: params.backgroundColor,
-              config: agentGroupService.normalizeGroupConfig(
-                Object.keys(groupConfig).length > 0 ? groupConfig : null,
-              ),
-              content: params.prompt,
-              description: params.description,
+              content: params.prompt ?? params.description,
               title: params.title,
               visibility: 'private',
             },
-            [],
-            {
-              ...params.supervisor,
-              ...runtimeConfig,
-              // The runtime guard above proves agencyConfig is present; the
-              // schema type is optional-but-never-null.
-              agencyConfig: runtimeConfig.agencyConfig ?? undefined,
-            },
-            runtimeConfig,
+            params.memberAgentIds,
+            params.coordinatorAgentId,
           );
-
-          if (workspaceId && group.visibility !== 'private') {
-            const permissionModel = new ResourcePermissionModel(serverDB, workspaceId);
-            await Promise.all([
-              permissionModel.setAccessLevel(
-                'agentGroup',
-                group.id,
-                DEFAULT_RESOURCE_ACCESS_LEVELS.agentGroup,
-                userId,
-              ),
-              permissionModel.setAccessLevel(
-                'agent',
-                supervisorAgentId,
-                DEFAULT_RESOURCE_ACCESS_LEVELS.agent,
-                userId,
-              ),
-            ]);
-          }
 
           return {
             content: `Successfully created group "${params.title}" with ID: ${group.id}`,

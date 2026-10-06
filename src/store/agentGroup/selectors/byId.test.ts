@@ -42,6 +42,16 @@ describe('agentGroupByIdSelectors', () => {
       expect(result).toEqual(mockGroup);
     });
 
+    it('does not guess a Group when one shared coordinator belongs to multiple Groups', () => {
+      const state = {
+        groupMap: {
+          first: createMockGroup({ id: 'first', supervisorAgentId: 'shared' }),
+          second: createMockGroup({ id: 'second', supervisorAgentId: 'shared' }),
+        },
+      } as ChatGroupStore;
+      expect(agentGroupByIdSelectors.groupBySupervisorAgentId('shared')(state)).toBeUndefined();
+    });
+
     it('should return undefined when supervisor agent ID not found', () => {
       const mockGroup = createMockGroup({
         id: 'group-1',

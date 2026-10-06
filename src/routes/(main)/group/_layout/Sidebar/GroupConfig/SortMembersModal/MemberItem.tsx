@@ -5,10 +5,9 @@ import { GripVertical } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Badge } from '@/components/reui/badge';
 import { SortableItemHandle } from '@/components/reui/sortable';
-import { DEFAULT_AVATAR } from '@/const/meta';
 
 const styles = createStaticStyles(({ css }) => ({
   title: css`
@@ -20,14 +19,13 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface MemberItemProps {
-  avatar?: string;
-  background?: string;
   disabled?: boolean;
-  isExternal?: boolean;
+  isCoordinator?: boolean;
+  runtimeType?: string;
   title: string;
 }
 
-const MemberItem = memo<MemberItemProps>(({ avatar, background, disabled, isExternal, title }) => {
+const MemberItem = memo<MemberItemProps>(({ runtimeType, disabled, isCoordinator, title }) => {
   const { t } = useTranslation('chat');
 
   return (
@@ -37,17 +35,11 @@ const MemberItem = memo<MemberItemProps>(({ avatar, background, disabled, isExte
           <GripVertical size={14} />
         </SortableItemHandle>
       )}
-      <Avatar
-        emojiScaleWithBackground
-        avatar={avatar || DEFAULT_AVATAR}
-        background={background}
-        size={24}
-        style={{ flex: 'none' }}
-      />
+      <AgentRuntimeIcon size={24} type={runtimeType} />
       <span className={styles.title}>{title}</span>
-      {isExternal && (
+      {isCoordinator && (
         <Badge size="sm" style={{ flexShrink: 0 }} variant="primary-light">
-          {t('group.profile.external')}
+          {t('group.settings.coordinatorName')}
         </Badge>
       )}
     </>

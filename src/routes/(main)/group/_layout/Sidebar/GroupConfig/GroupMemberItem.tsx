@@ -1,53 +1,37 @@
 'use client';
 
-import { type ReactNode } from 'react';
-import { memo } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Badge } from '@/components/reui/badge';
-import { DEFAULT_AVATAR } from '@/const/meta';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
 interface GroupMemberItemProps {
   actions?: ReactNode;
-  avatar?: string;
-  background?: string;
-  isExternal?: boolean;
-  onClick?: () => void;
+  isCoordinator?: boolean;
+  runtimeType?: string;
   title: string;
 }
 
-const GroupMemberItem = memo<GroupMemberItemProps>(
-  ({ title, avatar, background, actions, isExternal }) => {
-    const { t } = useTranslation('chat');
-    return (
-      <NavItem
-        actions={actions}
-        icon={
-          <Avatar
-            emojiScaleWithBackground
-            avatar={avatar || DEFAULT_AVATAR}
-            background={background}
-            size={24}
-            style={{ flex: 'none' }}
-          />
-        }
-        title={
-          <div className="flex items-center gap-1">
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {title}
-            </span>
-            {isExternal && (
-              <Badge size="sm" style={{ flexShrink: 0 }} variant="primary-light">
-                {t('group.profile.external')}
-              </Badge>
-            )}
-          </div>
-        }
-      />
-    );
-  },
-);
+const GroupMemberItem = ({ title, runtimeType, actions, isCoordinator }: GroupMemberItemProps) => {
+  const { t } = useTranslation('chat');
+  return (
+    <NavItem
+      actions={actions}
+      icon={<AgentRuntimeIcon size={24} type={runtimeType} />}
+      title={
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="truncate">{title}</span>
+          {isCoordinator && (
+            <Badge className="shrink-0" size="sm" variant="secondary">
+              {t('group.settings.coordinatorName')}
+            </Badge>
+          )}
+        </div>
+      }
+    />
+  );
+};
 
 export default GroupMemberItem;

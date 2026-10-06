@@ -113,7 +113,7 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
   });
 
   it('carries the current agent when editing and deleting comments', async () => {
-    const ctx = { agentId: 'agt-current', taskId: 'task-1' };
+    const ctx = { agentId: 'agt-current', messageId: 'message-1', taskId: 'task-1' };
     await taskExecutor.updateTaskComment({ commentId: 'comment-1', content: 'Progress' }, ctx);
     await taskExecutor.deleteTaskComment({ commentId: 'comment-1' }, ctx);
     expect(mocks.updateComment).toHaveBeenCalledWith('comment-1', 'Progress', {

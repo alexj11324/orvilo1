@@ -951,6 +951,60 @@ describe('HeterogeneousPersistenceHandler — event branch coverage', () => {
   });
 
   describe('agent_intervention producer ACK', () => {
+    it('replaces native question display metadata with the authoritative form on the same tool', async () => {
+      const h = createHarness({ topicAgentId: 'agent-test' });
+      const toolCallId = 'native-elicitation-question';
+      await ingest(h, [
+        buildEvent('stream_chunk', 0, {
+          chunkType: 'tools_calling',
+          toolsCalling: [
+            {
+              apiName: 'Asking for your input',
+              arguments: '{}',
+              id: toolCallId,
+              identifier: 'claude-code',
+              type: 'default',
+            },
+          ],
+        }),
+      ]);
+      const originalTool = [...h.messages.values()].find(
+        (message) => message.tool_call_id === toolCallId,
+      )!;
+      const questions = [
+        {
+          header: 'Scope',
+          options: [{ label: 'Narrow' }, { label: 'Full' }],
+          question: 'Which scope should I use?',
+        },
+      ];
+      await ingest(h, [
+        buildEvent('agent_intervention_request', 0, {
+          apiName: 'askUserQuestion',
+          arguments: JSON.stringify({ questions }),
+          deadline: 1_900_000_000_000,
+          identifier: 'claude-code',
+          interactionKind: 'question',
+          provider: 'claude-code',
+          toolCallId,
+        }),
+      ]);
+      const tools = [...h.messages.values()].filter((message) => message.role === 'tool');
+      expect(tools).toHaveLength(1);
+      expect(tools[0]).toMatchObject({
+        id: originalTool.id,
+        plugin: {
+          apiName: 'askUserQuestion',
+          identifier: 'claude-code',
+          intervention: { operationId: h.operationId, status: 'pending' },
+        },
+        tool_call_id: toolCallId,
+      });
+      expect(JSON.parse(tools[0].plugin.arguments)).toEqual({
+        questions: [{ ...questions[0], multiSelect: false }],
+      });
+    });
+
     const materializeAskUserTool = async (
       h: ReturnType<typeof createHarness>,
       toolCallId: string,

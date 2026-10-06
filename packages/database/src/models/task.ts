@@ -69,6 +69,7 @@ import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { insertOutboxEvent, newEventId } from './eventOutbox';
 import { LinearSyncModel } from './linearSync';
 import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
 import { TaskDependencyError } from './taskDependency';
@@ -3778,10 +3779,16 @@ export class TaskModel {
     runner: OrviloDatabase,
     input: {
       action: 'created' | 'deleted' | 'updated';
-      comment?: { content: string; editorData?: unknown } | null;
+      comment?: {
+        authorAgentId?: string | null;
+        authorUserId?: string | null;
+        content: string;
+        editorData?: unknown;
+      } | null;
       commentId: string;
       externalMappingId?: string;
       mutation?: TaskMutationContext;
+      previousEditorData?: unknown;
       source: TaskDomainEventSource;
       taskId: string;
     },
@@ -3800,6 +3807,28 @@ export class TaskModel {
       .where(and(eq(tasks.id, input.taskId), this.ownership()))
       .returning(taskRowColumns);
     if (!task) throw new Error('Task not found');
+    if (
+      input.action !== 'deleted' &&
+      input.comment &&
+      !input.comment.authorAgentId &&
+      input.mutation?.source !== 'agent'
+    ) {
+      await insertOutboxEvent(runner, {
+        aggregateId: task.id,
+        aggregateType: 'task',
+        eventId: newEventId(),
+        eventType: `task.comment.${input.action}`,
+        payload: {
+          action: input.action,
+          commentId: input.commentId,
+          content: input.comment.content,
+          editorData: input.comment.editorData,
+          previousEditorData: input.previousEditorData,
+          userId: this.userId,
+        },
+        workspaceId: this.workspaceId,
+      });
+    }
     if (!this.workspaceId || input.mutation?.suppressDomainEvent) return task;
 
     await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
@@ -3912,6 +3941,13 @@ export class TaskModel {
   ): Promise<TaskCommentItem | undefined> {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      const [previous] = await runner
+        .select({ editorData: taskComments.editorData })
+        .from(taskComments)
+        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .for('update')
+        .limit(1);
+      if (!previous) return undefined;
       const [comment] = await runner
         .update(taskComments)
         .set({
@@ -3927,6 +3963,7 @@ export class TaskModel {
         comment,
         commentId: comment.id,
         mutation: opts?.mutation,
+        previousEditorData: previous.editorData,
         source: 'user',
         taskId: comment.taskId,
       });

@@ -229,9 +229,9 @@ export class AskUserBridge {
       result?: unknown;
       resolutionRequestId?: string;
     },
-  ): void {
+  ): boolean {
     const entry = this.pending_.get(toolCallId);
-    if (!entry) return;
+    if (!entry) return false;
     this.pending_.delete(toolCallId);
     entry.cleanup();
     // Echo the resolution on the outbound stream. For user-driven submits
@@ -249,6 +249,7 @@ export class AskUserBridge {
         ? { cancelReason: payload.cancelReason ?? 'user_cancelled', cancelled: true }
         : { result: payload.result },
     );
+    return true;
   }
 
   /**

@@ -1416,6 +1416,11 @@ export class HeterogeneousPersistenceHandler {
     // Persist before any business side effect. The existing JSON plugin-state
     // column carries only correlation metadata; no schema/migration is needed.
     await this.deps.messageModel.updateMessagePlugin(toolMsgId, {
+      // Native ACP may first create this tool with a display title and empty
+      // arguments. The validated intervention owns the original question form.
+      ...(reviewRequest?.interactionKind === 'question'
+        ? { apiName: 'askUserQuestion', arguments: reviewRequest.arguments }
+        : {}),
       intervention: intent.intervention,
     });
     await this.deps.messageModel.updatePluginState(toolMsgId, {

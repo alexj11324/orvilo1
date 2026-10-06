@@ -3,14 +3,18 @@ import type {
   NotificationBulkAction,
   NotificationFeedBucket,
   NotificationFeedTypeFilter,
+  NotificationMetadata,
   NotificationPresentationFilter,
 } from '@orvilo/types';
 import {
+  LOCAL_HETEROGENEOUS_AGENT_TYPES,
   NOTIFICATION_BULK_PREPARE_LIMIT,
   NOTIFICATION_BULK_PREPARE_WINDOW_MS,
   notificationScopeKey,
   parseNotificationBulkFingerprint,
 } from '@orvilo/types';
+import { safeParseJSON } from '@orvilo/utils';
+import { isRecord, pickString } from '@orvilo/utils/object';
 import {
   and,
   count,
@@ -28,10 +32,12 @@ import {
   sql,
 } from 'drizzle-orm';
 
+import { agents } from '../schemas/agent';
+import { messagePlugins, messages } from '../schemas/message';
 import type { NewNotification, NewNotificationDelivery } from '../schemas/notification';
 import { notificationDeliveries, notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
-import { tasks } from '../schemas/task';
+import { tasks, taskTopics } from '../schemas/task';
 import {
   notificationBulkSnapshots,
   notificationEventReceipts,
@@ -814,6 +820,7 @@ export class NotificationModel {
       recipientUserId: string;
       title?: string;
       content?: string;
+      metadata?: NotificationMetadata;
     },
   ) {
     const now = new Date();
@@ -822,6 +829,7 @@ export class NotificationModel {
       .set({
         activityVersion: sql`${notifications.activityVersion} + 1`,
         ...(params.content !== undefined ? { content: params.content } : {}),
+        ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
         isArchived: false,
         isRead: false,
         lastActivityAt: now,
@@ -847,6 +855,159 @@ export class NotificationModel {
       .where(and(...this.scope(), eq(notifications.actionRequestId, requestId)));
   }
 
+  /** Reconcile Inbox with the same native tool message that the existing answer transport owns. */
+  async syncNativeInterventions(messageIds?: string[]) {
+    const rows = await this.db
+      .select({
+        agentId: messages.agentId,
+        arguments: messagePlugins.arguments,
+        avatar: agents.avatar,
+        backgroundColor: agents.backgroundColor,
+        intervention: messagePlugins.intervention,
+        messageId: messages.id,
+        metadata: messages.metadata,
+        name: agents.title,
+        runStatus: taskTopics.status,
+        taskId: tasks.id,
+        title: tasks.name,
+        toolCallId: messagePlugins.toolCallId,
+        topicId: messages.topicId,
+        threadId: messages.threadId,
+      })
+      .from(messages)
+      .innerJoin(messagePlugins, eq(messagePlugins.id, messages.id))
+      .innerJoin(taskTopics, eq(taskTopics.topicId, messages.topicId))
+      .innerJoin(tasks, eq(tasks.id, taskTopics.taskId))
+      .leftJoin(agents, eq(agents.id, messages.agentId))
+      .where(
+        and(
+          eq(messages.userId, this.userId),
+          eq(messagePlugins.userId, this.userId),
+          eq(taskTopics.userId, this.userId),
+          eq(messagePlugins.apiName, 'askUserQuestion'),
+          inArray(messagePlugins.identifier, [...LOCAL_HETEROGENEOUS_AGENT_TYPES]),
+          isNull(messages.deletedAt),
+          this.workspaceId
+            ? eq(messages.workspaceId, this.workspaceId)
+            : isNull(messages.workspaceId),
+          this.workspaceId
+            ? eq(taskTopics.workspaceId, this.workspaceId)
+            : isNull(taskTopics.workspaceId),
+          buildWorkspaceWhere(
+            { userId: this.userId, workspaceId: this.workspaceId ?? undefined },
+            {
+              userId: tasks.createdByUserId,
+              visibility: tasks.visibility,
+              workspaceId: tasks.workspaceId,
+            },
+          ),
+          this.taskTeamReadable(),
+          messageIds
+            ? inArray(messages.id, messageIds)
+            : or(
+                sql`${messagePlugins.intervention}->>'status' = 'pending'`,
+                sql`exists (select 1 from ${notifications} where ${notifications.actionRequestId} = ${messages.id} and ${notifications.userId} = ${this.userId} and ${notifications.type} = 'native_intervention' and ${notifications.resolvedAt} is null)`,
+              ),
+        ),
+      )
+      .orderBy(desc(messages.createdAt))
+      .limit(50);
+
+    const pending = [];
+    for (const row of rows) {
+      if (row.intervention?.status !== 'pending' || row.runStatus !== 'running') {
+        await this.resolveAction(row.messageId);
+        continue;
+      }
+      const operationId =
+        row.intervention.operationId ??
+        (isRecord(row.metadata)
+          ? pickString(row.metadata.heterogeneousToolStateOperationId)
+          : undefined);
+      if (!operationId || !row.agentId || !row.topicId || !row.toolCallId) continue;
+      const args = safeParseJSON(row.arguments ?? '');
+      const questions = isRecord(args) && Array.isArray(args.questions) ? args.questions : [];
+      const content = questions
+        .flatMap((question) =>
+          isRecord(question) ? [pickString(question.question)].filter(Boolean) : [],
+        )
+        .join('\n');
+      pending.push({
+        actionKind: 'acp_intervention' as const,
+        content: content || 'Agent needs your input',
+        metadata: {
+          agent: {
+            avatar: row.avatar ?? undefined,
+            backgroundColor: row.backgroundColor ?? undefined,
+            id: row.agentId,
+            name: row.name ?? undefined,
+          },
+          nativeIntervention: {
+            agentId: row.agentId,
+            messageId: row.messageId,
+            operationId,
+            threadId: row.threadId,
+            toolCallId: row.toolCallId,
+            topicId: row.topicId,
+          },
+        },
+        requestId: row.messageId,
+        resourceId: row.taskId,
+        resourceType: 'task',
+        title: row.title || 'Agent needs your input',
+        type: 'native_intervention',
+      });
+    }
+    await this.ensureActionCards(pending);
+    if (pending.length > 0) {
+      // A failed transport restores the same pending message; reopen only its projection.
+      await this.db
+        .update(notifications)
+        .set({ resolvedAt: null })
+        .where(
+          and(
+            ...this.scope(),
+            eq(notifications.type, 'native_intervention'),
+            inArray(
+              notifications.actionRequestId,
+              pending.map((item) => item.requestId),
+            ),
+          ),
+        );
+    }
+    return pending;
+  }
+
+  /** Delete the notification, preserving the source interaction and a receipt against repair replay. */
+  async dismissObserved(id: string, expectedVersion: number): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(notifications)
+        .where(
+          and(
+            ...this.scope(),
+            this.resourceReadable(),
+            eq(notifications.id, id),
+            eq(notifications.activityVersion, expectedVersion),
+          ),
+        )
+        .for('update');
+      if (!row) return false;
+      if (row.actionKind && row.actionRequestId) {
+        await this.recordEventReceipt(tx, {
+          consumer: 'notification-dismissal',
+          eventId: `action:${row.actionKind}:${row.actionRequestId}`,
+          kind: 'action',
+          notificationId: row.id,
+          recipientUserId: this.userId,
+        });
+      }
+      await tx.delete(notifications).where(eq(notifications.id, row.id));
+      return true;
+    });
+  }
+
   /**
    * Repair missing Inbox projections from live source requests. Existing
    * cards (including archived unresolved actions) are left in place.
@@ -858,7 +1019,9 @@ export class NotificationModel {
       requestId: string;
       resourceId?: string;
       resourceType?: string;
+      metadata?: NotificationMetadata;
       title: string;
+      type?: string;
     }>,
   ) {
     if (items.length === 0) return;
@@ -879,6 +1042,19 @@ export class NotificationModel {
 
     for (const item of items) {
       if (have.has(item.requestId)) continue;
+      const [dismissed] = await this.db
+        .select({ id: notificationEventReceipts.id })
+        .from(notificationEventReceipts)
+        .where(
+          and(
+            eq(notificationEventReceipts.consumer, 'notification-dismissal'),
+            eq(notificationEventReceipts.eventId, `action:${item.actionKind}:${item.requestId}`),
+            eq(notificationEventReceipts.recipientUserId, this.userId),
+            eq(notificationEventReceipts.kind, 'action'),
+          ),
+        )
+        .limit(1);
+      if (dismissed) continue;
       const revision = await allocateFeedRevision(this.db, {
         userId: this.userId,
         workspaceId: this.workspaceId,
@@ -894,10 +1070,11 @@ export class NotificationModel {
         kind: 'action',
         lastActivityAt: new Date(),
         latestFeedRevision: revision,
+        metadata: item.metadata,
         resourceId: item.resourceId,
         resourceType: item.resourceType,
         title: item.title,
-        type: item.actionKind,
+        type: item.type ?? item.actionKind,
         ...(typeof this.workspaceId === 'string' ? { workspaceId: this.workspaceId } : {}),
       });
     }

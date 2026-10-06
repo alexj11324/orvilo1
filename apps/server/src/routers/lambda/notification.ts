@@ -64,6 +64,20 @@ const listLiveTransferCards = async (ctx: {
 };
 
 export const notificationRouter = router({
+  dismiss: notificationWriteProcedure
+    .input(z.object({ expectedVersion: z.number().int().min(1), id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const dismissed = await ctx.notificationModel.dismissObserved(
+        input.id,
+        input.expectedVersion,
+      );
+      if (!dismissed)
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Notification changed or is no longer available',
+        });
+      return { success: true };
+    }),
   archive: notificationWriteProcedure
     .input(
       z.object({

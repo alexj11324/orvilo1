@@ -1311,6 +1311,20 @@ describe('HeterogeneousAgentCtr', () => {
           }),
         ),
       );
+      await expect(
+        ctr.submitIntervention({
+          operationId: 'missing-operation',
+          result: { 'How broad?': 'Full' },
+          toolCallId: 'cursor-question-1',
+        }),
+      ).rejects.toThrow('no longer pending');
+      await expect(
+        ctr.submitIntervention({
+          operationId: 'op-cursor-question',
+          result: { 'How broad?': 'Full' },
+          toolCallId: 'missing-question',
+        }),
+      ).rejects.toThrow('no longer pending');
       await ctr.submitIntervention({
         operationId: 'op-cursor-question',
         result: { 'How broad?': 'Full' },

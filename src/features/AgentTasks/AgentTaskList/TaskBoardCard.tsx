@@ -204,7 +204,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       [navigate, routeScope],
     );
 
-    const isPrivate = task.visibility === 'private';
+    const isPrivate = !activeWorkspaceId && task.visibility === 'private';
 
     // Executor slot (top-right): the agent — or the hover-revealed assign
     // affordance when the card has none. Mirrors Cordy's board card.

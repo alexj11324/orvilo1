@@ -244,23 +244,34 @@ describe('TaskBoardCard', () => {
     expect(document.querySelector('[data-user-avatar="user-1"]')).toBeInTheDocument();
   });
 
-  it.each([false, true])('keeps private metadata without extra marks (overlay: %s)', (overlay) => {
-    const { container } = render(
-      <TaskBoardCard
-        overlay={overlay}
-        task={createTask({ dispatchPhase: 'outcome_unknown', visibility: 'private' })}
-      />,
-    );
+  it.each([
+    { overlay: false, workspaceId: 'workspace-1' },
+    { overlay: true, workspaceId: 'workspace-1' },
+    { overlay: false, workspaceId: undefined },
+    { overlay: true, workspaceId: undefined },
+  ])(
+    'marks only personal private cards (overlay: $overlay, workspace: $workspaceId)',
+    ({ overlay, workspaceId }) => {
+      mocks.activeWorkspaceId = workspaceId;
+      const { container } = render(
+        <TaskBoardCard
+          overlay={overlay}
+          task={createTask({ dispatchPhase: 'outcome_unknown', visibility: 'private' })}
+        />,
+      );
 
-    expect(container.querySelector('[data-task-board-card]')).toHaveAttribute(
-      'data-collab-private',
-      'true',
-    );
-    expect(container.querySelector('[data-collab-id$=":status"]')).toBeInTheDocument();
-    expect(container.querySelector('.lucide-lock')).not.toBeInTheDocument();
-    expect(screen.queryByText('Private')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
-  });
+      const card = container.querySelector('[data-task-board-card]');
+      if (workspaceId) {
+        expect(card).not.toHaveAttribute('data-collab-private');
+      } else {
+        expect(card).toHaveAttribute('data-collab-private', 'true');
+      }
+      expect(container.querySelector('[data-collab-id$=":status"]')).toBeInTheDocument();
+      expect(container.querySelector('.lucide-lock')).not.toBeInTheDocument();
+      expect(screen.queryByText('Private')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
+    },
+  );
 
   it('falls back to the identifier as title when the task has no name', () => {
     render(<TaskBoardCard task={createTask({ name: null })} />);

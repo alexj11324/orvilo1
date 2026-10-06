@@ -1,3 +1,3 @@
 # Native GitHub event acceptance
 
-Fixture commit 4.
+Fixture commit 5.

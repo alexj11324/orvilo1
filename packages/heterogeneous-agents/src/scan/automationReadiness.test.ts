@@ -6,8 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { checkAutomationReadinessOnHost } from './automationReadiness';
 
-const { detect, spawnPlan, directory, remote } = vi.hoisted(() => ({
+const { detect, spawnPlan, directory, remote, primeProbe } = vi.hoisted(() => ({
   detect: vi.fn(),
+  primeProbe: vi.fn(),
   directory: vi.fn(),
   remote: vi.fn(),
   spawnPlan: vi.fn(),
@@ -19,7 +20,7 @@ vi.mock('../spawn/cliSpawn', () => ({ resolveCliSpawnPlan: spawnPlan }));
 vi.mock('../spawn/workingDirectory', () => ({ isSpawnableDirectory: directory }));
 vi.mock('./scanHost', () => ({ resolveRemotePlatformCommand: remote }));
 vi.mock('@orvilo/prime-harness/readiness', () => ({
-  probePrimeArtifactInstallation: async () => ({ installed: true }),
+  probePrimeArtifactInstallation: primeProbe,
 }));
 
 describe('automation host readiness', () => {
@@ -29,6 +30,8 @@ describe('automation host readiness', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    primeProbe.mockResolvedValue({ installed: true });
+    remote.mockResolvedValue({ available: false, error: 'Unknown platform' });
     auth = 'Logged in using ChatGPT';
     help = 'Run Codex non-interactively\nUsage: codex exec [OPTIONS]';
     failed = null;
@@ -235,19 +238,61 @@ describe('automation host readiness', () => {
     ).toMatchObject({ repositoryAccessible: false });
   });
 
-  it('checks Prime installation but rejects unsupported device dispatch instead of switching hosts', async () => {
-    expect(await checkAutomationReadinessOnHost({ agentType: 'native' })).toMatchObject({
+  it.each(['native', 'orvilo'])(
+    'reports the supported Prime executor for %s without CLI probes',
+    async (agentType) => {
+      const result = await checkAutomationReadinessOnHost({ agentType });
+      expect(result).toMatchObject({
+        executor: 'prime',
+        installed: true,
+        authenticated: 'unknown',
+        unattended: true,
+      });
+      expect(result.blockers).toBeUndefined();
+      expect(primeProbe).toHaveBeenCalledOnce();
+      expect(detect).not.toHaveBeenCalled();
+      expect(remote).not.toHaveBeenCalled();
+      expect(childProcess.execFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it('ignores retired engine fields for the builtin Orvilo executor', async () => {
+    expect(
+      await checkAutomationReadinessOnHost({ agentType: 'orvilo', engine: 'other' }),
+    ).toMatchObject({
       executor: 'prime',
       installed: true,
       authenticated: 'unknown',
-      unattended: false,
-      blockers: ['EXECUTOR_UNSUPPORTED'],
+      unattended: true,
     });
+  });
+
+  it.each([false, 'unknown'] as const)(
+    'keeps %s installation evidence separate from Prime support',
+    async (installed) => {
+      primeProbe.mockResolvedValue({ installed });
+      expect(await checkAutomationReadinessOnHost({ agentType: 'orvilo' })).toMatchObject({
+        executor: 'prime',
+        installed,
+        authenticated: 'unknown',
+        unattended: true,
+      });
+    },
+  );
+
+  it('does not attest Prime repository access, tool support or provider authorization', async () => {
+    vi.mocked(access).mockRejectedValueOnce(new Error('denied'));
     expect(
-      await checkAutomationReadinessOnHost({ agentType: 'orvilo', engine: 'other' }),
-    ).toMatchObject({ installed: 'unknown' });
-    expect(detect).not.toHaveBeenCalled();
-    expect(remote).not.toHaveBeenCalled();
+      await checkAutomationReadinessOnHost({
+        agentType: 'orvilo',
+        cwd: '/denied',
+        requiredTools: ['writeIssue'],
+      }),
+    ).toMatchObject({
+      repositoryAccessible: false,
+      requiredToolsSupported: 'unknown',
+      authenticated: 'unknown',
+    });
   });
 
   it.each([false, true])(

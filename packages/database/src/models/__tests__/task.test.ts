@@ -77,6 +77,7 @@ const derivedStatus = async (id: string) => {
 };
 
 beforeEach(async () => {
+  await serverDB.delete(workspaces);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
   // Project creation provisions a coordinator through Prime inheritance.
@@ -84,6 +85,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await serverDB.delete(workspaces);
   await serverDB.delete(users);
 });
 

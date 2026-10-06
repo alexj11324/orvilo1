@@ -255,7 +255,6 @@ export const RuntimeFields = ({
           value={host.deviceId ?? null}
           onValueChange={(value) => {
             host.select(value ?? undefined);
-            form.selectChoice(BUILTIN_AGENT_KEY);
           }}
         >
           <SelectTrigger className="w-full">

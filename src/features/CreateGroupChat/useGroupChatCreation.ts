@@ -12,7 +12,7 @@ export const useGroupChatCreation = () => {
   const [error, setError] = useState<unknown>();
 
   const create = async (
-    params: Parameters<typeof chatGroupService.createGroup>[0],
+    params: Omit<Parameters<typeof chatGroupService.createGroup>[0], 'agentIds'>,
     participantIds: string[],
   ) => {
     if (busy.current) return undefined;
@@ -21,12 +21,13 @@ export const useGroupChatCreation = () => {
     setError(undefined);
     try {
       if (!checkpoint.current) {
-        const { group } = await chatGroupService.createGroup(params);
+        const { group } = await chatGroupService.createGroup({
+          ...params,
+          agentIds: participantIds,
+        });
         checkpoint.current = group.id;
         setCreatedId(group.id);
       }
-      if (participantIds.length)
-        await chatGroupService.addAgentsToGroup(checkpoint.current, participantIds);
       await useAgentGroupStore.getState().refreshGroupDetail(checkpoint.current);
       await useHomeStore.getState().refreshAgentList();
       return checkpoint.current;

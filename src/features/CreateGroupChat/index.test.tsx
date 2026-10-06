@@ -23,7 +23,16 @@ vi.mock('@/components/Modal', () => ({
   useModalContext: () => ({ close: mocks.close }),
 }));
 vi.mock('@/services/agent', () => ({
-  agentService: { queryAgents: vi.fn().mockResolvedValue([]) },
+  agentService: {
+    queryAgents: vi.fn().mockResolvedValue([
+      {
+        id: 'existing-member',
+        name: 'Existing member',
+        title: 'Agent',
+        heterogeneousType: 'codex',
+      },
+    ]),
+  },
 }));
 vi.mock('./useGroupChatCreation', () => ({
   useGroupChatCreation: () => ({ create: mocks.finishSetup, pending: false }),
@@ -75,7 +84,11 @@ describe('global group creation modal navigation', () => {
       fireEvent.change(screen.getByLabelText('group.create.name'), {
         target: { value: 'Native Group' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Choose configured orchestrator' }));
+      await waitFor(() =>
+        expect(screen.getByRole('checkbox', { name: 'Existing member' })).toBeTruthy(),
+      );
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Existing member' }));
+      fireEvent.click(screen.getByRole('button', { name: 'group.settings.setCoordinator' }));
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'group.create.submit' })).toBeEnabled(),
       );
@@ -84,6 +97,11 @@ describe('global group creation modal navigation', () => {
       expect(root.state.location.pathname).toBe('/team/group/group-old/topic-old');
       expect(activeTab.state.location.pathname).toBe('/team/group/group-created');
       expect(mocks.finishSetup).toHaveBeenCalledTimes(1);
+      expect(mocks.finishSetup).toHaveBeenCalledWith(
+        expect.objectContaining({ coordinatorAgentId: 'existing-member' }),
+        ['existing-member'],
+      );
+      expect(mocks.copyDirectory).not.toHaveBeenCalled();
       expect(mocks.close).toHaveBeenCalledTimes(1);
     } finally {
       view.unmount();

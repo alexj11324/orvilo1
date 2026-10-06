@@ -19,7 +19,6 @@ import {
   isWorkspacePrimaryOwner,
 } from '@/server/services/workspacePermission';
 
-import * as ResourceConfigGuardModule from '../_helpers/resourceConfigGuard';
 import {
   getWorkspaceAgentParentGroupIds,
   getWorkspaceGroupVirtualAgentIds,
@@ -191,157 +190,53 @@ describe('agentGroupRouter', () => {
     };
   });
 
-  describe('createGroup', () => {
-    it('should create a group with normalized config', async () => {
-      const mockInput = {
-        title: 'Test Group',
-        description: 'Test Description',
-        config: {
-          allowDM: true,
-        },
-      };
-
-      const mockCreatedGroup = {
-        id: 'group-1',
-        title: 'Test Group',
-        description: 'Test Description',
-        config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
-      };
-
+  describe('creation uses existing selected members', () => {
+    it('returns the existing coordinator ID without creating or copying Agent runtime', async () => {
       agentGroupRepoMock.createGroupWithSupervisor.mockResolvedValue({
-        group: mockCreatedGroup,
-        supervisorAgentId: 'supervisor-1',
+        group: { id: 'group-1', title: 'Group' },
+        supervisorAgentId: 'member-a',
       });
-
-      const caller = agentGroupRouter.createCaller(mockCtx);
-      const result = await caller.createGroup(mockInput);
-
-      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
-        {
-          ...mockInput,
-          config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
-        },
-        [],
-        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
-        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
-      );
-      expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
-    });
-
-    it('should create a group without config', async () => {
-      const mockInput = {
-        title: 'Test Group',
-      };
-
-      const mockCreatedGroup = {
-        id: 'group-1',
-        title: 'Test Group',
-      };
-
-      agentGroupRepoMock.createGroupWithSupervisor.mockResolvedValue({
-        group: mockCreatedGroup,
-        supervisorAgentId: 'supervisor-1',
+      const result = await agentGroupRouter.createCaller(mockCtx).createGroup({
+        title: 'Group',
+        agentIds: ['member-a', 'member-b'],
+        coordinatorAgentId: 'member-a',
       });
-
-      const caller = agentGroupRouter.createCaller(mockCtx);
-      const result = await caller.createGroup(mockInput);
-
-      expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
-        {
-          ...mockInput,
-          config: undefined,
-        },
-        [],
-        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
-        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
-      );
-      expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
-    });
-  });
-
-  describe('createGroupWithMembers', () => {
-    it('rejects a source with profile-only config access before any group or member write', async () => {
-      vi.spyOn(ResourceConfigGuardModule, 'getResourceConfigAccess').mockResolvedValue('profile');
-      const caller = agentGroupRouter.createCaller({ ...mockCtx, workspaceId: 'workspace' });
-      await expect(
-        caller.createGroupWithMembers({
-          groupConfig: { title: 'Restricted source', config: {} },
-          members: [{ title: 'Member' }],
-          supervisorConfig: { params: { orchestratorSourceAgentId: 'restricted-source' } },
-        }),
-      ).rejects.toThrow('Agent runtime configuration is unavailable');
+      expect(result.supervisorAgentId).toBe('member-a');
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
       expect(agentModelMock.inheritRuntimeForCreation).not.toHaveBeenCalled();
-      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
-      expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
-    });
-
-    it('rejects an unavailable selected source before creating member agents', async () => {
-      agentModelMock.inheritRuntimeForCreation.mockRejectedValue(new Error('Agent not found'));
-      await expect(
-        agentGroupRouter.createCaller(mockCtx).createGroupWithMembers({
-          groupConfig: { title: 'Invalid source', config: {} },
-          members: [{ title: 'Member' }],
-          supervisorConfig: {
-            agencyConfig: {
-              boundDeviceId: 'prime-host',
-              executionTarget: 'device',
-              heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' },
-            },
-            model: 'gpt-4',
-            provider: 'openai',
-            params: { orchestratorSourceAgentId: 'missing-source' },
-          },
-        }),
-      ).rejects.toThrow('Agent not found');
-      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
-      expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
-    });
-
-    it('should create a group with virtual member agents', async () => {
-      const mockInput = {
-        groupConfig: {
-          title: 'Team Group',
-          config: { allowDM: true },
-        },
-        members: [
-          { title: 'Agent 1', systemRole: 'Helper' },
-          { title: 'Agent 2', systemRole: 'Assistant' },
-        ],
-      };
-
-      const mockCreatedAgents = [{ id: 'agent-1' }, { id: 'agent-2' }];
-      const mockCreatedGroup = { id: 'group-1', title: 'Team Group' };
-
-      agentModelMock.batchCreate.mockResolvedValue(mockCreatedAgents);
-      agentGroupRepoMock.createGroupWithSupervisor.mockResolvedValue({
-        group: mockCreatedGroup,
-        supervisorAgentId: 'supervisor-1',
-      });
-
-      const caller = agentGroupRouter.createCaller(mockCtx);
-      const result = await caller.createGroupWithMembers(mockInput);
-
-      expect(agentModelMock.batchCreate).toHaveBeenCalledWith([
-        { title: 'Agent 1', systemRole: 'Helper', virtual: true },
-        { title: 'Agent 2', systemRole: 'Assistant', virtual: true },
-      ]);
       expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
-        {
-          title: 'Team Group',
-          config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
-        },
-        ['agent-1', 'agent-2'],
-        {
-          ...(await agentModelMock.inheritRuntimeForCreation.mock.results[0]?.value),
-          params: { orchestratorSourceAgentId: 'selected-source' },
-        },
-        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
+        expect.objectContaining({ title: 'Group' }),
+        ['member-a', 'member-b'],
+        'member-a',
       );
-      expect(result).toEqual({
-        agentIds: ['agent-1', 'agent-2'],
-        groupId: 'group-1',
-        supervisorAgentId: 'supervisor-1',
+    });
+
+    it('rejects an empty Group request before any Agent write', async () => {
+      await expect(
+        agentGroupRouter
+          .createCaller(mockCtx)
+          .createGroup({ title: 'Group', agentIds: [], coordinatorAgentId: 'member-a' }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+    });
+
+    it('accepts only existing member IDs in the members endpoint', async () => {
+      agentGroupRepoMock.createGroupWithSupervisor.mockResolvedValue({
+        group: { id: 'group-1', title: 'Group' },
+        supervisorAgentId: 'member-a',
       });
+      const result = await agentGroupRouter.createCaller(mockCtx).createGroupWithMembers({
+        groupConfig: { title: 'Group' },
+        members: ['member-a'],
+        coordinatorAgentId: 'member-a',
+      });
+      expect(result).toEqual({
+        groupId: 'group-1',
+        agentIds: ['member-a'],
+        supervisorAgentId: 'member-a',
+      });
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
     });
   });
 
@@ -692,6 +587,7 @@ describe('agentGroupRouter', () => {
       await expect(
         caller.createGroupWithMembers({
           groupConfig: { title: 'Group' },
+          coordinatorAgentId: 'member',
           members: [
             {
               agencyConfig: { heterogeneousProvider: { adapterType: 'cli', type: 'orvilo' } },

@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -155,7 +154,7 @@ afterEach(async () => {
 
 describe('AgentGroupRepository', () => {
   describe('findByIdWithAgents', () => {
-    it('should return group with its agents (including auto-created supervisor)', async () => {
+    it('returns only its existing members', async () => {
       // Create test data
       await serverDB.insert(chatGroups).values({
         description: 'Test group description',
@@ -196,14 +195,12 @@ describe('AgentGroupRepository', () => {
         id: 'test-group-1',
         title: 'Test Group',
       });
-      // 2 participants + 1 auto-created supervisor
-      expect(result!.agents).toHaveLength(3);
-      expect(result!.supervisorAgentId).toBeDefined();
+      expect(result!.agents).toHaveLength(2);
+      expect(result!.supervisorAgentId).toBeUndefined();
 
       // Verify agents structure: supervisor first, then participants ordered by order field
       expect(result!.agents).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ isSupervisor: true, title: 'Supervisor', virtual: true }),
           expect.objectContaining({ id: 'agent-1', isSupervisor: false, title: 'Agent 1' }),
           expect.objectContaining({ id: 'agent-2', isSupervisor: false, title: 'Agent 2' }),
         ]),
@@ -214,26 +211,6 @@ describe('AgentGroupRepository', () => {
       const result = await agentGroupRepo.findByIdWithAgents('non-existent-group');
 
       expect(result).toBeNull();
-    });
-
-    it('should auto-create supervisor when no agents assigned', async () => {
-      await serverDB.insert(chatGroups).values({
-        id: 'empty-group',
-        title: 'Empty Group',
-        userId,
-      });
-
-      const result = await agentGroupRepo.findByIdWithAgents('empty-group');
-
-      expect(result).toMatchObject({
-        id: 'empty-group',
-        title: 'Empty Group',
-      });
-      expect(result!.supervisorAgentId).toBeDefined();
-      // Should have auto-created supervisor
-      expect(result!.agents).toEqual([
-        expect.objectContaining({ isSupervisor: true, title: 'Supervisor', virtual: true }),
-      ]);
     });
 
     it('should not return groups belonging to other users', async () => {
@@ -415,85 +392,6 @@ describe('AgentGroupRepository', () => {
       ]);
     });
 
-    it('should auto-create virtual supervisor when no supervisor exists', async () => {
-      // Create group without supervisor
-      await serverDB.insert(chatGroups).values({
-        config: {
-          allowDM: true,
-          revealDM: true,
-        },
-        id: 'no-supervisor-group',
-        title: 'Group without Supervisor',
-        userId,
-      });
-
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'regular-agent',
-        title: 'Regular Agent',
-        userId,
-      });
-
-      await serverDB.insert(chatGroupsAgents).values({
-        agentId: 'regular-agent',
-        chatGroupId: 'no-supervisor-group',
-        role: 'participant',
-        userId,
-      });
-
-      const result = await agentGroupRepo.findByIdWithAgents('no-supervisor-group');
-
-      expect(result).toMatchObject({
-        id: 'no-supervisor-group',
-        title: 'Group without Supervisor',
-      });
-      // Supervisor should be auto-created
-      expect(result!.supervisorAgentId).toBeDefined();
-      // Should have 2 agents: auto-created supervisor + regular agent
-      expect(result!.agents).toHaveLength(2);
-
-      // Verify agents include auto-created supervisor
-      expect(result!.agents).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            isSupervisor: true,
-            title: 'Supervisor',
-            virtual: true,
-          }),
-          expect.objectContaining({
-            id: 'regular-agent',
-            isSupervisor: false,
-            title: 'Regular Agent',
-          }),
-        ]),
-      );
-
-      // Calling again should return the same supervisor (not create another one)
-      const result2 = await agentGroupRepo.findByIdWithAgents('no-supervisor-group');
-      expect(result2!.supervisorAgentId).toBe(result!.supervisorAgentId);
-      expect(result2!.agents).toHaveLength(2);
-    });
-
-    it('should auto-create supervisor for group with empty agents', async () => {
-      await serverDB.insert(chatGroups).values({
-        id: 'empty-agents-group',
-        title: 'Empty Agents Group',
-        userId,
-      });
-
-      const result = await agentGroupRepo.findByIdWithAgents('empty-agents-group');
-
-      expect(result).toMatchObject({
-        id: 'empty-agents-group',
-        title: 'Empty Agents Group',
-      });
-      expect(result!.supervisorAgentId).toBeDefined();
-      // Only the auto-created supervisor
-      expect(result!.agents).toEqual([
-        expect.objectContaining({ isSupervisor: true, title: 'Supervisor', virtual: true }),
-      ]);
-    });
-
     describe('member agent demoted to private ', () => {
       const workspaceId = 'agent-group-demotion-ws';
 
@@ -604,8 +502,8 @@ describe('AgentGroupRepository', () => {
         // Supervisor existence is judged on raw rows: no duplicate is created,
         // and the group-owned supervisor stays in the roster so that
         // `supervisorAgentId` always resolves to a member entry.
-        expect(result!.supervisorAgentId).toBe('ws-supervisor');
-        expect(result!.agents.map((a) => a.id)).toEqual(['ws-supervisor', 'ws-public-member']);
+        expect(result!.supervisorAgentId).toBeUndefined();
+        expect(result!.agents.map((a) => a.id)).toEqual(['ws-public-member']);
 
         const supervisorRows = await serverDB
           .select()
@@ -615,7 +513,7 @@ describe('AgentGroupRepository', () => {
       });
     });
 
-    it('should inject group-supervisor slug for supervisor agent', async () => {
+    it('keeps the coordinator Agent original slug', async () => {
       // Create group
       await serverDB.insert(chatGroups).values({
         id: 'slug-test-group',
@@ -668,139 +566,12 @@ describe('AgentGroupRepository', () => {
       // Verify supervisor has injected slug
       const supervisor = result!.agents.find((a) => a.isSupervisor);
       expect(supervisor).toBeDefined();
-      expect(supervisor!.slug).toBe(BUILTIN_AGENT_SLUGS.groupSupervisor);
+      expect(supervisor!.slug).toBeUndefined();
 
       // Verify participant keeps original slug
       const participant = result!.agents.find((a) => !a.isSupervisor);
       expect(participant).toBeDefined();
       expect(participant!.slug).toBe('custom-slug');
-    });
-
-    it('should inject group-supervisor slug for auto-created supervisor', async () => {
-      await serverDB.insert(chatGroups).values({
-        id: 'auto-slug-group',
-        title: 'Auto Slug Group',
-        userId,
-      });
-
-      const result = await agentGroupRepo.findByIdWithAgents('auto-slug-group');
-
-      expect(result).not.toBeNull();
-      expect(result!.agents).toHaveLength(1);
-
-      // Verify auto-created supervisor has injected slug
-      const supervisor = result!.agents[0];
-      expect(supervisor.isSupervisor).toBe(true);
-      expect(supervisor.slug).toBe(BUILTIN_AGENT_SLUGS.groupSupervisor);
-    });
-  });
-
-  describe('createGroupWithSupervisor', () => {
-    it('should create group with supervisor agent', async () => {
-      const result = await agentGroupRepo.createGroupWithSupervisor({
-        config: {
-          allowDM: true,
-          openingMessage: 'Hello team!',
-        },
-        title: 'New Group with Supervisor',
-      });
-
-      expect(result).toMatchObject({
-        group: expect.objectContaining({ title: 'New Group with Supervisor' }),
-      });
-      expect(result.supervisorAgentId).toBeDefined();
-      expect(result.agents).toEqual([expect.objectContaining({ role: 'supervisor' })]);
-
-      // Verify supervisor agent was created
-      const groupDetail = await agentGroupRepo.findByIdWithAgents(result.group.id);
-      expect(groupDetail).toMatchObject({
-        supervisorAgentId: result.supervisorAgentId,
-      });
-      expect(groupDetail!.agents).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: result.supervisorAgentId,
-            title: 'Supervisor',
-            virtual: true,
-          }),
-        ]),
-      );
-    });
-
-    it('should create group with supervisor and member agents', async () => {
-      // Create member agents first
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'member-1',
-          title: 'Member 1',
-          userId,
-        },
-        {
-          ...runtimeFixture,
-          id: 'member-2',
-          title: 'Member 2',
-          userId,
-        },
-      ]);
-
-      const result = await agentGroupRepo.createGroupWithSupervisor(
-        { title: 'Group with Members' },
-        ['member-1', 'member-2'],
-      );
-
-      expect(result).toMatchObject({
-        group: expect.objectContaining({ title: 'Group with Members' }),
-      });
-      expect(result.supervisorAgentId).toBeDefined();
-      // 1 supervisor + 2 members
-      expect(result.agents).toHaveLength(3);
-
-      // Check roles and order
-      expect(result.agents).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ order: -1, role: 'supervisor' }),
-          expect.objectContaining({ agentId: 'member-1', order: 0, role: 'participant' }),
-          expect.objectContaining({ agentId: 'member-2', order: 1, role: 'participant' }),
-        ]),
-      );
-    });
-
-    it('should use custom supervisor config when provided', async () => {
-      const result = await agentGroupRepo.createGroupWithSupervisor(
-        { title: 'Custom Supervisor Group' },
-        [],
-        {
-          model: 'claude-3-opus',
-          provider: 'anthropic',
-          title: 'Custom Host',
-        },
-      );
-
-      const groupDetail = await agentGroupRepo.findByIdWithAgents(result.group.id);
-      expect(groupDetail!.agents).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: result.supervisorAgentId,
-            model: 'claude-3-opus',
-            provider: 'anthropic',
-            title: 'Custom Host',
-          }),
-        ]),
-      );
-    });
-
-    it('should create group with empty member agents', async () => {
-      const result = await agentGroupRepo.createGroupWithSupervisor({
-        title: 'Supervisor Only Group',
-      });
-
-      expect(result).toMatchObject({
-        group: expect.objectContaining({ title: 'Supervisor Only Group' }),
-      });
-      expect(result.supervisorAgentId).toBeDefined();
-      // Only supervisor
-      expect(result.agents).toEqual([expect.objectContaining({ role: 'supervisor' })]);
     });
   });
 
@@ -1713,7 +1484,11 @@ describe('AgentGroupRepository', () => {
     it('stamps workspaceId on the group, supervisor agent, and junction rows', async () => {
       const wsRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
 
-      const result = await wsRepo.createGroupWithSupervisor({ title: 'WS Group' });
+      const result = await wsRepo.createGroupWithSupervisor(
+        { title: 'WS Group' },
+        [`runtime-fixture-${userId}-${workspaceId}`],
+        `runtime-fixture-${userId}-${workspaceId}`,
+      );
 
       // group row carries the workspace id
       expect(result.group.workspaceId).toBe(workspaceId);
@@ -1737,7 +1512,11 @@ describe('AgentGroupRepository', () => {
     // matched 0 rows and threw "not found or access denied".
     it('allows the workspace-scoped ChatGroupModel to update a workspace-created group', async () => {
       const wsRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
-      const { group } = await wsRepo.createGroupWithSupervisor({ title: 'WS Group' });
+      const { group } = await wsRepo.createGroupWithSupervisor(
+        { title: 'WS Group' },
+        [`runtime-fixture-${userId}-${workspaceId}`],
+        `runtime-fixture-${userId}-${workspaceId}`,
+      );
 
       const chatGroupModel = new ChatGroupModel(serverDB, userId, workspaceId);
 
@@ -1750,7 +1529,11 @@ describe('AgentGroupRepository', () => {
 
     it('isolates workspace groups from personal-mode reads', async () => {
       const wsRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
-      const { group } = await wsRepo.createGroupWithSupervisor({ title: 'WS Group' });
+      const { group } = await wsRepo.createGroupWithSupervisor(
+        { title: 'WS Group' },
+        [`runtime-fixture-${userId}-${workspaceId}`],
+        `runtime-fixture-${userId}-${workspaceId}`,
+      );
 
       // personal-mode repo (no workspaceId) must not see the workspace group
       const personalRepo = new AgentGroupRepository(serverDB, userId);
@@ -1762,7 +1545,11 @@ describe('AgentGroupRepository', () => {
 
     it("keeps the owner's unfiled groups reachable in workspace-scoped reads", async () => {
       const personalRepo = new AgentGroupRepository(serverDB, userId);
-      const { group } = await personalRepo.createGroupWithSupervisor({ title: 'Personal Group' });
+      const { group } = await personalRepo.createGroupWithSupervisor(
+        { title: 'Personal Group' },
+        [`runtime-fixture-${userId}-personal`],
+        `runtime-fixture-${userId}-personal`,
+      );
 
       expect(group.workspaceId).toBeNull();
 
@@ -1771,6 +1558,48 @@ describe('AgentGroupRepository', () => {
       const wsRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
       expect(await wsRepo.findByIdWithAgents(group.id)).toMatchObject({ id: group.id });
     });
+
+    it.each(['transfer', 'copy'] as const)(
+      'preserves shared coordinator ownership and config on cross-workspace %s',
+      async (operation) => {
+        const targetWorkspaceId = 'shared-coord-target-ws';
+        await serverDB.insert(workspaces).values({
+          id: targetWorkspaceId,
+          name: 'Target',
+          primaryOwnerId: userId,
+          slug: targetWorkspaceId,
+        });
+        await seedRuntimeFixtures();
+        const sourceId = `runtime-fixture-${userId}-${workspaceId}`;
+        const [source] = await serverDB.select().from(agents).where(eq(agents.id, sourceId));
+        const [group] = await serverDB
+          .insert(chatGroups)
+          .values({ title: 'Shared coordinator', userId, workspaceId })
+          .returning();
+        await serverDB.insert(chatGroupsAgents).values({
+          agentId: sourceId,
+          chatGroupId: group.id,
+          role: 'supervisor',
+          userId,
+          workspaceId,
+        });
+        const wsRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
+        const result =
+          operation === 'transfer'
+            ? await wsRepo.transferToWorkspace(group.id, targetWorkspaceId, userId)
+            : await wsRepo.copyToWorkspace(group.id, targetWorkspaceId, userId);
+        expect((await serverDB.select().from(agents).where(eq(agents.id, sourceId)))[0]).toEqual(
+          source,
+        );
+        const target = await new AgentGroupRepository(
+          serverDB,
+          userId,
+          targetWorkspaceId,
+        ).findByIdWithAgents(result!.groupId);
+        expect(target?.agents).toHaveLength(1);
+        expect(target?.supervisorAgentId).toBe(target?.agents[0].id);
+      },
+    );
 
     it('transfers a workspace group with members and conversation data to the target scope', async () => {
       const targetWorkspaceId = 'agent-group-target-ws';

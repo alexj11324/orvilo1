@@ -1,0 +1,42 @@
+{
+  "limits": [
+    "Original users.onboarding JSON restored exactly; legitimate workspace preferences and Project/Task business data were retained.",
+    "No fresh OAuth/signup or injected finish-error/retry acceptance is claimed.",
+    "Fingerprint comparison covers agency_config and params only, including nested engine/model."
+  ],
+  "noDuplicateResources": {
+    "workspacesBefore": 1,
+    "workspacesAfter": 1,
+    "ownedNonvirtualAgentsBefore": 5,
+    "ownedNonvirtualAgentsAfter": 5,
+    "workspaceIdsUnchanged": true,
+    "agentIdsUnchanged": true
+  },
+  "onboardingAcceptance": {
+    "finished": true,
+    "finishedAt": "2026-10-06T08:00:18.643Z",
+    "version": 2,
+    "existingWorkspaceAndAgentsReused": true,
+    "configuredOrchestratorSelected": true
+  },
+  "originalOrchestrator": {
+    "comparedFields": ["agency_config", "params"],
+    "baselineFingerprint": "62e97e28c16c9fff1d26914811867f8d91bb289cc88124fc45fd0e22883180b4",
+    "currentFingerprint": "62e97e28c16c9fff1d26914811867f8d91bb289cc88124fc45fd0e22883180b4",
+    "serialization": "JSON.stringify(pg rows [{agency_config,params}])",
+    "unchanged": true,
+    "comparisonStatus": "Compared using the exact original read-fixture/read-source-immutability exporter serialization"
+  },
+  "restoration": {
+    "verifiedAt": "2026-10-06T08:05:40.296Z",
+    "databaseReadOnly": true,
+    "exactOriginalOnboardingJsonRestored": true,
+    "currentVersion": 1,
+    "originalVersion": 1,
+    "currentFinished": true,
+    "originalFinished": true,
+    "scope": "users.onboarding only; legitimate workspace preferences and Project/Task business data were not restored by this script"
+  },
+  "scope": "Controlled resume of an existing fixture; not new-account signup proof. Metadata-title WIP shared this revision during acceptance; no onboarding producer changed.",
+  "sourceRevision": "6a37a149eea1f5e2aa5f032de0d6e1ffd574849e"
+}

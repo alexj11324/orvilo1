@@ -1,0 +1,324 @@
+{
+  "actualCoordinatorAssistantIds": ["msg_eLPP8U6aLO9QIjfiUg"],
+  "actualMemberAssistantIds": ["msg_QWOq3XIMBN6CTObbNW"],
+  "allMessageGroupIdsMatchTrustedTopic": true,
+  "allTopicMessageCount": 7,
+  "allTopicMessages": [
+    {
+      "id": "msg_Xc7lV8dWXnbf",
+      "role": "user",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_tmfGZsog7VpW",
+      "thread_id": null,
+      "parent_id": null,
+      "created_at": "2026-10-06T09:04:36.360Z",
+      "content_length": 678,
+      "has_error": false,
+      "exact_intended_final": false,
+      "exact_member_marker": false
+    },
+    {
+      "id": "msg_lidxF5dMNEq1",
+      "role": "assistant",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_tmfGZsog7VpW",
+      "thread_id": null,
+      "parent_id": "msg_Xc7lV8dWXnbf",
+      "created_at": "2026-10-06T09:04:36.456Z",
+      "content_length": 3,
+      "has_error": false,
+      "exact_intended_final": false,
+      "exact_member_marker": false
+    },
+    {
+      "id": "msg_0gnClCxgl5Ld9d1GHC",
+      "role": "tool",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_tmfGZsog7VpW",
+      "thread_id": null,
+      "parent_id": "msg_lidxF5dMNEq1",
+      "created_at": "2026-10-06T09:05:11.844Z",
+      "content_length": 15,
+      "has_error": false,
+      "exact_intended_final": false,
+      "exact_member_marker": true
+    },
+    {
+      "id": "msg_zOn9m0nx4RbwWDUrlo",
+      "role": "tool",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_tmfGZsog7VpW",
+      "thread_id": null,
+      "parent_id": "msg_lidxF5dMNEq1",
+      "created_at": "2026-10-06T09:05:12.951Z",
+      "content_length": 15,
+      "has_error": false,
+      "exact_intended_final": false,
+      "exact_member_marker": true
+    },
+    {
+      "id": "msg_eS6F2ZowHEVRYLISdx",
+      "role": "user",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_AB0VcTFshbq8",
+      "thread_id": "thd_F1P1IUPEYbfNEPuE",
+      "parent_id": null,
+      "created_at": "2026-10-06T09:05:12.994Z",
+      "content_length": 80,
+      "has_error": false,
+      "exact_intended_final": false,
+      "exact_member_marker": false
+    },
+    {
+      "id": "msg_QWOq3XIMBN6CTObbNW",
+      "role": "assistant",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_AB0VcTFshbq8",
+      "thread_id": "thd_F1P1IUPEYbfNEPuE",
+      "parent_id": "msg_eS6F2ZowHEVRYLISdx",
+      "created_at": "2026-10-06T09:05:13.003Z",
+      "content_length": 15,
+      "has_error": false,
+      "exact_intended_final": false,
+      "exact_member_marker": true
+    },
+    {
+      "id": "msg_eLPP8U6aLO9QIjfiUg",
+      "role": "assistant",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "agent_id": "agt_tmfGZsog7VpW",
+      "thread_id": null,
+      "parent_id": "msg_lidxF5dMNEq1",
+      "created_at": "2026-10-06T09:05:48.702Z",
+      "content_length": 36,
+      "has_error": false,
+      "exact_intended_final": true,
+      "exact_member_marker": false
+    }
+  ],
+  "businessFileComparison": {
+    "observedAt": "2026-10-06T09:12:13.351Z",
+    "scope": "ordinary top-level business files; runtime telemetry directories excluded",
+    "baselineObservedAt": "2026-10-06T08:06:54.980677+00:00",
+    "addedNames": [],
+    "removedNames": [],
+    "changedNames": []
+  },
+  "childActualToolCallCount": 0,
+  "childResultDelivery": [
+    {
+      "event_id": "child-result:op_1791277476489_agt_tmfGZsog7VpW_tpc_7IkaEnKJmivt_kkb42j5l:op_1791277513009_agt_AB0VcTFshbq8_tpc_7IkaEnKJmivt_poldrHXw:mcp_f1884dae8f41c0032a7188dbbfda938d74f16c9197c6137b:0",
+      "event_type": "agent_operation.child_result",
+      "status": "delivered",
+      "delivery_state": "acked",
+      "child_operation_id": "op_1791277513009_agt_AB0VcTFshbq8_tpc_7IkaEnKJmivt_poldrHXw",
+      "created_at": "2026-10-06T09:05:31.469Z"
+    }
+  ],
+  "compiledAndCommittedRevisionConfirmedBy": "root",
+  "coreGroupAcceptancePassed": true,
+  "exactIntendedCoordinatorAnswer": "GROUP_COORDINATOR_OK\nGROUP_MEMBER_OK",
+  "frozenAt": "2026-10-06T09:13:51.116Z",
+  "groupId": "cg_jKfC6pBdh1Kr",
+  "historicalNegativeSummaryArtifact": "group-historical-negative-facts.json",
+  "historicalScopes": [
+    {
+      "sourceHead": "6bcc5eb154a461c60f2018c8396ef3721402e163",
+      "topicId": "tpc_IeUQwM6QfUmq",
+      "status": "Member and callback succeeded; shared parent-child provider session and no coordinator answer."
+    },
+    {
+      "sourceHead": "3dab813d7172c4db8ef2fb98c5ed2482739de7cc",
+      "topicId": "tpc_Bgvo1gio89gz",
+      "status": "Session separation, cache preservation, callback and exact intended raw/persisted answer passed; final message group_id NULL hid it in native Group after reload."
+    }
+  ],
+  "intermediateCacheObservation": {
+    "at": "2026-10-06T09:06:06.795Z",
+    "topicId": "tpc_7IkaEnKJmivt",
+    "trustedGroupId": "cg_jKfC6pBdh1Kr",
+    "providerSessionHashes": {
+      "parent": "8772dc2319e5a6e68def077adcf503fb061c8e1b535b5947ac3a7e23218638a0",
+      "child": "9319f032018f2b5ce060f5dda7ce0c41dbcda5f81c8f82e8cdce5de9f310fe97"
+    },
+    "topicSessionHashes": {
+      "legacy": "8772dc2319e5a6e68def077adcf503fb061c8e1b535b5947ac3a7e23218638a0",
+      "cwd": "8772dc2319e5a6e68def077adcf503fb061c8e1b535b5947ac3a7e23218638a0"
+    },
+    "operations": [
+      {
+        "id": "op_1791277476489_agt_tmfGZsog7VpW_tpc_7IkaEnKJmivt_kkb42j5l",
+        "status": "running",
+        "started_at": "2026-10-06T09:04:36.493Z",
+        "completed_at": null
+      },
+      {
+        "id": "op_1791277513009_agt_AB0VcTFshbq8_tpc_7IkaEnKJmivt_poldrHXw",
+        "status": "done",
+        "started_at": "2026-10-06T09:05:13.009Z",
+        "completed_at": "2026-10-06T09:05:31.449Z"
+      }
+    ],
+    "parentCacheMatchesBeforeParentTerminal": true,
+    "childSessionDistinct": true,
+    "timingLimit": "This records child operation done, parent durable row running, and cache matching parent. It does not prove heteroFinish RPC or binding writes had not begun."
+  },
+  "limits": [
+    "Provider session IDs are exported only as SHA-256 values; raw traces, prompts, configuration, credentials and headers are excluded.",
+    "The source Agent historical fingerprint covers agency_config and params only.",
+    "The business-file comparison uses the earlier T7 inventory timestamp explicitly recorded here; it is not an invented immediately-before-Group snapshot.",
+    "Two persisted plugin rows represent external protocol rendering and the single server runtime invocation. The external render plugin retains in_progress, while the server runtime invocation is completed and its child delivery acked; no second invocation is claimed.",
+    "T7 first automatic Task acceptance is separate frozen evidence on revision 904b928d0e49da4338575d25f37b6546a2ab1757 and was not rerun for this Group acceptance."
+  ],
+  "messageCountAfterInitialUser": 6,
+  "nativeReloadPersistedVisiblePassed": true,
+  "nativeScreenshots": [
+    {
+      "name": "group-final-visible-7c47.jpg",
+      "sha256": "fc9064ba50ce63606ab840b3573c8dd27b8159a1bce514c9e2ed88ed7b3b8af7",
+      "evidenceOwner": "root",
+      "nativeApp": "Electron",
+      "rootConfirmedActualNonUserAssistantMarkersVisible": true
+    },
+    {
+      "name": "group-final-reloaded-7c47.jpg",
+      "sha256": "52563e803474d4807dea05acbc3456e9bddc655ae436d97c6b7db829ee6fbac7",
+      "evidenceOwner": "root",
+      "nativeApp": "Electron",
+      "rootConfirmedActualNonUserAssistantMarkersVisible": true
+    }
+  ],
+  "nativeVisiblePassed": true,
+  "newBusinessTasksCount": 0,
+  "nonUserMessageCount": 5,
+  "observerActions": {
+    "databaseReadOnly": true,
+    "businessMutation": false,
+    "sourceMutation": false,
+    "gitMutation": false,
+    "providerPrompt": false,
+    "providerProbe": false,
+    "manualCallbackReplay": false,
+    "historicalBackfill": false
+  },
+  "operations": [
+    {
+      "id": "op_1791277476489_agt_tmfGZsog7VpW_tpc_7IkaEnKJmivt_kkb42j5l",
+      "agent_id": "agt_tmfGZsog7VpW",
+      "topic_id": "tpc_7IkaEnKJmivt",
+      "thread_id": null,
+      "task_id": null,
+      "status": "done",
+      "started_at": "2026-10-06T09:04:36.493Z",
+      "completed_at": "2026-10-06T09:06:14.288Z",
+      "app_group_id": "cg_jKfC6pBdh1Kr",
+      "isolation_thread": null,
+      "orchestration_role": "supervisor",
+      "workingDirectory": "journey-demo",
+      "executionAndBuiltinCwdMatch": true
+    },
+    {
+      "id": "op_1791277513009_agt_AB0VcTFshbq8_tpc_7IkaEnKJmivt_poldrHXw",
+      "agent_id": "agt_AB0VcTFshbq8",
+      "topic_id": "tpc_7IkaEnKJmivt",
+      "thread_id": "thd_F1P1IUPEYbfNEPuE",
+      "task_id": null,
+      "status": "done",
+      "started_at": "2026-10-06T09:05:13.009Z",
+      "completed_at": "2026-10-06T09:05:31.449Z",
+      "app_group_id": "cg_jKfC6pBdh1Kr",
+      "isolation_thread": "true",
+      "orchestration_role": "member",
+      "workingDirectory": "journey-demo",
+      "executionAndBuiltinCwdMatch": true
+    }
+  ],
+  "parentTopicSessionCachePreserved": true,
+  "providerSessionTraces": [
+    {
+      "role": "parent",
+      "traceName": "2026-10-06T09-04-43-509Z-op_1791277476489_agt_tmfGZsog7VpW_tpc_7IkaEnKJmivt_kkb42j5l",
+      "traceSha256": "a96fcce3bfd546e734b781ebc7dcddb0a16be88b0898ad2c549bd978ffeb873a",
+      "rawTraceIncluded": false,
+      "providerSessionHashes": ["8772dc2319e5a6e68def077adcf503fb061c8e1b535b5947ac3a7e23218638a0"],
+      "frameCount": 19,
+      "toolCalls": [
+        {
+          "toolCallIdSha256": "3254f1bac2c11b8523b389172f68d341c7d7d9fe05307c9e28db5ea919a92fa7",
+          "traceLines": [8, 9, 10],
+          "executeAgentTaskObserved": true,
+          "memberResultReceived": true,
+          "finalStatus": "completed",
+          "agentId": "agt_AB0VcTFshbq8",
+          "skipCallSupervisor": false
+        }
+      ],
+      "assistantTextCharacterCount": 36,
+      "exactMemberAnswer": false,
+      "exactIntendedCoordinatorAnswer": true,
+      "stopReason": "end_turn"
+    },
+    {
+      "role": "child",
+      "traceName": "2026-10-06T09-05-14-034Z-op_1791277513009_agt_AB0VcTFshbq8_tpc_7IkaEnKJmivt_poldrHXw",
+      "traceSha256": "e64d313cb506682b41fed3ea69083fe4afd6b9a0d2517df630d6121cfdaee5a4",
+      "rawTraceIncluded": false,
+      "providerSessionHashes": ["9319f032018f2b5ce060f5dda7ce0c41dbcda5f81c8f82e8cdce5de9f310fe97"],
+      "frameCount": 13,
+      "toolCalls": [],
+      "assistantTextCharacterCount": 15,
+      "exactMemberAnswer": true,
+      "exactIntendedCoordinatorAnswer": false,
+      "stopReason": "end_turn"
+    }
+  ],
+  "publishedProjection": "Bounded sanitized projection of the frozen source proof; omits member roster, raw cwd paths and business-file inventory.",
+  "remainingFieldFollowup": "External protocol render plugin retains in_progress despite completed callback/content. No universal plugin-state success or unobserved UI defect is asserted.",
+  "runtimePlugins": [
+    {
+      "id": "msg_zOn9m0nx4RbwWDUrlo",
+      "tool_call_id": "mcp_f1884dae8f41c0032a7188dbbfda938d74f16c9197c6137b",
+      "status": "completed",
+      "on_complete": "resume",
+      "expected_members": "1"
+    },
+    {
+      "id": "msg_0gnClCxgl5Ld9d1GHC",
+      "tool_call_id": "call_4a98d6c707374b2296566da2",
+      "status": "in_progress",
+      "on_complete": null,
+      "expected_members": null
+    }
+  ],
+  "sessionsDistinct": true,
+  "sourceAgentImmutability": {
+    "comparedFields": ["agency_config", "params"],
+    "baselineFingerprint": "62e97e28c16c9fff1d26914811867f8d91bb289cc88124fc45fd0e22883180b4",
+    "currentFingerprint": "62e97e28c16c9fff1d26914811867f8d91bb289cc88124fc45fd0e22883180b4",
+    "unchanged": true,
+    "limit": "Does not certify other top-level fields beyond the historical baseline"
+  },
+  "sourceArtifactSha256": "668b98c07f3fcf783f3df30c473a310da21b6b597d8cddb2ba978e9913f942ae",
+  "sourceHead": "7c47a19cc059f5617b26652d7faf9706e949f162",
+  "threads": [
+    {
+      "id": "thd_F1P1IUPEYbfNEPuE",
+      "topic_id": "tpc_7IkaEnKJmivt",
+      "agent_id": "agt_AB0VcTFshbq8",
+      "group_id": "cg_jKfC6pBdh1Kr",
+      "parent_thread_id": null,
+      "source_message_id": "msg_zOn9m0nx4RbwWDUrlo",
+      "type": "isolation",
+      "status": "completed",
+      "created_at": "2026-10-06T09:05:12.958Z",
+      "updated_at": "2026-10-06T09:05:31.463Z"
+    }
+  ],
+  "topicCreatedAt": "2026-10-06T09:04:36.188Z",
+  "topicFinalSessionHashes": {
+    "legacy": "8772dc2319e5a6e68def077adcf503fb061c8e1b535b5947ac3a7e23218638a0",
+    "cwd": "8772dc2319e5a6e68def077adcf503fb061c8e1b535b5947ac3a7e23218638a0"
+  },
+  "topicId": "tpc_7IkaEnKJmivt",
+  "uniqueActualExecuteAgentTaskCount": 1
+}

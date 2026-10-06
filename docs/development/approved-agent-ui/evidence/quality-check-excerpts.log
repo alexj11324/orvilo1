@@ -21,3 +21,25 @@ Independent reviews
 Scoped Task recovery: independent read-only reviewer found no introduced defect.
 CLI completion authority: independent light review approved with no findings.
 Source: owner review records and scoped manifests; these are not remote CI results.
+
+Title ordering
+✓ 6 files · lint clean · tests 228 passed
+Final lifecycle selector: ✓ 1 files · tests 45 passed
+Code and TypeScript independent reviews approved, recorded by owner.
+
+Group creation navigation
+✓ 4 files · lint clean · tests 7 passed
+Code and TypeScript independent reviews approved, recorded by owner.
+Check advisory: new React component regression test; its active-tab navigation behavior was exercised natively.
+
+Group session isolation
+Test Files  2 passed (2)
+Tests  95 passed (95)
+✓ 5 files · lint clean
+
+Group message association
+Test Files  2 passed (2)
+Tests  68 passed (68)
+✓ 2 files · lint clean
+Code and TypeScript independent reviews approved for both changes, recorded by owner.
+These suites overlap; counts are per invocation, not a unique combined test total.

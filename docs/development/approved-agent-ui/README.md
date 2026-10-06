@@ -1,6 +1,8 @@
-# Approved Agent UI and Task recovery verification
+# Approved Agent UI and Task journey verification
 
-Native Task recovery source: `5e1c2462af7835b77f58dc9669f9900e07d9f08b`.
+Current verified Group source / documentation candidate: `7c47a19cc059f5617b26652d7faf9706e949f162`.
+First automatic Task proof: `904b928d0e49da4338575d25f37b6546a2ab1757`.
+Native Task recovery proof: `5e1c2462af7835b77f58dc9669f9900e07d9f08b`.
 The actual CLI was rebuilt from `be127a7ad6aac1c4fa5d9fb1b90b12b51823f28f`;
 its artifact SHA-256 is `627424d37665f520dc3645d6bb66df5d14a47319eb135d1cd2bed5450f86b285`.
 [Build record](evidence/cli-completion-authority-build.json) includes source-file hashes,
@@ -12,7 +14,29 @@ creation menu, group creation and five group settings tabs. English and Simplifi
 Verification uses the real macOS Electron application and installed official OpenCode 1.18.29 with
 an isolated local backend/database/device gateway. Original applications and checkout were preserved.
 
-## Current Task recovery result
+## First automatic Task journey
+
+**Fresh T-7 reached Review in its sole first generation through normal watchdog intake and durable
+recovery.** At 08:05:16.960 UTC it was Backlog, domain/requirement revision 2, policy revision 1,
+generation 0, with no dispatch or Task topic. The standard watchdog tick started generation 1;
+the operation ran 08:05:36.989–08:08:35.263 in the saved personal-device directory. Its admitted
+completion receipt requested finalization. The regular next tick at 08:10:40.426 recovered the
+terminal operation, and the 08:12:56.805 ledger records Review, an assigned reviewer, succeeded
+dispatch, completed topic and cleared lease. Requirement 2 / policy 1 remained unchanged.
+
+No manual Run, second generation, callback replay or observer business status write was used.
+No progress comment or persisted brief was produced; neither is claimed. Human review acceptance
+was not performed. [Filtered ledger](evidence/t7-first-automatic-native-review-proof.json),
+[proof explanation](evidence/t7-first-automatic-native-review-proof.md),
+and [native Review](evidence/t7-first-automatic-review-904b.jpg).
+
+The foreground creation operation completed at 08:04:09.221; metadata title work started at
+08:04:10.633 and completed at 08:04:50.402. This verifies the title began 1,412 ms after foreground
+completion for this run. It does not identify the historical SQLite lock owner or prove every
+possible OpenCode concurrency scenario. [Scoped source hashes](evidence/native-runtime-source-hashes.json)
+match the frozen title-ordering files.
+
+## Native Task recovery result
 
 **T-5 reached Review after a human clicked the native scoped Run action to recover a failed run.**
 Generation 2 then executed and settled through normal callbacks and asynchronous brief judgments.
@@ -44,10 +68,11 @@ or rejected operation capability. The fresh T-5 generation-2 result above suppli
 proof. [Filtered T-6 facts](evidence/t6-cli-self-completion-negative.json) preserve the original failure;
 T-6's state was not rewritten.
 
-A fresh T-7 creation attempt on the current source failed at startup with the same SQLite lock,
+An earlier T-7 creation attempt on `5e1c2462af7835b77f58dc9669f9900e07d9f08b` failed at startup
+with the same SQLite lock,
 zero ACP frames, zero tool calls and no Task creation. A title operation overlapped and completed.
 The exact SQLite statement and historical lock holder were not observed, so overlap alone does not
-establish causation. **The fresh first-run automatic journey remains pending.**
+establish causation. That failed attempt remains historical evidence; the later accepted first automatic T-7 journey above was captured after the title-ordering repair.
 [Filtered T-7 startup facts](evidence/t7-first-startup-negative.json).
 
 The earlier T-4 terminal-callback replay remains qualified recovery evidence on its recorded revision;
@@ -59,7 +84,8 @@ A read-only comparison at `074f002a34e54638b214d662375cf0c6e828defe` confirmed t
 Orchestrator's `agency_config` and `params` fingerprint matched the pre-T5 baseline, including nested
 runtime engine/model. This comparison does not certify unrelated top-level fields or later changes.
 [Bounded configuration fingerprint](evidence/source-orchestrator-immutability-074f.json) contains no
-raw configuration or account identity list.
+raw configuration or account identity list. The later controlled onboarding and final Group proof
+repeat this same bounded comparison with the original serialization and matching fingerprint.
 
 [Scoped check excerpts](evidence/quality-check-excerpts.log) record:
 
@@ -69,9 +95,68 @@ raw configuration or account identity list.
   covered operation completion/refusal/incomplete context and operation-ID propagation. Independent
   light review approved the completion-authority change.
 
-These checks, source reviews and native observations are separate evidence. No local `tsgo` was run.
+Title ordering additionally passed 228 scoped tests and a final 45-test lifecycle selector; Group
+navigation passed 7 tests and lint. Their code and TypeScript reviews were approved. These checks,
+source reviews and native observations are separate evidence. Group session isolation passed 95
+tests and Group association passed 68, each with scoped lint and approved code/TypeScript reviews;
+these overlapping suites are per-invocation counts, not a unique combined total. No local `tsgo` was run.
 Required repository CI must be checked at the final delivery head; this document does not claim all CI
 passed, a merge occurred, or a deployment was accepted.
+
+## Controlled onboarding
+
+The current three-step onboarding was resumed through native controls using an existing fixture:
+[workspace](evidence/onboarding-workspace-resume.jpg) →
+[existing Agent check](evidence/onboarding-agent-resume.jpg) →
+[configured Orchestrator](evidence/onboarding-orchestrator-selection.jpg).
+Completion at 08:00:18.643 UTC and [reload into the same workspace](evidence/onboarding-finished-reload-6a37.jpg)
+were confirmed on `6a37a149eea1f5e2aa5f032de0d6e1ffd574849e` with metadata-title WIP, which did not
+change the onboarding producer. Workspace count stayed 1 and owned nonvirtual Agent count stayed 5,
+with unchanged IDs. The selected source's bounded configuration fingerprint also stayed unchanged.
+At 08:05:40.296, a read-only check confirmed the exact original `users.onboarding` JSON was restored;
+legitimate workspace preferences and business data were retained.
+[Sanitized success/restoration record](evidence/onboarding-controlled-resume-restored-6a37.json).
+This verifies controlled resume/completion/reload, not fresh signup or an injected finish-error retry.
+
+## Group delegation, isolation and native reload
+
+**The existing private Group completed a fresh real delegation and displayed the coordinator's
+result after normal reload on `7c47a19cc059f5617b26652d7faf9706e949f162`.** Creation navigation and
+custom coordinator selection had already been exercised on `6bcc5eb154a461c60f2018c8396ef3721402e163`:
+[new Group / Local directory](evidence/group-created-active-tab-fixed.jpg),
+[configured OpenCode coordinator](evidence/group-coordinator-custom-6bcc.jpg).
+The final repetition used a new normal topic in that same Group, without creating a new Task.
+
+The supervisor ran 09:04:36.493–09:06:14.288 UTC and made exactly one actual `executeAgentTask`
+request with callback continuation enabled. The isolated member completed 09:05:31.449 and returned
+`GROUP_MEMBER_OK`; its child-result delivery was acknowledged. The coordinator's actual assistant
+then returned `GROUP_COORDINATOR_OK` followed by `GROUP_MEMBER_OK`, visibly attributed to the
+Supervisor rather than the user. All seven topic messages carry the trusted Group ID.
+[Filtered complete proof](evidence/group-native-full-acceptance-proof-7c47.json),
+[explanation](evidence/group-native-full-acceptance-proof-7c47.md),
+[visible result](evidence/group-final-visible-7c47.jpg),
+[normal reload](evidence/group-final-reloaded-7c47.jpg).
+
+Parent and child provider session hashes differ, and both final topic-cache hashes match the parent.
+An intermediate 09:06:06.795 snapshot records child done and the parent durable row still running;
+it does not establish whether finish RPC or binding writes had already begun. Both execution/tool
+contexts used `journey-demo`. The bounded source configuration fingerprint stayed unchanged, and no
+business Task was created. The file comparison is against the earlier T-7 inventory timestamp and
+covers ordinary top-level files only, excluding telemetry.
+
+Historical failures remain explicit. On `6bcc5eb`, parent/child shared a provider session: the member
+and callback completed but no coordinator answer followed. A later mis-hit UI delete removed two
+fixture supervisor/tool messages; the operator disclosed it, immutable pre-delete evidence was kept,
+and no DB restoration was performed. On `3dab813d`, session separation and callback continuation
+worked, but the final assistant had a null Group association and was excluded from the Group query.
+The fresh current topic proves both corrected boundaries and reload visibility.
+[Historical negative facts](evidence/group-historical-negative-facts.json).
+
+The external protocol render-plugin row still reports `in_progress`, while the server runtime
+invocation is completed and the child delivery acknowledged. This is a field follow-up; no universal
+plugin-state success or unobserved UI failure is claimed. The current source hashes are recorded
+[separately from the historical session manifest](evidence/native-runtime-source-hashes.json), since
+the persistence handler changed again for Group association.
 
 ## Retained earlier approved UI evidence
 
@@ -102,12 +187,11 @@ the older revision and is not an exception to current required gates.
 
 ## Remaining acceptance
 
-- Fresh first-run creation → automatic intake → execution → Review without recovery remains pending.
-- New/existing Group directory binding, real member delegation and callback completion remain pending.
-- Current three-step onboarding resume/completion/retry remains pending; earlier onboarding evidence
-  above covers an older source and does not verify the current controlled-resume fixture.
+- Fresh-account onboarding and injected finish-error/retry remain unverified; controlled existing-fixture
+  resume/completion/reload is accepted above.
 - The full light/dark, minimum-width, zoom, hover and responsive matrix remains incomplete. The native
-  main window's minimum width is 1000; no phone-width or complete narrow-form acceptance is claimed.
+  main window's configured minimum is 1000; its hardware geometry has not been verified here. No
+  phone-width or complete narrow-form acceptance is claimed.
 - Final personal-device picker/manual opening and remaining ActionPopover keyboard checks need their
   own current native evidence. A renderer reload does not establish full restart authentication.
 

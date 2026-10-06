@@ -189,7 +189,12 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
   };
 
   return (
-    <Accordion className="flex flex-col gap-6" value={activeKey} onValueChange={setActiveKey}>
+    <Accordion
+      multiple
+      className="flex flex-col gap-6"
+      value={activeKey}
+      onValueChange={setActiveKey}
+    >
       {deploymentOptions.map((item, index) => {
         let properties: {
           description?: string;

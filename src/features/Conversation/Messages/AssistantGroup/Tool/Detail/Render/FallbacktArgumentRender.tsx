@@ -34,7 +34,7 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
     // Default render: show arguments and result
     return (
       <div
-        className="flex flex-col"
+        className="flex flex-col overflow-hidden"
         id={toolCallId}
         style={{
           border: `1px solid ${cssVar.colorBorder}`,
@@ -46,12 +46,14 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
         {content && (
           <>
             <Separator style={{ marginBlock: 0 }} />
-            <div className="flex flex-col px-4" style={{ paddingBlock: '8px 0' }}>
+            <div className="flex min-h-10 items-center py-2 px-4">
               <div>{t('debug.response')}</div>
             </div>
             <CodeBlock
+              className="[&_[data-slot=code-block-line]]:px-4"
               code={data}
               language={language}
+              variant="ghost"
               style={{
                 background: 'transparent',
                 borderRadius: 0,

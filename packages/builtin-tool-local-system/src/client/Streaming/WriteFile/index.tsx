@@ -6,7 +6,7 @@ import type { BuiltinStreamingProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 type WriteFileArgs = WriteLocalFileParams & {
   file_path?: string;
@@ -42,7 +42,9 @@ export const WriteFileStreaming = memo<BuiltinStreamingProps<WriteFileArgs>>(({ 
       language={ext || 'text'}
       style={{ padding: '4px 8px' }}
       variant={'default'}
-    />
+    >
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 });
 

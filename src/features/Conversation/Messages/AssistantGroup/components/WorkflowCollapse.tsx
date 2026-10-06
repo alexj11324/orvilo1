@@ -517,10 +517,17 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
     return (
       <Accordion multiple value={expandedKeys} onValueChange={handleExpandedChange}>
         <AccordionItem value="workflow">
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-            {title}
-            {expandToggleNode}
-          </AccordionTrigger>
+          <div className="flex items-center">
+            <div className="min-w-0 flex-1">
+              <AccordionTrigger
+                className="hover:no-underline"
+                style={{ paddingBlock: 4, paddingInline: 4 }}
+              >
+                {title}
+              </AccordionTrigger>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">{expandToggleNode}</div>
+          </div>
           <AccordionContent>
             {
               <WorkflowExpandedList

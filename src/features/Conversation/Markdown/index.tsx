@@ -13,6 +13,7 @@ const MarkdownMessage = memo<MarkdownProps>(({ children, componentProps, ...rest
   return (
     <Markdown
       fontSize={fontSize}
+      marginMultiple={2}
       variant={'chat'}
       componentProps={{
         ...componentProps,

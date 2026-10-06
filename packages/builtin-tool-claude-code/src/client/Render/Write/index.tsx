@@ -5,7 +5,7 @@ import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface WriteArgs {
@@ -45,7 +45,9 @@ const Write = memo<BuiltinRenderProps<WriteArgs>>(({ args }) => {
         language={ext || 'text'}
         style={{ maxHeight: 240, overflow: 'auto' }}
         variant={'ghost'}
-      />
+      >
+        <CodeBlockCopyButton />
+      </CodeBlock>
     );
   };
 

@@ -202,7 +202,7 @@ const ChatAppearance = memo(() => {
           </div>
         }
       >
-        <HighlighterPreview key={general.highlighterTheme} />
+        <HighlighterPreview key={general.highlighterTheme} theme={general.highlighterTheme} />
       </FormGroup>
 
       <FormGroup

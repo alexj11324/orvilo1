@@ -22,7 +22,7 @@ import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton, parseUnifiedDiff } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { countChangedLines, stripKimiLineNumbers } from './utils';
@@ -149,7 +149,9 @@ const TextResult = memo<BuiltinRenderProps>(({ content }) => {
       language="text"
       style={{ maxHeight: 240, overflow: 'auto' }}
       variant="ghost"
-    />
+    >
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 });
 TextResult.displayName = 'KimiCodeTextResult';
@@ -178,7 +180,9 @@ const ReadRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args, content }) =>
       language={path.extname(filePath).slice(1).toLowerCase() || 'text'}
       style={{ maxHeight: 240, overflow: 'auto' }}
       variant="ghost"
-    />
+    >
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 });
 ReadRender.displayName = 'KimiCodeReadRender';
@@ -214,7 +218,9 @@ const WriteRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args }) => {
       language={extension || 'text'}
       style={{ maxHeight: 240, overflow: 'auto' }}
       variant="ghost"
-    />
+    >
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 });
 WriteRender.displayName = 'KimiCodeWriteRender';

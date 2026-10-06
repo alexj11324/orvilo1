@@ -159,7 +159,7 @@ const ProcessControl = memo<ProcessControlProps>(
 
         {!hasExperiments && map}
 
-        <Accordion defaultValue={['deliverables', 'findings', 'activity']}>
+        <Accordion multiple defaultValue={['deliverables', 'findings', 'activity']}>
           {(
             [
               // The structured acceptance standard the terminal goal acceptance is

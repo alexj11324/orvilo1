@@ -8,7 +8,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useTextFileLoader } from '../../hooks/useTextFileLoader';
@@ -93,7 +93,9 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
       {mode === 'render' ? (
         <Markdown style={{ paddingBlock: 16, paddingInline: 24 }}>{fileData}</Markdown>
       ) : (
-        <CodeBlock code={fileData} language={'markdown'} variant={'ghost'} />
+        <CodeBlock code={fileData} language={'markdown'} variant={'ghost'}>
+          <CodeBlockCopyButton />
+        </CodeBlock>
       )}
     </div>
   );

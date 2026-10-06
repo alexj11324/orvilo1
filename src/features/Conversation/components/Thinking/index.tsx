@@ -64,7 +64,10 @@ const Thinking = memo<ThinkingProps>((props) => {
       onValueChange={(keys) => setShowDetail(keys.length > 0)}
     >
       <AccordionItem value="thinking">
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+        <AccordionTrigger
+          className="hover:no-underline"
+          style={{ paddingBlock: 4, paddingInline: 4 }}
+        >
           <Title duration={duration} showDetail={showDetail} thinking={thinking} />
         </AccordionTrigger>
         <AccordionContent>

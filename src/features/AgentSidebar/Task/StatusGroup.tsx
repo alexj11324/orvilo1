@@ -43,7 +43,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
           <div className="text-[11px] text-muted-foreground">{group.tasks.length}</div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {group.tasks.map((task) => (
             <TaskItem

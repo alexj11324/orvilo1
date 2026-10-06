@@ -91,7 +91,12 @@ const ProcessFold = memo<ProcessFoldProps>(
           onValueChange={(next) => setExpanded(next.includes(PROCESS_KEY))}
         >
           <AccordionItem style={HEADER_STYLE} value={PROCESS_KEY}>
-            <AccordionTrigger style={TRIGGER_STYLE}>{title}</AccordionTrigger>
+            <AccordionTrigger
+              className="hover:no-underline [&_[data-slot=accordion-trigger-icon]]:hidden"
+              style={TRIGGER_STYLE}
+            >
+              {title}
+            </AccordionTrigger>
             <AccordionContent style={CONTENT_STYLE}>{children}</AccordionContent>
           </AccordionItem>
         </Accordion>

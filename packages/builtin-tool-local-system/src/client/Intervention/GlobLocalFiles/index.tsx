@@ -3,7 +3,7 @@ import { type BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import OutOfScopeWarning from '../OutOfScopeWarning';
 
@@ -16,7 +16,9 @@ const GlobLocalFiles = memo<BuiltinInterventionProps<GlobFilesParams>>(({ args }
       <OutOfScopeWarning paths={[pattern]} />
       <div className="flex flex-col gap-1">
         <div className="text-muted-foreground">{t('localFiles.globFiles.pattern')}</div>
-        <CodeBlock code={pattern} language="text" variant={'default'} />
+        <CodeBlock code={pattern} language="text" variant={'default'}>
+          <CodeBlockCopyButton />
+        </CodeBlock>
       </div>
     </div>
   );

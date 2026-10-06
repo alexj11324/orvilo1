@@ -54,7 +54,7 @@ const Topic = memo<TopicProps>(({ itemKey }) => {
           {renderSidebarMenuItems(dropdownMenu, [], 'context')}
         </ContextMenuContent>
       </ContextMenu>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <Suspense fallback={<SkeletonList />}>
           <div className="flex flex-col" style={{ gap: 1, paddingBlock: 1 }}>
             <List />

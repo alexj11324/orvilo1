@@ -44,7 +44,7 @@ const InstructionAccordion = memo<{ childrenCount: number; instruction: string }
     }, [childrenCount > 1]);
 
     return (
-      <Accordion multiple className='gap-2' value={expandedKeys} onValueChange={setExpandedKeys}><AccordionItem value='instruction'><AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>{(
+      <Accordion multiple className='gap-2' value={expandedKeys} onValueChange={setExpandedKeys}><AccordionItem value='instruction'><AccordionTrigger className="hover:no-underline" style={{ paddingBlock: 4, paddingInline: 4 }}>{(
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
                 >
@@ -234,7 +234,7 @@ const CompletedView = memo<{
     <div className="flex flex-col gap-2">
       {/* Intermediate steps - collapsed by default */}
       {intermediateBlocks.length > 0 && (
-        <Accordion multiple className='gap-2' defaultValue={[]}><AccordionItem value='intermediate'><AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>{title}</AccordionTrigger><AccordionContent>{(
+        <Accordion multiple className='gap-2' defaultValue={[]}><AccordionItem value='intermediate'><AccordionTrigger className="hover:no-underline" style={{ paddingBlock: 4, paddingInline: 4 }}>{title}</AccordionTrigger><AccordionContent>{(
                 <div className="flex flex-col gap-2 px-1" style={{ marginTop: 8 }}>
                   {intermediateBlocks.map((block) => (
                     <ContentBlock

@@ -189,7 +189,7 @@ const Group = memo<GroupChildrenProps>(
     };
 
     return (
-      <div className={cn('flex flex-col gap-1', styles.container)}>
+      <div className={cn('flex flex-col gap-4', styles.container)}>
         {views.map((view, index) => (
           <Fragment key={view.id}>
             {view.steerUserId && <SteerMessage id={view.steerUserId} />}

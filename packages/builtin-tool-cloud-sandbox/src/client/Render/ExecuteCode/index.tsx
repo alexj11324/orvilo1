@@ -4,7 +4,7 @@ import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import type { ExecuteCodeState } from '../../../types';
 
@@ -33,7 +33,9 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
             language={language}
             style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
             variant={'ghost'}
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
           {pluginState?.output && (
             <CodeBlock
               wrap
@@ -41,10 +43,14 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
               language={'text'}
               style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
               variant={'default'}
-            />
+            >
+              <CodeBlockCopyButton />
+            </CodeBlock>
           )}
           {pluginState?.stderr && (
-            <CodeBlock wrap code={pluginState.stderr} language={'text'} variant={'default'} />
+            <CodeBlock wrap code={pluginState.stderr} language={'text'} variant={'default'}>
+              <CodeBlockCopyButton />
+            </CodeBlock>
           )}
         </div>
       </div>

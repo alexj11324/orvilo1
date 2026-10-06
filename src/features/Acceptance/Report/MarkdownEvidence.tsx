@@ -7,7 +7,7 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/BrandTextLoading';
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { useTextFileLoader } from '@/features/FileViewer/hooks/useTextFileLoader';
 import { getLanguageFromFilename } from '@/utils/fileLanguage';
 
@@ -270,12 +270,9 @@ export const CollapsibleMarkdownEvidence = memo<{
       {children}
     </Markdown>
   ) : (
-    <CodeBlock
-      wrap
-      code={children}
-      language={getLanguageFromFilename(fileName)}
-      variant={'ghost'}
-    />
+    <CodeBlock wrap code={children} language={getLanguageFromFilename(fileName)} variant={'ghost'}>
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 
   if (!fold) {
@@ -350,7 +347,9 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
             code={fileData}
             language={getLanguageFromFilename(fileName || filenameFromUrl(url))}
             variant={'ghost'}
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
         )}
       </div>
     );

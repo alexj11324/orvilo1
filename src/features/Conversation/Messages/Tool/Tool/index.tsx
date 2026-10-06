@@ -86,27 +86,36 @@ const Tool = memo<InspectorProps>(
         onValueChange={(value) => setExpand(value.length > 0)}
       >
         <AccordionItem value="tool">
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-            {
-              <Inspectors
-                apiName={apiName}
-                identifier={identifier}
-                result={result}
-                toolCallId={toolCallId}
-              />
-            }
-            {!disableEditing && (
-              <Actions
-                assistantMessageId={messageId}
-                canToggleCustomToolRender={hasCustomRender}
-                identifier={identifier}
-                setShowCustomToolRender={setShowCustomToolRender}
-                setShowDebug={setShowDebug}
-                showCustomToolRender={showCustomToolRender}
-                showDebug={showDebug}
-              />
-            )}
-          </AccordionTrigger>
+          <div className="flex items-center">
+            <div className="min-w-0 flex-1">
+              <AccordionTrigger
+                className="hover:no-underline"
+                style={{ paddingBlock: 4, paddingInline: 4 }}
+              >
+                {
+                  <Inspectors
+                    apiName={apiName}
+                    identifier={identifier}
+                    result={result}
+                    toolCallId={toolCallId}
+                  />
+                }
+              </AccordionTrigger>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {!disableEditing && (
+                <Actions
+                  assistantMessageId={messageId}
+                  canToggleCustomToolRender={hasCustomRender}
+                  identifier={identifier}
+                  setShowCustomToolRender={setShowCustomToolRender}
+                  setShowDebug={setShowDebug}
+                  showCustomToolRender={showCustomToolRender}
+                  showDebug={showDebug}
+                />
+              )}
+            </div>
+          </div>
           <AccordionContent>
             {
               <div className="flex flex-col gap-2 py-2">

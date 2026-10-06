@@ -1,8 +1,9 @@
 // @vitest-environment node
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { users, workspaces } from '../../schemas';
+import { tasks, users, workspaces } from '../../schemas';
 import { projects } from '../../schemas/project';
 import { teamCycles, teamMembers, teams } from '../../schemas/team';
 import type { OrviloDatabase } from '../../type';
@@ -158,7 +159,7 @@ describe('SavedViewModel', () => {
     expect((await ownerViews.findById(view.id))?.name).toBe('Owner view');
   });
 
-  it('redacts private task ids from a shared view definition', async () => {
+  it('redacts private-team task ids while retaining shared legacy-private task ids', async () => {
     const ownerTasks = new TaskModel(serverDB, ownerId, workspaceId);
     const secret = await ownerTasks.create({
       instruction: 'Keep this title off the visitor AST',
@@ -170,13 +171,30 @@ describe('SavedViewModel', () => {
       name: 'Open task',
       visibility: 'public',
     });
+    const privateTeamId = 'view-private-task-team';
+    await serverDB.insert(teams).values({
+      id: privateTeamId,
+      key: 'VPT',
+      name: 'Private task team',
+      visibility: 'private',
+      workspaceId,
+    });
+    await ownerTasks.update(secret.id, { teamId: privateTeamId });
+    const legacyShared = await ownerTasks.create({
+      instruction: 'Legacy shared task',
+      name: 'Legacy shared task',
+    });
+    await serverDB
+      .update(tasks)
+      .set({ visibility: 'private' })
+      .where(eq(tasks.id, legacyShared.id));
     const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
     const view = await ownerViews.create({
       entityType: 'task',
       name: 'Mixed ids',
       query: {
         entityType: 'task',
-        filter: { all: [{ field: 'id', op: 'in', value: [secret.id, open.id] }] },
+        filter: { all: [{ field: 'id', op: 'in', value: [secret.id, open.id, legacyShared.id] }] },
         schemaVersion: 1,
       },
       visibility: 'workspace',
@@ -187,9 +205,10 @@ describe('SavedViewModel', () => {
     const serialized = JSON.stringify(presented.queryAst);
     expect(serialized).not.toContain(secret.id);
     expect(serialized).toContain(open.id);
+    expect(serialized).toContain(legacyShared.id);
 
     const asVisitor = await visitorViews.evaluate((await visitorViews.findById(view.id))!);
-    expect(asVisitor.tasks?.map((row) => row.id)).toEqual([open.id]);
+    expect(asVisitor.tasks?.map((row) => row.id).sort()).toEqual([open.id, legacyShared.id].sort());
     expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Secret task');
   });
 

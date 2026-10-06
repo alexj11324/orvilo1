@@ -893,7 +893,7 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
-    if (this.workspaceId) data = { ...data, visibility: 'public' };
+    if (this.workspaceId && data.visibility !== undefined) data = { ...data, visibility: 'public' };
     if (
       data.assigneeAgentId !== undefined &&
       mutation.executionTransfer !== true &&
@@ -966,6 +966,7 @@ export class TaskModel {
     };
 
     const { status: transition, ...writeData } = data;
+    if (this.workspaceId) writeData.visibility = 'public';
     const transitionPatch =
       transition === undefined ? {} : TaskModel.statusTransitionPatch(transition);
     if (!eventType) {

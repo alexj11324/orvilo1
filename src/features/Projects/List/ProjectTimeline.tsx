@@ -20,8 +20,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
-import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import { ProjectIcon } from '@/features/Projects/ProjectIcon';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
@@ -541,7 +541,6 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                 )}
                 {group.items.map((project) => {
                   const status = resolveProjectStatus(project.status);
-                  const statusVisual = PROJECT_STATUS_VISUALS[status];
                   const priority = resolvePriorityLevel(project.priority);
                   const progress = projectProgress(project);
                   const lead = project.leadUserId;
@@ -580,18 +579,9 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                       </span>
                       <span className={styles.cellIcons}>
                         {options.properties.status ? (
-                          status === 'active' ? (
-                            <ProjectActiveStatusIcon
-                              color={statusVisual.color}
-                              percent={progress ?? 0}
-                            />
-                          ) : (
-                            <statusVisual.icon
-                              aria-label={t(`status.${status}`)}
-                              color={statusVisual.color}
-                              size={14}
-                            />
-                          )
+                          <span aria-label={t(`status.${status}`)} role="img">
+                            <ProjectStatusIcon percent={progress ?? 0} size={16} status={status} />
+                          </span>
                         ) : null}
                         {options.properties.priority ? (
                           <PriorityIcon

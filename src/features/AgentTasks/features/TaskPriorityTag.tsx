@@ -97,6 +97,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface TaskPriorityTagProps {
   children?: ReactNode;
   disableDropdown?: boolean;
+  /** Matches native button children; the default icon trigger is a span. */
+  nativeButton?: boolean;
   onChange?: (priority: number) => void;
   priority?: number | null;
   size?: number;
@@ -104,7 +106,15 @@ interface TaskPriorityTagProps {
 }
 
 const TaskPriorityTag = memo<TaskPriorityTagProps>(
-  ({ children, disableDropdown, onChange, size = 16, priority, taskIdentifier }) => {
+  ({
+    children,
+    disableDropdown,
+    nativeButton = false,
+    onChange,
+    size = 16,
+    priority,
+    taskIdentifier,
+  }) => {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
@@ -191,7 +201,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger
-          nativeButton={false}
+          nativeButton={nativeButton}
           render={triggerNode as ReactElement}
           onClick={(event) => event.stopPropagation()}
         />

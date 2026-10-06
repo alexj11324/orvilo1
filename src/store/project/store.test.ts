@@ -448,47 +448,8 @@ describe('project store cache scope', () => {
     expect(useProjectStore.getState().pendingProjectAgentIds).toEqual([]);
   });
 
-  it('updates the cached project after an orchestration policy save', async () => {
-    const project = {
-      coordinatorAgentId: 'agent-before',
-      id: 'project-1',
-      name: 'Policy project',
-      orchestrationPolicy: {
-        autoDispatch: false,
-        replanMode: 'disabled',
-        requireHumanReview: true,
-      },
-      orchestrationPolicyRevision: 1,
-    } as ProjectListItem;
-    const detail = { project } as unknown as ProjectDetail;
-    vi.spyOn(projectService, 'updateOrchestrationPolicy').mockResolvedValue({
-      data: {
-        coordinatorAgentId: 'agent-after',
-        orchestrationPolicy: { ...project.orchestrationPolicy, autoDispatch: true },
-        orchestrationPolicyRevision: 2,
-        requireHumanReviewRequired: false,
-      },
-      message: 'Project orchestration policy updated',
-      success: true,
-    });
-    useProjectStore.setState({
-      projectDetails: { 'user-1:personal': { 'project-1': detail } },
-    });
-
-    await useProjectStore.getState().updateProjectOrchestrationPolicy({
-      coordinatorAgentId: 'agent-after',
-      expectedRevision: 1,
-      id: 'project-1',
-      orchestrationPolicy: project.orchestrationPolicy,
-    });
-
-    expect(
-      useProjectStore.getState().projectDetails['user-1:personal']['project-1'].project,
-    ).toEqual(
-      expect.objectContaining({
-        coordinatorAgentId: 'agent-after',
-        orchestrationPolicyRevision: 2,
-      }),
-    );
+  it('exposes no Project orchestration policy reader or writer', () => {
+    expect(useProjectStore.getState()).not.toHaveProperty('useFetchProjectOrchestrationPolicy');
+    expect(useProjectStore.getState()).not.toHaveProperty('updateProjectOrchestrationPolicy');
   });
 });

@@ -13,7 +13,6 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import {
-  requireWorkspaceRoleWhenScoped,
   type WorkspaceRole,
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
@@ -35,17 +34,19 @@ const projectProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   return opts.next({
     ctx: {
       projectModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
-      projectPolicyModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined, {
-        canManageAll: isWorkspaceAdmin(ctx),
-      }),
+      projectModerationModel: new ProjectModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+        {
+          canManageAll: isWorkspaceAdmin(ctx),
+        },
+      ),
     },
   });
 });
 
 const projectWriteProcedure = projectProcedure.use(withScopedPermission('agent:update'));
-const projectPolicyProcedure = projectProcedure
-  .use(withScopedPermission('agent:update'))
-  .use(requireWorkspaceRoleWhenScoped('admin'));
 const idInput = z.object({ id: z.string() });
 const PROJECT_SLUG_REGEX = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 const projectIdentifierInput = z
@@ -54,26 +55,6 @@ const projectIdentifierInput = z
   .transform((value) => value.toUpperCase())
   .pipe(z.string().regex(PROJECT_IDENTIFIER_REGEX, 'Invalid project identifier'));
 const projectSlugInput = z.string().max(100).regex(PROJECT_SLUG_REGEX, 'Invalid project slug');
-const orchestrationPolicySchema = z.object({
-  allowedAgentIds: z.array(z.string().min(1)).max(100).optional(),
-  allowedRoles: z.array(z.string().trim().min(1)).max(100).optional(),
-  autoDispatch: z.boolean(),
-  concurrencyLimit: z.number().int().min(1).max(100).optional(),
-  executionBudget: z
-    .object({
-      maxCost: z.number().min(0).max(100_000).optional(),
-      maxRuns: z.number().int().min(1).max(1000).optional(),
-    })
-    .optional(),
-  planningBudget: z
-    .object({
-      maxRevisions: z.number().int().min(1).max(1000).optional(),
-    })
-    .optional(),
-  replanMode: z.enum(['disabled', 'observe', 'suggest', 'apply']),
-  requireHumanReview: z.boolean(),
-});
-
 const healthInput = z.enum(PROJECT_HEALTH_STATES);
 
 function requireResult<T>(result: T | null, message = 'Project not found'): T {
@@ -366,17 +347,6 @@ export const projectRouter = router({
     }
   }),
 
-  getOrchestrationPolicy: projectPolicyProcedure.input(idInput).query(async ({ ctx, input }) => {
-    try {
-      return {
-        data: requireResult(await ctx.projectPolicyModel.getOrchestrationPolicy(input.id)),
-        success: true,
-      };
-    } catch (error) {
-      mapProjectError(error, 'getOrchestrationPolicy');
-    }
-  }),
-
   labels: projectProcedure.query(async ({ ctx }) => ({
     data: await ctx.projectModel.listLabels(),
     success: true,
@@ -483,7 +453,7 @@ export const projectRouter = router({
     }),
 
   /**
-   * Edit a published project update/comment. Uses `projectPolicyModel` so the
+   * Edit a published project update/comment. Uses `projectModerationModel` so the
    * model's moderation ACL sees `canManageAll`: the author, the project
    * owner/lead, or a workspace admin may edit — everyone else gets NOT_FOUND.
    */
@@ -500,7 +470,7 @@ export const projectRouter = router({
         const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
         return {
           data: requireResult(
-            await ctx.projectPolicyModel.updateUpdate(project.id, input.updateId, {
+            await ctx.projectModerationModel.updateUpdate(project.id, input.updateId, {
               body: input.body,
               health: input.health,
             }),
@@ -520,7 +490,7 @@ export const projectRouter = router({
         const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
         return {
           data: requireResult(
-            await ctx.projectPolicyModel.deleteUpdate(project.id, input.updateId),
+            await ctx.projectModerationModel.deleteUpdate(project.id, input.updateId),
             'Update not found',
           ),
           success: true,
@@ -755,26 +725,6 @@ export const projectRouter = router({
         };
       } catch (error) {
         mapProjectError(error, 'update');
-      }
-    }),
-
-  updateOrchestrationPolicy: projectPolicyProcedure
-    .input(
-      idInput.extend({
-        coordinatorAgentId: z.string().min(1),
-        expectedRevision: z.number().int().min(1),
-        orchestrationPolicy: orchestrationPolicySchema,
-      }),
-    )
-    .mutation(async ({ ctx, input: { id, ...input } }) => {
-      try {
-        return {
-          data: requireResult(await ctx.projectPolicyModel.updateOrchestrationPolicy(id, input)),
-          message: 'Project orchestration policy saved',
-          success: true,
-        };
-      } catch (error) {
-        mapProjectError(error, 'updateOrchestrationPolicy');
       }
     }),
 

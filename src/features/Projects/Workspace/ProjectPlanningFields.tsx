@@ -14,27 +14,20 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import DatePicker from '@/components/DatePicker';
-import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
+import { PriorityIcon } from '@/components/PriorityIcon';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxChipsInput,
   ComboboxContent,
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxTrigger,
 } from '@/components/ui/combobox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
@@ -195,24 +188,24 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
         }}
       >
         <>
-          <ComboboxChips className="min-w-0 max-w-full">
+          <ComboboxTrigger
+            aria-label={t('properties.labels')}
+            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+            id={id}
+            render={<Button variant="ghost" />}
+          >
             <TagIcon aria-hidden size={16} />
-            {(detail.labels ?? [])
-              .map((label) => label.id)
-              .map((value) => (
-                <ComboboxChip key={value}>
-                  {labelPickerOptions.find((option) => option.value === value)?.label ??
-                    String(value)}
-                </ComboboxChip>
-              ))}
-            <ComboboxChipsInput
-              aria-label={t('properties.labels')}
-              disabled={saving || query.isLoading}
-              id={id}
-              placeholder={t('properties.addLabels')}
-            />
-          </ComboboxChips>
+            <span className="truncate">
+              {(detail.labels ?? []).map((label) => label.name).join(', ') ||
+                t('properties.addLabels')}
+            </span>
+          </ComboboxTrigger>
           <ComboboxContent className="min-w-56">
+            <ComboboxInput
+              aria-label={t('properties.addLabels')}
+              placeholder={t('properties.addLabels')}
+              showTrigger={false}
+            />
             <ComboboxEmpty>{t('properties.addLabels')}</ComboboxEmpty>
             <ComboboxList>
               {(value: (typeof labelPickerOptions)[number]['value']) => {
@@ -304,17 +297,37 @@ export function ProjectLeadField({
         }}
       >
         <>
-          <ComboboxInput
+          <ComboboxTrigger
             aria-label={t('properties.lead')}
-            className="min-w-0 max-w-full"
-            disabled={saving || members.isLoading}
+            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
             id={id}
-            placeholder={t('properties.addLead')}
-            showClear={false}
+            render={<Button variant="ghost" />}
           >
-            {!project.leadUserId && <UserRoundIcon aria-hidden size={16} />}
-          </ComboboxInput>
+            {selectedMember ? (
+              <Avatar
+                avatar={selectedMember.user?.avatar ?? undefined}
+                size={18}
+                name={
+                  selectedMember.user?.fullName ||
+                  selectedMember.user?.username ||
+                  selectedMember.userId
+                }
+              />
+            ) : (
+              <UserRoundIcon aria-hidden size={16} />
+            )}
+            <span className="truncate">
+              {project.leadUserId
+                ? options.find((option) => option.value === project.leadUserId)?.title
+                : t('properties.addLead')}
+            </span>
+          </ComboboxTrigger>
           <ComboboxContent className="min-w-56">
+            <ComboboxInput
+              aria-label={t('properties.addLead')}
+              placeholder={t('properties.addLead')}
+              showTrigger={false}
+            />
             <ComboboxEmpty>{t('properties.members')}</ComboboxEmpty>
             <ComboboxList>
               {(value: (typeof leadPickerOptions)[number]['value']) => {
@@ -346,45 +359,25 @@ export function ProjectPriorityField({
   const { t } = useTranslation('project');
   const { save, saving } = usePlanningMutation(project.id);
   const id = useId();
-  const priorityPickerOptions = priorities.map((name, value) => ({
-    label: (
-      <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
-        <PriorityIcon priority={value} size={16} />
-        {t(`create.priority.${name}`)}
-      </div>
-    ),
-    value,
-  }));
+  const priority = project.priority ?? 0;
   return (
-    <>
-      <label className={styles.accessibleLabel} htmlFor={id}>
-        {t('properties.priority')}
-      </label>
-      <Select
+    <TaskPriorityTag
+      nativeButton
+      disableDropdown={saving}
+      priority={priority}
+      onChange={(value) => void save({ priority: value })}
+    >
+      <Button
+        aria-label={t('properties.priority')}
+        className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
         disabled={saving}
-        items={priorityPickerOptions}
-        value={project.priority ?? 0}
-        onValueChange={(value) => {
-          if (value === null) return;
-          if (isPriorityLevel(value) && value !== project.priority) void save({ priority: value });
-        }}
+        id={id}
+        variant="ghost"
       >
-        <SelectTrigger className="min-w-0 max-w-full" id={id} size="sm">
-          <SelectValue placeholder={undefined} />
-        </SelectTrigger>
-        <SelectContent>
-          {priorityPickerOptions.map((option) => (
-            <SelectItem
-              disabled={'disabled' in option && option.disabled === true}
-              key={option.value}
-              value={option.value}
-            >
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </>
+        <PriorityIcon priority={priority} size={16} />
+        {t(`create.priority.${priorities[priority] ?? 'noPriority'}`)}
+      </Button>
+    </TaskPriorityTag>
   );
 }
 

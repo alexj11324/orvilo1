@@ -185,7 +185,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
                 style={{ color: headerStatusVisual.color }}
                 variant="outline"
               >
-                <ProjectStatusIcon size={12} status={detail.project.status} />
+                <ProjectStatusIcon size={16} status={detail.project.status} />
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,
                 })}

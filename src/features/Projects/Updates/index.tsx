@@ -6,7 +6,7 @@ import { cn } from 'cn';
 import dayjs from 'dayjs';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { createElement, memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
@@ -17,6 +17,7 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getDraft, removeDraft, saveDraft } from '@/features/ChatInput/draftStorage';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { useClientDataSWR } from '@/libs/swr';
@@ -213,14 +214,32 @@ export const ProjectUpdateComposer = memo<{
   }) => {
     const { t } = useTranslation(['project', 'common']);
     const editing = !!editingUpdate;
-    const [body, setBody] = useState(editingUpdate?.body ?? '');
-    const [health, setHealth] = useState<ProjectHealth>(editingUpdate?.health ?? 'onTrack');
+    const userId = useUserStore(userProfileSelectors.userId);
+    const draftKey = `project-update:${userId ?? 'local'}:${projectId}:${editingUpdate?.id ?? 'new'}`;
+    const [draft] = useState(() => getDraft(draftKey));
+    const [initialBody] = useState(() =>
+      typeof draft?.body === 'string' ? draft.body : (editingUpdate?.body ?? ''),
+    );
+    const [body, setBody] = useState(initialBody);
+    const [health, setHealth] = useState<ProjectHealth>(() =>
+      PROJECT_UPDATE_HEALTH_ORDER.includes(draft?.health as ProjectHealth)
+        ? (draft?.health as ProjectHealth)
+        : (editingUpdate?.health ?? 'onTrack'),
+    );
     const [posting, setPosting] = useState(false);
     const [editorRevision, setEditorRevision] = useState(0);
 
     const [expanded, setExpanded] = useState(defaultExpanded || editing);
     // `kind` is immutable once posted — edit mode never switches modes.
-    const [mode, setMode] = useState<ProjectUpdateKind>(editingUpdate?.kind ?? defaultMode);
+    const [mode, setMode] = useState<ProjectUpdateKind>(
+      () =>
+        editingUpdate?.kind ??
+        (draft?.mode === 'comment' || draft?.mode === 'update' ? draft.mode : defaultMode),
+    );
+    useEffect(() => {
+      if (body.trim()) saveDraft(draftKey, { body, health, mode });
+      else removeDraft(draftKey);
+    }, [body, draftKey, health, mode]);
 
     const post = async () => {
       const content = body.trim();
@@ -242,6 +261,7 @@ export const ProjectUpdateComposer = memo<{
           setEditorRevision((revision) => revision + 1);
           if (!defaultExpanded) setExpanded(false);
         }
+        removeDraft(draftKey);
         onPosted?.();
       } catch (error) {
         console.error('Failed to save project update', error);
@@ -287,7 +307,7 @@ export const ProjectUpdateComposer = memo<{
     }
 
     return (
-      <div className={cn('flex flex-col', styles.composer)}>
+      <div className="flex flex-col gap-3">
         {/* A posted row keeps its kind — edit mode drops the Comment/Update tabs.
           Editing a comment leaves the header empty, so it is skipped entirely. */}
         {(!editing || mode === 'update') && (
@@ -305,7 +325,7 @@ export const ProjectUpdateComposer = memo<{
                     { key: 'comment', label: t('overview.updateModeComment') },
                     { key: 'update', label: t('overview.updateModeUpdate') },
                   ].map((item) => (
-                    <TabsTrigger key={item.key} value={item.key}>
+                    <TabsTrigger className={styles.modeTab} key={item.key} value={item.key}>
                       {item.label}
                     </TabsTrigger>
                   ))}
@@ -329,37 +349,39 @@ export const ProjectUpdateComposer = memo<{
             )}
           </div>
         )}
-        <ProjectUpdateEditor
-          disabled={posting}
-          initialContent={editingUpdate?.body}
-          key={editorRevision}
-          label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
-          placeholder={t(
-            mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
-          )}
-          onChange={setBody}
-          onSubmit={() => void post()}
-        />
-        <div
-          className={cn('flex flex-row', styles.composerFooter)}
-          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
-        >
-          {editing && (
-            <Button disabled={posting} variant="outline" onClick={onCancelEdit}>
-              {t('common:cancel')}
-            </Button>
-          )}
-          <Button
-            aria-busy={posting}
-            disabled={!body.trim() || posting}
-            variant="default"
-            onClick={() => void post()}
+        <div className={cn('flex flex-col', styles.composer)}>
+          <ProjectUpdateEditor
+            disabled={posting}
+            initialContent={editorRevision === 0 ? initialBody : ''}
+            key={editorRevision}
+            label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
+            placeholder={t(
+              mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
+            )}
+            onChange={setBody}
+            onSubmit={() => void post()}
+          />
+          <div
+            className={cn('flex flex-row', styles.composerFooter)}
+            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
           >
-            {posting && <Spinner />}
-            {editing
-              ? t('common:save')
-              : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
-          </Button>
+            {editing && (
+              <Button disabled={posting} variant="outline" onClick={onCancelEdit}>
+                {t('common:cancel')}
+              </Button>
+            )}
+            <Button
+              aria-busy={posting}
+              disabled={!body.trim() || posting}
+              variant="default"
+              onClick={() => void post()}
+            >
+              {posting && <Spinner />}
+              {editing
+                ? t('common:save')
+                : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -406,12 +428,12 @@ export const ProjectUpdateRow = memo<{
   return (
     <div
       className={cn('flex flex-row', cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen))}
-      style={{ alignItems: 'flex-start', gap: 10 }}
+      style={{ alignItems: 'flex-start', gap: 12 }}
     >
       <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
       <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
         <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
+          <span className="text-sm" style={{ fontSize: 14, fontWeight: 500 }}>
             {update.authorName || t('overview.updateAnonymous', { defaultValue: 'Member' })}
           </span>
           {meta && update.health && (
@@ -464,7 +486,7 @@ export const ProjectUpdateRow = memo<{
             </div>
           )}
         </div>
-        <Markdown fontSize={15}>{update.body}</Markdown>
+        <Markdown fontSize={14}>{update.body}</Markdown>
       </div>
     </div>
   );

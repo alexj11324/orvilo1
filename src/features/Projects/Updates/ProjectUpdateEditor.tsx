@@ -1,7 +1,7 @@
 import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
 import { createStaticStyles } from 'antd-style';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const plugins = [ReactLinkPlugin, ReactListPlugin];
 
@@ -9,8 +9,8 @@ const styles = createStaticStyles(({ css }) => ({
   editor: css`
     [contenteditable] {
       min-height: 32px;
-      font-size: 15px !important;
-      line-height: 24px;
+      font-size: 14px !important;
+      line-height: 22px;
     }
   `,
 }));
@@ -34,6 +34,13 @@ export function ProjectUpdateEditor({
   placeholder,
 }: ProjectUpdateEditorProps) {
   const editor = useEditor();
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   useEffect(
     () =>
       editor.getLexicalEditor()?.registerRootListener((root) => {
@@ -55,10 +62,12 @@ export function ProjectUpdateEditor({
       placeholder={placeholder}
       plugins={plugins}
       style={{ minHeight: 32, maxHeight: 240, overflowY: 'auto', padding: '10px 12px 4px' }}
-      theme={{ fontSize: 15, lineHeight: 1.6 }}
+      theme={{ fontSize: 14, lineHeight: 1.6 }}
       type={initialContent ? 'markdown' : 'text'}
-      variant="chat"
-      onChange={(current) => onChange(String(current.getDocument('markdown') ?? ''))}
+      onChange={(current) => {
+        // The editor's trailing debounce may fire after a successful post unmounts it.
+        if (active.current) onChange(String(current.getDocument('markdown') ?? ''));
+      }}
       onPressEnter={({ event }) => {
         if (!event.isComposing && (event.metaKey || event.ctrlKey)) {
           event.preventDefault();

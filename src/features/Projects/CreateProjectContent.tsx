@@ -370,7 +370,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
     const statusPickerOptions = PROJECT_STATUS_OPTIONS.map((option) => ({
       label: (
         <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
-          <ProjectStatusIcon size={13} status={option.value} />
+          <ProjectStatusIcon size={16} status={option.value} />
           {t(option.labelKey)}
         </div>
       ),

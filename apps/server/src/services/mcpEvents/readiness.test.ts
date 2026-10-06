@@ -1,7 +1,9 @@
 // @vitest-environment node
+import { PGlite } from '@electric-sql/pglite';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { drizzle } from 'drizzle-orm/pglite';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { checkMcpAutomationReadiness } from './readiness';
 
@@ -95,6 +97,147 @@ const input = () => ({
     state: 'active',
     expiresAt: null,
   } as any,
+});
+
+describe('OpenCode ACP execution evidence', () => {
+  let database: PGlite;
+  const model = 'opencode-go/glm-5.3-flash';
+  const metadata = () => ({
+    executionEngine: 'hetero',
+    heteroAgentType: 'opencode',
+    assistantMessageId: 'answer',
+    executionPlan: { deviceId: 'one', workingDirectoryBinding: '/repo' },
+    remoteAdmission: { acpSessionId: 'acp-session' },
+  });
+  const request = () => {
+    const value = input();
+    value.db = drizzle(database);
+    value.task.config.workspace = { repoPath: '/repo' };
+    return value;
+  };
+  beforeEach(async () => {
+    database = new PGlite();
+    await database.exec(`
+      CREATE TABLE agent_operations (
+        id text PRIMARY KEY, user_id text, workspace_id text, agent_id text,
+        topic_id text, status text, completion_reason text, model text, provider text,
+        started_at timestamptz, completed_at timestamptz, metadata jsonb
+      );
+      CREATE TABLE messages (
+        id text PRIMARY KEY, user_id text, workspace_id text, topic_id text,
+        role text, content text, deleted_at timestamptz
+      );
+      INSERT INTO messages VALUES ('answer', 'user', 'workspace', 'topic', 'assistant', 'ACP succeeded', NULL);
+    `);
+    await database.query(
+      `INSERT INTO agent_operations VALUES
+      ('proof', 'user', 'workspace', 'agent', 'topic', 'done', 'done', $1, 'opencode',
+       '2026-10-06T10:00:00Z', '2026-10-06T10:01:00Z', $2)`,
+      [model, metadata()],
+    );
+    mocks.agent.mockResolvedValue({
+      id: 'agent',
+      updatedAt: new Date('2026-10-06T09:59:00Z'),
+      plugins: [],
+      agencyConfig: { heterogeneousProvider: { type: 'opencode', model } },
+    });
+    mocks.probe.mockResolvedValue({
+      success: true,
+      content: JSON.stringify({ ...verified(), executor: 'opencode', authenticated: 'unknown' }),
+    });
+  });
+  afterEach(async () => database.close());
+
+  it('accepts the latest actual ACP success on the unchanged pinned execution route', async () => {
+    expect(await checkMcpAutomationReadiness(request())).toMatchObject({
+      canEnable: true,
+      reasons: [],
+    });
+  });
+
+  it.each([
+    ['another user', "UPDATE agent_operations SET user_id='other'"],
+    ['another workspace', "UPDATE agent_operations SET workspace_id='other'"],
+    ['another Agent', "UPDATE agent_operations SET agent_id='other'"],
+    ['another provider', "UPDATE agent_operations SET provider='other'"],
+    ['another executed model', "UPDATE agent_operations SET model='another/model'"],
+    ['missing executed model', 'UPDATE agent_operations SET model=NULL'],
+    ['old configuration', "UPDATE agent_operations SET started_at='2026-10-06T09:58:00Z'"],
+    ['missing terminal completion', 'UPDATE agent_operations SET completed_at=NULL'],
+    ['failed completion', "UPDATE agent_operations SET completion_reason='error'"],
+    [
+      'missing ACP session',
+      "UPDATE agent_operations SET metadata=metadata #- '{remoteAdmission,acpSessionId}'",
+    ],
+    ['missing ACP engine', "UPDATE agent_operations SET metadata=metadata - 'executionEngine'"],
+    [
+      'wrong Agent family',
+      `UPDATE agent_operations SET metadata=jsonb_set(metadata, '{heteroAgentType}', '"other"')`,
+    ],
+    [
+      'another device',
+      `UPDATE agent_operations SET metadata=jsonb_set(metadata, '{executionPlan,deviceId}', '"other"')`,
+    ],
+    [
+      'another cwd',
+      `UPDATE agent_operations SET metadata=jsonb_set(metadata, '{executionPlan,workingDirectoryBinding}', '"/other"')`,
+    ],
+    ['missing output', 'DELETE FROM messages'],
+    ['blank output', "UPDATE messages SET content='   '"],
+    ['foreign output', "UPDATE messages SET user_id='other'"],
+    ['deleted output', 'UPDATE messages SET deleted_at=now()'],
+  ])('rejects %s evidence', async (_name, statement) => {
+    await database.exec(statement);
+    expect((await checkMcpAutomationReadiness(request())).reasons).toContain('AUTH_REQUIRED');
+  });
+
+  it('invalidates older success after a newer failure before model negotiation', async () => {
+    await database.exec(`INSERT INTO agent_operations
+      SELECT 'failed', user_id, workspace_id, agent_id, topic_id, 'error', 'error', NULL,
+        provider, started_at, completed_at + interval '1 minute', metadata
+      FROM agent_operations WHERE id='proof'`);
+    expect((await checkMcpAutomationReadiness(request())).reasons).toContain('AUTH_REQUIRED');
+  });
+
+  it('rejects whitespace-only output containing line breaks and tabs', async () => {
+    await database.query('UPDATE messages SET content=$1', ['\n\t\r']);
+    expect((await checkMcpAutomationReadiness(request())).reasons).toContain('AUTH_REQUIRED');
+  });
+
+  it('uses completion order when a concurrent failure finishes before the success', async () => {
+    await database.exec(`INSERT INTO agent_operations
+      SELECT 'failed', user_id, workspace_id, agent_id, topic_id, 'error', 'error', NULL,
+        provider, started_at + interval '1 second', completed_at - interval '30 seconds', metadata
+      FROM agent_operations WHERE id='proof'`);
+    expect((await checkMcpAutomationReadiness(request())).canEnable).toBe(true);
+  });
+
+  it.each([
+    { authenticated: false },
+    { credentialRequired: false },
+    { installed: false },
+    { unattended: false },
+    { repositoryAccessible: false },
+    { requiredToolsSupported: false },
+  ])('preserves host rejection %j', async (patch) => {
+    mocks.probe.mockResolvedValue({
+      success: true,
+      content: JSON.stringify({
+        ...verified(),
+        executor: 'opencode',
+        authenticated: 'unknown',
+        ...patch,
+      }),
+    });
+    expect((await checkMcpAutomationReadiness(request())).canEnable).toBe(false);
+  });
+
+  it('requires an explicit pinned model even after a successful default-model run', async () => {
+    const agent = await mocks.agent();
+    delete agent.agencyConfig.heterogeneousProvider.model;
+    mocks.agent.mockResolvedValue(agent);
+    expect((await checkMcpAutomationReadiness(request())).reasons).toContain('AUTH_REQUIRED');
+  });
 });
 const verified = () => ({
   executor: 'codex',

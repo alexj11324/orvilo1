@@ -4,15 +4,16 @@ import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task'
 import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
 import { automationReadinessResultSchema } from '@orvilo/heterogeneous-agents/automationReadiness';
 import type { McpEventBinding, TaskItem } from '@orvilo/types';
-import { getActivePluginIds } from '@orvilo/types';
+import { getActivePluginIds, TERMINAL_AGENT_OPERATION_STATUSES } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { evaluateFeatureFlag } from '@/config/featureFlags';
 import { AgentModel } from '@/database/models/agent';
 import { ConnectorModel } from '@/database/models/connector';
 import { DeviceModel } from '@/database/models/device';
 import { ProviderBindingModel } from '@/database/models/providerBinding';
-import { ConnectorStatus } from '@/database/schemas';
+import { agentOperations, ConnectorStatus, messages } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
@@ -246,6 +247,65 @@ export async function checkMcpAutomationReadiness(input: {
     if (observed.requiredToolsSupported !== true) reasons.push('REQUIRED_TOOLS_UNSUPPORTED');
     if (cwd && observed.repositoryAccessible !== true) reasons.push('REPOSITORY_UNAVAILABLE');
     let authenticated = observed.authenticated === true;
+    if (
+      type === 'opencode' &&
+      observed.executor === 'opencode' &&
+      observed.authenticated === 'unknown' &&
+      observed.credentialRequired !== false &&
+      provider.model &&
+      cwd &&
+      agent.updatedAt
+    ) {
+      // ponytail: recent successful ACP execution proves this unchanged route;
+      // credential revocation and host binary changes still require a new run.
+      const [latest] = await db
+        .select({
+          status: agentOperations.status,
+          completionReason: agentOperations.completionReason,
+          model: agentOperations.model,
+          sessionId: sql<
+            string | null
+          >`${agentOperations.metadata}->'remoteAdmission'->>'acpSessionId'`,
+          hasOutput: sql<boolean>`coalesce(${messages.content}, '') ~ '[^[:space:]]'`,
+        })
+        .from(agentOperations)
+        .leftJoin(
+          messages,
+          and(
+            eq(messages.id, sql`${agentOperations.metadata}->>'assistantMessageId'`),
+            eq(messages.topicId, agentOperations.topicId),
+            eq(messages.userId, trigger.userId),
+            eq(messages.workspaceId, trigger.workspaceId),
+            eq(messages.role, 'assistant'),
+            isNull(messages.deletedAt),
+          ),
+        )
+        .where(
+          and(
+            eq(agentOperations.userId, trigger.userId),
+            eq(agentOperations.workspaceId, trigger.workspaceId),
+            eq(agentOperations.agentId, agent.id),
+            eq(agentOperations.provider, 'opencode'),
+            sql`${agentOperations.metadata}->>'executionEngine' = 'hetero'`,
+            sql`${agentOperations.metadata}->>'heteroAgentType' = 'opencode'`,
+            sql`${agentOperations.metadata}->'executionPlan'->>'deviceId' = ${deviceId}`,
+            sql`${agentOperations.metadata}->'executionPlan'->>'workingDirectoryBinding' = ${cwd}`,
+            gte(agentOperations.startedAt, agent.updatedAt),
+            isNotNull(agentOperations.completedAt),
+            inArray(agentOperations.status, [...TERMINAL_AGENT_OPERATION_STATUSES]),
+            // A failure before model negotiation still invalidates older success.
+            or(eq(agentOperations.model, provider.model), isNull(agentOperations.model)),
+          ),
+        )
+        .orderBy(desc(agentOperations.completedAt), desc(agentOperations.id))
+        .limit(1);
+      authenticated =
+        latest?.status === 'done' &&
+        latest.completionReason === 'done' &&
+        latest.model === provider.model &&
+        Boolean(latest.sessionId?.trim()) &&
+        latest.hasOutput === true;
+    }
     // Prime's provider is authorized by the server binding, not a host CLI login.
     // The engine model is retired: the builtin 'orvilo' agent IS the embedded
     // Prime runtime, so a persisted `provider.engine` key is dead data — the

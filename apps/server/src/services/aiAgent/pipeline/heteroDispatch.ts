@@ -1010,7 +1010,8 @@ export const dispatchHeteroAgent = async (
     // must host — admission records it per candidate so a wrong-adapter
     // device can never read as a verified pick.
     requiredOperation: { adapter: resolveHarnessAdapter(heteroType), kind: 'agent-run' },
-    sandboxExecutionAvailable: !isRemoteHetero && supportsCloudHeterogeneousSandbox(heteroType),
+    sandboxExecutionAvailable:
+      enableCloudSandbox && !isRemoteHetero && supportsCloudHeterogeneousSandbox(heteroType),
     sessionBoundDeviceId,
     userId: deps.userId,
     workspaceId: deps.workspaceId,

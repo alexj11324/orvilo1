@@ -12,7 +12,9 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { projects, taskDispatches, tasks } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
+import { TaskDispatchService } from '@/server/services/taskDispatch';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
+import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 import { createTaskRuntime } from '@/server/services/toolExecution/serverRuntimes/task';
 
 import { taskRouter } from '../../task';
@@ -602,6 +604,116 @@ describe('Task Router Integration', () => {
         wsCaller: taskRouter.createCaller({ ...createTestContext(userId), workspaceId }),
       };
     };
+
+    it('rejects an Agent reassigned to private between member preflight and locked dispatch admission', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { workspaceId, wsAgentId, wsCaller } = await setupWorkspace();
+      const { agents } = await import('@/database/schemas');
+      const privateAgentId = 'agt_assignee_race_private';
+      await serverDB.insert(agents).values({
+        id: privateAgentId,
+        slug: privateAgentId,
+        userId,
+        workspaceId,
+        visibility: 'private',
+      });
+      const created = await wsCaller.create({
+        assigneeAgentId: wsAgentId,
+        instruction: 'Race executor',
+      });
+      const memberCaller = taskRouter.createCaller({
+        ...createTestContext(otherUserId),
+        workspaceId,
+      });
+      const originalPrepare = TaskDispatchService.prototype.prepare;
+      const kickoff = vi.spyOn(TaskModel.prototype, 'claimRunKickoff');
+      const provision = vi.spyOn(TaskWorkspaceService.prototype, 'provision');
+      const prepare = vi
+        .spyOn(TaskDispatchService.prototype, 'prepare')
+        .mockImplementationOnce(async function (this: TaskDispatchService, input) {
+          await wsCaller.update({
+            id: created.data.id,
+            assigneeAgentId: privateAgentId,
+            expectedDomainRevision: await revisionOf(created.data.id),
+          });
+          return originalPrepare.call(this, input);
+        });
+      try {
+        const generationBefore = created.data.executionGeneration;
+        const result = await memberCaller.run({ id: created.data.id }).then(
+          () => 'started',
+          (error) => error,
+        );
+        expect(prepare).toHaveBeenCalledTimes(1);
+        expect
+          .soft(
+            await serverDB
+              .select()
+              .from(taskDispatches)
+              .where(eq(taskDispatches.taskId, created.data.id)),
+          )
+          .toHaveLength(0);
+        const afterRun = await new TaskModel(serverDB, userId, workspaceId).findById(
+          created.data.id,
+        );
+        expect.soft(afterRun?.executionGeneration).toBe(generationBefore);
+        expect.soft(kickoff).not.toHaveBeenCalled();
+        expect.soft(provision).not.toHaveBeenCalled();
+        expect.soft(mockExecAgent).not.toHaveBeenCalled();
+        expect.soft(result).toMatchObject({ code: 'NOT_FOUND' });
+      } finally {
+        prepare.mockRestore();
+        kickoff.mockRestore();
+        provision.mockRestore();
+      }
+    });
+
+    it('shares a task assigned to an owner personal Agent without granting teammate execution', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { workspaceId, wsAgentId, wsCaller } = await setupWorkspace();
+      const { agents } = await import('@/database/schemas');
+      await serverDB.update(agents).set({ visibility: 'private' }).where(eq(agents.id, wsAgentId));
+      const created = await wsCaller.create({
+        assigneeAgentId: wsAgentId,
+        assigneeUserId: otherUserId,
+        instruction: 'Shared outcome, personal executor',
+      });
+      expect(created.data.visibility).toBe('public');
+      expect(created.data.assigneeUserId).toBe(otherUserId);
+      const teammate = new TaskModel(serverDB, otherUserId!, workspaceId);
+      expect(await teammate.findById(created.data.id)).toMatchObject({ id: created.data.id });
+      const memberCaller = taskRouter.createCaller({
+        ...createTestContext(otherUserId),
+        workspaceId,
+      });
+      const beforeRun = await teammate.findById(created.data.id);
+
+      await expect(memberCaller.run({ id: created.data.id })).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+      expect(await teammate.findById(created.data.id)).toEqual(beforeRun);
+      expect(
+        await serverDB
+          .select()
+          .from(taskDispatches)
+          .where(eq(taskDispatches.taskId, created.data.id)),
+      ).toHaveLength(0);
+      expect(mockExecAgent).not.toHaveBeenCalled();
+
+      await expect(
+        wsCaller.updateVisibility({ id: created.data.id, visibility: 'private' }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      // Explicit privacy still requires clearing an assignee who would lose access.
+      await wsCaller.update({
+        id: created.data.id,
+        assigneeUserId: null,
+        expectedDomainRevision: await revisionOf(created.data.id),
+      });
+      await wsCaller.updateVisibility({ id: created.data.id, visibility: 'private' });
+      expect(await teammate.findById(created.data.id)).toBeNull();
+      await wsCaller.updateVisibility({ id: created.data.id, visibility: 'public' });
+      expect(await teammate.findById(created.data.id)).toMatchObject({ visibility: 'public' });
+    });
 
     it('creates a task with an executing agent AND a human owner, notifying the member once', async () => {
       otherUserId = await createTestUser(serverDB);

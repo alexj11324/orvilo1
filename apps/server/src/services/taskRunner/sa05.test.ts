@@ -23,6 +23,9 @@ vi.mock('@/database/models/goal', () => ({
 }));
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
+vi.mock('@/database/utils/agent-access', () => ({
+  assertAgentUsableBy: vi.fn().mockResolvedValue(undefined),
+}));
 // `consumeForDispatch` is an instance field (arrow), not a prototype method —
 // intercept the class via the barrel so tests control the scoped single-use
 // approval lookup bound to the prepared dispatch.

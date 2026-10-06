@@ -347,18 +347,13 @@ export const agentRouter = router({
         });
       }
 
-      // Demoting an agent must not strand tasks that depend on it: public
-      // tasks would violate the `assertAgentVisibilityCompat` invariant
-      // (members keep seeing the task but can no longer see or run the
-      // assignee), and other members' tasks — private ones included — would
-      // fail future runs/updates because their creators can no longer
-      // resolve the agent. Reject early — reassign or demote those tasks
-      // first.
+      // Other members' tasks must keep a usable executor after demotion.
+      // The owner's shared tasks retain their owner-only Agent execution rights.
       if (blockingTasks > 0) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message:
-            'Cannot make this agent private while workspace tasks still depend on it. Reassign those tasks or make them private first.',
+            'Cannot make this agent private while other members tasks still depend on it. Reassign those tasks first.',
         });
       }
 

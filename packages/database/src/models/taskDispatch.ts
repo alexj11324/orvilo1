@@ -41,6 +41,7 @@ import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase, Transaction } from '../type';
+import { assertAgentUsableBy } from '../utils/agent-access';
 import { snapshotAutomationDefinition } from '../utils/automationOccurrence';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
@@ -169,9 +170,13 @@ export class TaskDispatchEventEvidenceError extends Error {
 }
 
 export interface RequestTaskDispatchInput {
+  /** Validated delegation executor; otherwise use the locked task assignee. */
+  delegatedAgentId?: string;
   dispatchId?: string;
   /** Server-verified admission evidence for `trigger: 'event'` rows. */
   eventEvidence?: EventDispatchEvidence;
+  /** Runner identity for fresh execution authorization, separate from audit actors. */
+  executionUserId?: string;
   expectedDefinitionVersionId?: string;
   idempotencyKey: string;
   /** Raw actor identity persisted separately from the `trigger:actor`
@@ -793,6 +798,14 @@ export class TaskDispatchModel {
         .for('update');
       if (!task || task.workspaceId !== (this.workspaceId ?? null)) {
         throw new TaskDispatchNotFoundError('Task not found in dispatch scope');
+      }
+
+      const executingAgentId = input.delegatedAgentId ?? task.assigneeAgentId;
+      if (input.executionUserId && executingAgentId) {
+        await assertAgentUsableBy(tx as OrviloDatabase, executingAgentId, {
+          userId: input.executionUserId,
+          workspaceId: this.workspaceId,
+        });
       }
 
       // The roster band the bound agent runs at — snapshotted once under the

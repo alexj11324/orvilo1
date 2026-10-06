@@ -28,6 +28,7 @@ import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
+import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
@@ -235,6 +236,15 @@ export class TaskRunnerService {
     if (!resolvedTask) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
+    // Reading a shared task does not grant use of its owner's personal Agent.
+    // Validate the actual executor before mutating task policy or dispatch state.
+    const assignedExecutor = delegation?.agentId ?? resolvedTask.assigneeAgentId;
+    if (assignedExecutor) {
+      await assertAgentUsableBy(this.db, assignedExecutor, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
     let task: TaskItem = resolvedTask;
     if (
       intent === 'fresh_occurrence' &&
@@ -351,7 +361,9 @@ export class TaskRunnerService {
     try {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
+          delegatedAgentId: delegation?.agentId,
           eventEvidence,
+          executionUserId: this.userId,
           idempotencyKey: resolvedIdempotencyKey,
           // Raw actor persisted separately from the `trigger:actor` audit
           // string — the persisted origin's initiator is what the final

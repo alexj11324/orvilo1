@@ -47,7 +47,6 @@ import TaskVisibilityTag from '../features/TaskVisibilityTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
-import { useAgentVisibility } from '../shared/useAgentVisibility';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import {
   answeredClarifications,
@@ -145,25 +144,12 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
   // the answers in the brief twice, once woven in and once as a list.
   const [isSynthesizing, setIsSynthesizing] = useState(false);
 
-  // A private agent can only run a private task. Coerce + lock the
-  // visibility chip when the selected agent is private.
-  const assigneeVisibility = useAgentVisibility(assigneeAgentId);
-  const isPrivateAgent = assigneeVisibility === 'private';
   const selfUserId = useUserStore(userProfileSelectors.userId);
   const isOtherMemberAssignee = Boolean(assigneeUserId) && assigneeUserId !== selfUserId;
 
-  // Resolve the two visibility constraints in one place so an old draft or an
-  // externally privatized agent cannot make separate effects toggle forever.
-  // A private agent is the stronger constraint, so drop an incompatible member.
   useEffect(() => {
-    if (isPrivateAgent) {
-      if (isOtherMemberAssignee) setAssigneeUserId(undefined);
-      if (visibility === 'public') setVisibility('private');
-      return;
-    }
-
     if (isOtherMemberAssignee && visibility === 'private') setVisibility('public');
-  }, [isOtherMemberAssignee, isPrivateAgent, visibility]);
+  }, [isOtherMemberAssignee, visibility]);
 
   const editor = useEditor();
 
@@ -760,11 +746,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                 <div className="text-[12px]">{assigneeMeta?.title}</div>
               </div>
             ) : (
-              <AssigneeAgentSelector
-                currentAgentId={assigneeAgentId}
-                taskVisibility={isOtherMemberAssignee ? 'public' : undefined}
-                onChange={handleAgentChange}
-              >
+              <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
                 <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeAgentId ? (
                     <>
@@ -796,16 +778,11 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
               <TaskVisibilityTag
                 visibility={visibility}
                 lockedReason={
-                  isPrivateAgent
-                    ? t('createTask.visibility.privateAgentLocked', {
-                        defaultValue: 'Private agents can only run private tasks.',
+                  isOtherMemberAssignee
+                    ? t('createTask.visibility.memberAssigneeLocked', {
+                        defaultValue: 'A task assigned to a member stays visible to the workspace.',
                       })
-                    : isOtherMemberAssignee
-                      ? t('createTask.visibility.memberAssigneeLocked', {
-                          defaultValue:
-                            'A task assigned to a member stays visible to the workspace.',
-                        })
-                      : undefined
+                    : undefined
                 }
                 onChange={setVisibility}
               >

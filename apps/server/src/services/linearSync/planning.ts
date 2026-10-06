@@ -606,8 +606,6 @@ export class LinearPlanningWorker {
             if (action.assigneeAgentId) {
               const exists = await agentModel.existsById(action.assigneeAgentId);
               if (!exists) throw new Error('Planning proposal assignee Agent is not available');
-              const agentVisibility = await agentModel.getAgentVisibility(action.assigneeAgentId);
-              taskService.assertAgentVisibilityCompat(task.visibility, agentVisibility);
             }
             await taskService.assertAssigneeUserAssignable(action.assigneeUserId);
             taskService.assertAssigneeUserVisibilityCompat(

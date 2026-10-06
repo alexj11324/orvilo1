@@ -2163,7 +2163,7 @@ describe('TaskService', () => {
     });
   });
 
-  describe('agent ↔ task visibility compat', () => {
+  describe('task visibility independent of agent access', () => {
     beforeEach(() => {
       mockTaskModel.create.mockImplementation(async (data: any) => ({
         ...data,
@@ -2173,7 +2173,7 @@ describe('TaskService', () => {
       }));
     });
 
-    it('rejects creating a public task with a private agent', async () => {
+    it('allows creating a public task with the caller own private agent', async () => {
       mockAgentModel.existsById.mockResolvedValue(true);
       mockAgentModel.getAgentSnapshotForTaskCreate.mockResolvedValue({
         snapshot: null,
@@ -2187,8 +2187,7 @@ describe('TaskService', () => {
           instruction: 'do something',
           visibility: 'public',
         }),
-      ).rejects.toThrow(/public task cannot be assigned to a private agent/i);
-      expect(mockTaskModel.create).not.toHaveBeenCalled();
+      ).resolves.toMatchObject({ visibility: 'public' });
     });
 
     it('allows creating a private task with a public agent', async () => {
@@ -2210,7 +2209,7 @@ describe('TaskService', () => {
       );
     });
 
-    it('infers private visibility from a private agent when caller omits it', async () => {
+    it('defaults to public visibility with a private agent when caller omits it', async () => {
       mockAgentModel.existsById.mockResolvedValue(true);
       mockAgentModel.getAgentSnapshotForTaskCreate.mockResolvedValue({
         snapshot: null,
@@ -2223,19 +2222,18 @@ describe('TaskService', () => {
         instruction: 'do something',
       });
       expect(mockTaskModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ visibility: 'private' }),
+        expect.objectContaining({ visibility: 'public' }),
         expect.anything(),
       );
     });
 
-    it('assertAgentVisibilityCompat allows null agent (no assignee)', () => {
+    it('rejects assigning an inaccessible private agent before creating a task', async () => {
+      mockAgentModel.existsById.mockResolvedValueOnce(false);
       const service = new TaskService(db, userId, 'ws-1');
-      expect(() => service.assertAgentVisibilityCompat('public', null)).not.toThrow();
-    });
-
-    it('assertAgentVisibilityCompat allows private task + private agent', () => {
-      const service = new TaskService(db, userId, 'ws-1');
-      expect(() => service.assertAgentVisibilityCompat('private', 'private')).not.toThrow();
+      await expect(
+        service.createTask({ assigneeAgentId: 'agent-other-private', instruction: 'do something' }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(mockTaskModel.create).not.toHaveBeenCalled();
     });
   });
 

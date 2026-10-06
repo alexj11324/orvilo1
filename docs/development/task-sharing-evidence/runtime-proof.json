@@ -1,0 +1,111 @@
+{
+  "afterRun": {
+    "task": {
+      "id": "task_EVjKiI33GdAz",
+      "status": "backlog",
+      "workflow_category": "backlog",
+      "execution_generation": 0,
+      "domain_revision": 1,
+      "requirement_revision": 1,
+      "policy_revision": 1,
+      "updated_at": "2026-10-06T13:23:46.787Z"
+    },
+    "dispatchCount": 0,
+    "topicCount": 0,
+    "operationCount": 0
+  },
+  "allSourceHashesMatch": true,
+  "beforeRun": {
+    "task": {
+      "id": "task_EVjKiI33GdAz",
+      "status": "backlog",
+      "workflow_category": "backlog",
+      "execution_generation": 0,
+      "domain_revision": 1,
+      "requirement_revision": 1,
+      "policy_revision": 1,
+      "updated_at": "2026-10-06T13:23:46.787Z"
+    },
+    "dispatchCount": 0,
+    "topicCount": 0,
+    "operationCount": 0
+  },
+  "businessTaskSqlWrites": false,
+  "cleanup": {
+    "originalMembersRestored": true,
+    "temporaryMembershipAbsent": true,
+    "originalDevices": [
+      {
+        "device_id": "9b50cc7840244d77b4fd36fbb35afcaf",
+        "workspace_id": "ayy9sEdMxzC2h6Sv",
+        "friendly_name": null
+      },
+      {
+        "device_id": "b26d477ac30d6080a4a038b66cb28a80",
+        "workspace_id": null,
+        "friendly_name": null
+      }
+    ],
+    "newFixtureRetained": true,
+    "allElevenPublic": true
+  },
+  "defaultVisibilityOmittedInRequest": true,
+  "deliveredTaskSourceHashes": {
+    "apps/server/src/routers/lambda/__tests__/integration/task.integration.test.ts": "db2b77b1ff75659f1872e0cfba121333e42691c83967abdf515fab16c505e24c",
+    "apps/server/src/routers/lambda/agent.ts": "0ad514f1088a3352ffec61444cc4dac42eb58a3b4914037d978f5fd2803c2dfe",
+    "apps/server/src/routers/lambda/task.ts": "e9e613cc03ade772b23a6c587c9ac1a7016b544335a87f4bb8810cc45623bbc7",
+    "apps/server/src/services/linearSync/planning.ts": "4f2a057631bbf93333ee497537a119bf54fe13f72aa0b5e8702070932f8196e0",
+    "apps/server/src/services/task/index.test.ts": "4571ba71e04a0460f12ffbd369f87aa36ae8fed7c20cc4aadaeafaa0e13a663b",
+    "apps/server/src/services/task/index.ts": "2d255d27ade24f242222c6524df45ace6c476c35f047cd0ea07f9c58e44e6c3e",
+    "apps/server/src/services/taskDispatch/index.ts": "8cf02233a26f0a4e152b49ca23060f24f16ed74f4095fdebc71c8c18d7aa8c69",
+    "apps/server/src/services/taskRunner/delegation.test.ts": "657b85144d5bb252b6a0a280ce7dc8d9fb7cfbb2ccd7966b7d2688343fdeb066",
+    "apps/server/src/services/taskRunner/index.ts": "45751b1fa19cda3c3312683d92b614604867b7c7d18a5363351bda75986c0bbe",
+    "apps/server/src/services/taskRunner/sa05.test.ts": "2e8d386fec15888089d7aa9c737dcc92c9e300be4ff66d3bd00c84649529d975",
+    "packages/database/src/models/__tests__/task.test.ts": "19f4f79174265247d3d461244511c1c8b96f57a7024671a10a799765d55fc7d7",
+    "packages/database/src/models/__tests__/taskDispatch.test.ts": "c5ba06a85e6486fe8ca1f592c71a087a15331fe01713f12be94416821787e156",
+    "packages/database/src/models/task.ts": "e77f7c84dcebf252c1f1b0a05c81110f6388607764be7c549763ccfc53553e61",
+    "packages/database/src/models/taskDispatch.ts": "9a318f91b0612a98344d9e89b5195783cd5b488e1a0927d6e0e52ec9335a3726",
+    "src/features/AgentTasks/AgentTaskList/CreateTaskInlineEntry.test.tsx": "7e4a0f63f26198f754654d60af202124e2f87ffb462a26791538bed6233167ca",
+    "src/features/AgentTasks/AgentTaskList/CreateTaskInlineEntry.tsx": "150f341894827e80f72c36b99843d1c7fdf3a61c7d87271a0e1fae4a28aebb1f",
+    "src/features/AgentTasks/CreateTaskModal/CreateTaskContent.tsx": "5fd6bbfc57a477cb3c34c0275bfd1c5b6ca9854b1f85c798b1e6ae30b2c8b92b",
+    "src/features/AgentTasks/features/AgentTaskItem.test.tsx": "1ef3b94c7da713e9b99638576aef72ffb4cade7646a178584181001b6fc7295e",
+    "src/features/AgentTasks/features/AgentTaskItem.tsx": "999bed1db1a3babd30e932175ca829bf63e35af6474d52a8cb49dec50fc397d7",
+    "src/features/AgentTasks/features/AssigneeAgentSelector.tsx": "4237126eb13b5147ee24b50f67918e0638ad176662052e5c808249549b9b1764"
+  },
+  "deliverySourceHead": "a2642a005560df7222db5ff98036f5143c395f0e",
+  "existingScreenshotTasks": {
+    "count": 10,
+    "normalApiPublicPromotions": 9,
+    "alreadyPublicNoop": 1,
+    "secondaryAfterAllPublicReadable": true,
+    "otherWorkspaceReadableCount": 0
+  },
+  "newDefaultTask": {
+    "id": "task_EVjKiI33GdAz",
+    "identifier": "T-11",
+    "visibility": "public",
+    "workspaceId": "ayy9sEdMxzC2h6Sv",
+    "assigneeAgentId": "agt_AB0VcTFshbq8",
+    "assigneeUserId": null,
+    "projectId": null,
+    "automationMode": null
+  },
+  "noExecutionSideEffects": true,
+  "privateAgentConfigReadable": false,
+  "provenance": {
+    "task-sharing-57d-safe-proof.json": "8afc3eb26ec6e9e3c2be8e38dfe1330160f44145dfb4aa4d62ced146366ab82d",
+    "normal-api-filtered-proof.json": "4983ac234114ee219382339e61c99a4291771ac4cf6238248240c0f62bf5cf66"
+  },
+  "providerExecution": false,
+  "reusedEvidenceNote": "Actual runtime candidate included separate sidebar changes. All 20 delivered Task source/test files match it. Locale copy and unrelated canary changes are not a same-head renderer acceptance claim.",
+  "runAttemptCount": 1,
+  "secondaryCanReadNewDefaultTask": true,
+  "singleSecondaryRun": {
+    "code": "NOT_FOUND",
+    "httpStatus": 404,
+    "message": "Agent not found"
+  },
+  "sourceAgentUnchanged": true,
+  "sourceFileCount": 24,
+  "sourceHead": "57d1293aa52596dad1599acc341021149caff166"
+}

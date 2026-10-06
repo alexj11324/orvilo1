@@ -32,7 +32,13 @@ vi.mock('@/database/models/agent', () => ({
 }));
 vi.mock('@/database/models/connector', () => ({
   ConnectorModel: class {
-    findPublicById = mocks.source;
+    findById = mocks.source;
+    findPublicById = async () => {
+      const row = await mocks.source();
+      if (!row) return row;
+      const { metadata: _metadata, credentials: _credentials, ...publicRow } = row;
+      return publicRow;
+    };
   },
 }));
 vi.mock('@/database/models/device', () => ({

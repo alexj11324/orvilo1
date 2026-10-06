@@ -94,7 +94,7 @@ export async function checkMcpAutomationReadiness(input: {
     );
   if ((await getMcpEventWorkerHealth()).status !== 'ready') reasons.push('WORKER_UNHEALTHY');
 
-  const source = await new ConnectorModel(db, trigger.userId, trigger.workspaceId).findPublicById(
+  const source = await new ConnectorModel(db, trigger.userId, trigger.workspaceId).findById(
     trigger.sourceId,
   );
   if (!source || !source.isEnabled || source.status !== ConnectorStatus.connected || source.agentId)

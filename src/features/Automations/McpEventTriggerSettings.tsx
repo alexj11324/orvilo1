@@ -57,7 +57,9 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
           <SelectContent>
             {events.map((event) => (
               <SelectItem key={event.name} value={event.name}>
-                {isGithub ? t(`events.github.event.${event.name.slice(7)}`) : event.name}
+                {isGithub
+                  ? t(`events.github.event.${event.name.slice(7)}`, { defaultValue: event.name })
+                  : event.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -112,11 +114,13 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {['opened', 'reopened', 'synchronize', 'closed'].map((value) => (
-                              <SelectItem key={value} value={value}>
-                                {t(`events.github.action.${value}`)}
-                              </SelectItem>
-                            ))}
+                            {(['opened', 'reopened', 'synchronize', 'closed'] as const).map(
+                              (value) => (
+                                <SelectItem key={value} value={value}>
+                                  {t(`events.github.action.${value}`)}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -134,7 +138,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {['any', 'success', 'failure'].map((value) => (
+                            {(['any', 'success', 'failure'] as const).map((value) => (
                               <SelectItem key={value} value={value}>
                                 {t(`events.github.conclusion.${value}`)}
                               </SelectItem>
@@ -285,7 +289,7 @@ function GithubWebhookSetup({
       <span>{t('events.github.contentType')}</span>
       <span>
         {t('events.github.selectedEvent', {
-          event: t(`events.github.event.${eventName.slice(7)}`),
+          event: t(`events.github.event.${eventName.slice(7)}`, { defaultValue: eventName }),
         })}
       </span>
       <span className={'text-muted-foreground'}>{t('events.github.secretHint')}</span>

@@ -85,7 +85,7 @@ export const mcpEventsRouter = router({
       if (!validMcpEventFilters(input.filters))
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid event filters' });
       const task = await ctx.eventTaskModel.resolve(input.taskId);
-      const connector = await ctx.connectorModel.findPublicById(input.connectorId);
+      const connector = await ctx.connectorModel.findById(input.connectorId);
       if (!task || !connector || connector.agentId) throw new TRPCError({ code: 'NOT_FOUND' });
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
       assertWorkspaceRowManageable(ctx, connector.userId, 'connector');
@@ -391,7 +391,7 @@ export const mcpEventsRouter = router({
     .query(async ({ ctx, input }) => {
       if (!(await ctx.eventTaskModel.resolve(input.taskId)))
         throw new TRPCError({ code: 'NOT_FOUND' });
-      const connector = await ctx.connectorModel.findPublicById(input.connectorId);
+      const connector = await ctx.connectorModel.findById(input.connectorId);
       if (!connector || connector.agentId) throw new TRPCError({ code: 'NOT_FOUND' });
       try {
         if (isGitHubMcpConnector(connector))
@@ -462,7 +462,7 @@ export const mcpEventsRouter = router({
   sources: eventProcedure.input(taskInput).query(async ({ ctx, input }) => {
     if (!(await ctx.eventTaskModel.resolve(input.taskId)))
       throw new TRPCError({ code: 'NOT_FOUND' });
-    const connectors = await ctx.connectorModel.queryPublic();
+    const connectors = await ctx.connectorModel.query();
     return {
       data: connectors
         .filter(
@@ -498,7 +498,7 @@ export const mcpEventsRouter = router({
       );
       if (binding?.sourceType !== 'github' || !binding.github || binding.state === 'revoked')
         throw new TRPCError({ code: 'NOT_FOUND' });
-      const connector = await ctx.connectorModel.findPublicById(trigger.sourceId);
+      const connector = await ctx.connectorModel.findById(trigger.sourceId);
       if (!connector || !isGitHubMcpConnector(connector))
         throw new TRPCError({ code: 'NOT_FOUND' });
       assertWorkspaceRowManageable(ctx, connector.userId, 'connector');

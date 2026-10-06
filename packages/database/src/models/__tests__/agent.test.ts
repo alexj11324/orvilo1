@@ -112,7 +112,7 @@ describe('agent runtime identity', () => {
             permission: { configId: 'approval', value: 'auto' },
           },
           workingDirByDevice: { 'creation-host-agent-model-test-user-id': '/old' },
-          modelSelectionPolicy: 'owner',
+          modelSelectionPolicy: 'fixed',
         },
       }),
     );
@@ -127,7 +127,7 @@ describe('agent runtime identity', () => {
     ).agencyConfig;
     await agentModel.updateConfig(coordinator.id, { agencyConfig: nextAgency }, true);
     const updated = await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) });
-    expect(updated?.agencyConfig).toEqual({ ...nextAgency, modelSelectionPolicy: 'owner' });
+    expect(updated?.agencyConfig).toEqual({ ...nextAgency, modelSelectionPolicy: 'fixed' });
     expect(updated?.model).toBeNull();
     expect(updated?.provider).toBeNull();
     const builtinRuntime = await withRuntime();

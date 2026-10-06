@@ -6,7 +6,14 @@
  * InMemory implementations when Redis is not available (test environment).
  */
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, chatGroups, messages, threads, topics } from '@orvilo/database/schemas';
+import {
+  agents,
+  chatGroups,
+  chatGroupsAgents,
+  messages,
+  threads,
+  topics,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -321,6 +328,13 @@ describe('execAgent', () => {
         .insert(chatGroups)
         .values({ title: 'Regression Group', userId })
         .returning();
+      await serverDB.insert(chatGroupsAgents).values({
+        agentId: testAgentId,
+        chatGroupId: group.id,
+        enabled: true,
+        role: 'participant',
+        userId,
+      });
 
       const caller = aiAgentRouter.createCaller(createTestContext());
 

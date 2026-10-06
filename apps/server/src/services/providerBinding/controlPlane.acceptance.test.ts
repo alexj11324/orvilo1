@@ -444,7 +444,7 @@ describe('scope fencing and revision guards', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
   });
 
-  it('missing composition fails closed as PROVIDER_BROKER_UNAVAILABLE', async () => {
+  it('missing composition fails closed as PROVIDER_CHECK_UNAVAILABLE', async () => {
     const row = await seedBinding();
 
     await expect(
@@ -454,7 +454,7 @@ describe('scope fencing and revision guards', () => {
       }),
     ).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
-      message: 'PROVIDER_BROKER_UNAVAILABLE',
+      message: 'PROVIDER_CHECK_UNAVAILABLE',
     });
     expect(seenRequests).toHaveLength(0);
   });

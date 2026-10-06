@@ -234,6 +234,16 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual(DEFAULT_SIDEBAR_ITEMS);
     });
 
+    it('keeps Issues and retires creation/reviews even in old workspace preferences', () => {
+      const s: GlobalState = merge(initialState, {
+        status: { workspace: { sidebarItems: ['create', 'reviews', 'home'] } },
+      });
+      const keys = systemStatusSelectors.sidebarItems('ws-1')(s);
+      expect(keys.filter((key) => key === 'tasks')).toHaveLength(1);
+      expect(keys).not.toEqual(expect.arrayContaining(['create', 'reviews']));
+      expect(keys).not.toContain('home');
+    });
+
     it('ignores legacy `sidebarSectionOrder` — accordion order is contract-owned now', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarSectionOrder: ['agent', 'recents'] },
@@ -262,7 +272,8 @@ describe('systemStatusSelectors', () => {
       'page',
       'pages',
       'home',
-      'tasks',
+      'reviews',
+      'create',
       'automations',
       'resource',
       'recents',

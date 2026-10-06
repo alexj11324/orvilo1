@@ -107,6 +107,33 @@ describe('TabBar storage', () => {
       expect(getTabPages(acmeScope).tabs.map((tab) => tab.id)).toEqual(['tasks-tab']);
     });
 
+    it.each([
+      [personalScope, '/reviews'],
+      [acmeScope, '/acme/reviews/review-1?view=detail'],
+    ] as const)(
+      'removes saved Reviews entries while retaining other tabs and persisting cleanup',
+      (scope, url) => {
+        const keep = {
+          cached: { title: 'Issue in review' },
+          id: 'issue',
+          lastVisited: 1,
+          url:
+            scope.type === 'workspace' ? '/acme/tasks?status=in_review' : '/tasks?status=in_review',
+        };
+        saveTabPages(
+          scope,
+          [{ cached: { title: '待审核' }, id: 'reviews', lastVisited: 2, url }, keep],
+          'reviews',
+        );
+
+        expect(getTabPages(scope)).toEqual({ activeTabId: 'issue', tabs: [keep] });
+        expect(JSON.parse(window.localStorage.getItem(tabPagesStorageKey(scope))!)).toEqual({
+          activeTabId: 'issue',
+          tabs: [keep],
+        });
+      },
+    );
+
     it('keeps tabs on retired-but-resolving prefixes like /memory and /apps', () => {
       // `/memory` no longer appears in navigation, but `/memory/preferences`
       // still hosts the manager; `/apps` redirects to Settings > About.

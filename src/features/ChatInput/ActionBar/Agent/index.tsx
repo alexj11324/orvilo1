@@ -11,7 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
-import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
@@ -102,7 +101,6 @@ const Agent = memo(() => {
   const agentId = useAgentId();
   const [open, setOpen] = useState(false);
   const { error, mutate } = useFetchAgentList();
-  const { createAgent } = useCreateMenuItems();
   const workspaceAwareNavigate = useWorkspaceAwareNavigate();
   // The task agent is a virtual row that never reaches the sidebar list — it
   // must be provisioned here so the dropdown can offer it (AgentList injects
@@ -197,18 +195,6 @@ const Agent = memo(() => {
           includeTaskAgent
           activeAgentId={agentId}
           error={error}
-          bottomSection={
-            <Button
-              className="w-full justify-start"
-              variant="ghost"
-              onClick={() => {
-                setOpen(false);
-                void createAgent();
-              }}
-            >
-              + {t('newAgent')}
-            </Button>
-          }
           onRetry={() => mutate()}
           onSelect={handleSelect}
           onConfigure={(id) => {

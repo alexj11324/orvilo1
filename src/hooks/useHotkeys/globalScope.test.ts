@@ -1,5 +1,5 @@
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { HotkeyId } from '@/types/hotkey';
@@ -7,6 +7,7 @@ import type { HotkeyId } from '@/types/hotkey';
 import {
   isAgentProfilePanelRoute,
   isTaskPanelRoute,
+  useCreateTaskHotkey,
   useToggleRightPanelHotkey,
 } from './globalScope';
 
@@ -23,6 +24,8 @@ type HotkeyRegistrationArgs = [HotkeyId, () => void, ...unknown[]];
 const mocks = vi.hoisted(() => ({
   hotkeyCallback: undefined as (() => void) | undefined,
   pathname: '/',
+  navigate: vi.fn(),
+  createTaskModal: vi.fn(),
   toggleAgentBuilderPanel: vi.fn(),
   toggleRightPanel: vi.fn(),
   toggleTaskAgentPanel: vi.fn(),
@@ -31,6 +34,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('react-router', () => ({
   useLocation: () => ({ pathname: mocks.pathname }),
+}));
+
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => mocks.navigate,
+}));
+vi.mock('@/features/AgentTasks/CreateTaskModal', () => ({
+  createTaskModal: mocks.createTaskModal,
 }));
 
 vi.mock('@/hooks/useNavigateToAgent', () => ({
@@ -63,11 +73,24 @@ describe('globalScope hotkeys', () => {
     mocks.toggleAgentBuilderPanel.mockReset();
     mocks.toggleRightPanel.mockReset();
     mocks.toggleTaskAgentPanel.mockReset();
+    mocks.navigate.mockReset();
+    mocks.createTaskModal.mockReset();
     mocks.useHotkeyById.mockReset();
     mocks.useHotkeyById.mockImplementation((_, callback) => {
       mocks.hotkeyCallback = callback;
       return { id: HotkeyEnum.ToggleRightPanel };
     });
+  });
+
+  it('takes global Create Issue to the Issues page before opening the existing modal', async () => {
+    mocks.pathname = '/chat/existing';
+    renderHook(() => useCreateTaskHotkey());
+    act(() => mocks.hotkeyCallback?.());
+    expect(mocks.navigate).toHaveBeenCalledWith('/tasks');
+    await waitFor(() => expect(mocks.createTaskModal).toHaveBeenCalledTimes(1));
+    expect(mocks.navigate.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.createTaskModal.mock.invocationCallOrder[0],
+    );
   });
 
   describe('isTaskPanelRoute', () => {

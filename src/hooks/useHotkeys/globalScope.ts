@@ -108,16 +108,19 @@ const BARE_KEY_HOTKEY_OPTIONS = { enableOnFormTags: false } as const;
  * editor chunk, so it is imported lazily inside the callback (same reasoning
  * as `CmdkLazy`): the always-on hotkey layer stays free of editor code.
  */
-export const useCreateTaskHotkey = () =>
-  useHotkeyById(
+export const useCreateTaskHotkey = () => {
+  const navigate = useWorkspaceAwareNavigate();
+  return useHotkeyById(
     HotkeyEnum.CreateTask,
     () => {
+      navigate('/tasks');
       void import('@/features/AgentTasks/CreateTaskModal').then(({ createTaskModal }) =>
         createTaskModal(),
       );
     },
     BARE_KEY_HOTKEY_OPTIONS,
   );
+};
 
 /**
  * Linear's `g then x` go-to navigation. Each entry pairs a registered
@@ -127,7 +130,6 @@ export const useCreateTaskHotkey = () =>
 export const GO_TO_DESTINATIONS: ReadonlyArray<{ id: HotkeyId; path: string }> = [
   { id: HotkeyEnum.GoToInbox, path: '/inbox' },
   { id: HotkeyEnum.GoToMyIssues, path: '/my-issues' },
-  { id: HotkeyEnum.GoToReviews, path: '/reviews' },
   { id: HotkeyEnum.GoToDrafts, path: '/drafts' },
   { id: HotkeyEnum.GoToProjects, path: '/projects' },
   { id: HotkeyEnum.GoToViews, path: '/views' },

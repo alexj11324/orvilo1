@@ -29,6 +29,10 @@ describe('Linear parity mappings', () => {
     expect(HOTKEYS_REGISTRATION.some((item) => item.keys === 'mod+bracketleft')).toBe(false);
   });
 
+  it('does not advertise Reviews navigation while the surface is withdrawn', () => {
+    expect(byId(HotkeyEnum.GoToReviews)).toBeUndefined();
+  });
+
   it('maps C to create task', () => {
     expect(byId(HotkeyEnum.CreateTask)).toMatchObject({
       group: HotkeyGroupEnum.Essential,
@@ -40,7 +44,6 @@ describe('Linear parity mappings', () => {
   it.each([
     [HotkeyEnum.GoToInbox, 'g>i'],
     [HotkeyEnum.GoToMyIssues, 'g>m'],
-    [HotkeyEnum.GoToReviews, 'g>r'],
     [HotkeyEnum.GoToDrafts, 'g>d'],
     [HotkeyEnum.GoToProjects, 'g>p'],
     [HotkeyEnum.GoToViews, 'g>v'],

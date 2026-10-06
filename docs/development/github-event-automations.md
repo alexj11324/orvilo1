@@ -66,12 +66,17 @@ failures follow the existing automation fuse policy.
 
 ## Acceptance boundary
 
-PR #476 remains a draft until the actual GitHub → signed receipt → canonical
-dispatch → bound local CLI → saved result path is exercised through Electron.
-Required evidence covers a first event, duplicate delivery, independent second
-event, pause, unavailable Device, and failed execution against a recorded commit.
+The actual GitHub → signed receipt → canonical dispatch → bound OpenCode ACP →
+saved result path was exercised through Electron for PR #476. The
+[recorded evidence](./github-event-automation-evidence/README.md) covers PR first,
+duplicate and independent second events, completed CI failure and duplicate,
+completion admission, pause without replay, unavailable Device, and failed
+execution. It identifies the business revision and the earlier Electron build,
+whose affected Automation and Agent settings sources match that revision.
+
 Unit tests, migrated storage, an authenticated GitHub fixture, and a working CLI
-are intermediate checks; they do not establish that complete path.
+are intermediate checks. Review the runtime evidence and its limitations before
+claiming the complete path on another configuration or revision.
 
 The local test fixture uses the existing CLI's real GitHub authorization,
 encrypted in an isolated database. It does not establish native OAuth UI

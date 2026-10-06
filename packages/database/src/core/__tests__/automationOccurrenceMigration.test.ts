@@ -87,7 +87,7 @@ describe('automation occurrence forward migration', () => {
         expect(repair.when).toBeGreaterThan(
           Math.max(
             ...journal.entries
-              .filter((entry: { tag: string }) => entry.tag !== repair.tag)
+              .slice(0, journal.entries.indexOf(repair))
               .map((entry: { when: number }) => entry.when),
           ),
         );

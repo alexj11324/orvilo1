@@ -144,6 +144,7 @@ interface OperationState {
    * family can't silently resume this session.
    */
   agentType?: string;
+  groupId: string | undefined;
   /**
    * CC-native session id this run is producing, captured off the stream_start
    * event stream and stamped on every persisted message's
@@ -653,6 +654,7 @@ export class HeterogeneousPersistenceHandler {
       // Legacy/finish-only callers may not have a readable assistant row; keep
       // the historical topic-owner fallback for those paths.
       agentId: baseAssistantMessage?.agentId ?? topic?.agentId ?? null,
+      groupId: topic?.groupId ?? undefined,
       workingDirectory:
         admittedCwd ??
         getWorkingDirEffectivePath(topic?.metadata?.workingDirectoryConfig) ??
@@ -1176,6 +1178,7 @@ export class HeterogeneousPersistenceHandler {
         await this.deps.messageModel.create(
           {
             agentId: intent.agentId ?? undefined,
+            ...(state.groupId ? { groupId: state.groupId } : {}),
             content: '',
             ...(Object.keys(createMetadata).length > 0 ? { metadata: createMetadata } : {}),
             model: intent.model,
@@ -1239,6 +1242,7 @@ export class HeterogeneousPersistenceHandler {
           await this.deps.messageModel.create(
             {
               agentId: state.agentId ?? undefined,
+              ...(state.groupId ? { groupId: state.groupId } : {}),
               content: '',
               ...(Object.keys(toolMetadata).length > 0 ? { metadata: toolMetadata } : {}),
               parentId: intent.assistantMessageId,
@@ -1624,6 +1628,7 @@ export class HeterogeneousPersistenceHandler {
         await this.deps.messageModel.create(
           {
             agentId: intent.agentId ?? undefined,
+            ...(state.groupId ? { groupId: state.groupId } : {}),
             content: intent.content,
             ...(Object.keys(subMetadata).length > 0 ? { metadata: subMetadata } : {}),
             parentId: intent.parentId,
@@ -1681,6 +1686,7 @@ export class HeterogeneousPersistenceHandler {
           await this.deps.messageModel.create(
             {
               agentId: state.agentId ?? undefined,
+              ...(state.groupId ? { groupId: state.groupId } : {}),
               content: '',
               ...(Object.keys(subToolMetadata).length > 0 ? { metadata: subToolMetadata } : {}),
               parentId: intent.assistantMessageId,

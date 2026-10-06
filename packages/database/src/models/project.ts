@@ -466,7 +466,7 @@ export class ProjectModel {
       const coordinator = await agentModel.create({
         ...coordinatorConfig,
         ...runtime,
-        params: { ...coordinatorConfig.params, ...runtime.params },
+        params: runtime.params,
         visibility: input.visibility,
         virtual: true,
       });

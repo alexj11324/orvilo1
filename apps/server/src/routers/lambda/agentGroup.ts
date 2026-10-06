@@ -407,7 +407,13 @@ export const agentGroupRouter = router({
           ),
         },
         [],
-        selectedRuntime ? { ...supervisorConfig, ...selectedRuntime } : supervisorConfig,
+        selectedRuntime
+          ? {
+              ...supervisorConfig,
+              ...selectedRuntime,
+              agencyConfig: selectedRuntime.agencyConfig ?? undefined,
+            }
+          : supervisorConfig,
         selectedRuntime,
       );
 

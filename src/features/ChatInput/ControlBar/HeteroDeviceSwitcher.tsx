@@ -1,12 +1,14 @@
 'use client';
 
-import { isDesktop } from '@orvilo/const';
+import { DOWNLOAD_URL, isDesktop } from '@orvilo/const';
 import type { DeviceExecutionTarget } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   CheckIcon,
   ChevronDownIcon,
+  ExternalLinkIcon,
   InfoIcon,
+  MonitorDownIcon,
   RefreshCwIcon,
   SettingsIcon,
   ShieldCheckIcon,
@@ -406,7 +408,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     canSelectExecutionTarget,
     canSelectPersonalDevice,
     isPreferenceLoading: isWorkspacePreferenceLoading,
-    memberSelectedDeviceId,
     workspaceScoped,
   } = useTopicAgencyConfig(agentId);
   const canShowExecutionTarget = canUseResource && canDisplayExecutionTarget;
@@ -968,12 +969,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
       {/* On web with no remote device, guide the user to the desktop app (which
           unlocks local execution + `orvilo connect`) rather than a muted dead-end. */}
       {showWebDownloadCard ? (
-        <a
-          className={styles.downloadCard}
-          href={DOWNLOAD_URL.default}
-          rel="noreferrer"
-          target="_blank"
-        >
+        <a className={styles.option} href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank">
           <div className={styles.optionIcon}>
             <span className="anticon" role="img">
               <MonitorDownIcon fill={'transparent'} height={14} size={14} width={14} />
@@ -987,7 +983,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               {t('heteroAgent.executionTarget.downloadDesktopDesc')}
             </div>
           </div>
-          <span className={cx('anticon', styles.downloadCardArrow)} role="img">
+          <span className="anticon flex-none" role="img">
             <ExternalLinkIcon fill={'transparent'} height={13} size={13} width={13} />
           </span>
         </a>

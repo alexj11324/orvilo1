@@ -203,20 +203,20 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     let transport: HarnessChannel | undefined;
     try {
       const authorization = await options.authorize({ ...fence });
-      if (!authorization.ok) return authorization;
+      if (authorization.ok === false) return authorization;
       const artifact = await options.verifyArtifact(options.artifact, PRIME_EMBEDDED_PIN);
-      if (!artifact.ok) return artifact;
+      if (artifact.ok === false) return artifact;
       const launched = await options.supervisor.launch({
         executable: options.executable,
         args: options.args ?? [options.artifact],
         workspace: input.workspace,
         environment: sanitizedRuntimeEnvironment({ home: options.home, temp: options.temp }),
       });
-      if (!launched.ok) return launched;
+      if (launched.ok === false) return launched;
       isolation = { ...launched.value };
       if (!verifiedIsolation(isolation)) {
         const cleanup = await this.terminate(isolation);
-        return cleanup.ok
+        return cleanup.ok === true
           ? failure('isolation_unavailable', 'Incomplete OS isolation evidence')
           : cleanup;
       }
@@ -241,34 +241,34 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       ) {
         transport.close();
         const cleanup = await this.terminate(isolation);
-        return cleanup.ok
+        return cleanup.ok === true
           ? failure('unsupported_capability', 'Pinned embedded harness handshake required')
           : cleanup;
       }
       // Recheck after asynchronous artifact/launch/handshake work, before registering.
       const admitted = await options.authorize({ ...fence });
-      if (!admitted.ok) {
+      if (admitted.ok === false) {
         transport.close();
         const cleanup = await this.terminate(isolation);
-        return cleanup.ok ? admitted : cleanup;
+        return cleanup.ok === true ? admitted : cleanup;
       }
       if (this.sessions.has(ack.sessionId)) {
         transport.close();
         const cleanup = await this.terminate(isolation);
-        return cleanup.ok ? failure('runtime_failed', 'Duplicate session id') : cleanup;
+        return cleanup.ok === true ? failure('runtime_failed', 'Duplicate session id') : cleanup;
       }
       const finalAdmission = await options.authorize({ ...fence });
-      if (!finalAdmission.ok) {
+      if (finalAdmission.ok === false) {
         transport.close();
         const cleanup = await this.terminate(isolation);
-        return cleanup.ok ? finalAdmission : cleanup;
+        return cleanup.ok === true ? finalAdmission : cleanup;
       }
       // No await between the final uniqueness check and registration: concurrent
       // starts can return the same child-generated ID during authorization.
       if (this.sessions.has(ack.sessionId)) {
         transport.close();
         const cleanup = await this.terminate(isolation);
-        return cleanup.ok ? failure('runtime_failed', 'Duplicate session id') : cleanup;
+        return cleanup.ok === true ? failure('runtime_failed', 'Duplicate session id') : cleanup;
       }
       const session: RuntimeSession = {
         runtimeId: RUNTIME_ID,
@@ -298,7 +298,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       }
       if (isolation) {
         const cleanup = await this.terminate(isolation);
-        if (!cleanup.ok) return cleanup;
+        if (cleanup.ok === false) return cleanup;
       }
       return failure('runtime_failed', 'Prime embedded harness startup failed');
     }
@@ -320,7 +320,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
 
   async *prompt(session: RuntimeSession, text: string): AsyncIterable<RuntimeEvent> {
     const found = this.entry(session);
-    if (!found.ok) {
+    if (found.ok === false) {
       yield { type: 'error', sessionId: session.sessionId, error: found.error };
       return;
     }
@@ -330,7 +330,8 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         'invalid_request',
         'Session stopped, prompt already active, or empty prompt',
       );
-      if (!denied.ok) yield { type: 'error', sessionId: session.sessionId, error: denied.error };
+      if (denied.ok === false)
+        yield { type: 'error', sessionId: session.sessionId, error: denied.error };
       return;
     }
     // Reserve before any await: two callers must never dispatch concurrent turns.
@@ -355,7 +356,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     let unsubscribe: (() => void) | undefined;
     try {
       const authorization = await this.options!.authorize({ ...entry.session.fence });
-      if (!authorization.ok) {
+      if (authorization.ok === false) {
         yield { type: 'error', sessionId: session.sessionId, error: authorization.error };
         return;
       }
@@ -381,7 +382,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
                 'runtime_failed',
                 'Embedded harness returned a malformed prompt result',
               );
-              if (!denied.ok)
+              if (denied.ok === false)
                 finish({ type: 'error', sessionId: session.sessionId, error: denied.error });
               return;
             }
@@ -404,13 +405,13 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
                   ? `Embedded harness turn failed: ${value.error}`
                   : 'Embedded harness turn failed',
               );
-              if (!denied.ok)
+              if (denied.ok === false)
                 finish({ type: 'error', sessionId: session.sessionId, error: denied.error });
             }
           },
           () => {
             const denied = failure('runtime_failed', 'Embedded harness prompt failed');
-            if (!denied.ok)
+            if (denied.ok === false)
               finish({ type: 'error', sessionId: session.sessionId, error: denied.error });
           },
         );
@@ -423,7 +424,8 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       }
     } catch {
       const denied = failure('runtime_failed', 'Embedded harness stream failed');
-      if (!denied.ok) yield { type: 'error', sessionId: session.sessionId, error: denied.error };
+      if (denied.ok === false)
+        yield { type: 'error', sessionId: session.sessionId, error: denied.error };
     } finally {
       try {
         unsubscribe?.();
@@ -433,7 +435,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         // Abandoning a stream cannot leave a writer running behind its caller.
         if ((!ended || requiresTermination) && !entry.stopping) {
           const stopped = await this.cancel(session);
-          if (!stopped.ok)
+          if (stopped.ok === false)
             yield { type: 'error', sessionId: session.sessionId, error: stopped.error };
         }
       }
@@ -442,7 +444,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
 
   cancel(session: RuntimeSession): Promise<ControlResult<QuiescenceProof>> {
     const found = this.entry(session);
-    if (!found.ok) return Promise.resolve(found);
+    if (found.ok === false) return Promise.resolve(found);
     const entry = found.value;
     if (entry.proof) return Promise.resolve({ ok: true, value: { ...entry.proof } });
     if (entry.stop) return entry.stop;
@@ -471,7 +473,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       /* Killing the tree is still mandatory. */
     }
     entry.stop = this.terminate(entry.isolation).then((result) => {
-      if (result.ok) entry.proof = { ...result.value };
+      if (result.ok === true) entry.proof = { ...result.value };
       // Failed termination can be retried; admission remains closed.
       entry.stop = undefined;
       return result;
@@ -563,12 +565,12 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
           'unsupported_capability',
           `Embedded harness reported tool execution outside the negotiated surface (${event.event}: ${event.toolName})`,
         );
-        if (!denied.ok) finish({ type: 'error', sessionId, error: denied.error });
+        if (denied.ok === false) finish({ type: 'error', sessionId, error: denied.error });
         return;
       }
       case 'error': {
         const denied = failure('runtime_failed', `Embedded harness error: ${event.message}`);
-        if (!denied.ok) finish({ type: 'error', sessionId, error: denied.error });
+        if (denied.ok === false) finish({ type: 'error', sessionId, error: denied.error });
         return;
       }
     }
@@ -609,7 +611,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     if (!options?.inferenceBroker)
       return { error: { code: -32603, message: 'Inference broker unavailable' } };
     const request = this.buildInferenceRequest(entry, params.request);
-    if (!request.ok) return { error: { code: -32603, message: request.error.message } };
+    if (request.ok === false) return { error: { code: -32603, message: request.error.message } };
     const requestId = params.request.requestId;
     entry.brokerStreams?.add(requestId);
     void this.pumpBrokerEvents(entry, requestId, request.value);
@@ -747,7 +749,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     const startedAt = now();
     try {
       const result = await this.options.supervisor.terminate(isolation.treeId);
-      if (!result.ok) return result;
+      if (result.ok === false) return result;
       const proof = result.value;
       if (
         proof.treeId !== isolation.treeId ||

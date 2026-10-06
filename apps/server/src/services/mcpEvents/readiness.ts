@@ -175,7 +175,7 @@ export async function checkMcpAutomationReadiness(input: {
       enableAgentMode: agent.chatConfig?.enableAgentMode,
       requiredToolIds,
       externalTools,
-      supportsBuiltinToolMount: canMountBuiltinToolSurface({ type, engine: provider.engine }),
+      supportsBuiltinToolMount: canMountBuiltinToolSurface({ type }),
     });
     if (surface.outcomes.some((outcome) => outcome.status !== 'mounted'))
       reasons.push('REQUIRED_TOOLS_UNSUPPORTED');

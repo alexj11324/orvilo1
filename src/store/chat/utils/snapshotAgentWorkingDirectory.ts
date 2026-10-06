@@ -11,6 +11,7 @@ import {
 } from '@/helpers/agentWorkingDirectory';
 import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { getAgentStoreState } from '@/store/agent';
+import { agentByIdSelectors } from '@/store/agent/selectors';
 import { deviceSelectors, getDeviceStoreState } from '@/store/device';
 import { useElectronStore } from '@/store/electron';
 import { getUserStoreState } from '@/store/user';
@@ -33,11 +34,15 @@ export const snapshotAgentWorkingDirectory = (
     agent?.workspaceId && userState.workspaceUserPreferenceWorkspaceId === agent.workspaceId
       ? userState.workspaceUserPreference.agentDeviceOverrides?.[agentId]
       : undefined;
-  const agencyConfig = resolveAgentAgencyConfig(agent?.agencyConfig, override, {
-    canManage,
-    visibility: agent?.visibility,
-    workspaceId: agent?.workspaceId,
-  });
+  const agencyConfig = resolveAgentAgencyConfig(
+    agentByIdSelectors.getAgencyConfigById(agentId)(agentState),
+    override,
+    {
+      canManage,
+      visibility: agent?.visibility,
+      workspaceId: agent?.workspaceId,
+    },
+  );
   const workspaceScoped = resolveWorkspaceScoped(
     !!agent?.workspaceId && agent.visibility !== 'private' && !canManage,
     override,

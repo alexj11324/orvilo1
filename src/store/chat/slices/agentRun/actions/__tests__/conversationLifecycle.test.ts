@@ -2710,14 +2710,8 @@ describe('ConversationLifecycle actions', () => {
           });
         });
 
-        it('executes an existing heterogeneous conversation in its selected worktree and resumes that cwd session', async () => {
-          const sendSpy = setupHeteroRun();
-          sendSpy.mockResolvedValue({
-            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
-            messages: [createMockMessage({ id: TEST_IDS.USER_MESSAGE_ID, role: 'user' })],
-            topicId: TEST_IDS.TOPIC_ID,
-            userMessageId: TEST_IDS.USER_MESSAGE_ID,
-          } as any);
+        it('routes an existing heterogeneous worktree conversation through Gateway', async () => {
+          setupHeteroRun();
           useChatStore.setState({
             activeTopicId: TEST_IDS.TOPIC_ID,
             topicDetailMap: {
@@ -2745,13 +2739,12 @@ describe('ConversationLifecycle actions', () => {
               message: 'Use this worktree',
             });
           });
-          expect(executeHeterogeneousAgentMock).toHaveBeenCalledWith(
-            expect.anything(),
+          expect(executeGatewayAgentMock).toHaveBeenCalledWith(
             expect.objectContaining({
-              workingDirectory: '/repo/worktree',
-              resumeSessionId: 'worktree-session',
+              context: expect.objectContaining({ topicId: TEST_IDS.TOPIC_ID }),
             }),
           );
+          expect(executeHeterogeneousAgentMock).not.toHaveBeenCalled();
         });
 
         it('prefers the bound device defaultCwd over the desktop fallback', async () => {

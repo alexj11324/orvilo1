@@ -421,6 +421,9 @@ const handleRequest = async (
         link.respondError(id, -32602, 'Invalid builtin MCP mount');
         return;
       }
+      const builtinMount = builtinMcp
+        ? { operationId: builtinMcp.operationId, url: builtinMcp.url }
+        : undefined;
       let lastStopReason: string | undefined;
       const trackStop = entry.session.subscribe((event) => {
         if (
@@ -434,7 +437,7 @@ const handleRequest = async (
       });
       const prompt = (async () => {
         try {
-          await withPrimeBuiltinMcp(entry.session, builtinMcp, () =>
+          await withPrimeBuiltinMcp(entry.session, builtinMount, () =>
             entry.session.promptAndWait(text),
           );
         } finally {

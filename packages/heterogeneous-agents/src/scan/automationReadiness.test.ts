@@ -40,15 +40,20 @@ describe('automation host readiness', () => {
     spawnPlan.mockImplementation(async (command, args) => ({ args, command }));
     directory.mockReturnValue(true);
     vi.mocked(access).mockResolvedValue(undefined);
-    vi.mocked(childProcess.execFile).mockImplementation(((_command, args, _options, callback) => {
+    vi.mocked(childProcess.execFile).mockImplementation(((
+      _command: string,
+      args: string[],
+      _options: childProcess.ExecFileOptions,
+      callback: (error: Error | null, stdout: string, stderr: string) => void,
+    ) => {
       callback(failed, args.includes('status') ? auth : help, '');
-      return {};
-    }) as any);
+      return {} as childProcess.ChildProcess;
+    }) as typeof childProcess.execFile);
   });
 
-  it('checks the same resolved engine and PATH without creating a session', async () => {
+  it('checks the declared CLI family and PATH without creating a session', async () => {
     const result = await checkAutomationReadinessOnHost({
-      agentType: 'orvilo',
+      agentType: 'codex',
       engine: 'codex-app-server',
     });
     expect(result).toMatchObject({
@@ -135,7 +140,12 @@ describe('automation host readiness', () => {
         options: {},
         ...entryOverrides,
       })}`;
-      vi.mocked(childProcess.execFile).mockImplementation(((_command, args, _options, callback) => {
+      vi.mocked(childProcess.execFile).mockImplementation(((
+        _command: string,
+        args: string[],
+        _options: childProcess.ExecFileOptions,
+        callback: (error: Error | null, stdout: string, stderr: string) => void,
+      ) => {
         const output =
           args[0] === 'models'
             ? catalog
@@ -143,8 +153,8 @@ describe('automation host readiness', () => {
               ? 'opencode acp: start ACP (Agent Client Protocol) server'
               : 'opencode run --format --model';
         callback(args[0] === 'models' && catalogFailed ? new Error('timeout') : null, output, '');
-        return {};
-      }) as any);
+        return {} as childProcess.ChildProcess;
+      }) as typeof childProcess.execFile);
     };
 
     it('records keyless public model configuration without claiming ACP access', async () => {
@@ -240,14 +250,17 @@ describe('automation host readiness', () => {
     expect(remote).not.toHaveBeenCalled();
   });
 
-  it('does not run auth probes for a missing binary', async () => {
-    detect.mockResolvedValue({ available: false });
-    expect(await checkAutomationReadinessOnHost({ agentType: 'codex' })).toMatchObject({
-      installed: false,
-      authenticated: 'unknown',
-    });
-    expect(childProcess.execFile).not.toHaveBeenCalled();
-  });
+  it.each([false, true])(
+    'does not run auth probes without a binary path (available=%s)',
+    async (available) => {
+      detect.mockResolvedValue({ available });
+      expect(await checkAutomationReadinessOnHost({ agentType: 'codex' })).toMatchObject({
+        installed: available,
+        authenticated: 'unknown',
+      });
+      expect(childProcess.execFile).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects malformed payload before host inspection', async () => {
     await expect(

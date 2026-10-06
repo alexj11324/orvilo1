@@ -2130,7 +2130,7 @@ export const taskRouter = router({
               workflowCategory: data.workflowCategory,
               workflowStateId: targetMappings[0].linearStateId,
             };
-          } else if (issueLink?.linearTeamId && resolved.teamId) {
+          } else if (issueLink?.linearTeamId && resolved.teamId && linearSyncModel) {
             // Team-scope links carry no project binding — category moves resolve
             // through the team's imported workflow states (lowest position wins).
             const teamLink = await linearSyncModel.findTeamLinkByLinearTeamId(

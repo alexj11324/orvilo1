@@ -38,7 +38,8 @@ export const verifyOnboardingOrchestrator = async (agentId: string, workspaceId:
     if (getHostContext().kind !== 'desktop') throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
     const agents = await scanLocal();
     const cliType = resolveHeteroCliAgentType(provider);
-    if (!cliType || !agents[cliType]?.available) throw new Error('FIRST_AGENT_RUNTIME_UNAVAILABLE');
+    if (!Object.entries(agents).some(([type, status]) => type === cliType && status?.available))
+      throw new Error('FIRST_AGENT_RUNTIME_UNAVAILABLE');
   } else {
     const devices = await client.device.listDevices.query();
     const device = devices.find((item) => item.deviceId === config.boundDeviceId && item.online);
@@ -47,7 +48,10 @@ export const verifyOnboardingOrchestrator = async (agentId: string, workspaceId:
       const scanClient = device.scope === 'personal' ? personalClient : client;
       const scan = await scanClient.device.scanAgents.query({ deviceId: device.deviceId });
       const cliType = resolveHeteroCliAgentType(provider);
-      if (scan.error || !cliType || !scan.agents[cliType]?.available)
+      if (
+        scan.error ||
+        !Object.entries(scan.agents).some(([type, status]) => type === cliType && status?.available)
+      )
         throw new Error(scan.error ?? 'FIRST_AGENT_RUNTIME_UNAVAILABLE');
     }
   }

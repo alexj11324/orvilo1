@@ -58,7 +58,7 @@ it('keeps a saved default selectable beyond the first page without changing its 
 it('resumes the transferred Agent in its saved workspace without consulting personal scope', async () => {
   api.config.mockResolvedValue({ id: 'first-agent', workspaceId: 'workspace-one' });
   const saved = await getOnboardingAgentConfig('first-agent', 'workspace-one');
-  expect(saved?.workspaceId).toBe('workspace-one');
+  expect(saved).toEqual({ id: 'first-agent', workspaceId: 'workspace-one' });
   expect(api.config).toHaveBeenCalledTimes(1);
   expect(api.config).toHaveBeenCalledWith('workspace-one', { agentId: 'first-agent' });
 });

@@ -64,7 +64,7 @@ export async function checkProviderBinding(
     result.ok &&
     result.value.status === 'ready' &&
     row.config.model !== PROVIDER_CONFIG_ANCHOR_MODEL
-      ? await composition.broker
+      ? await active.broker
           .capabilities({
             schemaVersion: 1,
             scope,

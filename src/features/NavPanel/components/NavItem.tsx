@@ -26,6 +26,13 @@ const ACTION_CLASS_NAME = 'nav-item-actions';
 const CONTENT_CLASS_NAME = 'nav-item-content';
 
 const styles = createStaticStyles(({ css }) => ({
+  interactive: css`
+    cursor: pointer;
+
+    &:hover {
+      background-color: ${cssVar.colorFillSecondary};
+    }
+  `,
   container: css`
     user-select: none;
     overflow: hidden;
@@ -185,7 +192,7 @@ const NavItem = memo<NavItemProps>(
         className={cx(
           cx(styles.container, className),
           'flex items-center gap-2 px-1',
-          !disabled && 'cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]',
+          !disabled && styles.interactive,
         )}
         style={{
           borderRadius: cssVar.borderRadius,

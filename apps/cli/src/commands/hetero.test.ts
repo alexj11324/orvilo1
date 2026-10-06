@@ -444,6 +444,7 @@ describe('hetero exec command', () => {
 
     const call = mockSpawnAgent.mock.calls[0][0];
     expect(call.operationId).toBe('op-server-allocated');
+    expect(call.env).toMatchObject({ ORVILO_OPERATION_ID: 'op-server-allocated' });
   });
 
   it('passes no ACP mcpServers without server-ingest mode', async () => {

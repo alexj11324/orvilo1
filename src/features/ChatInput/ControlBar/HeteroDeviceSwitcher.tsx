@@ -408,6 +408,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     canSelectExecutionTarget,
     canSelectPersonalDevice,
     isPreferenceLoading: isWorkspacePreferenceLoading,
+    memberSelectedDeviceId,
     workspaceScoped,
   } = useTopicAgencyConfig(agentId);
   const canShowExecutionTarget = canUseResource && canDisplayExecutionTarget;
@@ -504,6 +505,8 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   } = useDeviceSelectorState({
     boundDeviceId,
     canSelectDevice: canSelectExecutionTarget,
+    canSelectPersonalDevice,
+    memberSelectedDeviceId,
     permissionsLoaded: !isWorkspacePreferenceLoading && !isAccessLoading,
     scope: isWorkspaceAgent ? 'workspace' : 'personal',
   });
@@ -525,22 +528,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     canShowExecutionTarget &&
     canSelectExecutionTarget &&
     (showDeviceSelector || bindingInvalid || Boolean(deviceInventoryError));
-
-  // Device-only CLIs cannot fall back to the cloud sandbox. When a web/legacy
-  // config has no usable device target, open the picker once so `none` is an
-  // explicit setup prompt rather than a disabled-but-active sandbox row.
-  useEffect(() => {
-    if (!canShowExecutionTargetSelector) return;
-    if (supportsSandbox) return;
-    if (isWorkspacePreferenceLoading) return;
-    if (executionTarget !== 'none') return;
-    setOpen(true);
-  }, [
-    canShowExecutionTargetSelector,
-    executionTarget,
-    isWorkspacePreferenceLoading,
-    supportsSandbox,
-  ]);
 
   // The sandbox is a modifier on `local`, not a target of its own, so the two
   // local rows differ only by this flag. Reading it through the same helper the
@@ -662,9 +649,13 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   // groupings say Private/Workspace (私人/工作区) instead.
   const {
     personal: personalOnlyDevices,
-    privateWorkspace: privateDevices,
+    privateWorkspace: privateWorkspaceDevices,
     workspace: workspaceDevices,
   } = groupExecutionTargetDevices(selectableDevices);
+  const privateDevices = [
+    ...privateWorkspaceDevices,
+    ...(isWorkspaceAgent ? personalOnlyDevices : []),
+  ];
   // Workspace agents always render the Private / Workspace group split (even
   // when one side is empty — the labels tell the user which pool they're
   // looking at). Personal mode stays flat.

@@ -146,6 +146,9 @@ Opening or marking a PR ready is a checkpoint for that decision, not a trigger t
   pi, etc.) must drive the Electron desktop app (`apps/desktop`). The Chrome/Web SPA cannot spawn
   local binaries — detection and spawn live in `apps/desktop/src/main` — so web runs only count as
   evidence for web-only flows.
+- Acceptance that exercises an agent end-to-end on opencode must use the free model
+  `opencode/mimo-v2.6-flash-free` (verified working; other `-free` Zen models are far slower — e.g.
+  `nemotron-3.5-lightning-free` streams for minutes before replying).
 
 Tests, lint, and type-check remain separate quality gates; they do not replace product verification.
 

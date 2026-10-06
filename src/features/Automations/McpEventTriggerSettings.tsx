@@ -37,6 +37,20 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
   const isGithub = data?.data.sourceType === 'github';
   const isPullRequest = eventName === 'github.pull_request';
   const events = data?.data.events.filter((event) => event.delivery.includes('webhook')) ?? [];
+  const eventOptions = events.map((event) => ({
+    label: isGithub
+      ? t(`events.github.event.${event.name.slice(7)}`, { defaultValue: event.name })
+      : event.name,
+    value: event.name,
+  }));
+  const actionOptions = (['opened', 'reopened', 'synchronize', 'closed'] as const).map((value) => ({
+    label: t(`events.github.action.${value}`),
+    value,
+  }));
+  const conclusionOptions = (['any', 'success', 'failure'] as const).map((value) => ({
+    label: t(`events.github.conclusion.${value}`),
+    value,
+  }));
   return (
     <AsyncBoundary
       data={data}
@@ -48,6 +62,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
     >
       <div className={'flex flex-col gap-2'}>
         <Select
+          items={eventOptions}
           value={eventName ?? null}
           onValueChange={(value) => setEventName(value ?? undefined)}
         >
@@ -55,11 +70,9 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
             <SelectValue placeholder={t('events.event')} />
           </SelectTrigger>
           <SelectContent>
-            {events.map((event) => (
-              <SelectItem key={event.name} value={event.name}>
-                {isGithub
-                  ? t(`events.github.event.${event.name.slice(7)}`, { defaultValue: event.name })
-                  : event.name}
+            {eventOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -109,18 +122,20 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                     (isPullRequest ? (
                       <div className={'flex flex-col gap-2'}>
                         <span>{t('events.github.action')}</span>
-                        <Select value={action} onValueChange={(value) => value && setAction(value)}>
+                        <Select
+                          items={actionOptions}
+                          value={action}
+                          onValueChange={(value) => value && setAction(value)}
+                        >
                           <SelectTrigger aria-label={t('events.github.action')}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(['opened', 'reopened', 'synchronize', 'closed'] as const).map(
-                              (value) => (
-                                <SelectItem key={value} value={value}>
-                                  {t(`events.github.action.${value}`)}
-                                </SelectItem>
-                              ),
-                            )}
+                            {actionOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -131,6 +146,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                         </span>
                         <span>{t('events.github.conclusion')}</span>
                         <Select
+                          items={conclusionOptions}
                           value={conclusion}
                           onValueChange={(value) => value && setConclusion(value)}
                         >
@@ -138,9 +154,9 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(['any', 'success', 'failure'] as const).map((value) => (
-                              <SelectItem key={value} value={value}>
-                                {t(`events.github.conclusion.${value}`)}
+                            {conclusionOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -427,6 +443,10 @@ export default function McpEventTriggerSettings() {
   const useFetch = useMcpEventsStore((s) => s.useFetchEventSources);
   const { data, error, isLoading, mutate } = useFetch(taskId);
   if (!taskId) return null;
+  const sourceOptions = (data?.data ?? []).map((source) => ({
+    label: source.name,
+    value: source.id,
+  }));
   return (
     <div className={'flex flex-col gap-3'}>
       <span className={'font-medium'}>{t('events.title')}</span>
@@ -440,6 +460,7 @@ export default function McpEventTriggerSettings() {
         onRetry={() => void mutate()}
       >
         <Select
+          items={sourceOptions}
           value={connectorId ?? null}
           onValueChange={(value) => setConnectorId(value ?? undefined)}
         >
@@ -447,9 +468,9 @@ export default function McpEventTriggerSettings() {
             <SelectValue placeholder={t('events.source')} />
           </SelectTrigger>
           <SelectContent>
-            {(data?.data ?? []).map((source) => (
-              <SelectItem key={source.id} value={source.id}>
-                {source.name}
+            {sourceOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>

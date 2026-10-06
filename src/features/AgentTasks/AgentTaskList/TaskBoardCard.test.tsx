@@ -233,16 +233,33 @@ describe('TaskBoardCard', () => {
 
     expect(screen.getByText('T-22')).toBeInTheDocument();
     expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
-    // One status mark — the workflow-category glyph slot — plus the read-only
-    // execution badge.
+    // The workflow-category glyph is the only status mark.
     expect(document.querySelector('[data-collab-id$=":status"]')).toBeInTheDocument();
-    expect(screen.getByTestId('execution-badge')).toBeInTheDocument();
+    expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
     expect(screen.getByTestId('priority')).toBeInTheDocument();
     // Linear cards stamp the creation date — "Created <date>".
     expect(screen.getByText('Created Sep 15')).toBeInTheDocument();
     // Executor slot (top-right) shows the agent; owner slot (meta row) the member.
     expect(document.querySelector('[data-agent-avatar="agt_owner"]')).toBeInTheDocument();
     expect(document.querySelector('[data-user-avatar="user-1"]')).toBeInTheDocument();
+  });
+
+  it.each([false, true])('keeps private metadata without extra marks (overlay: %s)', (overlay) => {
+    const { container } = render(
+      <TaskBoardCard
+        overlay={overlay}
+        task={createTask({ dispatchPhase: 'outcome_unknown', visibility: 'private' })}
+      />,
+    );
+
+    expect(container.querySelector('[data-task-board-card]')).toHaveAttribute(
+      'data-collab-private',
+      'true',
+    );
+    expect(container.querySelector('[data-collab-id$=":status"]')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-lock')).not.toBeInTheDocument();
+    expect(screen.queryByText('Private')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
   });
 
   it('falls back to the identifier as title when the task has no name', () => {

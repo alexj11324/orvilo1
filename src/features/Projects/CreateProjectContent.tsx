@@ -53,6 +53,7 @@ import { type ProjectListItem, useProjectStore } from '@/store/project';
 
 import {
   type CreateProjectDraft,
+  getCreateProjectErrorKey,
   getCreateProjectInput,
   getProjectFieldSuggestions,
   isProjectIdentifierValid,
@@ -357,7 +358,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
         else navigate(`/project/${project.slug ?? project.id}`);
       } catch (error) {
         console.error('Failed to create project', error);
-        toast.error(t('operationFailed', { ns: 'common' }));
+        toast.error(t(getCreateProjectErrorKey(error)));
       } finally {
         updateForm({ loading: false });
       }

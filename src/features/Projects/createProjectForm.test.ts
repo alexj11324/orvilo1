@@ -1,7 +1,9 @@
+import { TRPCClientError } from '@trpc/client';
 import { describe, expect, it } from 'vitest';
 
 import type { ProjectPriority, ProjectStatus } from './createProjectForm';
 import {
+  getCreateProjectErrorKey,
   getCreateProjectInput,
   getProjectFieldSuggestions,
   isProjectIdentifierValid,
@@ -200,4 +202,18 @@ describe('createProjectForm', () => {
       getCreateProjectInput({ identifier: 'ORVILO', name: 'Orvilo Project', slug: '-invalid' }),
     ).toBeNull();
   });
+});
+
+describe('project creation recovery', () => {
+  it('explains how to recover when a private Orchestrator cannot create a public project', () => {
+    expect(getCreateProjectErrorKey(new TRPCClientError('ORCHESTRATOR_SOURCE_PRIVATE'))).toBe(
+      'create.orchestratorPrivate',
+    );
+  });
+  it.each([new Error('network unavailable'), null])(
+    'retains the generic message for unrelated errors',
+    (error) => {
+      expect(getCreateProjectErrorKey(error)).toBe('common:operationFailed');
+    },
+  );
 });

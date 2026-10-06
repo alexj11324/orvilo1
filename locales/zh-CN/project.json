@@ -79,6 +79,7 @@
   "create.milestones": "里程碑",
   "create.nameLabel": "项目名称",
   "create.namePlaceholder": "你正在推进什么事情？",
+  "create.orchestratorPrivate": "当前协调 Agent 为私有。请将项目可见性改为「私密」，或在「设置 → 协调 Agent」选择工作区共享的 Agent 后重试。",
   "create.priority.high": "高",
   "create.priority.low": "低",
   "create.priority.noPriority": "无优先级",

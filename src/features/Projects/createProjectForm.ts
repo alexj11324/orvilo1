@@ -6,6 +6,7 @@ import {
   type ProjectStatus,
   type ProjectVisibility,
 } from '@orvilo/types';
+import { errorMessageFrom } from '@orvilo/utils/error';
 import { kebabCase } from 'es-toolkit';
 import { pinyin } from 'pinyin-pro';
 
@@ -147,3 +148,8 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
       : {}),
   };
 };
+
+export const getCreateProjectErrorKey = (error: unknown) =>
+  errorMessageFrom(error) === 'ORCHESTRATOR_SOURCE_PRIVATE'
+    ? ('create.orchestratorPrivate' as const)
+    : ('common:operationFailed' as const);

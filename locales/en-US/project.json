@@ -79,6 +79,7 @@
   "create.milestones": "Milestones",
   "create.nameLabel": "Project name",
   "create.namePlaceholder": "What are you working on?",
+  "create.orchestratorPrivate": "The selected Orchestrator is private. Set this project’s visibility to Private, or select a workspace-shared Agent in Settings → Orchestrator, then try again.",
   "create.priority.high": "High",
   "create.priority.low": "Low",
   "create.priority.noPriority": "No priority",

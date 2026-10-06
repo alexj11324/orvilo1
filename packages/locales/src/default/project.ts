@@ -86,6 +86,8 @@ export default {
   'create.identifierPlaceholder': 'ORVILO',
   'create.nameLabel': 'Project name',
   'create.namePlaceholder': 'What are you working on?',
+  'create.orchestratorPrivate':
+    'The selected Orchestrator is private. Set this project’s visibility to Private, or select a workspace-shared Agent in Settings → Orchestrator, then try again.',
   'create.slugDescription': 'Used for the project URL and generated from the project name.',
   'create.slugInvalid': 'Use lowercase letters, numbers, and single hyphens only.',
   'create.slugLabel': 'Slug (optional)',

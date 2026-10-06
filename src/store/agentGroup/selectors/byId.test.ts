@@ -1,7 +1,7 @@
 import { type AgentGroupDetail } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { type ChatGroupStore } from '../store';
+import { type ChatGroupStore, useAgentGroupStore } from '../store';
 import { agentGroupByIdSelectors } from './byId';
 
 // Helper to create mock AgentGroupDetail with required fields
@@ -43,12 +43,13 @@ describe('agentGroupByIdSelectors', () => {
     });
 
     it('does not guess a Group when one shared coordinator belongs to multiple Groups', () => {
-      const state = {
+      const state: ChatGroupStore = {
+        ...useAgentGroupStore.getState(),
         groupMap: {
           first: createMockGroup({ id: 'first', supervisorAgentId: 'shared' }),
           second: createMockGroup({ id: 'second', supervisorAgentId: 'shared' }),
         },
-      } as ChatGroupStore;
+      };
       expect(agentGroupByIdSelectors.groupBySupervisorAgentId('shared')(state)).toBeUndefined();
     });
 

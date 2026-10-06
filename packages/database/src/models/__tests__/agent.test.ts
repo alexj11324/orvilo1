@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE, INBOX_SESSION_ID } from '@orvilo/const';
 import type { OrviloAgentAgencyConfig } from '@orvilo/types';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -2839,7 +2839,7 @@ describe('AgentModel', () => {
         name: 'JA',
         avatar: 'JV',
         virtual: false,
-        agencyConfig: { heterogeneousProvider: { command: 'codex' } },
+        agencyConfig: sql`${JSON.stringify({ heterogeneousProvider: { command: 'codex' } })}::jsonb`,
       });
       const result = await agentModel.queryAgents();
       const agent = result.find((row) => row.id === 'legacy-codex-brand');

@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto';
+
 import type { Command } from 'commander';
 import pc from 'picocolors';
 
-import { getTrpcClient } from '../../api/client';
+import { createLambdaClient, getTrpcClient } from '../../api/client';
 import { getAuthInfo } from '../../api/http';
+import { resolveServerUrl } from '../../settings';
 import { streamAgentEvents } from '../../utils/agentStream';
 import { log } from '../../utils/logger';
 
@@ -201,7 +204,11 @@ export function registerLifecycleCommands(task: Command) {
     .requiredOption('-m, --message <text>', 'Comment content')
     .action(async (id: string, options: { message: string }) => {
       const client = await getTrpcClient();
-      await client.task.addComment.mutate({ content: options.message, id });
+      await client.task.addComment.mutate({
+        ...(process.env.ORVILO_AGENT_ID ? { authorAgentId: process.env.ORVILO_AGENT_ID } : {}),
+        content: options.message,
+        id,
+      });
       log.info('Comment added.');
     });
 
@@ -233,6 +240,27 @@ export function registerLifecycleCommands(task: Command) {
     .command('complete <id>')
     .description('Mark a task as completed')
     .action(async (id: string) => {
+      const operationId = process.env.ORVILO_OPERATION_ID;
+      const operationJwt = process.env.ORVILO_OPERATION_JWT;
+      if (operationId || operationJwt) {
+        if (!operationId || !operationJwt) {
+          throw new Error('Operation-scoped task completion requires an operation ID and token.');
+        }
+        const client = createLambdaClient(
+          { serverUrl: resolveServerUrl(), token: operationJwt, tokenType: 'jwt' },
+          process.env.ORVILO_WORKSPACE_ID,
+        );
+        const result = await client.aiAgent.heteroExecBuiltinTool.mutate({
+          apiName: 'updateTaskStatus',
+          args: { identifier: id, status: 'completed' },
+          identifier: 'orvilo-task',
+          operationId,
+          toolCallId: `cli-task-complete-${randomUUID()}`,
+        });
+        if (!result.success) throw new Error(result.content || 'Task completion request failed.');
+        log.info(result.content || 'Task completion request accepted.');
+        return;
+      }
       const client = await getTrpcClient();
       const result = (await client.task.updateStatus.mutate({ id, status: 'completed' })) as any;
       log.info(`Task ${pc.bold(result.data.identifier)} completed.`);

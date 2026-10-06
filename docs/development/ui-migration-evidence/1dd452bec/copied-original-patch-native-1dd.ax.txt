@@ -1,0 +1,43 @@
+The following is a diff from the previous accessibility tree for Window: "对话 · Orvilo" with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 154-156, 219
++										232 文本输入区 (settable) --- a/style.css
++++ b/style.css
+@@ -1,2 +1,2 @@
+---color: red
+-old
++++ value
++new
+--- a/next.ts
++++ b/next.ts
+@@ -1 +1 @@
+-before
++after
++											233 文本 --- a/style.css
++++ b/style.css
+@@ -1,2 +1,2 @@
+---color: red
+-old
++++ value
++new
+--- a/next.ts
++++ b/next.ts
+@@ -1 +1 @@
+-before
++after
+~							198 text 114  FPS
+~						201 弹出式按钮 R1.2G · J350.2M, Help: R = Renderer private footprint (red at 1 GiB) · J = JS heap used — click for the full breakdown
+~							204 文本 350.2M
+~							206 text CPU  2.6 %
+~							208 text GPU  1.3 % ·  34 M
+The focused UI element is 232 文本输入区 (settable) --- a/style.css
++++ b/style.css
+@@ -1,2 +1,2 @@
+---color: red
+-old
++++ value
++new
+--- a/next.ts
++++ b/next.ts
+@@ -1 +1 @@
+-before
++after

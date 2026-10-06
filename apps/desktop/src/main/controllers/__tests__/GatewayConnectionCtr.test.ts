@@ -1,7 +1,7 @@
 import type * as ChildProcessModule from 'node:child_process';
 import type * as CryptoModule from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -19,6 +19,15 @@ import LocalFileCtr from '../LocalFileCtr';
 import McpCtr from '../McpCtr';
 import RemoteServerConfigCtr from '../RemoteServerConfigCtr';
 import ShellCommandCtr from '../ShellCommandCtr';
+
+const { resolveCliScriptMock, primeProbeMock } = vi.hoisted(() => ({
+  resolveCliScriptMock: vi.fn(),
+  primeProbeMock: vi.fn(),
+}));
+vi.mock('@/modules/cliEmbedding', () => ({ resolveCliScript: resolveCliScriptMock }));
+vi.mock('@orvilo/prime-harness/readiness', () => ({
+  probePrimeArtifactInstallation: primeProbeMock,
+}));
 
 // ─── Mocks ───
 
@@ -308,6 +317,8 @@ describe('GatewayConnectionCtr', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resolveCliScriptMock.mockReturnValue('/mock/apps/cli/dist/index.js');
+    primeProbeMock.mockResolvedValue({ installed: false });
     vi.useFakeTimers();
     resolveRemotePlatformRuntimeMock.mockImplementation(
       async (type: 'hermes' | 'openclaw', baseEnv: NodeJS.ProcessEnv = process.env) => ({
@@ -628,10 +639,70 @@ describe('GatewayConnectionCtr', () => {
       expect(JSON.parse(response.result.content)).toMatchObject({
         authenticated: 'unknown',
         executor: 'prime',
-        unattended: false,
-        blockers: ['EXECUTOR_UNSUPPORTED'],
+        unattended: true,
+        installed: false,
       });
       expect(response.result.state).toEqual(JSON.parse(response.result.content));
+    });
+
+    it.each(['/mock/apps/cli/dist/index.js', '/mock/Resources/bin/orvilo-cli.js'])(
+      'checks the Prime artifact beside the execution CLI at %s',
+      async (cliScript) => {
+        resolveCliScriptMock.mockReturnValue(cliScript);
+        const artifact = path.join(path.dirname(cliScript), 'runner.mjs');
+        primeProbeMock.mockImplementation(async (selected: string) => ({
+          installed: selected === artifact,
+        }));
+        const client = await connectAndOpen();
+        client.simulateToolCallRequest(
+          'checkAutomationReadiness',
+          { agentType: 'orvilo', primeArtifact: '/remote/runner.mjs' },
+          'readiness',
+        );
+        await vi.waitFor(() => expect(client.sendToolCallResponse).toHaveBeenCalled());
+        expect(
+          JSON.parse(client.sendToolCallResponse.mock.calls.at(-1)![0].result.content),
+        ).toMatchObject({ executor: 'prime', installed: true, unattended: true });
+      },
+    );
+
+    it('uses an existing execution artifact override and ignores a missing override', async () => {
+      const dir = await mkdtemp(path.join(os.tmpdir(), 'desktop-prime-path-'));
+      const artifact = path.join(dir, 'runner.mjs');
+      await writeFile(artifact, 'export {};');
+      try {
+        vi.stubEnv('ORVILO_PRIME_RUNNER', artifact);
+        primeProbeMock.mockImplementation(async (selected: string) => ({
+          installed: selected === artifact,
+        }));
+        const client = await connectAndOpen();
+        client.simulateToolCallRequest(
+          'checkAutomationReadiness',
+          { agentType: 'orvilo' },
+          'override',
+        );
+        await vi.waitFor(() => expect(client.sendToolCallResponse).toHaveBeenCalled());
+        expect(
+          JSON.parse(client.sendToolCallResponse.mock.calls.at(-1)![0].result.content).installed,
+        ).toBe(true);
+        vi.stubEnv('ORVILO_PRIME_RUNNER', path.join(dir, 'missing.mjs'));
+        client.sendToolCallResponse.mockClear();
+        const sibling = '/mock/apps/cli/dist/runner.mjs';
+        primeProbeMock.mockImplementation(async (selected: string) => ({
+          installed: selected === sibling,
+        }));
+        client.simulateToolCallRequest(
+          'checkAutomationReadiness',
+          { agentType: 'orvilo' },
+          'missing-override',
+        );
+        await vi.waitFor(() => expect(client.sendToolCallResponse).toHaveBeenCalled());
+        expect(
+          JSON.parse(client.sendToolCallResponse.mock.calls.at(-1)![0].result.content).installed,
+        ).toBe(true);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
     });
 
     async function connectAndOpen() {

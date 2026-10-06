@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useGlobalStore } from '@/store/global';
 
@@ -275,6 +276,7 @@ CommandMenuContent.displayName = 'CommandMenuContent';
  */
 const CommandMenu = memo(() => {
   const [open, setOpen] = useGlobalStore((s) => [s.status.showCommandMenu, s.updateSystemStatus]);
+  const [creatingView, setCreatingView] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [appRoot, setAppRoot] = useState<HTMLElement | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -342,13 +344,27 @@ const CommandMenu = memo(() => {
     }, CLOSE_ANIMATION_DURATION);
   }, [isClosing, setOpen]);
 
-  if (!mounted || !isVisible || !appRoot) return null;
+  if (!mounted) return null;
+  const newViewModal = <NewViewModal open={creatingView} onClose={() => setCreatingView(false)} />;
+  if (!isVisible || !appRoot) return newViewModal;
 
-  return createPortal(
-    <CommandMenuProvider pathname={pathname} onClose={handleClose}>
-      <CommandMenuContent isClosing={isClosing} onClose={handleClose} />
-    </CommandMenuProvider>,
-    appRoot,
+  return (
+    <>
+      {newViewModal}
+      {createPortal(
+        <CommandMenuProvider
+          pathname={pathname}
+          onClose={handleClose}
+          onCreateView={() => {
+            handleClose();
+            setCreatingView(true);
+          }}
+        >
+          <CommandMenuContent isClosing={isClosing} onClose={handleClose} />
+        </CommandMenuProvider>,
+        appRoot,
+      )}
+    </>
   );
 });
 

@@ -184,6 +184,7 @@ export interface ViewTaskParams {
 }
 
 export interface ViewTaskState {
+  domainRevision?: number;
   identifier?: string;
   success: boolean;
 }
@@ -228,11 +229,15 @@ export interface EditTaskParams {
   /** Workspace member (user id) to assign the task to; `null` clears the human assignee. */
   assigneeUserId?: string | null;
   description?: string;
+  /** Latest domainRevision observed through viewTask; required for assignee changes. */
+  expectedDomainRevision?: number;
   identifier: string;
   instruction?: string;
   name?: string;
   parentIdentifier?: string | null;
   priority?: number;
+  /** Existing project id; null removes the task from its project. */
+  projectId?: string | null;
   removeDependencies?: string[];
 }
 

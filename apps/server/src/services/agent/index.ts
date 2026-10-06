@@ -256,6 +256,7 @@ export class AgentService {
   async updateAgentConfig(
     agentId: string,
     value: PartialDeep<AgentItem>,
+    replaceRuntime = false,
   ): Promise<UpdateAgentResult> {
     // 1. Execute update
     // `AgentItem` here is the `@orvilo/types` domain shape (plugins:
@@ -263,7 +264,7 @@ export class AgentService {
     // AgentItem, whose `plugins` column type is intentionally left as
     // `string[]` (only the domain types are widened for the tri-state
     // rollout, not the JSONB column's compile-time annotation).
-    await this.agentModel.updateConfig(agentId, value as any);
+    await this.agentModel.updateConfig(agentId, value as any, replaceRuntime);
 
     // 2. Query and return updated data (with default config merged)
     const agent = await this.getAgentConfigById(agentId);

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { Button } from '@/components/ui/button';
-import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -17,6 +16,7 @@ import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
 import AgentSettingsDetailPage from './AgentSettingsDetailPage';
+import { AgentSettingsList } from './AgentSettingsList';
 
 /**
  * Scope the settings host to the `:sub` route param — the per-agent settings
@@ -97,8 +97,7 @@ const AgentSettingsIndex = memo(() => {
             {tChat('newAgent')}
           </Button>
         </div>
-        <AgentList
-          activeAgentId={''}
+        <AgentSettingsList
           error={error}
           onRetry={() => mutate()}
           onSelect={(id) => navigate(`/settings/agents/${id}`, { escape: true })}

@@ -123,6 +123,7 @@ const findCompletionAssistantMessageId = (
  */
 export interface RunAdapterContext {
   context: ConversationContext;
+  isCreateNewTopic?: boolean;
   parentMessageId: string;
   parentMessageType: 'user' | 'assistant' | 'tool';
   runId: string;
@@ -150,10 +151,34 @@ export const buildRunLifecycle = (
   const { agentId, topicId, threadId, groupId, workspaceSlug } = context;
   const messageKey = messageMapKey(context);
   const contextKey = messageKey;
-  let voiceTopicTitleSummaryRequested = false;
+  let topicTitleSummaryRequested = false;
+
+  // Dev-only fast path: slice the first user message instead of calling the
+  // LLM. Only honored in non-production builds. Relocated verbatim.
+  const shouldSliceTopicTitle = __DEV__ && process.env.NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC === '1';
+
+  const applyTopicTitle = async (tid: string, messages: UIChatMessage[]) => {
+    if (!shouldSliceTopicTitle) {
+      await get().summaryTopicTitle(tid, messages);
+      return;
+    }
+    const firstUserText = messages.find((m) => m.role === 'user')?.content?.trim() ?? '';
+    const title = markdownToTxt(firstUserText).slice(0, 80) || 'New Topic';
+    // `internal_updateTopic` already balances its own loading owner. For a
+    // new client-runtime topic like "阅读下面...", an extra `false` here would
+    // consume the runtime's loading owner and hide the sidebar spinner early.
+    await get().internal_updateTopic(tid, { title });
+    console.info('[dev] sliced topic title (NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC=1):', title);
+  };
 
   const summarizeVoiceTopicTitleAfterCompletion = () => {
-    if (voiceTopicTitleSummaryRequested || adapter.runScope === 'sub_agent' || !topicId) return;
+    if (
+      adapter.runtimeType === 'gateway' ||
+      topicTitleSummaryRequested ||
+      adapter.runScope === 'sub_agent' ||
+      !topicId
+    )
+      return;
 
     const topic = topicSelectors.getTopicById(topicId)(get());
     const messages = displayMessageSelectors.getDisplayMessagesByKey(messageKey)(get());
@@ -168,11 +193,11 @@ export const buildRunLifecycle = (
       isAudioOnlyFirstUserMessage(messages) &&
       hasCompletedAssistantText(messages)
     ) {
-      voiceTopicTitleSummaryRequested = true;
+      topicTitleSummaryRequested = true;
       void get()
         .summaryTopicTitle(topicId, messages)
         .catch((error) => {
-          voiceTopicTitleSummaryRequested = false;
+          topicTitleSummaryRequested = false;
           log('Failed to summarize voice topic title: %O', error);
         });
     }
@@ -212,9 +237,8 @@ export const buildRunLifecycle = (
 
   return {
     afterUserMessagePersisted: async (event: UserMessagePersistedEvent) => {
-      // Topic title auto-generation. Single home for all three runtimes —
-      // the client used to do this inline in sendMessage and gateway/hetero
-      // had no LLM-summarized title at all before the unified lifecycle.
+      // Send-time snapshot and immediate client / dev-slice topic title.
+      // Gateway LLM titles are deferred to successful completeRun below.
       // Top-level only — a nested sub-agent / `/compact` run must not retitle the
       // user's topic. See RunScope.
       if (adapter.runScope !== 'top_level') return;
@@ -227,24 +251,10 @@ export const buildRunLifecycle = (
       // leg → fire-and-forget; it only patches topic metadata, idempotently.
       void snapshotTopicWorkingDirGit(get, { agentId, topicId }).catch(() => {});
 
-      // Dev-only fast path: slice the first user message instead of calling the
-      // LLM. Only honored in non-production builds. Relocated verbatim.
-      const shouldSliceTopicTitle =
-        __DEV__ && process.env.NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC === '1';
-
-      const applyTopicTitle = async (tid: string, messages: UIChatMessage[]) => {
-        if (!shouldSliceTopicTitle) {
-          await get().summaryTopicTitle(tid, messages);
-          return;
-        }
-        const firstUserText = messages.find((m) => m.role === 'user')?.content?.trim() ?? '';
-        const title = markdownToTxt(firstUserText).slice(0, 80) || 'New Topic';
-        // `internal_updateTopic` already balances its own loading owner. For a
-        // new client-runtime topic like "阅读下面...", an extra `false` here would
-        // consume the runtime's loading owner and hide the sidebar spinner early.
-        await get().internal_updateTopic(tid, { title });
-        console.info('[dev] sliced topic title (NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC=1):', title);
-      };
+      // Gateway admission precedes the foreground runtime's terminal event.
+      // Start LLM title work only at successful completion so two local ACP
+      // processes do not initialize the provider database concurrently.
+      if (adapter.runtimeType === 'gateway' && !shouldSliceTopicTitle) return;
 
       // Key off the EVENT's context, not the adapter's send-time `context`.
       // `context` (= operationContext captured at dispatch) still carries a null
@@ -360,7 +370,41 @@ export const buildRunLifecycle = (
       // Title recovery is a successful-completion side effect, not a notification
       // side effect. Run it before the queued-message early return so a follow-up
       // cannot strand an audio-first topic without a title.
-      if (disposition === 'success') summarizeVoiceTopicTitleAfterCompletion();
+      if (disposition === 'success') {
+        if (
+          adapter.runtimeType === 'gateway' &&
+          adapter.runScope === 'top_level' &&
+          topicId &&
+          !shouldSliceTopicTitle &&
+          !topicTitleSummaryRequested
+        ) {
+          const topic = topicSelectors.getTopicById(topicId)(get());
+          const messages = displayMessageSelectors.getDisplayMessagesByKey(messageKey)(get());
+          const isUntitled =
+            !topic?.title ||
+            topic.title === LOADING_FLAT ||
+            topic.title === t('defaultTitle', { ns: 'topic' });
+          const isVoiceTitle =
+            topic &&
+            isUntitled &&
+            isAudioOnlyFirstUserMessage(messages) &&
+            hasCompletedAssistantText(messages);
+          if (adapter.isCreateNewTopic || (topic && !topic.title) || isVoiceTitle) {
+            topicTitleSummaryRequested = true;
+            try {
+              if (adapter.isCreateNewTopic && !topic)
+                await get()
+                  .refreshTopic()
+                  .catch(() => {});
+              await applyTopicTitle(topicId, messages);
+            } catch (error) {
+              log('Failed to summarize completed Gateway topic title: %O', error);
+            }
+          }
+        } else {
+          summarizeVoiceTopicTitleAfterCompletion();
+        }
+      }
 
       const completeSuccess = () => {
         get().completeOperation(operationId);

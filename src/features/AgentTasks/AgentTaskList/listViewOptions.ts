@@ -405,7 +405,7 @@ export const getTaskGroupMeta = (
       return getTaskPriorityGroupMeta(getPriorityValue(task));
     }
     case 'status': {
-      if (task.workflowStateId && task.workflowCategory) {
+      if (task.workflowCategory) {
         return {
           groupBy: 'status',
           key: `workflow:${task.workflowCategory}`,

@@ -1609,6 +1609,18 @@ describe('TopicModel - Query', () => {
       expect(result.map((t) => t.id).sort()).toEqual(['topic1', 'topic2']);
     });
 
+    it('excludes internal judgments from ordinary topic feeds while retaining audit lookup', async () => {
+      await serverDB.insert(topics).values([
+        { id: 'ordinary-chat', sessionId, userId, trigger: 'chat' },
+        { id: 'title-judgment', sessionId, userId, trigger: 'acp_judgment' },
+      ]);
+      expect((await topicModel.queryTopics()).map((topic) => topic.id)).toEqual(['ordinary-chat']);
+      expect((await topicModel.queryTopicsPage()).items.map((topic) => topic.id)).toEqual([
+        'ordinary-chat',
+      ]);
+      expect((await topicModel.findById('title-judgment'))?.id).toBe('title-judgment');
+    });
+
     it('should filter by status', async () => {
       await serverDB.insert(topics).values([
         { id: 'running1', sessionId, status: 'running', userId },

@@ -10,6 +10,7 @@ import {
   awaitAcpBuiltinToolChildren,
   execAcpBuiltinTool,
 } from '../acpBuiltinToolExec';
+import type * as OrchestrationRunners from '../orchestrationRunners';
 import {
   apiSchemaDigest,
   connectorAuthRevision,
@@ -24,6 +25,9 @@ const {
   mockExecute,
   mockExecuteTool,
   mockFindConnectorById,
+  mockFindGroup,
+  mockGroupRoster,
+  mockCreateMessage,
   mockFindMessage,
   mockFindPlugin,
   mockGetReceiptPayload,
@@ -47,6 +51,9 @@ const {
   mockExecute: vi.fn(),
   mockExecuteTool: vi.fn(),
   mockFindConnectorById: vi.fn(),
+  mockFindGroup: vi.fn(),
+  mockGroupRoster: vi.fn(),
+  mockCreateMessage: vi.fn(),
   mockFindMessage: vi.fn(),
   mockFindPlugin: vi.fn(),
   mockGetReceiptPayload: vi.fn(),
@@ -115,7 +122,11 @@ vi.mock('../orchestrationRunners', () => ({
 
 vi.mock('@/database/models/message', () => ({
   MessageModel: vi.fn().mockImplementation(function () {
-    return { findById: mockFindMessage, updateToolMessage: mockUpdateToolMessage };
+    return {
+      create: mockCreateMessage,
+      findById: mockFindMessage,
+      updateToolMessage: mockUpdateToolMessage,
+    };
   }),
 }));
 
@@ -138,7 +149,7 @@ vi.mock('@/database/models/eventOutbox', () => ({
 
 vi.mock('@/database/models/chatGroup', () => ({
   ChatGroupModel: vi.fn().mockImplementation(function () {
-    return { findById: vi.fn(), getGroupAgentsWithMeta: vi.fn().mockResolvedValue([]) };
+    return { findById: mockFindGroup, getGroupAgentsWithMeta: mockGroupRoster };
   }),
 }));
 
@@ -200,11 +211,85 @@ describe('execAcpBuiltinTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExecute.mockResolvedValue({ content: 'done', success: true });
+    mockFindGroup.mockResolvedValue({ id: 'group-1', title: 'Review team' });
+    mockGroupRoster.mockResolvedValue([
+      { agentId: 'agt_1', role: 'supervisor', title: 'Coordinator' },
+      { agentId: 'agt_member', role: 'participant', title: 'Reviewer' },
+    ]);
+    mockCreateMessage.mockResolvedValue({ id: 'msg_group_tool' });
+
     mockResolveConnectorMcpParams.mockImplementation(async (connector: any) => ({
       auth: { token: connector.credentials?.token ?? 'none' },
       type: 'http',
       url: connector.mcpServerUrl,
     }));
+  });
+
+  it('rejects a formerly mounted group tool after its Agent is no longer the supervisor', async () => {
+    const deps = buildDeps({
+      op: {
+        ...baseOp,
+        agentId: 'agt_member',
+        chatGroupId: 'group-1',
+        appContext: { orchestrationRole: 'supervisor' },
+        metadata: { ...baseOp.metadata, builtinTools: { 'orvilo-group-management': ['speak'] } },
+      },
+    });
+    await expect(
+      execAcpBuiltinTool(deps, {
+        ...baseInput,
+        identifier: 'orvilo-group-management',
+        apiName: 'speak',
+      }),
+    ).rejects.toThrow('Only the group supervisor');
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+
+  it('runs a real member runner and returns the deferred child operation to the supervisor', async () => {
+    const { buildServerAgentMemberRunner } = await import('../orchestrationRunners');
+    const actual = await vi.importActual<typeof OrchestrationRunners>('../orchestrationRunners');
+    vi.mocked(buildServerAgentMemberRunner).mockImplementationOnce(
+      actual.buildServerAgentMemberRunner,
+    );
+    const execGroupMember = vi
+      .fn()
+      .mockResolvedValue({ started: true, operationId: 'op_group_child' });
+    const deps = {
+      ...buildDeps({
+        op: {
+          ...baseOp,
+          chatGroupId: 'group-1',
+          metadata: { ...baseOp.metadata, builtinTools: { 'orvilo-group-management': ['speak'] } },
+        },
+      }),
+      execGroupMember,
+    };
+    mockExecute.mockImplementationOnce(async (_payload, context) => {
+      const { started } = await context.agentMember.run({
+        members: [{ agentId: 'Reviewer', instruction: 'Review it.' }],
+        mode: 'in_group',
+        onComplete: 'resume',
+      });
+      return { success: started, deferred: true };
+    });
+    const result = await execAcpBuiltinTool(deps, {
+      ...baseInput,
+      identifier: 'orvilo-group-management',
+      apiName: 'speak',
+    });
+    expect(result).toMatchObject({
+      success: true,
+      deferred: true,
+      childOperationIds: ['op_group_child'],
+    });
+    expect(execGroupMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: 'agt_member',
+        groupId: 'group-1',
+        parentOperationId: 'op_1',
+        onComplete: 'resume',
+      }),
+    );
   });
 
   it('runs the builtin executor with a reconstructed context', async () => {

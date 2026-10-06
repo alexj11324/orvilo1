@@ -149,7 +149,10 @@ export interface PrimeDeviceRun {
    * iterator — a driver draining after prompt completion waits for 0. */
   pendingEvents: () => number;
   /** `session.prompt` — resolves with the runner's stop result. */
-  prompt: (text: string) => Promise<ControlResult<HarnessPromptResult>>;
+  prompt: (
+    text: string,
+    builtinMcp?: { operationId: string; url: string },
+  ) => Promise<ControlResult<HarnessPromptResult>>;
   /** Re-POST the launch proof for a NEW operation resuming this session —
    * the server records activation evidence per operation, so a resumed turn
    * must re-activate under its own bound credential (same sessionId). */
@@ -438,11 +441,11 @@ export const openPrimeDeviceRun = async (
       brokerBridgeOptions.credential = credential;
       return activated;
     },
-    prompt: async (text) => {
+    prompt: async (text, builtinMcp) => {
       try {
         const result = await transport.request(
           HARNESS_PROMPT_METHOD,
-          { sessionId, text },
+          { builtinMcp, sessionId, text },
           { timeoutMs: PROMPT_TIMEOUT_MS },
         );
         if (!isHarnessPromptResult(result))

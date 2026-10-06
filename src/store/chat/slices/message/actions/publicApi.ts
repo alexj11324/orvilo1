@@ -174,12 +174,8 @@ export class MessagePublicApiActionImpl {
       );
     };
 
-    await Promise.all([
-      // 1. remove tool message
-      this.#get().optimisticDeleteMessage(id, context),
-      // 2. remove the tool item in the assistant tools
-      removeToolInAssistantMessage(),
-    ]);
+    await this.#get().optimisticDeleteMessage(id, context);
+    await removeToolInAssistantMessage();
   };
 
   clearMessage = async (): Promise<void> => {

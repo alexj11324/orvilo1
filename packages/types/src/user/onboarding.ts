@@ -19,6 +19,7 @@ export interface UserOnboardingSetup {
   firstAgentId?: string;
   goals?: string[];
   jobTitle?: string;
+  orchestratorAgentId?: string;
   role?: string;
   teamSize?: string;
   workspaceId?: string;
@@ -53,6 +54,7 @@ export const UserOnboardingSchema = z.object({
   setup: z
     .object({
       firstAgentId: z.string().min(1).max(128).optional(),
+      orchestratorAgentId: z.string().min(1).max(128).optional(),
       firstAgentDeviceId: z.string().min(1).max(200).optional(),
       firstAgentExecutionTarget: z.enum(['device', 'local']).optional(),
       discoveryOther: z.string().max(255).optional(),

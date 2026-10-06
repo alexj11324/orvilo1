@@ -95,7 +95,7 @@ export class HandoffCoordinator {
         }
         case 'quiescing': {
           const result = await this.supervisor.quiesce(record.source, record.id);
-          if (!result.ok) return result;
+          if (result.ok === false) return result;
           if (!(await this.validProof(record, result.value))) {
             return denied(
               'not_quiescent',
@@ -118,7 +118,7 @@ export class HandoffCoordinator {
             );
           }
           const result = await this.persistence.transfer(record);
-          if (!result.ok) return result;
+          if (result.ok === false) return result;
           const previous = record;
           record = result.value;
           if (
@@ -147,7 +147,7 @@ export class HandoffCoordinator {
           if (!record.successor)
             return denied('handoff_conflict', 'Transferred record has no successor fence.');
           const result = await this.successor.ensureStarted(record.id, record.successor);
-          if (!result.ok) return result;
+          if (result.ok === false) return result;
           next = { ...record, phase: 'resumed', revision: record.revision + 1 };
           break;
         }

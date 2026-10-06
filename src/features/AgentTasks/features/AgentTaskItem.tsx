@@ -256,7 +256,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           onChange={onStatusChange}
         />
       </span>
-      <TaskExecutionBadge size={13} status={status} />
+      <TaskExecutionBadge dispatchPhase={task.dispatchPhase} size={13} status={status} />
       <LinearTaskSyncStatus taskId={task.id} />
       {privacyBadge}
       <div className={cn('truncate', 'block', 'font-medium', styles.title)}>

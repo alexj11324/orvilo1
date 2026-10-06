@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { LinearSyncWorker } from './worker';
 
+vi.mock('@/server/services/agent/orchestratorRuntimeCreation', () => ({
+  resolveOrchestratorRuntimeForCreation: vi.fn(),
+}));
+
 const mocks = vi.hoisted(() => ({
   claimOutbox: vi.fn(),
   findBindingById: vi.fn(),

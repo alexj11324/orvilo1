@@ -1093,6 +1093,7 @@ export class TopicModel {
     const where = and(
       this.ownership(),
       this.notShareVisitor(),
+      or(isNull(topics.trigger), ne(topics.trigger, 'acp_judgment')),
       visibleParentWhere,
       statuses && statuses.length > 0
         ? inArray(topics.status, statuses as ChatTopicStatus[])

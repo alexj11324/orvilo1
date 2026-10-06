@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { isLinearScopeTeamImportable, isLinearScopeTeamLinkable, LinearSyncWorker } from './worker';
 
+vi.mock('@/server/services/agent/orchestratorRuntimeCreation', () => ({
+  resolveOrchestratorRuntimeForCreation: vi.fn(),
+}));
+
 const mocks = vi.hoisted(() => ({
   binding: null as any,
   recordDomainEvent: vi.fn(),

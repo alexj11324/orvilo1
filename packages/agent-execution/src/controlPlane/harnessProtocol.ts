@@ -187,6 +187,8 @@ export interface HarnessInitAck {
 }
 
 export interface HarnessPromptParams {
+  /** Ephemeral host-owned Orvilo callback endpoint, released after this turn. */
+  builtinMcp?: { operationId: string; url: string };
   sessionId: string;
   text: string;
 }

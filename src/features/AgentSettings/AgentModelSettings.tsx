@@ -16,31 +16,28 @@ import {
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { TriangleAlertIcon } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import type { SelectOptions } from '@/components/SelectOptions';
 import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from '@/components/ui/combobox';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   getEffortLabelKeys,
   getModeLabelKey,
 } from '@/features/ChatInput/ControlBar/HeteroModel/labels';
-import { getStaticModelOptions } from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
+import {
+  getStaticModelOptions,
+  modelDisplayLabel,
+} from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
 import { resolveModelSwitchSelection } from '@/features/ChatInput/ControlBar/HeteroModel/selectorView';
 import { useModelCatalog } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
+import { AgentModelPicker } from '@/features/CreateAgent/AgentModelPicker';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
@@ -50,6 +47,7 @@ import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { usePermission } from '@/hooks/usePermission';
+import { useSaveState } from '@/hooks/useSaveState';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useAiInfraStore } from '@/store/aiInfra';
@@ -73,6 +71,7 @@ interface AgentModelSettingsProps {
 const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
+  const { status, save, lastSavedAt, retry } = useSaveState();
   const { allowed: canEdit } = usePermission('edit_own_content');
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
@@ -100,9 +99,15 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const patchProvider = (patch: PartialDeep<HeterogeneousProviderConfig>) => {
     const nextType = patch.type ?? provider?.type ?? 'orvilo';
     const base: PartialDeep<HeterogeneousProviderConfig> = provider ? {} : { type: nextType };
-    return updateAgentConfigById(agentId, {
-      agencyConfig: { heterogeneousProvider: { ...base, ...patch } },
-    });
+    return save(() =>
+      updateAgentConfigById(
+        agentId,
+        {
+          agencyConfig: { heterogeneousProvider: { ...base, ...patch } },
+        },
+        { rethrow: true },
+      ),
+    );
   };
 
   // Prime's model contract: an embedded run's model is the `modelRoute` of
@@ -202,7 +207,6 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
 
   // Catalog-backed CLIs enumerate models on the machine the run targets, so
   // the picker only fills once the effective target resolves somewhere real.
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const effectiveTarget = resolveExecutionTarget(effectiveAgencyConfig, {
     clientExecutionAvailable: isDesktop,
     isHetero: true,
@@ -221,7 +225,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
     deviceId: catalogDeviceId,
     isDeviceListLoading: devicesLoading,
     isPreferenceLoading,
-    open: catalogOpen,
+    open: true,
     provider: isCatalogModel ? provider : undefined,
     targetReady: catalogTargetReady,
     type: harnessType as ListHeterogeneousAgentModelsParams['type'],
@@ -236,9 +240,11 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
 
     return [
       { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...(staleCurrent ? [{ label: model, title: model, value: model }] : []),
+      ...(staleCurrent
+        ? [{ label: modelDisplayLabel({ id: model, modelId: model }), title: model, value: model }]
+        : []),
       ...models.map((item) => ({
-        label: item.label ?? item.modelId,
+        label: modelDisplayLabel(item),
         title: `${item.label ?? item.modelId} ${item.id}`,
         value: item.id,
       })),
@@ -263,7 +269,18 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   }
 
   return (
-    <SettingsGroup title={t('settingAgent.modelSettings.title')}>
+    <SettingsGroup
+      title={t('settingAgent.modelSettings.title')}
+      action={
+        status !== 'idle' ? (
+          <AutoSaveHint
+            lastUpdatedTime={lastSavedAt}
+            saveStatus={status}
+            onRetry={() => void retry()}
+          />
+        ) : undefined
+      }
+    >
       {builtinEngine ? (
         <AsyncBoundary
           data={bindingQuery.data}
@@ -273,22 +290,15 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
         >
           {primeModelOptions.length > 0 ? (
             <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
-              <Select
-                disabled={!canEdit}
-                items={selectItems(primeModelOptions)}
-                value={model || undefined}
-                onValueChange={(value) => {
-                  if (typeof value !== 'string') return;
-                  void patchProvider({ model: value });
-                }}
-              >
-                <SelectTrigger className={settingsStyles.select}>
-                  <SelectValue placeholder={t('settingAgent.modelSettings.modelLabel')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectOptionItems options={primeModelOptions} />
-                </SelectContent>
-              </Select>
+              <AgentModelPicker
+                disabled={!canEdit || status === 'saving'}
+                value={model}
+                options={flattenSelectOptions(primeModelOptions).map((option) => ({
+                  value: String(option.value),
+                  label: option.title ?? String(option.value),
+                }))}
+                onChange={(value) => void patchProvider({ model: value })}
+              />
               <div className={settingsStyles.hint}>{t('settingAgent.modelSettings.primeHint')}</div>
             </SettingsRow>
           ) : (
@@ -316,59 +326,38 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
 
       {capability?.model?.source === 'static' ? (
         <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
-          <Select
-            disabled={!canEdit}
-            items={selectItems(modelOptions)}
+          <AgentModelPicker
+            disabled={!canEdit || status === 'saving'}
             value={model}
-            onValueChange={(value) => {
-              if (typeof value === 'string') handleModelChange(value);
-            }}
-          >
-            <SelectTrigger className={settingsStyles.select}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectOptionItems options={modelOptions} />
-            </SelectContent>
-          </Select>
+            options={flattenSelectOptions(modelOptions).map((option) => ({
+              value: String(option.value),
+              label:
+                typeof option.label === 'string'
+                  ? option.label
+                  : (option.title ?? String(option.value)),
+            }))}
+            onChange={handleModelChange}
+          />
         </SettingsRow>
       ) : null}
 
       {isCatalogModel ? (
         <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
-          <Combobox
-            disabled={!canEdit || catalog.isLoading}
-            items={flattenSelectOptions(catalogModelOptions).map((o) => o.value)}
+          <AgentModelPicker
+            disabled={!canEdit || status === 'saving'}
+            error={catalog.error}
+            loading={catalog.isLoading}
             value={model}
-            itemToStringLabel={(v) =>
-              flattenSelectOptions(catalogModelOptions).find((o) => o.value === v)?.title ?? v
-            }
-            onOpenChange={(open) => setCatalogOpen(open)}
-            onValueChange={(value) => {
-              if (typeof value === 'string') handleModelChange(value);
-            }}
-          >
-            <ComboboxInput className={settingsStyles.select} />
-            <ComboboxContent>
-              <ComboboxEmpty>
-                {catalog.isLoading
-                  ? t('settingAgent.modelSettings.catalogPending')
-                  : t('common:cmdk.noResults')}
-              </ComboboxEmpty>
-              <ComboboxList>
-                {(v) => {
-                  const option = flattenSelectOptions(catalogModelOptions).find(
-                    (o) => o.value === v,
-                  );
-                  return (
-                    <ComboboxItem key={v} value={v}>
-                      {option?.label ?? v}
-                    </ComboboxItem>
-                  );
-                }}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
+            options={flattenSelectOptions(catalogModelOptions).map((option) => ({
+              value: String(option.value),
+              label:
+                typeof option.label === 'string'
+                  ? option.label
+                  : (option.title ?? String(option.value)),
+            }))}
+            onChange={handleModelChange}
+            onRetry={() => void catalog.mutate()}
+          />
           {!catalogTargetReady ? (
             <div className={settingsStyles.hint}>
               {t('settingAgent.modelSettings.catalogPending')}
@@ -384,7 +373,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       {capability?.effort && effort !== undefined ? (
         <SettingsRow label={t('settingAgent.modelSettings.effortLabel')}>
           <Select
-            disabled={!canEdit}
+            disabled={!canEdit || status === 'saving'}
             items={selectItems(effortOptions)}
             value={effort}
             onValueChange={(value) => {
@@ -409,7 +398,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       {capability?.mode && mode !== undefined ? (
         <SettingsRow label={t('settingAgent.modelSettings.modeLabel')}>
           <Select
-            disabled={!canEdit}
+            disabled={!canEdit || status === 'saving'}
             items={selectItems(modeOptions)}
             value={mode}
             onValueChange={(value) => {
@@ -434,7 +423,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       {speedSupported ? (
         <SettingsRow label={t('settingAgent.modelSettings.speedLabel')}>
           <Select
-            disabled={!canEdit}
+            disabled={!canEdit || status === 'saving'}
             items={selectItems(speedOptions)}
             value={speed}
             onValueChange={(value) => {

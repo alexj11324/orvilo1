@@ -126,6 +126,19 @@ describe('listAuthorizedDeviceCandidates', () => {
 
     expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: false }]);
   });
+
+  it('does not authorize an unregistered personal reference through gateway presence', async () => {
+    queryWorkspaceDevices.mockResolvedValue([]);
+    queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
+      workspaceId ? [] : [{ deviceId: 'dev-personal', authenticated: true }],
+    );
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
+      referencedDevices: [{ deviceId: 'dev-personal' }],
+    });
+
+    expect(inventory).toMatchObject({ candidates: [], inventoryComplete: true });
+  });
 });
 
 describe('resolveHeteroExecutionPlan', () => {

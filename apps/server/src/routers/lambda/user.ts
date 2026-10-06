@@ -41,6 +41,7 @@ import {
   getSubscriptionPlan,
   onUserActivityForBusiness,
 } from '@/business/server/user';
+import { AgentModel } from '@/database/models/agent';
 import { MessageModel } from '@/database/models/message';
 import { RbacModel } from '@/database/models/rbac';
 import { SessionModel } from '@/database/models/session';
@@ -214,6 +215,7 @@ const userProcedure = authedProcedure.use(serverDatabase).use(async ({ ctx, next
       createOnboardingService: () => new OnboardingService(ctx.serverDB, ctx.userId),
       sessionModel: new SessionModel(ctx.serverDB, ctx.userId),
       userModel: new UserModel(ctx.serverDB, ctx.userId),
+      preferenceAgentModel: new AgentModel(ctx.serverDB, ctx.userId),
     },
   });
 });
@@ -850,6 +852,11 @@ export const userRouter = router({
   }),
 
   updatePreference: userProcedure.input(UserPreferenceSchema).mutation(async ({ ctx, input }) => {
+    if (input.orchestratorAgentId)
+      await ctx.preferenceAgentModel.inheritRuntimeForCreation(input.orchestratorAgentId, {
+        purpose: 'orchestrator',
+        visibility: 'private',
+      });
     if (input.showInCollaboration === undefined) return ctx.userModel.updatePreference(input);
 
     const currentPreference = await ctx.userModel.getUserPreference();

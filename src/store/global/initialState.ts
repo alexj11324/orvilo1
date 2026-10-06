@@ -96,6 +96,7 @@ export enum SettingsTabs {
   Messenger = 'messenger',
   Notification = 'notification',
   OAuthApps = 'oauth-apps',
+  Orchestrator = 'orchestrator',
   // business
   Plans = 'plans',
   Profile = 'profile',

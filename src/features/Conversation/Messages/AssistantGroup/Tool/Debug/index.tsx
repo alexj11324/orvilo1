@@ -66,6 +66,7 @@ const Debug = memo<DebugProps>(
               code={params}
               language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
+              variant="ghost"
             />
           ),
           icon: <MessageSquareCodeIcon />,
@@ -78,6 +79,7 @@ const Debug = memo<DebugProps>(
               code={isJsonResult ? JSON.stringify(result?.content, null, 2) : result?.content || ''}
               language={isJsonResult ? 'json' : 'plaintext'}
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
+              variant="ghost"
             />
           ),
           icon: <SquareArrowDownIcon />,
@@ -90,6 +92,7 @@ const Debug = memo<DebugProps>(
               code={JSON.stringify(functionCall, null, 2)}
               language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
+              variant="ghost"
             />
           ),
           icon: <FunctionSquareIcon />,
@@ -102,6 +105,7 @@ const Debug = memo<DebugProps>(
               code={JSON.stringify(result?.state, null, 2)}
               language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
+              variant="ghost"
             />
           ),
           icon: <BracesIcon />,
@@ -114,6 +118,7 @@ const Debug = memo<DebugProps>(
               code={JSON.stringify(intervention, null, 2)}
               language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
+              variant="ghost"
             />
           ),
           icon: <HandIcon />,
@@ -128,6 +133,7 @@ const Debug = memo<DebugProps>(
                     code={JSON.stringify(result.error, null, 2)}
                     language="json"
                     style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
+                    variant="ghost"
                   />
                 ),
                 icon: <CircleAlertIcon />,

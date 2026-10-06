@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { MessageSquare } from 'lucide-react';
 import type * as ReactModule from 'react';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ import {
 } from '@/spa/router/routeMeta';
 
 import TabCacheBridges from './TabCacheBridges';
+import NativeTabItem from './TabItem';
 import type { TabItem } from './types';
 
 const mocks = vi.hoisted(() => {
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => {
   };
 
   return {
+    preview: { current: undefined as string | undefined },
     getTabs: () => tabs.current,
     routes,
     setRoutes: (next: RouteObject[]) => {
@@ -42,6 +44,19 @@ const mocks = vi.hoisted(() => {
     updateTabCache: vi.fn<(id: string, cached: DynamicRouteMeta) => void>(),
   };
 });
+
+vi.mock('@dnd-kit/sortable', () => ({
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: () => {},
+    isDragging: false,
+    isSorting: false,
+  }),
+}));
+vi.mock('./hooks/useTabPreview', () => ({ useTabPreview: () => mocks.preview.current }));
+vi.mock('./hooks/useTabRunning', () => ({ useTabRunning: () => false }));
+vi.mock('./hooks/useTabUnread', () => ({ useTabUnread: () => false }));
 
 vi.mock('@/spa/router/desktopRouter.config', () => ({
   get mainAreaMetaRoutes() {
@@ -108,6 +123,7 @@ const tab = (url: string, id = url): TabItem => ({
 describe('TabCacheBridges', () => {
   afterEach(() => {
     cleanup();
+    mocks.preview.current = undefined;
     mocks.updateTabCache.mockReset();
     mocks.setTabs([]);
     mocks.routes.current = [];
@@ -237,5 +253,59 @@ describe('TabCacheBridges', () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+});
+
+describe('tab preview popup lifecycle', () => {
+  afterEach(() => {
+    cleanup();
+    mocks.preview.current = undefined;
+  });
+
+  it('does not mount a closed preview when its snapshot arrives after the pointer leaves', async () => {
+    const props = {
+      enterWidth: 200,
+      enterX: 0,
+      index: 0,
+      isActive: true,
+      isSplitVisible: false,
+      item: {
+        isActive: true,
+        tab: tab('/tasks', 'preview-tab'),
+        meta: { title: 'Tasks', icon: MessageSquare },
+      },
+      onActivate: vi.fn(),
+      onClose: vi.fn(),
+      onCloseLeft: vi.fn(),
+      onCloseOthers: vi.fn(),
+      onCloseRight: vi.fn(),
+      onCloseSplitView: vi.fn(),
+      onOpenInSplitView: vi.fn(),
+      onTogglePin: vi.fn(),
+      pinnedCount: 0,
+      splitViewEnabled: false,
+      tier: 'full' as const,
+      totalCount: 2,
+      width: 200,
+      x: 0,
+    };
+    const { container, rerender } = render(<NativeTabItem {...props} />);
+    const trigger = container.querySelector('[data-tier="full"]')!;
+    fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
+    fireEvent.mouseEnter(trigger);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    fireEvent.pointerLeave(trigger, { pointerType: 'mouse' });
+    fireEvent.mouseLeave(trigger);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    mocks.preview.current = 'data:image/png;base64,cHJldmlldw==';
+    rerender(<NativeTabItem {...props} item={{ ...props.item }} />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
   });
 });

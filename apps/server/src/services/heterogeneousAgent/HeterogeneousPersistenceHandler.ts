@@ -144,6 +144,7 @@ interface OperationState {
    * family can't silently resume this session.
    */
   agentType?: string;
+  groupId: string | undefined;
   /**
    * CC-native session id this run is producing, captured off the stream_start
    * event stream and stamped on every persisted message's
@@ -153,6 +154,7 @@ interface OperationState {
    * Recovered on a cold replica from the current assistant's stamped metadata.
    */
   heteroSessionId: string | undefined;
+  isolationThread: boolean;
   /** Last DB-confirmed tool-state seq, scoped to this operation. */
   lastAppliedToolStateSeqByCallId: Map<string, number>;
   lastStepIndex: number;
@@ -523,6 +525,8 @@ export class HeterogeneousPersistenceHandler {
    * clobber `runningOperation` / `workingDirectory` / other peer fields.
    */
   private async persistSessionId(state: OperationState, sessionId: string): Promise<void> {
+    // Isolation-thread provenance stays on its messages; the topic belongs to the parent run.
+    if (state.isolationThread) return;
     try {
       const topic =
         state.workingDirectory === undefined
@@ -650,6 +654,7 @@ export class HeterogeneousPersistenceHandler {
       // Legacy/finish-only callers may not have a readable assistant row; keep
       // the historical topic-owner fallback for those paths.
       agentId: baseAssistantMessage?.agentId ?? topic?.agentId ?? null,
+      groupId: topic?.groupId ?? undefined,
       workingDirectory:
         admittedCwd ??
         getWorkingDirEffectivePath(topic?.metadata?.workingDirectoryConfig) ??
@@ -668,6 +673,7 @@ export class HeterogeneousPersistenceHandler {
       publishedKeys: new Set(),
       toolMsgIdByCallId: new Map(),
       threadId: running?.threadId ?? undefined,
+      isolationThread: toRecord(operation?.appContext)?.isolationThread === true,
       topicId,
     };
     await this.refreshToolMessageIndex(state);
@@ -1172,6 +1178,7 @@ export class HeterogeneousPersistenceHandler {
         await this.deps.messageModel.create(
           {
             agentId: intent.agentId ?? undefined,
+            ...(state.groupId ? { groupId: state.groupId } : {}),
             content: '',
             ...(Object.keys(createMetadata).length > 0 ? { metadata: createMetadata } : {}),
             model: intent.model,
@@ -1235,6 +1242,7 @@ export class HeterogeneousPersistenceHandler {
           await this.deps.messageModel.create(
             {
               agentId: state.agentId ?? undefined,
+              ...(state.groupId ? { groupId: state.groupId } : {}),
               content: '',
               ...(Object.keys(toolMetadata).length > 0 ? { metadata: toolMetadata } : {}),
               parentId: intent.assistantMessageId,
@@ -1620,6 +1628,7 @@ export class HeterogeneousPersistenceHandler {
         await this.deps.messageModel.create(
           {
             agentId: intent.agentId ?? undefined,
+            ...(state.groupId ? { groupId: state.groupId } : {}),
             content: intent.content,
             ...(Object.keys(subMetadata).length > 0 ? { metadata: subMetadata } : {}),
             parentId: intent.parentId,
@@ -1677,6 +1686,7 @@ export class HeterogeneousPersistenceHandler {
           await this.deps.messageModel.create(
             {
               agentId: state.agentId ?? undefined,
+              ...(state.groupId ? { groupId: state.groupId } : {}),
               content: '',
               ...(Object.keys(subToolMetadata).length > 0 ? { metadata: subToolMetadata } : {}),
               parentId: intent.assistantMessageId,

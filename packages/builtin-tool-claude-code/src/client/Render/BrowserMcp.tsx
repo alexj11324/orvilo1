@@ -6,7 +6,7 @@ import { createStaticStyles, cx } from 'antd-style';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import {
   BROWSER_MCP_TOOL_NAMES,
@@ -130,7 +130,9 @@ const PageDump = memo<BrowserMcpRenderProps>(({ content }) => {
       language={'text'}
       style={{ maxHeight: 240, overflow: 'auto' }}
       variant={'ghost'}
-    />
+    >
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 });
 

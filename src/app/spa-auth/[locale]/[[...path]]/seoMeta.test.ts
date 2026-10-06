@@ -16,7 +16,7 @@ describe('buildAuthSeoEntry', () => {
 
     expect(entry.canonicalPath).toBe('/signup');
     expect(entry.title).toBe('Create Account');
-    expect(entry.description).toBe('Start your Agents collaboration space');
+    expect(entry.description).toBe('Start your agent collaboration space');
   });
 
   it('uses hand-translated zh-CN keys', async () => {
@@ -25,7 +25,7 @@ describe('buildAuthSeoEntry', () => {
 
     expect(signin.title).toBe('登录');
     expect(signup.title).toBe('创建账号');
-    expect(signup.description).toBe('开启 Agents 协作空间');
+    expect(signup.description).toBe('开启你的智能体协作空间');
   });
 
   it('strips a trailing slash before matching', async () => {

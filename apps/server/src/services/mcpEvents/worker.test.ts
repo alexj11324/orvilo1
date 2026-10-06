@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { PGlite } from '@electric-sql/pglite';
+import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlane';
 import type { AutomationOccurrenceSnapshot } from '@orvilo/types';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type { AcceptedMcpEvent, McpEventBinding } from './deliveryTypes';
 import { matchesMcpEventFilters } from './filter';

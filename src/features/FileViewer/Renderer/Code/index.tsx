@@ -4,7 +4,7 @@ import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { getLanguageFromFilename } from '@/utils/fileLanguage';
 
 import { useTextFileLoader } from '../../hooks/useTextFileLoader';
@@ -30,7 +30,9 @@ const CodeViewer = memo<CodeViewerProps>(({ url, fileName }) => {
   return (
     <div className={cx('flex flex-col', styles.page)}>
       {!loading && fileData ? (
-        <CodeBlock className="h-full" code={fileData} language={language} variant={'ghost'} />
+        <CodeBlock className="h-full" code={fileData} language={language} variant={'ghost'}>
+          <CodeBlockCopyButton />
+        </CodeBlock>
       ) : (
         <div className="flex flex-col items-center justify-center h-[100%]">
           <NeuralNetworkLoading size={36} />

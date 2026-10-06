@@ -3,7 +3,7 @@
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 interface GrepArgs {
   glob?: string;
@@ -23,7 +23,9 @@ const Grep = memo<BuiltinRenderProps<GrepArgs>>(({ content }) => {
       language={'text'}
       style={{ maxHeight: 240, overflow: 'auto' }}
       variant={'ghost'}
-    />
+    >
+      <CodeBlockCopyButton />
+    </CodeBlock>
   );
 });
 

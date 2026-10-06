@@ -85,7 +85,17 @@ export const useDeviceSelectorState = ({
     // enrollments (`visibility === 'private'`), which are legal for their
     // enroller — a surface that dropped them computed a different pool than
     // the admission contract resolves against.
-    const selectable = executionTargetDeviceCandidates(devices, scope);
+    const scoped = executionTargetDeviceCandidates(devices, scope);
+    const personal =
+      scope === 'workspace'
+        ? (devices ?? []).filter(
+            (device) =>
+              device.scope === 'personal' &&
+              ((canSelectDevice && canSelectPersonalDevice) ||
+                (device.deviceId === boundDeviceId && memberSelectedDeviceId === boundDeviceId)),
+          )
+        : [];
+    const selectable = [...scoped, ...personal];
     return {
       runnableDevices: selectable.filter((device) => device.online),
       selectableDevices: selectable,

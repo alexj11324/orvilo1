@@ -2,6 +2,7 @@ import { BUILTIN_AGENT_SLUGS, getAgentPersistConfig } from '@orvilo/builtin-agen
 import { INBOX_SESSION_ID, isHeterogeneousAgentModelId } from '@orvilo/const';
 import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
+  AGENT_PERMISSION_POLICY_KEYS,
   BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
   HETEROGENEOUS_AGENT_CONFIGS,
@@ -112,6 +113,7 @@ import {
   syncTopicCommentsOnTopicTransfer,
   TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS,
 } from './topicComment';
+import { UserModel } from './user';
 import { WorkspaceUserSettingsModel } from './workspaceUserSettings';
 
 /**
@@ -1078,13 +1080,17 @@ export class AgentModel {
     return `https://registry.npmmirror.com/@lobehub/icons-static-avatar/latest/files/avatars/${iconId.toLowerCase()}.webp`;
   };
 
-  private assertRuntimeUpdate = async (stored: AgentItem, next: Partial<AgentItem>) => {
+  private assertRuntimeUpdate = async (
+    stored: AgentItem,
+    next: Partial<AgentItem>,
+    replaceRuntime = false,
+  ) => {
     if (stored.slug && getAgentPersistConfig(stored.slug)) return;
     const before = normalizeAgencyConfigForWrite(stored.agencyConfig);
     const after = normalizeAgencyConfigForWrite(next.agencyConfig);
     const previousType = before?.heterogeneousProvider?.type;
     const nextType = after?.heterogeneousProvider?.type;
-    if (previousType && previousType !== nextType) {
+    if (!replaceRuntime && previousType && previousType !== nextType) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'AGENT_RUNTIME_IDENTITY_FIXED' });
     }
     const contract = (
@@ -1100,11 +1106,12 @@ export class AgentModel {
       model: config.model,
       provider: config.provider,
     });
-    if (isEqual(contract(stored, before), contract(next, after))) return;
+    if (!replaceRuntime && isEqual(contract(stored, before), contract(next, after))) return;
     next.agencyConfig = await assertAgentRuntimeCreation(
       this.db,
       { userId: this.userId, workspaceId: stored.workspaceId ?? undefined },
       { ...next, agencyConfig: after },
+      replaceRuntime ? { purpose: 'orchestrator' } : {},
     );
   };
 
@@ -1112,6 +1119,7 @@ export class AgentModel {
   inheritRuntimeForCreation = async (
     agentId: string,
     options: {
+      purpose?: 'orchestrator';
       deviceId?: string;
       visibility?: 'private' | 'public';
       model?: string;
@@ -1124,6 +1132,20 @@ export class AgentModel {
       .where(and(eq(agents.id, agentId), this.ownership()))
       .limit(1);
     if (!source) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+    if (options.purpose === 'orchestrator') {
+      if (source.virtual)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'ORCHESTRATOR_AGENT_REQUIRED',
+        });
+      if ((source.workspaceId ?? undefined) !== this.workspaceId)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'ORCHESTRATOR_SCOPE_MISMATCH',
+        });
+      if (this.workspaceId && options.visibility !== 'private' && source.visibility === 'private')
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'ORCHESTRATOR_SOURCE_PRIVATE' });
+    }
     // Device/model overrides live on the workspace member preference only —
     // a personal agent has exactly one member, so there is nothing to override.
     const preference = this.workspaceId
@@ -1141,12 +1163,35 @@ export class AgentModel {
     const provider = agency?.heterogeneousProvider;
     if (!provider)
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_RUNTIME_REQUIRED' });
-    const { env: _env, ...safeProvider } = provider;
+    const { env: _env, ...withoutEnv } = provider;
+    const safeProvider =
+      options.purpose === 'orchestrator'
+        ? {
+            apiConfig: provider.apiConfig,
+            args: provider.args,
+            authMode: provider.authMode,
+            command: provider.command,
+            effort: provider.effort,
+            mode: provider.mode,
+            model: provider.model,
+            permission: provider.permission,
+            speed: provider.speed,
+            type: provider.type,
+          }
+        : withoutEnv;
     const override = preference?.agentModelOverrides?.[agentId];
     const selectedModel = options.model ?? override?.model ?? safeProvider.model ?? source.model;
     const config = {
       agencyConfig: {
-        ...agency,
+        ...(options.purpose === 'orchestrator'
+          ? {
+              boundDeviceId: agency?.boundDeviceId,
+              executionTarget: agency?.executionTarget,
+              localSandbox: agency?.localSandbox,
+              localSandboxNetwork: agency?.localSandboxNetwork,
+              workingDirByDevice: agency?.workingDirByDevice,
+            }
+          : agency),
         // `resolveAgentAgencyConfig` strips the stored selection policy on the
         // owner path — it is a read-time view of the shared row, not the shape
         // to persist. A copied/inherited runtime must carry the agent's stored
@@ -1172,8 +1217,31 @@ export class AgentModel {
       this.db,
       { userId: this.userId, workspaceId: this.workspaceId },
       config,
+      options,
     );
     return { agencyConfig: config.agencyConfig, model: config.model, provider: config.provider };
+  };
+
+  getOrchestratorSourceAgentId = async () => {
+    const preference = this.workspaceId
+      ? await new WorkspaceUserSettingsModel(this.db, this.userId, this.workspaceId).getPreference()
+      : await new UserModel(this.db, this.userId).getUserPreference();
+    const agentId = preference?.orchestratorAgentId;
+    if (!agentId)
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'ORCHESTRATOR_SETUP_REQUIRED' });
+    return agentId;
+  };
+
+  /** Future resource-owned coordinators use only the caller's explicit default in this scope. */
+  getOrchestratorRuntimeForCreation = async (
+    options: { visibility?: 'private' | 'public'; model?: string; provider?: string } = {},
+  ) => {
+    const agentId = await this.getOrchestratorSourceAgentId();
+    const runtime = await this.inheritRuntimeForCreation(agentId, {
+      ...options,
+      purpose: 'orchestrator',
+    });
+    return { ...runtime, params: { orchestratorSourceAgentId: agentId } };
   };
 
   /** Internal resource-owned Prime consumers inherit an existing executable contract. */
@@ -1578,7 +1646,11 @@ export class AgentModel {
     return result?.id ?? null;
   };
 
-  updateConfig = async (agentId: string, input: PartialDeep<AgentItem> | undefined | null) => {
+  updateConfig = async (
+    agentId: string,
+    input: PartialDeep<AgentItem> | undefined | null,
+    replaceRuntime = false,
+  ) => {
     if (!input || Object.keys(input).length === 0) return;
 
     const data = this.stripImmutableFields(input);
@@ -1588,6 +1660,16 @@ export class AgentModel {
     });
 
     if (!agent) return;
+
+    if (replaceRuntime) {
+      const [supervisor] = await this.db
+        .select({ id: chatGroupsAgents.agentId })
+        .from(chatGroupsAgents)
+        .where(and(eq(chatGroupsAgents.agentId, agentId), eq(chatGroupsAgents.role, 'supervisor')))
+        .limit(1);
+      if (!agent.virtual || !supervisor || !data.agencyConfig)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'GROUP_SUPERVISOR_REQUIRED' });
+    }
 
     // Compatibility applies only to persisted rows. Merge provider patches with
     // that source before validating; normalizing input alone invents a runtime.
@@ -1634,6 +1716,19 @@ export class AgentModel {
       { ...agent, agencyConfig: normalizeAgencyConfigForWrite(agent.agencyConfig) },
       restData,
     );
+    if (replaceRuntime && data.agencyConfig) {
+      mergedValue.agencyConfig = { ...data.agencyConfig } as OrviloAgentAgencyConfig;
+      mergedValue.model = data.model ?? null;
+      mergedValue.provider = data.provider ?? null;
+      // Policy omission must not undo the router's collaborator write guard.
+      for (const key of AGENT_PERMISSION_POLICY_KEYS) {
+        if (!Object.hasOwn(data.agencyConfig, key) && agent.agencyConfig?.[key] !== undefined)
+          mergedValue.agencyConfig = {
+            ...mergedValue.agencyConfig,
+            [key]: agent.agencyConfig[key],
+          };
+      }
+    }
     // Validate after merging so a command-only patch keeps the existing type.
     // Do not infer Claude Code from an incomplete or malformed client binding.
     if (Object.hasOwn(data, 'agencyConfig')) {
@@ -1730,7 +1825,7 @@ export class AgentModel {
       Object.hasOwn(data, 'model') ||
       Object.hasOwn(data, 'provider')
     ) {
-      await this.assertRuntimeUpdate(agent, mergedValue);
+      await this.assertRuntimeUpdate(agent, mergedValue, replaceRuntime);
     }
     if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder)
       mergedValue.avatar = this.runtimeAvatar(mergedValue);

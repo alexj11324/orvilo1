@@ -10,7 +10,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import {
   buildGitHubRenderModel,
@@ -277,7 +277,9 @@ const GitHubRender = memo<BuiltinRenderProps<Record<string, unknown>, unknown, u
             language={'text'}
             style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
         )}
         {model.rawResultJson && (
           <details className={styles.rawDetails}>
@@ -299,7 +301,9 @@ const GitHubRender = memo<BuiltinRenderProps<Record<string, unknown>, unknown, u
               language={'text'}
               style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
-            />
+            >
+              <CodeBlockCopyButton />
+            </CodeBlock>
           </Section>
         )}
       </div>

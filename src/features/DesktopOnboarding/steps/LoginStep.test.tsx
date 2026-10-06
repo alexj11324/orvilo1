@@ -34,6 +34,8 @@ vi.mock('react-i18next', () => ({
         'back': 'Back',
         'next': 'Next',
         'screen5.actions.cancel': 'Cancel',
+        'screen5.actions.reopen': 'Reopen browser',
+        'screen5.auth.cancelled': 'Sign-in cancelled',
         'screen5.actions.connectToServer': 'Connect to server',
         'screen5.actions.done': 'Done',
         'screen5.actions.signingIn': 'Signing in...',
@@ -235,7 +237,28 @@ describe('Desktop onboarding LoginStep', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     });
     expect(remoteServerService.cancelAuthorization).toHaveBeenCalledOnce();
+    expect(screen.getByText('Sign-in cancelled')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in Cloud' })).toBeEnabled();
+  });
+
+  it('reopens the browser through a new authorization request while waiting', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    await renderLoginStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in Cloud' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen browser' }));
+    expect(mockElectronState.connectRemoteServer).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('surfaces a rejected authorization request and allows a retry', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    mockElectronState.connectRemoteServer.mockRejectedValueOnce(new Error('Browser unavailable'));
+    await renderLoginStep();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in Cloud' }));
+    });
+    expect(screen.getByText('Browser unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
   });
 
   it('retries a failed authorization from the visible error state', async () => {

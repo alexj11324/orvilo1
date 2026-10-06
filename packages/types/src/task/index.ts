@@ -916,6 +916,8 @@ export interface TaskItem {
   cycleRefId: string | null;
   deletedAt?: Date | null;
   description: string | null;
+  /** Latest durable dispatch phase; execution display truth, separate from reservation ownership. */
+  dispatchPhase?: TaskDispatchPhase | null;
   domainRevision: number;
   /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
   dueDate: string | null;
@@ -1140,6 +1142,7 @@ export interface TaskDetailSubtask {
   schedule?: { pattern?: string | null; timezone?: string | null };
   /** @deprecated Legacy status projection — see {@link TaskItem.status}. */
   status: string;
+
   updatedAt?: string;
   visibility?: 'private' | 'public';
   /** Canonical Issue Status category (see {@link TaskWorkflowCategory}). */
@@ -1349,6 +1352,10 @@ export interface TaskDetailData {
     workflowStateId?: string | null;
   }>;
   description?: string | null;
+  /** Latest durable dispatch phase; execution display truth, separate from reservation ownership. */
+  dispatchPhase?: TaskDispatchPhase | null;
+  /** Observed version used as expectedDomainRevision for optimistic-concurrency edits. */
+  domainRevision?: number;
   /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
   dueDate?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */

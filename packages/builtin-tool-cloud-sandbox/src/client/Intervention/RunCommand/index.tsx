@@ -3,7 +3,7 @@
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 interface RunCommandParams {
   background?: boolean;
@@ -45,7 +45,9 @@ const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) =
           language={'sh'}
           style={{ padding: '4px 8px' }}
           variant={'default'}
-        />
+        >
+          <CodeBlockCopyButton />
+        </CodeBlock>
       )}
     </div>
   );

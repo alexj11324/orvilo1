@@ -101,29 +101,20 @@ describe('selectRuntimeType', () => {
     });
   });
 
-  it.each([
-    [false, false],
-    [false, true],
-    [true, false],
-    [true, true],
-  ])(
-    'keeps local Prime on Gateway with workspace=%s and socket connected=%s',
-    (isWorkspaceAgent, deviceGatewayConnected) => {
-      expect(
-        selectRuntimeType(
-          {
-            boundDeviceId: 'verified-device',
-            deviceGatewayConnected,
-            executionTarget: 'local',
-            heterogeneousProvider: { type: 'orvilo' },
-            isGatewayMode: false,
-            isWorkspaceAgent,
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('gateway');
-    },
-  );
+  it.each([false, true])('keeps local Prime on Gateway with workspace=%s', (isWorkspaceAgent) => {
+    expect(
+      selectRuntimeType(
+        {
+          boundDeviceId: 'verified-device',
+          executionTarget: 'local',
+          heterogeneousProvider: { type: 'orvilo' },
+          isGatewayMode: false,
+          isWorkspaceAgent,
+        },
+        { isDesktop: true },
+      ),
+    ).toBe('gateway');
+  });
 
   it('does not inherit an IPC parent runtime for a Prime child', () => {
     expect(

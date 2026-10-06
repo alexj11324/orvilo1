@@ -12,6 +12,8 @@ import {
   TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS,
   TopicCommentModel,
 } from '../../models/topicComment';
+import { UserModel } from '../../models/user';
+import { WorkspaceUserSettingsModel } from '../../models/workspaceUserSettings';
 import { credentials, devices } from '../../schemas';
 import { agents } from '../../schemas/agent';
 import { agentHistoryJobAgents, agentHistoryJobs } from '../../schemas/agentHistoryJob';
@@ -112,10 +114,20 @@ const seedRuntimeFixtures = async () => {
           userId: actor.id,
           workspaceId: scope,
           visibility: 'public',
-          virtual: true,
+          virtual: false,
           title: 'Runtime fixture',
         })
         .onConflictDoNothing();
+      const preference = {
+        orchestratorAgentId: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
+      };
+      if (scope) {
+        await new WorkspaceUserSettingsModel(serverDB, actor.id, scope).updatePreference(
+          preference,
+        );
+      } else {
+        await new UserModel(serverDB, actor.id).updatePreference(preference);
+      }
     }
   }
 };

@@ -12,6 +12,7 @@ interface FakeMessage {
   agentId: string | null;
   content: string;
   error?: any;
+  groupId?: string;
   id: string;
   metadata?: any;
   model?: string;
@@ -49,6 +50,7 @@ interface FakeTopicMetadata {
 
 interface FakeTopic {
   agentId: string | null;
+  groupId?: string;
   id: string;
   metadata: FakeTopicMetadata;
 }
@@ -56,6 +58,7 @@ interface FakeTopic {
 const createHarness = (params: {
   assistantAgentId?: string | null;
   assistantMessageId: string;
+  groupId?: string;
   operationId: string;
   topicAgentId?: string | null;
   topicId: string;
@@ -69,6 +72,7 @@ const createHarness = (params: {
   // created before triggering the CLI ingest.
   messages.set(params.assistantMessageId, {
     agentId: params.assistantAgentId ?? params.topicAgentId ?? null,
+    ...(params.groupId ? { groupId: params.groupId } : {}),
     content: '',
     id: params.assistantMessageId,
     role: 'assistant',
@@ -82,6 +86,7 @@ const createHarness = (params: {
       const msgId = id ?? `msg_${nextMsgIdSeq}`;
       const msg: FakeMessage = {
         agentId: input.agentId ?? null,
+        ...(input.groupId ? { groupId: input.groupId } : {}),
         content: input.content ?? '',
         id: msgId,
         metadata: input.metadata,
@@ -162,6 +167,7 @@ const createHarness = (params: {
       if (id !== params.topicId) return null;
       return {
         agentId: params.topicAgentId ?? null,
+        ...(params.groupId ? { groupId: params.groupId } : {}),
         id,
         metadata: {
           runningOperation: {
@@ -205,6 +211,65 @@ describe('HeterogeneousPersistenceHandler', () => {
   afterEach(() => {
     __resetOperationStatesForTesting();
   });
+
+  it.each([undefined, 'group-1'])(
+    'keeps streamed messages visible after reload for topic groupId=%s',
+    async (groupId) => {
+      const h = createHarness({
+        assistantMessageId: 'asst-init',
+        groupId,
+        operationId: 'op-1',
+        topicId: 'topic-1',
+      });
+      const subagent = {
+        parentToolCallId: 'tc-spawn',
+        spawnMetadata: { prompt: 'Return the member result', subagentType: 'Worker' },
+        subagentMessageId: 'member-turn',
+      };
+      const tool = {
+        apiName: 'Read',
+        arguments: '{}',
+        id: 'main-tool',
+        identifier: 'read',
+        type: 'default',
+      };
+
+      await h.handler.ingest({
+        operationId: 'op-1',
+        topicId: 'topic-1',
+        events: [
+          buildEvent('stream_start', 0, { newStep: true, messageId: 'main-turn' }),
+          buildEvent('stream_chunk', 1, { chunkType: 'tools_calling', toolsCalling: [tool] }),
+          buildEvent('stream_chunk', 2, {
+            chunkType: 'tools_calling',
+            subagent,
+            toolsCalling: [{ ...tool, id: 'member-tool' }],
+          }),
+          buildEvent('stream_start', 3, { newStep: true, messageId: 'final-turn' }),
+          buildEvent('stream_chunk', 4, { chunkType: 'text', content: 'GROUP_COORDINATOR_OK' }),
+          buildEvent('agent_runtime_end', 5, { reason: 'success' }),
+        ],
+      });
+
+      const created = [...h.messages.values()].filter((m) => m.id !== 'asst-init');
+      expect(created.some((m) => !m.threadId && m.role === 'tool')).toBe(true);
+      expect(created.filter((m) => m.threadId).map((m) => m.role)).toEqual([
+        'user',
+        'assistant',
+        'tool',
+      ]);
+      const reloaded = created.filter(
+        (m) => m.topicId === 'topic-1' && (m.groupId ?? null) === (groupId ?? null),
+      );
+      expect(reloaded.map((m) => m.id)).toEqual(created.map((m) => m.id));
+      expect(reloaded.some((m) => m.content === 'GROUP_COORDINATOR_OK')).toBe(true);
+      if (!groupId) {
+        expect(h.messageModel.create.mock.calls.every(([input]) => !('groupId' in input))).toBe(
+          true,
+        );
+      }
+    },
+  );
 
   describe('state bootstrap', () => {
     it('reads runningOperation from topic.metadata to find the seeded assistantMessageId', async () => {

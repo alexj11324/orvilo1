@@ -1,7 +1,7 @@
 'use client';
 
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { PinIcon } from 'lucide-react';
+import { CheckIcon, PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +12,7 @@ import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
+import { ConfiguredAgentRow } from './ConfiguredAgentRow';
 import { type AgentRow, useHomeAgentRows } from './useHomeAgentRows';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -51,6 +52,7 @@ interface AgentListProps {
   error?: unknown;
   /** Also list the builtin task agent — the composer chip offers every conversation target. */
   includeTaskAgent?: boolean;
+  onConfigure?: (agentId: string) => void;
   onRetry?: () => void;
   onSelect: (agentId: string) => void;
 }
@@ -63,7 +65,7 @@ const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
 ));
 
 const AgentList = memo<AgentListProps>(
-  ({ activeAgentId, bottomSection, error, includeTaskAgent, onRetry, onSelect }) => {
+  ({ activeAgentId, bottomSection, error, includeTaskAgent, onConfigure, onRetry, onSelect }) => {
     const { t } = useTranslation('common');
 
     const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
@@ -73,6 +75,17 @@ const AgentList = memo<AgentListProps>(
 
     const renderRow = (row: AgentRow) => {
       const isActive = row.id === activeAgentId;
+
+      if (onConfigure)
+        return (
+          <ConfiguredAgentRow
+            active={isActive}
+            key={row.id}
+            row={row}
+            onConfigure={onConfigure}
+            onSelect={onSelect}
+          />
+        );
 
       return (
         <Button
@@ -93,6 +106,7 @@ const AgentList = memo<AgentListProps>(
           >
             {row.title}
           </div>
+          {isActive && <CheckIcon aria-hidden className="shrink-0 text-primary" size={16} />}
           {row.pinned && <PinIcon aria-hidden size={12} style={{ opacity: 0.5, flexShrink: 0 }} />}
         </Button>
       );

@@ -401,6 +401,7 @@ export class HeterogeneousAgentService {
     let serializedHooks: SerializedHook[] | undefined;
     let assistantMessageId = seedAssistantMessageId;
     let isolationThreadId: string | undefined;
+    let isolationThread = false;
     let orchestrationRole: 'member' | 'supervisor' | undefined;
     let staleActiveOperationId: string | undefined;
     let executionWorkingDirectory: string | undefined;
@@ -420,6 +421,7 @@ export class HeterogeneousAgentService {
         assistantMessageId = metadata.assistantMessageId;
       }
       isolationThreadId = operation?.threadId ?? undefined;
+      isolationThread = toRecord(operation?.appContext)?.isolationThread === true;
     } catch (err) {
       log('heteroFinish: failed to load operation lifecycle metadata (non-fatal): %O', err);
     }
@@ -489,7 +491,7 @@ export class HeterogeneousAgentService {
       : result === 'error' && resumeSessionInvalidated
         ? { heteroSessionBindingKey: undefined, heteroSessionId: undefined }
         : undefined;
-    if (resumeBindingUpdate) {
+    if (resumeBindingUpdate && !isolationThread) {
       try {
         // Only the producer can distinguish a missing native session from a
         // transient pre-init error such as Codex's "already has an active writer".

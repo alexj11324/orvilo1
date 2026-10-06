@@ -61,13 +61,17 @@ interface TaskExecutionBadgeProps {
  * It renders the canonical projection (`deriveTaskExecutionState`) and can
  * never mutate it: no dropdown, no click handler — a marker like
  * ●Running / ◷Waiting / ✓Succeeded / !Failed. A task with no run history
- * (projection null) renders nothing.
+ * (projection null) renders nothing in compact lists; labeled backlog and
+ * scheduled properties show that execution has not started.
  */
 const TaskExecutionBadge = memo<TaskExecutionBadgeProps>(
   ({ dispatchPhase, runState, showLabel, size = 14, status }) => {
     const { t } = useTranslation('chat');
     const execution = deriveTaskExecutionState({ dispatchPhase, legacyStatus: status, runState });
-    if (!execution) return null;
+    if (!execution)
+      return showLabel && (status === 'backlog' || status === 'scheduled') ? (
+        <span className={styles.badge}>{t('goalProcess.summary.notStarted')}</span>
+      ) : null;
     const visual = EXECUTION_STATE_VISUALS[execution];
     const VisualIcon = visual.icon;
     const label = t(`taskDetail.execution.${execution}`, { defaultValue: execution });

@@ -24,6 +24,8 @@ import {
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
 } from '@orvilo/heterogeneous-agents';
 import { DroidIcon, HETEROGENEOUS_AGENT_CLIENT_CONFIGS } from '@orvilo/heterogeneous-agents/client';
+import type { HeterogeneousReasoningEffort } from '@orvilo/types';
+import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 
 /**
  * One row in the connect wizard's agent inventory. `kind` mirrors the domain
@@ -64,6 +66,10 @@ export interface ConnectAgentProfile {
 }
 
 interface BuildConnectAgentConfigOptions {
+  /** Reasoning effort the create page picked — persisted on the provider. */
+  effort?: HeterogeneousReasoningEffort;
+  /** Model the create page picked — `'default'`/empty leaves the CLI's own. */
+  model?: string;
   overrides?: { description?: string; name?: string };
   profile?: ConnectAgentProfile;
   provider: ConnectableProvider;
@@ -127,12 +133,20 @@ export const buildPlatformAgencyConfig = (
 });
 
 export const buildConnectAgentConfig = ({
+  effort,
+  model,
   overrides,
   profile,
   provider,
   target,
 }: BuildConnectAgentConfigOptions) => {
   const name = overrides?.name?.trim() || undefined;
+  // `'default'` means "leave the CLI's own setting in control" — it is a
+  // selection sentinel, not a value the CLI flags understand.
+  const selectorOverrides = {
+    ...(effort && effort !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION ? { effort } : {}),
+    ...(model && model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION ? { model } : {}),
+  };
 
   if (provider.kind === 'platform' && isRemoteHeterogeneousType(provider.type)) {
     return {
@@ -163,7 +177,11 @@ export const buildConnectAgentConfig = ({
       agencyConfig: {
         boundDeviceId: target.deviceId,
         executionTarget: 'device' as const,
-        heterogeneousProvider: { command: provider.command, type: provider.type },
+        heterogeneousProvider: {
+          command: provider.command,
+          type: provider.type,
+          ...selectorOverrides,
+        },
       },
     };
   }
@@ -173,7 +191,11 @@ export const buildConnectAgentConfig = ({
     agencyConfig: {
       ...(target.deviceId ? { boundDeviceId: target.deviceId } : undefined),
       executionTarget: 'local' as const,
-      heterogeneousProvider: { command: provider.command, type: provider.type },
+      heterogeneousProvider: {
+        command: provider.command,
+        type: provider.type,
+        ...selectorOverrides,
+      },
     },
   };
 };

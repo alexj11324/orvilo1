@@ -634,6 +634,8 @@ describe('createTaskRuntime', () => {
         existsById: vi.fn().mockResolvedValue(true),
       };
       const taskModel = {
+        addDependency: vi.fn().mockResolvedValue(undefined),
+        removeDependency: vi.fn().mockResolvedValue(undefined),
         resolve: vi.fn().mockResolvedValue({ id: 'task-1', identifier: 'T-1' }),
         update: vi.fn().mockResolvedValue({}),
       };
@@ -641,6 +643,59 @@ describe('createTaskRuntime', () => {
       const taskCaller = { update: vi.fn().mockResolvedValue({}) } as any;
       return { agentModel, taskCaller, taskModel, taskService };
     };
+
+    it('leaves dependencies untouched when the revision-fenced field update fails', async () => {
+      const deps = makeDeps();
+      let rejectUpdate!: (error: Error) => void;
+      deps.taskCaller.update.mockReturnValueOnce(
+        new Promise((_, reject) => {
+          rejectUpdate = reject;
+        }),
+      );
+      const runtime = createTaskRuntime({
+        agentId: 'agt-manager',
+        agentModel: deps.agentModel as any,
+        taskCaller: deps.taskCaller,
+        taskModel: deps.taskModel as any,
+        taskService: deps.taskService,
+      });
+      const edit = runtime.editTask({
+        identifier: 'T-1',
+        name: 'Edited',
+        expectedDomainRevision: 1,
+        addDependencies: ['T-2'],
+        removeDependencies: ['T-3'],
+      });
+      await vi.waitFor(() => expect(deps.taskCaller.update).toHaveBeenCalledTimes(1));
+      const dependencyCallsWhilePending =
+        deps.taskModel.addDependency.mock.calls.length +
+        deps.taskModel.removeDependency.mock.calls.length;
+      rejectUpdate(new Error('Task changed; reload before editing.'));
+      await expect(edit).rejects.toThrow('Task changed; reload before editing.');
+      expect(dependencyCallsWhilePending).toBe(0);
+      expect(deps.taskModel.addDependency).not.toHaveBeenCalled();
+      expect(deps.taskModel.removeDependency).not.toHaveBeenCalled();
+    });
+
+    it('applies dependency edits after a successful field update', async () => {
+      const deps = makeDeps();
+      const runtime = createTaskRuntime({
+        agentId: 'agt-manager',
+        agentModel: deps.agentModel as any,
+        taskCaller: deps.taskCaller,
+        taskModel: deps.taskModel as any,
+        taskService: deps.taskService,
+      });
+      const result = await runtime.editTask({
+        identifier: 'T-1',
+        name: 'Edited',
+        addDependencies: ['T-2'],
+        removeDependencies: ['T-3'],
+      });
+      expect(result.success).toBe(true);
+      expect(deps.taskModel.addDependency).toHaveBeenCalledTimes(1);
+      expect(deps.taskModel.removeDependency).toHaveBeenCalledTimes(1);
+    });
 
     it('rejects explicit assigneeAgentId that is not owned by the current user', async () => {
       const deps = makeDeps();

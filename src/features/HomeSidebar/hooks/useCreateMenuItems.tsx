@@ -1,16 +1,17 @@
 import { GroupBotSquareIcon } from '@lobehub/ui/icons';
+import { CHAT_NEW_URL } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
+import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   BotIcon,
   FolderCogIcon,
   FolderPlus,
   ListPlusIcon,
-  MonitorSmartphone,
+  MessageSquarePlus,
   SparklesIcon,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import useSWRMutation from 'swr/mutation';
 
 import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import { toast } from '@/components/toast';
@@ -18,14 +19,13 @@ import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { openNewConversation } from '@/features/Conversation/selectAgent';
 import { requestAgentRuntime } from '@/features/CreateAgent';
+import { openCreateGroupChatModal } from '@/features/CreateGroupChat';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import type { CreateAgentParams } from '@/services/agent';
 import type { GroupMemberConfig } from '@/services/chatGroup';
 import { chatGroupService } from '@/services/chatGroup';
-import { useAgentStore } from '@/store/agent';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useHomeStore } from '@/store/home';
 
@@ -44,6 +44,7 @@ type MenuItem = SidebarMenuItemData & { sfSymbol?: SFSymbol };
 
 interface CreateAgentOptions {
   groupId?: string;
+  initialType?: HeterogeneousAgentType;
   isPinned?: boolean;
   onSuccess?: () => void;
   /**
@@ -56,8 +57,7 @@ interface CreateAgentOptions {
   origin?: 'chat' | 'settings';
   /**
    * Forwarded to the server-side `visibility` column. Used by the sidebar's
-   * "Create Private …" entries; defaults to undefined which the server reads
-   * as `'public'`. Has no effect in personal mode.
+   * "Create Private …" entries; defaults to `'private'` so personal execution is valid. Has no effect in personal mode.
    */
   visibility?: 'private' | 'public';
 }
@@ -72,7 +72,6 @@ export const useCreateMenuItems = () => {
   const groupTemplates = useGroupTemplates();
   const { allowed: canCreate } = usePermission('create_content');
 
-  const [storeCreateAgent] = useAgentStore((s) => [s.createAgent]);
   const [addGroup, refreshAgentList, switchToGroup, removeAgent] = useHomeStore((s) => [
     s.addGroup,
     s.refreshAgentList,
@@ -84,79 +83,36 @@ export const useCreateMenuItems = () => {
 
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [isCreatingSessionGroup, setIsCreatingSessionGroup] = useState(false);
-
-  // SWR-based agent creation; the caller decides the destination after the
-  // mutation resolves (origin decides destination per the create contract).
-  const { trigger: mutateAgent, isMutating: isMutatingAgent } = useSWRMutation(
-    'agent.createAgent',
-    async (_key: string, { arg }: { arg?: CreateAgentParams }) => {
-      const result = await storeCreateAgent(arg ?? {});
-      await refreshAgentList();
-      return result;
-    },
-  );
-
-  // SWR-based group creation landing straight in the conversation
-  const { trigger: mutateGroup, isMutating: isMutatingGroup } = useSWRMutation(
-    'group.createGroup',
-    async (_key: string, { arg }: { arg?: CreateAgentOptions & { title?: string } }) => {
-      const groupId = await createGroup(
-        {
-          config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
-          groupId: arg?.groupId,
-          title: arg?.title || t('defaultGroupChat'),
-          // Forward the caller's bucket choice — without it a "Create Private
-          // Group" entry silently lands the group in the public bucket.
-          ...(arg?.visibility ? { visibility: arg.visibility } : {}),
-        },
-        [],
-        true, // silent mode - don't switch session, we'll navigate instead
-      );
-      return groupId;
-    },
-    {
-      onSuccess: async (groupId) => {
-        navigate(`/group/${groupId}`);
-        await refreshAgentList();
-        await loadGroups();
-      },
-    },
-  );
+  const [isMutatingAgent, setIsMutatingAgent] = useState(false);
 
   const createAgent = useCallback(
     async (options?: CreateAgentOptions) => {
       if (!canCreate) return;
-
-      const config = await requestAgentRuntime({ visibility: options?.visibility });
-      if (!config) return;
-
-      const result = await mutateAgent({
-        clientRequestId: crypto.randomUUID(),
-        config,
+      openConnectAgentModal({
         groupId: options?.groupId,
-        visibility: options?.visibility,
+        initialType: options?.initialType,
+        visibility: options?.visibility ?? 'private',
+        onCreated: async (agentId, config) => {
+          setIsMutatingAgent(true);
+          try {
+            await refreshAgentList();
+            toast.success({
+              actions: [{ label: t('common:undo'), onClick: () => void removeAgent(agentId) }],
+              title: t('agentCreated', { name: config?.name || config?.title || 'Orvilo AI' }),
+            });
+            if (options?.origin === 'settings') {
+              navigate(`/settings/agents/${agentId}`);
+            } else {
+              openNewConversation({ agentId });
+            }
+            options?.onSuccess?.();
+          } finally {
+            setIsMutatingAgent(false);
+          }
+        },
       });
-
-      toast.success({
-        actions: [
-          {
-            label: t('common:undo'),
-            onClick: () => {
-              void removeAgent(result.agentId);
-            },
-          },
-        ],
-        title: t('agentCreated', { name: config.title || 'Orvilo AI' }),
-      });
-
-      if (options?.origin === 'settings') {
-        navigate(`/settings/agents/${result.agentId}`);
-      } else {
-        openNewConversation({ agentId: result.agentId });
-      }
-      options?.onSuccess?.();
     },
-    [canCreate, mutateAgent, navigate, removeAgent, t],
+    [canCreate, navigate, refreshAgentList, removeAgent, t],
   );
 
   /**
@@ -183,7 +139,7 @@ export const useCreateMenuItems = () => {
           ? privateGroups.some((group) => group.id === options.groupId)
             ? 'private'
             : 'public'
-          : options?.visibility;
+          : (options?.visibility ?? 'private');
         const runtimeConfig = await requestAgentRuntime({ visibility });
         if (!runtimeConfig) return false;
 
@@ -257,21 +213,23 @@ export const useCreateMenuItems = () => {
     [canCreate, createGroup, t],
   );
 
-  /**
-   * Create empty group and land in its conversation
-   */
-  const createEmptyGroup = useCallback(
-    async (options?: CreateAgentOptions & { title?: string }) => {
-      if (!canCreate) return;
-
-      await mutateGroup(options);
-    },
-    [canCreate, mutateGroup],
-  );
-
   const agentModal = useOptionalAgentModal();
   const openCreateModal = agentModal?.openCreateModal;
   const openCreateGroupModal = agentModal?.openCreateGroupModal;
+
+  const createEmptyGroup = useCallback(
+    async (options?: CreateAgentOptions & { title?: string }) => {
+      if (!canCreate) return;
+      openCreateGroupChatModal({
+        groupId: options?.groupId,
+        visibility: options?.visibility ?? 'private',
+        onGenerate: openCreateModal
+          ? (context) => openCreateModal('group', { ...options, ...context })
+          : undefined,
+      });
+    },
+    [canCreate, openCreateModal],
+  );
 
   /**
    * Create agent menu item
@@ -318,30 +276,8 @@ export const useCreateMenuItems = () => {
    * agents installed on a local or connected machine.
    */
   const createConnectAgentMenuItem = useCallback(
-    (options?: CreateAgentOptions): MenuItem | null => {
-      return {
-        icon: <MonitorSmartphone size={14} />,
-        disabled: !canCreate,
-        key: 'newPlatformAgent',
-        label: (
-          <div className="flex flex-col gap-[1px]">
-            <div>{t('newPlatformAgent')}</div>
-            <div className="text-[12px] text-muted-foreground">{t('newPlatformAgentDesc')}</div>
-          </div>
-        ),
-        sfSymbol: 'laptopcomputer.and.iphone',
-        onClick: (info) => {
-          stopMenuItemDomEvent(info.domEvent);
-          if (!canCreate) return;
-          openConnectAgentModal(
-            options?.groupId || options?.visibility
-              ? { groupId: options?.groupId, visibility: options?.visibility }
-              : undefined,
-          );
-        },
-      };
-    },
-    [t, canCreate],
+    (_options?: CreateAgentOptions): MenuItem | null => null,
+    [],
   );
 
   /**
@@ -442,25 +378,26 @@ export const useCreateMenuItems = () => {
   /**
    * Top-level create menu shown by the Agent section and header add buttons.
    */
-  const createTopLevelMenuItems = useCallback((): MenuItem[] => {
-    const connectItem = createConnectAgentMenuItem();
-    const groupFromDescription = createGroupFromDescriptionMenuItem();
+  const createConversationMenuItem = useCallback(
+    (): MenuItem => ({
+      icon: <MessageSquarePlus size={14} />,
+      key: 'newConversation',
+      label: t('common:cmdk.newConversation'),
+      onClick: () => navigate(CHAT_NEW_URL),
+    }),
+    [navigate, t],
+  );
 
-    return [
-      createAgentMenuItem(),
+  const createTopLevelMenuItems = useCallback(
+    (): MenuItem[] => [
+      createConversationMenuItem(),
       createGroupChatMenuItem(),
-      ...(groupFromDescription ? [groupFromDescription] : []),
-      ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
       { type: 'divider' as const },
-      createAgentListMenuItem(),
-    ];
-  }, [
-    createAgentListMenuItem,
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-  ]);
+      createAgentMenuItem(),
+      { type: 'divider' as const },
+    ],
+    [createConversationMenuItem, createGroupChatMenuItem, createAgentMenuItem],
+  );
 
   return {
     configMenuItem,
@@ -468,6 +405,7 @@ export const useCreateMenuItems = () => {
     createAgentListMenuItem,
     createAgentMenuItem,
     createConnectAgentMenuItem,
+    createConversationMenuItem,
     createEmptyGroup,
     createGroupChatMenuItem,
     createGroupFromDescriptionMenuItem,
@@ -480,7 +418,7 @@ export const useCreateMenuItems = () => {
     // Loading states
     isCreatingGroup,
     isCreatingSessionGroup,
-    isLoading: isMutatingAgent || isMutatingGroup || isCreatingGroup || isCreatingSessionGroup,
+    isLoading: isMutatingAgent || isCreatingGroup || isCreatingSessionGroup,
     isMutatingAgent,
   };
 };

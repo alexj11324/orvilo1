@@ -23,6 +23,7 @@ import { TaskModel } from '@/database/models/task';
 import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 
 const isWorkspaceAdmin = (ctx: unknown) => {
   const workspaceRole = (ctx as { workspaceRole?: WorkspaceRole }).workspaceRole;
@@ -297,7 +298,13 @@ export const projectRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         return {
-          data: await ctx.projectModel.create(input),
+          data: await ctx.projectModel.create(
+            input,
+            await resolveOrchestratorRuntimeForCreation(
+              { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId },
+              { visibility: input.visibility },
+            ),
+          ),
           message: 'Project created',
           success: true,
         };

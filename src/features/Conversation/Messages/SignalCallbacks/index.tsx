@@ -44,7 +44,10 @@ const SignalCallbacks = memo<{ block: UISignalCallbacksBlock }>(({ block }) => {
   return (
     <Accordion multiple className="gap-1" value={expandedKeys} onValueChange={setExpandedKeys}>
       <AccordionItem value="signal-callbacks">
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+        <AccordionTrigger
+          className="hover:no-underline"
+          style={{ paddingBlock: 4, paddingInline: 4 }}
+        >
           {
             <div className="flex items-center gap-2">
               <div

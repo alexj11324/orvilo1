@@ -41,6 +41,7 @@ import { McpManager } from '@earendil-works/pi-coding-agent/core/mcp/mcp-manager
 import { getDefaultSessionDir } from '@earendil-works/pi-coding-agent/core/session-manager.js';
 import type {
   HarnessInitParams,
+  HarnessPromptParams,
   HarnessResumeParams,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import {
@@ -59,6 +60,7 @@ import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 
 import type { BrokerBridge } from './broker';
 import { createBrokerBridge } from './broker';
+import { withPrimeBuiltinMcp } from './builtinMcp';
 import { mapAgentSessionEvent, mapStopReason } from './events';
 import { RunnerLink } from './ndjson';
 import { PrimeRlmFamily } from './rlmHost';
@@ -410,6 +412,19 @@ const handleRequest = async (
         return;
       }
       const text = params.text;
+      const builtinMcp = params.builtinMcp;
+      let builtinMount: HarnessPromptParams['builtinMcp'];
+      if (builtinMcp !== undefined) {
+        if (
+          !isRecord(builtinMcp) ||
+          !isNonEmptyString(builtinMcp.operationId) ||
+          !isNonEmptyString(builtinMcp.url)
+        ) {
+          link.respondError(id, -32602, 'Invalid builtin MCP mount');
+          return;
+        }
+        builtinMount = { operationId: builtinMcp.operationId, url: builtinMcp.url };
+      }
       let lastStopReason: string | undefined;
       const trackStop = entry.session.subscribe((event) => {
         if (
@@ -423,7 +438,9 @@ const handleRequest = async (
       });
       const prompt = (async () => {
         try {
-          await entry.session.promptAndWait(text);
+          await withPrimeBuiltinMcp(entry.session, builtinMount, () =>
+            entry.session.promptAndWait(text),
+          );
         } finally {
           trackStop();
         }

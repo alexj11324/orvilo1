@@ -22,7 +22,7 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { DeviceModel, WorkspaceDevicePrivateConflictError } from '@/database/models/device';
 import { UserModel } from '@/database/models/user';
-import { router } from '@/libs/trpc/lambda';
+import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { signWorkspaceDeviceToken } from '@/libs/trpc/utils/internalJwt';
 import { type DeviceAttachment, deviceGateway } from '@/server/services/deviceGateway';
@@ -93,7 +93,7 @@ const wsWritableProcedure = wsProcedure.use(requireWorkspaceRole('member'));
 // surfaces the workspace's shared devices; without it, the personal path is
 // unchanged (`ctx.workspaceId === undefined`).
 //
-// Every route below that takes a `deviceId` input also passes the workspace
+// Every execution RPC route below that takes a `deviceId` input also passes the workspace
 // visibility gate — see `assertWorkspaceDeviceVisible` for why filtering the
 // list paths alone is not enough.
 const deviceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
@@ -116,6 +116,14 @@ const deviceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
     },
   });
 });
+
+// Personal metadata is owned by the authenticated user, independently of the
+// active workspace selector carried by the Settings UI or CLI client.
+const personalDeviceProcedure = authedProcedure.use(serverDatabase).use(async (opts) =>
+  opts.next({
+    ctx: { deviceModel: new DeviceModel(opts.ctx.serverDB, opts.ctx.userId) },
+  }),
+);
 
 const workspaceFileInput = z.object({
   deviceId: z.string(),
@@ -1658,7 +1666,7 @@ export const deviceRouter = router({
       return ctx.deviceModel.register(input);
     }),
 
-  removeDevice: deviceProcedure
+  removeDevice: personalDeviceProcedure
     .input(z.object({ deviceId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.deviceModel.delete(input.deviceId);
@@ -1670,7 +1678,7 @@ export const deviceRouter = router({
   }),
 
   /** User-editable fields only — never the machine-reported identity columns. */
-  updateDevice: deviceProcedure
+  updateDevice: personalDeviceProcedure
     .input(
       z.object({
         defaultCwd: z.string().nullish(),
@@ -1688,7 +1696,8 @@ export const deviceRouter = router({
       const nextWorkingDirs = workingDirs
         ? preserveWorkspaceCache(
             workingDirs,
-            (await ctx.deviceModel.findByDeviceId(deviceId))?.workingDirs ?? [],
+            (await ctx.deviceModel.queryPersonal()).find((device) => device.deviceId === deviceId)
+              ?.workingDirs ?? [],
           )
         : undefined;
 

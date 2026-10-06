@@ -190,7 +190,11 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
 
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuTrigger
+          nativeButton={false}
+          render={triggerNode as ReactElement}
+          onClick={(event) => event.stopPropagation()}
+        />
         <DropdownMenuContent className="min-w-52">
           <input
             autoFocus
@@ -204,7 +208,9 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
             })}
             onChange={(event) => setQuery(event.target.value)}
             onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') event.stopPropagation();
+            }}
           />
           <div className={styles.showingCaption}>
             {query.trim()

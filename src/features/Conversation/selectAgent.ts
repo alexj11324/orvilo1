@@ -1,4 +1,4 @@
-import { AGENT_CHAT_URL } from '@orvilo/const';
+import { CHAT_NEW_URL } from '@orvilo/const';
 
 import { stableWorkspaceAwareNavigate } from '@/features/Workspace/stableWorkspaceAwareNavigate';
 import { useChatStore } from '@/store/chat';
@@ -42,5 +42,5 @@ export const selectAgentForConversation = (agentId: string) => {
  */
 export const openNewConversation = ({ agentId }: { agentId: string }) => {
   selectAgentForConversation(agentId);
-  stableWorkspaceAwareNavigate(AGENT_CHAT_URL(agentId));
+  stableWorkspaceAwareNavigate(CHAT_NEW_URL);
 };

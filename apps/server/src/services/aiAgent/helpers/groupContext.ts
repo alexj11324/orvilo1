@@ -1,4 +1,9 @@
 import type { AgentGroupConfig } from '@orvilo/context-engine';
+import type { OrviloDatabase } from '@orvilo/database';
+import { formatGroupMembers, groupContextTemplate } from '@orvilo/prompts';
+import { TRPCError } from '@trpc/server';
+
+import { ChatGroupModel } from '@/database/models/chatGroup';
 
 /**
  * Format error for storage in thread metadata
@@ -88,4 +93,61 @@ export const buildBotConversationGroupContext = (
     members: [{ id: currentAgentId, name, role: 'participant' }],
     systemPrompt: typeof description === 'string' ? description : undefined,
   };
+};
+
+/** Read group authority from its scoped, enabled roster before a run or tool call. */
+export const resolveGroupRunContext = async (
+  deps: { db: OrviloDatabase; userId: string; workspaceId?: string },
+  input: { agentId: string; claimedRole?: 'member' | 'supervisor'; groupId: string },
+) => {
+  const model = new ChatGroupModel(deps.db, deps.userId, deps.workspaceId);
+  const group = await model.findById(input.groupId);
+  if (!group || group.isDeleted || group.deletedAt) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
+  }
+  const roster = await model.getGroupAgentsWithMeta(group.id);
+  const member = roster.find((entry) => entry.agentId === input.agentId);
+  const isGroupSupervisor = member?.role === 'supervisor';
+  if (input.claimedRole === 'supervisor' && !isGroupSupervisor) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Only the group supervisor can orchestrate this group',
+    });
+  }
+  if (!member) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Agent is not an enabled member of this group',
+    });
+  }
+  return {
+    group: {
+      ...group,
+      supervisorAgentId: roster.find((entry) => entry.role === 'supervisor')?.agentId,
+    },
+    groupContext: buildGroupAgentContext(input.agentId, group, roster),
+    groupMembers: roster.map((entry) => ({
+      id: entry.agentId,
+      isSupervisor: entry.role === 'supervisor',
+      title: entry.title,
+    })),
+    isGroupSupervisor,
+  };
+};
+
+/** Keep the standard group identity and roster block on the ACP context channel. */
+export const buildGroupAgentSystemContext = (
+  context: AgentGroupConfig | undefined,
+): string | undefined => {
+  if (!context) return undefined;
+  return `<group_context>\n${groupContextTemplate
+    .replace('{{AGENT_NAME}}', context.currentAgentName || '')
+    .replace('{{AGENT_ROLE}}', context.currentAgentRole || '')
+    .replace('{{AGENT_ID}}', context.currentAgentId || '')
+    .replace('{{GROUP_TITLE}}', context.groupTitle || '')
+    .replace('{{SYSTEM_PROMPT}}', context.systemPrompt || '')
+    .replace(
+      '{{GROUP_MEMBERS}}',
+      formatGroupMembers(context.members || [], context.currentAgentId),
+    )}\n</group_context>`;
 };

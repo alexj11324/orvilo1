@@ -4,6 +4,7 @@ import type {
   GenerateObjectSchema,
 } from '@orvilo/model-runtime';
 import type { OpenAIChatMessage } from '@orvilo/types';
+import { pickTrimmedString } from '@orvilo/utils/object';
 
 import type { OrviloDatabase } from '@/database/type';
 import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
@@ -163,6 +164,9 @@ export class AiGenerationService {
           provider: input.provider,
           purpose: options.judgment.purpose,
           signal: options.signal,
+          sourceTopicId:
+            pickTrimmedString(options.metadata?.topicId) ??
+            pickTrimmedString(options.tracing?.topicId),
           taskId: options.judgment.taskId,
           timeoutMs: options.judgment.timeoutMs,
           tracing: options.tracing,

@@ -203,6 +203,16 @@ declare module '@earendil-works/pi-coding-agent' {
     prompt: (text: string, options?: Record<string, unknown>) => Promise<void>;
     promptAndWait: (text: string) => Promise<void>;
     promptHeartbeat: (job: unknown, options?: Record<string, unknown>) => Promise<void>;
+    releaseAcpMcpServers: (ownerId: string, serverNames: readonly string[]) => Promise<void>;
+    replaceAcpMcpServers: (
+      servers: readonly {
+        name: string;
+        type: 'http';
+        url: string;
+        headers: Record<string, string>;
+      }[],
+      ownerId: string,
+    ) => void;
     readonly sessionFile?: string;
     readonly sessionId: string;
     readonly sessionManager: SessionManager;

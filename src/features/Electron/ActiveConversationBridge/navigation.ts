@@ -1,5 +1,7 @@
 import { appNavigate } from '@/features/Electron/navigation/appNavigate';
+import { getTabRouter } from '@/features/Electron/TabHost/tabRouterManager';
 import { useChatStore } from '@/store/chat';
+import { useElectronStore } from '@/store/electron';
 
 import { type ActiveConversationCoordinate, buildActiveConversationUrl } from './coordinate';
 
@@ -23,6 +25,18 @@ export const subscribeActiveConversationNavigation = (
     if (
       !coordinate.isConversation ||
       (!coordinate.routeAgentId && !coordinate.groupId && !coordinate.chatBasePath)
+    )
+      return;
+
+    // Child route hydration can reset the old topic before the passive URL
+    // mirror updates coordinateRef. The live tab router already owns the new
+    // route, so do not write the stale conversation URL back over it.
+    const activeTabId = useElectronStore.getState().activeTabId;
+    const liveLocation = activeTabId ? getTabRouter(activeTabId)?.state.location : undefined;
+    if (
+      liveLocation &&
+      `${liveLocation.pathname}${liveLocation.search}${liveLocation.hash}` !==
+        `${coordinate.pathname}${coordinate.search}${coordinate.hash}`
     )
       return;
 

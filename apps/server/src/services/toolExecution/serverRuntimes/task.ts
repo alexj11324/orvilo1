@@ -1,4 +1,4 @@
-import type { ListWorkspaceMembersParams } from '@orvilo/builtin-tool-task';
+import type { EditTaskParams, ListWorkspaceMembersParams } from '@orvilo/builtin-tool-task';
 import {
   normalizeListTasksParams,
   normalizeListWorkspaceMembersParams,
@@ -379,18 +379,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       }
     },
 
-    editTask: async (args: {
-      addDependencies?: string[];
-      assigneeAgentId?: string | null;
-      assigneeUserId?: string | null;
-      description?: string;
-      identifier: string;
-      instruction?: string;
-      name?: string;
-      parentIdentifier?: string | null;
-      priority?: number;
-      removeDependencies?: string[];
-    }) => {
+    editTask: async (args: EditTaskParams) => {
       const task = await taskModel().resolve(args.identifier);
       if (!task) return { content: `Task not found: ${args.identifier}`, success: false };
 
@@ -402,9 +391,9 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         name?: string;
         parentTaskId?: string | null;
         priority?: number;
+        projectId?: string | null;
       } = {};
       const changes: string[] = [];
-      const ops: Promise<unknown>[] = [];
 
       if (args.name !== undefined) {
         updateData.name = args.name;
@@ -447,10 +436,22 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         changes.push(`priority → ${priorityLabel(args.priority)}`);
       }
 
+      if (args.projectId !== undefined) {
+        updateData.projectId = args.projectId;
+        changes.push(args.projectId ? `project → ${args.projectId}` : 'project cleared');
+      }
+
       if (Object.keys(updateData).length > 0) {
         // Attribution rides the caller's context, not this payload — see
         // `AuthContext.actingAgentId`.
-        ops.push(taskCaller().update({ id: task.id, ...updateData }));
+        // A rejected revision-fenced edit must not start dependency mutations.
+        await taskCaller().update({
+          id: task.id,
+          ...updateData,
+          ...(args.expectedDomainRevision !== undefined
+            ? { expectedDomainRevision: args.expectedDomainRevision }
+            : {}),
+        });
       }
 
       const applyDeps = async (
@@ -499,11 +500,11 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         );
       }
 
-      if (ops.length === 0 && depResults.length === 0) {
+      if (Object.keys(updateData).length === 0 && depResults.length === 0) {
         return { content: 'No fields provided; nothing to update.', success: false };
       }
 
-      const [, depErrors] = await Promise.all([Promise.all(ops), Promise.all(depResults)]);
+      const depErrors = await Promise.all(depResults);
       const firstDepError = depErrors.find((e) => e);
       if (firstDepError) return { content: firstDepError, success: false };
 
@@ -950,6 +951,11 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
 
       return {
         content: formatTaskDetail(detail),
+        state: {
+          domainRevision: detail.domainRevision,
+          identifier: detail.identifier,
+          success: true,
+        },
         success: true,
       };
     },

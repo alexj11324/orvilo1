@@ -102,11 +102,11 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
       <div className="flex items-center gap-2" style={{ width: '100%' }}>
         {showCheckbox && (
           <Checkbox
+            aria-label={title}
             checked={isSelected}
             onCheckedChange={handleClick}
             onClick={(e) => {
               e.stopPropagation();
-              handleClick();
             }}
           />
         )}

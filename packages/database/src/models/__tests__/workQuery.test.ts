@@ -201,6 +201,19 @@ describe('WorkQueryModel', () => {
     expect(mineResult.queryHash).toBe(otherResult.queryHash);
   });
 
+  it('keeps the latest waiting dispatch phase on visible task query rows', async () => {
+    const task = await createTask(userId, { assigneeUserId: userId, workflowCategory: 'backlog' });
+    await runDispatchFor(task.id, 'waiting');
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      query: { entityType: 'task', groupBy: 'none', layout: 'list', schemaVersion: 1 },
+    });
+    expect(result.tasks.find((row) => row.id === task.id)).toMatchObject({
+      dispatchPhase: 'waiting',
+      status: 'running',
+      workflowCategory: 'backlog',
+    });
+  });
+
   it('hydrates the parent breadcrumb only for parents the reader can see', async () => {
     const parent = await createTask(userId, { name: 'Handoff parent' });
     const hidden = await createTask(otherUserId, { name: 'Secret parent', visibility: 'private' });

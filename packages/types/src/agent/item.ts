@@ -74,7 +74,10 @@ export interface OrviloAgentConfig {
   /**
    * Language model parameters
    */
-  params: LLMParams;
+  params: LLMParams & {
+    /** Saved Agent whose runtime was selected for this resource-owned coordinator. */
+    orchestratorSourceAgentId?: string;
+  };
 
   /**
    * Enabled plugins. Each entry is either a legacy bare identifier string

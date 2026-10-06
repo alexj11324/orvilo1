@@ -1066,6 +1066,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // ENOENT on a stale global install. Custom commands are used verbatim.
   const resolvedCommand = await resolveHeteroSpawnCommand(agentType, options.command);
   const commandEnv = {
+    ...(serverIngest ? { ORVILO_OPERATION_ID: operationId } : {}),
     ...(resolvedCommand.pathEnv ? { PATH: resolvedCommand.pathEnv } : {}),
     // Automatic mode: the opted-in run applies the pack's discipline without
     // the agent having to name the skills explicitly. Only set for this run —

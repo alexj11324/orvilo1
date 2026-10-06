@@ -40,44 +40,30 @@ const admitted = {
   provider: 'saved-provider',
 };
 describe('group tool runtime creation admission', () => {
-  it('requires invoking source before group and supervisor creation', async () => {
-    const result = await runtime.createGroup({ title: 'Team' });
+  it('reports a missing selected default instead of falling back to the invoking Agent', async () => {
+    createGroup.mockRejectedValueOnce(new Error('ORCHESTRATOR_SETUP_REQUIRED'));
+    const result = await runtime.createGroup({ title: 'Team' }, { agentId: 'different-source' });
     expect(result.success).toBe(false);
-    expect(result.content).toContain('setup');
-    expect(createGroup).not.toHaveBeenCalled();
+    expect(result.content).toContain('ORCHESTRATOR_SETUP_REQUIRED');
+    expect(getRuntimeForCreation).not.toHaveBeenCalled();
   });
 
-  it('blocks unsupported imported supervisor before insertion', async () => {
-    getRuntimeForCreation.mockResolvedValueOnce({
-      agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-    });
-    const result = await runtime.createGroup({ title: 'Team' }, { agentId: 'source' });
-    expect(result.success).toBe(false);
-    expect(result.content).toContain('unsupported');
-    expect(createGroup).not.toHaveBeenCalled();
-  });
-
-  it('creates group with admitted Prime supervisor configuration in first write', async () => {
-    const prime = {
-      agencyConfig: { heterogeneousProvider: { type: 'orvilo' }, boundDeviceId: 'host' },
-      model: 'saved',
-      provider: 'saved-provider',
-    };
-    getRuntimeForCreation.mockResolvedValueOnce(prime);
+  it('lets the server create the selected Orchestrator and preserves caller metadata', async () => {
     createGroup.mockResolvedValueOnce({
       group: { id: 'group', visibility: 'private' },
       supervisorAgentId: 'supervisor',
     });
     const result = await runtime.createGroup(
       { title: 'Team', supervisor: { title: 'Lead', model: 'requested' } },
-      { agentId: 'source' },
+      { agentId: 'different-source' },
     );
     expect(result.success).toBe(true);
+    expect(getRuntimeForCreation).not.toHaveBeenCalled();
     expect(createGroup).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Team',
         visibility: 'private',
-        supervisorConfig: expect.objectContaining({ ...prime, title: 'Lead' }),
+        supervisorConfig: { title: 'Lead', model: 'requested' },
       }),
     );
   });

@@ -36,6 +36,7 @@ import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreatio
 import { GROUP_MEMBER_ROLES } from '@/database/utils/groupMembership';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 import { AgentGroupService } from '@/server/services/agentGroup';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
@@ -385,6 +386,19 @@ export const agentGroupRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { supervisorConfig, ...groupInput } = input;
+      const folderVisibility = groupInput.groupId
+        ? await ctx.agentGroupRepo.getAssignableFolderVisibility(groupInput.groupId)
+        : undefined;
+      const sourceAgentId = supervisorConfig?.params?.orchestratorSourceAgentId;
+      const selectedRuntime =
+        (typeof sourceAgentId === 'string' && sourceAgentId) || !supervisorConfig?.agencyConfig
+          ? await resolveOrchestratorRuntimeForCreation(resourceConfigGuardCtx(ctx), {
+              sourceAgentId: typeof sourceAgentId === 'string' ? sourceAgentId : undefined,
+              visibility: groupInput.visibility ?? folderVisibility,
+              model: supervisorConfig?.model ?? undefined,
+              provider: supervisorConfig?.provider ?? undefined,
+            })
+          : undefined;
       const { group, supervisorAgentId } = await ctx.agentGroupRepo.createGroupWithSupervisor(
         {
           ...groupInput,
@@ -393,7 +407,14 @@ export const agentGroupRouter = router({
           ),
         },
         [],
-        supervisorConfig,
+        selectedRuntime
+          ? {
+              ...supervisorConfig,
+              ...selectedRuntime,
+              agencyConfig: selectedRuntime.agencyConfig ?? undefined,
+            }
+          : supervisorConfig,
+        selectedRuntime,
       );
 
       if (ctx.workspaceId && group.visibility !== 'private') {
@@ -486,26 +507,22 @@ export const agentGroupRouter = router({
         ...(groupVisibility ? { visibility: groupVisibility } : {}),
       }));
 
-      const selectedPrime = memberConfigs.find(
-        (member) => member.agencyConfig?.heterogeneousProvider?.type === 'orvilo',
-      );
-      const runtime = input.supervisorConfig?.agencyConfig
-        ? input.supervisorConfig
-        : selectedPrime
-          ? {
-              agencyConfig: selectedPrime.agencyConfig,
-              model: selectedPrime.model,
-              provider: selectedPrime.provider,
-            }
-          : await ctx.agentModel.getPrimeRuntimeForCreation({ visibility: groupVisibility });
+      const sourceAgentId = input.supervisorConfig?.params?.orchestratorSourceAgentId;
+      const selectedRuntime =
+        (typeof sourceAgentId === 'string' && sourceAgentId) ||
+        !input.supervisorConfig?.agencyConfig
+          ? await resolveOrchestratorRuntimeForCreation(resourceConfigGuardCtx(ctx), {
+              sourceAgentId: typeof sourceAgentId === 'string' ? sourceAgentId : undefined,
+              visibility: groupVisibility,
+            })
+          : undefined;
+      const runtime = selectedRuntime ?? input.supervisorConfig;
       const supervisorConfig = { ...input.supervisorConfig, ...runtime };
-      if (supervisorConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'GROUP_SUPERVISOR_RUNTIME_REQUIRED' });
-      }
       await assertAgentRuntimeCreation(
         ctx.serverDB,
         { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
         { ...supervisorConfig, visibility: groupVisibility },
+        { purpose: 'orchestrator' },
       );
 
       const createdAgents = await ctx.agentModel.batchCreate(memberConfigs);
@@ -524,6 +541,7 @@ export const agentGroupRouter = router({
         },
         memberAgentIds,
         supervisorConfig as any,
+        selectedRuntime,
       );
 
       if (ctx.workspaceId && group.visibility !== 'private') {

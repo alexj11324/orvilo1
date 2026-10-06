@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import type { DescriptionItem } from '@/components/Descriptions';
 import Descriptions from '@/components/Descriptions';
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 import { Separator } from '@/components/ui/separator';
 import { useYamlArguments } from '@/hooks/useYamlArguments';
 import { shinyTextStyles } from '@/styles';
@@ -51,7 +51,17 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
   let contentNode;
 
   if (typeof displayArgs === 'string') {
-    contentNode = !!yaml && <CodeBlock code={yaml} language="yaml" wrap={wrap} />;
+    contentNode = !!yaml && (
+      <CodeBlock
+        className="[&_[data-slot=code-block-line]]:px-4"
+        code={yaml}
+        language="yaml"
+        variant="ghost"
+        wrap={wrap}
+      >
+        <CodeBlockCopyButton />
+      </CodeBlock>
+    );
   } else if (Object.keys(displayArgs).length === 0) {
     contentNode = null;
   } else {
@@ -63,7 +73,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
     }));
 
     contentNode = (
-      <div className="flex flex-col py-1 px-4">
+      <div className="flex flex-col py-3 px-4">
         <Descriptions
           bordered={false}
           items={items}
@@ -85,7 +95,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
 
   return (
     <>
-      <div className="flex items-center gap-1 justify-between py-2 px-4">
+      <div className="flex min-h-10 items-center gap-1 justify-between py-2 px-4">
         <div>{t('arguments.title')}</div>
         <div className="flex gap-1">
           <ActionIcon
@@ -101,7 +111,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
           {actions}
         </div>
       </div>
-      <Separator style={{ marginBlock: 0 }} />
+      {contentNode && <Separator style={{ marginBlock: 0 }} />}
       {contentNode}
     </>
   );

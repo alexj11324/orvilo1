@@ -975,10 +975,10 @@ export class ConversationLifecycleActionImpl {
     }
     throwIfSendAborted(signal);
 
-    // Shared run lifecycle for the post-persist topic-title hook. Built once here
-    // so all three runtime branches fire the SAME `afterUserMessagePersisted`
-    // — gateway/hetero previously had no LLM title before the unified lifecycle.
-    // `parentMessage*` are unused by this hook.
+    // The send-time lifecycle snapshots Git and titles client-persisted turns.
+    // Direct mentions use REST persistence + ClientSubAgentTransport even when
+    // gateway mode is selected; ordinary Gateway titles wait for completion.
+    // This adapter is used only by afterUserMessagePersisted below.
     const sendRunScope: RunScope =
       operationContext.scope === 'sub_agent' ? 'sub_agent' : 'top_level';
     const sendRunLifecycle = buildRunLifecycle(this.#get, {
@@ -987,7 +987,7 @@ export class ConversationLifecycleActionImpl {
       parentMessageType: 'user',
       runId: operationId,
       runScope: sendRunScope,
-      runtimeType,
+      runtimeType: directMentionRoute ? 'client' : runtimeType,
     });
 
     // Construct local media preview for server-mode temporary messages (S3 URL takes priority).

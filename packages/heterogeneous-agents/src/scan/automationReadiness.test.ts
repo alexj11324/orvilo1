@@ -6,8 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { checkAutomationReadinessOnHost } from './automationReadiness';
 
-const { detect, spawnPlan, directory, remote } = vi.hoisted(() => ({
+const { detect, spawnPlan, directory, remote, primeProbe } = vi.hoisted(() => ({
   detect: vi.fn(),
+  primeProbe: vi.fn(),
   directory: vi.fn(),
   remote: vi.fn(),
   spawnPlan: vi.fn(),
@@ -19,7 +20,7 @@ vi.mock('../spawn/cliSpawn', () => ({ resolveCliSpawnPlan: spawnPlan }));
 vi.mock('../spawn/workingDirectory', () => ({ isSpawnableDirectory: directory }));
 vi.mock('./scanHost', () => ({ resolveRemotePlatformCommand: remote }));
 vi.mock('@orvilo/prime-harness/readiness', () => ({
-  probePrimeArtifactInstallation: async () => ({ installed: true }),
+  probePrimeArtifactInstallation: primeProbe,
 }));
 
 describe('automation host readiness', () => {
@@ -29,6 +30,8 @@ describe('automation host readiness', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    primeProbe.mockResolvedValue({ installed: true });
+    remote.mockResolvedValue({ available: false, error: 'Unknown platform' });
     auth = 'Logged in using ChatGPT';
     help = 'Run Codex non-interactively\nUsage: codex exec [OPTIONS]';
     failed = null;
@@ -40,15 +43,20 @@ describe('automation host readiness', () => {
     spawnPlan.mockImplementation(async (command, args) => ({ args, command }));
     directory.mockReturnValue(true);
     vi.mocked(access).mockResolvedValue(undefined);
-    vi.mocked(childProcess.execFile).mockImplementation(((_command, args, _options, callback) => {
+    vi.mocked(childProcess.execFile).mockImplementation(((
+      _command: string,
+      args: string[],
+      _options: childProcess.ExecFileOptions,
+      callback: (error: Error | null, stdout: string, stderr: string) => void,
+    ) => {
       callback(failed, args.includes('status') ? auth : help, '');
-      return {};
-    }) as any);
+      return {} as childProcess.ChildProcess;
+    }) as typeof childProcess.execFile);
   });
 
-  it('checks the same resolved engine and PATH without creating a session', async () => {
+  it('checks the declared CLI family and PATH without creating a session', async () => {
     const result = await checkAutomationReadinessOnHost({
-      agentType: 'orvilo',
+      agentType: 'codex',
       engine: 'codex-app-server',
     });
     expect(result).toMatchObject({
@@ -135,7 +143,12 @@ describe('automation host readiness', () => {
         options: {},
         ...entryOverrides,
       })}`;
-      vi.mocked(childProcess.execFile).mockImplementation(((_command, args, _options, callback) => {
+      vi.mocked(childProcess.execFile).mockImplementation(((
+        _command: string,
+        args: string[],
+        _options: childProcess.ExecFileOptions,
+        callback: (error: Error | null, stdout: string, stderr: string) => void,
+      ) => {
         const output =
           args[0] === 'models'
             ? catalog
@@ -143,8 +156,8 @@ describe('automation host readiness', () => {
               ? 'opencode acp: start ACP (Agent Client Protocol) server'
               : 'opencode run --format --model';
         callback(args[0] === 'models' && catalogFailed ? new Error('timeout') : null, output, '');
-        return {};
-      }) as any);
+        return {} as childProcess.ChildProcess;
+      }) as typeof childProcess.execFile);
     };
 
     it('records keyless public model configuration without claiming ACP access', async () => {
@@ -225,29 +238,87 @@ describe('automation host readiness', () => {
     ).toMatchObject({ repositoryAccessible: false });
   });
 
-  it('checks Prime installation but rejects unsupported device dispatch instead of switching hosts', async () => {
-    expect(await checkAutomationReadinessOnHost({ agentType: 'native' })).toMatchObject({
+  it.each(['native', 'orvilo'])(
+    'reports the supported Prime executor for %s without CLI probes',
+    async (agentType) => {
+      const result = await checkAutomationReadinessOnHost({ agentType });
+      expect(result).toMatchObject({
+        executor: 'prime',
+        installed: true,
+        authenticated: 'unknown',
+        unattended: true,
+      });
+      expect(result.blockers).toBeUndefined();
+      expect(primeProbe).toHaveBeenCalledOnce();
+      expect(detect).not.toHaveBeenCalled();
+      expect(remote).not.toHaveBeenCalled();
+      expect(childProcess.execFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses only the trusted host artifact argument, not a remote request path', async () => {
+    const request = { agentType: 'orvilo', primeArtifact: '/remote/runner.mjs' };
+    await checkAutomationReadinessOnHost(request, '/host/runner.mjs');
+    expect(primeProbe).toHaveBeenCalledWith('/host/runner.mjs');
+  });
+
+  it('keeps a missing resolved host artifact unavailable instead of probing a different bundle', async () => {
+    expect(await checkAutomationReadinessOnHost({ agentType: 'orvilo' }, null)).toMatchObject({
+      installed: false,
+    });
+    expect(primeProbe).not.toHaveBeenCalled();
+  });
+
+  it('ignores retired engine fields for the builtin Orvilo executor', async () => {
+    expect(
+      await checkAutomationReadinessOnHost({ agentType: 'orvilo', engine: 'other' }),
+    ).toMatchObject({
       executor: 'prime',
       installed: true,
       authenticated: 'unknown',
-      unattended: false,
-      blockers: ['EXECUTOR_UNSUPPORTED'],
+      unattended: true,
     });
-    expect(
-      await checkAutomationReadinessOnHost({ agentType: 'orvilo', engine: 'other' }),
-    ).toMatchObject({ installed: 'unknown' });
-    expect(detect).not.toHaveBeenCalled();
-    expect(remote).not.toHaveBeenCalled();
   });
 
-  it('does not run auth probes for a missing binary', async () => {
-    detect.mockResolvedValue({ available: false });
-    expect(await checkAutomationReadinessOnHost({ agentType: 'codex' })).toMatchObject({
-      installed: false,
+  it.each([false, 'unknown'] as const)(
+    'keeps %s installation evidence separate from Prime support',
+    async (installed) => {
+      primeProbe.mockResolvedValue({ installed });
+      expect(await checkAutomationReadinessOnHost({ agentType: 'orvilo' })).toMatchObject({
+        executor: 'prime',
+        installed,
+        authenticated: 'unknown',
+        unattended: true,
+      });
+    },
+  );
+
+  it('does not attest Prime repository access, tool support or provider authorization', async () => {
+    vi.mocked(access).mockRejectedValueOnce(new Error('denied'));
+    expect(
+      await checkAutomationReadinessOnHost({
+        agentType: 'orvilo',
+        cwd: '/denied',
+        requiredTools: ['writeIssue'],
+      }),
+    ).toMatchObject({
+      repositoryAccessible: false,
+      requiredToolsSupported: 'unknown',
       authenticated: 'unknown',
     });
-    expect(childProcess.execFile).not.toHaveBeenCalled();
   });
+
+  it.each([false, true])(
+    'does not run auth probes without a binary path (available=%s)',
+    async (available) => {
+      detect.mockResolvedValue({ available });
+      expect(await checkAutomationReadinessOnHost({ agentType: 'codex' })).toMatchObject({
+        installed: available,
+        authenticated: 'unknown',
+      });
+      expect(childProcess.execFile).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects malformed payload before host inspection', async () => {
     await expect(

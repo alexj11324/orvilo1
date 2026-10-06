@@ -485,7 +485,15 @@ export const listAuthorizedDeviceCandidates = async (
           : undefined);
       if (!verifiedRow) continue;
       seen.add(ref.deviceId);
-      const isOnline = !!liveById.get(ref.deviceId);
+      // A verified reference can belong to the caller's personal registry
+      // during a workspace-private run. Presence must use that row's principal;
+      // workspace presence cannot establish personal-device liveness.
+      const referenceWorkspaceId = verifiedRow.workspaceId ?? undefined;
+      const referencePresence =
+        verifiedRow.userId === userId && referenceWorkspaceId === workspaceId
+          ? online
+          : await deviceGateway.queryDeviceList(verifiedRow.userId, referenceWorkspaceId);
+      const isOnline = referencePresence.some((device) => device.deviceId === ref.deviceId);
       // Probe a referenced device that needs live evidence and is online.
       if (probeNeeded && isOnline && !probedInfo.has(ref.deviceId)) {
         const info = await probeSystemInfo(ref.deviceId).catch(() => undefined);

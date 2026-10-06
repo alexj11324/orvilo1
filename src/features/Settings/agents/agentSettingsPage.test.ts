@@ -19,6 +19,8 @@ import { describe, expect, it } from 'vitest';
 import { shouldShowAgentBreadcrumb } from '@/features/AgentBreadcrumb/shouldShowAgentBreadcrumb';
 import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
 
+import { agentSettingsRowState } from './agentSettingsRowState';
+
 const repoRoot = path.resolve(import.meta.dirname, '../../../..');
 
 const exists = (relativePath: string) =>
@@ -181,5 +183,23 @@ describe('sidebar + topic-row chrome stays de-attributed', () => {
         'boundAgentNode',
       );
     }
+  });
+});
+
+describe('settings Agent row profile loading boundary', () => {
+  const input = {
+    agencyConfig: undefined,
+    devices: [],
+    bindings: [],
+    desktop: true,
+    workspaceScoped: false,
+    loading: false,
+  };
+  it('retains unresolved, absent and failed profile states without reading an absent config', () => {
+    expect(agentSettingsRowState({ ...input, profile: undefined }).state).toBe('loading');
+    expect(agentSettingsRowState({ ...input, profile: null }).state).toBe('unavailable');
+    expect(
+      agentSettingsRowState({ ...input, profile: undefined, error: new Error('offline') }).state,
+    ).toBe('error');
   });
 });

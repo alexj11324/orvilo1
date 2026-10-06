@@ -19,6 +19,7 @@ import {
   isWorkspacePrimaryOwner,
 } from '@/server/services/workspacePermission';
 
+import * as ResourceConfigGuardModule from '../_helpers/resourceConfigGuard';
 import {
   getWorkspaceAgentParentGroupIds,
   getWorkspaceGroupVirtualAgentIds,
@@ -97,7 +98,8 @@ describe('agentGroupRouter', () => {
 
     agentModelMock = {
       batchCreate: vi.fn(),
-      getPrimeRuntimeForCreation: vi.fn().mockResolvedValue({
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue('selected-source'),
+      inheritRuntimeForCreation: vi.fn().mockResolvedValue({
         agencyConfig: {
           boundDeviceId: 'prime-host',
           executionTarget: 'device',
@@ -220,7 +222,8 @@ describe('agentGroupRouter', () => {
           config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
         },
         [],
-        undefined,
+        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
+        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
       );
       expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
     });
@@ -249,13 +252,51 @@ describe('agentGroupRouter', () => {
           config: undefined,
         },
         [],
-        undefined,
+        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
+        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
       );
       expect(result).toEqual({ group: mockCreatedGroup, supervisorAgentId: 'supervisor-1' });
     });
   });
 
   describe('createGroupWithMembers', () => {
+    it('rejects a source with profile-only config access before any group or member write', async () => {
+      vi.spyOn(ResourceConfigGuardModule, 'getResourceConfigAccess').mockResolvedValue('profile');
+      const caller = agentGroupRouter.createCaller({ ...mockCtx, workspaceId: 'workspace' });
+      await expect(
+        caller.createGroupWithMembers({
+          groupConfig: { title: 'Restricted source', config: {} },
+          members: [{ title: 'Member' }],
+          supervisorConfig: { params: { orchestratorSourceAgentId: 'restricted-source' } },
+        }),
+      ).rejects.toThrow('Agent runtime configuration is unavailable');
+      expect(agentModelMock.inheritRuntimeForCreation).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
+    });
+
+    it('rejects an unavailable selected source before creating member agents', async () => {
+      agentModelMock.inheritRuntimeForCreation.mockRejectedValue(new Error('Agent not found'));
+      await expect(
+        agentGroupRouter.createCaller(mockCtx).createGroupWithMembers({
+          groupConfig: { title: 'Invalid source', config: {} },
+          members: [{ title: 'Member' }],
+          supervisorConfig: {
+            agencyConfig: {
+              boundDeviceId: 'prime-host',
+              executionTarget: 'device',
+              heterogeneousProvider: { model: 'gpt-4', type: 'orvilo' },
+            },
+            model: 'gpt-4',
+            provider: 'openai',
+            params: { orchestratorSourceAgentId: 'missing-source' },
+          },
+        }),
+      ).rejects.toThrow('Agent not found');
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
+    });
+
     it('should create a group with virtual member agents', async () => {
       const mockInput = {
         groupConfig: {
@@ -290,7 +331,11 @@ describe('agentGroupRouter', () => {
           config: { ...DEFAULT_CHAT_GROUP_CHAT_CONFIG, allowDM: true },
         },
         ['agent-1', 'agent-2'],
-        await agentModelMock.getPrimeRuntimeForCreation.mock.results[0]?.value,
+        {
+          ...(await agentModelMock.inheritRuntimeForCreation.mock.results[0]?.value),
+          params: { orchestratorSourceAgentId: 'selected-source' },
+        },
+        expect.objectContaining({ params: { orchestratorSourceAgentId: 'selected-source' } }),
       );
       expect(result).toEqual({
         agentIds: ['agent-1', 'agent-2'],

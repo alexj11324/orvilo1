@@ -104,6 +104,7 @@ const toTaskCardFields = (
     name: row.task.name,
     priority: row.task.priority,
     status: row.task.status,
+    dispatchPhase: row.task.dispatchPhase,
   },
 });
 

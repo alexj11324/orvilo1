@@ -53,6 +53,7 @@ import { type ProjectListItem, useProjectStore } from '@/store/project';
 
 import {
   type CreateProjectDraft,
+  getCreateProjectErrorKey,
   getCreateProjectInput,
   getProjectFieldSuggestions,
   isProjectIdentifierValid,
@@ -284,6 +285,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       status: 'backlog',
       targetDatePrecision: 'day',
       teamId,
+      visibility: 'private',
     });
     const createInput = getCreateProjectInput(form);
     const identifierValid = isProjectIdentifierValid(form.identifier);
@@ -356,7 +358,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
         else navigate(`/project/${project.slug ?? project.id}`);
       } catch (error) {
         console.error('Failed to create project', error);
-        toast.error(t('operationFailed', { ns: 'common' }));
+        toast.error(t(getCreateProjectErrorKey(error)));
       } finally {
         updateForm({ loading: false });
       }
@@ -535,6 +537,29 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             />
           </div>
           <div className="flex flex-row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Select
+              disabled={form.loading}
+              value={form.visibility ?? 'private'}
+              items={[
+                { value: 'private', label: t('create.visibilityPrivate') },
+                { value: 'public', label: t('create.visibilityPublic') },
+              ]}
+              onValueChange={(visibility) => {
+                if (visibility === 'private' || visibility === 'public') updateForm({ visibility });
+              }}
+            >
+              <SelectTrigger
+                aria-label={t('create.visibilityLabel')}
+                className="min-w-0 max-w-full"
+                size="sm"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="private">{t('create.visibilityPrivate')}</SelectItem>
+                <SelectItem value="public">{t('create.visibilityPublic')}</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               disabled={false}
               items={statusPickerOptions}

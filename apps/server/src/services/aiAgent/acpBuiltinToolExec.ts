@@ -1,4 +1,4 @@
-import { builtinTools } from '@orvilo/builtin-tools';
+import { builtinTools, groupSupervisorToolIds } from '@orvilo/builtin-tools';
 import type { OrviloToolManifest } from '@orvilo/context-engine';
 import type {
   ChatToolPayload,
@@ -55,7 +55,7 @@ import {
   type ToolApprovalScope,
   toolApprovalScopeHash,
 } from '../agentExecution/toolApprovalReceipt';
-import { buildGroupAgentContext } from './helpers/groupContext';
+import { buildGroupAgentContext, resolveGroupRunContext } from './helpers/groupContext';
 import {
   buildServerAgentMemberRunner,
   buildServerVirtualSubAgentRunner,
@@ -242,6 +242,15 @@ export const execAcpBuiltinTool = async (
 
   const operation = await loadAcpToolOperation(db, operationId);
   const allowlist = resolveToolAllowlist(operation, identifier, apiName);
+  if (groupSupervisorToolIds.includes(identifier)) {
+    if (!operation.chatGroupId || !operation.agentId) {
+      throw new AcpBuiltinToolForbiddenError('Group tools require the assigned group supervisor');
+    }
+    await resolveGroupRunContext(
+      { db, userId, workspaceId },
+      { agentId: operation.agentId, groupId: operation.chatGroupId, claimedRole: 'supervisor' },
+    );
+  }
 
   const appContext = (operation.appContext ?? {}) as Record<string, any>;
   const metadata = (operation.metadata ?? {}) as Record<string, any>;

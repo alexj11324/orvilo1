@@ -1040,6 +1040,8 @@ export function parseUnifiedDiff(patch: string): CodeBlockPatchFile[] {
   let current: CodeBlockPatchFile | null = null;
   let oldNumber = 0;
   let newNumber = 0;
+  let oldRemaining = 0;
+  let newRemaining = 0;
   let width = 4;
 
   const push = (text: string, state: CodeBlockLineState | undefined, gutter: string) => {
@@ -1055,17 +1057,21 @@ export function parseUnifiedDiff(patch: string): CodeBlockPatchFile[] {
   const pad = (value: number | null) => (value === null ? '' : String(value)).padStart(width);
 
   for (const raw of normalizeCode(patch).split('\n')) {
+    const inHunk = oldRemaining > 0 || newRemaining > 0;
     const fileHeader = raw.match(/^diff --git a\/(.+) b\/(.+)$/);
-    const plusHeader = raw.match(/^\+\+\+ (?:b\/)?(.+)$/);
+    const plusHeader = inHunk ? null : raw.match(/^\+\+\+ (?:b\/)?(.+)$/);
     if (fileHeader || plusHeader) {
       const name = fileHeader ? fileHeader[2] : plusHeader![1];
       if (name !== '/dev/null' && (!current || current.file !== name)) {
         current = { file: name, lines: [], added: 0, removed: 0, hunks: [] };
         files.push(current);
       }
+      oldRemaining = 0;
+      newRemaining = 0;
       continue;
     }
     if (
+      !inHunk &&
       /^(?:---|index |old mode|new mode|new file|deleted file|similarity|rename |Binary )/.test(raw)
     ) {
       continue;
@@ -1075,6 +1081,8 @@ export function parseUnifiedDiff(patch: string): CodeBlockPatchFile[] {
     if (hunk && current) {
       oldNumber = Number(hunk[1]);
       newNumber = Number(hunk[3]);
+      oldRemaining = Number(hunk[2] ?? 1);
+      newRemaining = Number(hunk[4] ?? 1);
       width = Math.max(
         String(oldNumber + Number(hunk[2] ?? 0)).length,
         String(newNumber + Number(hunk[4] ?? 0)).length,
@@ -1093,16 +1101,20 @@ export function parseUnifiedDiff(patch: string): CodeBlockPatchFile[] {
     if (raw.startsWith('+')) {
       push(raw.slice(1), { diff: 'add' }, `${pad(null)} ${pad(newNumber)}`);
       newNumber += 1;
+      newRemaining -= 1;
       current.added += 1;
     } else if (raw.startsWith('-')) {
       push(raw.slice(1), { diff: 'remove' }, `${pad(oldNumber)} ${pad(null)}`);
       oldNumber += 1;
+      oldRemaining -= 1;
       current.removed += 1;
     } else if (raw.startsWith(' ') || raw === '') {
       if (current.lines.length === 0 && raw === '') continue;
       push(raw.slice(1), undefined, `${pad(oldNumber)} ${pad(newNumber)}`);
       oldNumber += 1;
       newNumber += 1;
+      oldRemaining -= 1;
+      newRemaining -= 1;
     }
   }
 

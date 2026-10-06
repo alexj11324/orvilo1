@@ -13,7 +13,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { OFFICIAL_SITE } from '@/const/url';
 import { isDesktop } from '@/const/version';
@@ -64,6 +63,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [remoteError, setRemoteError] = useState<string | null>(null);
   const [showEndpoint, setShowEndpoint] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   const [hasLegacyLocalDb, setHasLegacyLocalDb] = useState(false);
   const [localRemainingSeconds, setLocalRemainingSeconds] = useState<number | null>(null);
   const { compositionProps, isComposingRef } = useIMECompositionEvent();
@@ -141,15 +141,22 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     }
 
     setRemoteError(null);
+    setCancelled(false);
     clearRemoteServerSyncError();
     setPendingLoginMethod('cloud');
     setCloudLoginStatus('loading');
     setSelfhostLoginStatus('idle');
     setDesktopAutoOidcFirstOpenHandled();
-    await connectRemoteServer({
-      remoteServerUrl: dataSyncConfig?.remoteServerUrl,
-      storageMode: 'cloud',
-    });
+    try {
+      await connectRemoteServer({
+        remoteServerUrl: dataSyncConfig?.remoteServerUrl,
+        storageMode: 'cloud',
+      });
+    } catch (error) {
+      setRemoteError(error instanceof Error ? error.message : t('authResult.failed.desc'));
+      setCloudLoginStatus('error');
+      setPendingLoginMethod(null);
+    }
   };
 
   // Handle self-hosted server connection
@@ -164,11 +171,18 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     if (!url) return;
 
     setRemoteError(null);
+    setCancelled(false);
     clearRemoteServerSyncError();
     setPendingLoginMethod('selfhost');
     setCloudLoginStatus('idle');
     setSelfhostLoginStatus('loading');
-    await connectRemoteServer({ remoteServerUrl: url, storageMode: 'selfHost' });
+    try {
+      await connectRemoteServer({ remoteServerUrl: url, storageMode: 'selfHost' });
+    } catch (error) {
+      setRemoteError(error instanceof Error ? error.message : t('authResult.failed.desc'));
+      setSelfhostLoginStatus('error');
+      setPendingLoginMethod(null);
+    }
   };
 
   const handleSignOut = async () => {
@@ -242,6 +256,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   useWatchBroadcast('authorizationProgress', (progress) => {
     setAuthProgress(progress);
     if (progress.phase === 'cancelled') {
+      setCancelled(true);
       setCloudLoginStatus('idle');
       setSelfhostLoginStatus('idle');
       setPendingLoginMethod(null);
@@ -277,14 +292,20 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   }, [localRemainingSeconds]);
 
   const handleCancelAuth = async () => {
-    setRemoteError(null);
-    clearRemoteServerSyncError();
-
-    setCloudLoginStatus('idle');
-    setSelfhostLoginStatus('idle');
-    setPendingLoginMethod(null);
-    setAuthProgress(null);
-    await remoteServerService.cancelAuthorization();
+    try {
+      await remoteServerService.cancelAuthorization();
+      setRemoteError(null);
+      clearRemoteServerSyncError();
+      setCloudLoginStatus('idle');
+      setSelfhostLoginStatus('idle');
+      setPendingLoginMethod(null);
+      setAuthProgress(null);
+      setCancelled(true);
+    } catch (error) {
+      setRemoteError(error instanceof Error ? error.message : t('authResult.failed.desc'));
+      if (pendingLoginMethod === 'selfhost') setSelfhostLoginStatus('error');
+      else setCloudLoginStatus('error');
+    }
   };
 
   if (successLoginMethod) {
@@ -452,16 +473,10 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
                 : t('screen5.actions.signInCloud')}
             {!busy && <ExternalLink data-icon="inline-end" />}
           </Button>
-          <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-muted-foreground text-xs">{t('screen5.entry.or')}</span>
-            <Separator className="flex-1" />
-          </div>
           <Button
             className="w-full"
             disabled={busy || isConnectingServer}
-            size="lg"
-            variant="outline"
+            variant="ghost"
             onClick={() => {
               setShowEndpoint(true);
               setCloudLoginStatus('idle');
@@ -480,6 +495,11 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         </>
       )}
 
+      {cancelled && (
+        <p className="text-muted-foreground text-sm" role="status">
+          {t('screen5.auth.cancelled')}
+        </p>
+      )}
       {busy && (
         <div
           aria-live="polite"
@@ -491,6 +511,18 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
             {localRemainingSeconds !== null && (
               <span>{t('screen5.auth.remaining', { time: localRemainingSeconds })}</span>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                void (pendingLoginMethod === 'selfhost'
+                  ? handleSelfhostConnect()
+                  : handleCloudLogin())
+              }
+            >
+              <ExternalLink data-icon="inline-start" />
+              {t('screen5.actions.reopen')}
+            </Button>
             <Button size="sm" variant="ghost" onClick={handleCancelAuth}>
               {t('screen5.actions.cancel')}
             </Button>

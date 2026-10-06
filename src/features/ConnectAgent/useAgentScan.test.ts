@@ -154,3 +154,31 @@ describe('buildConnectAgentConfig', () => {
     expect(config.agencyConfig).not.toHaveProperty('boundDeviceId');
   });
 });
+
+describe('buildConnectAgentConfig selector picks', () => {
+  it('persists the picked model and effort on the provider', () => {
+    const config = buildConnectAgentConfig({
+      effort: 'high',
+      model: 'opencode/nemotron-3.5-lightning-free',
+      provider: getConnectableProvider('opencode')!,
+      target: { deviceId: 'local-desktop', kind: 'local' },
+    });
+
+    expect(config.agencyConfig?.heterogeneousProvider).toMatchObject({
+      effort: 'high',
+      model: 'opencode/nemotron-3.5-lightning-free',
+    });
+  });
+
+  it('treats the default sentinel as "leave the CLI setting alone"', () => {
+    const config = buildConnectAgentConfig({
+      effort: 'default',
+      model: 'default',
+      provider: getConnectableProvider('opencode')!,
+      target: { deviceId: 'local-desktop', kind: 'local' },
+    });
+
+    expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('model');
+    expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('effort');
+  });
+});

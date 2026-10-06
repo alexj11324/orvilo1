@@ -1,0 +1,151 @@
+{
+  "actualInvocationProof": "prime-readiness-233.json records actual Go gateway to Electron callback installed=true at 2026-10-06T11:23:01.747Z; current compiled entry requires this main and main dynamically requires this readiness chunk.",
+  "backendPort": 31598,
+  "candidate": "233f3cbe04467e6aea252faacec56b93c43f7df9",
+  "cdpPort": 9249,
+  "cleanWorkingTree": true,
+  "cliArtifacts": [
+    {
+      "path": "apps/cli/dist/index.js",
+      "sha256": "751094a3a7ad8c32433bd9850d7091c3df78cee5200ec1eace6c3155dd3a0110",
+      "bytes": 13024016
+    },
+    {
+      "path": "apps/cli/dist/runner.mjs",
+      "sha256": "6e52ec3464a3e61896f76c8e9b52375c549356001b4f752e5abe1dd944e9e22e",
+      "bytes": 17228500
+    },
+    {
+      "path": "apps/cli/dist/runner.manifest.json",
+      "sha256": "1fc134d3bb7309a3c33c793bcc424548cd37f7615da0b97d1170bd599ced71c6",
+      "bytes": 275
+    }
+  ],
+  "cliBuildManifest": "cli-artifact-manifest-233f.json",
+  "desktopArtifacts": [
+    {
+      "path": "apps/desktop/dist/main/index.js",
+      "sha256": "5820c076cee977bb4ca818dd03f84fe3f4d7774d32fbb01c49850099022d5a59",
+      "bytes": 10236
+    },
+    {
+      "path": "apps/desktop/dist/main/main-app-B0B0s7Ur.js",
+      "sha256": "dddd42a726e4a604a7326b8205066a52105df464ed1c34bdff1c1bb07df2e7cf",
+      "bytes": 8431729
+    },
+    {
+      "path": "apps/desktop/dist/main/automationReadiness-DBftrXQS.js",
+      "sha256": "4701125184865368c376ff127c437660a7cfb69004225af44f51913fd2b37f91",
+      "bytes": 421908
+    }
+  ],
+  "historicalMetadataNotice": "source-fingerprint-233.json reused old compiled metadata and is not a fresh artifact observation. This separate snapshot records current files and time; old packet remains retained.",
+  "mainReference": "apps/desktop/dist/main/main-app-B0B0s7Ur.js",
+  "observedAt": "2026-10-06T11:26:15.036716+00:00",
+  "parent": "efc1ed7b724e059e642123a43392962018c5bd75",
+  "providerExecution": false,
+  "readinessChunkReference": "apps/desktop/dist/main/automationReadiness-DBftrXQS.js",
+  "sourceFiles": [
+    {
+      "path": "apps/server/src/routers/lambda/agent.ts",
+      "sha256": "a48594705994c78c6dfdbdd9fc29bb4180e1f481fbde8a3f81d5b8ae2bc5a0b3",
+      "bytes": 60103
+    },
+    {
+      "path": "apps/server/src/routers/lambda/task.ts",
+      "sha256": "9647e03fb11e60caf2f2cd4508ff129c711787f22d6f88e165df036ca56154cf",
+      "bytes": 111275
+    },
+    {
+      "path": "apps/server/src/services/agent/index.ts",
+      "sha256": "5e6628996a7b3630b927937a9075e2ecc7f0f5724875ecc5d2cd2ac1c70d1951",
+      "bytes": 10883
+    },
+    {
+      "path": "apps/server/src/services/aiAgent/pipeline/resolveRunAgentConfig.ts",
+      "sha256": "ca38492a0ee1cb299e67797c7906c0d247598db8ccc1a716b142a1e46b9f19ff",
+      "bytes": 13531
+    },
+    {
+      "path": "apps/server/src/services/toolExecution/serverRuntimes/task.ts",
+      "sha256": "c77714be712c58620c794ac32c9868bcf3e20ddbe69f8ad7a8fd38820131d985",
+      "bytes": 40520
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/executor/index.ts",
+      "sha256": "54332b3ba085e6d4fe0cde2f8b89a4f06bb77ac6e87a870eb52fc046db4aae7b",
+      "bytes": 36284
+    },
+    {
+      "path": "packages/database/src/models/agent.ts",
+      "sha256": "0dbd38c3f0cd1856cc47dad0a42772118e5eb24e14b586c7ef3af89380978f80",
+      "bytes": 128654
+    },
+    {
+      "path": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+      "sha256": "0b5e80ec5b9cd84b8415e1a2c46b56d6dd299e4f74930938c505f121a88b95d4",
+      "bytes": 7945
+    },
+    {
+      "path": "src/components/reui/code-block/code-block-highlight.tsx",
+      "sha256": "280c7c190b0c20e92da817e614ab6b043e1e42cb3e00ef4ede06b21c216e7363",
+      "bytes": 37686
+    },
+    {
+      "path": "src/components/reui/code-block/code-block.tsx",
+      "sha256": "67f7add5103248ecb8754e3e85d9aac8364c80dc7dd38343418598acbb98eef8",
+      "bytes": 81264
+    },
+    {
+      "path": "src/components/ui/code-block.tsx",
+      "sha256": "67f7add5103248ecb8754e3e85d9aac8364c80dc7dd38343418598acbb98eef8",
+      "bytes": 81264
+    },
+    {
+      "path": "src/features/CreateAgent/RuntimeFields.tsx",
+      "sha256": "1b58df701b12ca793e5432935b4fbedc0c17f05fb4a816071f2d2002a9b0fc2e",
+      "bytes": 15705
+    },
+    {
+      "path": "src/features/GroupProfile/index.tsx",
+      "sha256": "1f56ea6233c0a85f27f23f95f4ef81eaa8dbf013e53d5a7c5e4a326eb3689beb",
+      "bytes": 13464
+    },
+    {
+      "path": "src/features/Projects/CreateProjectContent.tsx",
+      "sha256": "6a06408a4aa6179d119e18efae104965302f801e1b9401f4f10f336dd507da96",
+      "bytes": 39623
+    },
+    {
+      "path": "src/features/Projects/createProjectForm.ts",
+      "sha256": "54271ad629a4bc7ef6e6373ba5ad8655375909977db958ced400df0823bc2d23",
+      "bytes": 5398
+    },
+    {
+      "path": "src/services/agent.ts",
+      "sha256": "0acbf1e7d5a8f4d30656b9a396173a78ad64b3e27078d2dfb007581c2802803e",
+      "bytes": 14055
+    },
+    {
+      "path": "src/services/task.ts",
+      "sha256": "c2a444eaa8cfade5883c5a924dbf95c7cb01a32ef7d2ec7aad4173d178ca0a9b",
+      "bytes": 14147
+    },
+    {
+      "path": "src/store/task/slices/detail/action.ts",
+      "sha256": "52c8e8bea606154cc359abae5a12fd9adeea534ab506914058d803d4071bdf0c",
+      "bytes": 31465
+    },
+    {
+      "path": "apps/desktop/src/main/controllers/GatewayConnectionCtr.ts",
+      "sha256": "e9186ea6bcf6a66900fbc4b7228c5aeda93d1158a24d8ff2b44479375800af0d",
+      "bytes": 52396
+    },
+    {
+      "path": "apps/cli/src/tools/index.ts",
+      "sha256": "a0131f5f5cdb5f6a055aafe53daca66da81602bb11a21af3340084de3093c5fb",
+      "bytes": 3409
+    }
+  ],
+  "vitePort": 5199
+}

@@ -45,6 +45,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-env
       - run: pnpm install --no-frozen-lockfile
+      - name: Build authorization SPA for Electron verification
+        run: bun run build:spa:auth
+      - name: Upload authorization SPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-spa-${{ github.sha }}
+          path: dist/auth/
+          retention-days: 14
       - name: Typecheck browser tests
         run: pnpm exec node scripts/type-check.mjs tsgo --noEmit -p tests/ui-alignment/tsconfig.json
       - run: pnpm exec playwright install --with-deps chromium

@@ -3,7 +3,7 @@ import { type BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { LocalFolder } from '@/features/LocalFile';
 
 import OutOfScopeWarning from '../OutOfScopeWarning';
@@ -18,7 +18,9 @@ const GrepContent = memo<BuiltinInterventionProps<GrepContentParams>>(({ args })
       {scope && <LocalFolder path={scope} />}
       <div className="flex flex-col gap-1">
         <div className="text-muted-foreground">{t('localFiles.grepContent.pattern')}</div>
-        <CodeBlock code={pattern} language="regex" variant={'default'} />
+        <CodeBlock code={pattern} language="regex" variant={'default'}>
+          <CodeBlockCopyButton />
+        </CodeBlock>
       </div>
       {glob && (
         <div className="text-muted-foreground" style={{ fontSize: 12 }}>

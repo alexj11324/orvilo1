@@ -7,7 +7,7 @@ import { Code2, Download, Eye } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -105,7 +105,9 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
                 code={content}
                 language={'html'}
                 style={{ height: '100%', overflow: 'auto' }}
-              />
+              >
+                <CodeBlockCopyButton />
+              </CodeBlock>
             </div>
           )}
         </div>

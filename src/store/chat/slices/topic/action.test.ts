@@ -12,6 +12,7 @@ import { aiChatService } from '@/services/aiChat';
 import { messageService } from '@/services/message';
 import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
+import { useAgentGroupStore } from '@/store/agentGroup';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
@@ -3475,6 +3476,35 @@ describe('topic action', () => {
     });
   });
   describe('createTopic', () => {
+    it.each(['supervisor', 'unrelated'])(
+      'keeps group scope only for its bound %s',
+      async (agentId) => {
+        useAgentGroupStore.setState({
+          groupMap: {
+            'group-selected': { id: 'group-selected', supervisorAgentId: 'supervisor' } as any,
+          },
+        });
+        useChatStore.setState({ activeGroupId: 'group-selected', activeAgentId: 'supervisor' });
+        useAgentStore.setState({
+          localAgentWorkingDirectoryMap: { supervisor: '/tmp/group-picked' },
+        });
+        const create = vi.spyOn(topicService, 'createTopic').mockResolvedValue('new-group-topic');
+        await act(async () => {
+          await useChatStore.getState().createTopic(agentId);
+        });
+        expect(create.mock.calls[0][0].groupId).toBe(
+          agentId === 'supervisor' ? 'group-selected' : undefined,
+        );
+        if (agentId === 'supervisor')
+          expect(create.mock.calls[0][0].metadata).toMatchObject({
+            workingDirectory: '/tmp/group-picked',
+            workingDirectoryConfig: { path: '/tmp/group-picked' },
+          });
+        useAgentGroupStore.setState({ groupMap: {} });
+        useAgentStore.setState({ localAgentWorkingDirectoryMap: {} });
+      },
+    );
+
     it('should create a new topic and update the store', async () => {
       const { result } = renderHook(() => useChatStore());
       const activeAgentId = 'test-session-id';

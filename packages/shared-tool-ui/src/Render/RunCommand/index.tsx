@@ -6,7 +6,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import { getRunCommandDisplayCommand } from '../../utils/runCommand';
 import AnsiOutput from './AnsiOutput';
@@ -47,7 +47,9 @@ const RunCommand = memo<BuiltinRenderProps<RunCommandArgs, RunCommandState>>(
             language={'sh'}
             style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
           {output && <AnsiOutput text={output} />}
           {stderr?.trim() && <AnsiOutput text={stderr} />}
         </div>

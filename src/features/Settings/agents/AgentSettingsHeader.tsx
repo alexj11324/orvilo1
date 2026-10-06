@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
 import ActionIcon from '@/components/ActionIcon';
-import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
+import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
@@ -44,7 +44,9 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
   const runtimeType = useAgentStore((s) =>
     resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
   );
-  const slug = useAgentStore(agentSelectors.getAgentSlugById(agentId));
+  const saveStatus = useAgentStore((s) => (s.saveAgentId === agentId ? s.saveStatus : 'idle'));
+  const lastUpdatedTime = useAgentStore((s) => s.lastUpdatedTime);
+  const retryAgentSave = useAgentStore((s) => s.retryAgentSave);
   const removeAgent = useHomeStore((s) => s.removeAgent);
 
   const { allowed: hasEditPermission } = usePermission('edit_own_content');
@@ -135,21 +137,16 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
               {role || t('settingAgent.role.unset', { ns: 'setting' })}
             </div>
           ) : null}
-          {slug && !suppressDuplicateRole ? (
-            <div style={{ color: cssVar.colorTextTertiary, fontSize: 13 }}>·</div>
-          ) : null}
-          {slug ? (
-            <code
-              className="font-mono rounded bg-muted px-1"
-              style={{ color: cssVar.colorTextSecondary, flex: 'none', fontSize: 12 }}
-            >
-              <span style={{ color: cssVar.colorTextTertiary }}>@</span>
-              {slug}
-            </code>
-          ) : null}
         </div>
       </div>
       <div className="flex-1" />
+      {saveStatus !== 'idle' && (
+        <AutoSaveHint
+          lastUpdatedTime={lastUpdatedTime}
+          saveStatus={saveStatus}
+          onRetry={() => void retryAgentSave()}
+        />
+      )}
       <SidebarDropdownMenu items={menuItems} placement="bottomRight">
         <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
       </SidebarDropdownMenu>

@@ -77,6 +77,19 @@ describe('task execution SQL projection (tasks.status retired)', () => {
     expect(await derivedStatus(task.id)).toBe('running');
   });
 
+  it('reads a waiting reservation as waiting without changing the execution ownership projection', async () => {
+    const model = new TaskModel(serverDB, userId);
+    const task = await model.create({ instruction: 'Waiting for project policy' });
+    await dispatch(task.id, 'waiting');
+
+    expect(await model.findById(task.id)).toMatchObject({
+      dispatchPhase: 'waiting',
+      status: 'running',
+      workflowCategory: 'backlog',
+    });
+    expect(await matchingIds(predicateForLegacyStatus('running'))).toContain(task.id);
+  });
+
   it('keeps the stored column frozen through every transition write', async () => {
     const model = new TaskModel(serverDB, userId);
     const task = await model.create({ instruction: 'Frozen column' });

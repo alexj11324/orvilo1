@@ -11,6 +11,7 @@ export const TopicTrigger = {
   Cron: 'cron',
   Document: 'document',
   Eval: 'eval',
+  Judgment: 'acp_judgment',
   RunTask: 'task',
 } as const;
 
@@ -23,5 +24,6 @@ export const MAIN_SIDEBAR_EXCLUDE_TRIGGERS: string[] = [
   TopicTrigger.Cron,
   TopicTrigger.Document,
   TopicTrigger.Eval,
+  TopicTrigger.Judgment,
   TopicTrigger.RunTask,
 ];

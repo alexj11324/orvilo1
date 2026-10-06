@@ -280,18 +280,6 @@ export const resolveSettlementPlan = ({
           workflowCategory: workflowAfterRun,
         });
       }
-      if (
-        context?.completionRequestedByOperation ||
-        (context?.runTrigger === 'goal' && !task.parentTaskId)
-      ) {
-        return plan({
-          attention: 'none',
-          decision: { type: 'complete' },
-          execution: 'succeeded',
-          legacyStatus: 'completed',
-          workflowCategory: 'done',
-        });
-      }
       if (reviewRequired) {
         return plan({
           attention: 'review_required',

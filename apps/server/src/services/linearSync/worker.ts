@@ -30,6 +30,7 @@ import type { TaskModel } from '@/database/models/task';
 import { TeamModel } from '@/database/models/team';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 
 import { LinearIntegrationTaskService } from './integrationTask';
 import {
@@ -2429,20 +2430,26 @@ export class LinearSyncWorker {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const identifier = attempt === 0 ? base : `${base.slice(0, 5)}${attempt}`;
       try {
-        return await projectModel.create({
-          creationSubject: {
-            id: `linear-installation:${installation.id}`,
-            kind: 'integration',
-            snapshot: {
-              displayName: installation.organizationName || 'Linear',
-              externalId: installation.organizationId,
+        return await projectModel.create(
+          {
+            creationSubject: {
+              id: `linear-installation:${installation.id}`,
               kind: 'integration',
+              snapshot: {
+                displayName: installation.organizationName || 'Linear',
+                externalId: installation.organizationId,
+                kind: 'integration',
+              },
             },
+            identifier,
+            name: remote.name,
+            visibility: 'public',
           },
-          identifier,
-          name: remote.name,
-          visibility: 'public',
-        });
+          await resolveOrchestratorRuntimeForCreation(
+            { db: this.db, userId: installation.installedByUserId!, workspaceId: this.workspaceId },
+            { visibility: 'public' },
+          ),
+        );
       } catch (error) {
         if (attempt === 9) throw error;
       }

@@ -831,15 +831,6 @@
     },
     {
       "rule": "isdesktop-census",
-      "importer": "src/features/ConnectAgent/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 6
-    },
-    {
-      "rule": "isdesktop-census",
       "importer": "src/features/Conversation/Error/OllamaSetupGuide/index.tsx",
       "scope": "direct",
       "owner": "wd-05",
@@ -1183,15 +1174,6 @@
     {
       "rule": "isdesktop-census",
       "importer": "src/features/Onboarding/finishOnboarding.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Onboarding/index.tsx",
       "scope": "direct",
       "owner": "wd-05",
       "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",

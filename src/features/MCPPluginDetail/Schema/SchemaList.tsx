@@ -18,6 +18,7 @@ interface SchemaListProps {
 
 export const SchemaList = memo<SchemaListProps>(({ activeKey, setActiveKey, children }) => (
   <Accordion
+    multiple
     style={{ overflow: 'hidden' }}
     value={activeKey}
     onValueChange={(keys) => setActiveKey?.(keys as string[])}

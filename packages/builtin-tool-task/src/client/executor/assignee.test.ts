@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  addDependency: vi.fn(),
   createTask: vi.fn(),
+  deleteComment: vi.fn(),
   getActiveWorkspaceSlug: vi.fn(),
   getWorkspaceMembers: vi.fn(),
+  removeDependency: vi.fn(),
+  updateComment: vi.fn(),
   updateTask: vi.fn(),
   userState: { user: { fullName: 'Me', id: 'usr_1' } as { fullName?: string; id?: string } },
 }));
@@ -30,7 +34,7 @@ vi.mock('@/store/user/selectors', () => ({
 vi.mock('@/store/chat', () => ({ getChatStoreState: vi.fn() }));
 
 vi.mock('@/store/task', () => ({
-  getTaskStoreState: () => ({ createTask: mocks.createTask, updateTask: mocks.updateTask }),
+  getTaskStoreState: () => mocks,
 }));
 
 vi.mock('@/store/task/slices/detail/reducer', () => ({
@@ -70,6 +74,55 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
       status: 'backlog',
     });
     mocks.updateTask.mockResolvedValue(undefined);
+  });
+
+  it('waits for the revision-fenced field write before mutating dependencies', async () => {
+    let rejectUpdate!: (reason: Error) => void;
+    mocks.updateTask.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectUpdate = reject;
+      }),
+    );
+    const edit = taskExecutor.editTask({
+      identifier: 'T-1',
+      assigneeAgentId: 'agt-1',
+      expectedDomainRevision: 1,
+      addDependencies: ['T-2'],
+      removeDependencies: ['T-3'],
+    });
+
+    expect(mocks.updateTask).toHaveBeenCalledTimes(1);
+    expect(mocks.addDependency).not.toHaveBeenCalled();
+    expect(mocks.removeDependency).not.toHaveBeenCalled();
+    rejectUpdate(new Error('Task changed; reload before editing.'));
+    expect((await edit).success).toBe(false);
+    expect(mocks.addDependency).not.toHaveBeenCalled();
+    expect(mocks.removeDependency).not.toHaveBeenCalled();
+  });
+
+  it('edits dependencies after the field write succeeds', async () => {
+    const result = await taskExecutor.editTask({
+      identifier: 'T-1',
+      name: 'Edited',
+      addDependencies: ['T-2'],
+      removeDependencies: ['T-3'],
+    });
+    expect(result.success).toBe(true);
+    expect(mocks.addDependency).toHaveBeenCalledWith('T-1', 'T-2');
+    expect(mocks.removeDependency).toHaveBeenCalledWith('T-1', 'T-3');
+  });
+
+  it('carries the current agent when editing and deleting comments', async () => {
+    const ctx = { agentId: 'agt-current', messageId: 'message-1', taskId: 'task-1' };
+    await taskExecutor.updateTaskComment({ commentId: 'comment-1', content: 'Progress' }, ctx);
+    await taskExecutor.deleteTaskComment({ commentId: 'comment-1' }, ctx);
+    expect(mocks.updateComment).toHaveBeenCalledWith('comment-1', 'Progress', {
+      actorAgentId: 'agt-current',
+      taskId: 'task-1',
+    });
+    expect(mocks.deleteComment).toHaveBeenCalledWith('comment-1', 'task-1', {
+      actorAgentId: 'agt-current',
+    });
   });
 
   describe('createTask', () => {
@@ -114,6 +167,34 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
   });
 
   describe('editTask', () => {
+    it('forwards the observed revision with Agent, owner and project edits without retrying conflicts', async () => {
+      const params = {
+        identifier: 'T-1',
+        expectedDomainRevision: 7,
+        assigneeAgentId: 'agt-new',
+        assigneeUserId: 'usr_2',
+        projectId: 'project-1',
+      };
+      const result = await taskExecutor.editTask(params);
+      expect(result.success).toBe(true);
+      expect(mocks.updateTask).toHaveBeenCalledWith(
+        'T-1',
+        {
+          expectedDomainRevision: 7,
+          assigneeAgentId: 'agt-new',
+          assigneeUserId: 'usr_2',
+          projectId: 'project-1',
+        },
+        { source: 'external' },
+      );
+      mocks.updateTask.mockClear();
+      mocks.updateTask.mockRejectedValueOnce(new Error('Task changed; reload before editing.'));
+      const stale = await taskExecutor.editTask(params);
+      expect(stale.success).toBe(false);
+      expect(stale.content).toContain('Task changed');
+      expect(mocks.updateTask).toHaveBeenCalledTimes(1);
+    });
+
     it('setting the member leaves the agent side untouched (assignees coexist)', async () => {
       const result = await taskExecutor.editTask({ assigneeUserId: 'usr_2', identifier: 'T-1' });
 

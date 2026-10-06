@@ -115,7 +115,7 @@ export const ExperimentDetail = ({
             )),
           )}
         </div>
-        <Accordion defaultValue={['instruction']}>
+        <Accordion multiple defaultValue={['instruction']}>
           {[
             {
               children: (

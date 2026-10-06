@@ -121,7 +121,9 @@ const PopoverContent = memo<PopoverContentProps>(
               placeholder={t('tools.search')}
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
-              onKeyDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') event.stopPropagation();
+              }}
             />
             {searchKeyword ? (
               <button

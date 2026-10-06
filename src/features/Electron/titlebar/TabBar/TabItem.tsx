@@ -276,29 +276,24 @@ const TabItem = memo<TabItemProps>(
       </m.div>
     );
 
-    // The Tooltip wraps unconditionally and opts out through `disabled`. Swapping between
-    // a wrapped and a bare node would remount the tab on every tier change — which is
-    // exactly when the width and offset animate, so the new node would mount at its final
-    // geometry and neither spring would ever run. An empty title is not an opt-out: the
-    // component only bails on a nullish one (`title == null`), so a full-width tab used to
-    // pop a blank bubble on hover.
+    // Keep the popup mounted through the tooltip lifecycle. If it is omitted while
+    // a snapshot loads, a hover-close can run with no popup ref; mounting the late
+    // snapshot afterwards leaves an already-closed popup without close completion.
     return (
       <ContextMenu>
         <TooltipProvider>
           <Tooltip>
             <ContextMenuTrigger render={<TooltipTrigger render={face} />} />
-            {tier === 'full' && !preview ? null : (
-              <TooltipContent>
-                {preview ? (
-                  <span className={styles.previewCard}>
-                    <img alt={meta.title} className={styles.previewImage} src={preview} />
-                    <span className={styles.previewTitle}>{meta.title}</span>
-                  </span>
-                ) : (
-                  meta.title
-                )}
-              </TooltipContent>
-            )}
+            <TooltipContent style={tier === 'full' && !preview ? { display: 'none' } : undefined}>
+              {preview ? (
+                <span className={styles.previewCard}>
+                  <img alt={meta.title} className={styles.previewImage} src={preview} />
+                  <span className={styles.previewTitle}>{meta.title}</span>
+                </span>
+              ) : (
+                meta.title
+              )}
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
         <ContextMenuContent>{renderSidebarMenuItems(contextMenuItems())}</ContextMenuContent>

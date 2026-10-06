@@ -1,3 +1,4 @@
+import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
 import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -19,11 +20,22 @@ export const assertAgentRuntimeCreation = async (
   db: OrviloDatabase,
   actor: { userId: string; workspaceId?: string },
   config: AgentRuntimeCreationConfig,
+  options: { purpose?: 'orchestrator' } = {},
 ): Promise<OrviloAgentAgencyConfig> => {
   if (!config.agencyConfig?.heterogeneousProvider?.type) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'AGENT_RUNTIME_REQUIRED' });
   }
   const agencyConfig = normalizeAgentRuntimeIdentity(config.agencyConfig);
+  if (options.purpose === 'orchestrator') {
+    if (!canRunGroupSupervisorRuntime(agencyConfig.heterogeneousProvider)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'ORCHESTRATOR_RUNTIME_UNSUPPORTED',
+      });
+    }
+    const { env: _env, ...provider } = agencyConfig.heterogeneousProvider!;
+    agencyConfig.heterogeneousProvider = provider;
+  }
   if (
     !agencyConfig.boundDeviceId ||
     !['device', 'local'].includes(agencyConfig.executionTarget ?? '')

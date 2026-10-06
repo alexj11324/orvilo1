@@ -1,5 +1,6 @@
+import type { TaskAutomationMode } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { ClockIcon } from 'lucide-react';
+import { ClockIcon, RadioTowerIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,7 @@ import {
 import { SimpleTooltip } from './SimpleTooltip';
 
 interface TaskTriggerTagProps {
-  automationMode?: 'heartbeat' | 'schedule' | null;
+  automationMode?: TaskAutomationMode | null;
   heartbeatInterval?: number | null;
   mode?: 'inline' | 'tag';
   schedulePattern?: string | null;
@@ -46,6 +47,11 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
     >(() => {
       // automationMode is the source of truth — DB may carry stale fields from
       // a previous mode (e.g. a heartbeat task that was once on a schedule).
+      if (automationMode === 'event') {
+        const event = t('taskDetail.runTrigger.event');
+        return { primary: event, tooltip: event };
+      }
+
       if (automationMode === 'schedule' && schedulePattern) {
         const primary = formatScheduleDescription(schedulePattern, t);
         const tzName = scheduleTimezone
@@ -100,7 +106,11 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
     return (
       <SimpleTooltip title={data.tooltip}>
         <div style={PILL_STYLE}>
-          <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
+          {automationMode === 'event' ? (
+            <RadioTowerIcon size={16} style={{ color: cssVar.colorTextDescription }} />
+          ) : (
+            <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
+          )}
           <div
             className="truncate block text-[12px] text-muted-foreground"
             style={FLEX_MIN_WIDTH_0}

@@ -5,7 +5,7 @@ import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
 import OutOfScopeWarning from '../OutOfScopeWarning';
@@ -62,7 +62,9 @@ const WriteFile = memo<BuiltinInterventionProps<WriteLocalFileParams>>(({ args }
             language={language}
             style={{ maxHeight: 400, overflow: 'auto', padding: '8px' }}
             variant={'default'}
-          />
+          >
+            <CodeBlockCopyButton />
+          </CodeBlock>
         )}
       </div>
     </div>

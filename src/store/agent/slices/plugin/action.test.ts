@@ -269,6 +269,26 @@ describe('PluginSlice Actions', () => {
   });
 
   describe('setPluginMode', () => {
+    it('pins the selected composer Agent without modifying the route Agent', async () => {
+      useAgentStore.setState({
+        activeAgentId: 'route-agent',
+        agentMap: {
+          'route-agent': { plugins: [] } as any,
+          'composer-agent': { plugins: [] } as any,
+        },
+      });
+      vi.mocked(agentService.updateAgentConfig).mockResolvedValue({
+        agent: {} as any,
+        success: true,
+      });
+      await useAgentStore.getState().setPluginMode('orvilo-task', 'pinned', 'composer-agent');
+      expect(agentService.updateAgentConfig).toHaveBeenCalledWith(
+        'composer-agent',
+        expect.objectContaining({ plugins: [{ identifier: 'orvilo-task', mode: 'pinned' }] }),
+        expect.any(AbortSignal),
+      );
+      expect(useAgentStore.getState().agentMap['route-agent'].plugins).toEqual([]);
+    });
     it('disables a legacy string entry, upgrading only that entry', async () => {
       const { result } = renderHook(() => useAgentStore());
 

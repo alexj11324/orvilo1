@@ -1,12 +1,14 @@
 'use client';
 
-import { isDesktop } from '@orvilo/const';
+import { DOWNLOAD_URL, isDesktop } from '@orvilo/const';
 import type { DeviceExecutionTarget } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   CheckIcon,
   ChevronDownIcon,
+  ExternalLinkIcon,
   InfoIcon,
+  MonitorDownIcon,
   RefreshCwIcon,
   SettingsIcon,
   ShieldCheckIcon,
@@ -32,6 +34,7 @@ import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSa
 import { useSelectExecutionTarget } from '@/features/ChatInput/hooks/useSelectExecutionTarget';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useDeviceSelectorState } from '@/features/DeviceManager/useDeviceSelectorState';
+import { TabIdContext } from '@/features/Electron/TabHost/TabIdContext';
 import {
   ExecutionTargetDeviceStatus,
   ExecutionTargetIcon,
@@ -502,6 +505,8 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   } = useDeviceSelectorState({
     boundDeviceId,
     canSelectDevice: canSelectExecutionTarget,
+    canSelectPersonalDevice,
+    memberSelectedDeviceId,
     permissionsLoaded: !isWorkspacePreferenceLoading && !isAccessLoading,
     scope: isWorkspaceAgent ? 'workspace' : 'personal',
   });
@@ -523,22 +528,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     canShowExecutionTarget &&
     canSelectExecutionTarget &&
     (showDeviceSelector || bindingInvalid || Boolean(deviceInventoryError));
-
-  // Device-only CLIs cannot fall back to the cloud sandbox. When a web/legacy
-  // config has no usable device target, open the picker once so `none` is an
-  // explicit setup prompt rather than a disabled-but-active sandbox row.
-  useEffect(() => {
-    if (!canShowExecutionTargetSelector) return;
-    if (supportsSandbox) return;
-    if (isWorkspacePreferenceLoading) return;
-    if (executionTarget !== 'none') return;
-    setOpen(true);
-  }, [
-    canShowExecutionTargetSelector,
-    executionTarget,
-    isWorkspacePreferenceLoading,
-    supportsSandbox,
-  ]);
 
   // The sandbox is a modifier on `local`, not a target of its own, so the two
   // local rows differ only by this flag. Reading it through the same helper the
@@ -660,9 +649,13 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   // groupings say Private/Workspace (私人/工作区) instead.
   const {
     personal: personalOnlyDevices,
-    privateWorkspace: privateDevices,
+    privateWorkspace: privateWorkspaceDevices,
     workspace: workspaceDevices,
   } = groupExecutionTargetDevices(selectableDevices);
+  const privateDevices = [
+    ...privateWorkspaceDevices,
+    ...(isWorkspaceAgent ? personalOnlyDevices : []),
+  ];
   // Workspace agents always render the Private / Workspace group split (even
   // when one side is empty — the labels tell the user which pool they're
   // looking at). Personal mode stays flat.
@@ -967,12 +960,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
       {/* On web with no remote device, guide the user to the desktop app (which
           unlocks local execution + `orvilo connect`) rather than a muted dead-end. */}
       {showWebDownloadCard ? (
-        <a
-          className={styles.downloadCard}
-          href={DOWNLOAD_URL.default}
-          rel="noreferrer"
-          target="_blank"
-        >
+        <a className={styles.option} href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank">
           <div className={styles.optionIcon}>
             <span className="anticon" role="img">
               <MonitorDownIcon fill={'transparent'} height={14} size={14} width={14} />
@@ -986,7 +974,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               {t('heteroAgent.executionTarget.downloadDesktopDesc')}
             </div>
           </div>
-          <span className={cx('anticon', styles.downloadCardArrow)} role="img">
+          <span className="anticon flex-none" role="img">
             <ExternalLinkIcon fill={'transparent'} height={13} size={13} width={13} />
           </span>
         </a>

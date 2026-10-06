@@ -1,0 +1,99 @@
+{
+  "acpConstraint": "Only OpenCode permitted. No provider execution performed for startup or these hash checks.",
+  "backendPort": 31598,
+  "candidate": "1dd452becde9cc2dfbdfd24c360db7be80eccce4",
+  "cdpPort": 9249,
+  "cleanWorkingTree": true,
+  "desktopCompiledMain": [
+    {
+      "path": "apps/desktop/dist/main/main-app-1hRrKwG-.js",
+      "sha256": "bf8f6538ac12d4da457ed8908a643d553f6ae4de464ed4ebb42eec4500a97a1a",
+      "bytes": 8430491
+    }
+  ],
+  "desktopReadinessChunk": {
+    "path": "apps/desktop/dist/main/automationReadiness-BElS2ASI.js",
+    "sha256": "0b839e9d33d6c4230f52e9e0fc5c90bcb9bf8e410517dcdf32f15b81918c05d4",
+    "bytes": 421551,
+    "importedBy": "apps/desktop/dist/main/main-app-1hRrKwG-.js",
+    "containsPrimeAliasAndSeparateInstalledUnattended": true,
+    "actualInvocationProof": "pending real gateway readonly request; build contents alone do not establish invocation"
+  },
+  "observedAt": "2026-10-06T10:19:40.948496+00:00",
+  "parent": "f4cc076c1c65c7428e49fc7c062bc16b76521cdd",
+  "sourceFiles": [
+    {
+      "path": "apps/server/src/routers/lambda/agent.ts",
+      "sha256": "a48594705994c78c6dfdbdd9fc29bb4180e1f481fbde8a3f81d5b8ae2bc5a0b3"
+    },
+    {
+      "path": "apps/server/src/routers/lambda/task.ts",
+      "sha256": "9647e03fb11e60caf2f2cd4508ff129c711787f22d6f88e165df036ca56154cf"
+    },
+    {
+      "path": "apps/server/src/services/agent/index.ts",
+      "sha256": "5e6628996a7b3630b927937a9075e2ecc7f0f5724875ecc5d2cd2ac1c70d1951"
+    },
+    {
+      "path": "apps/server/src/services/aiAgent/pipeline/resolveRunAgentConfig.ts",
+      "sha256": "ca38492a0ee1cb299e67797c7906c0d247598db8ccc1a716b142a1e46b9f19ff"
+    },
+    {
+      "path": "apps/server/src/services/toolExecution/serverRuntimes/task.ts",
+      "sha256": "c77714be712c58620c794ac32c9868bcf3e20ddbe69f8ad7a8fd38820131d985"
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/executor/index.ts",
+      "sha256": "54332b3ba085e6d4fe0cde2f8b89a4f06bb77ac6e87a870eb52fc046db4aae7b"
+    },
+    {
+      "path": "packages/database/src/models/agent.ts",
+      "sha256": "0dbd38c3f0cd1856cc47dad0a42772118e5eb24e14b586c7ef3af89380978f80"
+    },
+    {
+      "path": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+      "sha256": "9fac79252d3f14cfd5d1ecc40420fff751b862e5db18c289152824c2cafc91a9"
+    },
+    {
+      "path": "src/components/reui/code-block/code-block-highlight.tsx",
+      "sha256": "280c7c190b0c20e92da817e614ab6b043e1e42cb3e00ef4ede06b21c216e7363"
+    },
+    {
+      "path": "src/components/reui/code-block/code-block.tsx",
+      "sha256": "67f7add5103248ecb8754e3e85d9aac8364c80dc7dd38343418598acbb98eef8"
+    },
+    {
+      "path": "src/components/ui/code-block.tsx",
+      "sha256": "67f7add5103248ecb8754e3e85d9aac8364c80dc7dd38343418598acbb98eef8"
+    },
+    {
+      "path": "src/features/CreateAgent/RuntimeFields.tsx",
+      "sha256": "91cbb18b648fee4287cb639b0ea89fc5d459409c02476a4bd6577d412ffaed35"
+    },
+    {
+      "path": "src/features/GroupProfile/index.tsx",
+      "sha256": "1f56ea6233c0a85f27f23f95f4ef81eaa8dbf013e53d5a7c5e4a326eb3689beb"
+    },
+    {
+      "path": "src/features/Projects/CreateProjectContent.tsx",
+      "sha256": "6a06408a4aa6179d119e18efae104965302f801e1b9401f4f10f336dd507da96"
+    },
+    {
+      "path": "src/features/Projects/createProjectForm.ts",
+      "sha256": "54271ad629a4bc7ef6e6373ba5ad8655375909977db958ced400df0823bc2d23"
+    },
+    {
+      "path": "src/services/agent.ts",
+      "sha256": "0acbf1e7d5a8f4d30656b9a396173a78ad64b3e27078d2dfb007581c2802803e"
+    },
+    {
+      "path": "src/services/task.ts",
+      "sha256": "c2a444eaa8cfade5883c5a924dbf95c7cb01a32ef7d2ec7aad4173d178ca0a9b"
+    },
+    {
+      "path": "src/store/task/slices/detail/action.ts",
+      "sha256": "52c8e8bea606154cc359abae5a12fd9adeea534ab506914058d803d4071bdf0c"
+    }
+  ],
+  "vitePort": 5199
+}

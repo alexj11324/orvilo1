@@ -13,7 +13,10 @@ import { Button } from '@/components/ui/button';
 import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
 import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSettings';
 import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
+import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
 import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
+import AgentOpeningSettings from '@/features/AgentSettings/AgentOpeningSettings';
+import AgentRuntimeSettings from '@/features/AgentSettings/AgentRuntimeSettings';
 import ExternalAgentConnectionSettings from '@/features/AgentSettings/ExternalAgentConnectionSettings';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
@@ -74,6 +77,7 @@ LegacyRuntimeNotice.displayName = 'AgentSettings.LegacyRuntimeNotice';
  * Advanced. Legacy runtimes get the migration notice instead of rows.
  */
 const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId }) => {
+  const { t } = useTranslation('setting');
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const isAgentConfigLoading = useAgentStore(agentSelectors.isAgentConfigLoading);
@@ -112,13 +116,26 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
             </div>
           ) : null}
           <div className="flex flex-col" style={{ containerType: 'inline-size' }}>
-            {externalAgent ? <ExternalAgentConnectionSettings agentId={agentId} /> : null}
+            <AgentGeneralSettings agentId={agentId} />
+            <AgentDeviceSettings agentId={agentId} />
             {/* Remote platforms carry no local model rows — model/effort is a
                 local-CLI concept. */}
             {externalAgent && isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
-            <AgentDeviceSettings agentId={agentId} />
+            <details className="mt-5 rounded-lg border px-4 py-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                {t('settingAgent.executionSettings.title')}
+              </summary>
+              <AgentRuntimeSettings agentId={agentId} />
+              {externalAgent ? <ExternalAgentConnectionSettings agentId={agentId} /> : null}
+            </details>
             <AgentAccessSettings agentId={agentId} />
-            <AgentAdvancedSettings agentId={agentId} />
+            <AgentOpeningSettings agentId={agentId} />
+            <details className="mt-5 rounded-lg border px-4 py-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                {t('settingAgent.advancedSettings.title')}
+              </summary>
+              <AgentAdvancedSettings agentId={agentId} />
+            </details>
           </div>
         </AsyncBoundary>
       </SettingContainer>

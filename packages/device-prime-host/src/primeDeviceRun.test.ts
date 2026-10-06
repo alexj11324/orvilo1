@@ -255,11 +255,16 @@ describe('openPrimeDeviceRun', () => {
       const iterator = run.events[Symbol.asyncIterator]();
       const first = await iterator.next();
       expect(first.value).toEqual({ kind: 'text', text: 'hello' });
-      const result = await run.prompt('do the thing');
+      const builtinMcp = { operationId: 'op-4', url: 'http://127.0.0.1:4321/mcp?op=op-4' };
+      const result = await run.prompt('do the thing', builtinMcp);
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.value.stopReason).toBe('end_turn');
       const promptFrame = runner.inbound.find((frame) => frame.method === 'session.prompt');
-      expect(promptFrame?.params).toMatchObject({ sessionId: 'sess-1', text: 'do the thing' });
+      expect(promptFrame?.params).toMatchObject({
+        builtinMcp,
+        sessionId: 'sess-1',
+        text: 'do the thing',
+      });
     } finally {
       await run.kill();
     }

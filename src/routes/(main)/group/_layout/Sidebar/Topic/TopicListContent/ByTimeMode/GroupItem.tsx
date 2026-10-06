@@ -34,7 +34,7 @@ const GroupItem = memo<GroupItemProps>(({ group, activeTopicId, activeThreadId }
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <div className="flex flex-col" style={{ gap: 1, paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem

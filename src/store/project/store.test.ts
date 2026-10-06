@@ -58,7 +58,12 @@ describe('project store cache scope', () => {
     mocks.swrDataByKey = {};
     mocks.swrConfigs = [];
     mocks.swrKeys = [];
-    useProjectStore.setState({ pendingProjectLinkKeys: [], projectDetails: {}, projectLists: {} });
+    useProjectStore.setState({
+      pendingProjectAgentIds: [],
+      pendingProjectLinkKeys: [],
+      projectDetails: {},
+      projectLists: {},
+    });
     vi.mocked(mutate).mockReset();
     vi.mocked(mutate).mockImplementation(async (_key, data) => data);
     vi.spyOn(projectService, 'listLinks').mockResolvedValue({ data: [], success: true });
@@ -381,6 +386,66 @@ describe('project store cache scope', () => {
     const details = useProjectStore.getState().projectDetails['user-1:personal'];
     expect(details.labels.labels).toEqual([]);
     expect(details['project-labels'].labels).toEqual([]);
+  });
+
+  it('keeps a committed participant addition distinct from a failed list refresh', async () => {
+    vi.spyOn(projectService, 'addAgent').mockResolvedValue({ success: true } as Awaited<
+      ReturnType<typeof projectService.addAgent>
+    >);
+    vi.mocked(mutate).mockRejectedValueOnce(new Error('Readback unavailable'));
+
+    await expect(
+      useProjectStore.getState().addProjectAgent('project-1', 'agent-1'),
+    ).resolves.toEqual({
+      refreshError: new Error('Readback unavailable'),
+    });
+    expect(useProjectStore.getState().pendingProjectAgentIds).toEqual([]);
+  });
+
+  it('does not refresh another workspace after a participant write settles', async () => {
+    vi.spyOn(projectService, 'addAgent').mockImplementation(async () => {
+      mocks.currentCacheScope = 'user-1:workspace-other';
+      return { success: true } as Awaited<ReturnType<typeof projectService.addAgent>>;
+    });
+    await useProjectStore.getState().addProjectAgent('project-1', 'agent-1');
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the mounted slug detail after adding a project participant', async () => {
+    useProjectStore.setState({
+      projectDetails: {
+        'user-1:personal': { launch: { project: { id: 'project-1' } } as ProjectDetail },
+      },
+    });
+    vi.spyOn(projectService, 'addAgent').mockResolvedValue({ success: true } as Awaited<
+      ReturnType<typeof projectService.addAgent>
+    >);
+    await useProjectStore.getState().addProjectAgent('project-1', 'agent-1');
+    expect(mutate).toHaveBeenCalledWith(['project/detail', 'user-1:personal', 'launch']);
+  });
+
+  it('retries participant readback through the mounted slug and retains refresh failures', async () => {
+    useProjectStore.setState({
+      projectDetails: {
+        'user-1:personal': { launch: { project: { id: 'project-1' } } as ProjectDetail },
+      },
+    });
+    vi.mocked(mutate).mockRejectedValueOnce(new Error('Still unavailable'));
+    await expect(useProjectStore.getState().refreshProjectDetail('project-1')).rejects.toThrow(
+      'Still unavailable',
+    );
+    expect(mutate).toHaveBeenCalledWith(['project/detail', 'user-1:personal', 'launch']);
+  });
+
+  it('propagates a rejected participant removal and releases pending state', async () => {
+    vi.spyOn(projectService, 'removeAgent').mockRejectedValue(
+      new Error('Coordinator cannot be removed'),
+    );
+    await expect(
+      useProjectStore.getState().removeProjectAgent('project-1', 'agent-1'),
+    ).rejects.toThrow('Coordinator cannot be removed');
+    expect(mutate).not.toHaveBeenCalled();
+    expect(useProjectStore.getState().pendingProjectAgentIds).toEqual([]);
   });
 
   it('updates the cached project after an orchestration policy save', async () => {

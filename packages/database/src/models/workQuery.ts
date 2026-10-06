@@ -1,5 +1,6 @@
 import type {
   MyWorkMode,
+  TaskDispatchPhase,
   TaskLabelSummary,
   TaskStatus,
   WorkQuery,
@@ -66,6 +67,7 @@ import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
 import {
+  latestDispatchPhase,
   legacyStatusExpr,
   predicateForLegacyStatus,
   predicateForLegacyStatuses,
@@ -1373,17 +1375,25 @@ export class WorkQueryModel {
       parent: row.parentTaskId ? (parentsById.get(row.parentTaskId) ?? null) : null,
       // Deprecated wire field — derived from canonical workflow/execution
       // rows, never the stored `tasks.status` value.
-      status: statusById.get(row.id) ?? 'backlog',
+      status: statusById.get(row.id)?.status ?? 'backlog',
+      dispatchPhase: statusById.get(row.id)?.dispatchPhase ?? null,
     }));
   };
 
   private derivedTaskStatusByIds = async (ids: string[]) => {
-    if (ids.length === 0) return new Map<string, TaskStatus>();
+    if (ids.length === 0)
+      return new Map<string, { status: TaskStatus; dispatchPhase: TaskDispatchPhase | null }>();
     const rows = await this.db
-      .select({ id: tasks.id, status: sql<TaskStatus>`${legacyStatusExpr}` })
+      .select({
+        id: tasks.id,
+        status: sql<TaskStatus>`${legacyStatusExpr}`,
+        dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
+      })
       .from(tasks)
       .where(and(inArray(tasks.id, ids), this.ownership()));
-    return new Map(rows.map((row) => [row.id, row.status]));
+    return new Map(
+      rows.map((row) => [row.id, { status: row.status, dispatchPhase: row.dispatchPhase }]),
+    );
   };
 
   private compileCtx = (

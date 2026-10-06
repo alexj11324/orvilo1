@@ -8,7 +8,7 @@ import type { ComponentType } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/ui/code-block';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import type { CodexMcpToolArgs, CodexMcpToolState } from './mcpToolUtils';
 import {
@@ -106,7 +106,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
               language={input.language}
               style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
-            />
+            >
+              {input.language !== 'text' ? undefined : <CodeBlockCopyButton />}
+            </CodeBlock>
           </div>
         )}
         {output && (
@@ -120,7 +122,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
               language={output.language}
               style={{ maxHeight: 360, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
-            />
+            >
+              {output.language !== 'text' ? undefined : <CodeBlockCopyButton />}
+            </CodeBlock>
           </div>
         )}
         {error && (
@@ -134,7 +138,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
               language={'text'}
               style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
-            />
+            >
+              <CodeBlockCopyButton />
+            </CodeBlock>
           </div>
         )}
       </div>

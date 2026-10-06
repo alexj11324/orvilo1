@@ -29,6 +29,10 @@ beforeEach(() => {
   mocks.state.isSignedIn = true;
 });
 describe('first login entry', () => {
+  it('allows the workspace-first onboarding route to render before an agent exists', () => {
+    mocks.pathname = '/onboarding';
+    expect(renderHook(useFirstLoginGate).result.current.status).toBe('allowed');
+  });
   it('gates a generic landing immediately after the first sign-in transition', () => {
     mocks.pathname = '/projects';
     mocks.state.isSignedIn = false;

@@ -141,33 +141,46 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
       onValueChange={(value) => handleExpand(value.includes(id))}
     >
       <AccordionItem value={id}>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-          {
-            <Inspectors
-              apiName={apiName}
-              arguments={requestArgs}
-              identifier={identifier}
-              intervention={intervention}
-              isArgumentsStreaming={isArgumentsStreaming}
-              isExpanded={isToolDetailExpand}
-              isToolCalling={isToolCalling}
-              result={result}
-              toolCallId={id}
-              toolCallStartTime={toolCallStartTime}
-            />
-          }
-          {!disableEditing && (
-            <Actions
-              assistantMessageId={assistantMessageId}
-              canToggleCustomToolRender={canToggleCustomToolRender}
-              identifier={identifier}
-              setShowCustomToolRender={setShowCustomToolRender}
-              setShowDebug={setShowDebug}
-              showCustomToolRender={showCustomToolRender}
-              showDebug={showDebug}
-            />
-          )}
-        </AccordionTrigger>
+        <div className="flex items-center">
+          <div className="min-w-0 flex-1">
+            <AccordionTrigger
+              style={{ paddingBlock: 4, paddingInline: 4 }}
+              className={
+                isAlwaysExpand
+                  ? 'hover:no-underline [&_[data-slot=accordion-trigger-icon]]:hidden'
+                  : 'hover:no-underline'
+              }
+            >
+              {
+                <Inspectors
+                  apiName={apiName}
+                  arguments={requestArgs}
+                  identifier={identifier}
+                  intervention={intervention}
+                  isArgumentsStreaming={isArgumentsStreaming}
+                  isExpanded={isToolDetailExpand}
+                  isToolCalling={isToolCalling}
+                  result={result}
+                  toolCallId={id}
+                  toolCallStartTime={toolCallStartTime}
+                />
+              }
+            </AccordionTrigger>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {!disableEditing && (
+              <Actions
+                assistantMessageId={assistantMessageId}
+                canToggleCustomToolRender={canToggleCustomToolRender}
+                identifier={identifier}
+                setShowCustomToolRender={setShowCustomToolRender}
+                setShowDebug={setShowDebug}
+                showCustomToolRender={showCustomToolRender}
+                showDebug={showDebug}
+              />
+            )}
+          </div>
+        </div>
         <AccordionContent>
           {
             <div className="flex flex-col gap-2 py-2">

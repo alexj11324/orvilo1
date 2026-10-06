@@ -1,0 +1,23 @@
+The following is a diff from the previous accessibility tree for Window: "对话 · Orvilo" with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 118, 120, 122-123, 125-126, 128-129, 131, 136, 138, 140-141, 143
+~												115 按钮 已复制
++														231 文本  · ·
++														232 文本  1
++														233 文本 -
++														234 文本  2
++														235 文本 -
++														236 文本  1
++														237 文本 +
++														238 文本  2
++														239 文本 +
++														240 文本  · ·
++														241 文本  1
++														242 文本 -
++														243 文本  1
++														244 文本 +
+~							198 text 112  FPS
+~						201 弹出式按钮 R1.2G · J357.7M, Help: R = Renderer private footprint (red at 1 GiB) · J = JS heap used — click for the full breakdown
+~							204 文本 357.7M
+~							206 text CPU  2.9 %
+~							208 text GPU  1.2 % ·  40 M
+The focused UI element is 115 按钮 已复制

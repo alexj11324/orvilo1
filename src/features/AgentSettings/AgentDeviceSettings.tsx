@@ -1,8 +1,8 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import type { AgentModelSelectionPolicy, DeviceListItem } from '@orvilo/types';
-import { LockIcon, TriangleAlertIcon, UsersIcon } from 'lucide-react';
+import type { DeviceListItem } from '@orvilo/types';
+import { TriangleAlertIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,9 +23,6 @@ import {
   resolveExecutionTargetSelection,
 } from '@/features/ExecutionTargetPicker';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import PolicySelect, { type PolicyOption } from '@/features/ResourcePermission/PolicySelect';
-import { getSelectionPolicyLabelKeys } from '@/features/ResourcePermission/selectionPolicyLabels';
-import { useAgentSelectionPolicies } from '@/features/ResourcePermission/useAgentSelectionPolicies';
 import { isHeterogeneousSandboxExecutionAvailable } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { usePermission } from '@/hooks/usePermission';
@@ -94,39 +91,6 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
 
   const isWorkspaceAgent = Boolean(agent?.workspaceId);
-  const {
-    canEditPolicies,
-    canFixExecutionTarget,
-    executionTargetPolicy,
-    setExecutionTargetPolicy,
-  } = useAgentSelectionPolicies(agentId);
-  const isPrivate = agent?.visibility === 'private';
-  const labelKeys = getSelectionPolicyLabelKeys(isPrivate);
-  const devicePolicyOptions = useMemo(
-    (): PolicyOption<AgentModelSelectionPolicy>[] => [
-      {
-        desc: t('permission.page.devicePolicyMemberDesc'),
-        icon: UsersIcon,
-        label: t(labelKeys.member),
-        value: 'member',
-      },
-      canFixExecutionTarget
-        ? {
-            desc: t('permission.page.devicePolicyFixedDesc'),
-            icon: LockIcon,
-            label: t(labelKeys.fixed),
-            value: 'fixed',
-          }
-        : {
-            desc: t('permission.page.devicePolicyUnset'),
-            disabled: true,
-            icon: LockIcon,
-            label: t(labelKeys.fixed),
-            value: 'fixed',
-          },
-    ],
-    [canFixExecutionTarget, labelKeys, t],
-  );
   const heterogeneousType = config?.agencyConfig?.heterogeneousProvider?.type;
   const externalHarness = !!heterogeneousType && !isBuiltinEngineType(heterogeneousType);
   const enableCloudSandbox = useServerConfigStore(
@@ -258,7 +222,12 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     });
 
   return (
-    <SettingsGroup title={t('settingAgent.executionSettings.title')}>
+    <SettingsGroup title={t('settingAgent.execution.target')}>
+      {(!deviceInventoryComplete && !deviceInventoryError) || isPreferenceLoading ? (
+        <SettingsRow>
+          <span className={settingsStyles.hint}>{t('settingAgent.list.loading')}</span>
+        </SettingsRow>
+      ) : null}
       {deviceInventoryError ? (
         <SettingsRow>
           <AsyncError
@@ -288,7 +257,8 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
         </SettingsRow>
       ) : null}
 
-      {showReadOnlyBinding ? (
+      {showReadOnlyBinding ||
+      (!showDeviceSelector && selected && deviceInventoryComplete && !isPreferenceLoading) ? (
         <SettingsRow label={t('settingAgent.deviceSettings.deviceLabel')}>
           {boundDevice ? (
             <div className="flex items-center gap-2">
@@ -305,7 +275,11 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
             </div>
           ) : (
             <div className={settingsStyles.hint}>
-              {t('settingAgent.deviceSettings.bindingMissing')}
+              {selected?.target === 'local'
+                ? t('chat:heteroAgent.executionTarget.local')
+                : selected?.target === 'sandbox'
+                  ? t('chat:heteroAgent.executionTarget.sandbox')
+                  : t('settingAgent.deviceSettings.bindingMissing')}
             </div>
           )}
         </SettingsRow>
@@ -357,27 +331,6 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
             <AlertTitle>{t('settingAgent.deviceSettings.offlineBoundTitle')}</AlertTitle>
             <AlertDescription>{t('settingAgent.deviceSettings.offlineBoundDesc')}</AlertDescription>
           </Alert>
-        </SettingsRow>
-      ) : null}
-
-      {isWorkspaceAgent ? (
-        <SettingsRow label={t('settingAgent.devicePolicy.title')}>
-          <div className="flex flex-col gap-2 w-full">
-            <div className="flex items-center gap-2">
-              <UsersIcon size={16} />
-              <PolicySelect
-                disabled={!canEditPolicies}
-                options={devicePolicyOptions}
-                value={executionTargetPolicy}
-                onChange={setExecutionTargetPolicy}
-              />
-            </div>
-            <div className={settingsStyles.hint}>
-              {canEditPolicies
-                ? t('permission.page.devicePolicyDesc')
-                : t('permission.noManagePermission')}
-            </div>
-          </div>
         </SettingsRow>
       ) : null}
     </SettingsGroup>

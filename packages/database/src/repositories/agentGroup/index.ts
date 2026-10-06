@@ -347,7 +347,11 @@ export class AgentGroupRepository {
    * @param groupId - The chat group ID
    * @returns AgentGroupDetail with group info, agents array, and supervisor agent ID
    */
-  async findByIdWithAgents(groupId: string): Promise<AgentGroupDetail | null> {
+  async findByIdWithAgents(
+    groupId: string,
+    selectedRuntime?: Awaited<ReturnType<AgentModel['getOrchestratorRuntimeForCreation']>>,
+    allowDefaultRuntime = true,
+  ): Promise<AgentGroupDetail | null> {
     // 1. Find the group
     const group = await this.db.query.chatGroups.findFirst({
       where: and(eq(chatGroups.id, groupId), this.groupOwnership()),
@@ -404,11 +408,18 @@ export class AgentGroupRepository {
 
     // 4. If no supervisor exists, create a virtual supervisor agent
     if (!supervisorAgentId) {
-      const runtime = await new AgentModel(
-        this.db,
-        this.userId,
-        this.workspaceId,
-      ).getPrimeRuntimeForCreation({ visibility: group.visibility });
+      if (!selectedRuntime && !allowDefaultRuntime)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'ORCHESTRATOR_SETUP_REQUIRED',
+        });
+      const runtime =
+        selectedRuntime ??
+        (await new AgentModel(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).getOrchestratorRuntimeForCreation({ visibility: group.visibility }));
       // Create supervisor agent (virtual agent)
       const [supervisorAgent] = await this.db
         .insert(agents)
@@ -495,6 +506,7 @@ export class AgentGroupRepository {
     groupParams: Omit<NewChatGroup, 'userId'>,
     agentMembers: string[] = [],
     supervisorConfig?: SupervisorAgentConfig,
+    selectedRuntime?: Awaited<ReturnType<AgentModel['getOrchestratorRuntimeForCreation']>>,
   ): Promise<CreateGroupWithSupervisorResult> {
     // Creating inside a Category has to land in that Category. The sidebar
     // resolves a public group's folder only against public folders (and a
@@ -517,27 +529,49 @@ export class AgentGroupRepository {
     // private. Defaults to 'public' to match the column default.
     const groupVisibility = groupParams.visibility ?? folderVisibility ?? 'public';
 
-    if (
-      supervisorConfig?.agencyConfig &&
-      supervisorConfig.agencyConfig.heterogeneousProvider?.type !== 'orvilo'
-    ) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'GROUP_SUPERVISOR_PRIME_REQUIRED' });
-    }
-    const runtime = supervisorConfig?.agencyConfig
-      ? {
-          agencyConfig: await assertAgentRuntimeCreation(
-            this.db,
-            { userId: this.userId, workspaceId: this.workspaceId },
-            { ...supervisorConfig, visibility: groupVisibility },
-          ),
-          model: supervisorConfig.model,
-          provider: supervisorConfig.provider,
-        }
-      : await new AgentModel(this.db, this.userId, this.workspaceId).getPrimeRuntimeForCreation({
-          visibility: groupVisibility,
-          model: supervisorConfig?.model ?? undefined,
-          provider: supervisorConfig?.provider ?? undefined,
-        });
+    const sourceAgentId = supervisorConfig?.params?.orchestratorSourceAgentId;
+    const runtime =
+      selectedRuntime ??
+      (typeof sourceAgentId === 'string' && sourceAgentId
+        ? {
+            ...(await new AgentModel(
+              this.db,
+              this.userId,
+              this.workspaceId,
+            ).inheritRuntimeForCreation(sourceAgentId, {
+              purpose: 'orchestrator',
+              visibility: groupVisibility,
+            })),
+            params: { orchestratorSourceAgentId: sourceAgentId },
+          }
+        : supervisorConfig?.agencyConfig
+          ? {
+              agencyConfig: await assertAgentRuntimeCreation(
+                this.db,
+                { userId: this.userId, workspaceId: this.workspaceId },
+                { ...supervisorConfig, visibility: groupVisibility },
+                { purpose: 'orchestrator' },
+              ),
+              model: supervisorConfig.model,
+              provider: supervisorConfig.provider,
+              params: supervisorConfig.params,
+            }
+          : await new AgentModel(
+              this.db,
+              this.userId,
+              this.workspaceId,
+            ).getOrchestratorRuntimeForCreation({
+              visibility: groupVisibility,
+              model: supervisorConfig?.model ?? undefined,
+              provider: supervisorConfig?.provider ?? undefined,
+            }));
+
+    await assertAgentRuntimeCreation(
+      this.db,
+      { userId: this.userId, workspaceId: this.workspaceId },
+      { ...runtime, visibility: groupVisibility },
+      { purpose: 'orchestrator' },
+    );
 
     // 1. Create supervisor agent (virtual agent)
     const [supervisorAgent] = await this.db
@@ -548,7 +582,7 @@ export class AgentGroupRepository {
         chatConfig: supervisorConfig?.chatConfig,
         description: supervisorConfig?.description,
         ...runtime,
-        params: supervisorConfig?.params,
+        params: { ...supervisorConfig?.params, ...runtime.params },
         // The `plugins` column is still typed `string[]` at the schema layer
         // (widening deferred to the tri-state rollout's final phase) but
         // legitimately holds mixed AgentPluginEntry[] at runtime — JSONB has

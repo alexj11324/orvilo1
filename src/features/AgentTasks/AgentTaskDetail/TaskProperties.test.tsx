@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskProperties from './TaskProperties';
 
 const mocks = vi.hoisted(() => ({
@@ -176,6 +177,45 @@ describe('TaskProperties', () => {
     delete detail.workflowCategory;
     delete detail.workflowStateId;
   });
+
+  it('shows a parked dispatch as waiting while preserving the canonical backlog workflow', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.status = 'running';
+    detail.dispatchPhase = 'waiting';
+    detail.workflowCategory = 'backlog';
+    try {
+      render(<TaskProperties />);
+      expect(screen.getByText('waiting')).toBeTruthy();
+      expect(screen.getByText('taskDetail.workflow.category.backlog')).toBeTruthy();
+      expect(screen.queryByText('running')).toBeNull();
+    } finally {
+      detail.status = 'backlog';
+      delete detail.dispatchPhase;
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('fills the loaded no-execution property without changing compact badges or unknown state', () => {
+    const { unmount } = render(<TaskProperties />);
+    expect(screen.getByText('goalProcess.summary.notStarted')).toBeTruthy();
+    unmount();
+    for (const props of [{ status: 'backlog' }, { showLabel: true }]) {
+      const { container, unmount: dispose } = render(<TaskExecutionBadge {...props} />);
+      expect(container.textContent).toBe('');
+      dispose();
+    }
+  });
+
+  it.each(['queued', 'running', 'waiting'] as const)(
+    'keeps the %s execution projection',
+    (runState) => {
+      render(<TaskExecutionBadge showLabel runState={runState} status="backlog" />);
+      expect(screen.getByText(runState)).toBeTruthy();
+      expect(screen.queryByText('goalProcess.summary.notStarted')).toBeNull();
+    },
+  );
 
   it('renders a Plane label beside each property value', () => {
     render(<TaskProperties />);

@@ -262,7 +262,7 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        "Edit a task's fields (name, description, instruction, priority), assignee (agent or workspace member), parent, or dependencies (batched). Status changes go through updateTaskStatus; schedule configuration goes through setTaskSchedule.",
+        "Edit a task's fields (name, description, instruction, priority), assignee (agent or workspace member), parent, or project or dependencies (batched). Before changing either assignee, call viewTask and pass its domainRevision as expectedDomainRevision. Status changes go through updateTaskStatus; schedule configuration goes through setTaskSchedule.",
       name: TaskApiName.editTask,
       parameters: {
         properties: {
@@ -287,6 +287,12 @@ export const TaskManifest: BuiltinToolManifest = {
               'Human-readable description (displayed in UI). Separate from instruction, which guides the agent.',
             type: 'string',
           },
+          expectedDomainRevision: {
+            description:
+              'The latest domainRevision returned by viewTask. Required when changing assigneeAgentId or assigneeUserId; also fences other field edits. If the task changed, view it again and reconsider the edit instead of repeating a stale revision.',
+            minimum: 0,
+            type: 'integer',
+          },
           identifier: {
             description: 'The identifier of the task to edit.',
             type: 'string',
@@ -307,6 +313,11 @@ export const TaskManifest: BuiltinToolManifest = {
           priority: {
             description: 'Updated priority level: 0=none, 1=urgent, 2=high, 3=normal, 4=low.',
             type: 'number',
+          },
+          projectId: {
+            description:
+              'Existing project ID to attach this task to. Pass null to remove it from the project. Omit to keep the current project.',
+            type: ['string', 'null'],
           },
           removeDependencies: {
             description: 'Identifiers of existing dependencies to remove.',

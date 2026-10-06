@@ -204,12 +204,26 @@ describe('TopicSummaryModel', () => {
       { createdAt: new Date('2026-07-31T00:00:00Z'), id: 'regular', userId },
       {
         createdAt: new Date('2026-07-31T00:00:00Z'),
+        id: 'internal-judgment',
+        userId,
+        trigger: 'acp_judgment',
+      },
+      {
+        createdAt: new Date('2026-07-31T00:00:00Z'),
         id: 'evaluation',
         trigger: 'eval',
         userId,
       },
     ]);
     await db.insert(messages).values([
+      {
+        content: 'internal title request',
+        id: 'm-judgment',
+        role: 'user',
+        topicId: 'internal-judgment',
+        updatedAt: new Date('2026-07-31T10:00:00Z'),
+        userId,
+      },
       {
         content: 'regular message',
         id: 'm-regular',

@@ -1,0 +1,282 @@
+{
+  "calls": [
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.updateComment"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.deleteComment"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.update"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.getDependencies"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.update"],
+      "method": "POST",
+      "status": 409
+    },
+    {
+      "paths": ["task.find"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.update"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.addDependency", "task.removeDependency"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.getDependencies"],
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "paths": ["task.updateStatus"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.updateStatus"],
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "paths": ["task.updateStatus"],
+      "method": "POST",
+      "status": 200
+    }
+  ],
+  "checks": [
+    {
+      "name": "agentCommentEditAttributed",
+      "commentRows": [
+        {
+          "author_agent_id": "agt_AB0VcTFshbq8",
+          "author_user_id": null,
+          "content": "Review fixture resumed comment edited by Journey"
+        }
+      ],
+      "requirementUnchanged": true,
+      "domainAdvanced": true
+    },
+    {
+      "name": "maintainedExecutorStaleOrdering",
+      "successResult": false,
+      "realConflict": true,
+      "dependencyPostCount": 0
+    },
+    {
+      "name": "maintainedExecutorFreshOrdering",
+      "success": true
+    },
+    {
+      "name": "dependencySnapshots",
+      "before": {
+        "data": [
+          {
+            "id": "fbf05154-43b7-4b33-a426-ca75f090db5e",
+            "taskId": "task_pGdBQXqWcCPP",
+            "dependsOnId": "task_BduDnQwuThsL",
+            "userId": "user_agent_testing_001",
+            "workspaceId": "ayy9sEdMxzC2h6Sv",
+            "type": "blocks",
+            "visibility": "private",
+            "condition": null,
+            "createdAt": "2026-10-06T10:40:33.877Z"
+          }
+        ],
+        "success": true
+      },
+      "after": {
+        "data": [
+          {
+            "id": "55f2bfb4-138a-4bb5-ad6b-c3545d93fbf2",
+            "taskId": "task_pGdBQXqWcCPP",
+            "dependsOnId": "task_pErreLcYVRYW",
+            "userId": "user_agent_testing_001",
+            "workspaceId": "ayy9sEdMxzC2h6Sv",
+            "type": "blocks",
+            "visibility": "private",
+            "condition": null,
+            "createdAt": "2026-10-06T10:41:46.931Z"
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "name": "freshTaskParked",
+      "id": "task_pGdBQXqWcCPP"
+    },
+    {
+      "name": "freshTaskParked",
+      "id": "task_pErreLcYVRYW"
+    },
+    {
+      "name": "freshTaskParked",
+      "id": "task_BduDnQwuThsL"
+    },
+    {
+      "name": "originalSourceAgentUnchanged",
+      "unchanged": true
+    }
+  ],
+  "completedAt": "2026-10-06T10:41:47.114Z",
+  "fixtures": {
+    "taskA": {
+      "id": "task_pGdBQXqWcCPP",
+      "identifier": "RF-8"
+    },
+    "taskB": {
+      "id": "task_pErreLcYVRYW",
+      "identifier": "RF-9"
+    },
+    "taskC": {
+      "id": "task_BduDnQwuThsL",
+      "identifier": "RF-10"
+    },
+    "commentId": "cmt_Wrp6kw5qqR2t"
+  },
+  "initialProbe": {
+    "sourceHead": "1dd452becde9cc2dfbdfd24c360db7be80eccce4",
+    "startedAt": "2026-10-06T10:40:33.486Z",
+    "scope": {
+      "userId": "user_agent_testing_001",
+      "workspaceId": "ayy9sEdMxzC2h6Sv"
+    },
+    "providerExecution": false,
+    "fixtures": {
+      "taskA": {
+        "id": "task_pGdBQXqWcCPP",
+        "identifier": "RF-8"
+      },
+      "taskB": {
+        "id": "task_pErreLcYVRYW",
+        "identifier": "RF-9"
+      },
+      "taskC": {
+        "id": "task_BduDnQwuThsL",
+        "identifier": "RF-10"
+      },
+      "commentId": "cmt_Wrp6kw5qqR2t"
+    },
+    "checks": [
+      {
+        "name": "freshTaskParked",
+        "id": "task_pGdBQXqWcCPP"
+      },
+      {
+        "name": "freshTaskParked",
+        "id": "task_pErreLcYVRYW"
+      },
+      {
+        "name": "freshTaskParked",
+        "id": "task_BduDnQwuThsL"
+      }
+    ],
+    "calls": [
+      {
+        "paths": ["task.create"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.create"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.create"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.addDependency"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.addComment"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.updateComment"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.updateStatus"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.updateStatus"],
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "paths": ["task.updateStatus"],
+        "method": "POST",
+        "status": 200
+      }
+    ],
+    "failedAt": "2026-10-06T10:40:34.130Z",
+    "failure": {
+      "name": "error",
+      "message": "relation \"task_activity_log\" does not exist"
+    }
+  },
+  "providerExecution": false,
+  "scope": {
+    "userId": "user_agent_testing_001",
+    "workspaceId": "ayy9sEdMxzC2h6Sv"
+  },
+  "sourceHead": "1dd452becde9cc2dfbdfd24c360db7be80eccce4",
+  "startedAt": "2026-10-06T10:41:43.913Z"
+}

@@ -70,6 +70,7 @@ const TaskProperties = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
 
   const taskId = useTaskDetailTaskId();
+  const dispatchPhase = useTaskDetailSelector(taskDetailSelectors.taskDispatchPhase);
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
   const workflowCategory = useTaskDetailSelector(taskDetailSelectors.taskWorkflowCategory);
   const workflowStateId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateId);
@@ -153,7 +154,7 @@ const TaskProperties = memo(() => {
         </PropertyRow>
 
         <PropertyRow label={t('taskDetail.executionStatus')} mark={<ClockIcon size={16} />}>
-          <TaskExecutionBadge showLabel size={16} status={status} />
+          <TaskExecutionBadge showLabel dispatchPhase={dispatchPhase} size={16} status={status} />
         </PropertyRow>
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (

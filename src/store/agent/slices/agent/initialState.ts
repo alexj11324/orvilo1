@@ -5,11 +5,12 @@ import { type AgentSettingsInstance } from '@/features/AgentSetting';
 import { type AvailableAgentItem } from '@/services/agent';
 import { type AgentItem } from '@/types/agent';
 import { type MetaData } from '@/types/meta';
+import type { SaveStatus } from '@/types/saveState';
 
 import { readAllLocalAgentWorkingDirectories } from '../../utils/localAgentWorkingDirectoryStorage';
 
 export type LoadingState = Record<Partial<keyof MetaData> | string, boolean>;
-export type SaveStatus = 'idle' | 'saving' | 'saved';
+export type { SaveStatus } from '@/types/saveState';
 
 export interface AgentSliceState {
   activeAgentId?: string;
@@ -49,6 +50,7 @@ export interface AgentSliceState {
    * store so subscribers re-render on change.
    */
   localAgentWorkingDirectoryMap: Record<string, string>;
+  saveAgentId?: string;
   /**
    * Save status for showing auto-save hint
    */

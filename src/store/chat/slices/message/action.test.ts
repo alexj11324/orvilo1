@@ -268,6 +268,41 @@ describe('chatMessage actions', () => {
   });
 
   describe('deleteMessage', () => {
+    it.each(['single', 'multiple'] as const)(
+      'retains the assistant error when %s deletion fails',
+      async (kind) => {
+        const context = { agentId: 'session-id', topicId: 'topic-id' };
+        const key = messageMapKey(context);
+        const messages = [
+          {
+            id: 'failed-assistant',
+            role: 'assistant',
+            content: '',
+            error: { type: 'ServerAgentRuntimeError', message: 'CLI unavailable' },
+          },
+        ] as UIChatMessage[];
+        useChatStore.setState({
+          dbMessagesMap: { [key]: messages },
+          messagesMap: { [key]: messages },
+        });
+        const service = kind === 'single' ? 'removeMessage' : 'removeMessages';
+        vi.spyOn(messageService, service).mockRejectedValueOnce(new Error('RPC unavailable'));
+        const { operationId } = useChatStore
+          .getState()
+          .startOperation({ type: 'regenerate', context });
+
+        await expect(
+          kind === 'single'
+            ? useChatStore.getState().optimisticDeleteMessage('failed-assistant', { operationId })
+            : useChatStore
+                .getState()
+                .optimisticDeleteMessages(['failed-assistant'], { operationId }),
+        ).rejects.toThrow('RPC unavailable');
+        expect(useChatStore.getState().dbMessagesMap[key]).toEqual(messages);
+        expect(useChatStore.getState().messagesMap[key][0].error?.message).toBe('CLI unavailable');
+      },
+    );
+
     it('deleteMessage should remove a message by id', async () => {
       const { result } = renderHook(() => useChatStore());
       const messageId = 'message-id';

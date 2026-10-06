@@ -786,6 +786,32 @@ describe('HomeRepository', () => {
   });
 
   describe('getSidebarAgentList - heterogeneous type', () => {
+    it('preserves a configured Prime runtime stamp without classifying unconfigured rows as Prime', async () => {
+      await clientDB.insert(Schema.agents).values([
+        {
+          id: 'configured-prime',
+          userId,
+          title: 'Prime',
+          virtual: false,
+          agencyConfig: {
+            boundDeviceId: 'saved-device',
+            executionTarget: 'device',
+            heterogeneousProvider: { type: 'orvilo', model: 'deepseek-chat' },
+          },
+        },
+        { id: 'unconfigured-agent', userId, title: 'Unconfigured', virtual: false },
+      ]);
+
+      const result = await homeRepo.getSidebarAgentList();
+
+      expect(result.ungrouped.find((row) => row.id === 'configured-prime')?.heterogeneousType).toBe(
+        'orvilo',
+      );
+      expect(result.ungrouped.find((row) => row.id === 'unconfigured-agent')).not.toHaveProperty(
+        'heterogeneousType',
+      );
+    });
+
     it('should expose heterogeneousType from agencyConfig.heterogeneousProvider.type', async () => {
       await clientDB.insert(Schema.agents).values({
         id: 'hetero-agent',

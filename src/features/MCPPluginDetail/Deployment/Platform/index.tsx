@@ -3,7 +3,14 @@ import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/ui/code-block';
+import {
+  CodeBlock,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockLanguage,
+  CodeBlockTitle,
+} from '@/components/ui/code-block';
 import { genServerConfig } from '@/features/MCP/utils';
 
 const styles = createStaticStyles(({ css }) => {
@@ -37,7 +44,16 @@ const Platform = memo<PlatformProps>(({ lite, identifier, connection }) => {
         style={{
           fontSize: 12,
         }}
-      />
+      >
+        <CodeBlockHeader>
+          <CodeBlockTitle className="flex-1">
+            {t('mcp.details.deployment.serverConfig')}
+          </CodeBlockTitle>
+          <CodeBlockLanguage />
+          <CodeBlockCopyButton />
+        </CodeBlockHeader>
+        <CodeBlockContent />
+      </CodeBlock>
     </div>
   );
 });

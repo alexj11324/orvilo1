@@ -351,6 +351,7 @@ describe('topicSelectors', () => {
         { id: 'task1', name: 'Task run', trigger: 'task' },
         { id: 'doc1', name: 'Doc chat', trigger: 'document' },
         { id: 'eval1', name: 'Eval', trigger: 'eval' },
+        { id: 'title-judgment', name: 'Internal title', trigger: 'acp_judgment' },
       ];
       const state = merge(initialStore, {
         activeAgentId: 'test',

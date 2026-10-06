@@ -4,7 +4,6 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 
 import { probePrimeArtifactInstallation } from '@orvilo/prime-harness/readiness';
-import { resolveOrviloCliAgentType } from '@orvilo/types';
 import { z } from 'zod';
 
 import { getHeterogeneousAgentConfig } from '../config';
@@ -101,16 +100,14 @@ const checkDirectory = async (cwd?: string): Promise<boolean> => {
  */
 export async function checkAutomationReadinessOnHost(
   input: AutomationReadinessRequest,
+  /** Execution artifact resolved by the trusted host, never by the remote request. */
+  primeArtifact?: string | null,
 ): Promise<AutomationReadinessResult> {
   const params = automationReadinessRequestSchema.parse(input);
-  const engineSupported =
-    !params.engine || params.engine === 'claude-sdk' || params.engine === 'codex-app-server';
   const executor =
-    params.agentType === 'orvilo' && engineSupported
-      ? resolveOrviloCliAgentType(params.engine)
-      : params.agentType === 'native' || params.engine === 'prime'
-        ? 'prime'
-        : params.agentType;
+    params.agentType === 'native' || params.agentType === 'orvilo' || params.engine === 'prime'
+      ? 'prime'
+      : params.agentType;
   const result: AutomationReadinessResult = {
     authenticated: 'unknown',
     checkedAt: new Date().toISOString(),
@@ -121,17 +118,14 @@ export async function checkAutomationReadinessOnHost(
     unattended: 'unknown',
   };
 
-  // Prime is an executor, not a fixed host. Its bundle may be installed on
-  // this device, but current device agent_run handlers only dispatch CLI
-  // families. Provider credentials are attested separately by the server.
+  // Device handlers support Prime descriptors. Installation remains separate
+  // evidence; provider credentials are attested by the server broker.
   if (executor === 'prime') {
-    result.installed = (await probePrimeArtifactInstallation()).installed;
-    result.unattended = false;
-    result.blockers = ['EXECUTOR_UNSUPPORTED'];
-    return result;
-  }
-  if (params.agentType === 'orvilo' && !engineSupported) {
-    result.blockers = ['EXECUTOR_UNSUPPORTED'];
+    result.installed =
+      primeArtifact === null
+        ? false
+        : (await probePrimeArtifactInstallation(primeArtifact)).installed;
+    result.unattended = true;
     return result;
   }
 

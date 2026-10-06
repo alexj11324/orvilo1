@@ -745,15 +745,12 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.id);
-        await assertAssigneeAgentBelongsToUser(
-          ctx.serverDB,
-          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-          input.authorAgentId,
-        );
+        const actor = await resolveActivityActor(ctx, input.authorAgentId);
+        const authorAgentId = actor.agentId ?? undefined;
         // Resolve @mentions before the insert so an invalid editorData never
         // leaves a comment behind that nobody was told about.
         const mentionedUserIds =
-          ctx.workspaceId && !input.authorAgentId
+          ctx.workspaceId && !authorAgentId
             ? await validateMentionedUserIds(
                 ctx.serverDB,
                 { actorUserId: ctx.userId, workspaceId: ctx.workspaceId },
@@ -761,8 +758,8 @@ export const taskRouter = router({
               )
             : [];
         const comment = await model.addComment({
-          authorAgentId: input.authorAgentId,
-          authorUserId: input.authorAgentId ? undefined : ctx.userId,
+          authorAgentId,
+          authorUserId: authorAgentId ? undefined : ctx.userId,
           briefId: input.briefId,
           content: input.content,
           editorData: input.editorData as never,
@@ -774,7 +771,7 @@ export const taskRouter = router({
         // assignee learn about new discussion; @mentioned members get the
         // stronger "mentioned" notification instead. Agent-authored progress
         // notes stay silent — they are not a conversation between members.
-        if (ctx.workspaceId && !input.authorAgentId) {
+        if (ctx.workspaceId && !authorAgentId) {
           const recipients = collectTaskCommentRecipients({
             actorUserId: ctx.userId,
             mentionedUserIds,
@@ -809,10 +806,13 @@ export const taskRouter = router({
     }),
 
   deleteComment: taskProcedureWrite
-    .input(z.object({ commentId: z.string() }))
+    .input(z.object({ actorAgentId: z.string().optional(), commentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        const deleted = await ctx.taskModel.deleteComment(input.commentId);
+        const actor = await resolveActivityActor(ctx, input.actorAgentId);
+        const deleted = await ctx.taskModel.deleteComment(input.commentId, {
+          source: actor.agentId ? 'agent' : 'user',
+        });
         if (!deleted) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
         }
@@ -834,6 +834,7 @@ export const taskRouter = router({
   updateComment: taskProcedureWrite
     .input(
       z.object({
+        actorAgentId: z.string().optional(),
         commentId: z.string(),
         content: z.string().min(1),
         editorData: z.unknown().optional(),
@@ -841,6 +842,7 @@ export const taskRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
+        const actor = await resolveActivityActor(ctx, input.actorAgentId);
         const workspaceId = ctx.workspaceId ?? undefined;
         const previous = await ctx.taskModel.findCommentById(input.commentId);
         if (!previous) {
@@ -860,6 +862,7 @@ export const taskRouter = router({
         }
         const comment = await ctx.taskModel.updateComment(input.commentId, input.content, {
           editorData: input.editorData === undefined ? null : input.editorData,
+          mutation: { source: actor.agentId ? 'agent' : 'user' },
         });
         if (!comment) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
@@ -2088,23 +2091,21 @@ export const taskRouter = router({
         let workflowPatch:
           | {
               workflowCategory: TaskWorkflowCategory;
-              workflowStateId: string;
+              workflowStateId?: string | null;
               workflowStateRefId?: string | null;
             }
           | undefined;
         if (data.workflowCategory !== undefined) {
-          if (!ctx.workspaceId || !resolved.workflowStateId) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'Business workflow moves require a linked Linear issue',
-            });
-          }
-
-          const linearSyncModel = new LinearSyncModel(ctx.serverDB, ctx.workspaceId);
-          const issueLink = await linearSyncModel.findIssueLinkByTaskId(resolved.id);
-          const binding = issueLink?.bindingId
-            ? await linearSyncModel.findBindingById(issueLink.bindingId)
+          const linearSyncModel = ctx.workspaceId
+            ? new LinearSyncModel(ctx.serverDB, ctx.workspaceId)
             : null;
+          const issueLink = linearSyncModel
+            ? await linearSyncModel.findIssueLinkByTaskId(resolved.id)
+            : null;
+          const binding =
+            issueLink?.bindingId && linearSyncModel
+              ? await linearSyncModel.findBindingById(issueLink.bindingId)
+              : null;
           if (issueLink && binding) {
             if (!linearBindingWriteEnabled(binding)) {
               throw new TRPCError({
@@ -2132,7 +2133,7 @@ export const taskRouter = router({
               workflowCategory: data.workflowCategory,
               workflowStateId: targetMappings[0].linearStateId,
             };
-          } else if (issueLink?.linearTeamId && resolved.teamId) {
+          } else if (issueLink?.linearTeamId && resolved.teamId && linearSyncModel) {
             // Team-scope links carry no project binding — category moves resolve
             // through the team's imported workflow states (lowest position wins).
             const teamLink = await linearSyncModel.findTeamLinkByLinearTeamId(
@@ -2160,11 +2161,16 @@ export const taskRouter = router({
               workflowStateId: targetState.remoteStateId!,
               workflowStateRefId: targetState.id,
             };
-          } else {
+          } else if (issueLink) {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
               message: 'Linear workflow writes are unavailable for this task',
             });
+          } else {
+            // No Linear linkage — a plain workflow-category move. Local tasks
+            // carry no remote state ids; the category alone is the source of
+            // truth (same shape as workAttention.moveBoard's non-team path).
+            workflowPatch = { workflowCategory: data.workflowCategory };
           }
         }
 

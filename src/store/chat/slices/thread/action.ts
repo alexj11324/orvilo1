@@ -228,6 +228,7 @@ export class ChatThreadActionImpl {
             promptVersion: TOPIC_TITLE_PROMPT_VERSION,
             scenario: TRACING_SCENARIOS.TopicTitle,
             schemaName: TOPIC_TITLE_JSON_SCHEMA.name,
+            topicId: portalThread.topicId,
           },
         },
         new AbortController(),

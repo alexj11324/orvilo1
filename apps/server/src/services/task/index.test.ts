@@ -358,6 +358,7 @@ describe('TaskService', () => {
         assigneeUserId: 'user-1',
         createdAt: new Date('2024-01-01T00:00:00Z'),
         description: 'A simple task',
+        dispatchPhase: 'succeeded',
         error: null,
         heartbeatInterval: null,
         heartbeatTimeout: null,
@@ -394,6 +395,7 @@ describe('TaskService', () => {
       expect(result?.name).toBe('Task One');
       expect(result?.description).toBe('A simple task');
       expect(result?.status).toBe('completed');
+      expect(result?.dispatchPhase).toBe('succeeded');
       expect(result?.priority).toBe('normal');
       expect(result?.agentId).toBe('agent-1');
       expect(result?.userId).toBe('user-1');

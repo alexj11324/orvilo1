@@ -29,7 +29,8 @@ const styles = createStaticStyles(({ css }) => ({
   interactive: css`
     cursor: pointer;
 
-    &:hover {
+    /* Keep themed anchor resets from overriding the row. */
+    &&:hover {
       background-color: ${cssVar.colorFillSecondary};
     }
   `,

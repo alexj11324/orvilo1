@@ -6000,29 +6000,12 @@ describe('ConversationLifecycle actions', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Characterization net for the POST-PERSIST topic-title auto-generation hook.
-  //
-  // After the user message is persisted, sendMessage fires the shared
-  // `sendRunLifecycle.afterUserMessagePersisted` hook (fire-and-forget), which
-  // calls `summaryTopicTitle(topicId, messages)` when the gate is met:
-  //   - the response created a new topic → always summarize it, OR
-  //   - existing topic whose `title` is empty/falsy → summarize it.
-  // All three runtimes funnel through this one hook: hetero passes the persisted
-  // topic via its event context and the hook reads the store; the gateway fires
-  // it when executeGatewayAgent resolves a topicId; the REST-persist tail
-  // (direct @Agent mention) passes `data.messages` straight through.
-  // These tests lock the PER-PATH WIRING (which path triggers the hook), not the
-  // title generation mechanism itself (that's unit-tested in topic/action.test.ts).
-  //
-  // NOTE on async: the hook is dispatched WITHOUT await inside sendMessage.
-  // Because the spy resolves synchronously and `act(async () => await ...)` flushes
-  // the microtask queue, asserting on the spy right after the awaited sendMessage
-  // is reliable here.
+  // Admission keeps foreground Gateway title work deferred. Client-persisted
+  // direct mentions retain their existing post-persist title behavior.
   // ───────────────────────────────────────────────────────────────────────────
   describe('post-persist title auto-gen characterization (lifecycle refactor regression net)', () => {
-    it('HETERO-bound new-topic path: summaryTopicTitle IS invoked with the new topicId + persisted messages', async () => {
-      // FIX-C: a hetero binding dispatches through unified admission — the
-      // title hook fires when executeGatewayAgent resolves the new topicId.
+    it('HETERO-bound new-topic admission defers title until foreground completion', async () => {
+      // Heterogeneous bindings dispatch through ordinary Gateway admission.
       setupHeteroRuntime();
       const { result } = renderHook(() => useChatStore());
       const agentId = TEST_IDS.SESSION_ID;
@@ -6066,16 +6049,8 @@ describe('ConversationLifecycle actions', () => {
         });
       });
 
-      // new-topic gate → summarize the freshly created topic. The hook reads
-      // the just-persisted conversation from the store under the real topicId.
-      await waitFor(() => expect(summaryTopicTitleSpy).toHaveBeenCalledTimes(1));
-      expect(summaryTopicTitleSpy).toHaveBeenCalledWith(
-        newTopicId,
-        expect.arrayContaining([
-          expect.objectContaining({ id: TEST_IDS.USER_MESSAGE_ID }),
-          expect.objectContaining({ id: TEST_IDS.ASSISTANT_MESSAGE_ID }),
-        ]),
-      );
+      expect(executeGatewayAgentMock).toHaveBeenCalled();
+      expect(summaryTopicTitleSpy).not.toHaveBeenCalled();
       expect(sendMessageInServerSpy).not.toHaveBeenCalled();
       expect(executeHeterogeneousAgentMock).not.toHaveBeenCalled();
     });
@@ -6124,9 +6099,8 @@ describe('ConversationLifecycle actions', () => {
       );
     });
 
-    it('HETERO-bound existing-topic with EMPTY title: summaryTopicTitle IS invoked', async () => {
-      // FIX-C: the binding dispatches through unified admission — the empty-
-      // title gate fires off the resolved topicId the same way.
+    it('HETERO-bound existing-topic with EMPTY title defers title at admission', async () => {
+      // Empty-title topics also wait for the successful terminal boundary.
       setupHeteroRuntime();
       const { result } = renderHook(() => useChatStore());
       const agentId = TEST_IDS.SESSION_ID;
@@ -6163,11 +6137,8 @@ describe('ConversationLifecycle actions', () => {
         });
       });
 
-      // empty-title gate → summarize the existing topic.
-      await waitFor(() => expect(summaryTopicTitleSpy).toHaveBeenCalledTimes(1));
-      // First arg is the existing topic id; messages come from the display selector
-      // for the topic's message key (assistant message id filtered out).
-      expect(summaryTopicTitleSpy.mock.calls[0][0]).toBe(topicId);
+      expect(executeGatewayAgentMock).toHaveBeenCalled();
+      expect(summaryTopicTitleSpy).not.toHaveBeenCalled();
       // sanity: the message key exists so the selector path is real
       expect(key).toBe(messageMapKey({ agentId, topicId }));
       expect(sendMessageInServerSpy).not.toHaveBeenCalled();
@@ -6216,11 +6187,8 @@ describe('ConversationLifecycle actions', () => {
       expect(executeHeterogeneousAgentMock).not.toHaveBeenCalled();
     });
 
-    it('GATEWAY path: summaryTopicTitle IS invoked via the shared hook once the gateway resolves a topicId', async () => {
-      // The unified lifecycle titles gateway-created topics too:
-      // executeGatewayAgent owns persistence and resolves with the real
-      // topicId, then sendMessage fires afterUserMessagePersisted which reads
-      // the persisted conversation from the store and summarizes it.
+    it('GATEWAY admission does not summarize a title while the foreground run is pending', async () => {
+      // Admission is not an authoritative successful terminal event.
       const { result } = renderHook(() => useChatStore());
       const newTopicId = TEST_IDS.NEW_TOPIC_ID;
 
@@ -6248,10 +6216,7 @@ describe('ConversationLifecycle actions', () => {
 
       // gateway routing was actually taken (precondition for the assertion below)
       expect(executeGatewayAgentSpy).toHaveBeenCalled();
-      // and the shared post-persist title hook fired for the resolved topic
-      await waitFor(() =>
-        expect(summaryTopicTitleSpy).toHaveBeenCalledWith(newTopicId, expect.any(Array)),
-      );
+      expect(summaryTopicTitleSpy).not.toHaveBeenCalled();
     });
   });
 });

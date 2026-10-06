@@ -17,6 +17,14 @@ vi.mock('@/store/chat/slices/agentRun/actions/lifecycle/agentSignalBridge', () =
   emitClientAgentSignalSourceEvent: agentSignalBridgeMock.emitClientAgentSignalSourceEvent,
 }));
 
+const gitSnapshotMock = vi.hoisted(() => ({
+  snapshotTopicWorkingDirGit: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock(
+  '@/store/chat/slices/agentRun/actions/lifecycle/snapshotWorkingDirGit',
+  () => gitSnapshotMock,
+);
+
 const desktopNotificationMock = vi.hoisted(() => ({
   notifyDesktopAgentCompleted: vi.fn().mockResolvedValue(undefined),
 }));
@@ -98,6 +106,7 @@ const completeEvent = (
 beforeEach(() => {
   agentSignalBridgeMock.emitClientAgentSignalSourceEvent.mockClear();
   desktopNotificationMock.notifyDesktopAgentCompleted.mockClear();
+  gitSnapshotMock.snapshotTopicWorkingDirGit.mockClear();
 });
 
 describe('buildRunLifecycle.completeRun — transport-driven disposition', () => {
@@ -565,7 +574,7 @@ describe('buildRunLifecycle.afterRunComplete — desktop notification body', () 
   });
 });
 
-describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runtimes)', () => {
+describe('buildRunLifecycle.afterUserMessagePersisted — topic title timing', () => {
   const persistedEvent = (
     runtimeType: AgentRuntimeType,
     runScope: 'sub_agent' | 'top_level',
@@ -585,8 +594,8 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
     const { get, store } = makeStore();
     const messages = [{ content: 'hello there', id: 'm1', role: 'user' } as any];
 
-    await lifecycle('gateway', get, 'top_level').afterUserMessagePersisted(
-      persistedEvent('gateway', 'top_level', { isCreateNewTopic: true, messages, topicId: 't1' }),
+    await lifecycle('client', get, 'top_level').afterUserMessagePersisted(
+      persistedEvent('client', 'top_level', { isCreateNewTopic: true, messages, topicId: 't1' }),
     );
 
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
@@ -623,60 +632,168 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
     }
   });
 
-  it('loads the topic first when it is absent from the store (gateway fire-and-forget refreshTopic race)', async () => {
-    const { get, store } = makeStore(); // topicMaps empty → getTopicById returns undefined
-    const messages = [{ content: 'hi', id: 'm1', role: 'user' } as any];
-
-    await lifecycle('gateway', get, 'top_level').afterUserMessagePersisted(
-      persistedEvent('gateway', 'top_level', { isCreateNewTopic: true, messages, topicId: 't1' }),
-    );
-
-    // The new gateway topic isn't in the store yet → refreshTopic is awaited
-    // before summarizing so summaryTopicTitle doesn't bail on a missing topic.
-    expect(store.refreshTopic).toHaveBeenCalled();
-    expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
-  });
-
-  it('new topic (gateway, no caller messages) reads the store under the EVENT topicId, not the stale send-time context', async () => {
-    // Regression (#16289 follow-up): the adapter is built with the send-time
-    // `operationContext`, whose topicId is still null for a brand-new topic.
-    // Gateway/hetero omit `event.messages` and persist the conversation under
-    // the REAL topicId (carried on `event.context`). Reading the store with the
-    // stale adapter context lands on an empty bucket, so the model summarizes
-    // nothing and emits a degenerate "空对话标题" title.
+  it('defers Gateway titles until success and awaits title before draining the next turn', async () => {
     const { get, store } = makeStore();
-    const storedMessages = [{ content: 'hello there', id: 'm1', role: 'user' } as any];
-    // Send-time context: new topic not created yet, so no topicId.
-    const sendContext = { agentId: 'a1', workspaceSlug: 'team' } as ConversationContext;
-    // Event context: the freshly-created topic id the messages were persisted under.
-    const eventContext = {
-      agentId: 'a1',
-      topicId: 't1',
-      workspaceSlug: 'team',
-    } as ConversationContext;
-    store.messagesMap = { [messageMapKey(eventContext)]: storedMessages };
-
-    const runLifecycle = buildRunLifecycle(get, {
-      context: sendContext,
+    const canonicalContext = { ...CONTEXT, threadId: 'created-thread' } as ConversationContext;
+    const messages = [
+      { content: 'hello there', id: 'u1', role: 'user' },
+      { content: 'finished reply', id: 'a1', role: 'assistant' },
+    ];
+    store.messagesMap = { [messageMapKey(canonicalContext)]: messages } as any;
+    store.topicDataMap = {
+      [topicMapKey({ agentId: 'a1' })]: {
+        items: [{ id: 't1', title: 'optimistic title' }],
+        total: 1,
+      },
+    } as any;
+    let finishTitle!: () => void;
+    store.drainQueuedMessages = vi.fn(() => [{ content: 'next turn', id: 'q1' } as any]);
+    // The send-time adapter is distinct from the canonical terminal adapter.
+    await buildRunLifecycle(get, {
+      context: { ...CONTEXT, topicId: null },
       parentMessageId: 'u1',
       parentMessageType: 'user',
       runId: OP,
       runScope: 'top_level',
       runtimeType: 'gateway',
+    }).afterUserMessagePersisted(
+      persistedEvent('gateway', 'top_level', { context: canonicalContext }),
+    );
+    expect(store.summaryTopicTitle).not.toHaveBeenCalled();
+    expect(gitSnapshotMock.snapshotTopicWorkingDirGit).toHaveBeenCalledWith(get, {
+      agentId: 'a1',
+      topicId: 't1',
     });
+    store.summaryTopicTitle.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishTitle = resolve;
+        }),
+    );
 
-    await runLifecycle.afterUserMessagePersisted({
-      context: eventContext,
+    const completion = buildRunLifecycle(get, {
+      context: canonicalContext,
       isCreateNewTopic: true,
-      operationId: OP,
+      parentMessageId: 'a1',
+      parentMessageType: 'assistant',
       runId: OP,
       runScope: 'top_level',
       runtimeType: 'gateway',
-      topicId: 't1',
-    });
-
-    expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', storedMessages);
+    }).completeRun(completeEvent('gateway', { context: canonicalContext, status: 'completed' }));
+    await vi.waitFor(() => expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages));
+    expect(store.drainQueuedMessages).not.toHaveBeenCalled();
+    expect(store.completeOperation).not.toHaveBeenCalled();
+    finishTitle();
+    await expect(completion).resolves.toEqual({ requeued: true });
+    expect(store.drainQueuedMessages).toHaveBeenCalledWith(messageMapKey(canonicalContext));
+    expect(store.completeOperation).toHaveBeenCalledWith(OP);
   });
+
+  it('refreshes a missing new Gateway topic after success before summarizing its canonical messages', async () => {
+    const { get, store } = makeStore();
+    const messages = [{ content: 'hi', id: 'u1', role: 'user' }];
+    store.messagesMap = { [messageMapKey(CONTEXT)]: messages } as any;
+    await buildRunLifecycle(get, {
+      context: CONTEXT,
+      isCreateNewTopic: true,
+      parentMessageId: 'u1',
+      parentMessageType: 'user',
+      runId: OP,
+      runScope: 'top_level',
+      runtimeType: 'gateway',
+    }).completeRun(completeEvent('gateway', { status: 'completed' }));
+    expect(store.refreshTopic).toHaveBeenCalled();
+    expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
+    expect(store.refreshTopic.mock.invocationCallOrder[0]).toBeLessThan(
+      store.summaryTopicTitle.mock.invocationCallOrder[0],
+    );
+  });
+
+  it.each(['failed', 'cancelled', undefined] as const)(
+    'does not title Gateway terminal status %s',
+    async (status) => {
+      const { get, store } = makeStore();
+      await buildRunLifecycle(get, {
+        context: CONTEXT,
+        isCreateNewTopic: true,
+        parentMessageId: 'u1',
+        parentMessageType: 'user',
+        runId: OP,
+        runScope: 'top_level',
+        runtimeType: 'gateway',
+      }).completeRun(completeEvent('gateway', { status }));
+      expect(store.summaryTopicTitle).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not title a successful Gateway sub-agent', async () => {
+    const { get, store } = makeStore();
+    await buildRunLifecycle(get, {
+      context: CONTEXT,
+      isCreateNewTopic: true,
+      parentMessageId: 'u1',
+      parentMessageType: 'user',
+      runId: OP,
+      runScope: 'sub_agent',
+      runtimeType: 'gateway',
+    }).completeRun(completeEvent('gateway', { status: 'completed' }));
+    expect(store.summaryTopicTitle).not.toHaveBeenCalled();
+  });
+
+  it('completes and drains queued messages when the deferred title fails', async () => {
+    const { get, store } = makeStore();
+    store.summaryTopicTitle.mockRejectedValue(new Error('title unavailable'));
+    store.drainQueuedMessages = vi.fn(() => [{ content: 'next turn', id: 'q1' } as any]);
+    await expect(
+      buildRunLifecycle(get, {
+        context: CONTEXT,
+        isCreateNewTopic: true,
+        parentMessageId: 'u1',
+        parentMessageType: 'user',
+        runId: OP,
+        runScope: 'top_level',
+        runtimeType: 'gateway',
+      }).completeRun(completeEvent('gateway', { status: 'completed' })),
+    ).resolves.toEqual({ requeued: true });
+    expect(store.summaryTopicTitle).toHaveBeenCalledTimes(1);
+    expect(store.completeOperation).toHaveBeenCalledWith(OP);
+  });
+
+  it('awaits Gateway audio-first recovery once and does not launch a second completion title', async () => {
+    const { get, store } = makeStore();
+    const messages = [
+      {
+        audioList: [{ id: 'voice-1', url: 'https://example.com/voice.webm' }],
+        content: '',
+        id: 'u1',
+        role: 'user',
+      },
+      { content: 'The recording asks how to list files.', id: 'a1', role: 'assistant' },
+    ];
+    store.messagesMap = { [messageMapKey(CONTEXT)]: messages } as any;
+    store.topicDataMap = {
+      [topicMapKey({ agentId: 'a1' })]: { items: [{ id: 't1', title: 'defaultTitle' }], total: 1 },
+    } as any;
+    const run = lifecycle('gateway', get);
+    await run.completeRun(completeEvent('gateway', { status: 'completed' }));
+    await run.afterRunComplete(completeEvent('gateway', { status: 'completed' }));
+    expect(store.summaryTopicTitle).toHaveBeenCalledTimes(1);
+    expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
+  });
+
+  it.each(['', 'existing title'])(
+    'existing Gateway topic title %j retains its title policy',
+    async (title) => {
+      const { get, store } = makeStore();
+      store.topicDataMap = {
+        [topicMapKey({ agentId: 'a1' })]: { items: [{ id: 't1', title }], total: 1 },
+      } as any;
+      await lifecycle('gateway', get).completeRun(
+        completeEvent('gateway', { status: 'completed' }),
+      );
+      expect(store.summaryTopicTitle).toHaveBeenCalledTimes(title ? 0 : 1);
+    },
+  );
 
   it('does NOT title for a sub_agent run', async () => {
     const { get, store } = makeStore();

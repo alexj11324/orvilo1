@@ -313,6 +313,8 @@ export class SqlMcpEventBindingRepository {
       eventName: _name,
       eventArguments: _arguments,
       payloadSchema: _payloadSchema,
+      sourceType: _sourceType,
+      github: _github,
       ...changes
     } = patch;
     if (changes.remoteSubscriptionId === null) delete changes.remoteSubscriptionId;

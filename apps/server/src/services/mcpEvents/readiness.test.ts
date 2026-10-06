@@ -15,6 +15,12 @@ const mocks = vi.hoisted(() => ({
   usable: vi.fn(),
   surface: vi.fn(),
   flags: vi.fn(),
+  githubGrant: vi.fn(),
+}));
+vi.mock('@/server/services/connector/githubMcp', () => ({
+  isGitHubMcpConnector: (source: { metadata?: { githubMcp?: unknown } }) =>
+    !!source.metadata?.githubMcp,
+  getGitHubMcpGrantIdentity: mocks.githubGrant,
 }));
 vi.mock('@/server/featureFlags', () => ({
   getServerFeatureFlagsFromRuntimeConfig: mocks.flags,
@@ -108,9 +114,32 @@ beforeEach(() => {
   mocks.probe.mockResolvedValue({ success: true, content: JSON.stringify(verified()) });
   mocks.health.mockResolvedValue({ status: 'ready', observedAt: Date.now() });
   mocks.surface.mockReturnValue({ outcomes: [] });
+  mocks.githubGrant.mockResolvedValue({ githubUserId: '123', grantRevision: 'grant' });
 });
 
 describe('MCP automation readiness', () => {
+  it('requires a verified native GitHub ping and the same live grant, independently of the MCP release flag', async () => {
+    const native = input();
+    native.binding.sourceType = 'github';
+    native.binding.github = { githubUserId: '123', grantRevision: 'grant' };
+    native.binding.state = 'pending';
+    mocks.source.mockResolvedValue({
+      isEnabled: true,
+      status: 'connected',
+      metadata: { githubMcp: {} },
+    });
+    mocks.flags.mockResolvedValue({});
+    expect(await checkMcpAutomationReadiness(native)).toMatchObject({
+      canEnable: false,
+      reasons: ['SOURCE_VERIFICATION_REQUIRED'],
+    });
+    native.binding.state = 'active';
+    expect((await checkMcpAutomationReadiness(native)).canEnable).toBe(true);
+    mocks.githubGrant.mockResolvedValue({ githubUserId: '123', grantRevision: 'reauthorized' });
+    expect((await checkMcpAutomationReadiness(native)).reasons).toContain('CONNECTOR_REVOKED');
+    mocks.githubGrant.mockResolvedValue(null);
+    expect((await checkMcpAutomationReadiness(native)).canEnable).toBe(false);
+  });
   it('keeps production enabling blocked until real Device acceptance is released', async () => {
     mocks.flags.mockResolvedValue({});
     expect(await checkMcpAutomationReadiness(input())).toMatchObject({

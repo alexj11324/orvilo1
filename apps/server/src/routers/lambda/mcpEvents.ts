@@ -20,9 +20,14 @@ import { appEnv } from '@/envs/app';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
+import { isGitHubMcpConnector } from '@/server/services/connector/githubMcp';
 import { createConnectorEventsAdapter } from '@/server/services/mcpEvents/connector';
 import { createMcpEventsSql } from '@/server/services/mcpEvents/database';
 import { validMcpEventFilters } from '@/server/services/mcpEvents/filter';
+import {
+  createGithubEventBinding,
+  githubEventDefinitions,
+} from '@/server/services/mcpEvents/githubSubscription';
 import { SqlMcpEventBindingRepository } from '@/server/services/mcpEvents/inbox';
 import { checkMcpAutomationReadiness } from '@/server/services/mcpEvents/readiness';
 import { MCP_EVENT_RENEWAL_LEAD_MS } from '@/server/services/mcpEvents/renewalSchedule';
@@ -38,6 +43,7 @@ const eventProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =>
   return opts.next({
     ctx: {
       eventBindings: new SqlMcpEventBindingRepository(createMcpEventsSql(ctx.serverDB)),
+      eventGateKeeper: gateKeeper,
       eventTriggers: new SqlMcpEventTriggerRepository(createMcpEventsSql(ctx.serverDB)),
       connectorModel: new ConnectorModel(
         ctx.serverDB,
@@ -103,6 +109,7 @@ export const mcpEventsRouter = router({
         });
       }
       const adapter = createConnectorEventsAdapter(input.connectorId, ctx);
+      const nativeGithub = isGitHubMcpConnector(connector);
       const service = new McpEventSubscriptionService({
         repository: ctx.eventBindings,
         minimumRefreshWindowMs: MCP_EVENT_RENEWAL_LEAD_MS,
@@ -111,20 +118,33 @@ export const mcpEventsRouter = router({
           new URL(`/api/webhooks/mcp-events/${token}`, appEnv.APP_URL).toString(),
       });
       try {
-        const discovery = await adapter.discover();
-        const event = discovery.events.find(
-          (definition) =>
-            definition.name === input.eventName && definition.delivery.includes('webhook'),
-        );
-        if (!discovery.supported || !event)
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Event unavailable' });
-        const binding = await service.create({
-          ...scope,
-          connectorId: input.connectorId,
-          event,
-          arguments: input.arguments,
-          schemaId: `${input.connectorId}:${event.name}`,
-        });
+        const binding = await (async () => {
+          if (nativeGithub)
+            return createGithubEventBinding({
+              arguments: input.arguments,
+              callbackUrl: (token) =>
+                new URL(`/api/webhooks/github-events/${token}`, appEnv.APP_URL).toString(),
+              connector,
+              db: ctx.serverDB,
+              eventName: input.eventName,
+              repository: ctx.eventBindings,
+              tenantId: scope.tenantId,
+            });
+          const discovery = await adapter.discover();
+          const event = discovery.events.find(
+            (definition) =>
+              definition.name === input.eventName && definition.delivery.includes('webhook'),
+          );
+          if (!discovery.supported || !event)
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Event unavailable' });
+          return service.create({
+            ...scope,
+            connectorId: input.connectorId,
+            event,
+            arguments: input.arguments,
+            schemaId: `${input.connectorId}:${event.name}`,
+          });
+        })();
         try {
           const trigger = await ctx.eventTriggers.save(
             {
@@ -157,10 +177,9 @@ export const mcpEventsRouter = router({
             throw new TRPCError({ code: 'CONFLICT', message: 'Task changed while saving trigger' });
           return { data: trigger, success: true as const };
         } catch (error) {
-          await service.stop(
-            { tenantId: scope.tenantId, connectorId: input.connectorId },
-            binding.id,
-          );
+          const bindingScope = { tenantId: scope.tenantId, connectorId: input.connectorId };
+          if (nativeGithub) await ctx.eventBindings.revoke(bindingScope, binding.id);
+          else await service.stop(bindingScope, binding.id);
           throw error;
         }
       } catch (error) {
@@ -193,7 +212,15 @@ export const mcpEventsRouter = router({
           trigger,
           binding,
         });
-        return { ...trigger, bindingState: binding?.state ?? 'unavailable', readiness };
+        return {
+          ...trigger,
+          bindingState: binding?.state ?? 'unavailable',
+          sourceType: binding?.sourceType ?? 'mcp',
+          eventName: binding?.eventName,
+          repository: binding?.github?.repositoryFullName,
+          callbackUrl: binding?.sourceType === 'github' ? binding.callbackUrl : undefined,
+          readiness,
+        };
       }),
     );
     return {
@@ -367,8 +394,17 @@ export const mcpEventsRouter = router({
       const connector = await ctx.connectorModel.findPublicById(input.connectorId);
       if (!connector || connector.agentId) throw new TRPCError({ code: 'NOT_FOUND' });
       try {
+        if (isGitHubMcpConnector(connector))
+          return {
+            data: {
+              events: githubEventDefinitions,
+              sourceType: 'github' as const,
+              supported: true,
+            },
+            success: true as const,
+          };
         const discovery = await createConnectorEventsAdapter(input.connectorId, ctx).discover();
-        return { data: discovery, success: true as const };
+        return { data: { ...discovery, sourceType: 'mcp' as const }, success: true as const };
       } catch {
         // Remote errors may contain provider tokens or headers. Never return them to the client.
         throw new TRPCError({ code: 'BAD_GATEWAY', message: 'Event discovery is unavailable' });
@@ -390,6 +426,12 @@ export const mcpEventsRouter = router({
       { tenantId: scope.tenantId, connectorId: trigger.sourceId },
       trigger.subscriptionId,
     );
+    const binding = await ctx.eventBindings.get(
+      { tenantId: scope.tenantId, connectorId: trigger.sourceId },
+      trigger.subscriptionId,
+    );
+    if (binding?.sourceType === 'github')
+      return { data: { stopped: true, cleanupPending: false }, success: true as const };
     const connector = await ctx.connectorModel.findPublicById(trigger.sourceId);
     if (!connector)
       return { data: { stopped: true, cleanupPending: true }, success: true as const };
@@ -428,12 +470,53 @@ export const mcpEventsRouter = router({
             connector.isEnabled &&
             connector.status === ConnectorStatus.connected &&
             !connector.agentId &&
-            connector.mcpConnectionType !== ConnectorMcpConnectionType.stdio &&
-            connector.mcpServerUrl &&
-            !isLocalOrPrivateUrl(connector.mcpServerUrl),
+            (isGitHubMcpConnector(connector) ||
+              (connector.mcpConnectionType !== ConnectorMcpConnectionType.stdio &&
+                connector.mcpServerUrl &&
+                !isLocalOrPrivateUrl(connector.mcpServerUrl))),
         )
         .map(({ id, name }) => ({ id, name })),
       success: true as const,
     };
   }),
+
+  githubWebhookConfiguration: eventWriteProcedure
+    .input(taskInput)
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
+      const task = await ctx.eventTaskModel.resolve(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
+      assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
+      const [trigger] = await ctx.eventTriggers.list(
+        { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId },
+        task.id,
+      );
+      if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
+      const binding = await ctx.eventBindings.get(
+        { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
+        trigger.subscriptionId,
+      );
+      if (binding?.sourceType !== 'github' || !binding.github || binding.state === 'revoked')
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      const connector = await ctx.connectorModel.findPublicById(trigger.sourceId);
+      if (!connector || !isGitHubMcpConnector(connector))
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      assertWorkspaceRowManageable(ctx, connector.userId, 'connector');
+      const secret = await ctx.eventGateKeeper.decrypt(binding.github.encryptedSecret);
+      if (!secret.wasAuthentic || !secret.plaintext)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Webhook credential unavailable',
+        });
+      return {
+        data: {
+          callbackUrl: binding.callbackUrl,
+          contentType: 'application/json',
+          event: binding.eventName.slice('github.'.length),
+          repository: binding.github.repositoryFullName,
+          secret: secret.plaintext,
+        },
+        success: true as const,
+      };
+    }),
 });

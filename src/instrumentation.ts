@@ -38,6 +38,12 @@ export async function register() {
       .catch(() => {
         console.error('[Instrumentation] Failed to start heartbeat recovery loop');
       });
+
+    void import('@/server/services/mcpEvents/localLoop')
+      .then(({ startLocalEventInboxLoop }) => startLocalEventInboxLoop())
+      .catch(() => {
+        console.error('[Instrumentation] Failed to start event-inbox consumption');
+      });
   }
 
   if (process.env.NODE_ENV !== 'production' && !process.env.ENABLE_TELEMETRY_IN_DEV) {

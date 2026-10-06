@@ -20,6 +20,10 @@ import { getServerFeatureFlagsFromRuntimeConfig } from '@/server/featureFlags';
 import { resolveExternalToolSurface } from '@/server/services/aiAgent/pipeline/resolveExternalToolSurface';
 import { resolveRunToolSurface } from '@/server/services/aiAgent/pipeline/runToolSurface';
 import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
+import {
+  getGitHubMcpGrantIdentity,
+  isGitHubMcpConnector,
+} from '@/server/services/connector/githubMcp';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 import { resolveOrviloProviderBinding } from '@/server/services/providerBinding/execution';
@@ -31,6 +35,7 @@ export type AutomationReadinessCode =
   | 'ACCEPTANCE_REQUIRED'
   | 'CONFIGURATION_INVALID'
   | 'CONNECTOR_REVOKED'
+  | 'SOURCE_VERIFICATION_REQUIRED'
   | 'AUTH_REQUIRED'
   | 'DEVICE_UNAVAILABLE'
   | 'DEVICE_SELECTION_REQUIRED'
@@ -59,9 +64,11 @@ export async function checkMcpAutomationReadiness(input: {
 }): Promise<AutomationReadiness> {
   const { db, task, trigger, binding } = input;
   const reasons: AutomationReadinessCode[] = [];
-  const flags = await getServerFeatureFlagsFromRuntimeConfig(trigger.userId);
-  if (evaluateFeatureFlag(flags.mcp_event_automations, trigger.userId) !== true)
-    reasons.push('ACCEPTANCE_REQUIRED');
+  if (binding?.sourceType !== 'github') {
+    const flags = await getServerFeatureFlagsFromRuntimeConfig(trigger.userId);
+    if (evaluateFeatureFlag(flags.mcp_event_automations, trigger.userId) !== true)
+      reasons.push('ACCEPTANCE_REQUIRED');
+  }
   const scope = { userId: trigger.userId, workspaceId: trigger.workspaceId };
   const config = isRecord(task.config) ? task.config : {};
   const workspace = isRecord(config.workspace) ? config.workspace : {};
@@ -74,13 +81,17 @@ export async function checkMcpAutomationReadiness(input: {
     reasons.push('CONFIGURATION_INVALID');
   if (
     !binding ||
-    binding.state !== 'active' ||
+    binding.state === 'revoked' ||
     binding.tenantId !== trigger.tenantId ||
     binding.connectorId !== trigger.sourceId ||
     binding.id !== trigger.subscriptionId ||
     (binding.expiresAt !== null && binding.expiresAt <= Date.now())
   )
     reasons.push('CONNECTOR_REVOKED');
+  else if (binding.state !== 'active')
+    reasons.push(
+      binding.sourceType === 'github' ? 'SOURCE_VERIFICATION_REQUIRED' : 'CONNECTOR_REVOKED',
+    );
   if ((await getMcpEventWorkerHealth()).status !== 'ready') reasons.push('WORKER_UNHEALTHY');
 
   const source = await new ConnectorModel(db, trigger.userId, trigger.workspaceId).findPublicById(
@@ -88,6 +99,19 @@ export async function checkMcpAutomationReadiness(input: {
   );
   if (!source || !source.isEnabled || source.status !== ConnectorStatus.connected || source.agentId)
     reasons.push('CONNECTOR_REVOKED');
+  if (binding?.sourceType === 'github') {
+    const grant =
+      source && isGitHubMcpConnector(source)
+        ? await getGitHubMcpGrantIdentity({ connector: source, db })
+        : null;
+    if (
+      !binding.github ||
+      !grant ||
+      grant.githubUserId !== binding.github.githubUserId ||
+      grant.grantRevision !== binding.github.grantRevision
+    )
+      reasons.push('CONNECTOR_REVOKED');
+  }
 
   const deviceModel = new DeviceModel(db, trigger.userId, trigger.workspaceId);
   const [workspaceRows, personalRows, workspaceOnline, personalOnline] = await Promise.all([

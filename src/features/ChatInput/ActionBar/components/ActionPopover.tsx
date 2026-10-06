@@ -152,6 +152,7 @@ const ActionPopover = memo<ActionPopoverProps>(
           closeDelay={mouseLeaveDelay === undefined ? undefined : mouseLeaveDelay * 1000}
           delay={mouseEnterDelay === undefined ? undefined : mouseEnterDelay * 1000}
           disabled={disabled}
+          nativeButton={false}
           openOnHover={openOnHover && !disabled}
           render={<span className="inline-flex">{children}</span>}
         />

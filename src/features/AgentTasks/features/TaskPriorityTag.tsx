@@ -190,7 +190,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
 
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuTrigger nativeButton={false} render={triggerNode as ReactElement} />
         <DropdownMenuContent className="min-w-52">
           <input
             autoFocus

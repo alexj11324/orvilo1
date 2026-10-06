@@ -278,6 +278,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
+          nativeButton={false}
           render={
             <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
               {children}

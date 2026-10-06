@@ -322,6 +322,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
+          nativeButton={false}
           render={
             <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
               {children}

@@ -1,0 +1,37 @@
+{
+  "groupReplacement": {
+    "groupId": "cg_jmyaT4jetEkZ",
+    "supervisorId": "agt_arj5NPbOlIJl",
+    "virtual": true,
+    "sourceAgentId": "agt_AB0VcTFshbq8",
+    "runtimeType": "opencode",
+    "model": "opencode/mimo-v2.6-flash-free",
+    "staleModelGone": true,
+    "staleArgsGone": true,
+    "stalePermissionGone": true,
+    "staleCwdGone": true,
+    "currentProviderMatchesSource": true
+  },
+  "observedAt": "2026-10-06T10:36:44.533Z",
+  "project": [
+    {
+      "id": "prj_H9te6VLuokxP",
+      "name": "Review Fix - private default 1dd",
+      "workspace_id": "ayy9sEdMxzC2h6Sv",
+      "visibility": "private",
+      "coordinator_agent_id": "agt_VhAEP7Eu09nt",
+      "coordinator_visibility": "private",
+      "virtual": true,
+      "coordinator_runtime_type": "opencode",
+      "execution_target": "local",
+      "bound_device_id": "b26d477ac30d6080a4a038b66cb28a80",
+      "source_agent_id": "agt_AB0VcTFshbq8",
+      "host_workspace_id": null,
+      "host_user_id": "user_agent_testing_001"
+    }
+  ],
+  "readOnly": true,
+  "sourceAgentFingerprint": "62e97e28c16c9fff1d26914811867f8d91bb289cc88124fc45fd0e22883180b4",
+  "sourceAgentUnchanged": true,
+  "sourceHead": "1dd452becde9cc2dfbdfd24c360db7be80eccce4"
+}

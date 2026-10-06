@@ -1,0 +1,92 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "name": "fixtureTasksOnly",
+      "tasks": [
+        {
+          "id": "task_pGdBQXqWcCPP",
+          "identifier": "RF-8",
+          "status": "backlog",
+          "workflow_category": "backlog",
+          "project_id": null,
+          "domain_revision": 12,
+          "requirement_revision": 5
+        },
+        {
+          "id": "task_pErreLcYVRYW",
+          "identifier": "RF-9",
+          "status": "backlog",
+          "workflow_category": "backlog",
+          "project_id": null,
+          "domain_revision": 3,
+          "requirement_revision": 1
+        },
+        {
+          "id": "task_BduDnQwuThsL",
+          "identifier": "RF-10",
+          "status": "backlog",
+          "workflow_category": "backlog",
+          "project_id": null,
+          "domain_revision": 3,
+          "requirement_revision": 1
+        }
+      ]
+    },
+    {
+      "name": "commentMutationFacts",
+      "events": [
+        {
+          "source": "agent",
+          "type": "task.comment.changed",
+          "action": "created",
+          "requirement_revision": "2",
+          "domain_revision": "3"
+        },
+        {
+          "source": "agent",
+          "type": "task.comment.changed",
+          "action": "updated",
+          "requirement_revision": "2",
+          "domain_revision": "4"
+        },
+        {
+          "source": "agent",
+          "type": "task.comment.changed",
+          "action": "updated",
+          "requirement_revision": "2",
+          "domain_revision": "6"
+        },
+        {
+          "source": "agent",
+          "type": "task.comment.changed",
+          "action": "deleted",
+          "requirement_revision": "2",
+          "domain_revision": "7"
+        }
+      ]
+    },
+    {
+      "name": "commentDeleted",
+      "remaining": []
+    },
+    {
+      "name": "fixtureNoExecution",
+      "operations": [],
+      "topics": []
+    },
+    {
+      "name": "originalSourceAgentUnchanged",
+      "unchanged": true
+    }
+  ],
+  "completedAt": "2026-10-06T10:43:11.984Z",
+  "fixtures": {},
+  "providerExecution": false,
+  "scope": {
+    "userId": "user_agent_testing_001",
+    "workspaceId": "ayy9sEdMxzC2h6Sv"
+  },
+  "sourceHead": "1dd452becde9cc2dfbdfd24c360db7be80eccce4",
+  "startedAt": "2026-10-06T10:43:11.953Z"
+}

@@ -1,0 +1,23 @@
+Task detail recovery
+✓ 4 files · lint clean (1 auto-fixed) · tests 29 passed
+
+CLI task completion
+Test Files  1 passed (1)
+Tests  10 passed (10)
+
+CLI operation context
+Test Files  1 passed (1)
+Tests  64 passed (64)
+
+CLI lint
+✓ 2 files · lint clean
+
+RED regressions before fixes
+Task detail: paused and failed recovery branches had no Run button.
+CLI task completion: admitted-operation completion, refusal, and incomplete-context tests failed.
+CLI operation context: --operation-id was not propagated.
+
+Independent reviews
+Scoped Task recovery: independent read-only reviewer found no introduced defect.
+CLI completion authority: independent light review approved with no findings.
+Source: owner review records and scoped manifests; these are not remote CI results.

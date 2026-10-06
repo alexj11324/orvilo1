@@ -1,0 +1,62 @@
+{
+  "artifacts": [
+    {
+      "path": "apps/cli/dist/index.js",
+      "bytes": 13024135,
+      "sha256": "627424d37665f520dc3645d6bb66df5d14a47319eb135d1cd2bed5450f86b285"
+    },
+    {
+      "path": "apps/cli/dist/runner.mjs",
+      "bytes": 17228500,
+      "sha256": "6e52ec3464a3e61896f76c8e9b52375c549356001b4f752e5abe1dd944e9e22e"
+    },
+    {
+      "path": "apps/cli/dist/runner.manifest.json",
+      "bytes": 275,
+      "sha256": "1fc134d3bb7309a3c33c793bcc424548cd37f7615da0b97d1170bd599ced71c6"
+    }
+  ],
+  "buildStages": ["ensureWorkspaceLinks", "tsdown --config tsdown.config.ts", "stagePrimeRunner"],
+  "checks": [
+    {
+      "check": "syntax",
+      "exitCode": 0,
+      "outputBytes": 0
+    },
+    {
+      "check": "version",
+      "exitCode": 0,
+      "outputBytes": 7
+    },
+    {
+      "check": "prime-exec-help",
+      "exitCode": 0,
+      "outputBytes": 756
+    }
+  ],
+  "primeArtifactSourceSha": "2064c23ee0e69cd9ad2067e458f77d6f3f3d0cf9",
+  "primeReusedUnchanged": true,
+  "primeVendorPin": {
+    "version": "0.9.8",
+    "commit": "7d442aafa985f9342134fac16c2ef41f03fb45c1"
+  },
+  "sourceFiles": [
+    {
+      "path": "apps/cli/src/commands/hetero.ts",
+      "sha256": "7b764e9dddcc9a56b4387dfbd60690e316631f0d7153de5d0984c6a6bcdc4828"
+    },
+    {
+      "path": "apps/cli/src/commands/task/lifecycle.ts",
+      "sha256": "cf0a6d0996ccaf7c6126107323223ad466a41a3f58cbcbf5fbdfe27fed0348d7"
+    },
+    {
+      "path": "apps/cli/src/commands/hetero.test.ts",
+      "sha256": "45c311049cfc10385a64d84645ac3210e4f1a0c1ac885e4e4a6af44231564baa"
+    },
+    {
+      "path": "apps/cli/src/commands/task.test.ts",
+      "sha256": "831cc180f5002d3eee49fc4302b77ea5d9a95d37d86af3bf8446ccd70f3fcb22"
+    }
+  ],
+  "sourceSha": "be127a7ad6aac1c4fa5d9fb1b90b12b51823f28f"
+}

@@ -7,10 +7,13 @@ import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
 import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
+import { agents } from '../../schemas/agent';
+import { messagePlugins, messages } from '../../schemas/message';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
 import { projectMembers } from '../../schemas/projectMember';
-import { tasks as tasksTable } from '../../schemas/task';
+import { tasks as tasksTable, taskTopics } from '../../schemas/task';
 import { teamMembers, teams } from '../../schemas/team';
+import { topics } from '../../schemas/topic';
 import { users } from '../../schemas/user';
 import {
   notificationBulkSnapshots,
@@ -83,6 +86,98 @@ afterEach(async () => {
 });
 
 describe('NotificationModel (integration)', () => {
+  it('projects the original pending native question onto its Issue once and resolves its terminal state', async () => {
+    const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+    const task = await new TaskModel(serverDB, userId).create({ instruction: 'Choose scope' });
+    await serverDB.insert(agents).values({ id: 'native-agent', userId, title: 'Codex' });
+    await serverDB.insert(topics).values({ agentId: 'native-agent', id: 'native-topic', userId });
+    await serverDB.insert(taskTopics).values({
+      operationId: 'native-op',
+      seq: 1,
+      taskId: task.id,
+      topicId: 'native-topic',
+      userId,
+    });
+    await serverDB.insert(messages).values({
+      agentId: 'native-agent',
+      id: 'native-question',
+      role: 'tool',
+      topicId: 'native-topic',
+      userId,
+    });
+    await serverDB.insert(messagePlugins).values({
+      apiName: 'askUserQuestion',
+      arguments: JSON.stringify({
+        questions: [
+          { question: 'Which scope?', options: [{ label: 'Narrow' }, { label: 'Full' }] },
+        ],
+      }),
+      id: 'native-question',
+      identifier: 'codex',
+      intervention: { operationId: 'native-op', status: 'pending' },
+      toolCallId: 'native-call',
+      userId,
+    });
+
+    await model.syncNativeInterventions(['native-question']);
+    await model.syncNativeInterventions(['native-question']);
+    const [row] = await model.listFeed();
+    expect(row).toMatchObject({
+      actionRequestId: 'native-question',
+      content: 'Which scope?',
+      resourceId: task.id,
+      resourceType: 'task',
+      type: 'native_intervention',
+      metadata: {
+        nativeIntervention: {
+          agentId: 'native-agent',
+          messageId: 'native-question',
+          operationId: 'native-op',
+          toolCallId: 'native-call',
+          topicId: 'native-topic',
+        },
+      },
+    });
+    expect(await model.listFeed()).toHaveLength(1);
+    await expect(
+      new NotificationModel(serverDB, otherUserId).syncNativeInterventions(['native-question']),
+    ).resolves.toEqual([]);
+    await expect(
+      new NotificationModel(serverDB, userId, {
+        workspaceId: 'different-workspace',
+      }).syncNativeInterventions(['native-question']),
+    ).resolves.toEqual([]);
+    await serverDB
+      .update(messagePlugins)
+      .set({ intervention: { operationId: 'native-op', status: 'approved' } })
+      .where(eq(messagePlugins.id, 'native-question'));
+    await model.syncNativeInterventions(['native-question']);
+    expect((await model.listFeed())[0].resolvedAt).not.toBeNull();
+  });
+
+  it('deletes only the observed notification and prevents its pending source from recreating it', async () => {
+    const model = new NotificationModel(serverDB, userId);
+    const pending = [
+      {
+        actionKind: 'acp_intervention' as const,
+        content: 'Which scope?',
+        requestId: 'original-message',
+        title: 'Agent question',
+      },
+    ];
+    await model.ensureActionCards(pending);
+    const [row] = await model.listFeed();
+    await expect(
+      new NotificationModel(serverDB, otherUserId).dismissObserved(row.id, 1),
+    ).resolves.toBe(false);
+    await expect(model.dismissObserved(row.id, 2)).resolves.toBe(false);
+    expect(await model.listFeed()).toHaveLength(1);
+    await expect(model.dismissObserved(row.id, 1)).resolves.toBe(true);
+    await model.ensureActionCards(pending);
+    await expect(model.listFeed()).resolves.toEqual([]);
+    await expect(model.findFeedRowById(row.id)).resolves.toBeNull();
+  });
+
   describe('create', () => {
     it('creates a user-scoped notification and round-trips its context', async () => {
       const model = new NotificationModel(serverDB, userId);

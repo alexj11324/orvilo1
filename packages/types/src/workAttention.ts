@@ -5,7 +5,11 @@
  * and action-source receipts. These are types only — not live API responses.
  */
 
-import type { NotificationActor, NotificationAgent } from './notification';
+import type {
+  NativeInterventionReference,
+  NotificationActor,
+  NotificationAgent,
+} from './notification';
 import { TASK_EXECUTION_STATES } from './task/stateModel';
 
 export const WORK_ATTENTION_CONTRACT_VERSION = 'nav-attention-v4.1';
@@ -167,12 +171,13 @@ export interface NotificationFeedCard {
    */
   actor?: NotificationActor;
   agent?: NotificationAgent;
-  availableActions: Array<'archive' | 'decide' | 'open' | 'snooze'>;
+  availableActions: Array<'archive' | 'decide' | 'dismiss' | 'open' | 'snooze'>;
   content: string;
   /** Verbs the current visitor may send through `workAttention.decide`. */
   decisionVerbs?: DecisionVerb[];
   kind: NotificationFeedKind;
   lastActivityAt: string;
+  nativeIntervention?: NativeInterventionReference;
   notificationId: string;
   /** True when this visitor initiated the request and can only withdraw. */
   outgoing?: boolean;

@@ -2,7 +2,9 @@ import { getBuiltinIntervention } from '@orvilo/builtin-tools/interventions';
 import { safeParseJSON } from '@orvilo/utils';
 import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { requestAgentRuntime } from '@/features/CreateAgent';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useUserStore } from '@/store/user';
@@ -37,6 +39,7 @@ interface InterventionProps {
 
 const Intervention = memo<InterventionProps>(
   ({ requestArgs, id, identifier, apiName, toolCallId, assistantGroupId, actionsPortalTarget }) => {
+    const { t } = useTranslation('notification');
     const approvalMode = useUserStore(toolInterventionSelectors.approvalMode);
     const { canUseResource } = useConversationResourceAccess();
     const [isEditing, setIsEditing] = useState(false);
@@ -141,7 +144,12 @@ const Intervention = memo<InterventionProps>(
       ) => {
         if (!canUseResource || interventionResolving) return;
         if (isHeteroInteractionIdentifier(identifier)) {
-          await submitHeteroIntervention(id, action.type, action.payload);
+          try {
+            await submitHeteroIntervention(id, action.type, action.payload);
+          } catch (error) {
+            toast.error(t('inbox.question.replyFailed'));
+            throw error;
+          }
           return;
         }
         switch (action.type) {
@@ -227,6 +235,7 @@ const Intervention = memo<InterventionProps>(
         parsedArgs,
         skipToolInteraction,
         submitHeteroIntervention,
+        t,
         submitToolInteraction,
         topicId,
         usesDurableServerClaim,

@@ -32,6 +32,7 @@ import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { insertOutboxEvent, newEventId } from './eventOutbox';
 import { matchesDispatchAssignee, TaskDispatchModel } from './taskDispatch';
 import { isAutomationArmed, isParked, predicateForLegacyStatus } from './taskExecutionSql';
 
@@ -449,14 +450,43 @@ export class TaskTopicModel {
   }
 
   async updateStatus(taskId: string, topicId: string, status: string): Promise<void> {
-    await this.db
-      .update(taskTopics)
-      .set({ runState: runStateForStatus(status), status })
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
+    await this.db.transaction(async (tx) => {
+      const changed = await tx
+        .update(taskTopics)
+        .set({ runState: runStateForStatus(status), status })
+        .where(
+          and(
+            eq(taskTopics.taskId, taskId),
+            eq(taskTopics.topicId, topicId),
+            sql`${taskTopics.status} <> ${status}`,
+            this.ownership(),
+          ),
+        )
+        .returning({ id: taskTopics.id });
+      if (changed.length > 0)
+        await this.recordCompletionNotification(tx as OrviloDatabase, taskId, topicId, status);
+    });
 
     if (TERMINAL_TOPIC_STATUSES.has(status)) {
       await this.markTopicEnded(topicId, status);
     }
+  }
+
+  private async recordCompletionNotification(
+    db: OrviloDatabase,
+    taskId: string,
+    topicId: string,
+    status: string,
+  ) {
+    if (!['completed', 'failed', 'timeout'].includes(status)) return;
+    await insertOutboxEvent(db, {
+      aggregateId: taskId,
+      aggregateType: 'task',
+      eventId: newEventId(),
+      eventType: status === 'completed' ? 'task.run.completed' : 'task.run.failed',
+      payload: { status, topicId },
+      workspaceId: this.workspaceId,
+    });
   }
 
   /**
@@ -748,6 +778,7 @@ export class TaskTopicModel {
         if (taskClaim.length === 0) {
           throw new Error('Task generation changed while claiming its completion callback');
         }
+        await this.recordCompletionNotification(tx as OrviloDatabase, taskId, topicId, status);
         return completionReservationId;
       }
 

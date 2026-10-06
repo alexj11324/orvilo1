@@ -2668,6 +2668,94 @@ describe('ConversationControl actions', () => {
   });
 
   describe('submitHeteroIntervention characterization (lifecycle refactor regression net)', () => {
+    it('keeps the original native question pending until its bridge consumes the reply and restores it on a stale bridge', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const context = { agentId: 'question-agent', topicId: 'question-topic', threadId: null };
+      const chatKey = messageMapKey(context);
+      let operationId!: string;
+      act(() => {
+        operationId = result.current.startOperation({
+          context,
+          type: 'execHeterogeneousAgent',
+        }).operationId;
+      });
+      const toolMessage = createMockMessage({
+        id: 'original-native-message',
+        role: 'tool',
+        tool_call_id: 'original-native-call',
+        pluginIntervention: { operationId, status: 'pending' },
+      } as any);
+      act(() =>
+        useChatStore.setState({
+          activeAgentId: 'unrelated-agent',
+          activeTopicId: 'unrelated-topic',
+          dbMessagesMap: { [chatKey]: [toolMessage] },
+          messagesMap: { [chatKey]: [toolMessage] },
+          messageOperationMap: {},
+        }),
+      );
+      const pluginSpy = vi
+        .spyOn(result.current, 'optimisticUpdateMessagePlugin')
+        .mockResolvedValue(undefined);
+      vi.spyOn(messageService, 'updateMessagePluginState').mockResolvedValue({ success: true });
+      vi.spyOn(result.current, 'updateTopicStatus').mockResolvedValue(undefined as any);
+      let consumed!: () => void;
+      const nativeSubmit = vi
+        .spyOn(heterogeneousAgentService, 'submitIntervention')
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              consumed = resolve;
+            }),
+        );
+      let reply!: Promise<void>;
+      act(() => {
+        reply = result.current.submitHeteroIntervention(
+          toolMessage.id,
+          'submit',
+          { Question: 'Full' },
+          context,
+        );
+      });
+      await vi.waitFor(() =>
+        expect(nativeSubmit).toHaveBeenCalledWith({
+          operationId,
+          result: { Question: 'Full' },
+          toolCallId: 'original-native-call',
+        }),
+      );
+      expect(
+        pluginSpy.mock.calls.some(([, value]) => value.intervention?.status === 'approved'),
+      ).toBe(false);
+      await act(async () => {
+        consumed();
+        await reply;
+      });
+      expect(pluginSpy.mock.calls.at(-1)?.[1].intervention).toMatchObject({
+        operationId,
+        resolving: false,
+        status: 'approved',
+      });
+      const operationCount = Object.keys(result.current.operations).length;
+      pluginSpy.mockClear();
+      nativeSubmit.mockRejectedValueOnce(new Error('Question no longer pending'));
+      await expect(
+        captureActError(() =>
+          result.current.submitHeteroIntervention(
+            toolMessage.id,
+            'submit',
+            { Question: 'Full' },
+            context,
+          ),
+        ),
+      ).resolves.toMatchObject({ message: 'Question no longer pending' });
+      expect(pluginSpy.mock.calls.at(-1)?.[1].intervention).toMatchObject({
+        operationId,
+        status: 'pending',
+      });
+      expect(Object.keys(result.current.operations)).toHaveLength(operationCount);
+    });
+
     it.each([
       {
         actionType: 'submit' as const,
@@ -2920,11 +3008,13 @@ describe('ConversationControl actions', () => {
         .spyOn(heterogeneousAgentService, 'submitIntervention')
         .mockResolvedValue(undefined as any);
 
-      await act(async () => {
-        await result.current.submitHeteroIntervention('tool-msg-source-unavailable', 'submit', {
-          Question: 'Answer',
-        });
-      });
+      await expect(
+        captureActError(() =>
+          result.current.submitHeteroIntervention('tool-msg-source-unavailable', 'submit', {
+            Question: 'Answer',
+          }),
+        ),
+      ).resolves.toMatchObject({ message: expect.stringContaining('no longer pending') });
 
       expect(sourceMutation).toHaveBeenCalledOnce();
       expect(pluginSpy).not.toHaveBeenCalled();
@@ -2995,7 +3085,9 @@ describe('ConversationControl actions', () => {
       );
       expect(pluginSpy).toHaveBeenCalledWith(
         'tool-msg-local-fallback',
-        { intervention: { status: 'approved' } },
+        expect.objectContaining({
+          intervention: expect.objectContaining({ resolving: false, status: 'approved' }),
+        }),
         { operationId: clientOperationId },
       );
       expect(localSubmit).toHaveBeenCalledWith({
@@ -3005,7 +3097,7 @@ describe('ConversationControl actions', () => {
       });
     });
 
-    it('uses the in-memory runtime identity only for the handled-false remote legacy fallback', async () => {
+    it('replies to the original server operation after a handled-false source lookup on an attached gateway run', async () => {
       const { result } = renderHook(() => useChatStore());
       const agentId = 'remote-agent';
       const topicId = 'remote-topic';
@@ -3034,6 +3126,7 @@ describe('ConversationControl actions', () => {
         });
         result.current.startOperation({
           context: { agentId, threadId: null, topicId },
+          metadata: { serverOperationId: 'server-operation-remote-fallback' },
           operationId: clientOperationId,
           type: 'execServerAgentRuntime',
         });
@@ -3062,7 +3155,7 @@ describe('ConversationControl actions', () => {
         expect.objectContaining({ operationId: 'server-operation-remote-fallback' }),
       );
       expect(legacyRemoteSubmit).toHaveBeenCalledWith({
-        operationId: clientOperationId,
+        operationId: 'server-operation-remote-fallback',
         resolutionRequestId: expect.any(String),
         result: { Question: 'Answer' },
         toolCallId: 'call-remote-fallback',
@@ -3190,7 +3283,9 @@ describe('ConversationControl actions', () => {
       // Optimistic approval runs against the resolved op (operationId carried).
       expect(result.current.optimisticUpdateMessagePlugin).toHaveBeenCalledWith(
         'tool-msg-1',
-        { intervention: { status: 'approved' } },
+        expect.objectContaining({
+          intervention: expect.objectContaining({ resolving: false, status: 'approved' }),
+        }),
         { operationId: assistantOpId },
       );
 
@@ -3271,7 +3366,9 @@ describe('ConversationControl actions', () => {
       expect(result.current.messageOperationMap[assistantMessage.id]).toBe(reasoningOpId);
       expect(result.current.optimisticUpdateMessagePlugin).toHaveBeenCalledWith(
         'tool-msg-1',
-        { intervention: { status: 'approved' } },
+        expect.objectContaining({
+          intervention: expect.objectContaining({ resolving: false, status: 'approved' }),
+        }),
         { operationId: executionOpId },
       );
       expect(submitInterventionSpy).toHaveBeenCalledWith({

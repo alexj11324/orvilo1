@@ -86,6 +86,7 @@ import {
   resolveInboxReadReceiptRetention,
   retainSelectedInboxCard,
 } from './inboxListSelection';
+import { InboxNativeIntervention } from './InboxNativeIntervention';
 import {
   INBOX_TABS,
   INBOX_TYPE_FILTERS,
@@ -581,23 +582,19 @@ const WorkInboxPage = memo(() => {
     [selectedId, writeInboxParams],
   );
 
-  const archiveCard = useCallback(
+  const dismissCard = useCallback(
     async (card: NotificationFeedCard) => {
       try {
-        await notificationService.archive(card.notificationId, card.activityVersion);
-        // The row leaves this view — update the loaded tail at once; the
-        // archived filter keeps it because it still belongs there.
-        if (displayOption !== 'archived') {
-          pager.removeCard(card.notificationId);
-          releaseSelection(card);
-        }
-        toast.success(t('inbox.toast.archived'));
+        await notificationService.dismiss(card.notificationId, card.activityVersion);
+        pager.removeCard(card.notificationId);
+        releaseSelection(card);
+        toast.success(t('inbox.toast.deleted'));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [displayOption, organizeFailed, pager, refresh, releaseSelection, t],
+    [organizeFailed, pager, refresh, releaseSelection, t],
   );
 
   const unarchiveCard = useCallback(
@@ -620,8 +617,8 @@ const WorkInboxPage = memo(() => {
 
   const toggleArchiveCard = useCallback(
     (card: NotificationFeedCard) =>
-      displayOption === 'archived' ? unarchiveCard(card) : archiveCard(card),
-    [archiveCard, displayOption, unarchiveCard],
+      displayOption === 'archived' ? unarchiveCard(card) : dismissCard(card),
+    [dismissCard, displayOption, unarchiveCard],
   );
 
   const snoozeCard = useCallback(
@@ -1217,6 +1214,14 @@ const WorkInboxPage = memo(() => {
           </div>
           <span className="text-sm text-muted-foreground">{selected.content}</span>
           <div className={styles.divider} />
+          {selected.nativeIntervention ? (
+            <InboxNativeIntervention
+              agent={selected.agent}
+              key={selected.nativeIntervention.messageId}
+              reference={selected.nativeIntervention}
+              taskId={selectedIssueTaskId}
+            />
+          ) : null}
           {decisionVerbs.length > 0 ? (
             <div className="flex flex-col" style={{ gap: 8 }}>
               {decisionVerbs.includes('submit_input') ? (

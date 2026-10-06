@@ -2255,21 +2255,19 @@ export default class HeterogeneousAgentCtr {
    * `pending()` Promise, the local MCP handler returns to CC, and CC's
    * `tool_result` flows back through the normal stream pipeline.
    *
-   * Idempotent — late submissions for already-resolved tool calls are no-ops.
-   * No-op when called for an unknown opId; the bridge may have been cleaned
-   * up already (op finished / cancelled).
+   * A missing operation or settled tool call is stale, never a successful reply.
    */
   async submitIntervention(params: SubmitInterventionParams): Promise<void> {
     const slot = this.opIdToIntervention.get(params.operationId);
     if (!slot) {
-      logger.warn('submitIntervention: no active intervention for operationId', params.operationId);
-      return;
+      throw new Error('This Agent question is no longer pending on this device.');
     }
-    slot.bridge.resolve(params.toolCallId, {
+    const consumed = slot.bridge.resolve(params.toolCallId, {
       cancelReason: params.cancelled ? (params.cancelReason ?? 'user_cancelled') : undefined,
       cancelled: params.cancelled,
       result: params.result,
     });
+    if (!consumed) throw new Error('This Agent question is no longer pending on this device.');
   }
 
   /**

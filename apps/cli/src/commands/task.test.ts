@@ -3,16 +3,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { registerTaskCommand } from './task';
 
-const { mockCreateTask, mockGetTrpcClient, mockGetWorkspace, mockLogInfo, mockResolveWorkspaceId } =
-  vi.hoisted(() => ({
-    mockCreateTask: vi.fn(),
-    mockGetTrpcClient: vi.fn(),
-    mockGetWorkspace: vi.fn(),
-    mockLogInfo: vi.fn(),
-    mockResolveWorkspaceId: vi.fn(),
-  }));
+const {
+  mockCreateTask,
+  mockCreateLambdaClient,
+  mockGetTrpcClient,
+  mockGetWorkspace,
+  mockLogInfo,
+  mockResolveWorkspaceId,
+} = vi.hoisted(() => ({
+  mockCreateTask: vi.fn(),
+  mockCreateLambdaClient: vi.fn(),
+  mockGetTrpcClient: vi.fn(),
+  mockGetWorkspace: vi.fn(),
+  mockLogInfo: vi.fn(),
+  mockResolveWorkspaceId: vi.fn(),
+}));
 
-vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
+vi.mock('../api/client', () => ({
+  createLambdaClient: mockCreateLambdaClient,
+  getTrpcClient: mockGetTrpcClient,
+}));
 vi.mock('../api/workspace', () => ({ resolveWorkspaceId: mockResolveWorkspaceId }));
 vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://app.example.com' }));
 vi.mock('../utils/logger', () => ({
@@ -60,7 +70,7 @@ describe('task create', () => {
           id: 'task_1',
           identifier: 'T-1',
           name: 'Personal task',
-          url: 'https://app.example.com/task/T-1',
+          url: 'https://app.example.com/task/T-1/personal-task',
         },
         null,
         2,
@@ -162,5 +172,74 @@ describe('task comment', () => {
       content: 'Ready for review',
       id: 'T-1',
     });
+  });
+});
+
+describe('task completion', () => {
+  const updateStatus = vi.fn();
+  const execBuiltinTool = vi.fn();
+
+  beforeEach(() => {
+    vi.stubEnv('ORVILO_OPERATION_ID', '');
+    vi.stubEnv('ORVILO_OPERATION_JWT', '');
+    updateStatus.mockReset().mockResolvedValue({ data: { identifier: 'T-1' } });
+    execBuiltinTool
+      .mockReset()
+      .mockResolvedValue({ success: true, content: 'Completion requested' });
+    mockGetTrpcClient
+      .mockReset()
+      .mockResolvedValue({ task: { updateStatus: { mutate: updateStatus } } });
+    mockCreateLambdaClient
+      .mockReset()
+      .mockReturnValue({ aiAgent: { heteroExecBuiltinTool: { mutate: execBuiltinTool } } });
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  const complete = async () => {
+    const program = new Command();
+    program.exitOverride();
+    registerTaskCommand(program);
+    await program.parseAsync(['node', 'test', 'task', 'complete', 'T-1']);
+  };
+
+  it('requests completion through the admitted operation instead of directly ending its task', async () => {
+    vi.stubEnv('ORVILO_OPERATION_ID', 'op-admitted');
+    vi.stubEnv('ORVILO_OPERATION_JWT', 'operation-token');
+    vi.stubEnv('ORVILO_JWT', 'user-token');
+    vi.stubEnv('ORVILO_WORKSPACE_ID', 'ws-1');
+    await complete();
+    expect(mockCreateLambdaClient).toHaveBeenCalledWith(
+      { serverUrl: 'https://app.example.com', token: 'operation-token', tokenType: 'jwt' },
+      'ws-1',
+    );
+    expect(execBuiltinTool).toHaveBeenCalledWith({
+      apiName: 'updateTaskStatus',
+      args: { identifier: 'T-1', status: 'completed' },
+      identifier: 'orvilo-task',
+      operationId: 'op-admitted',
+      toolCallId: expect.any(String),
+    });
+    expect(updateStatus).not.toHaveBeenCalled();
+    expect(mockGetTrpcClient).not.toHaveBeenCalled();
+  });
+
+  it('does not fall back to direct completion when the operation capability refuses', async () => {
+    vi.stubEnv('ORVILO_OPERATION_ID', 'op-admitted');
+    vi.stubEnv('ORVILO_OPERATION_JWT', 'operation-token');
+    execBuiltinTool.mockResolvedValue({ success: false, content: 'Operation refused' });
+    await expect(complete()).rejects.toThrow('Operation refused');
+    expect(updateStatus).not.toHaveBeenCalled();
+  });
+
+  it('rejects an incomplete operation context instead of treating it as a human command', async () => {
+    vi.stubEnv('ORVILO_OPERATION_ID', 'op-admitted');
+    await expect(complete()).rejects.toThrow('Operation-scoped task completion requires');
+    expect(updateStatus).not.toHaveBeenCalled();
+  });
+
+  it('preserves direct completion for an unscoped human CLI command', async () => {
+    await complete();
+    expect(updateStatus).toHaveBeenCalledWith({ id: 'T-1', status: 'completed' });
+    expect(execBuiltinTool).not.toHaveBeenCalled();
   });
 });

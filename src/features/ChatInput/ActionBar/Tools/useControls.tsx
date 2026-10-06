@@ -1654,7 +1654,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         style={{ width: '100%' }}
         value={searchKeyword}
         onChange={(event) => setSearchKeyword(event.target.value)}
-        onKeyDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key !== 'Escape') event.stopPropagation();
+        }}
       />
     </div>
   );

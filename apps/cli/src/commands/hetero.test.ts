@@ -435,15 +435,18 @@ describe('hetero exec command', () => {
       'hetero',
       'exec',
       '--type',
-      'claude-code',
+      'codex',
       '--prompt',
       'hi',
+      '--topic',
+      'topic-1',
       '--operation-id',
       'op-server-allocated',
     ]);
 
     const call = mockSpawnAgent.mock.calls[0][0];
     expect(call.operationId).toBe('op-server-allocated');
+    expect(call.env).toMatchObject({ ORVILO_OPERATION_ID: 'op-server-allocated' });
   });
 
   it('passes no ACP mcpServers without server-ingest mode', async () => {
@@ -1115,6 +1118,7 @@ describe('hetero exec command', () => {
     await runCmd(['hetero', 'exec', '--type', 'codex', '--prompt', 'hi', '--render', 'none']);
 
     expect(mockSpawnAgent.mock.calls[0][0].uploadImage).toBeUndefined();
+    expect(mockSpawnAgent.mock.calls[0][0].env?.ORVILO_OPERATION_ID).toBeUndefined();
   });
 
   it('finishes server-ingest runs with error when spawnAgent rejects before streaming', async () => {

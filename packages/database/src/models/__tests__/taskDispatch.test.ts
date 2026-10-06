@@ -24,11 +24,13 @@ import {
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { TaskModel } from '../task';
 import {
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
   TaskDispatchNotFoundError,
 } from '../taskDispatch';
+import { TaskTopicModel } from '../taskTopic';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'task-dispatch-user';
@@ -709,6 +711,88 @@ describe('TaskDispatchModel', () => {
     });
   });
 
+  it('holds a new event while the previous dispatch is completing its result', async () => {
+    const task = await createTask('EVT-COMPLETING', 104);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = await model.request({
+      idempotencyKey: 'manual:EVT-COMPLETING:first',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await model.settle({
+      dispatchId: first.dispatch.id,
+      expected: ['requested'],
+      fence: first.dispatch.fence,
+      generation: first.dispatch.generation,
+      phase: 'succeeded',
+    });
+    const topicId = 'completing-event-topic';
+    const operationId = 'completing-event-operation';
+    const reservationId = `completion:${topicId}:owner`;
+    await db.insert(topics).values({ id: topicId, userId });
+    await db.insert(taskTopics).values({
+      dispatchId: first.dispatch.id,
+      executionGeneration: first.dispatch.generation,
+      operationId,
+      seq: 1,
+      status: 'completed',
+      taskId: task.id,
+      topicId,
+      userId,
+      workspaceId,
+    });
+    await db
+      .update(tasks)
+      .set({
+        currentTopicId: topicId,
+        runReservationExpiresAt: new Date(Date.now() + 60_000),
+        runReservationId: reservationId,
+      })
+      .where(eq(tasks.id, task.id));
+    const eventEvidence = await seedEventEvidence(task.id);
+    const input = {
+      eventEvidence,
+      idempotencyKey: eventEvidence.idempotencyKey,
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'event' as const,
+    };
+    expect(await model.request(input)).toMatchObject({
+      active: { id: first.dispatch.id },
+      state: 'busy',
+    });
+    expect(await db.select().from(taskDispatches)).toHaveLength(1);
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const current = await taskModel.findById(task.id);
+    expect(current).toMatchObject({
+      executionGeneration: first.dispatch.generation,
+      runReservationId: reservationId,
+    });
+    expect(
+      await taskModel.updateStatusForExecutionContract(task.id, 'scheduled', {
+        assigneeAgentId: current!.assigneeAgentId,
+        executionGeneration: first.dispatch.generation,
+        policyRevision: current!.policyRevision,
+        requirementRevision: current!.requirementRevision,
+        runReservationId: reservationId,
+      }),
+    ).not.toBeNull();
+    expect(
+      await new TaskTopicModel(db, userId, workspaceId).markResultReady(
+        task.id,
+        topicId,
+        operationId,
+        'succeeded',
+      ),
+    ).toBe(true);
+    await taskModel.releaseRunReservation(task.id, reservationId);
+    const resumed = await model.request(input);
+    if (resumed.state === 'busy') throw new Error('completed lease still held the next event');
+    expect(resumed.dispatch.generation).toBe(first.dispatch.generation + 1);
+  });
+
   it('identifies a late completion from an old execution generation', async () => {
     const task = await createTask('RUN-4', 4);
     const model = new TaskDispatchModel(db, workspaceId);
@@ -1021,6 +1105,46 @@ describe('TaskDispatchModel', () => {
       }),
     ).resolves.toMatchObject({ phase: 'dispatched' });
   });
+
+  it.each(['schedule', 'heartbeat'] as const)(
+    'cancels a claimed %s dispatch when the automation pauses before dispatch',
+    async (trigger) => {
+      const task = await createTask('RUN-PAUSE', 74);
+      await db.update(tasks).set({ automationMode: trigger }).where(eq(tasks.id, task.id));
+      const model = new TaskDispatchModel(db, workspaceId);
+      const requested = await model.request({
+        idempotencyKey: `${trigger}:RUN-PAUSE:request-1`,
+        requestedBy: userId,
+        taskId: task.id,
+        trigger,
+      });
+      if (requested.state === 'busy') throw new Error('unexpected busy');
+      const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+      if (!claim) throw new Error('dispatch was not claimed');
+      await db
+        .update(tasks)
+        .set({
+          context: { execution: { parked: { at: new Date().toISOString(), reason: 'paused' } } },
+        })
+        .where(eq(tasks.id, task.id));
+
+      await expect(
+        model.transition({
+          dispatchId: requested.dispatch.id,
+          expected: ['claimed'],
+          fence: claim.fence,
+          owner: 'worker-a',
+          phase: 'dispatched',
+        }),
+      ).resolves.toBeNull();
+      await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+        fence: claim.fence + 1,
+        leaseOwner: null,
+        phase: 'canceled',
+        waitingReason: 'automation_inactive',
+      });
+    },
+  );
 
   it('fences cancellation and makes completion replay idempotent', async () => {
     const task = await createTask('RUN-8', 8);

@@ -8,7 +8,17 @@ const mocks = vi.hoisted(() => ({
   enqueue: vi.fn(),
   pump: vi.fn(),
   health: vi.fn(),
+  queue: true,
+  wake: vi.fn(),
 }));
+vi.mock('@/envs/app', () => ({
+  appEnv: {
+    get enableQueueAgentRuntime() {
+      return mocks.queue;
+    },
+  },
+}));
+vi.mock('./localLoop', () => ({ wakeLocalEventInboxLoop: mocks.wake }));
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn(async () => mocks.db) }));
 vi.mock('@/libs/hatchet', () => ({ enqueueHatchetTask: mocks.enqueue }));
 vi.mock('./workerHealth', () => ({ recordMcpEventWorkerHealth: mocks.health }));
@@ -22,6 +32,7 @@ vi.mock('./worker', () => ({
 describe('MCP durable consumption task', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.queue = true;
     mocks.health.mockResolvedValue(undefined);
   });
 
@@ -42,6 +53,14 @@ describe('MCP durable consumption task', () => {
     expect(mocks.health.mock.invocationCallOrder[0]).toBeGreaterThan(
       mocks.pump.mock.invocationCallOrder[0],
     );
+  });
+
+  it('wakes the shared inbox locally without requiring Hatchet or waiting for device startup', async () => {
+    mocks.queue = false;
+    expect(await scheduleMcpEventInboxSweep()).toBe('local-event-inbox');
+    expect(mocks.wake).toHaveBeenCalledOnce();
+    expect(mocks.enqueue).not.toHaveBeenCalled();
+    expect(mocks.pump).not.toHaveBeenCalled();
   });
 
   it('does not mark a sweep with lost or timed-out leases healthy', async () => {

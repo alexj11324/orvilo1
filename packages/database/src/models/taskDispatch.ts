@@ -902,11 +902,24 @@ export class TaskDispatchModel {
         );
       }
 
+      // A terminal dispatch still owns its generation while completion writes
+      // the result. Only a verified internal takeover may replace that lease.
+      const completing =
+        input.origin !== 'internal' &&
+        task.runReservationId?.startsWith('completion:') &&
+        task.runReservationExpiresAt &&
+        task.runReservationExpiresAt.getTime() > Date.now();
       const [active] = await tx
         .select()
         .from(taskDispatches)
         .where(
-          and(eq(taskDispatches.taskId, task.id), inArray(taskDispatches.phase, ACTIVE_PHASES)),
+          and(
+            eq(taskDispatches.taskId, task.id),
+            or(
+              inArray(taskDispatches.phase, ACTIVE_PHASES),
+              completing ? eq(taskDispatches.generation, task.executionGeneration) : undefined,
+            ),
+          ),
         )
         .limit(1)
         .for('update');
@@ -1385,7 +1398,7 @@ export class TaskDispatchModel {
         const automationWaitingReason =
           task &&
           ['event', 'heartbeat', 'schedule'].includes(requestedTrigger) &&
-          (executionParkedReason(task) ||
+          (executionParkedReason(task.context) ||
             task.automationMode !== requestedTrigger ||
             task.workflowCategory === 'done' ||
             task.workflowCategory === 'canceled')
@@ -1631,6 +1644,8 @@ export class TaskDispatchModel {
     const result = await tx.execute<{
       binding_expires: string | null;
       binding_state: string | null;
+      binding_source_type: string | null;
+      source_grant_valid: boolean | null;
       connector_agent: string | null;
       connector_enabled: boolean | null;
       connector_status: string | null;
@@ -1666,6 +1681,14 @@ export class TaskDispatchModel {
              i.lease_until AS lease_until,
              b.state AS binding_state,
              b.binding->>'expiresAt' AS binding_expires,
+             b.binding->>'sourceType' AS binding_source_type,
+             (connector.metadata->'githubMcp'->>'type' = 'github_user_connection'
+               AND github.github_user_id = b.binding->'github'->>'githubUserId'
+               AND github.grant_revision::text = b.binding->'github'->>'grantRevision'
+               AND (github.access_token_expires_at IS NULL OR github.access_token_expires_at > now()
+                 OR (github.refresh_token_ciphertext IS NOT NULL
+                   AND (github.refresh_token_expires_at IS NULL OR github.refresh_token_expires_at > now()))))
+               AS source_grant_valid,
              connector.is_enabled AS connector_enabled,
              connector.status AS connector_status,
              connector.agent_id AS connector_agent,
@@ -1684,6 +1707,8 @@ export class TaskDispatchModel {
         ON b.id = t.subscription_id AND b.tenant_id = t.tenant_id
       LEFT JOIN user_connectors connector
         ON connector.id::text = t.source_id AND connector.workspace_id = t.workspace_id
+      LEFT JOIN github_user_connections github
+        ON github.user_id = connector.metadata->'githubMcp'->>'grantOwnerUserId'
       LEFT JOIN workspace_members member
         ON member.workspace_id = t.workspace_id AND member.user_id = t.user_id
       LEFT JOIN tasks task
@@ -1738,6 +1763,9 @@ export class TaskDispatchModel {
       row.connector_agent !== null
     ) {
       return denied('revoked', 'Event source connector unavailable');
+    }
+    if (row.binding_source_type === 'github' && row.source_grant_valid !== true) {
+      return denied('revoked', 'GitHub event source authorization changed');
     }
     if (
       row.member_deleted !== null ||

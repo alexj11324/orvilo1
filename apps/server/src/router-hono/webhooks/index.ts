@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { casdoorWebhook } from './handlers/casdoor';
+import { githubEventsWebhook } from './handlers/githubEvents';
 import { linearWebhook } from './handlers/linear';
 import { logtoWebhook } from './handlers/logto';
 import { mcpEventsWebhook } from './handlers/mcpEvents';
@@ -16,6 +17,7 @@ const app = new Hono().basePath('/api/webhooks');
 app.post('/casdoor', casdoorWebhook);
 app.post('/logto', logtoWebhook);
 app.post('/linear/:workspaceId', linearWebhook);
+app.post('/github-events/:callbackToken', githubEventsWebhook);
 app.post('/mcp-events/:callbackToken', mcpEventsWebhook);
 
 // Memory pipeline webhooks — share the configured static-header guard.

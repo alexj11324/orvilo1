@@ -21,6 +21,7 @@ import { mcpEventsWebhook } from './mcpEvents';
 
 const connection = vi.hoisted(() => ({ db: undefined as McpEventsDatabase | undefined }));
 const enqueue = vi.hoisted(() => vi.fn().mockResolvedValue('queued'));
+vi.mock('@/envs/app', () => ({ appEnv: { enableQueueAgentRuntime: true } }));
 vi.mock('@/libs/hatchet', () => ({ enqueueHatchetTask: enqueue }));
 vi.mock('@/database/server', () => ({
   getServerDB: async () => {

@@ -1,0 +1,341 @@
+{
+  "cases": [
+    {
+      "name": "PR first and duplicate delivery",
+      "capturedAt": "2026-10-06T10:43:46.173Z",
+      "githubDeliveryGuid": "9edb3f70-c171-11f1-9632-f83c07d86817",
+      "occurrenceStatus": "accepted",
+      "reason": null,
+      "canonicalOccurrenceCount": 1,
+      "dispatchCount": 1,
+      "topicCount": 1,
+      "generation": 5,
+      "dispatchPhase": "succeeded",
+      "runState": "succeeded",
+      "resultCount": 1,
+      "resultStatus": "delivered",
+      "executionStatus": "succeeded",
+      "stopReason": "done",
+      "provider": "opencode",
+      "recordedModel": "opencode-go/glm-5.3-flash",
+      "singleFencedJsonFacts": {
+        "marker": "ORVILO_NATIVE_GITHUB_EVENT",
+        "occurrenceId": "af1c5148-2380-403d-930f-4348a1c55aaf",
+        "eventId": "9edb3f70-c171-11f1-9632-f83c07d86817",
+        "eventType": "github.pull_request",
+        "repositoryId": "1370358179",
+        "resourceId": "4756101151",
+        "action": "synchronize",
+        "conclusion": null
+      },
+      "jsonOnlyInstructionSatisfied": false,
+      "githubDeliveries": [
+        {
+          "id": "3846751670862094336",
+          "guid": "9edb3f70-c171-11f1-9632-f83c07d86817",
+          "event": "pull_request",
+          "statusCode": 202,
+          "redelivery": true
+        },
+        {
+          "id": "3846750774845521920",
+          "guid": "9edb3f70-c171-11f1-9632-f83c07d86817",
+          "event": "pull_request",
+          "statusCode": 202,
+          "redelivery": false
+        }
+      ]
+    },
+    {
+      "name": "PR next generation settles",
+      "capturedAt": "2026-10-06T10:49:18.739Z",
+      "githubDeliveryGuid": "d55fe4a0-c172-11f1-997e-cf6277233236",
+      "occurrenceStatus": "accepted",
+      "reason": null,
+      "canonicalOccurrenceCount": 1,
+      "dispatchCount": 1,
+      "topicCount": 1,
+      "generation": 6,
+      "dispatchPhase": "succeeded",
+      "runState": "succeeded",
+      "resultCount": 1,
+      "resultStatus": "delivered",
+      "executionStatus": "succeeded",
+      "stopReason": "done",
+      "provider": "opencode",
+      "recordedModel": "opencode-go/glm-5.3-flash",
+      "singleFencedJsonFacts": {
+        "marker": "ORVILO_NATIVE_GITHUB_EVENT",
+        "occurrenceId": "ed8a7cb2-0123-48f8-80a5-aa8bcb928a37",
+        "eventId": "d55fe4a0-c172-11f1-997e-cf6277233236",
+        "eventType": "github.pull_request",
+        "repositoryId": "1370358179",
+        "resourceId": "4756101151",
+        "action": "synchronize",
+        "conclusion": null
+      },
+      "jsonOnlyInstructionSatisfied": false
+    },
+    {
+      "name": "CI failure first and duplicate delivery",
+      "capturedAt": "2026-10-06T10:58:34.886Z",
+      "githubDeliveryGuid": "f92027f0-c173-11f1-91da-5c20c3308eca",
+      "occurrenceStatus": "accepted",
+      "reason": null,
+      "canonicalOccurrenceCount": 1,
+      "dispatchCount": 1,
+      "topicCount": 1,
+      "generation": 4,
+      "dispatchPhase": "succeeded",
+      "runState": "succeeded",
+      "resultCount": 1,
+      "resultStatus": "delivered",
+      "executionStatus": "succeeded",
+      "stopReason": "done",
+      "provider": "opencode",
+      "recordedModel": "opencode-go/glm-5.3-flash",
+      "singleFencedJsonFacts": {
+        "marker": "ORVILO_NATIVE_GITHUB_EVENT",
+        "occurrenceId": "48e897be-8c96-45b2-97ec-07f77f0fa7c9",
+        "eventId": "f92027f0-c173-11f1-91da-5c20c3308eca",
+        "eventType": "github.workflow_run",
+        "repositoryId": "1370358179",
+        "resourceId": "37452368018",
+        "action": "completed",
+        "conclusion": "failure"
+      },
+      "jsonOnlyInstructionSatisfied": false,
+      "githubDeliveries": [
+        {
+          "id": "3846753676269993984",
+          "guid": "f92027f0-c173-11f1-91da-5c20c3308eca",
+          "event": "workflow_run",
+          "statusCode": 202,
+          "redelivery": true
+        },
+        {
+          "id": "3846752944760307712",
+          "guid": "f92027f0-c173-11f1-91da-5c20c3308eca",
+          "event": "workflow_run",
+          "statusCode": 202,
+          "redelivery": false
+        }
+      ]
+    },
+    {
+      "name": "Paused PR denied; no replay after resume",
+      "capturedAt": "2026-10-06T11:07:35.581Z",
+      "githubDeliveryGuid": "a6f4b1d0-c173-11f1-85a0-94937db6098e",
+      "occurrenceStatus": "denied",
+      "reason": "paused_at_receipt",
+      "canonicalOccurrenceCount": 1,
+      "dispatchCount": 0,
+      "topicCount": 0
+    },
+    {
+      "name": "Actual OpenCode ACP process failure",
+      "capturedAt": "2026-10-06T11:09:16.041Z",
+      "githubDeliveryGuid": "254a6410-c176-11f1-99e1-0ae8d61706c8",
+      "occurrenceStatus": "accepted",
+      "reason": null,
+      "canonicalOccurrenceCount": 1,
+      "dispatchCount": 1,
+      "topicCount": 1,
+      "generation": 7,
+      "dispatchPhase": "failed",
+      "runState": "failed",
+      "resultCount": 1,
+      "resultStatus": "delivered",
+      "executionStatus": "failed",
+      "stopReason": "error",
+      "provider": "opencode",
+      "recordedModel": null,
+      "singleFencedJsonFacts": null,
+      "jsonOnlyInstructionSatisfied": false
+    }
+  ],
+  "ci": {
+    "headSha": "ee0e96d03477fe4a19811b54e83eb33968397269",
+    "workflowCount": 16,
+    "successCount": 14,
+    "intentionalSkippedCount": 2,
+    "checkRunCount": 57,
+    "nonpassingCheckRuns": 0,
+    "testCi": "https://github.com/alexj11324/orvilo1/actions/runs/37450552212",
+    "actualTypecheckJob": "https://github.com/alexj11324/orvilo1/actions/runs/37450552212/job/112225929538",
+    "requiredQualityGateJob": "https://github.com/alexj11324/orvilo1/actions/runs/37450552212/job/112230804671",
+    "e2eCi": "https://github.com/alexj11324/orvilo1/actions/runs/37450552190",
+    "actualWebAppJob": "https://github.com/alexj11324/orvilo1/actions/runs/37450552190/job/112225858421",
+    "uiAlignment": "https://github.com/alexj11324/orvilo1/actions/runs/37450557247",
+    "vercelPreDeployGate": "https://github.com/alexj11324/orvilo1/actions/runs/37450554415",
+    "vercelPreviewDeployment": "intentionally_skipped_for_draft_pr"
+  },
+  "cleanup": {
+    "remoteStatus": "complete_root_authenticated_inspection",
+    "deletedFixtureWebhookIds": [692944941, 692927281],
+    "remainingRepositoryWebhookCount": 0,
+    "remainingMatchingFixtureWebhookIds": [],
+    "fixturePullRequest": {
+      "number": 477,
+      "state": "closed",
+      "merged": false
+    },
+    "fixtureBranch": {
+      "name": "test/github-native-acceptance-20261006",
+      "getRefStatus": 404
+    },
+    "localEventSourceRevocation": {
+      "status": "complete_normal_electron_stop_subscription",
+      "capturedAt": "2026-10-06T11:41:22.099Z",
+      "revokedBindingCount": 2,
+      "disabledTriggerCount": 2,
+      "disabledTriggerRevisions": [5, 9],
+      "activeOperationCount": 0,
+      "privateRegistryEntryCount": 0,
+      "registryEvidence": "Root readonly inspection confirmed empty registry.",
+      "historyRetained": true,
+      "retainedHistoryCounts": {
+        "inbox": 554,
+        "occurrences": 554,
+        "dispatches": 11,
+        "operations": 34,
+        "topics": 9,
+        "results": 8
+      }
+    },
+    "artifactReview": "bounded_independent_text_hash_review_passed; final root-requested privacy and lock-causality wording corrected",
+    "images": "Three root visually approved images published with matching manifest and hashes."
+  },
+  "completionAdmission": {
+    "heldDuringCompletion": [
+      {
+        "githubDeliveryGuid": "079d1c20-c174-11f1-9ed2-04d9759c34b6",
+        "admissionHeld": true,
+        "occurrenceStatus": "pending",
+        "completedFailureMatchesFixtureHead": true
+      },
+      {
+        "githubDeliveryGuid": "1352b2f0-c174-11f1-82da-83cb48c7699e",
+        "admissionHeld": true,
+        "occurrenceStatus": "pending",
+        "completedFailureMatchesFixtureHead": true
+      }
+    ],
+    "afterPause": [
+      {
+        "githubDeliveryGuid": "1352b2f0-c174-11f1-82da-83cb48c7699e",
+        "occurrenceStatus": "denied",
+        "noDispatch": true
+      },
+      {
+        "githubDeliveryGuid": "079d1c20-c174-11f1-9ed2-04d9759c34b6",
+        "occurrenceStatus": "denied",
+        "noDispatch": true
+      }
+    ]
+  },
+  "executor": {
+    "provider": "opencode",
+    "version": "1.18.29",
+    "configuredModel": "opencode-go/glm-5.3-flash",
+    "faultRunRecordedModel": null
+  },
+  "faultInjection": {
+    "signal": "SIGKILL",
+    "injectedAt": "2026-10-06T11:08:44.202960+00:00",
+    "verifiedPrivateCwd": true,
+    "verifiedDirectParentAndProcessGroup": true,
+    "verifiedOpenCodeAcpCommand": true,
+    "unrelatedProcessesTouched": false
+  },
+  "limitations": [
+    "Output facts validated from one fenced JSON block; prose and diagnostic text remained. jsonOnlyInstructionSatisfied is false. Strict JSON-only output was not a webhook execution acceptance requirement.",
+    "Old Codex matrix, orphan recovery, and incomplete old CI generation 1 are excluded.",
+    "External result webhook delivery was not exercised; delivered refers to the saved Orvilo result."
+  ],
+  "nativeReadiness": {
+    "offline": "Bound device unavailable; enable trigger disabled.",
+    "online": "Enable trigger available after device reconnect.",
+    "newerFailure": "Credential verification requested; enable trigger disabled after newer failed run.",
+    "proofCeiling": "A later credential revocation or binary change is not detected until a new run."
+  },
+  "postFault": {
+    "daemonConnected": true,
+    "activeOperationRegistryCount": 0,
+    "normalRecoveryChat": {
+      "kind": "ordinary existing-topic native ReGenerate; does not rerun automation",
+      "capturedAt": "2026-10-06T11:36:05.448Z",
+      "initialFreshChat": {
+        "status": "error",
+        "exitCode": 1,
+        "startedAt": "2026-10-06T11:15:18.630Z",
+        "completedAt": "2026-10-06T11:15:23.057Z",
+        "ownedStderr": "database is locked",
+        "concurrentRequest": "acp_judgment.topic_title",
+        "artifactLimit": "D950 renderer predates the parent frontend title deferral change; full ee0 renderer and fresh-chat lock-free behavior are not proved.",
+        "lockCausality": "Concurrent title request association; exact database lock owner unproven."
+      },
+      "existingTopicRegenerate": {
+        "status": "done",
+        "completionReason": "done",
+        "provider": "opencode",
+        "recordedModel": "opencode-go/glm-5.3-flash",
+        "startedAt": "2026-10-06T11:27:46.802Z",
+        "completedAt": "2026-10-06T11:28:02.467Z",
+        "observedOutputMarker": "ORVILO_OPENCODE_RECOVERED",
+        "markerEvidence": "Root native screenshot observation."
+      }
+    }
+  },
+  "privacy": {
+    "textFiles": "No full automation instructions, raw GitHub payloads, process logs, callback/OAuth URLs, secrets, ACP sessions, or private user/workspace/device identifiers.",
+    "images": "Root re-inspected all three as legible with no callback URLs or secrets. Recovery image contains a benign constant smoke prompt and fixture display names."
+  },
+  "provenance": {
+    "businessRuntimeAndCliBootRevision": "c092ace473d187d0c33b4f40e43ae31ad681d4c0",
+    "productionSourceEquivalentToRevision": "ee0e96d03477fe4a19811b54e83eb33968397269",
+    "onlyDelta": "One HookDispatcher test typing change; no production code change.",
+    "electronBuild": "D950 main/preload/static renderer",
+    "affectedAutomationAndAgentSettingsSourcesMatchRevision": "ee0e96d03477fe4a19811b54e83eb33968397269",
+    "rendererLimitation": "Mixed source provenance; no full ee0 Electron renderer rebuild. Scoped Automation, AgentSettings, and run-history files match the D950 build revision. Other chat UI differs; the first fresh chat recovery hit a database lock alongside a concurrent title-start request.",
+    "githubGrant": "Reused GitHub grant fixture; does not prove native OAuth UI.",
+    "electronBuildRevision": "d950a3b545205837d2fc888b3489e155ee8b94e3",
+    "scopedUiSourceHashes": [
+      {
+        "path": "src/features/Automations/McpEventTriggerSettings.tsx",
+        "sha256": "df25261fd4f5af129cac7312de5ac9f9392131d44e4974b3ef56727d3d50d6e1",
+        "matchesBothRevisions": true
+      },
+      {
+        "path": "src/features/AgentSettings/AgentModelSettings.tsx",
+        "sha256": "198511c830d9c49ec87c7403ea824dbfc9714479cfbcb86b34a289651aa453b6",
+        "matchesBothRevisions": true
+      },
+      {
+        "path": "src/features/Automations/AutomationRunList.tsx",
+        "sha256": "ad9156ad1dacfcac7717947835e6bf8614762ec608eed290d5541fc15f8cdfc3",
+        "matchesBothRevisions": true
+      },
+      {
+        "path": "src/features/Automations/AutomationRunsPage.tsx",
+        "sha256": "14e4d1b75484123021ad6a3ddf24bf0e218f1677e812e01627a5f14f6396bfc6",
+        "matchesBothRevisions": true
+      },
+      {
+        "path": "src/features/Automations/RunStatusBadge.tsx",
+        "sha256": "a4a83094fe5aaec4e4ca1ca0d5871124a2fdfdd2bc5bfbf1e08e21f719131499",
+        "matchesBothRevisions": true
+      },
+      {
+        "path": "src/features/Automations/ResultDeliveryList.tsx",
+        "sha256": "874a6c135193a453ab2d8be0bde8eba070b51cbd426bf5063161d43c85520d0b",
+        "matchesBothRevisions": true
+      }
+    ]
+  },
+  "publicationStatus": "repository_evidence",
+  "pullRequestUrl": "https://github.com/alexj11324/orvilo1/pull/476",
+  "schemaVersion": 1,
+  "sourceRevision": "ee0e96d03477fe4a19811b54e83eb33968397269",
+  "sourceUrl": "https://github.com/alexj11324/orvilo1/commit/ee0e96d03477fe4a19811b54e83eb33968397269"
+}

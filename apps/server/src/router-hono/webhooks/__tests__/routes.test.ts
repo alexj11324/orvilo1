@@ -11,6 +11,8 @@ import app from '../index';
  * Handlers are mocked out: importing them for real drags in model-runtime and
  * the db clients, which is far more than a routing assertion needs.
  */
+vi.mock('../handlers/githubEvents', () => ({ githubEventsWebhook: vi.fn() }));
+vi.mock('../handlers/mcpEvents', () => ({ mcpEventsWebhook: vi.fn() }));
 vi.mock('../handlers/casdoor', () => ({ casdoorWebhook: vi.fn() }));
 vi.mock('../handlers/logto', () => ({ logtoWebhook: vi.fn() }));
 vi.mock('../handlers/linear', () => ({ linearWebhook: vi.fn() }));
@@ -32,6 +34,7 @@ describe('webhooks hono routes', () => {
 
     expect([...new Set(paths)].sort()).toEqual([
       '/api/webhooks/casdoor',
+      '/api/webhooks/github-events/:callbackToken',
       '/api/webhooks/linear/:workspaceId',
       '/api/webhooks/logto',
       '/api/webhooks/mcp-events/:callbackToken',

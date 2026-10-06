@@ -198,16 +198,17 @@ describe('HookDispatcher', () => {
       const rsc = await import('../HookDispatcher');
       expect(instrument.hookDispatcher).not.toBe(rsc.hookDispatcher);
       mockTriggerHatchetWorkflow.mockRejectedValueOnce(new Error('queue delivery unavailable'));
+      const webhook: AgentHookWebhook = {
+        delivery: 'hatchet',
+        fallback: 'none',
+        url: '/api/agent/webhooks/group-member-callback',
+      };
       await expect(
         rsc.hookDispatcher.dispatch(operationId, 'onComplete', makeEvent(), [
           {
             id: 'task-on-complete',
             type: 'onComplete',
-            webhook: {
-              delivery: 'hatchet',
-              fallback: 'none',
-              url: '/api/agent/webhooks/group-member-callback',
-            },
+            webhook,
           },
         ]),
       ).rejects.toBeInstanceOf(rsc.CriticalHookDeliveryError);

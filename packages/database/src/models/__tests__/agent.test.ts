@@ -2757,7 +2757,7 @@ describe('AgentModel', () => {
       expect(result[0]).toHaveProperty('backgroundColor');
     });
 
-    it('should derive heteroType from agencyConfig.heterogeneousProvider', async () => {
+    it('should derive heteroType without assigning a runtime to an unconfigured agent', async () => {
       await serverDB.insert(agents).values({
         agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
         id: 'hetero-agent',
@@ -2777,7 +2777,8 @@ describe('AgentModel', () => {
       const hetero = result.find((a) => a.id === 'hetero-agent');
       const normal = result.find((a) => a.title === 'Normal Agent');
       expect(hetero?.heteroType).toBe('claude-code');
-      expect(normal?.heteroType).toBe('orvilo');
+      expect(normal).toBeDefined();
+      expect(normal?.heteroType).toBeUndefined();
       // raw agencyConfig must not leak into the result payload
       expect(hetero).not.toHaveProperty('agencyConfig');
     });

@@ -1,5 +1,6 @@
 import { checkAutomationReadinessOnHost } from '@orvilo/heterogeneous-agents/automationReadiness';
 
+import { resolvePrimeRunnerArtifact } from '../device/primeRun';
 import { log } from '../utils/logger';
 import { checkPlatformCapability } from './checkPlatformCapability';
 import { getAgentProfile } from './getAgentProfile';
@@ -16,7 +17,8 @@ import { scanHeterogeneousAgents } from './scanHeterogeneousAgents';
 const methodMap: Record<string, (args: any) => Promise<unknown>> = {
   cancelHeteroTask,
   checkPlatformCapability,
-  checkAutomationReadiness: checkAutomationReadinessOnHost,
+  checkAutomationReadiness: (args) =>
+    checkAutomationReadinessOnHost(args, resolvePrimeRunnerArtifact()),
   getAgentProfile,
   runHeteroTask,
   scanHeterogeneousAgents,

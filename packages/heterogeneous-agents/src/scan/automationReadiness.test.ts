@@ -256,6 +256,19 @@ describe('automation host readiness', () => {
     },
   );
 
+  it('uses only the trusted host artifact argument, not a remote request path', async () => {
+    const request = { agentType: 'orvilo', primeArtifact: '/remote/runner.mjs' };
+    await checkAutomationReadinessOnHost(request, '/host/runner.mjs');
+    expect(primeProbe).toHaveBeenCalledWith('/host/runner.mjs');
+  });
+
+  it('keeps a missing resolved host artifact unavailable instead of probing a different bundle', async () => {
+    expect(await checkAutomationReadinessOnHost({ agentType: 'orvilo' }, null)).toMatchObject({
+      installed: false,
+    });
+    expect(primeProbe).not.toHaveBeenCalled();
+  });
+
   it('ignores retired engine fields for the builtin Orvilo executor', async () => {
     expect(
       await checkAutomationReadinessOnHost({ agentType: 'orvilo', engine: 'other' }),

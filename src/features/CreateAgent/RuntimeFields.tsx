@@ -239,6 +239,11 @@ export const RuntimeFields = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={BUILTIN_AGENT_KEY}>Orvilo AI</SelectItem>
+              {!builtin && !form.installed.some((provider) => provider.type === choice) && (
+                <SelectItem disabled value={choice}>
+                  {form.provider?.title}
+                </SelectItem>
+              )}
               {form.installed.map((provider) => (
                 <SelectItem key={provider.type} value={provider.type}>
                   {provider.title}

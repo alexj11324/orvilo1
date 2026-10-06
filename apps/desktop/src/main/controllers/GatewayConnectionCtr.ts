@@ -18,6 +18,7 @@ import { serializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp } from 'electron';
 
+import { resolveCliScript } from '@/modules/cliEmbedding';
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
 import { createLogger } from '@/utils/logger';
@@ -535,7 +536,20 @@ export default class GatewayConnectionCtr extends ControllerModule {
       case 'checkAutomationReadiness': {
         const { checkAutomationReadinessOnHost } =
           await import('@orvilo/heterogeneous-agents/automationReadiness');
-        const result = await checkAutomationReadinessOnHost(args as AutomationReadinessRequest);
+        let primeArtifact = path.join(path.dirname(resolveCliScript()), 'runner.mjs');
+        const override = process.env.ORVILO_PRIME_RUNNER;
+        if (override) {
+          try {
+            await fs.promises.access(override);
+            primeArtifact = override;
+          } catch {
+            // Execution falls back to the CLI sibling when the override is absent.
+          }
+        }
+        const result = await checkAutomationReadinessOnHost(
+          args as AutomationReadinessRequest,
+          primeArtifact,
+        );
         return { content: JSON.stringify(result), state: result, success: true };
       }
 

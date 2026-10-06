@@ -82,16 +82,7 @@ const matchesSearch = (member: WorkspaceMemberRow, query: string) =>
   );
 
 const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
-  ({
-    children,
-    currentUserId,
-    disabled,
-    fullWidth,
-    onChange,
-    taskCreatorId,
-    taskIdentifier,
-    taskVisibility,
-  }) => {
+  ({ children, currentUserId, disabled, fullWidth, onChange, taskIdentifier }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [open, setOpen] = useState(false);
@@ -104,7 +95,6 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     const { isLoading } = useFetchWorkspaceMembers();
     const allMembers = useWorkspaceMembers();
     const selfUserId = useUserStore(userProfileSelectors.userId);
-    const creatorId = taskCreatorId ?? selfUserId;
     const members = useMemo(() => {
       // Personal mode has no member directory. Keep only the explicit
       // unassigned option so an existing self-assignment can still be cleared
@@ -114,10 +104,8 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
       const assignableMembers = allMembers.filter((member) =>
         canWorkspaceRoleBeTaskAssignee(member.role),
       );
-      return taskVisibility === 'private'
-        ? assignableMembers.filter((member) => member.userId === creatorId)
-        : assignableMembers;
-    }, [activeWorkspaceId, allMembers, creatorId, taskVisibility]);
+      return assignableMembers;
+    }, [activeWorkspaceId, allMembers]);
 
     const query = search.trim().toLowerCase();
     const filteredMembers = useMemo(

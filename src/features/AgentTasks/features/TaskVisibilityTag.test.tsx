@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -34,21 +34,16 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('TaskVisibilityTag', () => {
-  it('shows only the current checkmark without unsupported numeric shortcut hints', () => {
-    render(
-      <TaskVisibilityTag visibility="private">
-        <span>Visibility</span>
-      </TaskVisibilityTag>,
-    );
+  it.each(['private', 'public'] as const)(
+    'offers no task privacy control for %s tasks',
+    (visibility) => {
+      const { container } = render(
+        <TaskVisibilityTag taskIdentifier="T-1" visibility={visibility}>
+          <span>Visibility</span>
+        </TaskVisibilityTag>,
+      );
 
-    const privateRow = screen.getByText('Private').closest('div');
-    const publicRow = screen.getByText('Workspace').closest('div');
-
-    expect(privateRow).not.toBeNull();
-    expect(publicRow).not.toBeNull();
-    expect(privateRow!.querySelector('.lucide-check')).toBeInTheDocument();
-    expect(publicRow!.querySelector('.lucide-check')).not.toBeInTheDocument();
-    expect(screen.queryByText('1')).not.toBeInTheDocument();
-    expect(screen.queryByText('2')).not.toBeInTheDocument();
-  });
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 });

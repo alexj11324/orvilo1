@@ -695,7 +695,7 @@ export const getKanbanTaskPatch = (
 };
 
 export const canDropTaskIntoKanbanColumn = (
-  task: TaskListItem,
+  _task: TaskListItem,
   groupBy: TaskKanbanGroupBy,
   column: KanbanColumnDefinition,
 ): boolean => {
@@ -703,12 +703,7 @@ export const canDropTaskIntoKanbanColumn = (
   if (groupBy === 'status') {
     return Boolean(column.targetWorkflowCategory);
   }
-  if (groupBy !== 'member' || column.groupMeta?.groupBy !== 'member') return true;
-
-  const targetAssigneeUserId = column.groupMeta.assigneeUserId;
-  if (!targetAssigneeUserId) return true;
-
-  return task.visibility !== 'private' || task.createdByUserId === targetAssigneeUserId;
+  return true;
 };
 
 /**

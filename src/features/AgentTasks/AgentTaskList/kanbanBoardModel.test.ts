@@ -197,7 +197,7 @@ describe('kanbanBoardModel', () => {
     expect(canDropTaskIntoKanbanColumn(automatedTask, 'member', unassignedColumn)).toBe(true);
   });
 
-  it('only allows private tasks to be dropped into their creator member column', () => {
+  it('allows legacy private tasks to be dropped into any workspace member column', () => {
     const columns = buildKanbanColumns(
       [
         group('member:creator-1', [], undefined, 'creator-1'),
@@ -210,7 +210,7 @@ describe('kanbanBoardModel', () => {
     const privateTask = task('private', null, null, { visibility: 'private' });
 
     expect(canDropTaskIntoKanbanColumn(privateTask, 'member', creatorColumn)).toBe(true);
-    expect(canDropTaskIntoKanbanColumn(privateTask, 'member', otherMemberColumn)).toBe(false);
+    expect(canDropTaskIntoKanbanColumn(privateTask, 'member', otherMemberColumn)).toBe(true);
   });
 
   describe('Issue workflow columns', () => {

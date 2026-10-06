@@ -305,7 +305,19 @@ describe('AgentTaskItem', () => {
     });
   });
 
-  it('keeps private row metadata without a lock beside the title', () => {
+  it('does not hide workspace legacy private rows from collaboration', () => {
+    const { container } = render(
+      <AgentTaskItem task={{ ...createTask('agent-1'), visibility: 'private' }} />,
+    );
+
+    expect(container.querySelector('[data-collab-private]')).not.toBeInTheDocument();
+    expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
+    expect(container.querySelector('[data-tooltip="Private"]')).not.toBeInTheDocument();
+    expect(container.querySelector('.lucide-lock')).not.toBeInTheDocument();
+  });
+
+  it('keeps personal private rows hidden from collaboration', () => {
+    mocks.activeWorkspaceId = undefined;
     const { container } = render(
       <AgentTaskItem task={{ ...createTask('agent-1'), visibility: 'private' }} />,
     );
@@ -314,9 +326,6 @@ describe('AgentTaskItem', () => {
       'data-collab-private',
       'true',
     );
-    expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
-    expect(container.querySelector('[data-tooltip="Private"]')).not.toBeInTheDocument();
-    expect(container.querySelector('.lucide-lock')).not.toBeInTheDocument();
   });
 
   it('places caller chips before the assignee and the date, as Linear orders them', () => {

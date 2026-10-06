@@ -38,6 +38,28 @@ beforeEach(() => {
 });
 
 describe('TaskListSliceAction', () => {
+  it.each(['private', 'workspace'] as const)(
+    'ignores the old %s privacy filter on list and board requests',
+    async (visibility) => {
+      const { useClientDataSWR } = await import('@/libs/swr');
+      const { taskService } = await import('@/services/task');
+      useTaskStore.setState({ listVisibility: visibility });
+
+      renderHook(() => useTaskStore.getState().useFetchTaskList({ allAgents: true }));
+      const listCall = vi.mocked(useClientDataSWR).mock.calls.at(-1)!;
+      const listFetcher = listCall[1] as (key: unknown) => Promise<unknown>;
+      await listFetcher(listCall[0]);
+      expect(vi.mocked(taskService.list).mock.calls.at(-1)![0].visibility).toBeUndefined();
+
+      renderHook(() => useTaskStore.getState().useFetchTaskGroupList({ allAgents: true }));
+      const groupFetcher = vi
+        .mocked(useClientDataSWR)
+        .mock.calls.at(-1)![1] as () => Promise<unknown>;
+      await groupFetcher();
+      expect(vi.mocked(taskService.groupList).mock.calls.at(-1)![0].visibility).toBeUndefined();
+    },
+  );
+
   describe('setListAgentId', () => {
     it('should update listAgentId', () => {
       useTaskStore.getState().setListAgentId('agt_1');

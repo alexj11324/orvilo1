@@ -23,16 +23,12 @@ import { useTaskCreateDraftSync } from '@/features/TaskDrafts/useTaskCreateDraft
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { useTaskStore } from '@/store/task';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskVisibilityChipLabel from '../features/TaskVisibilityChipLabel';
-import TaskVisibilityTag from '../features/TaskVisibilityTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
@@ -107,19 +103,8 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>(
       assigneeUserIdPreset ?? undefined,
     );
-    // Default to workspace-visible: workspace tasks are team work by default,
-    // and going private stays one click away. In personal mode the field is
-    // irrelevant and the chip is hidden anyway.
-    const [visibility, setVisibility] = useState<'private' | 'public'>('public');
     const [pickedTeamId, setPickedTeamId] = useState<string | undefined>(teamId);
     useEffect(() => setPickedTeamId(teamId), [teamId]);
-
-    const selfUserId = useUserStore(userProfileSelectors.userId);
-    const isOtherMemberAssignee = Boolean(assigneeUserId) && assigneeUserId !== selfUserId;
-
-    useEffect(() => {
-      if (isOtherMemberAssignee && visibility === 'private') setVisibility('public');
-    }, [isOtherMemberAssignee, visibility]);
 
     const editor = useEditor();
     const instructionRef = useRef('');
@@ -134,7 +119,6 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
         setPriority(next.priority);
         if (!lockAssignee) setAssigneeAgentId(next.assigneeAgentId);
         setAssigneeUserId(next.assigneeUserId);
-        if (next.visibility) setVisibility(next.visibility);
         if (next.teamId) setPickedTeamId(next.teamId);
         instructionRef.current = markdown;
       },
@@ -153,7 +137,6 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           projectId,
           teamId: pickedTeamId,
           title,
-          visibility,
         },
         workspaceId: activeWorkspaceId,
       });
@@ -189,7 +172,6 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               assigneeUserId,
               markdown: handoff,
               priority,
-              visibility,
             }),
           );
           handedOff = true;
@@ -213,7 +195,6 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       projectId,
       title,
       updateSystemStatus,
-      visibility,
     ]);
 
     const handleContentChange = useCallback(() => {
@@ -249,7 +230,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           status,
           teamId: pickedTeamId,
           // Only send visibility in workspace mode; personal mode ignores it.
-          visibility: activeWorkspaceId ? visibility : undefined,
+          visibility: activeWorkspaceId ? 'public' : undefined,
           workflowCategory,
         });
 
@@ -284,7 +265,6 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       title,
       status,
       workflowCategory,
-      visibility,
     ]);
 
     const handleSubmitRef = useRef(handleSubmit);
@@ -363,11 +343,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             </TaskPriorityTag>
 
             {activeWorkspaceId && (
-              <AssigneeMemberSelector
-                currentUserId={assigneeUserId}
-                taskVisibility={visibility}
-                onChange={handleMemberChange}
-              >
+              <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
                 <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeUserId ? (
                     <>
@@ -420,22 +396,6 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 value={pickedTeamId}
                 onChange={(value) => setPickedTeamId(value as string | undefined)}
               />
-            )}
-
-            {activeWorkspaceId && (
-              <TaskVisibilityTag
-                visibility={visibility}
-                lockedReason={
-                  isOtherMemberAssignee
-                    ? t('createTask.visibility.memberAssigneeLocked', {
-                        defaultValue: 'A task assigned to a member stays visible to the workspace.',
-                      })
-                    : undefined
-                }
-                onChange={setVisibility}
-              >
-                <TaskVisibilityChipLabel visibility={visibility} />
-              </TaskVisibilityTag>
             )}
 
             <ActionIcon

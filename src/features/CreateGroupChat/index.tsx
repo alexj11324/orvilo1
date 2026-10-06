@@ -22,7 +22,6 @@ import type { AgentRuntimeConfig } from '@/features/CreateAgent';
 import ConfiguredOrchestratorSelector from '@/features/Orchestrator/ConfiguredOrchestratorSelector';
 import { copyOrchestratorWorkingDirectory } from '@/features/Orchestrator/copyWorkingDirectory';
 import { useOrchestratorPreference } from '@/features/Orchestrator/useOrchestratorPreference';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { agentService, type AvailableAgentItem } from '@/services/agent';
@@ -45,7 +44,6 @@ export const CreateGroupChatContent = ({
 }: CreateGroupChatOptions) => {
   const { t } = useTranslation(['chat', 'common']);
   const { close } = useModalContext();
-  const navigate = useWorkspaceAwareNavigate();
   const { allowed: canCreate } = usePermission('create_content');
   const hasWorkspace = useHasActiveWorkspace();
   const orchestratorPreference = useOrchestratorPreference();
@@ -152,7 +150,7 @@ export const CreateGroupChatContent = ({
       const coordinator = group?.agents.find((agent) => agent.isSupervisor);
       if (orchestratorId && coordinator)
         await copyOrchestratorWorkingDirectory(orchestratorId, coordinator.id);
-      navigate(`/group/${id}`);
+      useHomeStore.getState().switchToGroup(id);
       close();
     }
   };

@@ -1,0 +1,29 @@
+{
+  "excludedImages": [
+    {
+      "filename": "electron-ee0-opencode-pr-first-json-output.png",
+      "reason": "Rejected: 320 by 320 perspective window thumbnail; illegible native capture."
+    }
+  ],
+  "images": [
+    {
+      "filename": "electron-ee0-ci-delivered-result.png",
+      "sha256": "a0fedfa54bdf3bfe92ffaceacff9eb0561e585e194d5e881b3f6794525481049",
+      "bytes": 384339,
+      "visualPrivacyReview": "root_passed_legible_no_callback_urls_or_secrets"
+    },
+    {
+      "filename": "electron-ee0-opencode-success-and-failure-results.png",
+      "sha256": "646d1157747918266d8fe8e94384c8137ba1f11b1f6f03cdf3f6e8ddf3535691",
+      "bytes": 438423,
+      "visualPrivacyReview": "root_passed_legible_no_callback_urls_or_secrets"
+    },
+    {
+      "filename": "electron-ee0-opencode-recovered.png",
+      "sha256": "77331fa90d56d664ba9b06b33d3c5b452463fd92165f61636a99c8c2a856fa7e",
+      "bytes": 298063,
+      "visualPrivacyReview": "root_passed_legible_no_callback_urls_or_secrets"
+    }
+  ],
+  "status": "three_root_visually_reviewed_images_published_with_verified_hashes"
+}

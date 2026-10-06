@@ -83,7 +83,7 @@ export class McpEventReceiver {
     let now = (this.dependencies.now ?? Date.now)();
     try {
       const binding = await this.dependencies.bindings.findByCallbackToken(callbackToken);
-      if (!binding) return response(404, 'unknown_callback');
+      if (!binding || binding.sourceType === 'github') return response(404, 'unknown_callback');
       if (binding.state === 'revoked' || (binding.expiresAt !== null && binding.expiresAt <= now))
         return response(410, 'subscription_inactive');
       // Read a bounded stream: an absent/misleading content-length cannot allocate an unbounded body.

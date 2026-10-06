@@ -107,6 +107,8 @@ const startServer = async () => {
   const { startLocalHeartbeatRecoveryLoop } =
     await import('@/server/services/taskScheduler/recovery');
   startLocalHeartbeatRecoveryLoop();
+  const { startLocalEventInboxLoop } = await import('@/server/services/mcpEvents/localLoop');
+  startLocalEventInboxLoop();
 
   process.title = `orvilo-dev-hono-${port}`;
   server.listen(port, host, () => {

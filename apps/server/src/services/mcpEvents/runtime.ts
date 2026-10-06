@@ -4,6 +4,7 @@ import { TaskModel } from '@/database/models/task';
 import { getServerDB } from '@/database/server';
 import type { OrviloDatabase } from '@/database/type';
 import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
+import { appEnv } from '@/envs/app';
 import { enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
@@ -46,6 +47,11 @@ export async function sweepMcpEventInbox(db: OrviloDatabase, admission?: EventDi
 
 /** The SQL inbox is the recovery source if enqueue loses its acknowledgement. */
 export async function scheduleMcpEventInboxSweep() {
+  if (!appEnv.enableQueueAgentRuntime) {
+    const { wakeLocalEventInboxLoop } = await import('./localLoop');
+    wakeLocalEventInboxLoop();
+    return 'local-event-inbox';
+  }
   return enqueueHatchetTask(HATCHET_TASK_NAMES.mcpEventInboxSweep, {});
 }
 

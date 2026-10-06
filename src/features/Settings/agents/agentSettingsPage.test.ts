@@ -160,7 +160,7 @@ describe('human-readable model labels', () => {
 
 describe('sidebar + topic-row chrome stays de-attributed', () => {
   it('keeps a workspace-aware Home destination without restoring an agent breadcrumb', () => {
-    const header = read('src/features/AgentSidebar/Header/index.tsx');
+    const header = read('src/features/AgentSidebar/Header/Nav.tsx');
 
     expect(header).toContain("buildWorkspaceAwarePath('/', activeSlug)");
     expect(header).toContain('href={homeHref}');

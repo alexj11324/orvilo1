@@ -345,13 +345,25 @@ export class DeviceModel {
     return this.db
       .update(devices)
       .set({ ...value, updatedAt: new Date() })
-      .where(and(eq(devices.userId, this.userId), eq(devices.deviceId, deviceId)));
+      .where(
+        and(
+          eq(devices.userId, this.userId),
+          eq(devices.deviceId, deviceId),
+          isNull(devices.workspaceId),
+        ),
+      );
   };
 
   delete = async (deviceId: string) => {
     return this.db
       .delete(devices)
-      .where(and(eq(devices.userId, this.userId), eq(devices.deviceId, deviceId)));
+      .where(
+        and(
+          eq(devices.userId, this.userId),
+          eq(devices.deviceId, deviceId),
+          isNull(devices.workspaceId),
+        ),
+      );
   };
 
   /**

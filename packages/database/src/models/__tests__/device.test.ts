@@ -546,6 +546,34 @@ describe('DeviceModel', () => {
   });
 
   describe('update', () => {
+    it('updates only the personal row when the same deviceId has a workspace twin', async () => {
+      await serverDB.insert(workspaces).values({
+        id: wsId,
+        name: 'WS',
+        primaryOwnerId: userId,
+        slug: 'personal-update-isolation',
+      });
+      await deviceModel.register({ deviceId: 'same-machine', identitySource: 'machine-id' });
+      await serverDB.insert(devices).values({
+        deviceId: 'same-machine',
+        identitySource: 'machine-id',
+        userId,
+        workspaceId: wsId,
+        defaultCwd: '/workspace/original',
+      });
+      const other = new DeviceModel(serverDB, otherUserId);
+      await other.register({ deviceId: 'same-machine', identitySource: 'machine-id' });
+
+      await deviceModel.update('same-machine', { defaultCwd: '/personal/project' });
+
+      expect((await deviceModel.queryPersonal())[0].defaultCwd).toBe('/personal/project');
+      expect(
+        (await new DeviceModel(serverDB, userId, wsId).findWorkspaceDeviceById('same-machine'))
+          ?.defaultCwd,
+      ).toBe('/workspace/original');
+      expect((await other.queryPersonal())[0].defaultCwd).toBeNull();
+    });
+
     it('should update user-editable fields', async () => {
       await deviceModel.register({ deviceId: 'dev-1', identitySource: 'machine-id' });
 
@@ -568,6 +596,32 @@ describe('DeviceModel', () => {
   });
 
   describe('delete', () => {
+    it('deletes only the personal row and retains workspace and other-user rows', async () => {
+      await serverDB.insert(workspaces).values({
+        id: wsId,
+        name: 'WS',
+        primaryOwnerId: userId,
+        slug: 'personal-delete-isolation',
+      });
+      await deviceModel.register({ deviceId: 'same-machine', identitySource: 'machine-id' });
+      await serverDB.insert(devices).values({
+        deviceId: 'same-machine',
+        identitySource: 'machine-id',
+        userId,
+        workspaceId: wsId,
+      });
+      const other = new DeviceModel(serverDB, otherUserId);
+      await other.register({ deviceId: 'same-machine', identitySource: 'machine-id' });
+
+      await deviceModel.delete('same-machine');
+
+      expect(await deviceModel.queryPersonal()).toEqual([]);
+      expect(
+        await new DeviceModel(serverDB, userId, wsId).findWorkspaceDeviceById('same-machine'),
+      ).toBeDefined();
+      expect(await other.queryPersonal()).toHaveLength(1);
+    });
+
     it('should remove the row', async () => {
       await deviceModel.register({ deviceId: 'dev-1', identitySource: 'machine-id' });
 

@@ -50,10 +50,7 @@ export async function register() {
     return;
   }
 
-  const shouldEnable = process.env.ENABLE_TELEMETRY && process.env.NEXT_RUNTIME === 'nodejs';
-  if (!shouldEnable) {
-    return;
+  if (process.env.ENABLE_TELEMETRY && process.env.NEXT_RUNTIME === 'nodejs') {
+    await import('./instrumentation.node');
   }
-
-  await import('./instrumentation.node');
 }

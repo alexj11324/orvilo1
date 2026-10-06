@@ -114,6 +114,34 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
   });
 
   describe('editTask', () => {
+    it('forwards the observed revision with Agent, owner and project edits without retrying conflicts', async () => {
+      const params = {
+        identifier: 'T-1',
+        expectedDomainRevision: 7,
+        assigneeAgentId: 'agt-new',
+        assigneeUserId: 'usr_2',
+        projectId: 'project-1',
+      };
+      const result = await taskExecutor.editTask(params);
+      expect(result.success).toBe(true);
+      expect(mocks.updateTask).toHaveBeenCalledWith(
+        'T-1',
+        {
+          expectedDomainRevision: 7,
+          assigneeAgentId: 'agt-new',
+          assigneeUserId: 'usr_2',
+          projectId: 'project-1',
+        },
+        { source: 'external' },
+      );
+      mocks.updateTask.mockClear();
+      mocks.updateTask.mockRejectedValueOnce(new Error('Task changed; reload before editing.'));
+      const stale = await taskExecutor.editTask(params);
+      expect(stale.success).toBe(false);
+      expect(stale.content).toContain('Task changed');
+      expect(mocks.updateTask).toHaveBeenCalledTimes(1);
+    });
+
     it('setting the member leaves the agent side untouched (assignees coexist)', async () => {
       const result = await taskExecutor.editTask({ assigneeUserId: 'usr_2', identifier: 'T-1' });
 

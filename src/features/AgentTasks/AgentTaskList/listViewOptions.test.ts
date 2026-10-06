@@ -140,6 +140,14 @@ describe('issue status grouping', () => {
     ]);
   });
 
+  it('groups an unlinked backlog Issue by its canonical category despite a reserved execution', () => {
+    const waiting = task('waiting', { status: 'running', workflowCategory: 'backlog' });
+    expect(groupTaskItems([waiting], 'status')[0][0]).toMatchObject({
+      key: 'workflow:backlog',
+      workflowCategory: 'backlog',
+    });
+  });
+
   it('keeps execution grouping for tasks without a linked workflow state', () => {
     const local = task('local', { status: 'running' });
     expect(groupTaskItems([local], 'status')[0][0]).toMatchObject({

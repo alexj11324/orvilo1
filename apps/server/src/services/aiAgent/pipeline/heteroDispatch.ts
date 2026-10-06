@@ -1822,7 +1822,10 @@ export const dispatchHeteroAgent = async (
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
-            env: aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : undefined,
+            env: {
+              ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
+              ORVILO_AGENT_ID: resolvedAgentId,
+            },
             // The device dedupes agent_run_request on this key (= the task id
             // it already tracks for cancelHeteroTask), so a gateway retry can
             // never spawn a duplicate execution of this operation.
@@ -2171,7 +2174,10 @@ export const dispatchHeteroAgent = async (
         ...heteroParams,
         agentType: heteroType as 'claude-code' | 'codex',
         args: heteroExecArgs,
-        env: aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : undefined,
+        env: {
+          ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
+          ORVILO_AGENT_ID: resolvedAgentId,
+        },
         jwt: sandboxJwt,
         marketService,
         // `heteroParams.jwt` (the operation token) is overridden above for

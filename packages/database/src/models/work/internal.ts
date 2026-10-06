@@ -1,5 +1,6 @@
 import type {
   RegisterTaskWorkParams,
+  TaskDispatchPhase,
   TaskWorkListItem,
   TaskWorkSummaryItem,
   WorkDisplayField,
@@ -18,7 +19,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { documents } from '../../schemas/file';
 import { tasks } from '../../schemas/task';
 import { works, workVersions } from '../../schemas/work';
-import { legacyStatusExpr } from '../taskExecutionSql';
+import { latestDispatchPhase, legacyStatusExpr } from '../taskExecutionSql';
 import { taskOwnership, type WorkContext, workOwnership } from './context';
 
 /**
@@ -209,6 +210,7 @@ export const currentTaskSummaryFields = {
     name: sql<string | null>`coalesce(${tasks.name}, ${works.title})`,
     priority: sql<number | null>`${tasks.priority}`,
     status: sql<string | null>`coalesce(${legacyStatusExpr}, ${works.status})`,
+    dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
   },
 };
 
@@ -220,6 +222,7 @@ export const eventTaskSummaryFields = {
     name: sql<string | null>`coalesce(${tasks.name}, ${workVersions.title})`,
     priority: sql<number | null>`${tasks.priority}`,
     status: sql<string | null>`coalesce(${legacyStatusExpr}, ${workVersions.status})`,
+    dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
   },
 };
 

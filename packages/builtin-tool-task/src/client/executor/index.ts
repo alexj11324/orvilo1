@@ -39,6 +39,7 @@ import type {
   CreateTaskParams,
   CreateTasksItemResult,
   DeleteTaskCommentParams,
+  EditTaskParams,
   ListWorkspaceMembersParams,
   RunTasksItemResult,
   UpdateTaskCommentParams,
@@ -386,18 +387,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
   };
 
   editTask = async (
-    params: {
-      addDependencies?: string[];
-      assigneeAgentId?: string | null;
-      assigneeUserId?: string | null;
-      description?: string;
-      identifier: string;
-      instruction?: string;
-      name?: string;
-      parentIdentifier?: string | null;
-      priority?: number;
-      removeDependencies?: string[];
-    },
+    params: EditTaskParams,
     ctx?: BuiltinToolContext,
   ): Promise<BuiltinToolResult> => {
     try {
@@ -416,6 +406,8 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
         name?: string;
         parentTaskId?: string | null;
         priority?: number;
+        projectId?: string | null;
+        expectedDomainRevision?: number;
       } = {};
       if (params.name !== undefined) {
         updateData.name = params.name;
@@ -455,6 +447,14 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
       if (params.priority !== undefined) {
         updateData.priority = params.priority;
         changes.push(`priority → ${priorityLabel(params.priority)}`);
+      }
+
+      if (params.projectId !== undefined) {
+        updateData.projectId = params.projectId;
+        changes.push(params.projectId ? `project → ${params.projectId}` : 'project cleared');
+      }
+      if (params.expectedDomainRevision !== undefined && Object.keys(updateData).length > 0) {
+        updateData.expectedDomainRevision = params.expectedDomainRevision;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -982,7 +982,11 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
 
       return {
         content: formatTaskDetail(detail),
-        state: { identifier: detail.identifier, success: true },
+        state: {
+          domainRevision: detail.domainRevision,
+          identifier: detail.identifier,
+          success: true,
+        },
         success: true,
       };
     } catch (error) {

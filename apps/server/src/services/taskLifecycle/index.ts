@@ -40,6 +40,7 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
+import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
 import { AiGenerationService } from '@/server/services/aiGeneration';
@@ -164,6 +165,7 @@ export class TaskLifecycleService {
       params.errorMessage = `Execution stopped because of ${rawReason}.`;
     const { errorMessage, errorCode } = params;
 
+    let completionDispatch: TaskDispatchItem | undefined;
     const hasDispatchClaim =
       params.dispatchId !== undefined ||
       params.dispatchFence !== undefined ||
@@ -223,6 +225,7 @@ export class TaskLifecycleService {
         );
         return;
       }
+      completionDispatch = settlement.dispatch;
     }
 
     log('onTopicComplete: task=%s topic=%s reason=%s', taskIdentifier, topicId, reason);
@@ -240,12 +243,23 @@ export class TaskLifecycleService {
       return;
     }
 
+    const dispatchClaimArgs: [] | [NonNullable<Parameters<TaskTopicModel['settleIfRunning']>[5]>] =
+      completionDispatch
+        ? [
+            {
+              dispatchId: completionDispatch.id,
+              fence: completionDispatch.fence,
+              generation: completionDispatch.generation,
+            },
+          ]
+        : [];
     const claimed = await this.taskTopicModel.settleIfRunning(
       taskId,
       topicId,
       params.operationId,
       reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed',
       rawReason,
+      ...dispatchClaimArgs,
     );
     if (!claimed) {
       await this.persistAutomationResult(params);
@@ -260,8 +274,12 @@ export class TaskLifecycleService {
 
     if (reason === 'interrupted') {
       log('onTopicComplete: interrupted run settled without advancing task=%s', taskIdentifier);
-      await this.markAutomationResultReady(params);
-      await this.persistAutomationResult(params);
+      try {
+        await this.markAutomationResultReady(params);
+        await this.persistAutomationResult(params);
+      } finally {
+        await this.taskModel.releaseRunReservation(taskId, claimed);
+      }
       return;
     }
 
@@ -269,7 +287,19 @@ export class TaskLifecycleService {
     // lease after the scheduler has moved the task back to `scheduled`. Keep
     // the CAS aligned with the status that settleIfRunning actually claimed;
     // requiring `running` here would strand that task with no next tick.
-    const claimedTaskStatus = currentTask.status === 'scheduled' ? 'scheduled' : 'running';
+    const claimedTaskStatus = currentTask.status;
+    const completionContract = completionDispatch
+      ? {
+          assigneeAgentId: currentTask.assigneeAgentId,
+          executionGeneration: completionDispatch.generation,
+          policyRevision: completionDispatch.automationOccurrence
+            ? currentTask.policyRevision
+            : completionDispatch.policyRevision,
+          requirementRevision: completionDispatch.automationOccurrence
+            ? currentTask.requirementRevision
+            : completionDispatch.requirementRevision,
+        }
+      : undefined;
 
     // All state decisions flow through the settlement service — the only
     // thing this lifecycle still owns is the concurrency guard (the claimed
@@ -284,6 +314,9 @@ export class TaskLifecycleService {
           dispatchFence: params.dispatchFence,
           executionGeneration: params.executionGeneration,
           ...input,
+          context: completionContract
+            ? { ...input.context, expectedContract: completionContract }
+            : input.context,
           operationId: params.operationId,
           taskId,
         },

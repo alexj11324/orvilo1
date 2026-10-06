@@ -14,6 +14,7 @@ import {
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
+import { TaskDispatchModel } from '../taskDispatch';
 import { TaskTopicModel } from '../taskTopic';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -470,6 +471,131 @@ describe('TaskTopicModel', () => {
       const topics = await topicModel.findByTaskId(task.id);
       expect(topics[0].status).toBe('completed');
     });
+
+    const completedDispatchFixture = async (
+      suffix: string,
+      phase: 'canceled' | 'failed' | 'succeeded' = 'succeeded',
+    ) => {
+      const topicId = `tpc_completed_${suffix}`;
+      const operationId = `op_completed_${suffix}`;
+      const dispatchId = `dispatch-completed-${suffix}`;
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({
+        instruction: 'Recover succeeded dispatch',
+        executionGeneration: 1,
+        workflowCategory: 'in_progress',
+      });
+      await createTopic(topicId);
+      await taskModel.updateCurrentTopic(task.id, topicId);
+      const current = (await taskModel.findById(task.id))!;
+      const dispatch = {
+        id: dispatchId,
+        planRevision: null,
+        taskId: task.id,
+        generation: 1,
+        fence: 1,
+        phase: 'running' as const,
+        policyRevision: current.policyRevision,
+        requirementRevision: current.requirementRevision,
+        taskRevision: current.domainRevision,
+        requestedBy: 'manual:test',
+        idempotencyKey: `${suffix}-dispatch-test`,
+        operationId,
+      };
+      await serverDB.insert(taskDispatches).values(dispatch);
+      await topicModel.startRun(task.id, topicId, {
+        dispatch,
+        operationId,
+        seq: 1,
+      });
+      await new TaskDispatchModel(serverDB).settle({
+        dispatchId: dispatch.id,
+        expected: ['running'],
+        fence: 1,
+        generation: 1,
+        operationId,
+        phase,
+      });
+      return { taskModel, topicModel, task, dispatch, topicId, operationId };
+    };
+
+    it('claims the exact completed dispatch after its running projection has ended', async () => {
+      const { taskModel, topicModel, task, dispatch, topicId, operationId } =
+        await completedDispatchFixture('owned');
+      expect((await taskModel.findById(task.id))?.status).toBe('backlog');
+      expect(
+        await topicModel.settleIfRunning(task.id, topicId, operationId, 'completed', 'done', {
+          dispatchId: dispatch.id,
+          fence: 99,
+          generation: 1,
+        }),
+      ).toBeNull();
+      const claim = await topicModel.settleIfRunning(
+        task.id,
+        topicId,
+        operationId,
+        'completed',
+        'done',
+        { dispatchId: dispatch.id, fence: 1, generation: 1 },
+      );
+      expect(claim).toMatch(/^completion:/);
+      expect((await topicModel.findByTopicId(topicId))?.runState).toBe('succeeded');
+      await expect(
+        topicModel.settleIfRunning(task.id, topicId, operationId, 'completed', 'done', {
+          dispatchId: dispatch.id,
+          fence: 1,
+          generation: 1,
+        }),
+      ).rejects.toThrow('already being processed');
+    });
+
+    it.each(['failed', 'canceled'] as const)(
+      'accepts the matching %s dispatch without mistaking it for a user park',
+      async (phase) => {
+        const { topicModel, task, dispatch, topicId, operationId } = await completedDispatchFixture(
+          phase,
+          phase,
+        );
+        const claim = await topicModel.settleIfRunning(
+          task.id,
+          topicId,
+          operationId,
+          phase === 'failed' ? 'failed' : 'canceled',
+          phase,
+          { dispatchId: dispatch.id, fence: 1, generation: 1 },
+        );
+        expect(claim).toMatch(/^completion:/);
+      },
+    );
+
+    it.each(['requirement', 'policy', 'generation', 'parked'] as const)(
+      'refuses a terminal dispatch completion after its %s changed',
+      async (change) => {
+        const { taskModel, topicModel, task, dispatch, topicId, operationId } =
+          await completedDispatchFixture(change);
+        if (change === 'requirement')
+          await taskModel.update(task.id, { instruction: 'Changed requirements' });
+        if (change === 'policy')
+          await taskModel.update(task.id, { config: { requireHumanReview: true } });
+        if (change === 'generation')
+          await new TaskDispatchModel(serverDB).request({
+            taskId: task.id,
+            trigger: 'manual',
+            requestedBy: 'manual:test',
+            idempotencyKey: 'successor',
+          });
+        if (change === 'parked') await taskModel.updateStatus(task.id, 'paused');
+        expect(
+          await topicModel.settleIfRunning(task.id, topicId, operationId, 'completed', 'done', {
+            dispatchId: dispatch.id,
+            fence: 1,
+            generation: 1,
+          }),
+        ).toBeNull();
+        expect((await topicModel.findByTopicId(topicId))?.status).toBe('running');
+      },
+    );
 
     it('claims one terminal callback when duplicate deliveries race', async () => {
       const taskModel = new TaskModel(serverDB, userId);

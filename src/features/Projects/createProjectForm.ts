@@ -4,6 +4,7 @@ import {
   type ProjectCreatableStatus,
   type ProjectPriority,
   type ProjectStatus,
+  type ProjectVisibility,
 } from '@orvilo/types';
 import { kebabCase } from 'es-toolkit';
 import { pinyin } from 'pinyin-pro';
@@ -54,6 +55,7 @@ export interface CreateProjectDraft {
   targetDate?: string;
   targetDatePrecision?: ProjectDatePrecision;
   teamId?: string;
+  visibility?: ProjectVisibility;
 }
 
 export interface ProjectFieldSuggestions {
@@ -121,6 +123,7 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
   return {
     identifier,
     name,
+    ...(draft.visibility ? { visibility: draft.visibility } : {}),
     ...(slug ? { slug } : {}),
     ...(draft.avatar ? { avatar: draft.avatar } : {}),
     ...(draft.summary?.trim() ? { summary: draft.summary.trim() } : {}),

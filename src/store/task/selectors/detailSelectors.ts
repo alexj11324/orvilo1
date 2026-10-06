@@ -35,6 +35,8 @@ const isTaskDetailLoading = (s: TaskStoreState): boolean =>
 const taskName = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.name;
 
 const taskStatus = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.status;
+const taskDispatchPhase = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.dispatchPhase;
 
 const taskWorkflowCategory = (s: TaskStoreState, taskId?: string) =>
   taskDetail(s, taskId)?.workflowCategory;
@@ -261,6 +263,7 @@ export const taskDetailSelectors = {
   taskSchedulePattern,
   taskScheduleTimezone,
   taskStatus,
+  taskDispatchPhase,
   taskSubtasks,
   taskTeamId,
   taskTopicCount,

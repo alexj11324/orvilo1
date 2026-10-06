@@ -114,7 +114,11 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
         {work.type === 'task' ? (
           <>
             <TaskPriorityTag disableDropdown priority={work.task.priority} size={14} />
-            <TaskExecutionBadge size={14} status={toTaskStatus(work.task.status)} />
+            <TaskExecutionBadge
+              dispatchPhase={work.task.dispatchPhase}
+              size={14}
+              status={toTaskStatus(work.task.status)}
+            />
           </>
         ) : (
           <TypeIcon className={styles.context} size={16} />

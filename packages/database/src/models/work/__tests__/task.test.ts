@@ -2,7 +2,14 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { messages, topics, works, workspaces, workVersions } from '../../../schemas';
+import {
+  messages,
+  taskDispatches,
+  topics,
+  works,
+  workspaces,
+  workVersions,
+} from '../../../schemas';
 import { TaskModel } from '../../task';
 import { WorkModel } from '..';
 import {
@@ -22,6 +29,52 @@ beforeEach(seedWorkTestData);
 afterEach(cleanupWorkTestData);
 
 describe('WorkModel · task', () => {
+  it('keeps current task waiting separate from the completed historical Work snapshot', async () => {
+    const taskModel = new TaskModel(serverDB, userId);
+    const workModel = new WorkModel(serverDB, userId);
+    const task = await taskModel.create({
+      instruction: 'Completed original run',
+      workflowCategory: 'done',
+    });
+    const work = await workModel.registerTask({
+      changeType: 'created',
+      rootOperationId: 'op-completed-history',
+      taskId: task.id,
+      threadId,
+      topicId,
+      toolCallId: 'history-call',
+      toolIdentifier: 'orvilo-task',
+      toolName: 'createTask',
+    });
+    // Replay an existing completed historical snapshot, independent of today's retired task column.
+    await serverDB
+      .update(workVersions)
+      .set({ status: 'completed' })
+      .where(eq(workVersions.workId, work!.id));
+    await taskModel.updateStatus(task.id, 'backlog');
+    await serverDB.insert(taskDispatches).values({
+      id: 'dispatch-next-waiting',
+      generation: 1,
+      idempotencyKey: 'next-waiting',
+      phase: 'waiting',
+      policyRevision: 1,
+      requestedBy: 'test',
+      requirementRevision: 1,
+      taskId: task.id,
+      taskRevision: 1,
+    });
+    const current = await workModel.listByConversation({ threadId, topicId });
+    expect(current[0]).toMatchObject({ task: { dispatchPhase: 'waiting', status: 'running' } });
+    const history = await workModel.listByRootOperation({
+      rootOperationId: 'op-completed-history',
+    });
+    expect(history[0]).toMatchObject({
+      status: 'completed',
+      task: { dispatchPhase: 'waiting', status: 'running' },
+    });
+    expect((await workModel.listVersions(work!.id))[0].status).toBe('completed');
+  });
+
   it('registers a task work with v1 carrying the attribution fields', async () => {
     const taskModel = new TaskModel(serverDB, userId);
     const workModel = new WorkModel(serverDB, userId);

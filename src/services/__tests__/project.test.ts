@@ -61,6 +61,25 @@ describe('ProjectService', () => {
     expect(lambdaClient.project.create.mutate).not.toHaveBeenCalled();
   });
 
+  it('pins participant writes to the selected workspace and propagates rejection', async () => {
+    const binding = { agentId: 'agent-1', enabled: true };
+    const add = vi.fn().mockResolvedValue({ data: binding, success: true });
+    const remove = vi.fn().mockRejectedValue(new Error('Coordinator cannot be removed'));
+    vi.mocked(createWorkspaceLambdaClient).mockReturnValue({
+      project: { addAgent: { mutate: add }, removeAgent: { mutate: remove } },
+    } as unknown as ReturnType<typeof createWorkspaceLambdaClient>);
+
+    await expect(projectService.addAgent('project-1', 'agent-1', 'workspace-1')).resolves.toEqual({
+      data: binding,
+      success: true,
+    });
+    await expect(projectService.removeAgent('project-1', 'agent-1', 'workspace-1')).rejects.toThrow(
+      'Coordinator cannot be removed',
+    );
+    expect(createWorkspaceLambdaClient).toHaveBeenNthCalledWith(1, 'workspace-1');
+    expect(createWorkspaceLambdaClient).toHaveBeenNthCalledWith(2, 'workspace-1');
+  });
+
   it('deletes a project by its internal id', async () => {
     vi.mocked(lambdaClient.project.delete.mutate).mockResolvedValue({
       data: { id: 'project-1' },

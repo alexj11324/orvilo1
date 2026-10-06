@@ -91,6 +91,9 @@ export default {
   'create.slugLabel': 'Slug (optional)',
   'create.slugPlaceholder': 'my-project',
   'create.title': 'New project',
+  'create.visibilityLabel': 'Visibility',
+  'create.visibilityPrivate': 'Private',
+  'create.visibilityPublic': 'Workspace members',
   'disabled.action': 'Enable in Labs',
   'disabled.title': 'Project workspaces are an Alpha experiment',
   'goals.create': 'Create goal',
@@ -357,6 +360,15 @@ export default {
   'orchestration.allowedAgentsHint':
     'Leave empty to allow any eligible project participant, or choose a bounded set.',
   'orchestration.allowedAgentsLabel': 'Allowed agents',
+  'orchestration.addParticipant': 'Add Agent',
+  'orchestration.enableParticipant': 'Enable Agent',
+  'orchestration.participantsLabel': 'Project Agents',
+  'orchestration.participantsSaveError': 'Could not update project Agents. Retry the change.',
+  'orchestration.participantsRefreshError':
+    'Project Agents changed, but the list could not refresh. Reload the list.',
+  'orchestration.removeParticipant': 'Remove {{agent}} from the project',
+  'orchestration.removeParticipantHint':
+    'To remove a coordinator or allowed Agent, update and save the policy first.',
   'orchestration.allowedAgentsPlaceholder': 'All eligible participants',
   'orchestration.allowedRolesHint': 'Only enabled participant roles can be selected.',
   'orchestration.allowedRolesLabel': 'Allowed roles',

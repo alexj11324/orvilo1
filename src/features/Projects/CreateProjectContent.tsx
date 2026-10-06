@@ -284,6 +284,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       status: 'backlog',
       targetDatePrecision: 'day',
       teamId,
+      visibility: 'public',
     });
     const createInput = getCreateProjectInput(form);
     const identifierValid = isProjectIdentifierValid(form.identifier);
@@ -535,6 +536,29 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             />
           </div>
           <div className="flex flex-row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Select
+              disabled={form.loading}
+              value={form.visibility ?? 'public'}
+              items={[
+                { value: 'private', label: t('create.visibilityPrivate') },
+                { value: 'public', label: t('create.visibilityPublic') },
+              ]}
+              onValueChange={(visibility) => {
+                if (visibility === 'private' || visibility === 'public') updateForm({ visibility });
+              }}
+            >
+              <SelectTrigger
+                aria-label={t('create.visibilityLabel')}
+                className="min-w-0 max-w-full"
+                size="sm"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="private">{t('create.visibilityPrivate')}</SelectItem>
+                <SelectItem value="public">{t('create.visibilityPublic')}</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               disabled={false}
               items={statusPickerOptions}

@@ -21,6 +21,8 @@ import {
   inArray,
   isNotNull,
   isNull,
+  not,
+  notInArray,
   or,
   sql,
 } from 'drizzle-orm';
@@ -30,7 +32,8 @@ import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
-import { isAutomationArmed, predicateForLegacyStatus } from './taskExecutionSql';
+import { matchesDispatchAssignee, TaskDispatchModel } from './taskDispatch';
+import { isAutomationArmed, isParked, predicateForLegacyStatus } from './taskExecutionSql';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
 
@@ -649,12 +652,54 @@ export class TaskTopicModel {
     operationId: string,
     status: 'canceled' | 'completed' | 'failed',
     stopReason?: string,
+    dispatchClaim?: { dispatchId: string; fence: number; generation: number },
   ): Promise<string | null> {
     const now = new Date();
     const reservationPrefix = `completion:${operationId}:`;
     const completionReservationId = `${reservationPrefix}${randomUUID()}`;
     const leaseExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
     const claimed = await this.db.transaction(async (tx) => {
+      // The dispatch is already terminal when its topic completion starts.
+      // Lock and validate that exact owner instead of relying on the retired
+      // running projection, which disappears as soon as the dispatch settles.
+      if (dispatchClaim) {
+        const [task] = await tx
+          .select()
+          .from(tasks)
+          .where(
+            and(
+              eq(tasks.id, taskId),
+              eq(tasks.currentTopicId, topicId),
+              not(isParked),
+              notInArray(tasks.workflowCategory, ['done', 'canceled']),
+              this.taskOwnership(),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        const dispatch = await new TaskDispatchModel(
+          tx as OrviloDatabase,
+          this.workspaceId,
+        ).findById(dispatchClaim.dispatchId);
+        const phase =
+          status === 'completed' ? 'succeeded' : status === 'failed' ? 'failed' : 'canceled';
+        if (
+          !task ||
+          !dispatch ||
+          dispatch.taskId !== taskId ||
+          dispatch.operationId !== operationId ||
+          dispatch.phase !== phase ||
+          dispatch.fence !== dispatchClaim.fence ||
+          dispatch.generation !== dispatchClaim.generation ||
+          task.executionGeneration !== dispatchClaim.generation ||
+          (!dispatch.automationOccurrence &&
+            (task.policyRevision !== dispatch.policyRevision ||
+              task.requirementRevision !== dispatch.requirementRevision)) ||
+          !matchesDispatchAssignee(task, dispatch)
+        )
+          return null;
+      }
+      const ownerStatus = dispatchClaim ? sql`true` : predicateForLegacyStatus('running');
       const settled = await tx
         .update(taskTopics)
         .set({ runState: runStateForStatus(status), status, ...(stopReason ? { stopReason } : {}) })
@@ -663,18 +708,19 @@ export class TaskTopicModel {
             eq(taskTopics.taskId, taskId),
             eq(taskTopics.topicId, topicId),
             eq(taskTopics.operationId, operationId),
+            ...(dispatchClaim
+              ? [
+                  eq(taskTopics.dispatchId, dispatchClaim.dispatchId),
+                  eq(taskTopics.dispatchFence, dispatchClaim.fence),
+                  eq(taskTopics.executionGeneration, dispatchClaim.generation),
+                ]
+              : []),
             eq(taskTopics.status, 'running'),
             exists(
               tx
                 .select({ id: tasks.id })
                 .from(tasks)
-                .where(
-                  and(
-                    eq(tasks.id, taskId),
-                    eq(tasks.currentTopicId, topicId),
-                    predicateForLegacyStatus('running'),
-                  ),
-                ),
+                .where(and(eq(tasks.id, taskId), eq(tasks.currentTopicId, topicId), ownerStatus)),
             ),
             this.ownership(),
           ),
@@ -694,7 +740,7 @@ export class TaskTopicModel {
             and(
               eq(tasks.id, taskId),
               eq(tasks.currentTopicId, topicId),
-              predicateForLegacyStatus('running'),
+              ownerStatus,
               this.taskOwnership(),
             ),
           )
@@ -721,7 +767,7 @@ export class TaskTopicModel {
           and(
             eq(tasks.id, taskId),
             eq(tasks.currentTopicId, topicId),
-            or(predicateForLegacyStatus('running'), isAutomationArmed),
+            or(ownerStatus, isAutomationArmed),
             sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
             sql`${tasks.runReservationExpiresAt} <= ${now}`,
             this.taskOwnership(),
@@ -734,6 +780,13 @@ export class TaskTopicModel {
                     eq(taskTopics.taskId, taskId),
                     eq(taskTopics.topicId, topicId),
                     eq(taskTopics.operationId, operationId),
+                    ...(dispatchClaim
+                      ? [
+                          eq(taskTopics.dispatchId, dispatchClaim.dispatchId),
+                          eq(taskTopics.dispatchFence, dispatchClaim.fence),
+                          eq(taskTopics.executionGeneration, dispatchClaim.generation),
+                        ]
+                      : []),
                     eq(taskTopics.status, status),
                     this.ownership(),
                   ),

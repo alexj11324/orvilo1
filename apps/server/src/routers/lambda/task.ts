@@ -745,15 +745,12 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.id);
-        await assertAssigneeAgentBelongsToUser(
-          ctx.serverDB,
-          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-          input.authorAgentId,
-        );
+        const actor = await resolveActivityActor(ctx, input.authorAgentId);
+        const authorAgentId = actor.agentId ?? undefined;
         // Resolve @mentions before the insert so an invalid editorData never
         // leaves a comment behind that nobody was told about.
         const mentionedUserIds =
-          ctx.workspaceId && !input.authorAgentId
+          ctx.workspaceId && !authorAgentId
             ? await validateMentionedUserIds(
                 ctx.serverDB,
                 { actorUserId: ctx.userId, workspaceId: ctx.workspaceId },
@@ -761,8 +758,8 @@ export const taskRouter = router({
               )
             : [];
         const comment = await model.addComment({
-          authorAgentId: input.authorAgentId,
-          authorUserId: input.authorAgentId ? undefined : ctx.userId,
+          authorAgentId,
+          authorUserId: authorAgentId ? undefined : ctx.userId,
           briefId: input.briefId,
           content: input.content,
           editorData: input.editorData as never,
@@ -774,7 +771,7 @@ export const taskRouter = router({
         // assignee learn about new discussion; @mentioned members get the
         // stronger "mentioned" notification instead. Agent-authored progress
         // notes stay silent — they are not a conversation between members.
-        if (ctx.workspaceId && !input.authorAgentId) {
+        if (ctx.workspaceId && !authorAgentId) {
           const recipients = collectTaskCommentRecipients({
             actorUserId: ctx.userId,
             mentionedUserIds,
@@ -812,7 +809,9 @@ export const taskRouter = router({
     .input(z.object({ commentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        const deleted = await ctx.taskModel.deleteComment(input.commentId);
+        const deleted = await ctx.taskModel.deleteComment(input.commentId, {
+          source: ctx.actingAgentId ? 'agent' : 'user',
+        });
         if (!deleted) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
         }
@@ -860,6 +859,7 @@ export const taskRouter = router({
         }
         const comment = await ctx.taskModel.updateComment(input.commentId, input.content, {
           editorData: input.editorData === undefined ? null : input.editorData,
+          mutation: { source: ctx.actingAgentId ? 'agent' : 'user' },
         });
         if (!comment) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });

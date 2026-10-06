@@ -201,7 +201,11 @@ export function registerLifecycleCommands(task: Command) {
     .requiredOption('-m, --message <text>', 'Comment content')
     .action(async (id: string, options: { message: string }) => {
       const client = await getTrpcClient();
-      await client.task.addComment.mutate({ content: options.message, id });
+      await client.task.addComment.mutate({
+        ...(process.env.ORVILO_AGENT_ID ? { authorAgentId: process.env.ORVILO_AGENT_ID } : {}),
+        content: options.message,
+        id,
+      });
       log.info('Comment added.');
     });
 

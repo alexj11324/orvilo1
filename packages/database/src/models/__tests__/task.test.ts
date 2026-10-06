@@ -2075,6 +2075,51 @@ describe('TaskModel', () => {
       expect(comment.authorUserId).toBeNull();
     });
 
+    it('keeps Agent progress comments outside the requirement fence while fencing human discussion', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({
+        instruction: 'Comment revision fence',
+        name: 'Comment revision fence',
+      });
+      await createAgent('agt_progress');
+      const before = await model.findById(task.id);
+
+      const progress = await model.addComment({
+        authorAgentId: 'agt_progress',
+        content: 'Work completed; ready for review.',
+        taskId: task.id,
+        userId,
+      });
+      const afterProgress = await model.findById(task.id);
+      expect(afterProgress?.requirementRevision).toBe(before?.requirementRevision);
+      expect(afterProgress?.domainRevision).toBe((before?.domainRevision ?? 0) + 1);
+
+      await model.updateComment(progress.id, 'Validation finished.', {
+        mutation: { source: 'agent' },
+      });
+      expect((await model.findById(task.id))?.requirementRevision).toBe(
+        before?.requirementRevision,
+      );
+
+      await model.updateComment(progress.id, 'Human adds another requirement.');
+      expect((await model.findById(task.id))?.requirementRevision).toBe(
+        (before?.requirementRevision ?? 0) + 1,
+      );
+      await model.deleteComment(progress.id);
+      expect((await model.findById(task.id))?.requirementRevision).toBe(
+        (before?.requirementRevision ?? 0) + 2,
+      );
+      await model.addComment({
+        authorUserId: userId,
+        content: 'Also support another case.',
+        taskId: task.id,
+        userId,
+      });
+      expect((await model.findById(task.id))?.requirementRevision).toBe(
+        (before?.requirementRevision ?? 0) + 3,
+      );
+    });
+
     it('should delete own comment', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test' });

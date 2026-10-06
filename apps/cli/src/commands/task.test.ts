@@ -143,3 +143,24 @@ describe('task edit', () => {
     expect(mockUpdateStatus).not.toHaveBeenCalled();
   });
 });
+
+describe('task comment', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('attributes a dispatched Agent comment from the run environment', async () => {
+    const addComment = vi.fn().mockResolvedValue({});
+    mockGetTrpcClient.mockResolvedValue({ task: { addComment: { mutate: addComment } } });
+    vi.stubEnv('ORVILO_AGENT_ID', 'agt-current-run');
+    const program = new Command();
+    program.exitOverride();
+    registerTaskCommand(program);
+
+    await program.parseAsync(['node', 'test', 'task', 'comment', 'T-1', '-m', 'Ready for review']);
+
+    expect(addComment).toHaveBeenCalledWith({
+      authorAgentId: 'agt-current-run',
+      content: 'Ready for review',
+      id: 'T-1',
+    });
+  });
+});

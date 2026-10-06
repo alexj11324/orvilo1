@@ -10,9 +10,10 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { taskDispatches, tasks } from '@/database/schemas';
+import { projects, taskDispatches, tasks } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
+import { createTaskRuntime } from '@/server/services/toolExecution/serverRuntimes/task';
 
 import { taskRouter } from '../../task';
 import {
@@ -799,6 +800,78 @@ describe('Task Router Integration', () => {
     });
   });
 
+  describe('builtin task edit concurrency', () => {
+    it('lets the builtin task tool view and edit owner, Agent and project with the observed revision', async () => {
+      const task = await caller.create({ instruction: 'Test fenced tool edit' });
+      const projectId = `project-tool-${userId}`;
+      await serverDB
+        .insert(projects)
+        .values({ id: projectId, identifier: 'PT', name: 'Tool project', userId });
+      const model = new TaskModel(serverDB, userId);
+      const before = await model.findById(task.data.id);
+      const runtime = createTaskRuntime({
+        agentModel: { existsById: async (id: string) => id === testAgentId } as never,
+        taskCaller: caller,
+        taskModel: model,
+        taskService: new TaskService(serverDB, userId),
+        db: serverDB,
+        userId,
+      });
+      const view = await runtime.viewTask({ identifier: task.data.identifier });
+      expect(view.content).toContain(`Domain revision: ${before?.domainRevision}`);
+      await runtime.editTask({
+        identifier: task.data.identifier,
+        assigneeUserId: userId,
+        assigneeAgentId: testAgentId,
+        projectId,
+        expectedDomainRevision: before!.domainRevision,
+      });
+      const after = await model.findById(task.data.id);
+      expect(after).toMatchObject({
+        assigneeUserId: userId,
+        assigneeAgentId: testAgentId,
+        projectId,
+      });
+      await expect(
+        runtime.editTask({
+          identifier: task.data.identifier,
+          assigneeAgentId: null,
+          expectedDomainRevision: before!.domainRevision,
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect((await model.findById(task.data.id))?.assigneeAgentId).toBe(testAgentId);
+      await expect(
+        runtime.editTask({
+          identifier: task.data.identifier,
+          assigneeUserId: 'foreign-user',
+          expectedDomainRevision: after!.domainRevision,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      const missingAgent = await runtime.editTask({
+        identifier: task.data.identifier,
+        assigneeAgentId: 'foreign-agent',
+        expectedDomainRevision: after!.domainRevision,
+      });
+      expect(missingAgent.success).toBe(false);
+      otherUserId = await createTestUser(serverDB);
+      const foreignProjectId = `foreign-project-${otherUserId}`;
+      await serverDB.insert(projects).values({
+        id: foreignProjectId,
+        identifier: 'FP',
+        name: 'Foreign project',
+        userId: otherUserId,
+      });
+      await expect(
+        runtime.editTask({
+          identifier: task.data.identifier,
+          projectId: foreignProjectId,
+          expectedDomainRevision: after!.domainRevision,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect((await model.findById(task.data.id))?.domainRevision).toBe(after!.domainRevision);
+    });
+  });
+
   describe('comments', () => {
     it('should add and retrieve comments', async () => {
       const task = await caller.create({ instruction: 'Test' });
@@ -816,6 +889,37 @@ describe('Task Router Integration', () => {
       const commentActivities = detail.data.activities?.filter((a) => a.type === 'comment');
       expect(commentActivities).toHaveLength(2);
       expect(commentActivities?.[0].content).toBe('First comment');
+    });
+
+    it('attributes trusted server comments to the running Agent and preserves its requirement fence', async () => {
+      const task = await caller.create({ instruction: 'Test' });
+      const before = await new TaskModel(serverDB, userId).findById(task.data.id);
+      const agentCaller = taskRouter.createCaller({
+        ...createTestContext(userId),
+        actingAgentId: testAgentId,
+      });
+
+      const comment = await agentCaller.addComment({
+        content: 'Ready for review',
+        id: task.data.id,
+      });
+
+      expect(comment.data.authorAgentId).toBe(testAgentId);
+      expect(comment.data.authorUserId).toBeNull();
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe(before?.requirementRevision);
+      await caller.updateComment({
+        commentId: comment.data.id,
+        content: 'Human changes the requirement',
+      });
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe((before?.requirementRevision ?? 0) + 1);
+      await caller.deleteComment({ commentId: comment.data.id });
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe((before?.requirementRevision ?? 0) + 2);
     });
 
     it('should add agent-authored comments and support update/delete', async () => {

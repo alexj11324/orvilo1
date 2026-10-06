@@ -10,6 +10,16 @@ import {
 import { formatProjectDate, getProjectDatePickerMode } from './projectPlanningDate';
 
 describe('createProjectForm', () => {
+  it('preserves an explicitly private project in the creation request', () => {
+    expect(
+      getCreateProjectInput({
+        identifier: 'PRIV',
+        name: 'Private project',
+        slug: 'private-project',
+        visibility: 'private',
+      }),
+    ).toMatchObject({ visibility: 'private' });
+  });
   it.each(['2026 Roadmap', '2026'])('suggests a submittable identifier for %s', (name) => {
     const suggestions = getProjectFieldSuggestions(name);
     expect(isProjectIdentifierValid(suggestions.identifier)).toBe(true);

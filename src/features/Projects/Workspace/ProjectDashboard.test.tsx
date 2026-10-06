@@ -318,6 +318,7 @@ vi.mock('@/store/project', () => ({
     const state = new Proxy(
       {
         createMilestone: mocks.createMilestone,
+        pendingProjectAgentIds: [],
         deleteMilestone: mocks.deleteMilestone,
         reorderMilestones: mocks.reorderMilestones,
         setTaskMilestone: mocks.setTaskMilestone,

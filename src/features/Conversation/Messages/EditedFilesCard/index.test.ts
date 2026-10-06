@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { parseUnifiedDiff } from '@/components/ui/code-block';
 import {
   initServerConfigStore,
   Provider as ServerConfigProvider,
@@ -87,6 +88,27 @@ describe('AGGREGATE_EDITED_FILE_ICON_SIZE', () => {
 });
 
 describe('SingleEditedFileCard', () => {
+  it('keeps header-like source lines inside hunks and recognizes the next file header', () => {
+    const files = parseUnifiedDiff(
+      '--- a/style.css\n+++ b/style.css\n@@ -1,2 +1,2 @@\n---color: red\n-old\n+++ value\n+new\n' +
+        '--- a/next.ts\n+++ b/next.ts\n@@ -1 +1 @@\n-before\n+after',
+    );
+
+    expect(files.map(({ file }) => file)).toEqual(['style.css', 'next.ts']);
+    expect(files[0].removed).toBe(2);
+    expect(files[0].added).toBe(2);
+    expect(files[0].lines.filter(({ state }) => state?.diff).map(({ text }) => text)).toEqual([
+      '--color: red',
+      'old',
+      '++ value',
+      'new',
+    ]);
+    expect(files[1].lines.filter(({ state }) => state?.diff).map(({ text }) => text)).toEqual([
+      'before',
+      'after',
+    ]);
+  });
+
   it.each(['single', 'aggregate'])(
     'keeps semantic diff rows and both line numbers (%s)',
     async (mode) => {
@@ -118,7 +140,7 @@ describe('SingleEditedFileCard', () => {
       expect(removed).toHaveAttribute('data-gutter', ' 1   ');
       expect(added).toHaveAttribute('data-gutter', '    1');
       expect(container.querySelector('[data-code-line-numbers]')).not.toBeNull();
-      await user.click(screen.getByRole('button', { name: 'Copy code' }));
+      await user.click(screen.getByRole('button', { name: 'copy' }));
       expect(writeText).toHaveBeenCalledWith(singleEntry.diffTexts[0]);
     },
   );

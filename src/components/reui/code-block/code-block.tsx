@@ -24,6 +24,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type {
   CodeBlockDiffSpec,
@@ -1749,6 +1750,7 @@ function CodeBlockCopyButton({
   children,
   ...props
 }: CodeBlockCopyButtonProps) {
+  const { t } = useTranslation('common');
   const context = use(CodeBlockConfigContext);
   const inHeader = use(CodeBlockHeaderContext);
   const [copied, setCopied] = useState(false);
@@ -1803,7 +1805,7 @@ function CodeBlockCopyButton({
 
   return (
     <Button
-      aria-label={copied ? (labels?.copied ?? 'Copied') : (labels?.copy ?? 'Copy code')}
+      aria-label={copied ? (labels?.copied ?? t('copySuccess')) : (labels?.copy ?? t('copy'))}
       data-copied={copied || undefined}
       data-copy-failed={copyFailed || undefined}
       data-position={resolvedPosition}

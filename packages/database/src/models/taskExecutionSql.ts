@@ -1,3 +1,4 @@
+import type { TaskAttentionReason } from '@orvilo/types';
 import type { SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -52,6 +53,9 @@ export const hasActiveExecution = sql`EXISTS (
     AND active.phase IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown')
 )`;
 
+/** Current input obligations, including answered-but-unacknowledged native questions. */
+export const hasUnresolvedTaskInput = sql<boolean>`has_task_unresolved_input(${tasks.id})`;
+
 /** Scalar: the phase of the task's most recent dispatch, or NULL when it never ran. */
 export const latestDispatchPhase = sql`(
   SELECT d.phase FROM ${taskDispatches} d
@@ -84,6 +88,18 @@ export const isExecutionParked = sql`(${isParked} OR (
 
 /** The parked marker carries the `failed` category — a failed park, not a pause. */
 export const parkedIsFailed = sql`coalesce(${tasks.context} #>> '{execution,parked,reason}', '') = 'failed'`;
+
+/** Existing attention vocabulary, projected from durable input and canonical settlement evidence. */
+export const taskAttentionReasonExpr = sql<TaskAttentionReason>`CASE
+  WHEN ${hasUnresolvedTaskInput} THEN 'needs_input'
+  WHEN ${tasks.context} #>> '{execution,parked,reason}' IN ('needs_input', 'review_required', 'needs_changes', 'blocked', 'execution_failed', 'outcome_unknown')
+    THEN ${tasks.context} #>> '{execution,parked,reason}'
+  WHEN ${parkedIsFailed} THEN 'execution_failed'
+  WHEN ${latestDispatchPhase} = 'outcome_unknown' THEN 'outcome_unknown'
+  WHEN NOT ${hasActiveExecution} AND ${latestDispatchPhase} = 'failed' THEN 'execution_failed'
+  WHEN ${tasks.workflowCategory} = 'in_review' THEN 'review_required'
+  ELSE 'none'
+END`;
 
 /**
  * Automation still armed for a future tick — canonical form of

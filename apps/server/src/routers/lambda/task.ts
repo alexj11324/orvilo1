@@ -6,6 +6,7 @@ import type {
   TaskVerifyConfig,
   TaskWorkflowCategory,
 } from '@orvilo/types';
+import { TASK_ATTENTION_REASONS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
@@ -284,6 +285,7 @@ const groupListSchema = z
       .array(
         z
           .object({
+            attentionReasons: z.array(z.enum(TASK_ATTENTION_REASONS)).max(7).optional(),
             key: z.string(),
             limit: z.number().min(1).max(100).default(50),
             offset: z.number().min(0).default(0),
@@ -291,9 +293,11 @@ const groupListSchema = z
             workflowCategories: z.array(z.enum(TASK_WORKFLOW_CATEGORIES)).max(7).optional(),
           })
           .refine(
-            ({ statuses, workflowCategories }) =>
-              Boolean(statuses?.length) || Boolean(workflowCategories?.length),
-            { message: 'A task group needs statuses or workflow categories' },
+            ({ attentionReasons, statuses, workflowCategories }) =>
+              Boolean(attentionReasons?.length) ||
+              Boolean(statuses?.length) ||
+              Boolean(workflowCategories?.length),
+            { message: 'A task group needs statuses, workflow categories, or attention reasons' },
           ),
       )
       .min(1)

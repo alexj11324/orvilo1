@@ -51,6 +51,7 @@ import type {
   DeviceWriteProjectFileResult,
   HeterogeneousAgentModelCatalog,
   HeterogeneousAgentPermissionCatalog,
+  ListHeterogeneousAgentModelsParams,
   ListHeterogeneousAgentPermissionsParams,
   ProjectSkillMeta,
   WorkspaceInitResult,
@@ -685,16 +686,7 @@ export class DeviceGateway {
     deviceId: string;
     env?: Record<string, string>;
     timeout?: number;
-    type:
-      | 'codebuddy'
-      | 'cursor'
-      | 'devin'
-      | 'droid'
-      | 'grok-build'
-      | 'opencode'
-      | 'pi'
-      | 'qoder'
-      | 'trae';
+    type: ListHeterogeneousAgentModelsParams['type'];
     userId: string;
     workspaceId?: string;
   }): Promise<HeterogeneousAgentModelCatalog> {

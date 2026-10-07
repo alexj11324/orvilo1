@@ -58,6 +58,8 @@ export interface ListHeterogeneousAgentModelsParams {
   cwd?: string;
   env?: Record<string, string>;
   type:
+    | 'claude-code'
+    | 'codex'
     | 'codebuddy'
     | 'cursor'
     | 'devin'

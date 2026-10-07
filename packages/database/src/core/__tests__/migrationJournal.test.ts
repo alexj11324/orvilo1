@@ -501,7 +501,12 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     assertTestDatabaseUrl(adminUrl);
 
     const journal = readJournal(migrationsFolder);
-    const stageEntries = journal.entries.slice(0, -1).filter((entry) => !isHistoricalEntry(entry));
+    const stageEntries = journal.entries.filter(
+      (entry) => entry.idx < 205 && !isHistoricalEntry(entry),
+    );
+    const tailEntries = journal.entries.filter(
+      (entry) => entry.idx >= 205 && !isHistoricalEntry(entry),
+    );
     const boundaryWhen = Math.max(...stageEntries.map((entry) => entry.when));
 
     // Scratch database so the real migrator runs against a clean slate.
@@ -554,7 +559,7 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
       const appliedAfter = await pool.query<{ count: string }>(
         'SELECT COUNT(*) AS count FROM "drizzle"."__drizzle_migrations"',
       );
-      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + 1);
+      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + tailEntries.length);
 
       expect(
         (

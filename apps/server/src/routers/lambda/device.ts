@@ -406,6 +406,8 @@ export const deviceRouter = router({
         deviceId: z.string(),
         env: z.record(z.string(), z.string()).optional(),
         type: z.enum([
+          'claude-code',
+          'codex',
           'codebuddy',
           'cursor',
           'droid',

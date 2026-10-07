@@ -182,6 +182,41 @@ describe('login command', () => {
     expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://fresh-custom.test' });
   });
 
+  it.each(['credentials', 'settings'])(
+    'stops after token issuance when %s persistence fails',
+    async (failure) => {
+      vi.clearAllMocks();
+      vi.mocked(fetch)
+        .mockResolvedValueOnce({ ...deviceAuthResponse(), status: 200 })
+        .mockResolvedValueOnce({ ...tokenSuccessResponse(), status: 200 })
+        .mockResolvedValueOnce(tokenErrorResponse('invalid_grant'));
+      if (failure === 'credentials')
+        vi.mocked(saveCredentials).mockImplementationOnce(() => {
+          throw new Error('Protected credential storage unavailable');
+        });
+      else
+        vi.mocked(saveSettings).mockImplementationOnce(() => {
+          throw new Error('Settings storage unavailable');
+        });
+      await runLoginAndAdvanceTimers(createProgram());
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(saveCredentials).toHaveBeenCalledOnce();
+      if (failure === 'credentials') expect(saveSettings).not.toHaveBeenCalled();
+      else expect(saveSettings).toHaveBeenCalledOnce();
+      expect(log.error).toHaveBeenCalledWith(expect.stringContaining('Could not persist login'));
+      expect(log.error).toHaveBeenCalledWith(
+        expect.stringContaining(
+          failure === 'credentials'
+            ? 'Protected credential storage unavailable'
+            : 'Settings storage unavailable',
+        ),
+      );
+      expect(log.error).not.toHaveBeenCalledWith(expect.stringContaining('invalid_grant'));
+      expect(log.info).not.toHaveBeenCalledWith(expect.stringContaining('Login successful'));
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    },
+  );
+
   it('should use environment api key without storing credentials', async () => {
     process.env.ORVILO_CLI_API_KEY = 'sk-ov-env-test';
     vi.mocked(getUserIdFromApiKey).mockResolvedValue('user-123');

@@ -194,32 +194,39 @@ export function registerLoginCommand(program: Command) {
               }
             }
           } else if (body.access_token) {
-            saveCredentials(
-              {
-                accessToken: body.access_token,
-                expiresAt: body.expires_in
-                  ? Math.floor(Date.now() / 1000) + body.expires_in
-                  : undefined,
-                refreshToken: body.refresh_token,
-              },
-              serverUrl,
-            );
+            try {
+              saveCredentials(
+                {
+                  accessToken: body.access_token,
+                  expiresAt: body.expires_in
+                    ? Math.floor(Date.now() / 1000) + body.expires_in
+                    : undefined,
+                  refreshToken: body.refresh_token,
+                },
+                serverUrl,
+              );
 
-            const existingSettings = loadSettings();
-            const shouldPreserveGateway = existingSettings?.serverUrl === serverUrl;
+              const existingSettings = loadSettings();
+              const shouldPreserveGateway = existingSettings?.serverUrl === serverUrl;
 
-            saveSettings(
-              shouldPreserveGateway
-                ? {
-                    gatewayUrl: existingSettings.gatewayUrl,
-                    serverUrl,
-                  }
-                : {
-                    // Gateway auth is tied to the login server's token issuer/JWKS.
-                    // When server changes, clear old gateway to avoid stale cross-environment config.
-                    serverUrl,
-                  },
-            );
+              saveSettings(
+                shouldPreserveGateway
+                  ? {
+                      gatewayUrl: existingSettings.gatewayUrl,
+                      serverUrl,
+                    }
+                  : {
+                      // Gateway auth is tied to the login server's token issuer/JWKS.
+                      // When server changes, clear old gateway to avoid stale cross-environment config.
+                      serverUrl,
+                    },
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              log.error(`Could not persist login credentials or settings: ${message}`);
+              process.exit(1);
+              return;
+            }
 
             // Register this device in the server registry right after auth, so
             // the device row exists without waiting for a later `orvilo connect`

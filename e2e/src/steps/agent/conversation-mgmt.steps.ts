@@ -265,32 +265,56 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   const captureNavigation = async (phase: string) => {
     try {
       const snapshot = await this.page.evaluate((expected) => {
-        const visible = (element: Element) => {
-          const box = element.getBoundingClientRect();
-          return (
-            box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden'
-          );
-        };
-        const composers = [...document.querySelectorAll('[data-testid="chat-input"]')].filter(
-          visible,
-        );
+        // Cucumber's tsx loader adds outer __name helpers to named nested functions.
+        // Keep this browser-serialized callback self-contained with DOM loops.
+        let visibleComposerCount = 0;
+        let blankComposer = false;
+        for (const composer of document.querySelectorAll('[data-testid="chat-input"]')) {
+          const box = composer.getBoundingClientRect();
+          if (
+            box.width <= 0 ||
+            box.height <= 0 ||
+            getComputedStyle(composer).visibility === 'hidden'
+          )
+            continue;
+          visibleComposerCount++;
+          const editor = composer.querySelector<HTMLElement>('[contenteditable="true"]');
+          if (editor) {
+            const editorBox = editor.getBoundingClientRect();
+            if (
+              editorBox.width > 0 &&
+              editorBox.height > 0 &&
+              getComputedStyle(editor).visibility !== 'hidden' &&
+              !editor.innerText.trim()
+            )
+              blankComposer = true;
+          }
+        }
+        const messages = document.querySelectorAll('.message-wrapper');
+        let visibleMessageCount = 0;
+        for (const message of messages) {
+          const box = message.getBoundingClientRect();
+          if (box.width > 0 && box.height > 0 && getComputedStyle(message).visibility !== 'hidden')
+            visibleMessageCount++;
+        }
         const button = document.querySelector('svg.lucide-message-square-plus')?.parentElement
           ?.parentElement;
+        const buttonBox = button?.getBoundingClientRect();
         return {
           actualPathname: location.pathname,
-          blankComposer: composers.some((composer) => {
-            const editor = composer.querySelector<HTMLElement>('[contenteditable="true"]');
-            return !!editor && visible(editor) && !editor.innerText.trim();
-          }),
+          blankComposer,
           buttonAriaDisabled: button?.getAttribute('aria-disabled') === 'true',
           buttonOpacity: button ? getComputedStyle(button).opacity : null,
-          buttonVisible: !!button && visible(button),
+          buttonVisible:
+            !!buttonBox &&
+            buttonBox.width > 0 &&
+            buttonBox.height > 0 &&
+            getComputedStyle(button!).visibility !== 'hidden',
           matchesExpected: location.pathname === expected,
-          messageCount: document.querySelectorAll('.message-wrapper').length,
-          visibleMessageCount: [...document.querySelectorAll('.message-wrapper')].filter(visible)
-            .length,
+          messageCount: messages.length,
+          visibleMessageCount,
           readyState: document.readyState,
-          visibleComposerCount: composers.length,
+          visibleComposerCount,
         };
       }, expectedPathname);
       receipt.snapshots.push({

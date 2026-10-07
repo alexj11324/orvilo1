@@ -2,7 +2,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
-import { canManageResourcePermission, getResourceMeta } from '@/server/services/resourcePermission';
+import type * as TrpcLambda from '@/libs/trpc/lambda';
+import {
+  canManageResourcePermission,
+  canPerformResourceAction,
+  getResourceMeta,
+} from '@/server/services/resourcePermission';
 
 import { resourcePermissionRouter } from '../resourcePermission';
 
@@ -18,16 +23,17 @@ vi.mock('@/server/services/resourcePermission', async (importOriginal) => {
   return {
     ...actual,
     canManageResourcePermission: vi.fn(),
+    canPerformResourceAction: vi.fn().mockResolvedValue(false),
     getResourceMeta: vi.fn(),
   };
 });
 vi.mock('@/business/server/trpc-middlewares/workspaceAuth', async () => {
   const mod = await vi.importActual<{ trpc: any }>('@/libs/trpc/lambda/init');
-  // The real `wsCompatProcedure` validates a Better-Auth session; for unit tests
-  // we skip auth and rely on the test ctx already carrying userId/workspaceId.
+  const { authedProcedure } = await vi.importActual<typeof TrpcLambda>('@/libs/trpc/lambda');
+  // Preserve the real authentication guard while isolating workspace membership IO.
   return {
     requireWorkspaceRoleWhenScoped: () => mod.trpc.middleware(async (opts: any) => opts.next()),
-    wsCompatProcedure: mod.trpc.procedure,
+    wsCompatProcedure: authedProcedure,
   };
 });
 vi.mock('@/libs/trpc/lambda/middleware', () => ({
@@ -37,6 +43,100 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
 
 const getResourceMetaMock = vi.mocked(getResourceMeta);
 const canManageMock = vi.mocked(canManageResourcePermission);
+const canPerformMock = vi.mocked(canPerformResourceAction);
+
+describe('resourcePermissionRouter Agent use capability', () => {
+  const meta = { userId: 'creator', visibility: 'public', workspaceId: 'ws_1' };
+  const caller = (userId: string | undefined = 'reader') =>
+    resourcePermissionRouter.createCaller({
+      serverDB: {},
+      userId,
+      workspaceId: 'ws_1',
+      workspacePermissionCodes: ['ai:model:invoke:all'],
+    } as never);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getResourceMetaMock.mockResolvedValue(meta);
+    vi.mocked(ResourcePermissionModel).mockImplementation(function () {
+      return {
+        getAccessLevel: vi.fn().mockResolvedValue('edit'),
+        setAccessLevel: vi.fn().mockResolvedValue(undefined),
+      } as unknown as ResourcePermissionModel;
+    });
+  });
+
+  it.each([
+    { canManage: true, canUseResource: false },
+    { canManage: false, canUseResource: true },
+  ])(
+    'returns independent Agent use capability $canUseResource with manage $canManage',
+    async (capabilities) => {
+      canManageMock.mockResolvedValue(capabilities.canManage);
+      canPerformMock.mockResolvedValue(capabilities.canUseResource);
+      const result = await caller().getGeneralAccess({
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+      });
+      expect(result).toMatchObject(capabilities);
+      expect(canPerformMock).toHaveBeenCalledExactlyOnceWith({
+        action: 'use',
+        db: {},
+        grantedPermissions: ['ai:model:invoke:all'],
+        meta,
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'reader',
+        workspaceId: 'ws_1',
+      });
+    },
+  );
+
+  it.each([false, true])(
+    'returns actual Agent use capability %s after saving general access',
+    async (canUseResource) => {
+      canManageMock.mockResolvedValue(true);
+      canPerformMock.mockResolvedValue(canUseResource);
+      const result = await caller().setGeneralAccess({
+        accessLevel: 'use',
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+      });
+      expect(result).toMatchObject({ canManage: true, canUseResource });
+    },
+  );
+
+  it.each(['getGeneralAccess', 'setGeneralAccess'] as const)(
+    'keeps foreign private Agents hidden on %s',
+    async (method) => {
+      getResourceMetaMock.mockResolvedValue({ ...meta, visibility: 'private' });
+      await expect(
+        caller()[method]({
+          accessLevel: 'use',
+          resourceId: 'agent-1',
+          resourceType: 'agent',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(canPerformMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['getGeneralAccess', 'setGeneralAccess'] as const)(
+    'requires authentication on %s',
+    async (method) => {
+      const anonymous = resourcePermissionRouter.createCaller({ workspaceId: 'ws_1' } as never);
+      await expect(
+        anonymous[method]({
+          accessLevel: 'use',
+          resourceId: 'agent-1',
+          resourceType: 'agent',
+        }),
+      ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+      expect(getResourceMetaMock).not.toHaveBeenCalled();
+      expect(canPerformMock).not.toHaveBeenCalled();
+    },
+  );
+});
 
 describe('resourcePermissionRouter.setGeneralAccess', () => {
   let permissionModelMock: any;
@@ -189,6 +289,8 @@ describe('resourcePermissionRouter.getGeneralAccess', () => {
     });
 
     expect(result.accessLevel).toBe('view');
+    expect(result).not.toHaveProperty('canUseResource');
+    expect(canPerformMock).not.toHaveBeenCalled();
   });
 
   // Regression: the workspace gate used to reject every unfiled row outright,

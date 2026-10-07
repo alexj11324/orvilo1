@@ -42,6 +42,7 @@ export interface ResourceMeta {
 export interface ResourcePermissionState {
   accessLevel: ResourceAccessLevel;
   canManage: boolean;
+  canUseResource?: boolean;
   creatorId: string;
   /** @deprecated Compatibility value returned for released clients. */
   generalAccess: 'editor' | 'viewer';
@@ -51,6 +52,7 @@ export interface ResourcePermissionState {
 export const buildResourcePermissionState = (params: {
   accessLevel: ResourceAccessLevel;
   canManage: boolean;
+  canUseResource?: boolean;
   creatorId: string;
   visibility: 'private' | 'public' | 'team';
 }): ResourcePermissionState => ({

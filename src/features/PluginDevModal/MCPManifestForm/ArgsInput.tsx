@@ -55,6 +55,7 @@ const ArgsInput = memo<ArgsInputProps>(({ value = [], onChange, ...res }) => {
       {value.length === 0 ? (
         <div className="flex items-center gap-2">
           <Input
+            className="h-9"
             {...res}
             placeholder={t('ArgsInput.enterFirstArgument')}
             style={{ flex: 1 }}
@@ -68,7 +69,7 @@ const ArgsInput = memo<ArgsInputProps>(({ value = [], onChange, ...res }) => {
           <Button
             aria-label={t('ArgsInput.addArgument')}
             size="icon-sm"
-            variant="default"
+            variant="outline"
             onClick={handleAddArg}
           >
             <Plus />
@@ -79,6 +80,7 @@ const ArgsInput = memo<ArgsInputProps>(({ value = [], onChange, ...res }) => {
           {value.map((arg, index) => (
             <div className="flex items-center gap-2" key={index}>
               <Input
+                className="h-9"
                 placeholder={t('ArgsInput.argumentPlaceholder', { index: index + 1 })}
                 style={{ flex: 1 }}
                 value={arg}

@@ -261,7 +261,7 @@ const MCPManifestForm = ({
                   },
             ]}
           >
-            <Input placeholder={t('dev.mcp.identifier.placeholder')} />
+            <Input className="h-9" placeholder={t('dev.mcp.identifier.placeholder')} />
           </FormItem>
           {mcpType === 'http' && (
             <>
@@ -283,7 +283,7 @@ const MCPManifestForm = ({
                   },
                 ]}
               >
-                <Input placeholder="https://mcp.higress.ai/mcp-github/xxxxx" />
+                <Input className="h-9" placeholder="https://mcp.higress.ai/mcp-github/xxxxx" />
               </FormItem>
               <FormItem
                 desc={t('dev.mcp.auth.desc')}
@@ -327,6 +327,7 @@ const MCPManifestForm = ({
                 >
                   <Input
                     autoComplete="new-password"
+                    className="h-9"
                     placeholder={t('dev.mcp.auth.token.placeholder')}
                     type={'password'}
                   />
@@ -339,7 +340,10 @@ const MCPManifestForm = ({
                     label={t('dev.mcp.auth.oauth.clientId.label')}
                     name={AUTH_CLIENT_ID}
                   >
-                    <Input placeholder={t('dev.mcp.auth.oauth.clientId.placeholder')} />
+                    <Input
+                      className="h-9"
+                      placeholder={t('dev.mcp.auth.oauth.clientId.placeholder')}
+                    />
                   </FormItem>
                   <FormItem
                     desc={t('dev.mcp.auth.oauth.clientSecret.desc')}
@@ -348,6 +352,7 @@ const MCPManifestForm = ({
                   >
                     <Input
                       autoComplete="new-password"
+                      className="h-9"
                       placeholder={t('dev.mcp.auth.oauth.clientSecret.placeholder')}
                       type={'password'}
                     />
@@ -371,7 +376,10 @@ const MCPManifestForm = ({
                   label={t('dev.mcp.headers.label')}
                   name={HEADERS}
                 >
-                  <KeyValueEditor addButtonText={t('dev.mcp.headers.add')} />
+                  <KeyValueEditor
+                    addButtonText={t('dev.mcp.headers.add')}
+                    style={{ borderRadius: 'var(--radius-card)' }}
+                  />
                 </FormItem>
               </CollapsibleSection>
             </>
@@ -386,7 +394,9 @@ const MCPManifestForm = ({
                 tag={'command'}
               >
                 <MCPStdioCommandInput
+                  className="rounded-(--radius-input)"
                   placeholder={t('dev.mcp.command.placeholder')}
+                  size="lg"
                   onParsedArgs={(args) => {
                     const existing: string[] = form.getFieldValue(STDIO_ARGS) ?? [];
                     form.setFieldValue(STDIO_ARGS, [...args, ...existing.filter(Boolean)]);
@@ -411,6 +421,7 @@ const MCPManifestForm = ({
                 <KeyValueEditor
                   addButtonText={t('dev.mcp.env.add')}
                   keyPlaceholder="VARIABLE_NAME"
+                  style={{ borderRadius: 'var(--radius-card)' }}
                 />
               </FormItem>
             </>
@@ -419,7 +430,8 @@ const MCPManifestForm = ({
             <div className="flex flex-row items-center gap-2 justify-end">
               <Button
                 loading={isTesting}
-                variant="default"
+                size="lg"
+                variant="outline"
                 onClick={isOAuth ? onAuthorizeOAuth : handleTestConnection}
               >
                 {isOAuth ? t('dev.mcp.auth.oauth.authorize') : t('dev.mcp.testConnection')}
@@ -458,14 +470,14 @@ const MCPManifestForm = ({
             name={DESC_TYPE}
             tag={'description'}
           >
-            <Input placeholder={t('dev.mcp.desc.placeholder')} />
+            <Input className="h-9" placeholder={t('dev.mcp.desc.placeholder')} />
           </FormItem>
           <FormItem
             label={t('dev.mcp.avatar.label')}
             name={['customParams', 'avatar']}
             tag={'avatar'}
           >
-            <Input placeholder={'https://plugin-avatar.com'} />
+            <Input className="h-9" placeholder={'https://plugin-avatar.com'} />
           </FormItem>
         </div>
       </Form>

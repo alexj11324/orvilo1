@@ -48,7 +48,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 12px;
     padding-inline: 16px;
     border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
+    border-radius: var(--radius-card);
 
     background-color: ${cssVar.colorBgContainer};
 

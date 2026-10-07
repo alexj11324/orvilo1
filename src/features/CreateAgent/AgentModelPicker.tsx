@@ -21,6 +21,7 @@ export interface AgentModelPickerProps {
   onChange: (value: string) => void;
   onRetry?: () => void;
   options: Array<{ description?: string; label: string; value: string }>;
+  size?: 'default' | 'lg';
   value: string;
 }
 
@@ -31,6 +32,7 @@ export const AgentModelPicker = ({
   onChange,
   onRetry,
   options,
+  size,
   value,
 }: AgentModelPickerProps) => {
   const { t } = useTranslation('chat');
@@ -47,7 +49,9 @@ export const AgentModelPicker = ({
       }}
     >
       <ComboboxTrigger
-        render={<Button className="w-full justify-between font-normal" variant="outline" />}
+        render={
+          <Button className="w-full justify-between font-normal" size={size} variant="outline" />
+        }
       >
         <span className="truncate">
           {options.find((option) => option.value === value)?.label ?? t('createAgent.model.choose')}

@@ -234,7 +234,7 @@ export const RuntimeFields = ({
               if (value) form.selectChoice(value as AgentChoice);
             }}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full data-[size=default]:h-9">
               <SelectValue>{() => agentLabel ?? t('createAgent.choose')}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -262,7 +262,7 @@ export const RuntimeFields = ({
             host.select(value ?? undefined);
           }}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full data-[size=default]:h-9">
             <SelectValue
               placeholder={t(
                 host.loading ? 'createAgent.host.loading' : 'creation.runtime.hostEmpty',
@@ -355,6 +355,7 @@ export const RuntimeFields = ({
               <AgentModelPicker
                 disabled={disabled || form.providerFetch.isLoading}
                 loading={form.providerFetch.isLoading}
+                size="lg"
                 value={form.selectedBindingId}
                 options={[
                   ...form.bindings.map((binding) => ({
@@ -392,6 +393,7 @@ export const RuntimeFields = ({
                 disabled={disabled}
                 error={form.modelOptions.error}
                 loading={form.modelOptions.loading}
+                size="lg"
                 value={form.model}
                 options={[
                   {
@@ -415,7 +417,7 @@ export const RuntimeFields = ({
                   if (value) form.setEffort(value as HeterogeneousReasoningEffort);
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full data-[size=default]:h-9">
                   <SelectValue>{() => t(effortLabels[form.effort])}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>

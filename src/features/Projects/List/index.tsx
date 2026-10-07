@@ -985,7 +985,7 @@ const ProjectListPage = memo(() => {
           </span>
         }
         right={
-          <Button size="sm" variant="ghost" onClick={() => openCreateProjectModal()}>
+          <Button size="lg" variant="ghost" onClick={() => openCreateProjectModal()}>
             {createElement(PlusIcon, { 'size': 16, 'aria-hidden': true })}
             {t('create.title')}
           </Button>

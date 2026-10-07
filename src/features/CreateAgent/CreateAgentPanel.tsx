@@ -113,6 +113,7 @@ const CreateAgentPanel = ({
         {t('createAgent.name')}
         <Input
           required
+          className="h-9"
           disabled={locked}
           placeholder={t('createAgent.namePlaceholder')}
           value={name}
@@ -123,7 +124,7 @@ const CreateAgentPanel = ({
         />
       </label>
       <RuntimeFields disabled={locked} form={form} />
-      <details className="rounded-md border p-3 text-sm">
+      <details className="rounded-(--radius-card) border p-3 text-sm">
         <summary className="cursor-pointer text-muted-foreground">
           {t('createAgent.moreSettings')}
           {workspaceId &&
@@ -147,7 +148,7 @@ const CreateAgentPanel = ({
                     form.selectChoice(BUILTIN_AGENT_KEY);
                   }}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full data-[size=default]:h-9">
                     <SelectValue>
                       {() =>
                         t(
@@ -181,13 +182,14 @@ const CreateAgentPanel = ({
       )}
       <div className="flex justify-end gap-2">
         {onCancel && (
-          <Button disabled={creating} type="button" variant="outline" onClick={onCancel}>
+          <Button disabled={creating} size="lg" type="button" variant="outline" onClick={onCancel}>
             {t('common:cancel')}
           </Button>
         )}
         <Button
           disabled={creating || !name.trim() || (!saved.current && !intent.current && !form.ready)}
           loading={creating}
+          size="lg"
           type="submit"
         >
           {t('createAgent.create')}

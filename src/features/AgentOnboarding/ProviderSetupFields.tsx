@@ -23,6 +23,7 @@ export const ProviderSetupFields = (props: ProviderSetupFieldsProps) => {
         {t('onboarding.api.endpoint')}
         <Input
           required
+          className="h-9"
           disabled={props.configDisabled}
           type="url"
           value={props.endpoint}
@@ -33,6 +34,7 @@ export const ProviderSetupFields = (props: ProviderSetupFieldsProps) => {
         {t('onboarding.api.model')}
         <Input
           required
+          className="h-9"
           disabled={props.configDisabled}
           value={props.model}
           onChange={(event) => props.onModelChange(event.target.value)}
@@ -42,6 +44,7 @@ export const ProviderSetupFields = (props: ProviderSetupFieldsProps) => {
         {t('onboarding.api.key')}
         <Input
           autoComplete="new-password"
+          className="h-9"
           disabled={props.keyDisabled}
           required={props.keyRequired ?? true}
           type="password"

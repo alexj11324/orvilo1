@@ -99,6 +99,7 @@ const QuickImportSection = ({
       <div>
         <Button
           className="w-full"
+          size="lg"
           style={{ marginBottom: 16 }}
           variant="outline"
           onClick={() => {
@@ -145,14 +146,15 @@ const QuickImportSection = ({
       <div className="flex flex-row justify-between">
         <Button
           className={electronStylish.nodrag}
-          size={'sm'}
+          size="lg"
+          variant="outline"
           onClick={() => {
             setIsImportModalVisible(false);
           }}
         >
           {t('common:cancel')}
         </Button>
-        <Button size={'sm'} variant={'default'} onClick={handleImportConfirm}>
+        <Button size="lg" variant={'default'} onClick={handleImportConfirm}>
           {t('common:import')}
         </Button>
       </div>

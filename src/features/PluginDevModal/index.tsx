@@ -158,7 +158,9 @@ const DevModal = memo<DevModalProps>(
         )}
         <div className="flex flex-row gap-3">
           <Button
+            size="lg"
             style={buttonStyle}
+            variant="outline"
             onClick={() => {
               onOpenChange(false);
             }}
@@ -167,6 +169,7 @@ const DevModal = memo<DevModalProps>(
           </Button>
           <Button
             loading={submitting}
+            size="lg"
             style={buttonStyle}
             variant={'default'}
             onClick={handlePrimaryClick}

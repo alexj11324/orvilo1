@@ -1,5 +1,6 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
+import type { TaskAttentionReason } from './stateModel';
 
 export * from './result';
 export * from './stateModel';
@@ -901,6 +902,8 @@ export interface TaskItem {
   assigneeLocked: boolean;
   assigneeUserId: string | null;
   assignmentMode: TaskAssignmentMode;
+  /** Derived current-run input obligation or execution parked reason. */
+  attentionReason?: TaskAttentionReason;
   automationMode: TaskAutomationMode | null;
   completedAt: Date | null;
   config: unknown;

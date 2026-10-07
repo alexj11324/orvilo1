@@ -5,6 +5,7 @@ import type {
   NewTask,
   TaskActivityLogPayload,
   TaskActivityLogType,
+  TaskAttentionReason,
   TaskAutomationMode,
   TaskAutomationSnapshot,
   TaskDispatchPhase,
@@ -84,6 +85,7 @@ import {
   predicateForLegacyStatus,
   predicateForLegacyStatuses,
   TASK_OPEN_WORKFLOW,
+  taskAttentionReasonExpr,
 } from './taskExecutionSql';
 import { workflowCategoryForLegacyStatus } from './workflowMove';
 
@@ -98,6 +100,7 @@ const taskRowColumns = {
   visibility: taskVisibilitySql(),
   status: sql<TaskStatus>`${legacyStatusExpr}`,
   dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
+  attentionReason: taskAttentionReasonExpr,
 };
 
 /** Columns whose change is worth a line in the task activity feed. */
@@ -1468,6 +1471,7 @@ export class TaskModel {
        */
       groupLimits?: Record<string, number>;
       groups?: Array<{
+        attentionReasons?: TaskAttentionReason[];
         key: string;
         limit?: number;
         offset?: number;
@@ -1739,9 +1743,11 @@ export class TaskModel {
     } else {
       const statusGroups = (groups ?? []).map((group) => ({
         ...group,
+        attentionReasons: Array.from(new Set(group.attentionReasons ?? [])),
         statuses: Array.from(new Set(group.statuses ?? [])),
         workflowCategories: Array.from(new Set(group.workflowCategories ?? [])),
       }));
+      const attentionGroups = statusGroups.flatMap((group) => group.attentionReasons);
       const taskQueries = statusGroups.map(async (group) => {
         const workflowCategoryCondition =
           group.workflowCategories.length > 0
@@ -1753,7 +1759,15 @@ export class TaskModel {
               ? and(isNull(tasks.workflowStateId), predicateForLegacyStatuses(group.statuses))
               : predicateForLegacyStatuses(group.statuses)
             : undefined;
-        const membership = or(workflowCategoryCondition, legacyStatusCondition);
+        const membership =
+          group.attentionReasons.length > 0
+            ? inArray(taskAttentionReasonExpr, group.attentionReasons)
+            : and(
+                or(workflowCategoryCondition, legacyStatusCondition),
+                attentionGroups.length > 0
+                  ? notInArray(taskAttentionReasonExpr, attentionGroups)
+                  : undefined,
+              );
         if (!membership) throw new Error(`Task group ${group.key} has no membership criteria`);
         const conditions = [membership];
         const limit = group.limit ?? 50;

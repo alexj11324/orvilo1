@@ -296,9 +296,10 @@ describe('completion skill synthesis end-to-end (emit -> handler, no operation-m
       this: AgentOperationModel,
       operationId,
     ) {
-      return operationId === 'op_run' && Reflect.get(this, 'userId') === 'user_1'
-        ? ({ id: 'op_run', userId: 'user_1', taskId: null } as never)
-        : null;
+      if (operationId !== 'op_run' || Reflect.get(this, 'userId') !== 'user_1') {
+        throw new Error('Unexpected operation or actor in completion synthesis fixture');
+      }
+      return { id: 'op_run', userId: 'user_1', taskId: null } as never;
     });
     const lifecycle = new CompletionLifecycle({} as never, 'user_1');
     await lifecycle.emitSignalEvents(

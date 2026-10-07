@@ -655,9 +655,10 @@ describe('HeterogeneousAgentService', () => {
       const find = vi
         .spyOn(AgentOperationModel.prototype, 'findById')
         .mockImplementation(async function (this: AgentOperationModel, operationId) {
-          return operationId === 'op-hook-success' && Reflect.get(this, 'userId') === 'user-test'
-            ? ({ id: operationId, userId: 'user-test', taskId: null } as never)
-            : null;
+          if (operationId !== 'op-hook-success' || Reflect.get(this, 'userId') !== 'user-test') {
+            throw new Error('Unexpected operation or actor in successful hook fixture');
+          }
+          return { id: operationId, userId: 'user-test', taskId: null } as never;
         });
 
       try {
@@ -917,16 +918,17 @@ describe('HeterogeneousAgentService', () => {
         this: AgentOperationModel,
         operationId,
       ) {
-        return operationId === 'op-q' && Reflect.get(this, 'userId') === 'user-test'
-          ? ({
-              id: operationId,
-              userId: 'user-test',
-              taskId: null,
-              metadata: options.operationHooks
-                ? { _hooks: options.operationHooks, assistantMessageId: 'asst-op' }
-                : undefined,
-            } as never)
-          : null;
+        if (operationId !== 'op-q' || Reflect.get(this, 'userId') !== 'user-test') {
+          throw new Error('Unexpected operation or actor in queue hook fixture');
+        }
+        return {
+          id: operationId,
+          userId: 'user-test',
+          taskId: null,
+          metadata: options.operationHooks
+            ? { _hooks: options.operationHooks, assistantMessageId: 'asst-op' }
+            : undefined,
+        } as never;
       });
       const service = new HeterogeneousAgentService({} as any, 'user-test', {
         agentOperationModel: agentOperationModel as any,
@@ -1104,9 +1106,10 @@ describe('HeterogeneousAgentService', () => {
         this: AgentOperationModel,
         operationId,
       ) {
-        return operationId === 'op-int' && Reflect.get(this, 'userId') === 'user-test'
-          ? ({ id: operationId, userId: 'user-test', taskId: null } as never)
-          : null;
+        if (operationId !== 'op-int' || Reflect.get(this, 'userId') !== 'user-test') {
+          throw new Error('Unexpected operation or actor in hook round-trip fixture');
+        }
+        return { id: operationId, userId: 'user-test', taskId: null } as never;
       });
       return new HeterogeneousAgentService({} as any, 'user-test', {
         persistenceHandler: createFakePersistenceHandler(),

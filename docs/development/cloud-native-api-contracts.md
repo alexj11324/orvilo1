@@ -12,7 +12,7 @@ and existing readable-task predicates. Owner privacy, workspace access and the
 existing visibility projection continue to govern the query.
 
 `attentionReason` is derived from durable current-run question obligations first,
-then the existing execution parked reason, otherwise `none`. A resolved native
+then existing parked, workflow and dispatch evidence, otherwise `none`. A resolved native
 question remains `needs_input` until the producer acknowledges it. A runtime
 question remains unresolved until its continuation starts. Historical topic or
 execution-generation questions do not become obligations of the current run.

@@ -1,8 +1,21 @@
-# Local setup
+# Local backend setup (explicit opt-in)
 
-The one supported way to run Orvilo on your machine. A repo-root `.env` always
-wins — if one exists, `init-dev-env.sh` refuses to run; use the existing config
-and start normally (`bun run dev`).
+Development and UI acceptance default to real Electron connected to
+`https://orvilo.aspectlylabs.com`, optionally serving a local Vite renderer.
+Preserve the existing cloud sign-in and workspace; verify the API target before
+recording evidence. See [AGENTS.md](../../AGENTS.md#default-electron-with-the-cloud-backend).
+
+**Never start a local backend by default.** The recipes below apply only when the
+user explicitly requests local backend development. Code changes, UI acceptance
+and failed cloud connections do not authorize these services or a local fallback.
+Local seeded accounts, cookies, data and mocks prove only local behavior, never
+cloud identity or cloud acceptance. Record local UI and cloud deployed commits
+separately; local HEAD does not prove backend deployment.
+
+The remaining sections describe the opt-in local environment and CI fixtures.
+A repo-root `.env` always wins: if one exists, `init-dev-env.sh` refuses to run.
+For explicitly requested local backend work, use that config with `bun run dev`;
+its presence alone does not authorize starting services.
 
 ## Prerequisites
 
@@ -44,7 +57,7 @@ SPA ports are auto-allocated and persisted in
 `.records/env/agent-testing-ports.env` — read that file for the actual ports.
 
 A hand-rolled `.env` is the alternative: copy `.env.example.development` — same
-contract (APP\_URL 3010, `orvilo` DB, Redis 6379, S3 mock) — and the bootstrap
+contract (APP_URL 3010, `orvilo` DB, Redis 6379, S3 mock) — and the bootstrap
 steps aside because a root `.env` exists.
 
 ## Run modes
@@ -62,11 +75,11 @@ handoff) are built from it, so the server must listen on the same port
 
 ## Seeds — which env gets which
 
-| Environment          | Seed                                                                                                                                                                                                                                                                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Local dev            | `init-dev-env.sh seed-user` — always; creates `agent-testing@orvilo.aspectlylabs.com` / `TestPassword123!` plus a CLI API key. Opt-in: `bun run workflow:seed-linear-parity` — the Linear-parity fixture, hard-guarded by `ORVILO_PARITY_SEED_TARGET=local`, writes only to the dedicated DB `orvilo_linear_parity_20260922` (see `scripts/seedLinearParity/README.md`). |
-| CI / e2e             | Deterministic fixtures built per run by the workflows and the e2e support code — nothing shared between runs.                                                                                                                                                                                                                                                            |
-| Staging / production | None.                                                                                                                                                                                                                                                                                                                                                                    |
+| Environment          | Seed                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local dev            | `init-dev-env.sh seed-user` — for the explicitly selected local test environment; creates `agent-testing@orvilo.aspectlylabs.com` / `TestPassword123!` plus a CLI API key. Opt-in: `bun run workflow:seed-linear-parity` — the Linear-parity fixture, hard-guarded by `ORVILO_PARITY_SEED_TARGET=local`, writes only to the dedicated DB `orvilo_linear_parity_20260922` (see `scripts/seedLinearParity/README.md`). |
+| CI / e2e             | Deterministic fixtures built per run by the workflows and the e2e support code — nothing shared between runs.                                                                                                                                                                                                                                                                                                        |
+| Staging / production | None.                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ## Sign in
 
@@ -90,9 +103,9 @@ The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
 
 ## Troubleshooting
 
-- **Migrations fail creating bm25 / pg\_search indexes** — brew `postgresql@17`
+- **Migrations fail creating bm25 / pg_search indexes** — brew `postgresql@17`
   does not ship `pg_search`, so those migrations error out. Apply the
-  non-pg\_search migrations, then insert marker rows into
+  non-pg_search migrations, then insert marker rows into
   `drizzle.__drizzle_migrations` (`hash` = sha256 of the `.sql` file contents,
   `created_at` = the journal entry's `when`). The full procedure — including
   the marker-ordering trap that permanently skips sandwiched migrations — is in

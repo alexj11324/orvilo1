@@ -35,21 +35,39 @@ Electron 桌面客户端，以及 CLI。
 
 需要 **Node.js >= 22** 与 **pnpm**。仓库通过 `packageManager` 锁定 `pnpm@12.4.1`。
 
+默认开发与 UI 验收使用真实 Electron 客户端，连接云端后端
+`https://orvilo.aspectlylabs.com`。保留已有云端登录与工作区；本地 Vite 仅提供前端代码。
+云端写操作须在用户授权范围内。本地种子账号、Cookie、数据与 Mock 不能作为云端身份或验收证据。
+
 ```bash
 pnpm install
 
-# 全栈：Next.js 外壳 + Vite SPA 同时启动
-bun run dev
+# Electron 与本地 Vite 前端；确认选中的服务端为云端
+bun run dev:desktop
 
-# 仅 SPA，API 代理到已有后端
+# 可选 Web 前端开发，使用终端打印的云端 Debug Proxy URL
 bun run dev:spa
-
-# 独立后端服务
-pnpm --filter @orvilo/server dev
 ```
 
-`dev:spa` 启动后终端会打印一个 **Debug Proxy** URL。打开它会把你的本地开发服务器
-加载进线上环境，从而在真实服务端配置下获得 HMR。
+`dev:spa` 打印的 **Debug Proxy** URL 会把本地前端加载进线上环境，提供 HMR。
+直接打开本地 Vite URL 的 API 代理默认指向 `localhost:3010`，不代表已连接云端。
+记录本地前端提交与云端部署提交；本地 HEAD 不能证明后端修改已部署。
+
+**默认绝不启动本地后端。** 代码修改、UI 验收或云端连接失败都不构成启动本地
+Next.js/Hono、数据库、网关、迁移或种子的授权，也不应触发本地回退。
+
+### 本地后端开发：仅限明确选择
+
+只有用户明确要求本地后端时，才按[本地配置指南](./docs/development/local-setup.md)
+准备服务与数据，并使用以下命令：
+
+```bash
+# 明确选择的全栈模式：Next.js + Vite SPA
+bun run dev
+
+# 明确选择的独立后端服务
+pnpm --filter @orvilo/server dev
+```
 
 ### 质量检查
 

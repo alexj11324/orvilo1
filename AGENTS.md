@@ -40,18 +40,41 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 
 ## Development
 
-### Starting the Dev Environment
+### Default: Electron with the cloud backend
 
-Full local setup — Postgres/Redis, migrations, seeds, troubleshooting — lives in [docs/development/local-setup.md](./docs/development/local-setup.md).
+Development and UI acceptance default to the real Electron app connected to
+`https://orvilo.aspectlylabs.com`. Preserve the existing cloud sign-in and workspace.
+A local Vite renderer is allowed; verify its API target is the cloud before collecting evidence.
+Perform cloud mutations only within the user-authorized action scope.
+
+**Never start a local backend by default.** Code changes, UI acceptance, a missing
+session, or a failed cloud connection do not authorize local Next.js/Hono servers,
+databases, gateways, migrations, seeds, or an automatic local fallback. Report the
+cloud blocker and continue independent work. Local seeded users, cookies, data and
+mocks are not cloud identity or cloud acceptance evidence.
+
+Record the local renderer commit and the cloud deployment commit separately. A local
+HEAD proves only the UI code it serves; it does not prove that backend changes are deployed.
 
 ```bash
-# SPA dev mode (frontend only, proxies API to localhost:3010)
-bun run dev:spa
+# Electron + its local Vite renderer; verify the selected server is the cloud
+bun run dev:desktop
 
-# Full-stack dev (Next.js + Vite SPA concurrently)
+# Optional Web frontend development against the cloud via the printed Debug Proxy URL
+bun run dev:spa
+```
+
+### Local backend development: explicit opt-in
+
+Only when the user explicitly requests a local backend, use
+[docs/development/local-setup.md](./docs/development/local-setup.md) for
+Postgres/Redis, migrations, seeds and troubleshooting.
+
+```bash
+# Opt-in full stack: Next.js + Vite SPA
 bun run dev
 
-# Standalone Hono backend service
+# Opt-in standalone Hono backend
 pnpm --filter @orvilo/server dev
 ```
 
@@ -70,7 +93,7 @@ Use Brave with a copy of the currently used Brave profile when comparing Orvilo 
 - Find the active profile under `~/Library/Application Support/BraveSoftware/Brave-Browser` (check `profile.last_used` in `Local State`). Copy the user-data directory to a private temporary directory outside the repository. Exclude `Singleton*` locks, `Crashpad/`, and `BrowserMetrics*`; set the copy's top directory to mode `700` after copying because `rsync -a` can restore its original mode. Never commit or upload the copy, which contains session data.
 - Start a separate Brave instance with `--user-data-dir=<copy> --profile-directory=<active-profile> --remote-debugging-address=127.0.0.1 --remote-debugging-port=<port> --no-first-run`. Do not restart the original Brave instance or point CDP at its live profile.
 - Verify the copied instance by reading `http://127.0.0.1:<port>/json/version` and `/json/list`, then navigate to the Linear workspace and confirm it is authenticated. Cookies in the copy alone do not prove login. Give agents the loopback endpoint only after these checks pass.
-- Run the Orvilo candidate against the intended local revision and populated fixture. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity.
+- Run the Orvilo candidate in real Electron against the intended local renderer revision and the existing populated cloud workspace. Record the cloud deployment revision separately. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity. Local fixtures require explicit local-backend opt-in and prove only that local environment.
 
 ### Git Workflow
 

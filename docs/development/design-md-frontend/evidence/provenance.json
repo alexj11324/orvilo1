@@ -1,0 +1,79 @@
+{
+  "afterSourceSHA": "68ebb3dbbe363599223252b1919be9df43e1aad2",
+  "baseCanarySHA": "b5edbdf7abe4dd9661b2f83c6264166ae5c323d7",
+  "beforeSourceSHA": "2372352eff950301a0bd789f756c54fdb90c901e",
+  "captureDate": "2026-10-07",
+  "data": "Read-only populated fixture; no API key creation, MCP installation or agent execution",
+  "fixture": "tests/ui-alignment/designFixture.tsx",
+  "images": [
+    {
+      "path": "before/api-key-form-1280-light-en-default.png",
+      "sha256": "cc75262fa3b4834f138fd3d9791c7650c7b7a14b6b6c6a5eadd29b29686f9020"
+    },
+    {
+      "path": "before/api-key-validation-1280-light-en-default.png",
+      "sha256": "de6ad872de0e64eb673cd1c1cae71155140f7217805ee59ec8cd6deaf7077e5d"
+    },
+    {
+      "path": "before/features-1280-dark-zh-custom.png",
+      "sha256": "4cbbebbfb167b07dba15d46eaa2079fe1a476085cf7a53134f589efec7d24baf"
+    },
+    {
+      "path": "before/features-900-light-zh-yellow.png",
+      "sha256": "aa717b34d13b1f6b2e6e37b733b94a2ffb631e170d602b4fc8a905ae54d5aeb5"
+    },
+    {
+      "path": "before/project-filter-1280-dark-zh-custom.png",
+      "sha256": "bfebd02e6369f466a1c87e1cdeee051d3600f299724caabae930bd247537fcc5"
+    },
+    {
+      "path": "before/menu-1280-light-en-default.png",
+      "sha256": "5b8d3e8c7bd1d9b270b7ad779150471dfb5710aab5e42273bd383d8e0254b97f"
+    },
+    {
+      "path": "after/api-key-form-1280-light-en-default.png",
+      "sha256": "adf6c5a1c626c7662f5c0ad7024eda5b408ea320fc3a74d450296e64a3bf582f"
+    },
+    {
+      "path": "after/api-key-validation-1280-light-en-default.png",
+      "sha256": "feee4faa09be27f1adf59faa631e2360e54cd26170d785033ff6dfa9a49a4832"
+    },
+    {
+      "path": "after/features-1280-dark-zh-custom.png",
+      "sha256": "abcb331b86d879b3275ea4e687029e57511dbc67bdeae59020da791aab2aad07"
+    },
+    {
+      "path": "after/features-900-light-zh-yellow.png",
+      "sha256": "6743810ad648a27737328802a1edd5ed2c4ebd905787f58b909b617521c306f5"
+    },
+    {
+      "path": "after/project-filter-1280-dark-zh-custom.png",
+      "sha256": "fa19faa93850830a301acb90c08e1b17b86982f6f28b7af481e1504be37b4670"
+    },
+    {
+      "path": "after/menu-1280-light-en-default.png",
+      "sha256": "425ff3ba9682b44e902a6f9bdabebe1a226bbba5039074545d1579f90950bde8"
+    }
+  ],
+  "limits": [
+    "Feature subtree and shared primitive acceptance; not whole-app or backend persistence certification",
+    "Task 44px row and retained 13/15px roles are source-preservation claims",
+    "tsgo validation runs only in remote CI"
+  ],
+  "runtime": "Electron 43.2.0",
+  "settings": "Frameless transparent BrowserWindow with sidebar vibrancy, sandbox/contextIsolation; same 900px viewport height on both sides",
+  "sharedFixtureSHA256": "015b5ea77f8c4566648ed9967d69ce3527579214feefd8b198f5366d05de80b6",
+  "verification": {
+    "runtimeTests": 21,
+    "runtimePassed": 21,
+    "runtimeSeconds": 53.5,
+    "unitTestsPassed": 9,
+    "lint": "pass including normal pre-commit hook",
+    "independentReview": "Original three P2 findings resolved; no remaining product P0/P1/P2; fixture lint diagnostics corrected and rechecked",
+    "baselineFailures": [
+      "MCP first paint opacity 0 and translateY 4px under disabled/reduced motion",
+      "Input contrast 1.26 light / 1.60 dark below 3:1",
+      "Custom expiry date picker 32px instead of 36px"
+    ]
+  }
+}

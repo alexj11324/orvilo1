@@ -1,0 +1,62 @@
+{
+  "backendDeploymentCommit": "not verified",
+  "backendOrigin": "https://orvilo.aspectlylabs.com",
+  "baselineCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511",
+  "baselineMethod": "temporarily restored the five candidate files from a8da6ed8; git diff a8da6ed8 was empty before capture",
+  "blocker": "First-agent setup gate covers normal pages until a usable configured Agent is returned. No Agent was created to bypass it.",
+  "candidateMethod": "ce737c937 source; restored exact committed file bytes after baseline capture",
+  "candidateProductCommit": "ce737c937445592c084e21bf91b145d8567482ec",
+  "captureDate": "2026-10-07",
+  "captureMethod": "native CUA application screenshot, original JPEG bytes",
+  "data": "real cloud account; transient unsaved creation form only",
+  "deviceScaleFactor": 2,
+  "identity": "same existing authenticated cloud account",
+  "images": [
+    {
+      "path": "before/first-agent-light-zh.jpg",
+      "sha256": "af4afa1c1acd0b22f2f25025d8cbbb9047215f079da33a399f2f21ba42cf2980",
+      "mediaType": "image/jpeg",
+      "pixels": [2400, 1600],
+      "productCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511"
+    },
+    {
+      "path": "after/first-agent-light-zh.jpg",
+      "sha256": "ceba3cbe8a550818a43c0a5a7716914e6dad5b4b0906f05c5a530ac34adadf26",
+      "mediaType": "image/jpeg",
+      "pixels": [2400, 1600],
+      "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+    },
+    {
+      "path": "before/create-codex-dark-zh.jpg",
+      "sha256": "961c693a8a335dd83e8f6e859494a87ec693fb509498eef56c49d0711e4ddb41",
+      "mediaType": "image/jpeg",
+      "pixels": [2400, 1600],
+      "productCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511"
+    },
+    {
+      "path": "after/create-codex-dark-zh.jpg",
+      "sha256": "bbfb264e30dc8f0bade5172f090ddb820a700010b25452498ca52bf17fa1d9a6",
+      "mediaType": "image/jpeg",
+      "pixels": [2400, 1600],
+      "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+    },
+    {
+      "path": "after/first-agent-expanded-light-zh.jpg",
+      "sha256": "77b5ff3d7073ca77cca9a55c8162eb85b4ce53d1539d8fe125684c1203fedb07",
+      "mediaType": "image/jpeg",
+      "pixels": [2400, 1600],
+      "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+    }
+  ],
+  "locale": "zh-CN",
+  "logicalWindow": [1200, 800],
+  "platform": "macOS native Electron 43.2.0, standard dev:desktop",
+  "route": "app://renderer/abx/tasks",
+  "unverifiedScope": [
+    "Projects list/detail/create/filter/board",
+    "API Key settings and creation modal",
+    "MCP settings/install configuration",
+    "full agent creation transaction",
+    "custom palette and native backdrop over work pages"
+  ]
+}

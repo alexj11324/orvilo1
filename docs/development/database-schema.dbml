@@ -1078,6 +1078,8 @@ table passkey {
 }
 
 table auth_sessions {
+  clerk_session_id text
+  clerk_user_id text
   created_at timestamp [not null, default: `now()`]
   expires_at timestamp [not null]
   id text [pk, not null]

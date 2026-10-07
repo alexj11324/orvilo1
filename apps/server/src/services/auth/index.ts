@@ -1,7 +1,11 @@
 import { type OrviloDatabase } from '@orvilo/database';
 import { and, eq } from 'drizzle-orm';
 
-import { AUTH_SESSION_COOKIE, AuthSessionModel } from '@/database/models/authSession';
+import {
+  AUTH_SESSION_COOKIE,
+  authSessionAbsoluteExpiry,
+  AuthSessionModel,
+} from '@/database/models/authSession';
 import { account, type UserItem } from '@/database/schemas';
 import { authEnv } from '@/envs/auth';
 
@@ -75,6 +79,8 @@ export const exchangeClerkSession = async (
       tx as OrviloDatabase,
       authEnv.AUTH_SESSION_TTL_SECONDS,
     ).create({
+      clerkSessionId: claims.sessionId,
+      clerkUserId: claims.userId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
       userId: user.id,
@@ -85,8 +91,8 @@ export const exchangeClerkSession = async (
   return {
     cookie: {
       name: AUTH_SESSION_COOKIE,
-      options: authSessionCookieOptions(session.expiresAt),
-      value: session.token,
+      options: authSessionCookieOptions(authSessionAbsoluteExpiry(session)),
+      value: session.bearerToken,
     },
     user,
   };

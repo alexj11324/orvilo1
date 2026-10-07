@@ -59,8 +59,8 @@ export const verifyClerkSessionToken = async (token: string): Promise<ClerkSessi
       issuer: clerkIssuer(),
     });
     payload = result.payload;
-  } catch (error) {
-    log('Session token signature/claims rejected: %O', error);
+  } catch {
+    log('Session token signature/claims rejected');
     throw new ClerkAuthError('Invalid Clerk session token');
   }
 
@@ -114,14 +114,24 @@ const clerkApiFetch = async <T>(path: string): Promise<T> => {
   if (!secretKey) throw new ClerkAuthError('CLERK_SECRET_KEY is not configured', 500);
 
   const apiUrl = (authEnv.CLERK_API_URL || DEFAULT_CLERK_API_URL).replace(/\/$/, '');
-  const response = await fetch(`${apiUrl}/v1/${path}`, {
-    headers: { authorization: `Bearer ${secretKey}` },
-  });
+  let response;
+  try {
+    response = await fetch(`${apiUrl}/v1/${path}`, {
+      headers: { authorization: `Bearer ${secretKey}` },
+    });
+  } catch {
+    throw new ClerkAuthError('Clerk Backend API unavailable', 503);
+  }
   if (!response.ok) {
     log('Backend API %s responded %d', path, response.status);
-    throw new ClerkAuthError(`Clerk Backend API error: ${response.status}`, 502);
+    if (response.status === 404) throw new ClerkAuthError('Clerk resource unavailable');
+    throw new ClerkAuthError('Clerk Backend API unavailable', 503);
   }
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ClerkAuthError('Clerk Backend API unavailable', 503);
+  }
 };
 
 /** Belt-and-suspenders session check against the Clerk Backend API. */
@@ -129,6 +139,8 @@ export const assertClerkSessionActive = async (claims: ClerkSessionClaims) => {
   const session = await clerkApiFetch<ClerkApiSession>(`sessions/${claims.sessionId}`);
   if (session.id !== claims.sessionId || session.user_id !== claims.userId)
     throw new ClerkAuthError('Session does not match token claims');
+  if (session.expire_at !== undefined && session.expire_at <= Date.now())
+    throw new ClerkAuthError('Clerk session is expired');
   if (session.status !== 'active') throw new ClerkAuthError('Clerk session is not active');
   if (session.actor) throw new ClerkAuthError('Impersonated sessions cannot be exchanged');
 };

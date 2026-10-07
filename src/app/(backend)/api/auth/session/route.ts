@@ -13,7 +13,12 @@ import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
  */
 export const GET = async (request: Request) => {
   const db = await getServerDB();
-  const session = await resolveAuthSessionFromHeaders(db, request.headers);
+  let session;
+  try {
+    session = await resolveAuthSessionFromHeaders(db, request.headers);
+  } catch {
+    return NextResponse.json({ error: 'session_verification_unavailable' }, { status: 503 });
+  }
   if (!session?.userId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }

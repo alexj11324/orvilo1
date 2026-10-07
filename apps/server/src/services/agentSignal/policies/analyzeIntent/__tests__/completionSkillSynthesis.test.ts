@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import * as agentSignalService from '@/server/services/agentSignal';
 
@@ -291,6 +292,14 @@ describe('completion skill synthesis end-to-end (emit -> handler, no operation-m
       return undefined;
     }) as never);
 
+    vi.spyOn(AgentOperationModel.prototype, 'findById').mockImplementation(async function (
+      this: AgentOperationModel,
+      operationId,
+    ) {
+      return operationId === 'op_run' && Reflect.get(this, 'userId') === 'user_1'
+        ? ({ id: 'op_run', userId: 'user_1', taskId: null } as never)
+        : null;
+    });
     const lifecycle = new CompletionLifecycle({} as never, 'user_1');
     await lifecycle.emitSignalEvents(
       'op_run',

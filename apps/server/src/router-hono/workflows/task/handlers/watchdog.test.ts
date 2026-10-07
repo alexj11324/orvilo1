@@ -26,6 +26,7 @@ const {
   findByTaskId,
   findByTopicId,
   findStuckTasks,
+  hasUnresolvedInput,
   interruptTask,
   requestStop,
   updateContext,
@@ -48,6 +49,7 @@ const {
   findByTaskId: vi.fn<(taskId: string) => Promise<RunningTopic[]>>(),
   findByTopicId: vi.fn<(topicId: string) => Promise<unknown>>(),
   findStuckTasks: vi.fn<() => Promise<WatchdogTask[]>>(),
+  hasUnresolvedInput: vi.fn<(taskId: string, operationId?: string) => Promise<boolean>>(),
   interruptTask:
     vi.fn<
       (params: {
@@ -92,6 +94,7 @@ vi.mock('@/database/models/task', () => ({
     vi.fn(function () {
       return {
         findById,
+        hasUnresolvedInput,
         resolveTaskReviewRequirement,
         updateContext,
         updateStatus,
@@ -169,6 +172,7 @@ describe('task watchdog', () => {
     findStuckTasks.mockResolvedValue([stuckTask]);
     findById.mockResolvedValue({ ...stuckTask, status: 'running' });
     findByTopicId.mockResolvedValue(null);
+    hasUnresolvedInput.mockReset().mockResolvedValue(false);
     resolveTaskReviewRequirement.mockResolvedValue(false);
     findByTaskId.mockResolvedValue([]);
     interruptTask.mockResolvedValue({ success: true });

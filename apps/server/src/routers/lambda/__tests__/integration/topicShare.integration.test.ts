@@ -13,6 +13,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ResourcePermissionModel } from '@/database/models/resourcePermission';
+
 import { topicRouter } from '../../topic';
 import { cleanupTestUser, createTestUser } from './setup';
 
@@ -75,8 +77,8 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
     ]);
 
     // Share management follows the topic's conversation, so the topics must be
-    // bound to one: a shared agent (every member holds `use` by default) and a
-    // private one (nobody but its creator can reach it).
+    // bound to one: a shared agent with selected co-editor Use grants and a
+    // private one whose negative actors have no grant.
     const [sharedAgent] = await serverDB
       .insert(agents)
       .values({
@@ -86,6 +88,13 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
         workspaceId,
       })
       .returning();
+    await new ResourcePermissionModel(serverDB, workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: creatorId,
+      resourceId: sharedAgent.id,
+      resourceType: 'agent',
+      userIds: [memberId, ownerId],
+    });
     const [privateAgent] = await serverDB
       .insert(agents)
       .values({
@@ -412,6 +421,13 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
         agentUserId: creatorId,
         topicSharePolicy: 'member',
         topicUserId: creatorId,
+      });
+      await new ResourcePermissionModel(serverDB, workspaceId).upsertCollaborators({
+        accessLevel: 'use',
+        createdBy: creatorId,
+        resourceId: ownerOwned.agentId,
+        resourceType: 'agent',
+        userIds: [memberId],
       });
 
       const memberCaller = topicRouter.createCaller(createWorkspaceContext(memberId, workspaceId));

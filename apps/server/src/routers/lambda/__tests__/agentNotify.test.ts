@@ -415,21 +415,25 @@ describe('agentNotifyRouter.notify — remote hetero terminal signal', () => {
     // instantiation for a top-level task op so the gate has a plan to read.
     const { onComplete } = registerHooks();
     mockOpFindById.mockResolvedValue({ parentOperationId: null, taskId: 'task-9' });
+    const unresolved = vi.spyOn(TaskModel.prototype, 'hasUnresolvedInput').mockResolvedValue(false);
+    try {
+      await createCaller().notify({ content: '', done: true, role: 'assistant', topicId: TOPIC });
 
-    await createCaller().notify({ content: '', done: true, role: 'assistant', topicId: TOPIC });
-
-    await vi.waitFor(() => expect(mockInstantiateVerifyPlan).toHaveBeenCalledTimes(1));
-    // Ensured with the run's own operationId + taskId (3rd arg is the params object).
-    expect(mockInstantiateVerifyPlan.mock.calls[0][2]).toMatchObject({
-      operationId: OP,
-      taskId: 'task-9',
-    });
-    // Ordered before the gate: the ensure resolves before completeOperation fires
-    // onComplete (→ runVerifyOnCompletion).
-    await vi.waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    expect(mockInstantiateVerifyPlan.mock.invocationCallOrder[0]).toBeLessThan(
-      onComplete.mock.invocationCallOrder[0],
-    );
+      await vi.waitFor(() => expect(mockInstantiateVerifyPlan).toHaveBeenCalledTimes(1));
+      // Ensured with the run's own operationId + taskId (3rd arg is the params object).
+      expect(mockInstantiateVerifyPlan.mock.calls[0][2]).toMatchObject({
+        operationId: OP,
+        taskId: 'task-9',
+      });
+      // Ordered before the gate: the ensure resolves before completeOperation fires
+      // onComplete (→ runVerifyOnCompletion).
+      await vi.waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+      expect(mockInstantiateVerifyPlan.mock.invocationCallOrder[0]).toBeLessThan(
+        onComplete.mock.invocationCallOrder[0],
+      );
+    } finally {
+      unresolved.mockRestore();
+    }
   });
 
   it('skips verify-plan instantiation for a repair / non-task run', async () => {

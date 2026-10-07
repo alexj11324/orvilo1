@@ -652,22 +652,33 @@ describe('HeterogeneousAgentService', () => {
     it('fires onComplete (reason=done) hooks on a successful run', async () => {
       const { service } = createService({ operationId: 'op-hook-success' });
       const { onComplete, onError } = registerHook('op-hook-success');
+      const find = vi
+        .spyOn(AgentOperationModel.prototype, 'findById')
+        .mockImplementation(async function (this: AgentOperationModel, operationId) {
+          return operationId === 'op-hook-success' && Reflect.get(this, 'userId') === 'user-test'
+            ? ({ id: operationId, userId: 'user-test', taskId: null } as never)
+            : null;
+        });
 
-      await service.heteroFinish({
-        agentType: 'claude-code',
-        operationId: 'op-hook-success',
-        result: 'success',
-        topicId: 'topic-hook-1',
-      });
+      try {
+        await service.heteroFinish({
+          agentType: 'claude-code',
+          operationId: 'op-hook-success',
+          result: 'success',
+          topicId: 'topic-hook-1',
+        });
 
-      expect(onComplete).toHaveBeenCalledTimes(1);
-      expect(onComplete.mock.calls[0][0]).toMatchObject({
-        operationId: 'op-hook-success',
-        reason: 'done',
-      });
-      expect(onError).not.toHaveBeenCalled();
-      // Hooks are unregistered after dispatch so a replay can't double-fire.
-      expect(hookDispatcher.hasHooks('op-hook-success')).toBe(false);
+        expect(onComplete).toHaveBeenCalledTimes(1);
+        expect(onComplete.mock.calls[0][0]).toMatchObject({
+          operationId: 'op-hook-success',
+          reason: 'done',
+        });
+        expect(onError).not.toHaveBeenCalled();
+        // Hooks are unregistered after dispatch so a replay can't double-fire.
+        expect(hookDispatcher.hasHooks('op-hook-success')).toBe(false);
+      } finally {
+        find.mockRestore();
+      }
     });
 
     it('fires both onComplete and onError (reason=error) hooks on a failed run', async () => {
@@ -902,6 +913,21 @@ describe('HeterogeneousAgentService', () => {
           ? { _hooks: options.operationHooks, assistantMessageId: 'asst-op' }
           : undefined,
       } as any);
+      vi.spyOn(AgentOperationModel.prototype, 'findById').mockImplementation(async function (
+        this: AgentOperationModel,
+        operationId,
+      ) {
+        return operationId === 'op-q' && Reflect.get(this, 'userId') === 'user-test'
+          ? ({
+              id: operationId,
+              userId: 'user-test',
+              taskId: null,
+              metadata: options.operationHooks
+                ? { _hooks: options.operationHooks, assistantMessageId: 'asst-op' }
+                : undefined,
+            } as never)
+          : null;
+      });
       const service = new HeterogeneousAgentService({} as any, 'user-test', {
         agentOperationModel: agentOperationModel as any,
         persistenceHandler: createFakePersistenceHandler(),
@@ -919,6 +945,7 @@ describe('HeterogeneousAgentService', () => {
     });
 
     afterEach(() => {
+      vi.restoreAllMocks();
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(false);
       if (originalAppUrl === undefined) delete process.env.APP_URL;
       else process.env.APP_URL = originalAppUrl;
@@ -1072,13 +1099,22 @@ describe('HeterogeneousAgentService', () => {
       });
     };
 
-    const makeService = (store: ReturnType<typeof makeStore>) =>
-      new HeterogeneousAgentService({} as any, 'user-test', {
+    const makeService = (store: ReturnType<typeof makeStore>) => {
+      vi.spyOn(AgentOperationModel.prototype, 'findById').mockImplementation(async function (
+        this: AgentOperationModel,
+        operationId,
+      ) {
+        return operationId === 'op-int' && Reflect.get(this, 'userId') === 'user-test'
+          ? ({ id: operationId, userId: 'user-test', taskId: null } as never)
+          : null;
+      });
+      return new HeterogeneousAgentService({} as any, 'user-test', {
         persistenceHandler: createFakePersistenceHandler(),
         snapshotStore: null,
         streamEventManager: createFakeStreamManager().manager,
         topicModel: store.topicModel,
       });
+    };
 
     beforeEach(() => {
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(true);
@@ -1087,6 +1123,7 @@ describe('HeterogeneousAgentService', () => {
     });
 
     afterEach(() => {
+      vi.restoreAllMocks();
       vi.mocked(isQueueAgentRuntimeEnabled).mockReturnValue(false);
       hookDispatcher.unregister('op-int');
       if (originalAppUrl === undefined) delete process.env.APP_URL;

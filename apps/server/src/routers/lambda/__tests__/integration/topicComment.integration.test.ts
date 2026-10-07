@@ -206,6 +206,14 @@ describe('topicCommentRouter integration', () => {
       workspaceId,
     });
 
+    const permissions = new ResourcePermissionModel(db, workspaceId);
+    await permissions.upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: adminId,
+      resourceId: agentId,
+      resourceType: 'agent',
+      userIds: [memberId],
+    });
     const member = topicCommentRouter.createCaller(context(memberId, workspaceId));
     const owner = topicCommentRouter.createCaller(context(ownerId, workspaceId));
     const created = await member.create({
@@ -213,12 +221,8 @@ describe('topicCommentRouter integration', () => {
       content: 'original',
       topicId: agentTopicId,
     });
-    await new ResourcePermissionModel(db, workspaceId).setAccessLevel(
-      'agent',
-      agentId,
-      'view',
-      adminId,
-    );
+    await permissions.removeCollaborators('agent', agentId, [memberId]);
+    await permissions.setAccessLevel('agent', agentId, 'view', adminId);
 
     await expect(member.get({ id: created.comment.id })).resolves.toMatchObject({
       canDelete: false,
@@ -241,9 +245,17 @@ describe('topicCommentRouter integration', () => {
       .where(eq(topicComments.id, created.comment.id));
     expect(stored).toMatchObject({ content: 'original', deletedAt: null, moderatedAt: null });
 
+    await permissions.upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: adminId,
+      resourceId: agentId,
+      resourceType: 'agent',
+      userIds: [ownerId],
+    });
     await expect(owner.delete({ id: created.comment.id })).resolves.toMatchObject({
       mode: 'moderated',
     });
+    await permissions.removeCollaborators('agent', agentId, [ownerId]);
     await db.update(agents).set({ visibility: 'private' }).where(eq(agents.id, agentId));
     notifyTopicCommentModeration.mockClear();
     await expect(owner.restore({ id: created.comment.id })).rejects.toMatchObject({
@@ -313,6 +325,13 @@ describe('topicCommentRouter integration', () => {
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
+    await new ResourcePermissionModel(db, workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: memberId,
+      resourceId: privateAgentId,
+      resourceType: 'agent',
+      userIds: [memberId],
+    });
     const privateRoot = await member.create({
       clientId: 'private-member',
       content: 'allowed',
@@ -514,6 +533,13 @@ describe('topicCommentRouter integration', () => {
       workspaceId,
     });
 
+    await new ResourcePermissionModel(db, workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: memberId,
+      resourceId: privateAgentId,
+      resourceType: 'agent',
+      userIds: [memberId],
+    });
     await member.create({
       clientId: 'private-mention',
       content: 'mentioning someone who cannot open this conversation',

@@ -33,6 +33,7 @@ const {
   runSetMetadata,
   opFindById,
   taskFindById,
+  taskHasUnresolvedInput,
   taskReleaseRunReservation,
   taskRenewRunReservation,
   taskTopicFindByOperationId,
@@ -70,6 +71,7 @@ const {
   serviceUpdateStatus: vi.fn(),
   statusRecompute: vi.fn(),
   taskFindById: vi.fn(),
+  taskHasUnresolvedInput: vi.fn(),
   taskReleaseRunReservation: vi.fn(),
   taskRenewRunReservation: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
@@ -121,6 +123,7 @@ vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(function () {
     return {
       findById: taskFindById,
+      hasUnresolvedInput: taskHasUnresolvedInput,
       releaseRunReservation: taskReleaseRunReservation,
       renewRunReservation: taskRenewRunReservation,
       updateStatus: taskUpdateStatus,
@@ -284,6 +287,7 @@ describe('driveTaskFromVerify', () => {
       runSetMetadata,
       opFindById,
       taskFindById,
+      taskHasUnresolvedInput,
       taskReleaseRunReservation,
       taskRenewRunReservation,
       taskTopicFindByOperationId,
@@ -309,6 +313,7 @@ describe('driveTaskFromVerify', () => {
     runCompleteTaskDrive.mockResolvedValue(true);
     runReleaseTaskDrive.mockResolvedValue(true);
     runRenewTaskDrive.mockResolvedValue(true);
+    taskHasUnresolvedInput.mockResolvedValue(false);
     taskRenewRunReservation.mockResolvedValue(true);
     taskUpdateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
     taskUpdateStatusForExecutionContract.mockResolvedValue({ id: 'task-1', status: 'paused' });

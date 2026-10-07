@@ -8,6 +8,7 @@ import { TaskIssueRecurrenceModel } from '@/database/models/taskIssueRecurrence'
 import {
   agentOperations,
   taskDispatches,
+  taskIssueRecurrences,
   tasks,
   users,
   workspaceMembers,
@@ -112,17 +113,22 @@ describe('TaskIssueRecurrenceService', () => {
     expect(
       await runTaskIssueRecurrenceSweep({ db, now: new Date('2026-10-06T00:01:00Z') }),
     ).toMatchObject({ skipped: 1, created: 0 });
-    expect(await recurrence.findForTask(task.id)).toMatchObject({
+    await expect(recurrence.findForTask(task.id)).rejects.toThrow('Task not found');
+    const [persisted] = await db
+      .select()
+      .from(taskIssueRecurrences)
+      .where(eq(taskIssueRecurrences.sourceTaskId, task.id));
+    expect(persisted).toMatchObject({
       enabled: false,
       lastError: 'Source issue or creation permission is unavailable',
     });
     expect(await db.select().from(tasks).where(eq(tasks.workspaceId, workspaceId))).toHaveLength(1);
   });
-  it('protects private series and rejects stale conversions and invalid timezones', async () => {
+  it('shares live workspace Issue series with members and rejects stale conversions and invalid timezones', async () => {
     const { task } = await convert('private');
     await expect(
       new TaskIssueRecurrenceModel(db, readerId, workspaceId).findForTask(task.id),
-    ).rejects.toThrow('Task not found');
+    ).resolves.toMatchObject({ sourceTaskId: task.id, enabled: true });
     await expect(
       service.convert({
         id: task.id,

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   findByTaskId: vi.fn(),
   findRecoverableScopes: vi.fn(),
   findStuckTasks: vi.fn(),
+  hasUnresolvedInput: vi.fn(),
   interruptTask: vi.fn(),
   requestStop: vi.fn(),
   runTaskDeliveryReviewSweep: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('@/database/models/task', () => ({
     vi.fn(function () {
       return {
         findById: mocks.findById,
+        hasUnresolvedInput: mocks.hasUnresolvedInput,
         resolveTaskReviewRequirement: mocks.resolveTaskReviewRequirement,
         updateContext: mocks.updateContext,
         updateStatus: mocks.updateStatus,
@@ -132,6 +134,7 @@ describe('runTaskWatchdog cancellation convergence', () => {
     });
     mocks.updateContext.mockResolvedValue({});
     mocks.findById.mockResolvedValue(stuckTask({ status: 'running' }));
+    mocks.hasUnresolvedInput.mockReset().mockResolvedValue(false);
     mocks.resolveTaskReviewRequirement.mockResolvedValue(false);
     mocks.updateStatus.mockResolvedValue({ id: 'task-1' });
     mocks.updateStatusForExecutionContract.mockResolvedValue({ id: 'task-1' });

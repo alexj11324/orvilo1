@@ -1,11 +1,13 @@
 /**
  * @vitest-environment node
  */
+import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 
 import Keygrip from 'keygrip';
 import { NextRequest } from 'next/server';
-import type { AdapterPayload } from 'oidc-provider';
+import type { AdapterPayload, KoaContextWithOIDC } from 'oidc-provider';
 import Provider from 'oidc-provider';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -231,8 +233,13 @@ beforeEach(() => {
   });
   fixture.provider.proxy = true;
   for (const event of ['server_error', 'authorization.error', 'end_session_confirm.error']) {
-    fixture.provider.on(event, (_ctx, error) =>
-      fixture.providerErrors.push(error.error_description ?? error.message),
+    EventEmitter.prototype.on.call(
+      fixture.provider,
+      event,
+      (_ctx: KoaContextWithOIDC, error: Error) => {
+        const description = 'error_description' in error ? error.error_description : undefined;
+        fixture.providerErrors.push(typeof description === 'string' ? description : error.message);
+      },
     );
   }
 });
@@ -301,7 +308,8 @@ describe('consent against the installed provider', () => {
       );
       expect(code?.accountId).toBe('canonical-b');
       expect(code?.codeChallenge).toBe(challenge);
-      const grant = await fixture.provider!.Grant.find(code!.grantId);
+      assert.ok(code?.grantId);
+      const grant = await fixture.provider!.Grant.find(code.grantId);
       expect(grant?.accountId).toBe('canonical-b');
       expect(await fixture.provider!.Grant.find(unrelatedGrant.jti)).toBeDefined();
       expect(await fixture.provider!.Session.find(unrelatedSession.jti)).toBeDefined();

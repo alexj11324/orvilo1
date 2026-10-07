@@ -132,6 +132,25 @@ for (const theme of ['light', 'dark']) {
         }
       }
       assertHoverCoverage(names, required, 28);
+      await page
+        .getByTestId('hover-fixture')
+        .screenshot({ path: testInfo.outputPath(`hover-${theme}.png`) });
+    } finally {
+      diagnostics.controls = results;
+      await testInfo.attach('hover-feedback', {
+        body: JSON.stringify(diagnostics, null, 2),
+        contentType: 'application/json',
+      });
+    }
+  });
+
+  test(`negative controls fail the hover judge / ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1024, height: 1200 });
+    await page.goto(`/?theme=${theme}`);
+    const fixture = page.getByTestId('hover-fixture');
+    await expect(fixture).toBeVisible();
+    const results: Record<string, unknown>[] = [];
+    try {
       for (const name of ['unstyled', 'text-only', 'ancestor-only', 'same-color-pseudo']) {
         const measurement = await measure(page, fixture.locator(`[data-hover-negative="${name}"]`));
         results.push({ name, negative: true, ...measurement });
@@ -143,13 +162,13 @@ for (const theme of ['light', 'dark']) {
           /no visible hover/,
         );
       }
-      await page
-        .getByTestId('hover-fixture')
-        .screenshot({ path: testInfo.outputPath(`hover-${theme}.png`) });
     } finally {
-      diagnostics.controls = results;
-      await testInfo.attach('hover-feedback', {
-        body: JSON.stringify(diagnostics, null, 2),
+      await testInfo.attach('hover-negative-feedback', {
+        body: JSON.stringify(
+          { commit: process.env.UI_ALIGNMENT_SHA, theme, controls: results },
+          null,
+          2,
+        ),
         contentType: 'application/json',
       });
     }

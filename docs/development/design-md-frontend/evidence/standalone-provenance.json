@@ -1,0 +1,96 @@
+{
+  "after": [
+    {
+      "host": "share",
+      "theme": "light",
+      "bodyMargin": "0px",
+      "display": "flex",
+      "buttonRadius": "8px",
+      "buttonHeight": "32px",
+      "radiusToken": "8px"
+    },
+    {
+      "host": "share",
+      "theme": "dark",
+      "bodyMargin": "0px",
+      "display": "flex",
+      "buttonRadius": "8px",
+      "buttonHeight": "32px",
+      "radiusToken": "8px"
+    },
+    {
+      "host": "workbench",
+      "theme": "light",
+      "bodyMargin": "0px",
+      "display": "flex",
+      "buttonRadius": "8px",
+      "buttonHeight": "32px",
+      "radiusToken": "8px"
+    },
+    {
+      "host": "workbench",
+      "theme": "dark",
+      "bodyMargin": "0px",
+      "display": "flex",
+      "buttonRadius": "8px",
+      "buttonHeight": "32px",
+      "radiusToken": "8px"
+    }
+  ],
+  "afterSourceSHA": "3a9248e4edc5395085fd4717cd15f953abb46436",
+  "before": [
+    {
+      "host": "share",
+      "bodyMargin": "0px",
+      "display": "block",
+      "buttonRadius": "0px",
+      "buttonHeight": "21px",
+      "radiusToken": ""
+    },
+    {
+      "host": "workbench",
+      "bodyMargin": "0px",
+      "display": "block",
+      "buttonRadius": "0px",
+      "buttonHeight": "21px",
+      "radiusToken": ""
+    }
+  ],
+  "beforeSourceSHA": "b767f24d6240bf82e3ede88bb548f46d3fbcdb41",
+  "fixtureImportBoundary": "Only selected actual host is dynamically imported; fixture does not import globals.css",
+  "images": [
+    {
+      "path": "before/standalone-share-light.png",
+      "sha256": "700156c08d71c90958eb4ae4b0366e702f441440861023a9cbe8e7ff53104e3d"
+    },
+    {
+      "path": "after/standalone-share-light.png",
+      "sha256": "908cb3902ef47a1ca09d98b6c8d7570a33d8fb00ba349e912d1a27c06cde2d7a"
+    },
+    {
+      "path": "before/standalone-workbench-light.png",
+      "sha256": "700156c08d71c90958eb4ae4b0366e702f441440861023a9cbe8e7ff53104e3d"
+    },
+    {
+      "path": "after/standalone-workbench-light.png",
+      "sha256": "908cb3902ef47a1ca09d98b6c8d7570a33d8fb00ba349e912d1a27c06cde2d7a"
+    }
+  ],
+  "regression": "Before: flex utility renders block; button height21px/radius0px and radius token absent. Body margin already0px, so no observed8px margin regression. After: flex,32px/radius8px, token8px; both light/dark pass.",
+  "runtime": "Chromium, actual standalone Share/Workbench theme hosts",
+  "scope": "Isolated real theme host plus shared button; no backend, login or external mutations",
+  "sourceHashes": {
+    "apps/share/src/shell/ShareTheme.tsx": "383603099bc12fca2653a1b1e386683d57ceb75a354ac21bd24c131ab4cfc0f5",
+    "apps/workbench/src/shell/WorkbenchTheme.tsx": "2e9d5c237e60a540d48e4b4ec130fd01971baa65cafb83e36d29d54ed7a9119c",
+    "tests/ui-alignment/standaloneThemeFixture.tsx": "0030b5a87b2bbcfe0466141f3b0bf22d0628744d5ed2c403c62b6b02029203d4",
+    "tests/ui-alignment/standaloneTheme.html": "51a877ed9a8cfa0ce0eaa89bf31a9b2f666694ffc3e589c32bf60848dd4469f5"
+  },
+  "tests": {
+    "cases": 2,
+    "themesPerCase": 2,
+    "passed": 2,
+    "durationSeconds": 3.9,
+    "lint": "pass",
+    "independentReview": "approve; no findings"
+  }
+}

@@ -10,6 +10,7 @@ import {
   agentOperations,
   messagePlugins,
   messages,
+  taskDispatches,
   tasks,
   taskTopics,
   topics,
@@ -128,14 +129,12 @@ describe('TaskModel attention groups', () => {
     const input = await createTask({
       context: { execution: { parked: { reason: 'needs_input' } } },
     });
-    const failed = await createTask({
-      context: { execution: { parked: { reason: 'execution_failed' } } },
-    });
+    const failed = await createTask();
+    await model.updateStatus(failed.id, 'failed');
     await createTask();
     const normal2 = await createTask();
-    const review = await createTask({
-      context: { execution: { parked: { reason: 'review_required' } } },
-    });
+    const review = await createTask();
+    await model.updateStatus(review.id, 'paused', { workflowCategory: 'in_review' });
     const attentionReasons: TaskAttentionReason[] = ['needs_input', 'needs_input'];
     const groups = [
       { attentionReasons, key: 'input', limit: 1 },
@@ -144,7 +143,7 @@ describe('TaskModel attention groups', () => {
         key: 'normal',
         limit: 1,
         offset: 1,
-        workflowCategories: ['backlog'] as TaskWorkflowCategory[],
+        workflowCategories: ['backlog', 'in_review'] as TaskWorkflowCategory[],
       },
       { key: 'legacy', statuses: ['paused'] },
     ];
@@ -172,6 +171,93 @@ describe('TaskModel attention groups', () => {
     expect(page).toMatchObject({ hasMore: false, total: 2 });
     expect(page.tasks.map((task) => task.id)).toEqual([failed.id]);
   });
+
+  it('projects settlement contract writes into review and failure groups before normal pagination', async () => {
+    await createTask();
+    const failed = await createTask();
+    const normal2 = await createTask();
+    const review = await createTask();
+    for (const [task, status] of [
+      [failed, 'failed'],
+      [review, 'paused'],
+    ] as const) {
+      const written = await model.updateStatusForExecutionContract(
+        task.id,
+        status,
+        {
+          assigneeAgentId: task.assigneeAgentId,
+          executionGeneration: task.executionGeneration,
+          policyRevision: task.policyRevision,
+          requirementRevision: task.requirementRevision,
+        },
+        status === 'paused' ? { workflowCategory: 'in_review' } : undefined,
+      );
+      expect(written).not.toBeNull();
+    }
+    expect((await model.findById(review.id))?.attentionReason).toBe('review_required');
+    const [failure, reviews, normal] = await model.groupList({
+      groups: [
+        { attentionReasons: ['execution_failed'], key: 'failure' },
+        { attentionReasons: ['review_required'], key: 'review' },
+        { key: 'normal', limit: 1, offset: 1, workflowCategories: ['backlog', 'in_review'] },
+      ],
+    });
+    expect(failure).toMatchObject({ total: 1, hasMore: false });
+    expect(failure.tasks).toEqual([
+      expect.objectContaining({ id: failed.id, attentionReason: 'execution_failed' }),
+    ]);
+    expect(reviews).toMatchObject({ total: 1, hasMore: false });
+    expect(reviews.tasks).toEqual([
+      expect.objectContaining({ id: review.id, attentionReason: 'review_required' }),
+    ]);
+    expect(normal).toMatchObject({ total: 2, hasMore: false, offset: 1 });
+    expect(normal.tasks.map((task) => task.id)).toEqual([normal2.id]);
+
+    const run = await createRun(failed);
+    const question = await createQuestion(run.operationId);
+    expect((await model.findById(failed.id))?.attentionReason).toBe('needs_input');
+    await db
+      .update(agentInterventions)
+      .set({ status: 'resolved', producerAckAt: new Date() })
+      .where(eq(agentInterventions.id, question.id));
+    expect((await model.findById(failed.id))?.attentionReason).toBe('execution_failed');
+  });
+
+  it.each(['failed', 'outcome_unknown'] as const)(
+    'projects the latest %s dispatch and lets a newer active run supersede it',
+    async (phase) => {
+      const task = await createTask();
+      const values = {
+        generation: 1,
+        id: `dispatch-${task.id}`,
+        idempotencyKey: task.id,
+        phase,
+        policyRevision: task.policyRevision,
+        requestedBy: 'user',
+        requirementRevision: task.requirementRevision,
+        taskId: task.id,
+        taskRevision: task.domainRevision,
+      };
+      await db.insert(taskDispatches).values(values);
+      const reason = phase === 'failed' ? 'execution_failed' : 'outcome_unknown';
+      expect((await model.findById(task.id))?.attentionReason).toBe(reason);
+      // Settle the old unknown lease before starting its successor.
+      if (phase === 'outcome_unknown') {
+        await db
+          .update(taskDispatches)
+          .set({ phase: 'abandoned' })
+          .where(eq(taskDispatches.id, values.id));
+      }
+      await db.insert(taskDispatches).values({
+        ...values,
+        generation: 2,
+        id: `next-${task.id}`,
+        idempotencyKey: `next-${task.id}`,
+        phase: 'running',
+      });
+      expect((await model.findById(task.id))?.attentionReason).toBe('none');
+    },
+  );
 
   it('does not expose another owner private attention tasks or totals', async () => {
     const owned = await createTask({

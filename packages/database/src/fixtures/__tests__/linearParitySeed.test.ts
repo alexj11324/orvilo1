@@ -126,6 +126,26 @@ describe('linear parity seed', () => {
     expect(myIssuesTasks).toHaveLength(LINEAR_PARITY_MY_ISSUES.length);
     expect(myIssuesTasks.every((task) => task.assigneeUserId === userId)).toBe(true);
     expect(myIssuesTasks.every((task) => task.projectId === null)).toBe(true);
+    expect(
+      myIssuesTasks.every(
+        (task) =>
+          task.assigneeAgentId === null &&
+          task.currentTopicId === null &&
+          task.executionGeneration === 0,
+      ),
+    ).toBe(true);
+    expect(
+      myIssuesTasks
+        .map(({ identifier, workflowCategory }) => ({ identifier, workflowCategory }))
+        .sort((a, b) => a.identifier.localeCompare(b.identifier)),
+    ).toEqual([
+      { identifier: 'PMI-1', workflowCategory: 'todo' },
+      { identifier: 'PMI-2', workflowCategory: 'todo' },
+      { identifier: 'PMI-3', workflowCategory: 'todo' },
+      { identifier: 'PMI-4', workflowCategory: 'todo' },
+      { identifier: 'PMI-5', workflowCategory: 'todo' },
+      { identifier: 'PMI-6', workflowCategory: 'done' },
+    ]);
 
     const assigned = await new WorkQueryModel(db, userId, result.workspaceId).queryTasks({
       limit: 50,

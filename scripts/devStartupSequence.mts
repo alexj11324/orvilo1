@@ -122,8 +122,23 @@ const createLocalAuthEnv = (env: NodeJS.ProcessEnv, appPort: number, authPort: n
       );
     }
   }
-  const productOrigin = `http://${NEXT_HOST}:${appPort}`;
-  const portalOrigin = `http://${NEXT_HOST}:${authPort}`;
+  let productOrigin = `http://${NEXT_HOST}:${appPort}`;
+  try {
+    const explicitOrigin = new URL(env.APP_URL || '');
+    if (
+      explicitOrigin.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(explicitOrigin.hostname) &&
+      explicitOrigin.port === String(appPort) &&
+      env.APP_URL === explicitOrigin.origin
+    ) {
+      productOrigin = explicitOrigin.origin;
+    }
+  } catch {
+    // Missing or production APP_URL values keep the local development default.
+  }
+  const portalUrl = new URL(productOrigin);
+  portalUrl.port = String(authPort);
+  const portalOrigin = portalUrl.origin;
   return {
     ...env,
     APP_URL: productOrigin,
@@ -148,6 +163,7 @@ const FORCE_KILL_TIMEOUT_MS = 5_000;
 const packageScriptCommand = 'bun';
 
 let nextPort = 3010;
+let nextHost = NEXT_HOST;
 let nextRootUrl = `http://${NEXT_HOST}:${nextPort}/`;
 let nextProcess: ChildProcess | undefined;
 let viteProcess: ChildProcess | undefined;
@@ -261,12 +277,12 @@ const waitForNextReady = async () => {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < NEXT_READY_TIMEOUT_MS) {
-    if (await isPortOpen(NEXT_HOST, nextPort)) return;
+    if (await isPortOpen(nextHost, nextPort)) return;
     await wait(NEXT_READY_RETRY_MS);
   }
 
   throw new Error(
-    `Next server was not ready within ${NEXT_READY_TIMEOUT_MS / 1000}s on ${NEXT_HOST}:${nextPort}`,
+    `Next server was not ready within ${NEXT_READY_TIMEOUT_MS / 1000}s on ${nextHost}:${nextPort}`,
   );
 };
 
@@ -356,11 +372,12 @@ const main = async () => {
   loadEnv();
   nextPort = await resolveNextPort();
   process.env.PORT = String(nextPort);
-  nextRootUrl = `http://${NEXT_HOST}:${nextPort}/`;
   const vitePort = await resolveVitePortEnv();
   const authPort =
     Number(process.env.AUTH_SPA_PORT_RR) || (await findFreePort(3018, [nextPort, vitePort]));
   const childEnv = createLocalAuthEnv(process.env, nextPort, authPort);
+  nextRootUrl = `${childEnv.APP_URL}/`;
+  nextHost = new URL(childEnv.APP_URL).hostname.replaceAll(/^\[|\]$/g, '');
   console.log(`🔌 dev ports — next: ${nextPort}, vite: ${vitePort}, auth: ${authPort}`);
   console.log(`🔑 Local accounts portal: ${childEnv.AUTH_ACCOUNTS_URL}`);
 
@@ -396,12 +413,16 @@ const main = async () => {
   viteHandle = createDevProcessHandle({ isWindows, pid: viteProcess.pid });
   watchChildExit(viteProcess, 'vite');
 
-  authProcess = spawn('pnpm', ['--filter', '@orvilo/auth', 'dev'], {
-    detached: !isWindows,
-    env: childEnv,
-    stdio: 'inherit',
-    shell: isWindows,
-  });
+  authProcess = spawn(
+    'pnpm',
+    ['--filter', '@orvilo/auth', 'dev', ...(nextHost === NEXT_HOST ? [] : ['--host', nextHost])],
+    {
+      detached: !isWindows,
+      env: childEnv,
+      stdio: 'inherit',
+      shell: isWindows,
+    },
+  );
   authHandle = createDevProcessHandle({ isWindows, pid: authProcess.pid });
   watchChildExit(authProcess, 'auth');
   runNextBackgroundTasks();

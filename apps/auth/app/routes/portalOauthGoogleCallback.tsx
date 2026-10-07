@@ -31,7 +31,7 @@ export default function PortalOauthGoogleCallbackPage() {
 
   useEffect(() => {
     if (!clerk.loaded || attempted.current || !signIn || !signUp) return;
-    const destination = returnUrl;
+    const destination = `/login?${new URLSearchParams({ return_url: returnUrl })}`;
     const fail = () => setError(true);
     const navigateTo = (url: string) =>
       /^https?:\/\//.test(url) ? window.location.assign(url) : navigate(url, { replace: true });

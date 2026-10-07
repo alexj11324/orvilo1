@@ -215,3 +215,41 @@ for (const theme of ['light', 'dark']) {
     });
   }
 }
+
+for (const host of ['share', 'workbench']) {
+  test(`standalone ${host} host loads its shared stylesheet`, async ({ page }) => {
+    for (const theme of ['light', 'dark']) {
+      await page.goto(`/standaloneTheme.html?host=${host}&theme=${theme}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      const button = page.getByTestId('standalone-button');
+      await expect(button).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await expect(page.locator('body')).toHaveCSS('margin', '0px');
+      const content = page.getByTestId('standalone-content');
+      await expect(content).toHaveCSS('display', 'flex');
+      await expect(content).toHaveCSS('gap', '16px');
+      await expect(content).toHaveCSS('padding', '16px');
+      await expect(button).toHaveCSS('height', '32px');
+      await expect(button).toHaveCSS('border-radius', '8px');
+      const colors = await button.evaluate((element) => {
+        const sample = document.createElement('span');
+        document.body.append(sample);
+        sample.style.backgroundColor = 'var(--primary)';
+        sample.style.color = 'var(--primary-foreground)';
+        const expected = getComputedStyle(sample);
+        const actual = getComputedStyle(element);
+        const result = {
+          actualBackground: actual.backgroundColor,
+          actualForeground: actual.color,
+          expectedBackground: expected.backgroundColor,
+          expectedForeground: expected.color,
+        };
+        sample.remove();
+        return result;
+      });
+      expect(colors.actualBackground).toBe(colors.expectedBackground);
+      expect(colors.actualForeground).toBe(colors.expectedForeground);
+    }
+  });
+}

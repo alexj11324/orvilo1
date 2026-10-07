@@ -1,5 +1,7 @@
 'use client';
 
+import '@/app/globals.css';
+
 import ConfigProvider from '@lobehub/ui/es/ConfigProvider/index';
 import ThemeProvider from '@lobehub/ui/es/ThemeProvider/index';
 import { App } from 'antd';

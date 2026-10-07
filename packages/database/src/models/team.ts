@@ -14,7 +14,6 @@ import { and, asc, desc, eq, exists, inArray, isNotNull, or, sql } from 'drizzle
 
 import { projectTeams, teamCycles, teamMembers, teams, teamWorkflowStates } from '../schemas/team';
 import type { OrviloDatabase } from '../type';
-import { ProjectModel } from './project';
 import {
   getActiveWorkspaceMembershipRole,
   hasActiveWorkspaceMembership,
@@ -348,6 +347,7 @@ export class TeamModel {
     });
     if (!['owner', 'admin', 'member'].includes(role ?? ''))
       throw new Error('Writable workspace membership is required');
+    const { ProjectModel } = await import('./project');
     const project = new ProjectModel(this.db, this.userId, this.workspaceId);
     const row = await project.findById(projectId);
     if (

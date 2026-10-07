@@ -2,7 +2,9 @@
  * @vitest-environment node
  */
 import { NextRequest } from 'next/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
 
 import { defineConfig } from './define-config';
 
@@ -168,5 +170,82 @@ describe('retired acceptance installation guide', () => {
     // platform. The path must fall through to normal SPA handling instead of
     // keeping the removed unauthenticated pass-through from `public/acceptance/`.
     expect(response?.headers.get('x-middleware-next')).not.toBe('1');
+  });
+});
+
+describe('OIDC consent POST recovery ownership', () => {
+  const originalResolve = vi.mocked(resolveAuthSessionFromHeaders).getMockImplementation()!;
+  afterEach(() => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockReset();
+    vi.mocked(resolveAuthSessionFromHeaders).mockImplementation(originalResolve);
+  });
+  it('lets only the consent handler recover an expired web session without losing POST fields', async () => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+    const response = await middleware(
+      new NextRequest('http://localhost:3010/oidc/consent', {
+        body: new URLSearchParams({ consent: 'accept', uid: 'synthetic-uid' }),
+        method: 'POST',
+      }),
+    );
+
+    expect(response?.headers.get('x-middleware-next')).toBe('1');
+    expect(response?.headers.get('location')).toBeNull();
+  });
+
+  it.each(['/oidc/consent/neighbor', '/oidc/auth'])('keeps %s session-protected', async (path) => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+    const response = await middleware(new NextRequest(`http://localhost:3010${path}`));
+    expect(new URL(response!.headers.get('location')!).pathname).toBe('/signin');
+  });
+});
+
+describe('device verification sign-in detour', () => {
+  const originalResolve = vi.mocked(resolveAuthSessionFromHeaders).getMockImplementation()!;
+  afterEach(() => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockReset();
+    vi.mocked(resolveAuthSessionFromHeaders).mockImplementation(originalResolve);
+  });
+
+  it.each(['GET', 'POST'])(
+    'retains the same pending user code when the web session expires on %s',
+    async (method) => {
+      vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+      const userCode = 'ABCD-EFGH';
+      const request = new NextRequest(
+        `http://localhost:3010/oidc/device${method === 'GET' ? `?user_code=${userCode}` : ''}`,
+        {
+          body:
+            method === 'POST'
+              ? new URLSearchParams({
+                  user_code: userCode,
+                  xsrf: 'synthetic-old-xsrf',
+                  confirm: 'yes',
+                })
+              : undefined,
+          method,
+        },
+      );
+      const response = await middleware(request);
+      const signIn = new URL(response!.headers.get('location')!);
+      const callback = new URL(signIn.searchParams.get('callbackUrl')!, signIn.origin);
+      expect(callback.origin).toBe(signIn.origin);
+      expect(callback.pathname).toBe('/oidc/device');
+      expect(callback.searchParams.get('user_code')).toBe(userCode);
+      expect(callback.searchParams.has('xsrf')).toBe(false);
+      expect(callback.searchParams.has('confirm')).toBe(false);
+      if (method === 'POST') expect((await request.formData()).get('user_code')).toBe(userCode);
+    },
+  );
+
+  it('rejects a malformed unauthenticated confirmation instead of losing its body', async () => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+    const response = await middleware(
+      new NextRequest('http://localhost:3010/oidc/device', {
+        body: new URLSearchParams({ confirm: 'yes' }),
+        method: 'POST',
+      }),
+    );
+    expect(response?.status).toBe(400);
+    expect(response?.headers.get('location')).toBeNull();
   });
 });

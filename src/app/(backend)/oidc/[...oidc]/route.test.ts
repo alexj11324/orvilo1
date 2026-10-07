@@ -8,11 +8,12 @@ const mocks = vi.hoisted(() => ({
   createNodeRequest: vi.fn(),
   createNodeResponse: vi.fn(),
   middleware: vi.fn(),
+  log: vi.fn(),
   providerCallback: vi.fn(),
 }));
 
 vi.mock('debug', () => ({
-  default: () => vi.fn(),
+  default: () => mocks.log,
 }));
 
 vi.mock('@/envs/auth', () => ({
@@ -43,6 +44,29 @@ describe('OIDC route', () => {
       responseHeaders: {},
       responseStatus: 200,
     });
+  });
+
+  it('does not log authorization query or response cookie values', async () => {
+    const sentinel = 'OIDC_SECRET_LOG_SENTINEL';
+    mocks.createNodeRequest.mockResolvedValueOnce({});
+    mocks.createNodeResponse.mockReturnValueOnce({
+      nodeResponse: {},
+      responseStatus: 200,
+      responseBody: JSON.stringify({ access_token: sentinel }),
+      responseHeaders: {
+        'set-cookie': `session=${sentinel}`,
+        'location': `https://example.com/callback?code=${sentinel}`,
+      },
+    });
+    mocks.middleware.mockImplementationOnce((_req, _res, next) => next());
+    const { POST } = await import('./route');
+    const response = await POST(
+      new Request(`https://example.com/oidc/token?code=${sentinel}`, {
+        method: 'POST',
+      }) as unknown as NextRequest,
+    );
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(mocks.log.mock.calls)).not.toContain(sentinel);
   });
 
   it('returns a 500 response when creating the Node request fails', async () => {

@@ -12,7 +12,7 @@ const log = debug('orvilo-oidc:route'); // Create a debug instance with a namesp
 
 const handler = async (req: NextRequest) => {
   const requestUrl = new URL(req.url);
-  log(`Received ${req.method.toUpperCase()} request: %s %s`, req.method, req.url);
+  log('Received request: %s %s', req.method, requestUrl.pathname);
   log('Path: %s, Pathname: %s', requestUrl.pathname, requestUrl.pathname);
 
   // Declare the response collector
@@ -36,7 +36,7 @@ const handler = async (req: NextRequest) => {
         middleware = provider.callback();
         log('Successfully obtained middleware function.');
       } catch (syncError) {
-        log('SYNC ERROR during provider.callback() call itself: %O', syncError);
+        log('SYNC ERROR during provider.callback()');
         reject(syncError);
         return;
       }
@@ -51,7 +51,7 @@ const handler = async (req: NextRequest) => {
         middleware(nodeRequest, nodeResponse, (error?: Error) => {
           log('Middleware callback function HAS BEEN EXECUTED.');
           if (error) {
-            log('Middleware error reported via callback: %O', error);
+            log('Middleware error reported via callback');
             reject(error);
           } else {
             log(
@@ -78,17 +78,15 @@ const handler = async (req: NextRequest) => {
     } = responseCollector;
 
     log('Final Response Status: %d', finalStatus);
-    log('Final Response Headers: %O', finalHeaders);
+    log('Final response header names: %O', Object.keys(finalHeaders));
 
     return new NextResponse(finalBody, {
       headers: finalHeaders as HeadersInit,
       status: finalStatus,
     });
   } catch (error) {
-    // Surface the real stack to production logs. A debug `log()` only writes to the
-    // `orvilo-oidc:route` namespace, which is disabled in production, so 500s otherwise
-    // land with no application-layer error signature (monitoring blind spot).
-    console.error(`[OIDC Route] Error handling ${req.method} ${requestUrl.pathname}:`, error);
+    // Provider errors can contain request credentials; log the boundary without raw values.
+    console.error(`[OIDC Route] Error handling ${req.method} ${requestUrl.pathname}`);
     return new NextResponse(`Internal Server Error: ${(error as Error).message}`, { status: 500 });
   }
 };

@@ -1,6 +1,8 @@
 /**
  * @vitest-environment node
  */
+import { createServer } from 'node:http';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
@@ -76,9 +78,9 @@ describe('OIDC Provider - Market Client Integration', () => {
       expect(
         desktopClient?.redirectUriAllowed('https://orvilo.aspectlylabs.com/oidc/callback/desktop'),
       ).toBe(true);
-      expect(desktopClient?.redirectUriAllowed('https://orvilo.aspectlylabs.com/oidc/callback/desktop')).toBe(
-        true,
-      );
+      expect(
+        desktopClient?.redirectUriAllowed('https://orvilo.aspectlylabs.com/oidc/callback/desktop'),
+      ).toBe(true);
       expect(desktopClient?.redirectUriAllowed('https://example.com/oidc/callback/desktop')).toBe(
         false,
       );
@@ -111,7 +113,7 @@ describe('OIDC Provider - Market Client Integration', () => {
       const module = await import('./provider');
 
       expect(module.oidcArtifactTTL).toEqual({
-        AccessToken: 7 * 24 * 60 * 60,
+        AccessToken: 900,
         AuthorizationCode: 600,
         BackchannelAuthenticationRequest: 600,
         ClientCredentials: 600,
@@ -287,5 +289,69 @@ describe('OIDC Provider - Market Client Integration', () => {
         expect(localClaims.fields).toContain('email');
       });
     });
+  });
+});
+
+describe('configured provider JWT API grant binding', () => {
+  it('mints a signed grantId and 900 second TTL without an access-token database row', async () => {
+    const { decodeJwt, exportJWK, generateKeyPair, importJWK, jwtVerify } = await import('jose');
+    const { privateKey } = await generateKeyPair('RS256', { extractable: true });
+    const key = { ...(await exportJWK(privateKey)), alg: 'RS256', kid: 'binding-test', use: 'sig' };
+    vi.doMock('./jwt', async (original) => ({
+      ...(await original<Record<string, unknown>>()),
+      getJWKS: () => ({ keys: [key] }),
+    }));
+    vi.doMock('./cookies', () => ({ getOIDCCookieKeys: () => ['isolated-test-cookie-key'] }));
+    try {
+      const { createOIDCProvider, API_AUDIENCE } = await import('./provider');
+      const insert = vi.fn();
+      const chain = { from: () => chain, where: () => chain, limit: async () => [] };
+      const provider = await createOIDCProvider({ insert, select: () => chain } as any);
+      const client = (await provider.Client.find('orvilo-desktop'))!;
+      const token = new provider.AccessToken({
+        accountId: 'user-123',
+        client,
+        grantId: 'grant-123',
+      });
+      token.resourceServer = new provider.ResourceServer(API_AUDIENCE, {
+        audience: API_AUDIENCE,
+        accessTokenFormat: 'jwt',
+        scope: 'profile email',
+      });
+      token.scope = 'profile email';
+      const jwt = await token.save();
+      const { payload } = await jwtVerify(
+        jwt,
+        await importJWK({ kty: key.kty, n: key.n, e: key.e }, 'RS256'),
+        { issuer: provider.issuer, audience: API_AUDIENCE, typ: 'at+jwt' },
+      );
+      expect(payload.grantId).toBe('grant-123');
+      expect(payload.exp! - payload.iat!).toBe(900);
+      expect(decodeJwt(jwt).client_id).toBe('orvilo-desktop');
+      expect(insert).not.toHaveBeenCalled();
+      // The Next route adapter preserves the full /oidc path when invoking callback().
+      const server = createServer(provider.callback());
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const { port } = server.address() as { port: number };
+        const response = await fetch(`http://127.0.0.1:${port}/oidc/token/revocation`, {
+          method: 'POST',
+          body: new URLSearchParams({
+            token: 'nonexistent-test-token',
+            token_type_hint: 'refresh_token',
+            client_id: 'orvilo-desktop',
+          }),
+        });
+        expect(response.status).toBe(200);
+      } finally {
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve())),
+        );
+      }
+    } finally {
+      vi.doUnmock('./jwt');
+      vi.doUnmock('./cookies');
+      vi.resetModules();
+    }
   });
 });

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { TRPCError } from '@trpc/server';
+import debug from 'debug';
 import type { JWTPayload } from 'jose';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +9,16 @@ import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJ
 
 import { validateOIDCJWT } from './jwt';
 
-const { authEnv } = vi.hoisted(() => ({ authEnv: { JWKS_KEY: '' } }));
+const { authEnv, grantRows, grantLimit } = vi.hoisted(() => ({
+  authEnv: { JWKS_KEY: '' },
+  grantRows: [] as Record<string, unknown>[],
+  grantLimit: vi.fn(),
+}));
+vi.mock('@/database/core/db-adaptor', () => ({
+  getServerDB: async () => ({
+    select: () => ({ from: () => ({ where: () => ({ limit: grantLimit }) }) }),
+  }),
+}));
 vi.mock('@/envs/auth', () => ({ authEnv }));
 vi.mock('@/envs/app', () => ({ appEnv: { APP_URL: 'https://orvilo.example' } }));
 
@@ -25,6 +35,7 @@ describe('validateOIDCJWT', () => {
     iat: now,
     iss: issuer,
     jti: 'access-token-id',
+    grantId: 'grant-123',
     scope: 'profile email offline_access',
     sub: 'user-123',
   };
@@ -39,6 +50,13 @@ describe('validateOIDCJWT', () => {
   });
   beforeEach(() => {
     authEnv.JWKS_KEY = jwks;
+    grantRows.splice(0, grantRows.length, {
+      id: 'grant-123',
+      userId: 'user-123',
+      clientId: 'orvilo-desktop',
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    grantLimit.mockReset().mockImplementation(async () => grantRows);
   });
 
   it('accepts the native OAuth API contract without openid or user:read scopes', async () => {
@@ -82,6 +100,53 @@ describe('validateOIDCJWT', () => {
     });
   });
 
+  it.each([
+    ['missing', []],
+    [
+      'expired',
+      [{ id: 'grant-123', userId: 'user-123', clientId: 'orvilo-desktop', expiresAt: new Date(0) }],
+    ],
+    [
+      'wrong user',
+      [
+        {
+          id: 'grant-123',
+          userId: 'another-user',
+          clientId: 'orvilo-desktop',
+          expiresAt: new Date(Date.now() + 60000),
+        },
+      ],
+    ],
+    [
+      'wrong client',
+      [
+        {
+          id: 'grant-123',
+          userId: 'user-123',
+          clientId: 'another-client',
+          expiresAt: new Date(Date.now() + 60000),
+        },
+      ],
+    ],
+  ])('rejects a %s current grant', async (_, rows) => {
+    grantRows.splice(0, grantRows.length, ...rows);
+    await expect(validateOIDCJWT(await sign(accessClaims, 'at+jwt'))).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+    });
+  });
+
+  it('fails closed for legacy provider access tokens without grantId', async () => {
+    await expect(
+      validateOIDCJWT(await sign({ ...accessClaims, grantId: undefined }, 'at+jwt')),
+    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it('propagates current grant database outage as infrastructure failure', async () => {
+    const outage = new Error('database unavailable');
+    grantLimit.mockRejectedValueOnce(outage);
+    await expect(validateOIDCJWT(await sign(accessClaims, 'at+jwt'))).rejects.toBe(outage);
+  });
+
   it('preserves the current sandbox producer and rejects another recipient using its purpose', async () => {
     await expect(validateOIDCJWT(await signUserJWT('user-123'))).resolves.toMatchObject({
       userId: 'user-123',
@@ -122,6 +187,27 @@ describe('validateOIDCJWT', () => {
     await expect(
       validateOIDCJWT(await sign(accessClaims, 'at+jwt', other.privateKey)),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it('does not log JOSE payload claims when enabled debug reports an expired token', async () => {
+    const previous = debug.disable();
+    debug.enable('oidc-jwt');
+    const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+    try {
+      await expect(
+        validateOIDCJWT(
+          await sign(
+            { ...accessClaims, exp: now - 30, privateClaim: 'JWT_SECRET_LOG_SENTINEL' },
+            'at+jwt',
+          ),
+        ),
+      ).rejects.toMatchObject({ code: 'UNAUTHORIZED', cause: { code: 'ERR_JWT_EXPIRED' } });
+      expect(output).toHaveBeenCalled();
+      expect(JSON.stringify(output.mock.calls)).not.toContain('JWT_SECRET_LOG_SENTINEL');
+    } finally {
+      output.mockRestore();
+      debug.enable(previous);
+    }
   });
 
   it('does not wrap JWKS infrastructure failures as unauthorized', async () => {

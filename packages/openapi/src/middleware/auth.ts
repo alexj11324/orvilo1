@@ -43,7 +43,7 @@ export const userAuthMiddleware = async (c: Context, next: Next) => {
 
   // Try Bearer token authentication - check format first to determine type
   if (bearerToken) {
-    log('Bearer token received: %s...', bearerToken.slice(0, 10));
+    log('Bearer token received');
 
     // Check if bearerToken matches API Key format (prefix + 16 alphanumeric chars)
     const isApiKeyFormat = validateApiKeyFormat(bearerToken);
@@ -103,7 +103,9 @@ export const userAuthMiddleware = async (c: Context, next: Next) => {
         // Use direct JWT validation instead of OIDCService
         const tokenInfo = await validateOIDCJWT(bearerToken);
         if (tokenInfo.tokenData?.purpose === 'hetero-operation') {
-          throw new Error('Operation tokens are only accepted by heterogeneous model endpoints');
+          throw new HTTPException(401, {
+            message: 'Operation tokens are only accepted by heterogeneous model endpoints',
+          });
         }
         const db = await getServerDB();
         await assertOIDCUserActive(db, tokenInfo.userId);
@@ -114,7 +116,19 @@ export const userAuthMiddleware = async (c: Context, next: Next) => {
 
         log('OIDC authentication successful, userId: %s', userId);
       } catch (error) {
-        log('OIDC authentication failed: %O', error);
+        log('OIDC authentication failed (%s)', error instanceof Error ? error.name : 'unknown');
+        if (error instanceof HTTPException && error.status === 401) throw error;
+        if (!(
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          error.code === 'UNAUTHORIZED'
+        )) {
+          throw new HTTPException(503, {
+            message: 'Authentication service unavailable',
+            cause: error,
+          });
+        }
       }
     } else {
       log('Bearer token provided but does not match API Key format and OIDC is not enabled');

@@ -41,8 +41,10 @@ export const createOnboardingAgentOnce = async (
     );
     const existing = configurations.find(
       (config) =>
-        (config?.params as Record<string, unknown> | undefined)?.onboardingCreateId ===
-        checkpoint.requestId,
+        config &&
+        'params' in config &&
+        (config.params as Record<string, unknown> | undefined)?.onboardingCreateId ===
+          checkpoint.requestId,
     );
     if (existing?.id) return { agentId: existing.id, config: existing };
   }

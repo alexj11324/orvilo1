@@ -40,6 +40,8 @@ export const DescriptionReferenceNormalizationPlugin = ({ appOrigin }: { appOrig
         if (
           schemaClass.current &&
           node instanceof schemaClass.current &&
+          'getSchemaType' in node &&
+          typeof node.getSchemaType === 'function' &&
           node.getSchemaType() === DESCRIPTION_REFERENCE_SCHEMA
         )
           return <DescriptionReferenceChip referenceNode={node.exportJSON()} />;

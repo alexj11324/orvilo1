@@ -113,7 +113,7 @@ export interface CreateTaskInput {
   instruction: string;
   name?: string;
   parentTaskId?: string;
-  priority?: number;
+  priority?: number | null;
   projectId?: string;
   schedulePattern?: string;
   scheduleTimezone?: string;

@@ -62,6 +62,7 @@ describe('TaskIssueDefinitionService', () => {
     const child = await model.create({
       name: 'Child',
       instruction: 'Child body',
+      priority: null,
       parentTaskId: source.id,
       workflowCategory: 'todo',
     });
@@ -101,6 +102,7 @@ describe('TaskIssueDefinitionService', () => {
         context: {},
       });
     expect(copies.find((copy) => copy.id !== result.rootId)).toMatchObject({
+      priority: null,
       name: 'Child',
       parentTaskId: result.rootId,
     });

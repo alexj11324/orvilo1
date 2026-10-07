@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: Orvilo
-description: Orvilo's design system, built on orvilo-ui (@lobehub/ui). Tokens are themeable — primary and neutral colors are user-configurable and resolve to CSS variables (cssVar key `orvilo-vars`). This is the Light theme; the Dark theme uses the same token names with different values and is documented in DESIGN.dark.md.
+description: Orvilo's visual contract. Existing light theme values below are reference defaults; DESIGN.dark.md supplies dark color values. Runtime adapters must implement the same semantic roles.
 themeable:
   # Users pick a primary and a neutral; components must read the semantic tokens
   # below rather than hard-coding any single value from this list.
@@ -13,7 +13,7 @@ themeable:
     default: ~ # the built-in `gray` scale when unset
     options: [mauve, slate, sage, olive, sand]
 colors:
-  # Semantic tokens (orvilo-ui token names) — the real contract components consume
+  # Existing engine token names for Orvilo semantic roles; light reference defaults
   # `cssVar.colorPrimary`, `cssVar.colorText`, etc. Light-theme defaults shown.
   colorPrimary: '#222222' # monochrome by default; becomes the chosen primaryColor[9]
   colorSuccess: '#379d4a' # green
@@ -30,8 +30,8 @@ colors:
   colorBgContainer: '#ffffff' # primary card / panel surface
   colorBgContainerSecondary: '#fbfbfb' # subtle secondary surface (orvilo-ui custom token)
   colorBgElevated: '#ffffff' # popovers, menus, modals
-  colorBgSpotlight: '#dddddd' # tooltips
-  # Borders & fills — translucent, layer over any background
+  colorBgSpotlight: '#dddddd' # retained engine spotlight role; not the local tooltip contract
+  # Borders are solid reference defaults; fills are translucent washes
   colorBorder: '#e3e3e3' # stronger edge
   colorBorderSecondary: '#eeeeee' # default divider / subtle border
   colorFill: 'rgba(0, 0, 0, 0.12)'
@@ -39,7 +39,7 @@ colors:
   colorFillTertiary: 'rgba(0, 0, 0, 0.03)' # hover wash
   colorFillQuaternary: 'rgba(0, 0, 0, 0.015)' # active wash
 elevation:
-  # Shared by both themes; pair each with the matching radius
+  # Shared elevation roles; light reference values, dark values may differ
   boxShadowTertiary: '0 3px 1px -1px rgba(26, 26, 26, 0.06)' # raised cards
   boxShadowSecondary: '0 8px 16px -4px rgba(0, 0, 0, 0.2)' # popovers, menus
   boxShadow: '0 20px 20px -8px rgba(0, 0, 0, 0.24)' # modals, dialogs
@@ -82,88 +82,124 @@ controls:
 
 # Orvilo
 
-## Overview
+Orvilo is calm and content-first: restrained color, clear hierarchy, and space for the user's work. Color communicates meaning. Natural, Meaningful, Certainty, and Growth guide the product; their definitions and interaction priorities live in [UX design values](.agents/skills/ux/references/design-values.md).
 
-Orvilo is an AI-native product suite (chat, agents, tools). Its design system is built on [@lobehub/ui](https://www.npmjs.com/package/@lobehub/ui) — Orvilo's component and theming layer — and is themed at runtime through `ThemeProvider` with the cssVar key `orvilo-vars`.
+## Rule ownership
 
-The aesthetic is calm and content-first: generous whitespace, restrained color, and a near-neutral canvas so the conversation and the user's content stay in focus. Color carries state and hierarchy, not decoration. Every surface is designed for both light and dark appearance and for desktop and mobile.
+This file is the single Orvilo visual contract for both appearances. [DESIGN.dark.md](DESIGN.dark.md) supplies dark color defaults only. The YAML above retains the existing light engine values as reference defaults, not a second palette or proof of accessibility.
 
-The YAML above lists the default Light theme. The Dark theme redefines the same token names with different values and lives in [DESIGN.dark.md](./DESIGN.dark.md) — every other section here (typography, layout, motion, shapes, components, voice, values) is theme-independent and applies to both. Build against token names, not values.
+| Concern                                                                                    | Owner                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Visual roles, type, density, spacing, shape, elevation, motion, copy tone                  | This document                                                                                                                                                                                                                                                                               |
+| Component/import priority, styling APIs, state locality, render boundaries                 | [React skill](.agents/skills/react/SKILL.md) and its [layout reference](.agents/skills/react/references/layout-kit.md)                                                                                                                                                                      |
+| Empty/loading/error behavior, recovery, selection, actions, drafts, progressive disclosure | [UX skill](.agents/skills/ux/SKILL.md), with [Read](.agents/skills/ux/references/read.md), [Edit](.agents/skills/ux/references/edit.md), [Act](.agents/skills/ux/references/act.md), [Feedback](.agents/skills/ux/references/feedback.md), and [Grow](.agents/skills/ux/references/grow.md) |
+| Imperative modal wiring                                                                    | [Modal skill](.agents/skills/modal/SKILL.md)                                                                                                                                                                                                                                                |
+| Three-layer token structure and component specification method                             | Installed [design-system skill](.agents/skills/design-system/SKILL.md), applied through this contract                                                                                                                                                                                       |
+
+Resolve conflicts in order: direct user instruction; the repository owner for that concern; a recorded scoped exception supported by approval or measured evidence. Record the surface, role, reason, source, and verification for an exception. If sources disagree, expose the conflict and resolve it with the owner; do not silently choose whichever source is convenient. Reference products and skill examples inform a scoped decision, but their palette, dimensions, and implementation snippets are not alternate Orvilo defaults.
+
+## Token architecture
+
+Use **primitive → semantic → component** layers, following the selected skill's [token architecture](.agents/skills/design-system/references/token-architecture.md). This is the required design model; it does not require a new token JSON, generated stylesheet, or parallel theme registry.
+
+| Layer     | Responsibility                                           | Orvilo example                                                                         |
+| --------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Primitive | Approved raw color, dimension, duration, or type value   | Existing neutral palette; 8px radius; 14px body size                                   |
+| Semantic  | Assign a stable purpose across themes and libraries      | Primary action fill; body text; small-control height; overlay radius                   |
+| Component | Map a specific component/variant/state to semantic roles | Primary Button background and foreground; property-picker height; tooltip inverse pair |
+
+Components consume semantic roles directly or through component aliases. Their geometry may use an existing role mapping or variant; a CSS variable for every property is unnecessary. Keep the role consistent across concrete consumers before extracting a shared abstraction. The skill's blue palette, 40/48px controls, always-white foregrounds, HSL values, and Tailwind v3/class-dark snippets illustrate structure only.
+
+Orvilo currently has two implementations: the Lobe/antd theme engine exposes `cssVar.*` through `ThemeProvider` (`orvilo-vars`), while local primitives use Tailwind CSS variables in [globals.css](src/app/globals.css). Both must express this contract. The actual stack is Tailwind v4 with `@theme inline`, complete color values, and the `data-theme` route selected by [NextThemeProvider](src/layout/GlobalProvider/NextThemeProvider.tsx); respect that stack when implementing aliases. Never wrap a complete color value in `hsl()` merely because an upstream example does so. Differences between adapters are migration findings, not permission to introduce independent palettes.
 
 ## Colors
 
-Orvilo uses orvilo-ui's semantic token model. A token's name encodes its role, so the same name resolves to the right value in light, dark, and under any user theme. Always consume tokens by name — `cssVar.colorText`, `cssVar.colorBgContainer`, and so on.
+Use role names rather than raw values from the reference tables. Text, surfaces, borders, action fills, state washes, and state text are separate roles:
 
-Text uses solid neutrals from the `gray` scale that hold contrast on any surface — rank information with them rather than reaching for color:
+- `colorText` is primary text/icons; `colorTextSecondary` is secondary text/labels. Tertiary is subdued supporting content and quaternary disabled content. A lower hierarchy does not waive readable-text contrast.
+- Layout, container, secondary container, and elevated backgrounds describe canvas/panel depth. Use everyday divider and stronger-edge roles for borders; use translucent fills for washes.
+- Primary identifies the main action, links, and related emphasis. Success, warning, error, and info communicate state with a label or icon as well as color.
+- Filled actions pair their background with the corresponding foreground role. Tinted washes pair with state text, not the filled-action foreground. Text-only links use a legible text role. **Primary foreground is not always white**: the default dark primary fill is near-white and needs dark foreground text.
 
-- `colorText` — primary text and icons
-- `colorTextSecondary` — secondary text, form labels
-- `colorTextTertiary` — placeholders, captions, metadata
-- `colorTextQuaternary` — disabled
+Hover/active colors are state roles, not a universal “darker” function: the correct direction can differ by theme, library, fill, and wash. Map each variant intentionally and check the resulting pair on its actual background. Do not assume matching token names or fixed reference values prove contrast.
 
-Surfaces are a separate scale from text; do not swap one for the other. `colorBgLayout` is the page canvas, `colorBgContainer` is the primary card/panel surface, `colorBgContainerSecondary` gives subtle separation, `colorBgElevated` backs popovers, menus, and modals, and `colorBgSpotlight` backs tooltips.
-
-Borders and fills are translucent (`rgba`/alpha), so they layer over any background. Use `colorBorderSecondary` for the everyday divider and `colorBorder` for a stronger edge; use the `colorFill*` ramp for hover/active washes (`colorFillTertiary` hover, `colorFillQuaternary` active).
-
-Functional color is reserved for meaning: `colorPrimary` for the single most important action, focus, and links — note it is monochrome by default (near-black in light, near-white in dark) and only takes on a hue when the user picks a primary color, which keeps the default UI calm; `colorSuccess`, `colorWarning`, `colorError`, `colorInfo` for state. Each functional and accent color also exposes a derived ramp — `color{Name}`, `color{Name}Hover`, `color{Name}Active`, `color{Name}Bg`, `color{Name}Border`, `color{Name}Text`, and `color{Name}Fill*` — so you can build tinted backgrounds, borders, and text without picking raw values.
-
-Applying tokens in components. The text ramp and the functional tints are full token sets, but component prop shorthands expose only part of them — so apply the token directly when no shorthand covers it. In `@lobehub/ui`, the `Text` `type` prop accepts `secondary | success | warning | danger | info` only (there is no `tertiary` / `quaternary`), and `Tag` `color` has no `primary`. For `colorTextTertiary` / `colorTextQuaternary` text, and for any `colorPrimary` or functional tint a shorthand lacks, set the token via `color={cssVar.colorTextTertiary}` (or a styled class) instead of `type="tertiary"` / `color="primary"` — the invalid prop values fail silently (rendered as a literal color or ignored), not with an error.
+The local [Tooltip](src/components/ui/tooltip.tsx) uses the existing inverse **`bg-foreground` / `text-background`** pair, including its arrow. Preserve that tooltip contract. `colorBgSpotlight` remains a retained engine role; neither spotlight nor elevated is an instruction to recolor local tooltips.
 
 ## Typography
 
-`Geist` sets UI and prose; `Geist Mono` sets code, data, and tabular figures. Use the scale tokens rather than setting size, weight, or line height by hand:
+Geist sets UI and prose; Geist Mono sets code, with tabular figures for aligned numbers. The normal scale is **14px body/labels, 12px metadata, 16px emphasis**. Headings use the existing 38/30/24/20/16px scale and 600 strong weight. Preserve role-appropriate line heights rather than shrinking text to fit a control.
 
-- Body & labels — `fontSize` (14px) covers most UI and body text; `fontSizeSM` (12px) for captions and dense metadata; `fontSizeLG` (16px) for emphasis and large controls. Line height is generous (\~1.57) for readability. The body/label scale is 12 / 14 / 16 — there is no 13px token. Some legacy UI hard-codes `fontSize={13}` for secondary text; treat that as drift and round to 12 or 14, and rank text with the `colorText*` opacity ramp rather than reaching for an in-between size. Don't introduce new off-scale sizes.
-- Headings — `fontSizeHeading1`–`fontSizeHeading5` (38 → 16px) title pages and sections; pair with `fontWeightStrong` (600).
-- Code & numbers — the `fontFamilyCode` stack; prefer tabular figures when numbers must align.
+Measured dense Linear/Plane surfaces may use a scoped **13px** label/body role; longer prose may use **15px** where that reading role is explicit. These are not universal defaults or automatically invalid sizes. Current project rail section labels use 13px/500 through [SECTION_LABEL_PROPS](src/features/Projects/sectionLabel.ts); activity links and milestone metadata in [ProjectSidePanel](src/features/Projects/Layout/ProjectSidePanel.tsx) remain 12px. The issue rail also retains [RAIL_VALUE_FONT_SIZE](src/features/AgentTasks/AgentTaskDetail/railText.ts) at 13px and its description at 15px/450, recorded in the [rail type checks](src/features/AgentTasks/AgentTaskDetail/railText.test.ts). Review the role and source before changing these values. Rank text through semantic tone and weight as well as size; there is no categorical 13px ban.
 
-## Layout
+## Density and exceptions
 
-Spacing follows a 4px scale via orvilo-ui padding/margin tokens: `XXS` 4, `XS` 8, `SM` 12, base 16, `MD` 20, `LG` 24, `XL` 32. Keep a clear rhythm — tight space inside a group (8px), more between groups (16px), most between sections (24–32px). Cards use 16–24px padding.
+Use the established role, not the library's size name, to choose geometry.
 
-The 4px scale governs gaps, padding, and margins — and only those. Two things are deliberately not on it: radius is a separate scale (see [Shapes](#shapes); it includes a 6px step, `borderRadiusSM`), so never reuse a radius value as spacing; and icon pixel sizes (12 / 14 / 16 / 18 / 20) and 1px hairline borders are dimensions, not spacing. Off-scale spacing values (6, 10, 13…) are drift — round to the nearest scale step. Reserve a one-off off-scale value for genuine optical tuning, never as a default.
+| Role                                       | Approved height / target                     |
+| ------------------------------------------ | -------------------------------------------- |
+| Normal small / default / large controls    | 28 / 36 / 40px                               |
+| Known compact work toolbars and controls   | 32px                                         |
+| Dense property controls                    | 28px                                         |
+| Sidebar small actions / standard hit areas | 24 / 32px                                    |
+| Task row                                   | 44px row role, separate from control heights |
 
-Layouts must work across appearances and form factors: every surface ships light and dark and desktop and mobile variants. Mobile is not an afterthought — `src/routes/(mobile)` and `.mobile`/`.desktop` component variants exist for exactly this. Center primary content and let side padding grow at wider breakpoints.
+The local Button currently defaults to 32px and has 24/28/36px variants. That implementation is a compact migration default, not a change of the normal 36px design target. Choose the surface's intended role explicitly. A shared default change needs a scoped consumer audit and product acceptance; this documentation does not authorize switching every consumer. Visible icon size and hit area are separate. Preserve accessible hit areas, labels, and keyboard paths, including for dense controls.
 
-## Elevation & Depth
+Spacing uses a 4px base rhythm: 4/8/12/16/20/24/32px for common gaps and insets. The selected [primitive reference](.agents/skills/design-system/references/primitive-tokens.md) also allows **2/6/10/14px half steps**. Assign those deliberately to a semantic or component role and repeat that role consistently; do not categorically round them away. Default grouping remains about 8px inside groups, 16px between groups, and 24–32px between sections; card padding is normally 16–24px.
 
-Hierarchy comes from tonal surfaces and borders first, so shadows stay subtle. Lift only what genuinely floats:
+Optical corrections require a local explanation and evidence. Keep ProjectSidePanel's **11px card inset**: its source records the border, start chrome, and stable scrollbar-gutter measurement that anchors the rail content. Its 10px hover extension is also local geometry. These facts do not create a general 11px spacing token. Icon sizes and hairline borders are dimensions; radius is an independent scale.
 
-- Raised cards / panels: `boxShadowTertiary`, barely-there — most cards need none, just a `colorBorderSecondary` edge.
-- Popovers and menus: `boxShadowSecondary`.
-- Modals and dialogs: `boxShadow`, the strongest tier.
+Work surfaces use the existing [WorkSurface](src/features/WorkSurface/WorkSurface.tsx) geometry: fixed 16px gutters, a 960px document cap, and surface-container responsiveness. Collections use available width; document reading lanes center within the cap. Keep each pane's scroll ownership and the toolbar overflow mechanism. Do not apply the chat wide-screen preference to work pages. Adapt supported mobile layouts and overflow deliberately.
 
-The shadow tokens are shared across light and dark. Only the surface and border colors change between themes. Tooltips take the lightest treatment on `colorBgSpotlight`. Pair each elevation with the matching radius below, and prefer a border over a shadow when both would read.
+## Shapes and elevation
+
+Map shape by purpose and **resolved pixels**, not by assumptions about Tailwind class names:
+
+| Role                | Approved radius | Existing engine name |
+| ------------------- | --------------- | -------------------- |
+| Chip/tag            | 4px             | `borderRadiusXS`     |
+| Small control/input | 6px             | `borderRadiusSM`     |
+| Button/card         | 8px             | `borderRadius`       |
+| Overlay/menu/dialog | 12px            | `borderRadiusLG`     |
+
+Pills, avatars, and circular actions may be fully round. Role-specific shapes may coexist within one view. The current Tailwind base radius resolves to 10px, with `rounded-lg` at 10px and `rounded-xl` at 14px (at a 16px root size); these differ from the approved 8/12px button-card/overlay roles. Record and resolve that drift in a scoped migration. ProjectSidePanel's current 10px card radius is a source fact, not an automatic new default or the same exception as its measured 11px inset.
+
+Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another.
+
+Preserve the native desktop glass/translucency boundary in [global styles](src/styles/global.ts) and the desktop shell. Theme-aware translucent surfaces must remain legible over the actual native backdrop; an opaque web reference is not authority to flatten native glass.
 
 ## Motion
 
-Motion clarifies change; it is never decoration. Honor `prefers-reduced-motion` by dropping nonessential animation.
+Motion explains change. Honor both **`prefers-reduced-motion` and the user's disabled-animation setting**. Nonessential motion stops under either; essential status remains understandable through static text or indicators.
 
-When motion helps — revealing, moving, or connecting elements — keep it short and physical: roughly 100–200ms for state changes and popovers, up to \~300ms for overlays and modals. Avoid long, looping, or attention-grabbing animation. For AI/loading moments, prefer the system's purpose-built loaders (skeletons, `NeuralNetworkLoading`) over ad-hoc spinners.
+Keep state/popover changes around 100–200ms and overlays up to about 300ms. List transition properties explicitly (`color`, `background-color`, `border-color`, `box-shadow`, and when needed `opacity` or `transform`); avoid `transition: all`. The actual theme and motion settings must reach portals and local primitives. Loading behavior belongs to [UX Feedback](.agents/skills/ux/references/feedback.md); loader component selection belongs to [React](.agents/skills/react/SKILL.md).
 
-## Shapes
+## Component states and accessibility
 
-Radii stay soft but tight, and one family per view:
+Use the components and styling route owned by the [React skill](.agents/skills/react/SKILL.md). The former Lobe base-ui-first mandate is obsolete. This file defines visual requirements, not an alternate import inventory.
 
-- `borderRadiusXS` 4px — tags, chips
-- `borderRadiusSM` 6px — inputs, small controls
-- `borderRadius` 8px — the default, for buttons and cards
-- `borderRadiusLG` 12px — menus, modals, large surfaces
+| State          | Required visual outcome                                                            |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Default        | Role-appropriate geometry and readable foreground/background pair                  |
+| Hover          | Clear feedback without layout shift                                                |
+| Active/pressed | Distinguishable press feedback for that variant                                    |
+| Selected       | Persistent selection signal, distinct from transient hover                         |
+| Focus          | Visible `:focus-visible` indicator that survives hover/selected/error combinations |
+| Disabled       | Recognizably unavailable without hiding necessary context                          |
+| Loading        | Stable layout with the applicable project loading treatment                        |
+| Error          | Identifiable affected field/action with legible message and non-color signal       |
 
-Reserve fully round (`9999px`) for pills, avatars, and circular icon buttons. Don't mix rounded and sharp corners in one view.
+Apply only states a component supports and document combinations; selected, focused, and error states can coexist. The skill's example priority list must not erase keyboard focus or selection. Busy locking, cancellation, retry, recovery, and draft handling follow UX rather than a universal opacity or pointer-events rule. Native disabled controls are exempt from WCAG contrast requirements; do not mistake that exemption for a readable-text exception elsewhere.
 
-## Components
+Verify WCAG AA text contrast on the rendered pair: **4.5:1 normal text; 3:1 large text** only at **24px regular or 18.67px bold** (18pt / 14pt). Required interactive graphics, control boundaries, and focus indicators need **3:1** against adjacent colors where the applicable WCAG criterion requires it. Normal 16/18/20px regular text is not “large” for this rule. Fixed theme defaults, tinted backgrounds, and alpha blends require measurement; color names alone prove nothing.
 
-Prefer the system's components over bespoke markup, in this order:
+## Migration status
 
-1. `@lobehub/ui/base-ui` — headless primitives, first choice for new code (`Select`, `Modal` / `createModal` / `confirmModal`, `DropdownMenu`, `ContextMenu`, `Popover`, `ScrollArea`, `Switch`, `Toast`, `FloatingSheet`).
-2. `@lobehub/ui` root — richer composed components when base-ui has no counterpart.
+These rules describe the approved target and explicitly retained scoped roles. Current Lobe theme values, Tailwind aliases, local Button sizing, tooltip styling, and project-rail geometry were inspected in source. That inspection identifies migration defaults and drift; it does not prove visual parity, contrast, native glass, or motion behavior in the running product.
 
-When base-ui has the component, use it — don't reach for the root version, and only drop to an underlying primitive when orvilo-ui has no counterpart at all.
+This is a **policy and tooling** reconciliation: no palette, token registration, component default, CSS, or runtime behavior changes here. A future runtime change must name its consumers and scope, preserve recorded exceptions, and verify the affected path in light/dark and the requested platform. Do not report these rules as runtime defects already fixed.
 
-Default control height is 36px (`controlHeight`); use `controlHeightSM` 28px and `controlHeightLG` 40px for the other sizes. Buttons follow orvilo-ui's hierarchy — one primary (`colorPrimary` fill) per view for the most important action, default (surface fill + `colorBorder`) for ordinary actions, text/link for low-emphasis, and danger (`colorError`) for destructive actions. Hover and active states step through the `colorFill*` / `color{Name}Hover` ramps; disabled uses `colorTextQuaternary` text with a not-allowed cursor. Every interactive element shows a visible focus ring at `:focus-visible`.
-
-Style components with orvilo-ui's styling layer: prefer `createStaticStyles` with `cssVar.*` (zero-runtime) and fall back to `createStyles` + `token` only when styles need runtime computation.
+The existing [Linear token gate](.github/scripts/require-linear-tokens.mjs) is a bounded static screen, not a second visual owner or proof of parity. When it flags an approved scoped value, use its `linear-token-override` line annotation with the DESIGN role and evidence reason (or the documented `linear-tokens: manual-review` PR marker for a reviewed surface); do not change an approved role solely to satisfy its syntax heuristic.
 
 ## Voice & Content
 
@@ -187,15 +223,3 @@ Reduce anxiety and restore control without being sentimental. Default to 80% inf
 3. Give the next action (button or path).
 
 Avoid preachy encouragement ("don't worry"), grand narratives, and over-anthropomorphizing ("I understand you", "I'll always remember you"). The stance: Agents accelerate output, but the user owns the judgment and the final decision.
-
-## Do's and Don'ts
-
-- Read semantic tokens (`cssVar.colorText`, `cssVar.colorPrimary`, …); they adapt to the user's theme and to light/dark. Don't hard-code hex values from this file.
-- Rank information with the text-opacity scale (`colorText` → `colorTextTertiary`). Don't signal state with color alone — pair it with an icon or label.
-- Do keep solid `colorPrimary` for the single most important action and for state. Don't spread brand color as decoration.
-- Do design all four data states — empty, loading, error, success. Don't ship only the happy path.
-- Do build light + dark and desktop + mobile for every surface. Don't treat mobile or dark as an afterthought.
-- Do keep `colorBg*` (surfaces) and the text/`colorFill` scales distinct. Don't swap a surface token for a text token.
-- Do reach for `@lobehub/ui/base-ui` first, then `@lobehub/ui`. Don't rebuild a component the system already provides.
-- Hold WCAG AA contrast (4.5:1 for body text) and show a visible `:focus-visible` ring.
-- Don't mix rounded and sharp corners.

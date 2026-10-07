@@ -150,6 +150,7 @@ export default eslint(
       // vendored upstream sources — upstream's own style, not this repo's
       'vendor',
       'packages/heterogeneous-agents/vendor',
+      '.agents/skills/design-system/**',
       // ci
       'coverage',
       '.coverage',

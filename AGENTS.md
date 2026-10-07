@@ -6,14 +6,18 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 - Next.js 16 + React 19 + TypeScript
 - SPA inside Next.js with `react-router-dom`
-- `@lobehub/ui`, antd, and antd-style for UI implementation
+- Local ReUI/shadcn components and adapters, retained `@lobehub/ui` features, antd-style; see the **react** skill for component and styling choices
 - react-i18next for i18n; zustand for state management
 - SWR for data fetching; TRPC for type-safe backend
 - Drizzle ORM with PostgreSQL; Vitest for testing
 
 ## Agent Skills
 
-`AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
+`AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in their owners and cross-reference them; do not maintain equally normative copies.
+
+- **Design system**: Before visual or token work, read the installed [design-system](.agents/skills/design-system/SKILL.md) skill and its applicable token references. It owns primitive → semantic → component architecture and generation guidance. [`DESIGN.md`](./DESIGN.md) owns approved Orvilo visual roles, values, theme mappings, and exceptions. Upstream example palettes, slide scaffolds, `.dark` toggles, and Tailwind v3 configuration examples are examples to adapt to the current project, not a second application contract.
+
+- **Interaction behavior**: Read [ux](.agents/skills/ux/SKILL.md) for user-facing flows and their states. **react** owns component selection, imports, and styling; **DESIGN.md** owns visual values. When changing an owner, synchronize its routed cross-links and checks in the same change.
 
 - **Live application UI parity**: Read `clone-website-orvilo` and its required references before reference collection, specification or implementation. It owns evidence-backed state coverage, isolated builder handoffs and whole-page acceptance; use existing domain skills for the code changes. Its upstream directory is a provenance archive, not an alternate skill.
 
@@ -167,4 +171,4 @@ Tests, lint, and type-check remain separate quality gates; they do not replace p
 
 Before reviewing a PR / diff / branch change, read the **deep-review** skill. Ordinary review requests use its light mode (one independent reviewer against the dimension quick checklists); the full multi-subagent deep mode runs only on explicit invocation.
 
-When designing or reviewing user-facing flows (empty/loading/error states, confirmations, async feedback, button hierarchy, lists at scale, pickers), follow Orvilo's design values in [`DESIGN.md`](./DESIGN.md) — Natural / Meaningful / Certainty / Growth (自然 / 意义感 / 确定性 / 成长).
+When designing or reviewing user-facing flows, use **ux** for interaction behavior and design values, **react** for component/import/styling choices, and [`DESIGN.md`](./DESIGN.md) for the approved visual contract. Use **linear-ui-parity** for live comparison evidence; archived reference values do not override the project contract.

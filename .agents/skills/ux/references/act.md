@@ -13,10 +13,11 @@ After any operation, lead the user to the next step instead of just stopping. A 
 state makes the strong button the forward action ("go to result") and the weak /
 secondary button "dismiss" / "Done". Keep bulk ⇄ single-item parity — an action on a
 multi-select toolbar must also be reachable on a single item (its context menu), and
-vice versa. Bulk / irreversible / async ops run as a modal state machine in one surface:
-a confirm step stating exactly what happens → an in-progress view with **dismissal
-locked** → a done (or error) view in the same modal. Never fire-and-forget with only a
-toast; never leave a dead spinner.
+vice versa. Operations that require a modal (multi-step work, deliberate destructive
+confirmation, or progress that needs focused attention) use a state machine:
+confirm stating exactly what happens → in-progress with appropriate dismissal guards
+→ done or error. Ordinary atomic operations can report progress on the originating
+surface as described below. Never fire-and-forget with only a toast or leave a dead spinner.
 
 But **the confirm modal is not the progress surface**. That state-machine is for ops that
 _earn_ a modal — multi-step, or where watching progress is the point. A **single
@@ -26,7 +27,7 @@ holding the confirm dialog open and **blocking on the round-trip**, its OK butto
 for the whole call, freezes a dialog that should have closed the instant the user
 committed. "In-progress (locked)" means the user can't dismiss a surface that's _showing
 them progress_ — it does not license a confirm box held hostage to a 30s call it isn't even
-narrating. Close the confirm the moment the user commits (a base-ui `confirmModal` `onOk`
+narrating. Close the confirm the moment the user commits (a local `@/components/Modal` `confirmModal` `onOk`
 that returns **synchronously**, not an `async` thenable the modal awaits) and move the
 in-progress signal onto the **originating surface**: an optimistic removal of the row, or a
 per-row "removing…" spinner that also guards a duplicate trigger, reconciled on settle via

@@ -8,18 +8,9 @@ tagged with the design value(s) it serves.
 
 ## 4.1 Loading visuals・Natural
 
-**Never use antd `Spin`** — it doesn't match the product's loading visual. Use a project
-loader:
+Choose a loading state that communicates the operation and preserves its context. Inline/button feedback should keep the action readable, known-shape placeholders should preserve the final layout, and AI-specific or branded surfaces should express their purpose. Component selection and imports belong solely to [React loader selection](../../react/SKILL.md#loader-selection).
 
-| Need                        | Component                                                                     |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| Default loading (in-flight) | `NeuralNetworkLoading` from `@/components/NeuralNetworkLoading` (`size` prop) |
-| Inline dots                 | `DotsLoading` / `BubblesLoading` from `@/components`                          |
-| Branded full-page           | `Loading` from `@/components/Loading/BrandTextLoading`                        |
-| List / card placeholder     | a skeleton (e.g. `SkeletonList`)                                              |
-
-When in doubt, reach for `NeuralNetworkLoading` — the default in-flight indicator (e.g.
-modal "in progress" states). Minimise layout shift (CLS): the strongest loading state
+Minimise layout shift (CLS): the strongest loading state
 changes as little of the final layout as possible. When a surface already knows its shape
 (card, row, list item), keep the layout elements — container, border, radius, padding,
 icon — and replace only the text/data with a skeleton sized like the text it stands in
@@ -51,7 +42,7 @@ doesn't leak a stale start onto a later one that reuses the slot.
 
 **Checklist**
 
-- [ ] No antd `Spin`; use `NeuralNetworkLoading` / project loaders. _(Natural)_
+- [ ] Loading feedback fits the operation and preserves context; component selection follows [React loader selection](../../react/SKILL.md#loader-selection). _(Natural)_
 - [ ] Skeleton reuses the loaded component's chrome — content swap, not relayout. _(Certainty・Natural)_
 - [ ] Skeleton lines match the real text's **height and typical width proportion** (long title line over a shorter subtitle, not equal full-width bars). _(Certainty)_
 - [ ] Known-shape surface not downgraded to a bare block / spinner. _(Natural)_
@@ -454,7 +445,7 @@ message) and never passes an i18n file. Three smells mark a message that escaped
 - **Internal ids in the headline** — a raw `tpc_…` / `msg_…` / uuid, a `#N` sequence, an
   operation id. The id is for a **log or an inspect link**, never the sentence the user reads;
   it belongs on a **structured field** (`topicId`, `taskId`) that powers a "View run" affordance,
-  not baked into the title. A human reading "topic #1 (tpc\_5UBuAjUU4z6B)" learns nothing and
+  not baked into the title. A human reading "topic #1 (tpc_5UBuAjUU4z6B)" learns nothing and
   distrusts the whole card.
 - **Log / stack framing** — `Execution failed: …`, `Error: …`, `[TaskLifecycle]`, a
   prefixed severity. Framing that reads like a console line signals "this wasn't meant for
@@ -474,7 +465,7 @@ of the smells above, and localize the _cause_ too where it maps to a known error
 > `topicId` field that lights up "View run" (`InboxBriefCard.tsx`,
 > `taskLifecycle/index.ts` error brief). ❌ Its prior form baked the lot into the stored
 > string — title `` `${taskIdentifier} topic #${seq} (${topicId}) error` `` → **"T-1 topic #1
-> (tpc\_5UBuAjUU4z6B) error"**, summary `` `Execution failed: ${raw}` `` — internal id in the
+> (tpc_5UBuAjUU4z6B) error"**, summary `` `Execution failed: ${raw}` `` — internal id in the
 > headline, log framing, task ref duplicated from the meta row, and English-only for every
 > locale.
 

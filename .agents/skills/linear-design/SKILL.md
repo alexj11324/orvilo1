@@ -1,27 +1,26 @@
 ---
 name: linear-design
-description: Linear's design tokens (color surfaces, hairlines, typography scale, spacing, radius, accent usage) distilled from linear.app. Use when aligning Orvilo work surfaces (sidebar, inbox, my-issues, reviews, views, teams) to Linear's visual language or judging whether a screen "looks Linear".
+description: 'Use for Linear visual-reference provenance and scoped mapping of live measurements to the approved Orvilo visual contract. Pair with linear-ui-parity for authenticated runtime comparison.'
 ---
 
 # Linear design reference
 
-Source: `linear-app-DESIGN.md` in this directory (voltagent/awesome-design-md, linear.app). Read it for the full token tables — this file holds the decision rules.
+## Source and ownership
 
-## When this applies
+[`linear-app-DESIGN.md`](linear-app-DESIGN.md) is an archived marketing-site reference from voltagent/awesome-design-md (linear.app). Preserve it as provenance; its raw palette, font suggestions, spacing, and component examples are not authoritative measurements of the authenticated Linear application and do not define Orvilo tokens.
 
-Any UI change whose goal is Linear parity (navigation-attention PR surfaces, sidebar IA, list/board density) must be checked against these tokens before shipping. Do not invent greys, radii, or tracking — map to the nearest Linear token.
+[DESIGN.md](../../../DESIGN.md) owns approved Orvilo visual roles, values, theme mappings, and scoped exceptions. [design-system](../design-system/SKILL.md) owns token architecture and generation guidance. [react](../react/SKILL.md) owns component/import/styling choices. This skill connects reference evidence to those owners; [linear-ui-parity](../linear-ui-parity/SKILL.md) owns collection and acceptance.
 
-## Hard rules
+## Applying reference evidence
 
-- **Surfaces, not shadows.** Hierarchy comes from the 4-step surface ladder (`canvas #010102 → surface-1 #0f1011 → surface-2 #141516 → surface-3 #18191a → surface-4 #191a1b`) plus 1px hairlines (`#23252a` / `#34343a` / `#3e3e44`). Never add drop shadows to fake elevation; in light mode use the same ladder logic (theme tokens already invert).
-- **One accent only.** Lavender-blue `#5e6ad2` (hover `#828fff`, focus `#5e69d1`) is the single chromatic accent — primary CTA, focus ring, active nav state. In Orvilo map to the theme's primary color token, never a raw hex. No decorative color; semantic colors only for real status.
-- **Radius discipline.** Cards/menus `8–12px` (`rounded.md`/`lg`), rows/chips `4–6px`, pill only for true pills (tabs, status badges). Linear never mixes pill rows with square cards.
-- **Density.** Sidebar rows are 28px, text `body-sm` 14px (labels) / `caption` 12px (counts, meta); section labels `eyebrow` 13px medium with `+0.4px` tracking; row counts right-aligned in `ink-subtle`. Headline tracking is negative and scales with size — app UI uses `body`/`body-sm`/`caption`, not display sizes.
-- **Spacing.** Grid in 4px units (`xxs 4 / xs 8 / sm 12 / md 16 / lg 24`). Sidebar section gap = `xs`; row horizontal padding = `xs`; icon-to-label = `xs`.
-- **Type voice.** UI text = Inter/system sans mapped to Linear Text: weight 400 body, 500 labels/buttons, 600 only for page titles. Mono only for IDs/keys.
+- Measure the live authenticated reference in the agreed route, locale, theme, viewport, and populated state. Record evidence before treating a value as a requirement.
+- Map measured surfaces, ink, accent, typography, spacing, radius, and elevation to the applicable DESIGN.md role. The archive's lavender palette and Inter fallback do not mandate project-wide colors or fonts.
+- Preserve role-based density and hierarchy. A measured dense UI size (including scoped 13px text) is an exception only in its documented surface; record it in DESIGN.md and the parity inventory rather than normalizing it automatically or promoting it globally.
+- Use project semantic tokens through the existing theme mechanism and the mapping contract in DESIGN.md. Do not copy raw reference values into components or create an alternate palette.
+- If a current measurement conflicts with the approved role, document the discrepancy and resolve its scope before changing the project contract. An archive or historical audit alone cannot approve a new value.
 
-## Sidebar anatomy (Linear reference)
+## Sidebar anatomy (historical reference lead)
 
-Header: `WorkspaceName ⌄` + search + compose icons. Flat rows: Inbox·count / My issues / Reviews·count / Agent / Drafts·count. Then a standalone `+` quick-create row. Then accordions: Workspace (Projects / Views / Members / More), Your teams (each team → Home / Issues / Projects / Views), Try. Bottom rail: `?` help + avatar.
+Header: workspace name, search, compose. Flat rows included Inbox, My issues, Reviews, Agent, and Drafts; grouped navigation included Workspace and Your teams; a bottom rail included help and avatar. Re-enumerate the live reference before using this as a parity inventory.
 
-Orvilo contract deltas that are intentional (do not "fix"): **Drafts** stays absent until a real issue-draft domain exists (v5 F38 — no fake entry); **Try** (Initiatives/Cycles) absent — those products don't exist here.
+Intentional Orvilo contract deltas: **Drafts** stays absent until a real issue-draft domain exists (v5 F38 — no fake entry); **Try** (Initiatives/Cycles) is absent while those products do not exist here. Record their exact affected rows in the parity inventory. Other deltas need explicit scope approval.

@@ -13,8 +13,8 @@ Fragment-level readability and convention adherence. Look at each changed hunk i
 - Leftover `console.log` / `console.debug` — use the `debug` package or remove
 - Missing `return await` inside try/catch (the rejection escapes the catch) — <https://typescript-eslint.io/rules/return-await/>
 - Hardcoded user-facing strings — must go through i18n keys (`packages/locales/src/default/<namespace>.ts`, named `{feature}.{context}.{action|status}`)
-- `antd` imports where `@lobehub/ui` (or `@lobehub/ui/base-ui`) wraps the same component — base-ui first, then `@lobehub/ui`, antd last
-- Hardcoded colors / raw CSS values — use `antd-style` tokens; prefer `createStaticStyles` + `cssVar.*` over `createStyles` + `token` unless styles need runtime computation
+- UI imports that bypass the current **react** component/import owner (local ReUI primitives and adapters first; retained libraries only in their documented scope)
+- Hardcoded visual values or inconsistent token mappings — use the roles and scoped exceptions in **DESIGN.md**, with implementation choices from **react**; Tailwind and `cssVar.*` consume the same semantic contract
 - Dead code, commented-out blocks, unused exports introduced by this diff
 - Comments: missing on hacky/non-obvious logic; stale after a signature change; or merely restating the code
 - Nesting ≥ 3 levels that early returns / lookup tables would flatten
@@ -25,14 +25,15 @@ Fragment-level readability and convention adherence. Look at each changed hunk i
 ## Rule sources (deep mode: read before reviewing)
 
 - `.agents/skills/typescript/SKILL.md` — TS style and type-safety rules
-- `.agents/skills/react/SKILL.md` — component conventions, base-ui/@lobehub/ui/antd priority, styling
+- `.agents/skills/react/SKILL.md` — component/import priority and styling (sole owner)
+- `DESIGN.md` — approved visual roles, values, theme mappings, and scoped exceptions
 - `.agents/skills/i18n/SKILL.md` — locale key conventions, what needs a key
 - Repo root `AGENTS.md` / `CLAUDE.md` — repo-wide conventions
 
 ## How to check
 
 1. Read the diff hunk by hunk; style issues must be visible within the fragment (plus its file).
-2. For UI imports: `rg "from 'antd'" <changed files>` and check whether `@lobehub/ui` or `@lobehub/ui/base-ui` exports the same component.
+2. For UI imports and styling, read **react** and compare each changed import/role against its current priority and **DESIGN.md**. Do not infer permission from a legacy library export or duplicate the owner's priority here.
 3. For strings: scan added JSX/text literals; anything a user can see needs an i18n key.
 4. For comments: diff the signature/behavior changes against surrounding JSDoc — flag stale docs.
 

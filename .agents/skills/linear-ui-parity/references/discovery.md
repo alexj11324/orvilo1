@@ -37,7 +37,7 @@ A control without an accessible name drops out of the candidate snapshot, so the
 
 ## Pass 3: type-scale histogram
 
-Collect the (font-size, font-weight, ink) combination of every visible text node in scope, with counts, on both sides of the same page. Compare the distributions, not individual nodes. Extra combinations, or a missing step between heading and body ink, are the measurable form of "there is no hierarchy". Map any fix to the tokens in `linear-design`.
+Collect the (font-size, font-weight, ink) combination of every visible text node in scope, with counts, on both sides of the same page. Compare the distributions, not individual nodes. Extra combinations, or a missing step between heading and body ink, are the measurable form of "there is no hierarchy". Map any fix to the approved roles in **DESIGN.md**; record scoped measured exceptions there and in the parity inventory. **linear-design** supplies provenance guidance, not an alternate token contract.
 
 ## Why not diff the whole DOM
 

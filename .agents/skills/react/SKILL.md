@@ -6,7 +6,15 @@ user-invocable: false
 
 # React Component Writing Guide
 
+## Ownership
+
+This skill owns component selection, imports, styling, and React implementation rules. [DESIGN.md](../../../DESIGN.md) owns the approved visual roles and values; [ux](../ux/SKILL.md) owns interaction behavior. Before visual/token work, read [design-system](../design-system/SKILL.md) and the applicable references for primitive → semantic → component architecture.
+
 ## Styling
+
+Apply the semantic role in DESIGN.md before choosing a CSS expression. `cssVar.*` / antd-style and Tailwind utilities must consume the same approved semantic contract; they are implementation paths, not separate palettes or scales. Component styling references semantic or component tokens rather than inventing raw visual values. Document scoped measured exceptions in DESIGN.md and the affected evidence inventory.
+
+Use the application's existing theme mechanism and `[data-theme]` mappings. Do not copy an upstream `.dark`-only override or add a parallel theme toggle. Adapt design-system generation and Tailwind examples to the project's installed toolchain; do not initialize a second theme/configuration or replace existing fonts from an example.
 
 | Scenario                                                   | Approach                                                       |
 | ---------------------------------------------------------- | -------------------------------------------------------------- |
@@ -26,6 +34,10 @@ user-invocable: false
 For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over `<Modal open … />`. The new `ModalHost` and sonner `ToastHost` are mounted in `SPAGlobalProvider` and every app shell; the lobehub base-ui hosts stay mounted until call-site slices finish migrating.
 
 > Common slip: `import { createModal } from '@lobehub/ui/base-ui'` is the legacy stack — use `@/components/Modal`. Same for `toast`, `useToast`, `ModalFooter`, `ModalInstance`.
+
+## Loader selection
+
+Use local `@/components/ui/spinner` for inline/button busy indicators and local skeletons for known shapes. Retain `NeuralNetworkLoading` for AI-specific surfaces that already use it and existing branded full-page loaders where they express the surface's purpose. Do not use antd `Spin` / `<Spin />`. Loading behavior, structure, recovery, and long-operation feedback follow [UX Feedback](../ux/references/feedback.md); this section is the sole component-selection owner for those needs.
 
 ## State
 
@@ -55,7 +67,7 @@ Use plain Tailwind flex utilities — no `Flexbox`/`Center` imports. See `refere
 
 ## Related Skills
 
-- **`ux`**: loading visuals and user-facing interaction design. Do not use antd `Spin` / `<Spin />`.
+- **`ux`**: loading behavior and user-facing interaction design; component choices follow [Loader selection](#loader-selection).
 - **`modal`**: imperative `@/components/Modal` patterns.
 - **`spa-routes`**: SPA navigation, route ownership, router configuration, and `.desktop` variants.
 - **`compose-atoms`**: split a heavy domain feature into mountable capability atoms; each host imports only what it mounts.

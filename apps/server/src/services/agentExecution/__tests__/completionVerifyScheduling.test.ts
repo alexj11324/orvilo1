@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import * as verifyServices from '@/server/services/verify';
 
 import { CompletionLifecycle } from '../CompletionLifecycle';
@@ -37,19 +38,32 @@ describe('CompletionLifecycle — verify gate scheduling', () => {
       .spyOn(verifyServices, 'runVerifyOnCompletion')
       .mockResolvedValue(undefined);
 
-    await lifecycle.dispatchHooks(
-      'op-1',
-      { host: { hooks: [] }, origin: { agentId: 'a' }, status: 'done' },
-      'done',
-    );
+    const findOperation = vi
+      .spyOn(AgentOperationModel.prototype, 'findById')
+      .mockImplementation(async function (this: AgentOperationModel, operationId) {
+        if (operationId !== 'op-1' || Reflect.get(this, 'userId') !== 'user-1') {
+          throw new Error('Unexpected operation lookup in verify scheduling fixture');
+        }
+        return { id: 'op-1', taskId: null, userId: 'user-1' } as never;
+      });
 
-    // Handed over, and not started behind the scheduler's back.
-    expect(after).toHaveBeenCalledTimes(1);
-    expect(runVerify).not.toHaveBeenCalled();
+    try {
+      await lifecycle.dispatchHooks(
+        'op-1',
+        { host: { hooks: [] }, origin: { agentId: 'a' }, status: 'done' },
+        'done',
+      );
 
-    // What was handed over is the gate itself.
-    await after.mock.calls[0][0]();
-    expect(runVerify).toHaveBeenCalledTimes(1);
-    expect(runVerify.mock.calls[0][2]).toMatchObject({ operationId: 'op-1' });
+      // Handed over, and not started behind the scheduler's back.
+      expect(after).toHaveBeenCalledTimes(1);
+      expect(runVerify).not.toHaveBeenCalled();
+
+      // What was handed over is the gate itself.
+      await after.mock.calls[0][0]();
+      expect(runVerify).toHaveBeenCalledTimes(1);
+      expect(runVerify.mock.calls[0][2]).toMatchObject({ operationId: 'op-1' });
+    } finally {
+      findOperation.mockRestore();
+    }
   });
 });

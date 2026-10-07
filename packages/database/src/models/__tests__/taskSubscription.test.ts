@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { users, workspaces } from '../../schemas';
+import { users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskSubscriptionModel } from '../taskSubscription';
@@ -20,6 +20,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'sub-ws',
   });
+  await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
 });
 
 afterEach(async () => {

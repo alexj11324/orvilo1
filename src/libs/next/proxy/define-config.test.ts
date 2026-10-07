@@ -5,7 +5,6 @@ import debug from 'debug';
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { appEnv } from '@/envs/app';
 import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
 
 import { defineConfig } from './define-config';
@@ -278,17 +277,18 @@ describe('enabled proxy auth request logging', () => {
     'does not log auth state/code or callback queries on %s',
     async (path) => {
       const previous = debug.disable();
-      const localRewrite = appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL;
       debug.enable('middleware:*');
       const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
-      appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL = true;
+      vi.stubEnv('MIDDLEWARE_REWRITE_THROUGH_LOCAL', '1');
+      vi.resetModules();
       const sentinel = 'PROXY_AUTH_SECRET_SENTINEL';
       const url = new URL(path, 'http://localhost:3010');
       url.searchParams.set('state', sentinel);
       url.searchParams.set('code', sentinel);
       url.searchParams.set('callbackUrl', `/oidc/auth?state=${sentinel}`);
       try {
-        const response = await middleware(new NextRequest(url));
+        const { defineConfig: defineLoggingConfig } = await import('./define-config');
+        const response = await defineLoggingConfig().middleware(new NextRequest(url));
         expect(response?.status).toBe(200);
         expect(output).toHaveBeenCalled();
         expect(JSON.stringify(output.mock.calls)).not.toContain(sentinel);
@@ -300,7 +300,8 @@ describe('enabled proxy auth request logging', () => {
       } finally {
         output.mockRestore();
         debug.enable(previous);
-        appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL = localRewrite;
+        vi.unstubAllEnvs();
+        vi.resetModules();
       }
     },
   );

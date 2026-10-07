@@ -8,7 +8,12 @@
  * - Delete conversation
  * - Search conversations
  */
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { Given, Then, When } from '@cucumber/cucumber';
+import type { Frame, Request, Response } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { llmMockManager } from '../../mocks/llm';
@@ -183,16 +188,161 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   // The new-topic button opens the blank composer at `/chat/new`. The click
   // can still land while the row is mid-re-render after the settled poll, so
   // retry it once when the first navigation never fires.
-  await addTopicButton.click();
+  const expectedPathname = `${agentPath}/new`;
+  const startedAt = Date.now();
+  // Keep structural routes; redact dynamic identities and unknown procedure names.
+  const projectPathname = (pathname: string) =>
+    pathname
+      .split('/')
+      .map((segment) =>
+        !segment ||
+        [
+          'chat',
+          'new',
+          'agent',
+          'api',
+          'trpc',
+          'webapi',
+          'oidc',
+          'auth',
+          'clerk',
+          'sessions',
+          'signin',
+          'lambda',
+          'tools',
+        ].includes(segment)
+          ? segment
+          : ':segment',
+      )
+      .join('/');
+  const receipt = {
+    expectedPathname: projectPathname(expectedPathname),
+    events: [] as Record<string, string | number | boolean>[],
+    outcome: 'failed',
+    schemaVersion: 1,
+    snapshots: [] as Record<string, unknown>[],
+  };
+  const recordEvent = (event: Record<string, string | number | boolean>) => {
+    if (receipt.events.length === 80) receipt.events.shift();
+    receipt.events.push({ elapsedMs: Date.now() - startedAt, ...event });
+  };
+  const applicationPath = (url: string) => {
+    const pathname = new URL(url).pathname;
+    return /^\/(?:api|trpc|webapi|oidc)(?:\/|$)/.test(pathname) ? projectPathname(pathname) : null;
+  };
+  const onNavigation = (frame: Frame) => {
+    if (frame === this.page.mainFrame()) {
+      const pathname = new URL(frame.url()).pathname;
+      recordEvent({
+        kind: 'main-frame',
+        pathname: projectPathname(pathname),
+        matchesExpected: pathname === expectedPathname,
+      });
+    }
+  };
+  const onLoad = () => recordEvent({ kind: 'load' });
+  const onDomReady = () => recordEvent({ kind: 'domcontentloaded' });
+  const onRequestFailed = (request: Request) => {
+    const pathname = applicationPath(request.url());
+    if (pathname)
+      recordEvent({
+        kind: 'requestfailed',
+        method: request.method(),
+        pathname,
+        resourceType: request.resourceType(),
+      });
+  };
+  const onResponse = (response: Response) => {
+    const pathname = applicationPath(response.url());
+    if (pathname)
+      recordEvent({
+        kind: 'response',
+        method: response.request().method(),
+        pathname,
+        status: response.status(),
+      });
+  };
+  const captureNavigation = async (phase: string) => {
+    try {
+      const snapshot = await this.page.evaluate((expected) => {
+        const visible = (element: Element) => {
+          const box = element.getBoundingClientRect();
+          return (
+            box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden'
+          );
+        };
+        const composers = [...document.querySelectorAll('[data-testid="chat-input"]')].filter(
+          visible,
+        );
+        const button = document.querySelector('svg.lucide-message-square-plus')?.parentElement
+          ?.parentElement;
+        return {
+          actualPathname: location.pathname,
+          blankComposer: composers.some((composer) => {
+            const editor = composer.querySelector<HTMLElement>('[contenteditable="true"]');
+            return !!editor && visible(editor) && !editor.innerText.trim();
+          }),
+          buttonAriaDisabled: button?.getAttribute('aria-disabled') === 'true',
+          buttonOpacity: button ? getComputedStyle(button).opacity : null,
+          buttonVisible: !!button && visible(button),
+          matchesExpected: location.pathname === expected,
+          messageCount: document.querySelectorAll('.message-wrapper').length,
+          visibleMessageCount: [...document.querySelectorAll('.message-wrapper')].filter(visible)
+            .length,
+          readyState: document.readyState,
+          visibleComposerCount: composers.length,
+        };
+      }, expectedPathname);
+      receipt.snapshots.push({
+        ...snapshot,
+        actualPathname: projectPathname(snapshot.actualPathname),
+        elapsedMs: Date.now() - startedAt,
+        phase,
+      });
+    } catch (error) {
+      console.error(
+        'Conversation navigation diagnostic snapshot unavailable:',
+        error instanceof Error ? error.name : typeof error,
+      );
+      receipt.snapshots.push({ elapsedMs: Date.now() - startedAt, phase, probeUnavailable: true });
+    }
+  };
+  this.page.on('framenavigated', onNavigation);
+  this.page.on('load', onLoad);
+  this.page.on('domcontentloaded', onDomReady);
+  this.page.on('requestfailed', onRequestFailed);
+  this.page.on('response', onResponse);
   try {
-    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
-      timeout: 30_000,
-    });
-  } catch {
+    await captureNavigation('before-first-click');
     await addTopicButton.click();
-    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
-      timeout: 30_000,
-    });
+    await captureNavigation('after-first-click');
+    try {
+      await this.page.waitForURL((url) => url.pathname === expectedPathname, { timeout: 30_000 });
+      await captureNavigation('first-url-matched');
+    } catch {
+      await captureNavigation('first-url-timeout');
+      await addTopicButton.click();
+      await captureNavigation('after-second-click');
+      try {
+        await this.page.waitForURL((url) => url.pathname === expectedPathname, { timeout: 30_000 });
+        await captureNavigation('second-url-matched');
+      } catch (error) {
+        await captureNavigation('second-url-timeout');
+        throw error;
+      }
+    }
+    receipt.outcome = 'passed';
+  } finally {
+    this.page.off('framenavigated', onNavigation);
+    this.page.off('load', onLoad);
+    this.page.off('domcontentloaded', onDomReady);
+    this.page.off('requestfailed', onRequestFailed);
+    this.page.off('response', onResponse);
+    const reportsDir = path.join(process.cwd(), 'reports');
+    await mkdir(reportsDir, { recursive: true });
+    const fileName = `conversation-navigation-${randomUUID()}.json`;
+    await writeFile(path.join(reportsDir, fileName), `${JSON.stringify(receipt, null, 2)}\n`);
+    console.log(`Conversation navigation receipt (${fileName}): ${JSON.stringify(receipt)}`);
   }
   await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();

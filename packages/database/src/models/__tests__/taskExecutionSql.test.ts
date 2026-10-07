@@ -118,9 +118,9 @@ describe('task execution SQL projection (tasks.status retired)', () => {
     const model = new TaskModel(serverDB, userId);
     const task = await model.create({ instruction: 'Explicit wins' });
 
-    await model.updateStatus(task.id, 'completed', { workflowCategory: 'in_review' });
+    await model.updateStatus(task.id, 'completed', { workflowCategory: 'todo' });
 
-    expect((await model.findById(task.id))?.workflowCategory).toBe('in_review');
+    expect((await model.findById(task.id))?.workflowCategory).toBe('todo');
   });
 
   it('matches each legacy predicate against canonical truth only', async () => {

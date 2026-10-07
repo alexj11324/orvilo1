@@ -501,7 +501,13 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     assertTestDatabaseUrl(adminUrl);
 
     const journal = readJournal(migrationsFolder);
-    const stageEntries = journal.entries.slice(0, -1).filter((entry) => !isHistoricalEntry(entry));
+    const canonicalEntries = journal.entries.filter((entry) => !isHistoricalEntry(entry));
+    const repairIndex = canonicalEntries.findIndex(
+      (entry) => entry.tag === '0205_core_execution_storage_forward_repair',
+    );
+    expect(repairIndex).toBeGreaterThan(0);
+    const stageEntries = canonicalEntries.slice(0, repairIndex);
+    const tail = canonicalEntries.slice(repairIndex);
     const boundaryWhen = Math.max(...stageEntries.map((entry) => entry.when));
 
     // Scratch database so the real migrator runs against a clean slate.
@@ -548,13 +554,14 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
         ).rows,
       ).toEqual([{ receipts: null, snapshots: null }]);
 
-      // Stage B: real folder — the deploy carrying the tail migration.
+      // Stage B: real folder — the deploy carrying 0205 and its subsequent canonical tail.
       await nodeMigrate(db, { migrationsFolder });
 
-      const appliedAfter = await pool.query<{ count: string }>(
-        'SELECT COUNT(*) AS count FROM "drizzle"."__drizzle_migrations"',
+      const appliedAfter = await pool.query<{ count: string; created_at: string }>(
+        'SELECT COUNT(*) AS count, MAX(created_at) AS created_at FROM "drizzle"."__drizzle_migrations"',
       );
-      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + 1);
+      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + tail.length);
+      expect(Number(appliedAfter.rows[0]?.created_at)).toBe(tail.at(-1)!.when);
 
       expect(
         (

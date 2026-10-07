@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clearCredentials, loadCredentials } from '../auth/credentials';
 import { stopDaemon } from '../daemon/manager';
@@ -29,12 +29,64 @@ describe('logout command', () => {
     vi.mocked(stopDaemon).mockReturnValue(false);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    process.exitCode = 0;
+  });
+
   function createProgram() {
     const program = new Command();
     program.exitOverride();
     registerLogoutCommand(program);
     return program;
   }
+
+  it('cleans up and reports unknown revocation after a server holds the request until its deadline', async () => {
+    vi.useFakeTimers();
+    vi.mocked(loadCredentials).mockReturnValue({ accessToken: 'access', refreshToken: 'refresh' });
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((milliseconds) => {
+      const abort = new AbortController();
+      setTimeout(() => abort.abort(new DOMException('Deadline', 'TimeoutError')), milliseconds);
+      return abort.signal;
+    });
+    const aborted = vi.fn();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url, options) =>
+          new Promise((_resolve, reject) =>
+            options.signal?.addEventListener(
+              'abort',
+              () => {
+                aborted();
+                reject(options.signal.reason);
+              },
+              { once: true },
+            ),
+          ),
+      ),
+    );
+    let completed = false;
+    const logout = createProgram()
+      .parseAsync(['node', 'test', 'logout'])
+      .then(() => {
+        completed = true;
+      });
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(completed).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(completed).toBe(true);
+    await logout;
+    expect(timeout).toHaveBeenCalledWith(10_000);
+    expect(aborted).toHaveBeenCalledOnce();
+    expect(stopDaemon).toHaveBeenCalled();
+    expect(clearCredentials).toHaveBeenCalled();
+    expect(saveActiveWorkspace).toHaveBeenCalledWith(null);
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('revocation failed'));
+    expect(process.exitCode).toBe(1);
+  });
 
   it('should log success when credentials are removed', async () => {
     vi.mocked(clearCredentials).mockReturnValue(true);

@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 
 import { oidcGrants } from '@orvilo/database/schemas';
 import { exportJWK, generateKeyPair } from 'jose';
+import type { Adapter as SDKAdapter } from 'oidc-provider';
 import Provider from 'oidc-provider';
 import { describe, expect, it } from 'vitest';
 
@@ -20,9 +21,9 @@ describe('installed SDK refresh replay', () => {
     const bothRead = new Promise<void>((resolve) => {
       releaseReads = resolve;
     });
-    class Adapter {
+    class Adapter implements SDKAdapter {
       constructor(private name: string) {}
-      async upsert(id: string, data: Record<string, any>, ttl: number) {
+      async upsert(id: string, data: Record<string, any>, ttl = 3600) {
         records.set(`${this.name}:${id}`, { data, expiresAt: new Date(Date.now() + ttl * 1000) });
       }
       async find(id: string) {
@@ -44,6 +45,16 @@ describe('installed SDK refresh replay', () => {
           return payload;
         }
         return row?.data;
+      }
+      async findByUserCode(userCode: string) {
+        return [...records.entries()].find(
+          ([key, row]) => key.startsWith(`${this.name}:`) && row.data.userCode === userCode,
+        )?.[1].data;
+      }
+      async findByUid(uid: string) {
+        return [...records.entries()].find(
+          ([key, row]) => key.startsWith(`${this.name}:`) && row.data.uid === uid,
+        )?.[1].data;
       }
       async consume(id: string) {
         const row = records.get(`${this.name}:${id}`);
@@ -115,6 +126,7 @@ describe('installed SDK refresh replay', () => {
         accountId: 'user-1',
         client,
         grantId,
+        gty: 'authorization_code',
         scope: 'openid offline_access',
       }).save();
       return { grantId, refreshToken };

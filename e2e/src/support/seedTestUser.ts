@@ -1,4 +1,6 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+
+import { clerkFixtureForUser } from './clerkFixture';
 
 const runId = process.env.E2E_RUN_ID || process.env.GITHUB_RUN_ID || 'local';
 const workerId = process.env.CUCUMBER_WORKER_ID || process.env.E2E_WORKER_ID || 'local';
@@ -89,15 +91,35 @@ export async function createTestSession(): Promise<string | null> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const sessionId = randomBytes(9).toString('base64url');
-    const sessionToken = randomBytes(24).toString('base64url');
+    const bearerToken = randomBytes(48).toString('base64url');
+    const digest = `sha256:${createHash('sha256').update(bearerToken).digest('hex')}`;
+    const clerk = clerkFixtureForUser(TEST_USER.id);
 
+    await client.query('BEGIN');
     await client.query(
-      `INSERT INTO auth_sessions (id, token, user_id, expires_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $5)`,
-      [sessionId, sessionToken, TEST_USER.id, expiresAt.toISOString(), now.toISOString()],
+      `INSERT INTO accounts (id, account_id, provider_id, user_id, created_at, updated_at)
+       VALUES ($1, $2, 'clerk', $3, $4, $4) ON CONFLICT (id) DO NOTHING`,
+      [`clerk:${clerk.upstreamUserId}`, clerk.upstreamUserId, TEST_USER.id, now.toISOString()],
     );
+    await client.query(
+      `INSERT INTO auth_sessions (id, token, user_id, expires_at, created_at, updated_at, clerk_session_id, clerk_user_id)
+       VALUES ($1, $2, $3, $4, $5, $5, $6, $7)`,
+      [
+        sessionId,
+        digest,
+        TEST_USER.id,
+        expiresAt.toISOString(),
+        now.toISOString(),
+        clerk.sessionId,
+        clerk.upstreamUserId,
+      ],
+    );
+    await client.query('COMMIT');
 
-    return sessionToken;
+    return bearerToken;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     await client.end();
   }

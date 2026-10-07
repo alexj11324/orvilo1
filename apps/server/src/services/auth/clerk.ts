@@ -118,12 +118,13 @@ const clerkApiFetch = async <T>(path: string): Promise<T> => {
   try {
     response = await fetch(`${apiUrl}/v1/${path}`, {
       headers: { authorization: `Bearer ${secretKey}` },
+      signal: AbortSignal.timeout(10_000),
     });
   } catch {
     throw new ClerkAuthError('Clerk Backend API unavailable', 503);
   }
   if (!response.ok) {
-    log('Backend API %s responded %d', path, response.status);
+    log('Backend API request failed with status %d', response.status);
     if (response.status === 404) throw new ClerkAuthError('Clerk resource unavailable');
     throw new ClerkAuthError('Clerk Backend API unavailable', 503);
   }

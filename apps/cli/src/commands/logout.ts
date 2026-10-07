@@ -30,6 +30,7 @@ export function registerLogoutCommand(program: Command) {
             }),
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             method: 'POST',
+            signal: AbortSignal.timeout(10_000),
           });
           revocationFailed = !response.ok;
         }

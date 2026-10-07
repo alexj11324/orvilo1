@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
+import debug from 'debug';
 import Keygrip from 'keygrip';
 import { NextRequest } from 'next/server';
 import type { AdapterPayload, KoaContextWithOIDC } from 'oidc-provider';
@@ -38,6 +39,7 @@ vi.mock('next/headers', () => ({
         }),
   }),
 }));
+vi.mock('@/envs/auth', () => ({ authEnv: { ENABLE_OIDC: true } }));
 vi.mock('@/envs/app', () => ({ appEnv: { APP_URL: 'https://synthetic.example.test' } }));
 vi.mock('@/libs/oidc-provider/config', () => ({
   defaultClients: [{ client_id: 'orvilo-desktop' }],
@@ -208,6 +210,7 @@ beforeEach(() => {
       devInteractions: { enabled: false },
       deviceFlow: { enabled: true },
       rpInitiatedLogout: { enabled: true },
+      revocation: { enabled: true },
       resourceIndicators: {
         enabled: true,
         getResourceServerInfo: () => ({
@@ -228,6 +231,7 @@ beforeEach(() => {
       code_verification: '/oidc/device',
       device_authorization: '/oidc/device/auth',
       end_session: '/oidc/session/end',
+      revocation: '/oidc/token/revocation',
       token: '/oidc/token',
     },
   });
@@ -275,6 +279,98 @@ const completeAuthorization = async (
 };
 
 describe('consent against the installed provider', () => {
+  it('reaches provider grant revocation through actual Next proxy and route without a web session', async () => {
+    const client = (await fixture.provider!.Client.find('orvilo-cli'))!;
+    const issue = async () => {
+      const grant = new fixture.provider!.Grant({
+        accountId: 'canonical-b',
+        clientId: client.clientId,
+      });
+      grant.addOIDCScope('profile email offline_access');
+      grant.addResourceScope(params.resource, 'profile email offline_access');
+      const grantId = await grant.save();
+      const refreshToken = await new fixture.provider!.RefreshToken({
+        accountId: 'canonical-b',
+        client,
+        grantId,
+        gty: 'urn:ietf:params:oauth:grant-type:device_code',
+        scope: 'profile email offline_access',
+        resource: params.resource,
+      }).save();
+      return { grantId, refreshToken };
+    };
+    const own = await issue();
+    const unrelated = await issue();
+    fixture.userId = undefined;
+    const form = new URLSearchParams({
+      client_id: client.clientId,
+      token: own.refreshToken,
+      token_type_hint: 'refresh_token',
+    }).toString();
+    const request = new NextRequest(`${origin}/oidc/token/revocation`, {
+      method: 'POST',
+      body: form,
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'content-length': String(Buffer.byteLength(form)),
+      },
+    });
+    const proxy = await defineConfig().middleware(request);
+    expect(proxy?.headers.get('location')).toBeNull();
+    expect(proxy?.headers.get('x-middleware-next')).toBe('1');
+    const { POST: revoke } = await import('../[...oidc]/route');
+    const result = await revoke(request);
+    expect(result.status).toBe(200);
+    expect(await fixture.provider!.Grant.find(own.grantId)).toBeUndefined();
+    expect(await fixture.provider!.RefreshToken.find(own.refreshToken)).toBeUndefined();
+    expect(await fixture.provider!.Grant.find(unrelated.grantId)).toBeDefined();
+    const control = await requestProvider('/oidc/token', {
+      client_id: client.clientId,
+      grant_type: 'refresh_token',
+      refresh_token: unrelated.refreshToken,
+    });
+    expect(control.responseStatus).toBe(200);
+  });
+
+  it('does not log grant IDs, interaction IDs, state or resume URLs through actual consent/service authorization', async () => {
+    const previous = debug.disable();
+    debug.enable('orvilo-oidc:consent,orvilo-oidc:service');
+    const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+    try {
+      const session = await seedSession('canonical-b');
+      const existingGrant = new fixture.provider!.Grant({ accountId: 'canonical-b', clientId });
+      await existingGrant.save();
+      session.grantIdFor(clientId, existingGrant.jti);
+      await session.save(3600);
+      const firstReply = await requestProvider(
+        `/oidc/auth?${new URLSearchParams({ ...params, state: 'CONSENT_SECRET_LOG_SENTINEL' })}`,
+      );
+      const interactionLocation = firstReply.responseHeaders.location as string;
+      const interactionId = new URL(interactionLocation, origin).pathname.split('/').at(-1)!;
+      expect(interactionLocation).toContain('/oauth/consent/');
+      const { response } = await submitConsent(interactionLocation);
+      expect(response.status).toBe(303);
+      const resume = response.headers.get('location')!;
+      const resumed = await requestProvider(resume);
+      const callback = new URL(resumed.responseHeaders.location as string);
+      expect(callback.searchParams.get('state')).toBe('CONSENT_SECRET_LOG_SENTINEL');
+      expect(await fixture.provider!.Grant.find(existingGrant.jti)).toBeDefined();
+      expect(output).toHaveBeenCalled();
+      const logged = JSON.stringify(output.mock.calls);
+      for (const secret of [
+        existingGrant.jti,
+        interactionId,
+        resume,
+        'CONSENT_SECRET_LOG_SENTINEL',
+      ]) {
+        expect(logged).not.toContain(secret);
+      }
+    } finally {
+      output.mockRestore();
+      debug.enable(previous);
+    }
+  });
+
   it.each([
     { accountId: 'canonical-a', persistent: false },
     { accountId: 'canonical-a', persistent: true },

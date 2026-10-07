@@ -6,8 +6,9 @@ import {
   bindTestUserExecutionDevice,
   ensureTestUserPrimeAgent,
 } from '../support/bindExecutionDevice';
+import { clerkFixtureForUser, MOCK_CLERK_SECRET_KEY } from '../support/clerkFixture';
 import { seedOrviloProviderBinding } from '../support/seedOrviloProviderBinding';
-import { createTestSession, seedTestUser } from '../support/seedTestUser';
+import { createTestSession, seedTestUser, TEST_USER } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
 
@@ -54,6 +55,17 @@ BeforeAll({ timeout: 600_000 }, async function () {
       );
     }
   }
+
+  // Fail before authenticated scenarios if the test Backend fixture is absent.
+  const clerkFixture = clerkFixtureForUser(TEST_USER.id);
+  const clerkStatus = await fetch(
+    `http://localhost:${llmPort}/v1/sessions/${clerkFixture.sessionId}`,
+    {
+      headers: { authorization: `Bearer ${MOCK_CLERK_SECRET_KEY}` },
+      signal: AbortSignal.timeout(3000),
+    },
+  );
+  if (!clerkStatus.ok) throw new Error('E2E Clerk Backend fixture is unavailable');
 
   // Clean slate for this worker's shared mock-LLM registry file — stale
   // responses from a previous run must not shadow this run's defaults.

@@ -8,16 +8,24 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { backfillAuthSessionDigests } from '../../../../../scripts/migrateServerDB/backfillAuthSessionDigests';
 
 const mocks = vi.hoisted(() => ({ db: {} as Record<string, unknown>, migrate: vi.fn() }));
-vi.mock('../../../../../scripts/migrateServerDB/errorHint', () => ({}));
-vi.mock('dotenv', () => ({
+vi.mock('../../../../../scripts/migrateServerDB/errorHint', () => ({
+  DB_FAIL_INIT_HINT: 'fixture',
+  DUPLICATE_EMAIL_HINT: 'fixture',
+  PGVECTOR_HINT: 'fixture',
+}));
+vi.mock('../../../../../node_modules/dotenv/lib/main.js', () => ({
   config: vi.fn(() => {
     process.env.DATABASE_URL = 'postgres://fixture.invalid/fallback-must-not-be-used';
     return {};
   }),
 }));
 vi.mock('dotenv-expand', () => ({ default: { expand: vi.fn() } }));
-vi.mock('drizzle-orm/node-postgres/migrator', () => ({ migrate: mocks.migrate }));
-vi.mock('drizzle-orm/neon-serverless/migrator', () => ({ migrate: mocks.migrate }));
+vi.mock('../../../../../node_modules/drizzle-orm/node-postgres/migrator.js', () => ({
+  migrate: mocks.migrate,
+}));
+vi.mock('../../../../../node_modules/drizzle-orm/neon-serverless/migrator.js', () => ({
+  migrate: mocks.migrate,
+}));
 vi.mock('../../server', () => ({ serverDB: mocks.db }));
 afterEach(() => {
   vi.restoreAllMocks();

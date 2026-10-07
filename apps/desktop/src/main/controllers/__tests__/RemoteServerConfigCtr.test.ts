@@ -1,5 +1,7 @@
+import { createServer } from 'node:http';
+
 import type { DataSyncConfig } from '@orvilo/electron-client-ipc';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
 
@@ -71,6 +73,132 @@ describe('RemoteServerConfigCtr', () => {
       storageMode: 'cloud',
     });
     controller = new RemoteServerConfigCtr(mockApp);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  describe('bounded logout requests', () => {
+    it('bounds actual loopback refresh JSON and revocation requests held by the server', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      let refreshStarted!: () => void;
+      const firstRequest = new Promise<void>((resolve) => {
+        refreshStarted = resolve;
+      });
+      const requests: string[] = [];
+      const server = createServer((request, response) => {
+        requests.push(request.url!);
+        if (request.url === '/oidc/token') {
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.write('{"access_token":'); // Keep the real body stream incomplete until abort.
+          refreshStarted();
+        }
+        // Revocation deliberately withholds response headers until the client aborts.
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') throw new Error('Expected loopback port');
+        mockStoreManager.get.mockImplementation((key) =>
+          key === 'dataSyncConfig'
+            ? {
+                active: true,
+                storageMode: 'selfHost',
+                remoteServerUrl: `http://127.0.0.1:${address.port}`,
+              }
+            : null,
+        );
+        await controller.saveTokens('access', 'refresh');
+        mockFetch.mockImplementation((url, options) => fetch(url, options));
+        const timeout = vi.spyOn(AbortSignal, 'timeout');
+        const started = Date.now();
+        const refresh = controller.refreshAccessToken();
+        await firstRequest;
+        await expect(controller.clearRemoteServerConfig()).rejects.toThrow(
+          'remote grant revocation failed',
+        );
+        expect((await refresh).success).toBe(false);
+        expect(Date.now() - started).toBeLessThan(25_000);
+        expect(requests).toEqual(['/oidc/token', '/oidc/token/revocation']);
+        expect(timeout).toHaveBeenNthCalledWith(1, 10_000);
+        expect(timeout).toHaveBeenNthCalledWith(2, 10_000);
+        expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+        expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+        expect(await controller.refreshAccessToken()).toEqual({
+          error: 'No refresh token available',
+          success: false,
+        });
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }, 30_000);
+
+    it.each(['headers', 'body', 'body-revoke-success'])(
+      'bounds an in-flight refresh stalled at %s then revocation before cleanup',
+      async (stall) => {
+        vi.useFakeTimers();
+        const { safeStorage } = await import('electron');
+        vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+        mockStoreManager.get.mockImplementation((key) =>
+          key === 'dataSyncConfig' ? { active: true, storageMode: 'cloud' } : null,
+        );
+        await controller.saveTokens('access', 'refresh');
+        const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((milliseconds) => {
+          const abort = new AbortController();
+          setTimeout(() => abort.abort(new DOMException('Deadline', 'TimeoutError')), milliseconds);
+          return abort.signal;
+        });
+        const aborted = vi.fn();
+        mockFetch.mockImplementation((_url, options) => {
+          const pending = () =>
+            new Promise((_resolve, reject) =>
+              options.signal?.addEventListener(
+                'abort',
+                () => {
+                  aborted();
+                  reject(options.signal.reason);
+                },
+                { once: true },
+              ),
+            );
+          if (stall === 'body-revoke-success' && mockFetch.mock.calls.length === 2)
+            return Promise.resolve({ ok: true });
+          return stall !== 'headers' && mockFetch.mock.calls.length === 1
+            ? Promise.resolve({ ok: true, json: pending })
+            : pending();
+        });
+        const refresh = controller.refreshAccessToken();
+        await vi.advanceTimersByTimeAsync(0);
+        let completed = false;
+        const logout = controller.clearRemoteServerConfig().catch((error) => {
+          completed = true;
+          return error;
+        });
+        const maximum = stall === 'body-revoke-success' ? 10_000 : 20_000;
+        await vi.advanceTimersByTimeAsync(maximum - 1);
+        expect(completed).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(completed).toBe(true);
+        expect(await logout).toBeInstanceOf(Error);
+        expect(await refresh).toEqual({
+          error: 'Exception occurred during token refresh',
+          success: false,
+        });
+        expect(timeout).toHaveBeenNthCalledWith(1, 10_000);
+        expect(timeout).toHaveBeenNthCalledWith(2, 10_000);
+        expect(aborted).toHaveBeenCalledTimes(stall === 'body-revoke-success' ? 1 : 2);
+        expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+        expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+        expect(await controller.refreshAccessToken()).toEqual({
+          error: 'No refresh token available',
+          success: false,
+        });
+      },
+    );
   });
 
   describe('getRemoteServerConfig', () => {

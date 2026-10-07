@@ -29,6 +29,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 import { clearAllMockLLMState } from '../src/mocks/llm/registry';
+import { MOCK_CLERK_SECRET_KEY } from '../src/support/clerkFixture';
 import { createTestOidcJwks } from '../src/support/oidcTestKey';
 
 // ============================================================================
@@ -299,6 +300,8 @@ function getServerEnv(port: number): Record<string, string> {
   return {
     APP_URL: `http://localhost:${port}`,
     AUTH_EMAIL_VERIFICATION: '0',
+    CLERK_API_URL: 'http://localhost:3406',
+    CLERK_SECRET_KEY: MOCK_CLERK_SECRET_KEY,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,
     // Agent sends run through the server-side runtime in gateway mode (the

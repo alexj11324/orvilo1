@@ -1,11 +1,22 @@
 import { createHash } from 'node:crypto';
 
-import type { Pool as NeonPool } from '@neondatabase/serverless';
-import type pg from 'pg';
+/** Narrow common SQL port for the existing node-postgres and Neon clients. */
+interface SessionDigestSQL {
+  query: <Row extends Record<string, unknown>>(
+    sql: string,
+    values?: unknown[],
+  ) => Promise<{ rows: Row[] }>;
+}
+interface SessionDigestClient extends SessionDigestSQL {
+  release: () => void;
+}
+interface SessionDigestPool extends SessionDigestSQL {
+  connect: () => Promise<SessionDigestClient>;
+}
 
 const rawPredicate = "token !~ '^sha256:[0-9a-f]{64}$'";
 
-export const backfillAuthSessionDigests = async (pool: pg.Pool | NeonPool, apply: boolean) => {
+export const backfillAuthSessionDigests = async (pool: SessionDigestPool, apply: boolean) => {
   if (!apply) {
     const result = await pool.query<{ count: string }>(
       `SELECT count(*) FROM auth_sessions WHERE ${rawPredicate}`,

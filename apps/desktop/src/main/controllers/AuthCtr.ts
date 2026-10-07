@@ -116,7 +116,7 @@ export default class AuthCtr extends ControllerModule {
         state: this.authRequestState,
       });
 
-      logger.info(`Constructed authorization URL: ${authUrl.toString()}`);
+      logger.info('Authorization request prepared for orvilo-desktop');
 
       // Open authorization URL in the default browser
       await shell.openExternal(authUrl.toString());
@@ -236,9 +236,7 @@ export default class AuthCtr extends ControllerModule {
 
           // Validate state parameter
           if (result.state !== this.authRequestState) {
-            logger.error(
-              `Invalid state parameter: expected ${this.authRequestState}, received ${result.state}`,
-            );
+            logger.error('Authorization state validation failed');
             this.broadcastAuthorizationFailed('Invalid state parameter');
             return;
           }

@@ -1,4 +1,5 @@
 import type { DataSyncConfig } from '@orvilo/electron-client-ipc';
+import debug from 'debug';
 import { BrowserWindow, shell } from 'electron';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,8 @@ import RemoteServerConfigCtr from '../RemoteServerConfigCtr';
 const { ipcMainHandleMock } = vi.hoisted(() => ({
   ipcMainHandleMock: vi.fn(),
 }));
+
+vi.unmock('@/utils/logger');
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -136,6 +139,42 @@ describe('AuthCtr', () => {
     authCtr?.cleanup?.();
     // Clean up any fake timers if used
     vi.clearAllTimers();
+  });
+
+  it('enabled actual auth logger excludes authorization and mismatched state sentinels', async () => {
+    vi.useFakeTimers();
+    const previousDebug = debug.disable();
+    debug.enable('controllers:AuthCtr');
+    const debugOutput = vi.spyOn(debug, 'log').mockImplementation(() => {});
+    const errorOutput = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { payload: { code: 'sentinel-code', state: 'sentinel-supplied-state' } },
+      }),
+    });
+    try {
+      await authCtr.requestAuthorization({ active: false, storageMode: 'cloud' });
+      const expectedState = new URL(
+        vi.mocked(shell.openExternal).mock.calls[0][0],
+      ).searchParams.get('state')!;
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(mockWindow.webContents.send).toHaveBeenCalledWith('authorizationFailed', {
+        error: 'Invalid state parameter',
+      });
+      const output = JSON.stringify([...debugOutput.mock.calls, ...errorOutput.mock.calls]);
+      expect(output).toContain('Authorization request prepared for orvilo-desktop');
+      expect(output).toContain('Authorization state validation failed');
+      expect(output).not.toContain(expectedState);
+      expect(output).not.toContain('sentinel-supplied-state');
+      expect(output).not.toContain('sentinel-code');
+    } finally {
+      debugOutput.mockRestore();
+      errorOutput.mockRestore();
+      debug.enable(previousDebug);
+      vi.useRealTimers();
+    }
   });
 
   describe('Basic functionality', () => {

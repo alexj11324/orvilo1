@@ -147,16 +147,21 @@ export default class RemoteServerConfigCtr extends ControllerModule {
     const { storeManager } = this.app;
 
     this.loggingOut = true;
-    // A refresh in flight may rotate the token; revoke the latest refresh token.
-    if (this.refreshPromise) await this.refreshPromise;
-    const refreshToken = await this.getRefreshToken();
-    let revocationFailed =
-      !refreshToken &&
-      Boolean(
-        this.encryptedRefreshToken || storeManager.get(this.encryptedTokensKey)?.refreshToken,
-      );
-    if (refreshToken) {
-      try {
+    let revocationFailed = false;
+    try {
+      // A refresh in flight may rotate the token; revoke the latest refresh token.
+      if (this.refreshPromise) {
+        const refresh = await this.refreshPromise;
+        // A lost refresh response may leave an unknown rotated token on the server.
+        revocationFailed = !refresh.success;
+      }
+      const refreshToken = await this.getRefreshToken();
+      revocationFailed ||=
+        !refreshToken &&
+        Boolean(
+          this.encryptedRefreshToken || storeManager.get(this.encryptedTokensKey)?.refreshToken,
+        );
+      if (refreshToken) {
         const remoteUrl = await this.getRemoteServerUrl();
         const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
         appendVercelCookie(headers);
@@ -169,16 +174,21 @@ export default class RemoteServerConfigCtr extends ControllerModule {
           }),
           headers,
           method: 'POST',
+          signal: AbortSignal.timeout(10_000),
         });
-        revocationFailed = !response.ok;
-      } catch {
-        revocationFailed = true;
+        revocationFailed ||= !response.ok;
+      }
+    } catch {
+      revocationFailed = true;
+    } finally {
+      try {
+        storeManager.set('dataSyncConfig', { active: false, storageMode: 'cloud' });
+        await this.clearTokens();
+        this.broadcastRemoteServerConfigUpdated();
+      } finally {
+        this.loggingOut = false;
       }
     }
-    storeManager.set('dataSyncConfig', { active: false, storageMode: 'cloud' });
-    await this.clearTokens();
-    this.broadcastRemoteServerConfigUpdated();
-    this.loggingOut = false;
     if (revocationFailed) throw new Error('Local logout completed; remote grant revocation failed');
 
     return true;
@@ -504,7 +514,12 @@ export default class RemoteServerConfigCtr extends ControllerModule {
       };
       appendVercelCookie(headers);
       setDesktopUserAgentHeader(headers);
-      const response = await netFetch(tokenUrl.toString(), { body, headers, method: 'POST' });
+      const response = await netFetch(tokenUrl.toString(), {
+        body,
+        headers,
+        method: 'POST',
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         // Try to parse error response

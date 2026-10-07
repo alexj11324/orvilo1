@@ -312,6 +312,7 @@ describe('configured provider JWT API grant binding', () => {
         accountId: 'user-123',
         client,
         grantId: 'grant-123',
+        gty: 'authorization_code',
       });
       token.resourceServer = new provider.ResourceServer(API_AUDIENCE, {
         audience: API_AUDIENCE,

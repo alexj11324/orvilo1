@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearCredentials } from '../auth/credentials';
+import { clearCredentials, loadCredentials } from '../auth/credentials';
 import { stopDaemon } from '../daemon/manager';
 import { saveActiveWorkspace } from '../settings';
 import { log } from '../utils/logger';
@@ -9,6 +9,7 @@ import { registerLogoutCommand } from './logout';
 
 vi.mock('../auth/credentials', () => ({
   clearCredentials: vi.fn(),
+  loadCredentials: vi.fn(),
 }));
 
 vi.mock('../daemon/manager', () => ({
@@ -17,11 +18,14 @@ vi.mock('../daemon/manager', () => ({
 
 vi.mock('../settings', () => ({
   saveActiveWorkspace: vi.fn(),
+  resolveServerUrl: vi.fn(() => 'https://server.test'),
 }));
 
 describe('logout command', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.exitCode = 0;
+    vi.mocked(loadCredentials).mockReturnValue(null);
     vi.mocked(stopDaemon).mockReturnValue(false);
   });
 
@@ -40,6 +44,36 @@ describe('logout command', () => {
 
     expect(clearCredentials).toHaveBeenCalled();
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Logged out'));
+  });
+
+  it('revokes the refresh grant before removing credentials', async () => {
+    vi.mocked(loadCredentials).mockReturnValue({ accessToken: 'access', refreshToken: 'refresh' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    await createProgram().parseAsync(['node', 'test', 'logout']);
+    expect(fetch).toHaveBeenCalledWith(
+      new URL('https://server.test/oidc/token/revocation'),
+      expect.objectContaining({
+        body: new URLSearchParams({
+          client_id: 'orvilo-cli',
+          token: 'refresh',
+          token_type_hint: 'refresh_token',
+        }),
+      }),
+    );
+    expect(clearCredentials).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('reports failed remote revocation while cleaning up locally', async () => {
+    vi.mocked(loadCredentials).mockReturnValue({ accessToken: 'access', refreshToken: 'refresh' });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await createProgram().parseAsync(['node', 'test', 'logout']);
+    expect(clearCredentials).toHaveBeenCalled();
+    expect(stopDaemon).toHaveBeenCalled();
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('revocation failed'));
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    vi.unstubAllGlobals();
   });
 
   // The scope belongs to the account that set it; the next login may be someone

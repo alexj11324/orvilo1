@@ -194,13 +194,16 @@ export function registerLoginCommand(program: Command) {
               }
             }
           } else if (body.access_token) {
-            saveCredentials({
-              accessToken: body.access_token,
-              expiresAt: body.expires_in
-                ? Math.floor(Date.now() / 1000) + body.expires_in
-                : undefined,
-              refreshToken: body.refresh_token,
-            });
+            saveCredentials(
+              {
+                accessToken: body.access_token,
+                expiresAt: body.expires_in
+                  ? Math.floor(Date.now() / 1000) + body.expires_in
+                  : undefined,
+                refreshToken: body.refresh_token,
+              },
+              serverUrl,
+            );
 
             const existingSettings = loadSettings();
             const shouldPreserveGateway = existingSettings?.serverUrl === serverUrl;

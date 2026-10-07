@@ -155,9 +155,31 @@ describe('login command', () => {
         accessToken: 'new-token',
         refreshToken: 'refresh-tok',
       }),
+      expect.any(String),
     );
     expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://orvilo.aspectlylabs.com' });
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Login successful'));
+  });
+
+  it('stores a fresh login in the selected server namespace before settings change', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(deviceAuthResponse())
+      .mockResolvedValueOnce(tokenSuccessResponse());
+    const program = createProgram();
+    const login = program.parseAsync([
+      'node',
+      'test',
+      'login',
+      '--server',
+      'https://fresh-custom.test',
+    ]);
+    await vi.advanceTimersByTimeAsync(6000);
+    await login;
+    expect(saveCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: 'new-token' }),
+      'https://fresh-custom.test',
+    );
+    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://fresh-custom.test' });
   });
 
   it('should use environment api key without storing credentials', async () => {
@@ -340,7 +362,10 @@ describe('login command', () => {
     const program = createProgram();
     await runLoginAndAdvanceTimers(program);
 
-    expect(saveCredentials).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: undefined }));
+    expect(saveCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({ expiresAt: undefined }),
+      expect.any(String),
+    );
   });
 
   it('should use default interval when not provided', async () => {

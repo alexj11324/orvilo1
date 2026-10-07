@@ -146,13 +146,40 @@ export default class RemoteServerConfigCtr extends ControllerModule {
     logger.info('Clearing remote server configuration');
     const { storeManager } = this.app;
 
-    // Clear instance configuration
+    this.loggingOut = true;
+    // A refresh in flight may rotate the token; revoke the latest refresh token.
+    if (this.refreshPromise) await this.refreshPromise;
+    const refreshToken = await this.getRefreshToken();
+    let revocationFailed =
+      !refreshToken &&
+      Boolean(
+        this.encryptedRefreshToken || storeManager.get(this.encryptedTokensKey)?.refreshToken,
+      );
+    if (refreshToken) {
+      try {
+        const remoteUrl = await this.getRemoteServerUrl();
+        const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+        appendVercelCookie(headers);
+        setDesktopUserAgentHeader(headers);
+        const response = await netFetch(new URL('/oidc/token/revocation', remoteUrl).toString(), {
+          body: querystring.stringify({
+            client_id: 'orvilo-desktop',
+            token: refreshToken,
+            token_type_hint: 'refresh_token',
+          }),
+          headers,
+          method: 'POST',
+        });
+        revocationFailed = !response.ok;
+      } catch {
+        revocationFailed = true;
+      }
+    }
     storeManager.set('dataSyncConfig', { active: false, storageMode: 'cloud' });
-
-    // Clear tokens (if any)
     await this.clearTokens();
-
     this.broadcastRemoteServerConfigUpdated();
+    this.loggingOut = false;
+    if (revocationFailed) throw new Error('Local logout completed; remote grant revocation failed');
 
     return true;
   }
@@ -166,6 +193,39 @@ export default class RemoteServerConfigCtr extends ControllerModule {
    * Encrypted tokens
    * Stored in memory for quick access, loaded from persistent storage on init.
    */
+  private tokenEncoding: 'memory' | 'safeStorage' = 'safeStorage';
+
+  private isProtectedStorageAvailable() {
+    return (
+      safeStorage.isEncryptionAvailable() &&
+      safeStorage.getSelectedStorageBackend?.() !== 'basic_text'
+    );
+  }
+
+  private readToken(token: string): string | null {
+    if (this.tokenEncoding === 'memory') {
+      if (
+        this.isProtectedStorageAvailable() &&
+        this.encryptedAccessToken &&
+        this.encryptedRefreshToken
+      ) {
+        try {
+          this.persistProtectedTokens(this.encryptedAccessToken, this.encryptedRefreshToken);
+        } catch {
+          logger.warn('Protected migration failed; existing credentials retained');
+        }
+      }
+      return token;
+    }
+    if (!this.isProtectedStorageAvailable()) return null;
+    try {
+      return safeStorage.decryptString(Buffer.from(token, 'base64'));
+    } catch {
+      logger.error('Protected token could not be decrypted');
+      return null;
+    }
+  }
+
   private encryptedAccessToken?: string;
   private encryptedRefreshToken?: string;
 
@@ -192,9 +252,8 @@ export default class RemoteServerConfigCtr extends ControllerModule {
     if (!this.encryptedAccessToken) return { isIdentityResolved: true };
 
     try {
-      const accessToken = safeStorage.isEncryptionAvailable()
-        ? safeStorage.decryptString(Buffer.from(this.encryptedAccessToken, 'base64'))
-        : this.encryptedAccessToken;
+      const accessToken = this.readToken(this.encryptedAccessToken);
+      if (!accessToken) return { isIdentityResolved: false };
       const parts = accessToken.split('.');
       if (parts.length !== 3) return { isIdentityResolved: false };
 
@@ -206,8 +265,8 @@ export default class RemoteServerConfigCtr extends ControllerModule {
       }
 
       return { isIdentityResolved: true, userId: payload.sub };
-    } catch (error) {
-      logger.warn('Failed to resolve Desktop bootstrap identity from access token:', error);
+    } catch {
+      logger.warn('Failed to resolve Desktop bootstrap identity from access token');
       return { isIdentityResolved: false };
     }
   }
@@ -216,6 +275,8 @@ export default class RemoteServerConfigCtr extends ControllerModule {
    * Promise representing the ongoing token refresh operation.
    * Used to prevent concurrent refreshes and allow callers to wait.
    */
+  private loggingOut = false;
+
   private refreshPromise: Promise<{ error?: string; success: boolean }> | null = null;
 
   /**
@@ -239,39 +300,38 @@ export default class RemoteServerConfigCtr extends ControllerModule {
     this.lastRefreshAt = Date.now();
     logger.debug(`Token last refreshed at: ${new Date(this.lastRefreshAt).toISOString()}`);
 
-    // If platform doesn't support secure storage, store raw tokens
-    if (!safeStorage.isEncryptionAvailable()) {
-      logger.warn('Safe storage not available, storing tokens unencrypted');
+    if (!this.isProtectedStorageAvailable()) {
+      logger.warn('Protected storage unavailable; credentials are memory-only');
+      this.tokenEncoding = 'memory';
       this.encryptedAccessToken = accessToken;
       this.encryptedRefreshToken = refreshToken;
-      // Persist unencrypted tokens (consider security implications)
-      this.app.storeManager.set(this.encryptedTokensKey, {
-        accessToken: this.encryptedAccessToken,
-        expiresAt: this.tokenExpiresAt,
-        lastRefreshAt: this.lastRefreshAt,
-        refreshToken: this.encryptedRefreshToken,
-      });
-      return;
+      return { persistent: false };
     }
 
-    // Encrypt tokens
-    logger.debug('Encrypting tokens using safe storage');
-    this.encryptedAccessToken = Buffer.from(safeStorage.encryptString(accessToken)).toString(
-      'base64',
-    );
+    this.persistProtectedTokens(accessToken, refreshToken);
+    return { persistent: true };
+  }
 
-    this.encryptedRefreshToken = Buffer.from(safeStorage.encryptString(refreshToken)).toString(
-      'base64',
-    );
-
-    // Persist encrypted tokens
-    logger.debug(`Persisting encrypted tokens to store key: ${this.encryptedTokensKey}`);
-    this.app.storeManager.set(this.encryptedTokensKey, {
-      accessToken: this.encryptedAccessToken,
+  private persistProtectedTokens(accessToken: string, refreshToken: string) {
+    const encryptedAccessToken = safeStorage.encryptString(accessToken);
+    const encryptedRefreshToken = safeStorage.encryptString(refreshToken);
+    if (
+      safeStorage.decryptString(encryptedAccessToken) !== accessToken ||
+      safeStorage.decryptString(encryptedRefreshToken) !== refreshToken
+    ) {
+      throw new Error('Protected credential verification failed');
+    }
+    const stored = {
+      accessToken: Buffer.from(encryptedAccessToken).toString('base64'),
+      encoding: 'safeStorage' as const,
       expiresAt: this.tokenExpiresAt,
       lastRefreshAt: this.lastRefreshAt,
-      refreshToken: this.encryptedRefreshToken,
-    });
+      refreshToken: Buffer.from(encryptedRefreshToken).toString('base64'),
+    };
+    this.app.storeManager.set(this.encryptedTokensKey, stored);
+    this.encryptedAccessToken = stored.accessToken;
+    this.encryptedRefreshToken = stored.refreshToken;
+    this.tokenEncoding = 'safeStorage';
   }
 
   /**
@@ -289,23 +349,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
       return null;
     }
 
-    // If platform doesn't support secure storage, return stored token
-    if (!safeStorage.isEncryptionAvailable()) {
-      logger.debug(
-        'Safe storage not available, returning potentially unencrypted token from memory/store',
-      );
-      return this.encryptedAccessToken;
-    }
-
-    try {
-      // Decrypt token
-      logger.debug('Decrypting access token');
-      const encryptedData = Buffer.from(this.encryptedAccessToken, 'base64');
-      return safeStorage.decryptString(encryptedData);
-    } catch (error) {
-      logger.error('Failed to decrypt access token:', error);
-      return null;
-    }
+    return this.readToken(this.encryptedAccessToken);
   }
 
   /**
@@ -323,23 +367,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
       return null;
     }
 
-    // If platform doesn't support secure storage, return stored token
-    if (!safeStorage.isEncryptionAvailable()) {
-      logger.debug(
-        'Safe storage not available, returning potentially unencrypted token from memory/store',
-      );
-      return this.encryptedRefreshToken;
-    }
-
-    try {
-      // Decrypt token
-      logger.debug('Decrypting refresh token');
-      const encryptedData = Buffer.from(this.encryptedRefreshToken, 'base64');
-      return safeStorage.decryptString(encryptedData);
-    } catch (error) {
-      logger.error('Failed to decrypt refresh token:', error);
-      return null;
-    }
+    return this.readToken(this.encryptedRefreshToken);
   }
 
   /**
@@ -414,6 +442,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
    * Concurrent callers share the in-progress refresh promise.
    */
   async refreshAccessToken(): Promise<{ error?: string; success: boolean }> {
+    if (this.loggingOut) return { error: 'Logout in progress', success: false };
     // If a refresh is already in progress, return the existing promise
     if (this.refreshPromise) {
       logger.debug('Token refresh already in progress, returning existing promise.');
@@ -481,12 +510,12 @@ export default class RemoteServerConfigCtr extends ControllerModule {
         // Try to parse error response
         const errorData = await response.json().catch(() => ({}));
         // Keep the OIDC code so AuthCtr can distinguish revoked grants from transient failures.
-        const errorDetail = [errorData.error, errorData.error_description]
-          .filter(Boolean)
-          .join(' ');
+        const errorDetail = NON_RETRYABLE_OIDC_ERRORS.includes(errorData.error)
+          ? errorData.error
+          : 'oidc_error';
         const errorMessage =
           `Token refresh failed: ${response.status} ${response.statusText} ${errorDetail}`.trim();
-        logger.error(errorMessage, errorData);
+        logger.error('Token refresh failed', { status: response.status, error: errorDetail });
         return { error: errorMessage, success: false };
       }
 
@@ -495,7 +524,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
 
       // Check if response contains necessary tokens
       if (!data.access_token || !data.refresh_token) {
-        logger.error('Refresh response missing access_token or refresh_token', data);
+        logger.error('Refresh response missing required tokens');
         return { error: 'Missing tokens in refresh response', success: false };
       }
 
@@ -504,10 +533,9 @@ export default class RemoteServerConfigCtr extends ControllerModule {
       await this.saveTokens(data.access_token, data.refresh_token, data.expires_in);
 
       return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Exception during token refresh operation:', errorMessage, error);
-      return { error: `Exception occurred during token refresh: ${errorMessage}`, success: false };
+    } catch {
+      logger.error('Exception during token refresh operation');
+      return { error: 'Exception occurred during token refresh', success: false };
     }
   }
 
@@ -521,10 +549,40 @@ export default class RemoteServerConfigCtr extends ControllerModule {
 
     if (storedTokens && storedTokens.accessToken && storedTokens.refreshToken) {
       logger.info('Successfully loaded tokens from store into memory.');
+      // Legacy raw JWTs are recognizable; never interpret unknown ciphertext as raw.
+      const legacyRaw = !storedTokens.encoding && storedTokens.accessToken.split('.').length === 3;
+      this.tokenEncoding = legacyRaw ? 'memory' : 'safeStorage';
       this.encryptedAccessToken = storedTokens.accessToken;
       this.encryptedRefreshToken = storedTokens.refreshToken;
       this.tokenExpiresAt = storedTokens.expiresAt;
       this.lastRefreshAt = storedTokens.lastRefreshAt;
+      if (
+        !legacyRaw &&
+        !storedTokens.encoding &&
+        safeStorage.isEncryptionAvailable() &&
+        safeStorage.getSelectedStorageBackend?.() === 'basic_text'
+      ) {
+        try {
+          const accessToken = safeStorage.decryptString(
+            Buffer.from(storedTokens.accessToken, 'base64'),
+          );
+          const refreshToken = safeStorage.decryptString(
+            Buffer.from(storedTokens.refreshToken, 'base64'),
+          );
+          this.encryptedAccessToken = accessToken;
+          this.encryptedRefreshToken = refreshToken;
+          this.tokenEncoding = 'memory';
+        } catch {
+          logger.warn('Legacy token decryption failed; original retained');
+        }
+      }
+      if (legacyRaw && this.isProtectedStorageAvailable()) {
+        try {
+          this.persistProtectedTokens(storedTokens.accessToken, storedTokens.refreshToken);
+        } catch {
+          logger.warn('Legacy token migration failed; original retained');
+        }
+      }
 
       if (this.tokenExpiresAt) {
         logger.debug(

@@ -26,6 +26,7 @@ vi.mock('electron', () => ({
     decryptString: vi.fn((buffer: Buffer) => buffer.toString()),
     encryptString: vi.fn((str: string) => Buffer.from(str)),
     isEncryptionAvailable: vi.fn(() => true),
+    getSelectedStorageBackend: vi.fn(() => 'gnome_libsecret'),
   },
 }));
 
@@ -59,8 +60,11 @@ const mockApp = {
 describe('RemoteServerConfigCtr', () => {
   let controller: RemoteServerConfigCtr;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { safeStorage } = await import('electron');
+    vi.mocked(safeStorage.getSelectedStorageBackend).mockReturnValue('gnome_libsecret');
+    vi.mocked(safeStorage.decryptString).mockImplementation((buffer) => buffer.toString());
     ipcMainHandleMock.mockClear();
     mockStoreManager.get.mockReturnValue({
       active: false,
@@ -157,20 +161,90 @@ describe('RemoteServerConfigCtr', () => {
       );
     });
 
-    it('should save unencrypted tokens when encryption is not available', async () => {
+    it('keeps tokens only in memory when encryption is not available', async () => {
       const { safeStorage } = await import('electron');
       vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
 
       await controller.saveTokens('access-token', 'refresh-token', 3600);
 
       expect(safeStorage.encryptString).not.toHaveBeenCalled();
-      expect(mockStoreManager.set).toHaveBeenCalledWith(
-        'encryptedTokens',
-        expect.objectContaining({
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        }),
+      expect(mockStoreManager.set).not.toHaveBeenCalled();
+      expect(await controller.getAccessToken()).toBe('access-token');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      expect(await controller.getRefreshToken()).toBe('refresh-token');
+    });
+  });
+
+  describe('protected storage regressions', () => {
+    it('refuses persistence with the Linux basic_text backend', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      vi.mocked(safeStorage.getSelectedStorageBackend).mockReturnValue('basic_text');
+      expect(await controller.saveTokens('access', 'refresh')).toEqual({ persistent: false });
+      expect(mockStoreManager.set).not.toHaveBeenCalled();
+      expect(safeStorage.encryptString).not.toHaveBeenCalled();
+      expect(await controller.getRefreshToken()).toBe('refresh');
+    });
+    it('never returns ciphertext as plaintext during a backend outage', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('access', 'refresh');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      expect(await controller.getAccessToken()).toBeNull();
+      expect(mockStoreManager.delete).not.toHaveBeenCalled();
+    });
+    it('preserves a raw legacy JWT when secure migration verification fails', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      const accessToken = 'header.payload.signature';
+      mockStoreManager.get.mockReturnValue({ accessToken, refreshToken: 'legacy-refresh' });
+      vi.mocked(safeStorage.decryptString).mockImplementation(() => 'wrong');
+      expect(await controller.getAccessToken()).toBe(accessToken);
+      expect(mockStoreManager.set).not.toHaveBeenCalled();
+      expect(mockStoreManager.delete).not.toHaveBeenCalled();
+    });
+    it('revokes refresh grant then clears tokens and disconnects locally', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('access', 'refresh');
+      mockFetch.mockResolvedValue({ ok: true });
+      await controller.clearRemoteServerConfig();
+      const [url, request] = mockFetch.mock.calls.at(-1)!;
+      expect(url).toBe('https://cloud.aspectlylabs.com/oidc/token/revocation');
+      expect(new URLSearchParams(request.body).get('token')).toBe('refresh');
+      expect(new URLSearchParams(request.body).get('token_type_hint')).toBe('refresh_token');
+      expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+    });
+    it.each(['unavailable', 'decrypt-failure'])(
+      'reports unknown remote revocation when protected refresh is unreadable: %s',
+      async (failure) => {
+        const { safeStorage } = await import('electron');
+        vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+        await controller.saveTokens('access', 'refresh');
+        if (failure === 'unavailable')
+          vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+        else
+          vi.mocked(safeStorage.decryptString).mockImplementation(() => {
+            throw new Error('locked');
+          });
+        await expect(controller.clearRemoteServerConfig()).rejects.toThrow(
+          'remote grant revocation failed',
+        );
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+        expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+      },
+    );
+    it('reports revocation failure after clearing local credentials', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('access', 'refresh');
+      mockFetch.mockRejectedValue(new Error('offline'));
+      await expect(controller.clearRemoteServerConfig()).rejects.toThrow(
+        'remote grant revocation failed',
       );
+      expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+      expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
     });
   });
 
@@ -561,7 +635,7 @@ describe('RemoteServerConfigCtr', () => {
       expect(result.error).toContain('Token refresh failed');
       expect(result.error).toContain(errorData.error);
       if (errorData.error_description) {
-        expect(result.error).toContain(errorData.error_description);
+        expect(result.error).not.toContain(errorData.error_description);
       }
       expect(controller.isNonRetryableError(result.error)).toBe(true);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -673,7 +747,8 @@ describe('RemoteServerConfigCtr', () => {
       const result = await controller.refreshAccessToken();
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Network error');
+      expect(result.error).toBe('Exception occurred during token refresh');
+      expect(result.error).not.toContain('Network error');
       expect(controller.isNonRetryableError(result.error)).toBe(false);
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });

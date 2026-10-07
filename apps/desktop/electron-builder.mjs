@@ -188,7 +188,12 @@ const config = {
       path.resolve(__dirname, 'resources/cli-package.json'),
       JSON.stringify({ name: cliPkg.name, type: 'module', version: cliPkg.version }),
     );
-    console.info('✅ CLI bundle copied to resources/bin/orvilo-cli.js');
+    await fs.cp(
+      path.resolve(__dirname, '../cli/dist/node_modules'),
+      path.resolve(__dirname, 'resources/bin/node_modules'),
+      { recursive: true },
+    );
+    console.info('✅ CLI bundle and native credential storage copied to resources/bin');
 
     // Prime harness artifact — `orvilo prime exec` resolves `runner.mjs` as a
     // sibling of the bundle (`Resources/bin/runner.mjs` when packaged). The

@@ -257,7 +257,7 @@ const ApiKey: FC = () => {
   ];
 
   return (
-    <div className="overflow-hidden rounded-xl bg-card py-4">
+    <div className="overflow-hidden rounded-(--radius-card) bg-card py-4">
       <div className="flex items-start justify-between gap-4 px-6 pb-4">
         <div className="flex flex-col gap-1">
           <span className="text-sm" style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
@@ -279,6 +279,7 @@ const ApiKey: FC = () => {
           </a>
           <Button
             disabled={!canCreate}
+            size="lg"
             title={canCreate ? undefined : createTooltip}
             type="button"
             onClick={handleCreate}

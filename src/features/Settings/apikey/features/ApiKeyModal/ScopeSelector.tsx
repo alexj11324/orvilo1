@@ -128,7 +128,7 @@ const ScopeSelector: FC<ScopeSelectorProps> = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between gap-4 rounded-(--radius-card) border border-border p-3">
         <div className="flex flex-col gap-0.5">
           <span className="text-sm">{t('apikey.form.fields.scopes.fullAccess')}</span>
           <span className="text-xs text-muted-foreground">
@@ -142,7 +142,7 @@ const ScopeSelector: FC<ScopeSelectorProps> = ({
         />
       </div>
       <div className={fullAccess ? 'pointer-events-none opacity-45' : undefined}>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-border p-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-(--radius-card) border border-border p-3">
           {SCOPE_GROUPS.map((group) => (
             <div className="flex flex-col gap-1" key={group.key}>
               <span className="text-xs text-muted-foreground">{t(group.label)}</span>

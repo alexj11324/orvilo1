@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { lazy, Suspense } from 'react';
 
 import { createModal } from '@/components/Modal';
@@ -10,17 +9,8 @@ const CreateProjectTitle = lazy(() =>
   import('./CreateProjectContent').then((m) => ({ default: m.CreateProjectTitle })),
 );
 
-const styles = createStaticStyles(({ css }) => ({
-  popup: css`
-    > div {
-      border-radius: 21px;
-    }
-  `,
-}));
-
 export const openCreateProjectModal = (options: CreateProjectOptions = {}) =>
   createModal({
-    classNames: { popup: styles.popup },
     content: (
       <Suspense fallback={null}>
         <CreateProjectContent {...options} />

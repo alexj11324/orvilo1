@@ -70,7 +70,7 @@ const MCPStdioCommandInput = memo<MCPStdioCommandInputProps>(
             onChange={(event) => onChange?.(event.target.value)}
             {...props}
           />
-          <AutocompleteContent>
+          <AutocompleteContent className="rounded-(--radius-overlay)">
             <AutocompleteList>
               {STDIO_COMMAND_OPTIONS.map(({ value, icon: Icon, color }) => (
                 <AutocompleteItem key={value} value={value}>

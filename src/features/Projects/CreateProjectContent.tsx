@@ -1035,8 +1035,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
           <Button
             aria-busy={form.loading}
             disabled={!createInput || form.loading}
-            size="sm"
-            style={{ borderRadius: 999 }}
+            size="lg"
             variant="default"
             onClick={handleCreate}
           >

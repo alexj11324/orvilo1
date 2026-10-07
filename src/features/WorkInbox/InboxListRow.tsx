@@ -1,4 +1,5 @@
 'use client';
+
 import type { NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -15,6 +16,7 @@ import { createElement, memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -166,7 +168,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
   return (
     <div
       aria-current={selected ? 'true' : undefined}
-      className={cn(styles.row, 'group')}
+      className={cn(cn(styles.row, 'group'), buttonHoverFeedback)}
       data-active={selected}
       data-inbox-id={card.notificationId}
       data-unread={!card.read}

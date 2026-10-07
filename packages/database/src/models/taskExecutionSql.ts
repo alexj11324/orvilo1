@@ -1,3 +1,4 @@
+import type { TaskAttentionReason } from '@orvilo/types';
 import type { SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -51,6 +52,23 @@ export const hasActiveExecution = sql`EXISTS (
   WHERE active.task_id = ${tasks.id}
     AND active.phase IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown')
 )`;
+
+/** Current input obligations, including answered-but-unacknowledged native questions. */
+export const hasUnresolvedTaskInput = sql<boolean>`has_task_unresolved_input(${tasks.id})`;
+
+/** Existing attention vocabulary, projected from durable input and park evidence. */
+export const taskAttentionReasonExpr = sql<TaskAttentionReason>`CASE
+  WHEN ${hasUnresolvedTaskInput} THEN 'needs_input'
+  WHEN ${tasks.context} #>> '{execution,parked,reason}' IN ('needs_input', 'review_required', 'needs_changes', 'blocked', 'execution_failed', 'outcome_unknown')
+    THEN ${tasks.context} #>> '{execution,parked,reason}'
+  ELSE 'none'
+END`;
+
+/** Real current executor, shared with the database workflow-entry trigger. */
+export const hasLiveTaskExecutor = sql<boolean>`has_task_live_executor(
+  ${tasks.id}, ${tasks.assigneeAgentId}, ${tasks.assigneeUserId},
+  ${tasks.currentTopicId}, ${tasks.executionGeneration}
+) AND NOT coalesce(jsonb_exists(${tasks.context} -> 'execution', 'parked'), false)`;
 
 /** Scalar: the phase of the task's most recent dispatch, or NULL when it never ran. */
 export const latestDispatchPhase = sql`(

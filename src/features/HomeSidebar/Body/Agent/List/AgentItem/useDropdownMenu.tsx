@@ -1,9 +1,7 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { SessionDefaultGroup, type SidebarAgentLabel, type SidebarVisibility } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import {
   Check,
-  EyeOffIcon,
   FolderInputIcon,
   GlobeIcon,
   LucideCopy,
@@ -37,14 +35,10 @@ import { agentService } from '@/services/agent';
 import { useGlobalStore } from '@/store/global';
 import { useHomeStore } from '@/store/home';
 import { agentLabelSelectors, homeAgentListSelectors } from '@/store/home/selectors';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 import { getDeleteErrorMessageKey } from '@/utils/forbiddenError';
 
 import { useRevealSidebarSection } from '../../../../hooks';
 import { getAgentPublishErrorKey } from './agentMenuVisibility';
-
-const BUILTIN_SLUGS = new Set<string>(Object.values(BUILTIN_AGENT_SLUGS));
 
 interface UseAgentDropdownMenuParams {
   anchor: HTMLElement | null;
@@ -81,7 +75,6 @@ export const useAgentDropdownMenu = ({
   labelsEnabled,
   openCreateGroupModal,
   pinned,
-  slug,
   title,
   userId,
   visibility,
@@ -116,28 +109,11 @@ export const useAgentDropdownMenu = ({
     [registryLabels, assignedLabelIds],
   );
 
-  // Visibility actions are only meaningful inside a workspace: in personal
-  // mode every row is implicitly owner-private. "Publish to Workspace"
-  // appears on private agents; the inverse "Make private"
-  // appears on published agents, but only for the creator ( —
-  // owners demoting another member's agent would appropriate it), and never
-  // on builtin agents (OrviloAI etc.). The server enforces the same rules as
-  // a backstop.
+  // Legacy private Agents may be explicitly published; new workspace Agents stay public.
   const activeWorkspaceId = useActiveWorkspaceId();
-  const currentUserId = useUserStore(userProfileSelectors.userId);
-
   const isPrivate = visibility === 'private';
-  const isBuiltin = !!slug && BUILTIN_SLUGS.has(slug);
   const showPublishAction = Boolean(activeWorkspaceId) && isPrivate;
-  const showMakePrivateAction =
-    Boolean(activeWorkspaceId) &&
-    visibility === 'public' &&
-    !isBuiltin &&
-    !!currentUserId &&
-    userId === currentUserId;
 
-  // Member Permissions only gate Agent configuration. Workspace-level list
-  // organization (pin/group) and duplication remain available to members.
   const { allowed: canEdit } = usePermission('edit_own_content');
   const { allowed: canCreate } = usePermission('create_content');
   // Label CRUD is admin-gated inside a workspace; personal mode has no such
@@ -225,7 +201,7 @@ export const useAgentDropdownMenu = ({
               },
             ]
           : []),
-        ...(creationEnabled && canCreate
+        ...(creationEnabled && canCreate && canConfigure
           ? [
               {
                 icon: <LucideCopy size={16} />,
@@ -478,37 +454,6 @@ export const useAgentDropdownMenu = ({
                 : []),
               // Under "Publish to Workspace": hand ownership to a member.
               ...(transferToMemberItem ? [transferToMemberItem] : []),
-              ...(showMakePrivateAction
-                ? [
-                    {
-                      icon: <EyeOffIcon size={16} />,
-                      key: 'makePrivate',
-                      label: t('makePrivate', { ns: 'common' }),
-                      onClick: async ({ domEvent }: any) => {
-                        domEvent?.stopPropagation();
-                        confirmModal({
-                          cancelText: t('cancel', { ns: 'common' }),
-                          content: <VisibilityConfirmContent variant="makePrivate" />,
-                          okButtonProps: { danger: true },
-                          okText: t('makePrivate.confirm.ok', { ns: 'common' }),
-                          onOk: async () => {
-                            try {
-                              await agentService.setAgentVisibility(id, 'private');
-                              await refreshAgentList();
-                              revealSidebarSection('private');
-                              toast.success(t('makePrivate.success', { ns: 'common' }));
-                            } catch (error) {
-                              console.error('Failed to make agent private:', error);
-                              toast.error(t('makePrivate.error', { ns: 'common' }));
-                            }
-                          },
-                          title: t('makePrivate.confirm.title', { ns: 'common' }),
-                        });
-                      },
-                      sfSymbol: 'eye.slash',
-                    },
-                  ]
-                : []),
               ...(canManage
                 ? [
                     { type: 'divider' as const },
@@ -574,7 +519,6 @@ export const useAgentDropdownMenu = ({
       transferMenuItems,
       transferToMemberItem,
       showPublishAction,
-      showMakePrivateAction,
       refreshAgentList,
       revealSidebarSection,
       t,

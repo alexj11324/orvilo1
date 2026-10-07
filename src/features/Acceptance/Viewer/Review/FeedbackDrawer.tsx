@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { AttachmentThumbs } from '../Evidence/attachments';
@@ -97,10 +98,13 @@ const EntryRow = memo<{
 
   return (
     <div
-      className={`flex flex-col gap-2 ${cx(styles.row, entry.checkId && styles.clickable)}`}
       role={entry.checkId ? 'button' : undefined}
       style={{ ...(entry.stale ? { opacity: 0.55 } : undefined) }}
       tabIndex={entry.checkId ? 0 : undefined}
+      className={cx(
+        `flex flex-col gap-2 ${cx(styles.row, entry.checkId && styles.clickable)}`,
+        entry.checkId && buttonHoverFeedback,
+      )}
       onClick={entry.checkId ? () => onJumpToCheck(entry.checkId!) : undefined}
       onKeyDown={(event) => {
         if (

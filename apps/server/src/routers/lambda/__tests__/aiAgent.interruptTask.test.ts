@@ -1,6 +1,16 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, chatGroups, sessions, threads, topics } from '@orvilo/database/schemas';
+import {
+  agentOperations,
+  agents,
+  chatGroups,
+  resourcePermissions,
+  sessions,
+  threads,
+  topics,
+  workspaceMembers,
+  workspaces,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
@@ -55,11 +65,14 @@ describe('aiAgentRouter.interruptTask', () => {
   let testGroupId: string;
   let testTopicId: string;
   let testThreadId: string;
+  let opId: (base: string) => string;
+  const extraUsers: string[] = [];
 
   beforeEach(async () => {
     serverDB = await getTestDB();
     testDB = serverDB;
     userId = await createTestUser(serverDB);
+    opId = (base) => `${base}:${userId}`;
     mockInterruptOperation.mockReset();
     mockInterruptOperation.mockResolvedValue(true);
     mockExecuteToolCall.mockReset();
@@ -115,20 +128,133 @@ describe('aiAgentRouter.interruptTask', () => {
         sourceMessageId: 'source-msg-1',
         type: ThreadType.Isolation,
         status: ThreadStatus.Processing,
-        metadata: { operationId: 'op-interrupt-test' },
+        metadata: { operationId: opId('op-interrupt-test') },
       })
       .returning()) as any[];
     testThreadId = thread.id;
+    await serverDB.insert(agentOperations).values(
+      [
+        opId('op-interrupt-test'),
+        opId('op-direct-interrupt'),
+        opId('op-override'),
+        opId('op-device-cancel'),
+        opId('op-no-device'),
+      ].map((id) => ({
+        id,
+        agentId: testAgentId,
+        status: 'running' as const,
+        topicId: testTopicId,
+        userId,
+      })),
+    );
   });
 
   afterEach(async () => {
     await cleanupTestUser(serverDB, userId);
+    for (const id of extraUsers.splice(0)) await cleanupTestUser(serverDB, id);
     vi.clearAllMocks();
   });
 
   const createTestContext = () => ({
     userId,
     jwtPayload: { userId },
+  });
+
+  describe('workspace Agent Use before cancellation', () => {
+    const workspaceActor = async (
+      role: 'member' | 'admin',
+      selected: boolean,
+      suspended = false,
+    ) => {
+      const memberId = await createTestUser(serverDB);
+      extraUsers.push(memberId);
+      const [workspace] = await serverDB
+        .insert(workspaces)
+        .values({
+          name: 'Interrupt Use scope',
+          primaryOwnerId: userId,
+          slug: `interrupt-${crypto.randomUUID()}`,
+        })
+        .returning();
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId: workspace.id },
+        {
+          role,
+          suspendedAt: suspended ? new Date() : null,
+          userId: memberId,
+          workspaceId: workspace.id,
+        },
+      ]);
+      await serverDB
+        .update(agents)
+        .set({ visibility: 'public', workspaceId: workspace.id })
+        .where(eq(agents.id, testAgentId));
+      await serverDB
+        .update(topics)
+        .set({ groupId: null, workspaceId: workspace.id })
+        .where(eq(topics.id, testTopicId));
+      await serverDB
+        .update(threads)
+        .set({ groupId: null, workspaceId: workspace.id })
+        .where(eq(threads.id, testThreadId));
+      await serverDB
+        .update(agentOperations)
+        .set({ workspaceId: workspace.id })
+        .where(eq(agentOperations.id, opId('op-interrupt-test')));
+      if (selected)
+        await serverDB.insert(resourcePermissions).values({
+          accessLevel: 'use',
+          createdBy: userId,
+          resourceId: testAgentId,
+          resourceType: 'agent',
+          userId: memberId,
+          workspaceId: workspace.id,
+        });
+      return { memberId, workspaceId: workspace.id };
+    };
+
+    it.each([
+      ['member', false, false],
+      ['admin', false, false],
+      ['member', true, true],
+    ] as const)(
+      'denies %s selected=%s suspended=%s before touching the runtime',
+      async (role, selected, suspended) => {
+        const { memberId, workspaceId } = await workspaceActor(role, selected, suspended);
+        const caller = aiAgentRouter.createCaller({
+          userId: memberId,
+          jwtPayload: { userId: memberId },
+          workspaceId,
+        });
+        await expect(
+          caller.interruptTask({ operationId: opId('op-interrupt-test') }),
+        ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        expect(mockInterruptOperation).not.toHaveBeenCalled();
+        expect(mockExecuteToolCall).not.toHaveBeenCalled();
+      },
+    );
+
+    it('allows a selected ordinary member to stop without Agent management authority', async () => {
+      const { memberId, workspaceId } = await workspaceActor('member', true);
+      const caller = aiAgentRouter.createCaller({
+        userId: memberId,
+        jwtPayload: { userId: memberId },
+        workspaceId,
+      });
+      await expect(
+        caller.interruptTask({ operationId: opId('op-interrupt-test') }),
+      ).resolves.toMatchObject({ success: true });
+      expect(mockInterruptOperation).toHaveBeenCalledOnce();
+    });
+
+    it('does not let the creator omit the workspace context to bypass member Use', async () => {
+      await workspaceActor('member', false);
+      const caller = aiAgentRouter.createCaller(createTestContext());
+      await expect(
+        caller.interruptTask({ operationId: opId('op-interrupt-test') }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(mockInterruptOperation).not.toHaveBeenCalled();
+    });
   });
 
   describe('interrupt by threadId', () => {
@@ -141,7 +267,7 @@ describe('aiAgentRouter.interruptTask', () => {
 
       expect(result.success).toBe(true);
       expect(result.threadId).toBe(testThreadId);
-      expect(result.operationId).toBe('op-interrupt-test');
+      expect(result.operationId).toBe(opId('op-interrupt-test'));
 
       // Verify thread status was updated
       const [updatedThread] = await serverDB
@@ -195,11 +321,11 @@ describe('aiAgentRouter.interruptTask', () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       const result = await caller.interruptTask({
-        operationId: 'op-direct-interrupt',
+        operationId: opId('op-direct-interrupt'),
       });
 
       expect(result.success).toBe(true);
-      expect(result.operationId).toBe('op-direct-interrupt');
+      expect(result.operationId).toBe(opId('op-direct-interrupt'));
       // threadId should be undefined when only operationId is provided
       expect(result.threadId).toBeUndefined();
     });
@@ -209,11 +335,11 @@ describe('aiAgentRouter.interruptTask', () => {
 
       const result = await caller.interruptTask({
         threadId: testThreadId,
-        operationId: 'op-override',
+        operationId: opId('op-override'),
       });
 
       // operationId should take precedence
-      expect(result.operationId).toBe('op-override');
+      expect(result.operationId).toBe(opId('op-override'));
       expect(result.threadId).toBe(testThreadId);
 
       // Thread should still be updated
@@ -238,7 +364,7 @@ describe('aiAgentRouter.interruptTask', () => {
 
       expect(result.success).toBe(false);
       expect(result.threadId).toBe(testThreadId);
-      expect(result.operationId).toBe('op-interrupt-test');
+      expect(result.operationId).toBe(opId('op-interrupt-test'));
 
       const [updatedThread] = await serverDB
         .select()
@@ -257,7 +383,7 @@ describe('aiAgentRouter.interruptTask', () => {
         .update(threads)
         .set({
           metadata: {
-            operationId: 'op-interrupt-test',
+            operationId: opId('op-interrupt-test'),
             startedAt: '2024-01-01T00:00:00Z',
             customField: 'preserved',
           },
@@ -276,7 +402,7 @@ describe('aiAgentRouter.interruptTask', () => {
         .where(eq(threads.id, testThreadId));
 
       // Existing metadata should be preserved
-      expect(updatedThread.metadata?.operationId).toBe('op-interrupt-test');
+      expect(updatedThread.metadata?.operationId).toBe(opId('op-interrupt-test'));
       expect(updatedThread.metadata?.startedAt).toBe('2024-01-01T00:00:00Z');
       expect(updatedThread.metadata?.customField).toBe('preserved');
       // New metadata should be added
@@ -300,7 +426,7 @@ describe('aiAgentRouter.interruptTask', () => {
         .set({
           status: ThreadStatus.Cancel,
           metadata: {
-            operationId: 'op-interrupt-test',
+            operationId: opId('op-interrupt-test'),
             completedAt: '2024-01-01T00:00:00Z',
           },
         })
@@ -338,7 +464,7 @@ describe('aiAgentRouter.interruptTask', () => {
                 deviceId: 'device-1',
                 deviceWorkspaceId: 'ws-device',
                 heteroType,
-                operationId: 'op-device-cancel',
+                operationId: opId('op-device-cancel'),
               },
             },
           })
@@ -348,13 +474,13 @@ describe('aiAgentRouter.interruptTask', () => {
         // resolves it without needing a separate operation row.
         await serverDB
           .update(threads)
-          .set({ metadata: { operationId: 'op-device-cancel' } })
+          .set({ metadata: { operationId: opId('op-device-cancel') } })
           .where(eq(threads.id, testThreadId));
 
         const caller = aiAgentRouter.createCaller(createTestContext());
 
         await caller.interruptTask({
-          operationId: 'op-device-cancel',
+          operationId: opId('op-device-cancel'),
           topicId: testTopicId,
         });
 
@@ -372,7 +498,7 @@ describe('aiAgentRouter.interruptTask', () => {
         const [, toolCall] = mockExecuteToolCall.mock.calls[0];
         const args = JSON.parse(toolCall.arguments);
         expect(args.signal).toBe('SIGINT');
-        expect(args.taskId).toBe('op-device-cancel');
+        expect(args.taskId).toBe(opId('op-device-cancel'));
       },
     );
 
@@ -386,7 +512,7 @@ describe('aiAgentRouter.interruptTask', () => {
             runningOperation: {
               assistantMessageId: 'asst-no-device',
               heteroType: 'devin',
-              operationId: 'op-no-device',
+              operationId: opId('op-no-device'),
             },
           },
         })
@@ -394,13 +520,13 @@ describe('aiAgentRouter.interruptTask', () => {
 
       await serverDB
         .update(threads)
-        .set({ metadata: { operationId: 'op-no-device' } })
+        .set({ metadata: { operationId: opId('op-no-device') } })
         .where(eq(threads.id, testThreadId));
 
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       await caller.interruptTask({
-        operationId: 'op-no-device',
+        operationId: opId('op-no-device'),
         topicId: testTopicId,
       });
 

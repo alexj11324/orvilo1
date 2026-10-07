@@ -27,6 +27,7 @@ import {
 } from '@/server/services/resourcePermission';
 
 import { getWorkspaceGroupVirtualAgentIds } from './_helpers/workspaceAgentGuard';
+import { isWorkspaceIssueAgentReadable } from './_helpers/workspaceIssueRead';
 
 const resourceInput = z.object({
   resourceId: z.string(),
@@ -107,8 +108,8 @@ const loadManageableResource = async (
 export const resourcePermissionRouter = router({
   /**
    * Grant a batch of workspace members a collaborator level on one resource.
-   * The creator is silently skipped (they already hold full access), and every
-   * target must be an active member of the workspace.
+   * Agent creators receive the same removable Use row as other members.
+   * Every target must currently be an active workspace member.
    */
   addCollaborators: permissionProcedure
     .input(
@@ -120,14 +121,19 @@ export const resourcePermissionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const meta = await loadManageableResource(ctx, input);
 
-      if (!isAccessLevelAllowed(input.resourceType, input.accessLevel)) {
+      if (
+        (input.resourceType === 'agent' && input.accessLevel !== 'use') ||
+        !isAccessLevelAllowed(input.resourceType, input.accessLevel)
+      ) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `${input.accessLevel} access is not supported for ${input.resourceType}`,
         });
       }
 
-      const targetIds = [...new Set(input.userIds)].filter((id) => id !== meta.userId);
+      const targetIds = [...new Set(input.userIds)].filter(
+        (id) => input.resourceType === 'agent' || id !== meta.userId,
+      );
       if (targetIds.length === 0) return { success: true };
 
       // Check membership and write the grants under one transaction, holding a
@@ -180,9 +186,37 @@ export const resourcePermissionRouter = router({
     if (!meta || !isWorkspaceScopedMeta(meta, ctx.workspaceId, ctx.userId)) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
     }
-    // Private rows are creator-only (mirrors `canPerformResourceAction`):
-    // don't leak existence/creator of another member's private resource.
-    if (meta.visibility === 'private' && meta.userId !== ctx.userId) {
+    // Issue-referenced Agent identity is readable without Use. This response
+    // contains permission state only; private standalone resources stay hidden.
+    const canUseResource =
+      input.resourceType === 'agent'
+        ? await canPerformResourceAction({
+            action: 'use',
+            db: ctx.serverDB,
+            meta,
+            resourceId: input.resourceId,
+            resourceType: input.resourceType,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          })
+        : undefined;
+    const readableIssueAgent =
+      input.resourceType === 'agent' &&
+      meta.visibility === 'private' &&
+      meta.userId !== ctx.userId &&
+      !canUseResource &&
+      (await isWorkspaceIssueAgentReadable(
+        ctx.serverDB,
+        input.resourceId,
+        ctx.userId,
+        ctx.workspaceId,
+      ));
+    if (
+      meta.visibility === 'private' &&
+      meta.userId !== ctx.userId &&
+      !canUseResource &&
+      !readableIssueAgent
+    ) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
     }
     if (input.resourceType === 'document' && meta.visibility === 'team') {
@@ -234,6 +268,7 @@ export const resourcePermissionRouter = router({
     return buildResourcePermissionState({
       accessLevel,
       canManage,
+      canUseResource,
       creatorId: meta.userId,
       visibility: (meta.visibility ?? 'public') as 'private' | 'public' | 'team',
     });
@@ -248,9 +283,30 @@ export const resourcePermissionRouter = router({
 
     // The model only returns per-member rows, so `userId` is always set — the
     // filter narrows the nullable column type, not the data.
-    const grants = (
+    let grants = (
       await ctx.permissionModel.listCollaborators(input.resourceType, input.resourceId)
     ).filter((row): row is typeof row & { userId: string } => row.userId !== null);
+    // Agent Use lists selected active members, not legacy view-only rows.
+    if (input.resourceType === 'agent') {
+      grants = grants.filter((row) => row.accessLevel === 'use');
+      if (grants.length === 0) return [];
+      const activeMembers = await ctx.serverDB
+        .select({ userId: workspaceMembers.userId })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, ctx.workspaceId),
+            isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
+            inArray(
+              workspaceMembers.userId,
+              grants.map((row) => row.userId),
+            ),
+          ),
+        );
+      const activeIds = new Set(activeMembers.map((member) => member.userId));
+      grants = grants.filter((row) => activeIds.has(row.userId));
+    }
     if (grants.length === 0) return [];
 
     const profiles = await ctx.serverDB
@@ -385,6 +441,18 @@ export const resourcePermissionRouter = router({
 
       return buildResourcePermissionState({
         accessLevel,
+        canUseResource:
+          input.resourceType === 'agent'
+            ? await canPerformResourceAction({
+                action: 'use',
+                db: ctx.serverDB,
+                meta,
+                resourceId: input.resourceId,
+                resourceType: input.resourceType,
+                userId: ctx.userId,
+                workspaceId: ctx.workspaceId,
+              })
+            : undefined,
         canManage: true,
         creatorId: meta.userId,
         visibility: (meta.visibility ?? 'public') as 'private' | 'public' | 'team',

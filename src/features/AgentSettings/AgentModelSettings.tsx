@@ -2,16 +2,17 @@
 
 import { isDesktop } from '@orvilo/const';
 import type {
-  HeterogeneousAgentMode,
   HeterogeneousProviderConfig,
-  HeterogeneousReasoningEffort,
-  HeterogeneousSpeedMode,
   ListHeterogeneousAgentModelsParams,
 } from '@orvilo/types';
 import {
   applyHeteroSelection,
+  getCliConfigValue,
+  getCliFlagValue,
   getHeteroSelectorCapability,
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+  HETEROGENEOUS_MODEL_INHERIT_SELECTION,
+  isSelectableDevice,
   normalizeHeterogeneousProviderConfig,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -21,28 +22,22 @@ import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import type { SelectOptions } from '@/components/SelectOptions';
-import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { flattenSelectOptions } from '@/components/SelectOptions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  getEffortLabelKeys,
-  getModeLabelKey,
-} from '@/features/ChatInput/ControlBar/HeteroModel/labels';
-import {
-  getStaticModelOptions,
-  modelDisplayLabel,
-} from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
-import { resolveModelSwitchSelection } from '@/features/ChatInput/ControlBar/HeteroModel/selectorView';
 import { useModelCatalog } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
 import { AgentModelPicker } from '@/features/CreateAgent/AgentModelPicker';
-import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
+import { useAgentDeviceCandidates, useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
+import {
+  resolveAgentWorkingDirectory,
+  resolveTargetDeviceId,
+} from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
@@ -64,9 +59,7 @@ interface AgentModelSettingsProps {
  * The agent's Model settings group. Builtin Orvilo agents pick the model
  * route of an enabled embedded-eligible provider binding (the same narrowing
  * `resolveOrviloProviderBinding` applies at dispatch); external harnesses get
- * their capability-driven model/effort/mode/speed rows — each row renders
- * only when the model + adapter actually support it at runtime (the
- * capability contract), per docs/development/device-execution-contract.md.
+ * model catalog directly from the runtime on their execution device.
  */
 const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat', 'common']);
@@ -82,10 +75,13 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
     isPreferenceLoading,
     workspaceScoped,
   } = useEffectiveAgencyConfig(agentId);
-  const { isLoading: devicesLoading } = useDeviceList();
+  const { data: devices, isLoading: devicesLoading } = useDeviceList();
   useElectronStore((s) => s.useFetchGatewayDeviceInfo)();
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
-  const cwd = useEffectiveWorkingDirectory(agentId);
+  const configuredCwd = useEffectiveWorkingDirectory(agentId, { topicId: null });
+  const legacyAgentWorkingDirectory = useAgentStore(
+    (s) => s.localAgentWorkingDirectoryMap[agentId],
+  );
 
   // A missing provider is a legacy chat runtime — model config lives on the
   // legacy `model`/`provider` fields which this group does not surface (the
@@ -115,7 +111,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   // user's enabled embedded-eligible bindings (runtime 'orvilo' + target
   // 'sandbox') — the same rows `resolveOrviloProviderBinding` may resolve.
   const bindings = useProviderBindingStore((s) => s.bindings);
-  const bindingQuery = useFetchProviderBindings();
+  const bindingQuery = useFetchProviderBindings(builtinEngine);
   const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
 
   const primeModelOptions = useMemo<SelectOptions>(() => {
@@ -143,67 +139,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const model =
     capability?.model?.resolve(provider) ??
     (builtinEngine ? (provider?.model ?? '') : HETEROGENEOUS_AGENT_DEFAULT_SELECTION);
-  const effort = capability?.effort?.resolve(provider);
-  const mode = capability?.mode?.resolve(provider);
-  const speedSupported = capability?.speed?.supported(model) ?? false;
-  const speed: HeterogeneousSpeedMode = speedSupported
-    ? capability!.speed!.resolve(provider)
-    : HETEROGENEOUS_AGENT_DEFAULT_SELECTION;
-
-  const effortLabelKeys = getEffortLabelKeys(harnessType);
   const defaultLabel = t('chat:heteroAgent.modelSelector.default');
-
-  const modelOptions = useMemo<SelectOptions>(() => {
-    if (capability?.model?.source !== 'static') return [];
-
-    const base: SelectOptions = [
-      { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...getStaticModelOptions(harnessType),
-    ];
-
-    return model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION &&
-      !base.some((option) => 'value' in option && option.value === model)
-      ? [{ label: model, title: model, value: model }, ...base]
-      : base;
-  }, [capability?.model?.source, defaultLabel, model, harnessType]);
-
-  const effortOptions = useMemo<SelectOptions>(() => {
-    if (!capability?.effort || effort === undefined) return [];
-
-    return [
-      { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...capability.effort.levels(model).map((level) => ({
-        label: t(`chat:${effortLabelKeys[level]}`),
-        title: level,
-        value: level,
-      })),
-    ];
-  }, [capability?.effort, defaultLabel, effort, effortLabelKeys, model, t]);
-
-  const modeOptions = useMemo<SelectOptions>(() => {
-    if (!capability?.mode || mode === undefined) return [];
-
-    return [
-      { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...capability.mode.levels.map((level) => ({
-        label: t(`chat:${getModeLabelKey(level)}`),
-        title: level,
-        value: level,
-      })),
-    ];
-  }, [capability?.mode, defaultLabel, mode, t]);
-
-  const speedOptions = useMemo<SelectOptions>(() => {
-    if (!speedSupported) return [];
-
-    return [
-      {
-        label: t('chat:heteroAgent.modelSelector.speed.standard'),
-        value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
-      },
-      { label: t('chat:heteroAgent.modelSelector.speed.fast'), value: 'fast' },
-    ];
-  }, [speedSupported, t]);
 
   // Catalog-backed CLIs enumerate models on the machine the run targets, so
   // the picker only fills once the effective target resolves somewhere real.
@@ -215,11 +151,43 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const targetDeviceId = resolveTargetDeviceId(effectiveAgencyConfig, currentDeviceId, {
     workspaceScoped,
   });
-  const useLocalIpc = isDesktop && effectiveTarget === 'local';
-  const catalogDeviceId = useLocalIpc ? undefined : targetDeviceId;
   const isCatalogModel = capability?.model?.source === 'catalog';
+  const canAutoResolveCatalog =
+    isCatalogModel &&
+    !workspaceScoped &&
+    !effectiveAgencyConfig?.boundDeviceId &&
+    effectiveAgencyConfig?.executionTargetSelectionPolicy !== 'fixed' &&
+    (effectiveAgencyConfig?.executionTarget === undefined ||
+      effectiveAgencyConfig.executionTarget === 'auto');
+  const candidateQuery = useAgentDeviceCandidates(
+    canAutoResolveCatalog && !isPreferenceLoading ? agentId : undefined,
+  );
+  const candidates = candidateQuery.data?.candidates.filter(isSelectableDevice) ?? [];
+  const singletonId =
+    canAutoResolveCatalog && candidateQuery.data?.inventoryComplete && candidates.length === 1
+      ? candidates[0].deviceId
+      : undefined;
+  const useLocalIpc =
+    isDesktop &&
+    (effectiveTarget === 'local' || (!!singletonId && singletonId === currentDeviceId));
+  const catalogDeviceId = useLocalIpc ? undefined : (singletonId ?? targetDeviceId);
   const catalogTargetReady =
-    isCatalogModel && (useLocalIpc || (effectiveTarget === 'device' && !!catalogDeviceId));
+    isCatalogModel &&
+    (useLocalIpc || ((effectiveTarget === 'device' || !!singletonId) && !!catalogDeviceId));
+  const cwd = singletonId
+    ? resolveAgentWorkingDirectory({
+        agencyConfig: {
+          ...effectiveAgencyConfig,
+          executionTarget: 'device',
+          boundDeviceId: singletonId,
+        },
+        legacyAgentWorkingDirectory,
+        fallback: singletonId === currentDeviceId ? configuredCwd : undefined,
+        deviceDefaultCwd:
+          devices?.find((device) => device.deviceId === singletonId)?.defaultCwd ?? undefined,
+        workspaceScoped,
+      })
+    : configuredCwd;
   const catalog = useModelCatalog({
     cwd,
     deviceId: catalogDeviceId,
@@ -231,40 +199,42 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
     type: harnessType as ListHeterogeneousAgentModelsParams['type'],
   });
 
-  const catalogModelOptions = useMemo<SelectOptions>(() => {
-    if (!isCatalogModel) return [];
+  const catalogError = catalog.error ?? (canAutoResolveCatalog ? candidateQuery.error : undefined);
+  const retryCatalog = async () => {
+    if (canAutoResolveCatalog) await candidateQuery.mutate();
+    await catalog.mutate();
+  };
 
+  const catalogModelOptions = useMemo(() => {
+    if (!isCatalogModel) return [];
     const models = catalog.data?.models ?? [];
     const staleCurrent =
       model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION && !models.some((item) => item.id === model);
 
     return [
-      { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...(staleCurrent
-        ? [{ label: modelDisplayLabel({ id: model, modelId: model }), title: model, value: model }]
-        : []),
+      { label: defaultLabel, value: HETEROGENEOUS_MODEL_INHERIT_SELECTION },
+      ...(staleCurrent ? [{ label: model, value: model }] : []),
       ...models.map((item) => ({
-        label: modelDisplayLabel(item),
-        title: `${item.label ?? item.modelId} ${item.id}`,
+        label: item.label || item.id,
         value: item.id,
+        ...(item.label && item.label !== item.id ? { description: item.id } : {}),
       })),
     ];
   }, [catalog.data?.models, defaultLabel, isCatalogModel, model]);
 
   const handleModelChange = (value: string) => {
     if (!capability?.model) return;
-    const selection = resolveModelSwitchSelection({
-      capability: { ...capability, model: capability.model },
-      effort,
-      isFastSpeed: speed === 'fast',
-      value,
-    });
-    void patchProvider(applyHeteroSelection(provider, selection));
+    void patchProvider(
+      applyHeteroSelection(provider, {
+        model: value,
+        modelExplicit: value !== HETEROGENEOUS_MODEL_INHERIT_SELECTION,
+      }),
+    );
   };
 
-  const showModelRow = builtinEngine || capability?.model?.source === 'static' || isCatalogModel;
+  const showModelRow = builtinEngine || isCatalogModel;
 
-  if (!provider || (!showModelRow && !capability?.effort && !capability?.mode && !speedSupported)) {
+  if (!provider || !showModelRow) {
     return null;
   }
 
@@ -324,124 +294,40 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
         </AsyncBoundary>
       ) : null}
 
-      {capability?.model?.source === 'static' ? (
-        <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
-          <AgentModelPicker
-            disabled={!canEdit || status === 'saving'}
-            value={model}
-            options={flattenSelectOptions(modelOptions).map((option) => ({
-              value: String(option.value),
-              label:
-                typeof option.label === 'string'
-                  ? option.label
-                  : (option.title ?? String(option.value)),
-            }))}
-            onChange={handleModelChange}
-          />
-        </SettingsRow>
-      ) : null}
-
       {isCatalogModel ? (
         <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
           <AgentModelPicker
             disabled={!canEdit || status === 'saving'}
-            error={catalog.error}
-            loading={catalog.isLoading}
-            value={model}
-            options={flattenSelectOptions(catalogModelOptions).map((option) => ({
-              value: String(option.value),
-              label:
-                typeof option.label === 'string'
-                  ? option.label
-                  : (option.title ?? String(option.value)),
-            }))}
+            error={catalogError}
+            loading={catalog.isLoading || (canAutoResolveCatalog && candidateQuery.isLoading)}
+            options={catalogModelOptions}
+            value={
+              model === HETEROGENEOUS_AGENT_DEFAULT_SELECTION &&
+              getCliFlagValue(provider.args, '--model') !== 'default' &&
+              getCliFlagValue(provider.args, '-m') !== 'default' &&
+              getCliConfigValue(provider.args, 'model') !== 'default'
+                ? HETEROGENEOUS_MODEL_INHERIT_SELECTION
+                : model
+            }
             onChange={handleModelChange}
-            onRetry={() => void catalog.mutate()}
+            onRetry={() => void retryCatalog()}
           />
-          {!catalogTargetReady ? (
+          {catalogError ? (
+            <AsyncError
+              error={catalogError}
+              title={t('settingAgent.modelSettings.catalogError')}
+              variant="inline"
+              onRetry={() => void retryCatalog()}
+            />
+          ) : !catalogTargetReady ? (
             <div className={settingsStyles.hint}>
               {t('settingAgent.modelSettings.catalogPending')}
             </div>
-          ) : catalog.error ? (
+          ) : !catalog.isLoading && catalog.data?.models.length === 0 ? (
             <div className={settingsStyles.hint}>
-              {t('settingAgent.modelSettings.catalogError')}
+              {t('settingAgent.modelSettings.catalogEmpty')}
             </div>
           ) : null}
-        </SettingsRow>
-      ) : null}
-
-      {capability?.effort && effort !== undefined ? (
-        <SettingsRow label={t('settingAgent.modelSettings.effortLabel')}>
-          <Select
-            disabled={!canEdit || status === 'saving'}
-            items={selectItems(effortOptions)}
-            value={effort}
-            onValueChange={(value) => {
-              if (typeof value !== 'string') return;
-              void patchProvider(
-                applyHeteroSelection(provider, {
-                  effort: value as HeterogeneousReasoningEffort,
-                }),
-              );
-            }}
-          >
-            <SelectTrigger className={settingsStyles.select}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectOptionItems options={effortOptions} />
-            </SelectContent>
-          </Select>
-        </SettingsRow>
-      ) : null}
-
-      {capability?.mode && mode !== undefined ? (
-        <SettingsRow label={t('settingAgent.modelSettings.modeLabel')}>
-          <Select
-            disabled={!canEdit || status === 'saving'}
-            items={selectItems(modeOptions)}
-            value={mode}
-            onValueChange={(value) => {
-              if (typeof value !== 'string') return;
-              void patchProvider(
-                applyHeteroSelection(provider, {
-                  mode: value as HeterogeneousAgentMode,
-                }),
-              );
-            }}
-          >
-            <SelectTrigger className={settingsStyles.select}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectOptionItems options={modeOptions} />
-            </SelectContent>
-          </Select>
-        </SettingsRow>
-      ) : null}
-
-      {speedSupported ? (
-        <SettingsRow label={t('settingAgent.modelSettings.speedLabel')}>
-          <Select
-            disabled={!canEdit || status === 'saving'}
-            items={selectItems(speedOptions)}
-            value={speed}
-            onValueChange={(value) => {
-              if (typeof value !== 'string') return;
-              void patchProvider(
-                applyHeteroSelection(provider, {
-                  speed: value as HeterogeneousSpeedMode,
-                }),
-              );
-            }}
-          >
-            <SelectTrigger className={settingsStyles.select}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectOptionItems options={speedOptions} />
-            </SelectContent>
-          </Select>
         </SettingsRow>
       ) : null}
     </SettingsGroup>

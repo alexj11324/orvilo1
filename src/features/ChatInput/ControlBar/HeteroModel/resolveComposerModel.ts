@@ -36,7 +36,9 @@ export const withDefaultModelOption = <T extends ComposerModelOption>(
   options: readonly T[],
   title: string,
 ): ComposerModelOption[] => [
-  { title, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
+  ...(!options.some((option) => option.value === HETEROGENEOUS_AGENT_DEFAULT_SELECTION)
+    ? [{ title, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION }]
+    : []),
   ...options.map((option) => ({ title: option.title, value: option.value })),
 ];
 

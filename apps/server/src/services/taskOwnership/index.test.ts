@@ -120,6 +120,27 @@ describe('transferTaskExecutionOwnership', () => {
     });
   });
 
+  it.each(['in_progress', 'in_review'] as const)(
+    'moves a resting %s issue to To Do atomically with clearing its Agent',
+    async (workflowCategory) => {
+      const taskModel = new TaskModel(db, userId, workspaceId);
+      const task = await createTask('TR-4', 204, { assigneeAgentId: 'agent-a' });
+      const current = await taskModel.findById(task.id);
+      if (!current) throw new Error('task missing');
+      const updated = await transferTaskExecutionOwnership({
+        db,
+        patch: { assigneeAgentId: null },
+        reason: 'test_transfer',
+        task: { ...current, workflowCategory, workflowStateRefId: 'old-active-state' },
+      });
+      expect(updated).toMatchObject({
+        assigneeAgentId: null,
+        workflowCategory: 'todo',
+        workflowStateRefId: null,
+      });
+    },
+  );
+
   it('rewrites a non-running task assignee without touching dispatches', async () => {
     const taskModel = new TaskModel(db, userId, workspaceId);
     const task = await createTask('TR-2', 202, { assigneeAgentId: 'agent-a' });

@@ -6,6 +6,7 @@ import {
   applyHeteroSelection,
   getHeteroSelectorCapability,
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+  HETEROGENEOUS_MODEL_INHERIT_SELECTION,
   isHeteroSelectorAvailable,
 } from './heteroSelectorCapabilities';
 
@@ -51,7 +52,8 @@ describe('selector availability', () => {
     ]);
     expect(getHeteroSelectorCapability('opencode')?.effort).toBeUndefined();
     expect(getHeteroSelectorCapability('qoder')?.effort).toBeDefined();
-    expect(getHeteroSelectorCapability('codex')?.model?.source).toBe('static');
+    expect(getHeteroSelectorCapability('codex')?.model?.source).toBe('catalog');
+    expect(getHeteroSelectorCapability('claude-code')?.model?.source).toBe('catalog');
     expect(getHeteroSelectorCapability('codebuddy')?.model?.source).toBe('catalog');
     expect(getHeteroSelectorCapability('qoder')?.model?.source).toBe('catalog');
     expect(getHeteroSelectorCapability('trae')?.model?.source).toBe('catalog');
@@ -285,4 +287,32 @@ describe('applyHeteroSelection', () => {
 
     expect(buildHeteroSpawnArgs(patched)).toEqual(['--model', 'opus']);
   });
+});
+
+describe('explicit ACP default model', () => {
+  it.each(['claude-code', 'codex'] as const)(
+    'preserves exact default ID through %s native argv',
+    (type) => {
+      const provider = { type, args: ['--verbose', '--model', 'sonnet'], model: 'sonnet' };
+      const patch = applyHeteroSelection(provider, { model: 'default', modelExplicit: true });
+      expect(patch.model).toBe('default');
+      expect(buildHeteroSpawnArgs({ ...provider, ...patch })).toEqual([
+        '--verbose',
+        '--model',
+        'default',
+      ]);
+      expect(buildHeteroSpawnArgs({ type, model: 'default' })).toBeUndefined();
+    },
+  );
+});
+
+it('clears an explicit ACP default when inheritance is selected again', () => {
+  const provider = {
+    type: 'claude-code' as const,
+    args: ['--verbose', '--model', 'default'],
+    model: 'default',
+  };
+  const patch = applyHeteroSelection(provider, { model: HETEROGENEOUS_MODEL_INHERIT_SELECTION });
+  expect(patch).toEqual({ args: ['--verbose'], model: 'default' });
+  expect(buildHeteroSpawnArgs({ ...provider, ...patch })).toEqual(['--verbose']);
 });

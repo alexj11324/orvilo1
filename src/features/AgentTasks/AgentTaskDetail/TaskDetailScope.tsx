@@ -5,6 +5,8 @@ import { createContext, type ReactNode, use, useCallback } from 'react';
 import { useTaskStore } from '@/store/task';
 import type { TaskStoreState } from '@/store/task/initialState';
 
+import { TaskDescriptionReferenceProvider } from './TaskDescriptionReferenceProvider';
+
 const TaskDetailTaskIdContext = createContext<string | undefined>(undefined);
 
 /**
@@ -14,7 +16,9 @@ const TaskDetailTaskIdContext = createContext<string | undefined>(undefined);
  * which one most recently wrote the shared `activeTaskId` slot.
  */
 export const TaskDetailScope = ({ children, taskId }: { children: ReactNode; taskId?: string }) => (
-  <TaskDetailTaskIdContext value={taskId}>{children}</TaskDetailTaskIdContext>
+  <TaskDetailTaskIdContext value={taskId}>
+    <TaskDescriptionReferenceProvider taskId={taskId}>{children}</TaskDescriptionReferenceProvider>
+  </TaskDetailTaskIdContext>
 );
 
 /**

@@ -278,6 +278,11 @@ export const projectRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        if (ctx.workspaceId && input.visibility === 'private')
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'New workspace Projects must be public',
+          });
         return {
           data: await ctx.projectModel.create(
             input,
@@ -321,6 +326,7 @@ export const projectRouter = router({
       );
       return {
         data: {
+          capabilities: await ctx.projectModel.getCapabilities(project.id),
           agents,
           completionReviews,
           knowledgeBases,
@@ -454,8 +460,8 @@ export const projectRouter = router({
 
   /**
    * Edit a published project update/comment. Uses `projectModerationModel` so the
-   * model's moderation ACL sees `canManageAll`: the author, the project
-   * owner/lead, or a workspace admin may edit — everyone else gets NOT_FOUND.
+   * model enforces active writable membership and author-only editing.
+   * Governance permits deletion separately; Lead assignment grants no rights.
    */
   updateUpdate: projectWriteProcedure
     .input(

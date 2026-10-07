@@ -5,6 +5,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { displayMessageSelectors } from '@/store/chat/selectors';
 
@@ -44,9 +45,12 @@ const AnchorPreview = memo<{ comment: TopicCommentItem }>(({ comment }) => {
   return (
     <div
       aria-disabled={canLocateMessage ? undefined : true}
-      className={cx('flex flex-col gap-1', styles.anchor)}
       role={canLocateMessage ? 'button' : undefined}
       tabIndex={canLocateMessage ? 0 : undefined}
+      className={cx(
+        cx('flex flex-col gap-1', styles.anchor),
+        canLocateMessage && buttonHoverFeedback,
+      )}
       onClick={locateMessage}
       onKeyDown={(event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;

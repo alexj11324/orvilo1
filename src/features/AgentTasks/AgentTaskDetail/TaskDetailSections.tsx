@@ -5,11 +5,12 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
-import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
+import { TaskDuplicateRelation } from './TaskDuplicateRelation';
 import TaskInstruction from './TaskInstruction';
+import TaskIssueResources from './TaskIssueResources';
 import TaskParentBar from './TaskParentBar';
 import { TaskBlockedNotice } from './TaskPrerequisites';
 import TaskProjectSection from './TaskProjectSection';
@@ -31,26 +32,26 @@ const TaskDetailSections = memo(() => {
       <div className={styles.root}>
         <div data-task-detail-header className={styles.header}>
           <div className={`flex flex-col gap-3 ${styles.main}`}>
-            {/* Reference order: the title owns the top line, then the
-                "Sub-issue of" parent bar, then the run/assignee controls. */}
+            {/* Title and issue context precede the single properties region. */}
             <TaskDetailTitleInput />
             <TaskParentBar />
-            <div className="flex items-center gap-2 flex-wrap" style={{ maxWidth: '100%' }}>
-              <TaskDetailAssignee />
-            </div>
-          </div>
-          <div className={styles.description}>
-            <TaskInstruction />
+            <TaskDuplicateRelation />
           </div>
           <div data-task-detail-side className={styles.side}>
             <TaskRailActions />
-            <TaskProperties />
-            <TaskProjectSection />
+            <div className={styles.propertyGroups}>
+              <TaskProperties />
+              <TaskProjectSection />
+            </div>
+          </div>
+          <div data-task-detail-description className={styles.description}>
+            <TaskInstruction />
           </div>
           <div className={`flex flex-col gap-6 ${styles.body}`}>
             <TaskBlockedNotice />
             <TaskSubtasks />
             <TaskArtifacts />
+            <TaskIssueResources />
             <TaskActivities />
           </div>
         </div>

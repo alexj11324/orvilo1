@@ -368,7 +368,7 @@ export const HETERO_SELECTOR_CAPABILITIES = {
     model: {
       encodings: [{ flags: ['--model'], kind: 'flag' }],
       resolve: resolveClaudeCodeModel,
-      source: 'static',
+      source: 'catalog',
     },
   },
   'codebuddy': {
@@ -392,7 +392,7 @@ export const HETERO_SELECTOR_CAPABILITIES = {
     model: {
       encodings: [MODEL_FLAGS_ENCODING, { key: 'model', kind: 'config' }],
       resolve: resolveCodexModel,
-      source: 'static',
+      source: 'catalog',
     },
     speed: {
       encodings: [{ key: CODEX_SERVICE_TIER_CONFIG_KEY, kind: 'config' }],
@@ -462,14 +462,19 @@ export const getHeteroSelectorCapability = (
 export const isHeteroSelectorAvailable = (type: string | undefined): boolean =>
   Object.keys(getHeteroSelectorCapability(type) ?? {}).length > 0;
 
+/** UI-only value for inheriting CLI config; never an ACP model ID. */
+export const HETEROGENEOUS_MODEL_INHERIT_SELECTION = '__orvilo_inherit_model__';
+
 export interface HeteroSelection {
   effort?: HeterogeneousReasoningEffort;
   mode?: HeterogeneousAgentMode;
   model?: string;
+  /** Transient selector provenance; encoded in existing native args, never persisted. */
+  modelExplicit?: boolean;
   speed?: HeterogeneousSpeedMode;
 }
 
-export interface HeteroSelectionPatch extends HeteroSelection {
+export interface HeteroSelectionPatch extends Omit<HeteroSelection, 'modelExplicit'> {
   args?: string[];
 }
 
@@ -507,7 +512,11 @@ export const applyHeteroSelection = (
   provider: HeteroSelectionTarget | null | undefined,
   selection: HeteroSelection,
 ): HeteroSelectionPatch => {
-  const patch: HeteroSelectionPatch = { ...selection };
+  const { modelExplicit, ...values } = selection;
+  const patch: HeteroSelectionPatch = { ...values };
+  if (selection.model === HETEROGENEOUS_MODEL_INHERIT_SELECTION) {
+    patch.model = HETEROGENEOUS_AGENT_DEFAULT_SELECTION;
+  }
   const capability = getHeteroSelectorCapability(provider?.type);
   if (!capability) return patch;
 
@@ -516,6 +525,15 @@ export const applyHeteroSelection = (
 
   if ('model' in selection && capability.model) {
     args = clearEncodings(args, capability.model.encodings, capability.model.extraStripFlags);
+    // `default` may be an actual opaque ACP ID. Native argv already carries
+    // its explicit provenance without changing persisted provider config.
+    if (modelExplicit && selection.model === HETEROGENEOUS_AGENT_DEFAULT_SELECTION) {
+      const encoding = capability.model.encodings.find((item) => item.kind === 'flag');
+      if (encoding?.kind === 'flag') {
+        const flag = encoding.flags.includes('--model') ? '--model' : encoding.flags[0];
+        args = [...(args ?? []), flag, selection.model];
+      }
+    }
     cleared = true;
   }
 

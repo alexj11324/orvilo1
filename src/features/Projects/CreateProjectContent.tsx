@@ -285,7 +285,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       status: 'backlog',
       targetDatePrecision: 'day',
       teamId,
-      visibility: 'private',
+      visibility: workspaceId ? 'public' : 'private',
     });
     const createInput = getCreateProjectInput(form);
     const identifierValid = isProjectIdentifierValid(form.identifier);
@@ -538,8 +538,8 @@ const CreateProjectContent = memo<CreateProjectOptions>(
           </div>
           <div className="flex flex-row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Select
-              disabled={form.loading}
-              value={form.visibility ?? 'private'}
+              disabled={form.loading || !!workspaceId}
+              value={form.visibility ?? 'public'}
               items={[
                 { value: 'private', label: t('create.visibilityPrivate') },
                 { value: 'public', label: t('create.visibilityPublic') },

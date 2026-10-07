@@ -25,7 +25,7 @@ import { useFetchProviderBindings, useProviderBindingStore } from '@/store/provi
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
-import { getStaticModelOptions, modelDisplayLabel } from './modelOptions';
+import { modelDisplayLabel } from './modelOptions';
 import { COMPOSER_DEFAULT_MODEL_LABEL_KEY, withDefaultModelOption } from './resolveComposerModel';
 import { useModelCatalog } from './useModelCatalog';
 
@@ -70,7 +70,6 @@ export interface ComposerModelSource {
  * ends up as one flat list rendered by the shared `ModelSwitchPanel`:
  *
  * - builtin Orvilo (Prime) → the provider-binding routes;
- * - `static` CLI harnesses → the alias table;
  * - `catalog` CLI harnesses → the runtime probe (`useModelCatalog`);
  * - anything else → `undefined`, and the caller keeps its read-only chip.
  *
@@ -91,7 +90,6 @@ export const useComposerModelSource = ({
   const source = capability?.model?.source;
   const isCatalog = source === 'catalog';
   const isPrime = isBuiltinEngineType(type);
-  const isStatic = source === 'static';
 
   // Prime's list is the provider-binding route list (deduped SWR fetch).
   const bindings = useProviderBindingStore((s) => s.bindings);
@@ -148,19 +146,6 @@ export const useComposerModelSource = ({
       };
     }
 
-    if (isStatic && type)
-      return {
-        id: type,
-        name,
-        options: withDefaultModelOption(
-          getStaticModelOptions(type).map((option) => ({
-            title: option.label,
-            value: option.value,
-          })),
-          t(COMPOSER_DEFAULT_MODEL_LABEL_KEY),
-        ),
-      };
-
     if (isCatalog && type) {
       const models = catalog.data?.models ?? [];
       const errorName = (catalog.error as Error | undefined)?.name;
@@ -188,7 +173,6 @@ export const useComposerModelSource = ({
     catalog.error,
     isCatalog,
     isPrime,
-    isStatic,
     name,
     t,
     type,

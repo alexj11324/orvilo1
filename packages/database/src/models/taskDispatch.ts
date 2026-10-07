@@ -41,7 +41,7 @@ import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase, Transaction } from '../type';
-import { assertAgentUsableBy } from '../utils/agent-access';
+import { assertAgentVisibleTo } from '../utils/agent-access';
 import { snapshotAutomationDefinition } from '../utils/automationOccurrence';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
@@ -73,6 +73,8 @@ const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
 
 /** Column projection shared by the resume-sweep candidate finders. */
 const resumeCandidateColumns = () => ({
+  agentId: taskDispatches.agentId,
+  initiator: taskDispatches.initiator,
   dispatchId: taskDispatches.id,
   eventEvidence: taskDispatches.eventEvidence,
   fence: taskDispatches.fence,
@@ -170,6 +172,12 @@ export class TaskDispatchEventEvidenceError extends Error {
 }
 
 export interface RequestTaskDispatchInput {
+  /** Server authorization on the actual executor while the Task is locked. */
+  authorizeExecutor?: (params: {
+    agentId: string;
+    db: OrviloDatabase;
+    userId: string;
+  }) => Promise<void>;
   /** Validated delegation executor; otherwise use the locked task assignee. */
   delegatedAgentId?: string;
   dispatchId?: string;
@@ -226,8 +234,11 @@ export interface TaskDispatchRecoveryCandidate {
 }
 
 export interface TaskPlanningDispatchCandidate {
+  agentId: string | null;
   dispatchId: string;
   idempotencyKey: string;
+  /** Actual authorizing principal; requestedBy remains an audit label. */
+  initiator: string | null;
   planRevision: number;
   requestedBy: string;
   taskId: string;
@@ -243,11 +254,14 @@ export interface TaskPlanningDispatchCandidate {
  * policy and goal re-checks decide whether the row resumes or re-parks.
  */
 export interface TaskDispatchResumeCandidate {
+  agentId: string | null;
   dispatchId: string;
   eventEvidence?: TaskEventDispatchEvidence | null;
   fence: number;
   generation: number;
   idempotencyKey: string;
+  /** Actual authorizing principal; requestedBy remains an audit label. */
+  initiator: string | null;
   phase: TaskDispatchPhase;
   planRevision: number | null;
   recoveryAttempts: number;
@@ -715,6 +729,8 @@ export class TaskDispatchModel {
     const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
     const rows = await db
       .select({
+        agentId: taskDispatches.agentId,
+        initiator: taskDispatches.initiator,
         dispatchId: taskDispatches.id,
         idempotencyKey: taskDispatches.idempotencyKey,
         planRevision: taskDispatches.planRevision,
@@ -802,10 +818,18 @@ export class TaskDispatchModel {
 
       const executingAgentId = input.delegatedAgentId ?? task.assigneeAgentId;
       if (input.executionUserId && executingAgentId) {
-        await assertAgentUsableBy(tx as OrviloDatabase, executingAgentId, {
-          userId: input.executionUserId,
-          workspaceId: this.workspaceId,
-        });
+        if (input.authorizeExecutor) {
+          await input.authorizeExecutor({
+            agentId: executingAgentId,
+            db: tx as OrviloDatabase,
+            userId: input.executionUserId,
+          });
+        } else {
+          await assertAgentVisibleTo(tx as OrviloDatabase, executingAgentId, {
+            userId: input.executionUserId,
+            workspaceId: this.workspaceId,
+          });
+        }
       }
 
       // The roster band the bound agent runs at — snapshotted once under the

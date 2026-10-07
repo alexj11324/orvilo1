@@ -46,6 +46,7 @@ import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 
+import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '../file/resolveAttachments';
@@ -223,7 +224,9 @@ export class TaskService {
     }
 
     if (createData.projectId) {
-      const project = await this.projectModel.findManageableById(createData.projectId);
+      const project = (await this.projectModel.getCapabilities(createData.projectId)).canEdit
+        ? await this.projectModel.findById(createData.projectId)
+        : null;
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
       createData.identifierPrefix ??= project.identifier;
     }
@@ -520,7 +523,7 @@ export class TaskService {
       /** Canonical Issue Status written atomically with the legacy `status`. */
       workflow?: Pick<
         TaskStatusTransitionExtra,
-        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId' | 'parkedReason'
       >;
     },
     /**
@@ -546,7 +549,7 @@ export class TaskService {
       status: TaskStatus;
       workflow?: Pick<
         TaskStatusTransitionExtra,
-        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId' | 'parkedReason'
       >;
     },
     actor: undefined,
@@ -567,7 +570,7 @@ export class TaskService {
       status: TaskStatus;
       workflow?: Pick<
         TaskStatusTransitionExtra,
-        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId' | 'parkedReason'
       >;
     },
     actor?: { agentId?: string | null; userId?: string | null },
@@ -1378,6 +1381,11 @@ export class TaskService {
       });
     }
 
+    const restingWorkflow =
+      task.workflowCategory === 'in_progress' || task.workflowCategory === 'in_review'
+        ? { workflowCategory: 'todo' as const, workflowStateId: null, workflowStateRefId: null }
+        : {};
+
     // A task with no live execution has no incumbent execution to fence —
     // the transfer is an ordinary (but CAS'd) assignment. The live-assignee
     // guard stays armed: if a run started between resolve and write, the
@@ -1387,7 +1395,7 @@ export class TaskService {
     if (!taskIsRunning) {
       const updated = await this.updateTaskWithAssigneeLock(
         task.id,
-        { assigneeAgentId: input.toAgentId },
+        { assigneeAgentId: input.toAgentId, ...restingWorkflow },
         { userId: this.userId },
         {
           expectedDomainRevision: input.expectedDomainRevision,
@@ -1398,11 +1406,22 @@ export class TaskService {
       return { state: 'assigned', task: updated };
     }
 
-    const successorAgentInfo = input.toAgentId
-      ? await this.agentModel.getAgentSnapshotForTaskCreate(input.toAgentId)
-      : null;
+    let successorAgentInfo: { snapshot: { model: string; provider: string } | null } | null = null;
     if (input.toAgentId !== null) {
-      await this.assertAssigneeAgentBelongsToUser(input.toAgentId);
+      if (this.workspaceId) {
+        await assertCanUseWorkspaceAgent({
+          agentId: input.toAgentId,
+          db: this.db,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
+        successorAgentInfo = {
+          snapshot: await this.agentModel.getAgentModelConfigForExecution(input.toAgentId),
+        };
+      } else {
+        await this.assertAssigneeAgentBelongsToUser(input.toAgentId);
+        successorAgentInfo = await this.agentModel.getAgentSnapshotForTaskCreate(input.toAgentId);
+      }
     }
 
     const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
@@ -1486,6 +1505,7 @@ export class TaskService {
       task.id,
       {
         assigneeAgentId: input.toAgentId,
+        ...restingWorkflow,
         ...(successorConfig ? { config: successorConfig } : {}),
       },
       { userId: this.userId },
@@ -1686,9 +1706,10 @@ export class TaskService {
         allDescendants.map((s) => s.assigneeAgentId).filter((id): id is string => Boolean(id)),
       ),
     ];
+    const issueTaskIds = [task.id, ...allDescendantIds];
     const subtaskAgents =
       subtaskAssigneeIds.length > 0
-        ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds)
+        ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds, issueTaskIds)
         : [];
     const subtaskAgentMap = new Map(subtaskAgents.map((a) => [a.id, a]));
 
@@ -1705,10 +1726,12 @@ export class TaskService {
                   avatar: agent.avatar,
                   backgroundColor: agent.backgroundColor,
                   id: agent.id,
-                  title: agent.title,
+                  title: agent.title || agent.name,
+                  heterogeneousType: agent.heterogeneousType,
                 },
               }
             : {}),
+          attentionReason: s.attentionReason,
           assigneeUserId: s.assigneeUserId,
           automationMode: s.automationMode,
           blockedBy: depMap.get(s.id),
@@ -1774,6 +1797,7 @@ export class TaskService {
         .map((t) => [
           t.id,
           {
+            attentionReason: t.attentionReason,
             identifier: t.identifier,
             name: t.name,
             status: depStatusById[t.id] ?? t.status,
@@ -1784,12 +1808,13 @@ export class TaskService {
     );
 
     // Resolve parent
-    let parent: { agentId: string | null; identifier: string; name: string | null } | null = null;
+    let parent: TaskDetailData['parent'] = null;
     if (task.parentTaskId) {
       const parentTask = await this.taskModel.findById(task.parentTaskId);
       if (parentTask) {
         parent = {
           agentId: parentTask.assigneeAgentId,
+          attentionReason: parentTask.attentionReason,
           identifier: parentTask.identifier,
           name: parentTask.name,
         };
@@ -1853,7 +1878,7 @@ export class TaskService {
       for (const id of [log.payload?.fromId, log.payload?.toId]) if (id) target.add(id);
     }
 
-    const authorMap = await this.resolveAuthors(agentIds, userIds);
+    const authorMap = await this.resolveAuthors(agentIds, userIds, issueTaskIds);
 
     // Every run row answers "and did it pass?" on its own (with counts). Without this the
     // activity feed lists rounds that all look alike, and the only way to learn
@@ -1927,6 +1952,7 @@ export class TaskService {
             : c.authorUserId
               ? authorMap.get(c.authorUserId)
               : undefined,
+          commentCapabilities: c.capabilities,
           content: c.content,
           editorData: c.editorData ?? undefined,
           files: files.length > 0 ? files : undefined,
@@ -2006,6 +2032,15 @@ export class TaskService {
       return a.time.localeCompare(b.time);
     });
 
+    const duplicateTarget = task.duplicateOfTaskId
+      ? await this.taskModel.findById(task.duplicateOfTaskId)
+      : null;
+    const duplicateOf: TaskDetailData['duplicateOf'] = task.duplicateOfTaskId
+      ? duplicateTarget && !duplicateTarget.isDeleted && !duplicateTarget.deletedAt
+        ? { identifier: duplicateTarget.identifier, name: duplicateTarget.name }
+        : { unavailable: true }
+      : undefined;
+
     const taskConfig = task.config ? (task.config as Record<string, unknown>) : undefined;
     const taskContext = task.context ? (task.context as TaskContext) : undefined;
     const scheduleConfig = (taskConfig?.schedule ?? {}) as { maxExecutions?: number | null };
@@ -2017,6 +2052,7 @@ export class TaskService {
       config: taskConfig,
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       createdByUserId: task.createdByUserId,
+      duplicateOf,
       dependencies: dependencies.map((d): NonNullable<TaskDetailData['dependencies']>[number] => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
@@ -2025,6 +2061,7 @@ export class TaskService {
             (d.type === 'relates' ? 'Unavailable related issue' : 'Unavailable prerequisite'),
           ...(d.id ? { relationId: d.id } : {}),
           ...(info ? { id: d.dependsOnId } : {}),
+          attentionReason: info?.attentionReason,
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,
@@ -2068,6 +2105,7 @@ export class TaskService {
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: heartbeatStatus ?? task.status,
       dispatchPhase: task.dispatchPhase,
+      attentionReason: task.attentionReason,
       userId: task.assigneeUserId,
       verify: acceptance
         ? { ...acceptance.config, requirement: acceptance.requirement }
@@ -2090,11 +2128,12 @@ export class TaskService {
   private async resolveAuthors(
     agentIds: Set<string>,
     userIds: Set<string>,
+    issueTaskIds: string[],
   ): Promise<Map<string, TaskDetailActivityAuthor>> {
     const map = new Map<string, TaskDetailActivityAuthor>();
 
     const [agentRows, userRows] = await Promise.all([
-      this.agentModel.getAgentAvatarsByIds([...agentIds]),
+      this.agentModel.getAgentAvatarsByIds([...agentIds], issueTaskIds),
       UserModel.findByIds(this.db, [...userIds]),
     ]);
 
@@ -2102,7 +2141,13 @@ export class TaskService {
     // query already returns rather than letting a live participant render as
     // nameless — the UI reserves its nameless labels for absent identities.
     for (const a of agentRows) {
-      map.set(a.id, { avatar: a.avatar, id: a.id, name: a.title || a.name, type: 'agent' });
+      map.set(a.id, {
+        avatar: a.avatar,
+        id: a.id,
+        name: a.title || a.name,
+        type: 'agent',
+        heterogeneousType: a.heterogeneousType,
+      });
     }
     for (const u of userRows) {
       map.set(u.id, { avatar: u.avatar, id: u.id, name: u.fullName || u.username, type: 'user' });

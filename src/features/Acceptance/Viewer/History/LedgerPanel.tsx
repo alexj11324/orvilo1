@@ -17,6 +17,7 @@ import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 import type { AcceptanceBundle } from '@/services/verify';
 
@@ -189,11 +190,14 @@ const LedgerPanel = memo<LedgerPanelProps>(
               aria-label={openable ? t('acceptance.ledger.viewReport') : undefined}
               key={round.run.id}
               role={openable ? 'button' : undefined}
-              className={`flex flex-col gap-1.5 ${cx(
-                styles.round,
-                openable && styles.roundClickable,
-                highlight === round.run.roundIndex && styles.roundActive,
-              )}`}
+              className={cx(
+                `flex flex-col gap-1.5 ${cx(
+                  styles.round,
+                  openable && styles.roundClickable,
+                  highlight === round.run.roundIndex && styles.roundActive,
+                )}`,
+                openable && buttonHoverFeedback,
+              )}
               onClick={openable ? () => onOpenReport(round) : undefined}
             >
               <div className="flex items-center gap-2">

@@ -76,14 +76,14 @@ const setupStores = ({
 };
 
 describe('useEffectiveAgencyConfig', () => {
-  it('offers caller-personal device repair only to the private owner or member-selectable caller', () => {
+  it('offers the caller personal device pool for nonfixed Agents independently of Manage', () => {
     setupStores({ workspaceId: 'ws', visibility: 'private' });
     const own = renderHook(() => useEffectiveAgencyConfig('agent-1'));
     expect(own.result.current.canSelectPersonalDevice).toBe(true);
     own.unmount();
     setupStores({ workspaceId: 'ws', visibility: 'private', ownerId: 'other' });
     const other = renderHook(() => useEffectiveAgencyConfig('agent-1'));
-    expect(other.result.current.canSelectPersonalDevice).toBe(false);
+    expect(other.result.current.canSelectPersonalDevice).toBe(true);
     other.unmount();
     setupStores({
       workspaceId: 'ws',
@@ -202,7 +202,7 @@ describe('useEffectiveAgencyConfig', () => {
       agencyConfig: { boundDeviceId: 'manager-desktop', executionTarget: 'local' },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+      canSelectPersonalDevice: true,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });

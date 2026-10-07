@@ -100,6 +100,55 @@ describe('DeviceModel', () => {
     });
   });
 
+  describe('runtime installation evidence', () => {
+    const codex = { available: true, command: 'codex', observedAt: '2026-10-06T21:00:00Z' };
+
+    it('preserves runtime facts across capability updates and other runtime scans', async () => {
+      await deviceModel.register({ deviceId: 'scanned', identitySource: 'machine-id' });
+      await deviceModel.updateCapabilityEvidence('scanned', { supportedTools: ['files.read'] });
+      await deviceModel.updateRuntimeInstallationEvidence('scanned', { codex });
+      await deviceModel.updateCapabilityEvidence('scanned', { supportedTools: ['mcp.call'] });
+      await deviceModel.updateRuntimeInstallationEvidence('scanned', {
+        'claude-code': { ...codex, command: 'claude', available: false },
+      });
+      expect((await deviceModel.findByDeviceId('scanned'))?.capabilitySnapshot).toEqual({
+        supportedTools: ['mcp.call'],
+        installedRuntimes: {
+          codex,
+          'claude-code': { ...codex, command: 'claude', available: false },
+        },
+      });
+    });
+
+    it('never updates another user’s personal installation facts', async () => {
+      const other = new DeviceModel(serverDB, otherUserId);
+      await other.register({ deviceId: 'shared-id', identitySource: 'machine-id' });
+      await deviceModel.updateRuntimeInstallationEvidence('shared-id', { codex });
+      expect((await other.findByDeviceId('shared-id'))?.capabilitySnapshot).toBeNull();
+    });
+
+    it('updates only the addressed pool when personal/workspace rows share an id', async () => {
+      await serverDB.insert(workspaces).values({
+        id: wsId,
+        name: 'WS 1',
+        primaryOwnerId: userId,
+        slug: 'device-runtime-pool',
+      });
+      await deviceModel.register({ deviceId: 'same-id', identitySource: 'machine-id' });
+      const workspace = new DeviceModel(serverDB, userId, wsId);
+      await workspace.registerWorkspaceDevice({
+        deviceId: 'same-id',
+        identitySource: 'machine-id',
+        workspaceId: wsId,
+      });
+      await workspace.updateRuntimeInstallationEvidence('same-id', { codex });
+      expect((await deviceModel.findByDeviceId('same-id'))?.capabilitySnapshot).toBeNull();
+      expect((await workspace.findWorkspaceDeviceById('same-id'))?.capabilitySnapshot).toEqual({
+        installedRuntimes: { codex },
+      });
+    });
+  });
+
   describe('query', () => {
     it('should return only the current user devices, newest lastSeen first', async () => {
       await deviceModel.register({ deviceId: 'dev-old', identitySource: 'machine-id' });
@@ -126,6 +175,17 @@ describe('DeviceModel', () => {
   });
 
   describe('workspace devices', () => {
+    it('never resolves an owned workspace-only enrollment through the personal registry', async () => {
+      await new DeviceModel(serverDB, userId, wsId).registerWorkspaceDevice({
+        deviceId: 'workspace-only',
+        identitySource: 'machine-id',
+        workspaceId: wsId,
+      });
+      expect(await deviceModel.findByDeviceId('workspace-only')).toBeUndefined();
+      expect(
+        await new DeviceModel(serverDB, userId, 'other-workspace').findByDeviceId('workspace-only'),
+      ).toBeUndefined();
+    });
     it('does not resolve an owned personal device as a workspace gateway device', async () => {
       await deviceModel.register({ deviceId: 'personal-node', identitySource: 'machine-id' });
       const scoped = new DeviceModel(serverDB, userId, wsId);

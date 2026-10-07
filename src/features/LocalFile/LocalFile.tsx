@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { useLocalFileActions } from './useLocalFileActions';
@@ -117,10 +118,13 @@ export const LocalFile = ({
 
   const fileContent = (
     <div
-      className={cx('flex flex-row items-center gap-1', styles.container)}
       role={handleClick ? 'button' : undefined}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       tabIndex={handleClick ? 0 : undefined}
+      className={cx(
+        cx('flex flex-row items-center gap-1', styles.container),
+        handleClick && buttonHoverFeedback,
+      )}
       onClick={handleClick}
       onKeyDown={
         handleClick

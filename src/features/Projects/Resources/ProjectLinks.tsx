@@ -8,9 +8,7 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
-import { useProjectStore } from '@/store/project';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
+import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import { openProjectLinkModal } from './ProjectLinkModal';
 
@@ -41,18 +39,12 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-export function ProjectLinks({
-  projectId,
-  ownerId,
-}: {
-  projectId: string;
-  ownerId: string | null;
-}) {
+export function ProjectLinks({ projectId }: { projectId: string; ownerId: string | null }) {
   const { t } = useTranslation('project');
   const query = useProjectStore((s) => s.useFetchProjectLinks)(projectId);
   const remove = useProjectStore((s) => s.removeProjectLink);
-  const userId = useUserStore(userProfileSelectors.userId);
-  const canEdit = !!ownerId && userId === ownerId;
+  const detail = useCurrentProjectDetail(projectId);
+  const canEdit = detail?.capabilities?.canEdit === true;
   const links = query.data?.data ?? [];
   return (
     <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

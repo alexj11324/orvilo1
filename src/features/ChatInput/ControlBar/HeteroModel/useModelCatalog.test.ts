@@ -22,6 +22,8 @@ describe('useModelCatalog', () => {
   });
 
   it.each([
+    'claude-code',
+    'codex',
     'codebuddy',
     'cursor',
     'droid',

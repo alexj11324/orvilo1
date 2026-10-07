@@ -119,12 +119,22 @@ describe('useHomeAgentRows', () => {
 
   it('carries the actual runtime type through renamed rows for their brand icon', () => {
     mocks.homeState.ungroupedAgents = [
-      agent('agt_cc', 'My assistant', { heterogeneousType: 'claude-code', avatar: 'OA' }),
+      agent('agt_cc', 'Claude Code', {
+        name: 'My assistant',
+        heterogeneousType: 'claude-code',
+        avatar: 'OA',
+      }),
     ];
     const { result } = renderHook(() => useHomeAgentRows());
     expect(result.current.workspaceRows.find((row) => row.id === 'agt_cc')?.heterogeneousType).toBe(
       'claude-code',
     );
+    expect(result.current.workspaceRows.find((row) => row.id === 'agt_cc')?.title).toBe(
+      'My assistant',
+    );
+    expect(
+      result.current.workspaceRows.find((row) => row.id === 'agt_cc')?.subtitle,
+    ).toBeUndefined();
   });
 
   it('ignores a stale per-agent sidebar-hidden preference', () => {

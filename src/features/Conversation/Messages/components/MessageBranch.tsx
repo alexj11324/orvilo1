@@ -3,6 +3,8 @@ import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
+
 import { useConversationStore } from '../../store';
 
 const prefixCls = 'ant';
@@ -82,9 +84,13 @@ const MessageBranch = memo<MessageBranchProps>(({ activeBranchIndex, count, mess
   return (
     <div className={cn('flex', styles.container)}>
       <div
-        className={cx(styles.button, !canGoPrevious && `${prefixCls}-disabled`)}
+        aria-disabled={!canGoPrevious || undefined}
         role="button"
         tabIndex={canGoPrevious ? 0 : -1}
+        className={cx(
+          cx(styles.button, !canGoPrevious && `${prefixCls}-disabled`),
+          canGoPrevious && buttonHoverFeedback,
+        )}
         onClick={handlePrevious}
       >
         <ChevronLeft size={16} />
@@ -93,9 +99,13 @@ const MessageBranch = memo<MessageBranchProps>(({ activeBranchIndex, count, mess
         {activeBranchIndex + 1}/{count}
       </div>
       <div
-        className={cx(styles.button, !canGoNext && `${prefixCls}-disabled`)}
+        aria-disabled={!canGoNext || undefined}
         role="button"
         tabIndex={canGoNext ? 0 : -1}
+        className={cx(
+          cx(styles.button, !canGoNext && `${prefixCls}-disabled`),
+          canGoNext && buttonHoverFeedback,
+        )}
         onClick={handleNext}
       >
         <ChevronRight size={16} />

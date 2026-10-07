@@ -6,6 +6,8 @@ export type ResourceAccessLevel = 'edit' | 'use' | 'view';
 export interface ResourceGeneralAccess {
   accessLevel: ResourceAccessLevel;
   canManage: boolean;
+  /** Actual caller execution capability; independent of Manage and legacy levels. */
+  canUseResource?: boolean;
   creatorId: string;
   /** @deprecated Compatibility value returned for released clients. */
   generalAccess: 'editor' | 'viewer';

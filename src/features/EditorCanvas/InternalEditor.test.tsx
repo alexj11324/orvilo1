@@ -2,12 +2,22 @@
  * @vitest-environment happy-dom
  */
 import { type IEditor } from '@lobehub/editor';
-import { moment } from '@lobehub/editor';
-import { useEditor } from '@lobehub/editor/react';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { moment, ReactLinkPlugin } from '@lobehub/editor';
+import { Editor, useEditor } from '@lobehub/editor/react';
+import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { $getRoot, PASTE_COMMAND } from 'lexical';
 import { memo, useEffect, useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DESCRIPTION_REFERENCE_SCHEMA } from '@/libs/editor/descriptionReference';
+
+import {
+  insertDescriptionReference,
+  normalizeDescriptionReferenceLinks,
+} from './descriptionReferences/actions';
+import { DescriptionReferenceNormalizationPlugin } from './descriptionReferences/DescriptionReferenceNormalizationPlugin';
+import { createDescriptionReferenceSchemaRules } from './descriptionReferences/schemaRules';
 import { type InternalEditorProps } from './InternalEditor';
 import InternalEditor from './InternalEditor';
 import { registerBlockDecoratorCaretGuard } from './registerBlockDecoratorCaretGuard';
@@ -16,10 +26,29 @@ vi.mock('./registerBlockDecoratorCaretGuard', () => ({
   registerBlockDecoratorCaretGuard: vi.fn(() => vi.fn()),
 }));
 
+const referenceLookup = vi.hoisted(() => ({ denied: false, navigate: vi.fn() }));
+vi.mock('../../../apps/desktop/src/preload/invoke', () => ({ invoke: vi.fn() }));
+vi.mock('~common/routes', () => ({ findMatchingRoute: vi.fn() }));
+vi.mock('@/features/Electron/navigation/appNavigate', () => ({
+  appNavigate: referenceLookup.navigate,
+}));
+vi.mock('@/hooks/useAppOrigin', () => ({ useAppOrigin: () => 'https://orvilo.example' }));
+vi.mock('@/store/task/descriptionReference', () => ({
+  useFetchDescriptionReference: (reference: { kind: string } | null) => ({
+    data: reference
+      ? { kind: 'pull-request', isDraft: false, state: 'MERGED', title: 'Synthetic accessible PR' }
+      : undefined,
+    error: referenceLookup.denied ? new Error('not readable') : undefined,
+    isLoading: false,
+  }),
+}));
+
 // Suppress console.warn for expected errors in tests
 const originalWarn = console.warn;
 beforeEach(() => {
   console.warn = vi.fn();
+  referenceLookup.denied = false;
+  referenceLookup.navigate.mockClear();
 });
 
 afterEach(() => {
@@ -77,6 +106,175 @@ const MinimalTestWrapper = memo<TestWrapperProps>(({ onEditorReady, plugins, ...
 MinimalTestWrapper.displayName = 'MinimalTestWrapper';
 
 describe('InternalEditor', () => {
+  describe('description reference chips', () => {
+    const origin = 'https://orvilo.example';
+    const url = 'https://github.com/acme/widgets/pull/7';
+    const referencePlugins = [
+      Editor.withProps(DescriptionReferenceNormalizationPlugin, { appOrigin: origin }),
+      Editor.withProps(ReactLinkPlugin, {
+        normalizeSchemaLinks: false,
+        schemaRules: createDescriptionReferenceSchemaRules(origin),
+      }),
+    ];
+
+    it('routes a valid issue through the renderer before the actual desktop preload intercepts it', async () => {
+      let instance: IEditor | undefined;
+      const issueUrl = `${origin}/ws-one/task/ISS-7`;
+      const view = render(
+        <MinimalTestWrapper
+          editable
+          plugins={referencePlugins}
+          onEditorReady={(editor) => {
+            instance = editor;
+          }}
+        />,
+      );
+      await waitFor(() => expect(instance?.getLexicalEditor()).toBeTruthy());
+      await act(async () => {
+        expect(insertDescriptionReference(instance!, issueUrl, origin)).toBe(true);
+        await moment();
+      });
+      const anchor = view.getByRole('link', { name: /Synthetic accessible PR/ });
+      const { setupRouteInterceptors } =
+        await import('../../../apps/desktop/src/preload/routeInterceptor');
+      const documentListener = vi.spyOn(document, 'addEventListener');
+      setupRouteInterceptors();
+      const preloadClick = documentListener.mock.calls.find(([event]) => event === 'click')!;
+      const { invoke } = await import('../../../apps/desktop/src/preload/invoke');
+      vi.mocked(invoke).mockClear();
+      // The actual desktop document-capture interceptor precedes editor listeners.
+      try {
+        fireEvent.click(anchor);
+        expect(referenceLookup.navigate).toHaveBeenCalledWith('/ws-one/task/ISS-7', {
+          escape: true,
+        });
+        expect(anchor).toHaveAttribute(RENDERER_HANDLED_LINK_ATTR, 'true');
+        expect(invoke).not.toHaveBeenCalled();
+      } finally {
+        document.removeEventListener('click', preloadClick[1], preloadClick[2]);
+        documentListener.mockRestore();
+      }
+      referenceLookup.navigate.mockClear();
+    });
+
+    it('inserts a recognized link through the live editor command', async () => {
+      let instance: IEditor | undefined;
+      const view = render(
+        <MinimalTestWrapper
+          plugins={referencePlugins}
+          onEditorReady={(editor) => {
+            instance = editor;
+          }}
+        />,
+      );
+      await waitFor(() => expect(instance?.getLexicalEditor()).toBeTruthy());
+      const onError = vi.spyOn(instance!.getLexicalEditor()!, '_onError');
+      await act(async () => {
+        expect(insertDescriptionReference(instance!, url, origin)).toBe(true);
+        await moment();
+      });
+      expect(onError.mock.calls).toEqual([]);
+      await waitFor(() =>
+        expect(view.getByRole('link', { name: /Synthetic accessible PR/ })).toBeTruthy(),
+      );
+      expect(String(instance!.getDocument('markdown'))).toContain(url);
+    });
+
+    it('renders a clickable authorized chip in a read-only editor after JSON reload', async () => {
+      let instance: IEditor | undefined;
+      const view = render(
+        <MinimalTestWrapper
+          editable={false}
+          plugins={referencePlugins}
+          onEditorReady={(editor) => {
+            instance = editor;
+          }}
+        />,
+      );
+      await waitFor(() => expect(instance?.getLexicalEditor()).toBeTruthy());
+      await act(async () => {
+        instance!.setDocument('markdown', `[Private stored preview](${url})`);
+        normalizeDescriptionReferenceLinks(instance!, origin);
+        await moment();
+      });
+      const json = instance!.getDocument('json');
+      expect(JSON.stringify(json)).not.toContain('Private stored preview');
+      expect(JSON.stringify(json)).not.toContain('Synthetic accessible PR');
+      await act(async () => {
+        instance!.setDocument('json', JSON.stringify(json));
+        await moment();
+      });
+      const anchor = view.getByRole('link', { name: /Synthetic accessible PR/ });
+      expect(anchor.getAttribute('href')).toBe(url);
+      expect(instance!.getLexicalEditor()!.isEditable()).toBe(false);
+      expect(view.container.firstElementChild).not.toHaveStyle({ pointerEvents: 'none' });
+    });
+
+    it('hides previously cached metadata when the current viewer is denied', async () => {
+      referenceLookup.denied = true;
+      let instance: IEditor | undefined;
+      const view = render(
+        <MinimalTestWrapper
+          editable={false}
+          plugins={referencePlugins}
+          onEditorReady={(editor) => {
+            instance = editor;
+          }}
+        />,
+      );
+      await waitFor(() => expect(instance?.getLexicalEditor()).toBeTruthy());
+      await act(async () => {
+        instance!.setDocument('markdown', `[Private stored preview](${url})`);
+        normalizeDescriptionReferenceLinks(instance!, origin);
+        await moment();
+      });
+      expect(view.queryByText('Synthetic accessible PR')).toBeNull();
+      expect(view.getByText('taskDetail.reference.unavailable')).toBeTruthy();
+      expect(
+        view.getByRole('link', { name: 'taskDetail.reference.unavailable' }).getAttribute('href'),
+      ).toBe(url);
+    });
+
+    it('sanitizes an adversarial HTML schema node during paste before persistence or toolbar use', async () => {
+      let instance: IEditor | undefined;
+      const view = render(
+        <MinimalTestWrapper
+          plugins={referencePlugins}
+          onEditorReady={(editor) => {
+            instance = editor;
+          }}
+        />,
+      );
+      await waitFor(() => expect(instance?.getLexicalEditor()).toBeTruthy());
+      const payload = JSON.stringify({
+        id: 'gh:github.com:acme:widgets:7',
+        kind: 'pull-request',
+        url,
+      }).replaceAll('"', '&quot;');
+      const html = `<a data-schema-link="true" data-schema-type="${DESCRIPTION_REFERENCE_SCHEMA}" data-payload="${payload}" href="javascript:alert(1)">Private HTML title</a>`;
+      await act(async () => {
+        const lexical = instance!.getLexicalEditor()!;
+        lexical.update(() => $getRoot().selectEnd(), { discrete: true });
+        lexical.dispatchCommand(PASTE_COMMAND, {
+          clipboardData: {
+            files: [],
+            types: ['text/html'],
+            getData: (type: string) => (type === 'text/html' ? html : ''),
+          },
+          preventDefault: vi.fn(),
+          stopImmediatePropagation: vi.fn(),
+        } as unknown as ClipboardEvent);
+        await moment();
+      });
+      const json = JSON.stringify(instance!.getDocument('json'));
+      expect(json).toContain('schema-link');
+      expect(json).not.toContain('javascript:');
+      expect(json).not.toContain('Private HTML title');
+      expect(view.getByText('taskDetail.reference.unavailable')).toBeTruthy();
+      expect(view.queryByRole('link')).toBeNull();
+    });
+  });
+
   describe('rendering', () => {
     it('should render editor with real editor instance', async () => {
       const { container } = render(<MinimalTestWrapper />);

@@ -1,4 +1,5 @@
 import type {
+  TaskAttentionReason,
   TaskCreationSubjectSnapshot,
   TaskWorkflowCategory,
   TeamTriageAction,
@@ -13,6 +14,7 @@ import dayjs from 'dayjs';
 export interface TeamTriageTask {
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
+  attentionReason?: TaskAttentionReason;
   createdAt?: Date | string | null;
   createdBySnapshot?: TaskCreationSubjectSnapshot | null;
   createdByUserId?: string | null;

@@ -1,8 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TaskModel } from '@/database/models/task';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import * as runAdmission from '@/server/services/heterogeneousAgent/runAdmission';
 
 // serverDatabase middleware calls getServerDB(); stub it (our model mocks
 // ignore the db handle anyway).
@@ -34,11 +36,12 @@ const mockMessageUpdate = vi.fn();
 const mockMessageCreate = vi.fn();
 const mockExecAgent = vi.fn();
 const mockOpFindById = vi.fn();
+const mockOpTouchRunning = vi.fn();
 const mockInstantiateVerifyPlan = vi.fn();
 
 vi.mock('@/database/models/agentOperation', () => ({
   AgentOperationModel: vi.fn(function () {
-    return { findById: mockOpFindById };
+    return { findById: mockOpFindById, touchRunning: mockOpTouchRunning };
   }),
 }));
 // Partial mock: keep the real runVerifyOnCompletion (CompletionLifecycle's gate
@@ -142,10 +145,64 @@ describe('agentNotifyRouter.notify — remote hetero terminal signal', () => {
     // test opts into a task-bound op.
     mockOpFindById.mockResolvedValue({ parentOperationId: null, taskId: null });
     mockInstantiateVerifyPlan.mockResolvedValue(undefined);
+    mockOpTouchRunning.mockResolvedValue(false);
   });
 
   afterEach(() => {
     hookDispatcher.unregister(OP);
+  });
+
+  it('enters In Progress only after an authenticated nonterminal remote message persists', async () => {
+    const order: string[] = [];
+    mockOpTouchRunning.mockResolvedValue(true);
+    mockOpFindById.mockResolvedValue({
+      id: OP,
+      taskId: 'task-1',
+      topicId: TOPIC,
+      agentId: 'agent-1',
+      status: 'running',
+      appContext: { executionGeneration: 2, dispatchFence: 3 },
+    });
+    mockMessageUpdate.mockImplementation(async () => {
+      order.push('persist');
+    });
+    const admission = vi
+      .spyOn(runAdmission, 'markRemoteRunRunning')
+      .mockImplementation(async () => {
+        order.push('host');
+        return true;
+      });
+    const task = vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({
+      id: 'task-1',
+      status: 'backlog',
+      workflowCategory: 'todo',
+      assigneeAgentId: 'agent-1',
+      assigneeUserId: 'owner-1',
+      policyRevision: 1,
+      requirementRevision: 1,
+    } as never);
+    const live = vi.spyOn(TaskModel.prototype, 'hasLiveExecutor').mockResolvedValue(true);
+    const write = vi
+      .spyOn(TaskModel.prototype, 'updateStatusForExecutionContract')
+      .mockImplementation(async () => {
+        order.push('active');
+        return { id: 'task-1' } as never;
+      });
+    try {
+      await createCaller().notify({ content: 'Working now', role: 'assistant', topicId: TOPIC });
+      expect(order).toEqual(['persist', 'host', 'active']);
+      expect(write).toHaveBeenCalledWith(
+        'task-1',
+        'running',
+        expect.objectContaining({ assigneeAgentId: 'agent-1', executionGeneration: 2 }),
+        expect.objectContaining({ workflowCategory: 'in_progress' }),
+      );
+    } finally {
+      admission.mockRestore();
+      task.mockRestore();
+      live.mockRestore();
+      write.mockRestore();
+    }
   });
 
   // Visitor topics carry the creator's userId, so an ownership-only lookup

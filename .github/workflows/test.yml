@@ -222,7 +222,7 @@ jobs:
   # Product-surface controls gate — fails when product .tsx files use raw HTML
   # form controls or ad-hoc control-kit imports instead of the repo design
   # system (ReUI). Exemptions live in scripts/ci/nativeControlsAllowlist.json.
-  # Pure Node script: no dependency install needed.
+  # The JSX guard uses the repository's existing TypeScript parser.
   native-controls:
     needs: [check-duplicate-run, changes]
     if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
@@ -238,6 +238,10 @@ jobs:
           git remote add origin "https://github.com/${REPOSITORY}.git"
           git fetch --no-tags --depth=1 origin "${REF_SHA}"
           git checkout --force FETCH_HEAD
+
+      - uses: ./.github/actions/setup-env
+      - name: Install existing parser dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - name: Scan product surfaces for native/ad-hoc controls
         run: |

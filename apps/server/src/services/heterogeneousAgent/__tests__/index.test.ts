@@ -3,6 +3,7 @@ import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { TaskModel } from '@/database/models/task';
 import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
@@ -148,6 +149,65 @@ describe('HeterogeneousAgentService', () => {
   });
 
   describe('heteroIngest', () => {
+    it('enters active workflow only after producer persistence and leaves terminal-only activity static', async () => {
+      const { agentOperationModel, persistenceHandler, service } = createService();
+      const order: string[] = [];
+      agentOperationModel.findById.mockResolvedValue({
+        id: 'op-1',
+        agentId: 'agent-1',
+        appContext: { dispatchFence: 3, executionGeneration: 2 },
+        status: 'running',
+        taskId: 'task-1',
+        topicId: 'topic-1',
+      } as never);
+      persistenceHandler.ingest.mockImplementation(async () => {
+        order.push('persist');
+      });
+      const find = vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({
+        assigneeAgentId: 'agent-1',
+        assigneeUserId: 'owner-1',
+        id: 'task-1',
+        policyRevision: 1,
+        requirementRevision: 1,
+        status: 'backlog',
+        workflowCategory: 'todo',
+      } as never);
+      const live = vi.spyOn(TaskModel.prototype, 'hasLiveExecutor').mockResolvedValue(true);
+      const write = vi
+        .spyOn(TaskModel.prototype, 'updateStatusForExecutionContract')
+        .mockImplementation(async () => {
+          order.push('active');
+          return { id: 'task-1' } as never;
+        });
+      try {
+        await service.heteroIngest({
+          agentType: 'codex',
+          events: [buildEvent('stream_chunk', 0)],
+          operationId: 'op-1',
+          topicId: 'topic-1',
+        });
+        expect(order).toEqual(['persist', 'active']);
+        expect(write).toHaveBeenCalledWith(
+          'task-1',
+          'running',
+          expect.objectContaining({ assigneeAgentId: 'agent-1', executionGeneration: 2 }),
+          expect.objectContaining({ workflowCategory: 'in_progress' }),
+        );
+        write.mockClear();
+        await service.heteroIngest({
+          agentType: 'codex',
+          events: [buildEvent('agent_runtime_end', 1)],
+          operationId: 'op-1',
+          topicId: 'topic-1',
+        });
+        expect(write).not.toHaveBeenCalled();
+      } finally {
+        find.mockRestore();
+        live.mockRestore();
+        write.mockRestore();
+      }
+    });
+
     it('refreshes the durable operation lease before accepting a batch', async () => {
       const { agentOperationModel, persistenceHandler, service } = createService();
 

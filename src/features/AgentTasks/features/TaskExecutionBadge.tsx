@@ -1,4 +1,5 @@
 import type {
+  TaskAttentionReason,
   TaskDispatchPhase,
   TaskExecutionState,
   TaskRunState,
@@ -45,6 +46,8 @@ const EXECUTION_STATE_VISUALS: Record<TaskExecutionState, StatusVisual> = {
 };
 
 interface TaskExecutionBadgeProps {
+  /** Human attention is independent of an ended operation's execution state. */
+  attentionReason?: TaskAttentionReason;
   /** `task_dispatch.phase` — dispatch truth, wins rank ties in the projection. */
   dispatchPhase?: TaskDispatchPhase | null;
   /** `task_topics.run_state` — run truth for the current topic. */
@@ -62,28 +65,44 @@ interface TaskExecutionBadgeProps {
  * never mutate it: no dropdown, no click handler — a marker like
  * ●Running / ◷Waiting / ✓Succeeded / !Failed. A task with no run history
  * (projection null) renders nothing in compact lists; labeled backlog and
- * scheduled properties show that execution has not started.
+ * scheduled properties show that execution has not started. Pending human
+ * input takes label priority while retaining the actual execution glyph and
+ * history in the tooltip; it never fabricates a live run.
  */
 const TaskExecutionBadge = memo<TaskExecutionBadgeProps>(
-  ({ dispatchPhase, runState, showLabel, size = 14, status }) => {
+  ({ attentionReason, dispatchPhase, runState, showLabel, size = 14, status }) => {
     const { t } = useTranslation('chat');
     const execution = deriveTaskExecutionState({ dispatchPhase, legacyStatus: status, runState });
-    if (!execution)
+    const needsInput = attentionReason === 'needs_input';
+    if (!execution && !needsInput)
       return showLabel && (status === 'backlog' || status === 'scheduled') ? (
         <span className={styles.badge}>{t('goalProcess.summary.notStarted')}</span>
       ) : null;
-    const visual = EXECUTION_STATE_VISUALS[execution];
+    const visual = EXECUTION_STATE_VISUALS[execution ?? 'outcome_unknown'];
     const VisualIcon = visual.icon;
-    const label = t(`taskDetail.execution.${execution}`, { defaultValue: execution });
+    const executionLabel = execution
+      ? t(`taskDetail.execution.${execution}`, { defaultValue: execution })
+      : undefined;
+    const label = needsInput ? t('taskList.attention.needsInput') : executionLabel;
+    const tooltip = needsInput && executionLabel ? `${label} · ${executionLabel}` : label;
     const icon = <VisualIcon color={visual.color} size={size} />;
     if (!showLabel)
       return (
-        <span onClick={(event) => event.stopPropagation()}>
-          <SimpleTooltip title={label}>{icon}</SimpleTooltip>
+        <span
+          data-task-attention-reason={attentionReason}
+          data-task-execution-state={execution ?? undefined}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SimpleTooltip title={tooltip}>{icon}</SimpleTooltip>
         </span>
       );
     return (
-      <span className={styles.badge}>
+      <span
+        className={styles.badge}
+        data-task-attention-reason={attentionReason}
+        data-task-execution-state={execution ?? undefined}
+        title={needsInput ? tooltip : undefined}
+      >
         {icon}
         <span>{label}</span>
       </span>

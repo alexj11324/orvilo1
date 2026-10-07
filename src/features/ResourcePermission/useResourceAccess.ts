@@ -9,7 +9,8 @@ const FETCH_RESOURCE_PERMISSION_KEY = 'resource-permission';
 /**
  * Read-side derivation of the workspace General-access level for a resource.
  *
- * Edit/use checks stay permissive while workspace access is loading so chat
+ * Agent Use is resolved by the server member list and stays read-only while loading.
+ * Other resource edit/use checks stay permissive while workspace access is loading so chat
  * input does not flash disabled. A server-confirmed creator/admin (`canManage`)
  * bypasses the public resource's Member Permissions. Management checks are
  * deliberately fail-closed: destructive/ownership controls must not appear
@@ -29,9 +30,17 @@ export const useResourceAccess = (
 
   return {
     accessError: error,
-    canEditResource: !enabled || !data ? true : data.canManage || data.accessLevel === 'edit',
+    canEditResource:
+      !enabled ||
+      (resourceType === 'agent'
+        ? data?.canManage === true
+        : !data || data.canManage || data.accessLevel === 'edit'),
     canManageResource: !enabled || data?.canManage === true,
-    canUseResource: !enabled || !data ? true : data.canManage || data.accessLevel !== 'view',
+    canUseResource:
+      !enabled ||
+      (resourceType === 'agent'
+        ? data?.canUseResource === true
+        : !data || data.canManage || data.accessLevel !== 'view'),
     isAccessResolved: !enabled || !!data,
     isLoading,
     retryAccess: mutate,

@@ -3,6 +3,7 @@ import { cn } from 'cn';
 import type { ComponentType, ReactNode } from 'react';
 import { createElement, Fragment, isValidElement, memo } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 
@@ -103,10 +104,10 @@ const RegularItem = memo<{
 
   const row = (
     <div
-      className={toolsListStyles.item}
+      className={cn(item.onClick && buttonHoverFeedback, toolsListStyles.item)}
       key={item.key || `item-${index}`}
-      role="button"
-      tabIndex={0}
+      role={item.onClick ? 'button' : undefined}
+      tabIndex={item.onClick ? 0 : undefined}
       onClick={item.onClick}
     >
       {iconNode && <div className={toolsListStyles.itemIcon}>{iconNode}</div>}

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from '@/components/toast';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskService } from '@/services/task';
+import { taskMenuService } from '@/services/taskMenu';
 import { workService } from '@/services/work';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
@@ -27,6 +28,8 @@ vi.mock('@/services/task', () => ({
     update: vi.fn(),
   },
 }));
+
+vi.mock('@/services/taskMenu', () => ({ taskMenuService: { copyIssue: vi.fn() } }));
 
 vi.mock('@/services/work', () => ({
   workService: {
@@ -262,6 +265,48 @@ describe('TaskDetailSliceAction', () => {
   });
 
   describe('updateTask', () => {
+    it('makes the completed edit revision immediately available to menu CAS and never regresses aliases', async () => {
+      const detail = {
+        id: 'task-uuid-1',
+        identifier: 'T-1',
+        instruction: 'Before',
+        name: 'Issue',
+        domainRevision: 7,
+        status: 'backlog',
+      };
+      useTaskStore.setState({
+        taskDetailMap: {
+          'T-1': { ...detail },
+          'task-uuid-1': { ...detail },
+          'T-other': { ...detail, id: 'other-task', identifier: 'T-other', domainRevision: 12 },
+        },
+      });
+      vi.mocked(taskService.update).mockResolvedValue({
+        data: { id: 'task-uuid-1', domainRevision: 9 },
+        success: true,
+      } as Awaited<ReturnType<typeof taskService.update>>);
+      vi.mocked(taskMenuService.copyIssue).mockImplementation(async (input) => {
+        if (input.expectedDomainRevision !== 9) throw new Error('Task revision conflict');
+        return { data: { rootId: 'task-copy', taskIds: ['task-copy'] }, success: true };
+      });
+      await useTaskStore.getState().updateTask('T-1', { instruction: 'Edited' });
+      await expect(
+        taskMenuService.copyIssue({
+          id: 'task-uuid-1',
+          expectedDomainRevision: useTaskStore.getState().taskDetailMap['T-1'].domainRevision!,
+        }),
+      ).resolves.toMatchObject({ data: { rootId: 'task-copy' } });
+      expect(useTaskStore.getState().taskDetailMap['task-uuid-1'].domainRevision).toBe(9);
+      expect(useTaskStore.getState().taskDetailMap['T-other'].domainRevision).toBe(12);
+      vi.mocked(taskService.update).mockResolvedValueOnce({
+        data: { id: 'task-uuid-1', domainRevision: 8 },
+        success: true,
+      } as Awaited<ReturnType<typeof taskService.update>>);
+      await useTaskStore.getState().updateTask('T-1', { name: 'Late reply' });
+      expect(useTaskStore.getState().taskDetailMap['T-1'].domainRevision).toBe(9);
+      expect(useTaskStore.getState().taskDetailMap['task-uuid-1'].domainRevision).toBe(9);
+    });
+
     it('should optimistically update taskDetailMap', async () => {
       useTaskStore.setState({
         activeTaskId: 'T-1',

@@ -9,7 +9,12 @@ import type {
   DeviceWorkspaceShare,
   WorkingDirEntry,
 } from '@orvilo/types';
-import { deriveWorktreePath, sortDevicesByActivity, workingDirConfigSchema } from '@orvilo/types';
+import {
+  deriveWorktreePath,
+  resolveAgentAgencyConfig,
+  sortDevicesByActivity,
+  workingDirConfigSchema,
+} from '@orvilo/types';
 import { deserializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -20,16 +25,32 @@ import {
   wsCompatProcedure,
   wsProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { AgentModel } from '@/database/models/agent';
 import { DeviceModel, WorkspaceDevicePrivateConflictError } from '@/database/models/device';
 import { UserModel } from '@/database/models/user';
+import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSettings';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { signWorkspaceDeviceToken } from '@/libs/trpc/utils/internalJwt';
 import { type DeviceAttachment, deviceGateway } from '@/server/services/deviceGateway';
+import {
+  canSelectCallerPersonalDevice,
+  listAuthorizedDeviceCandidates,
+} from '@/server/services/deviceGateway/executionAdmission';
+import { scanDeviceAgents } from '@/server/services/deviceGateway/installedRuntimeEvidence';
 import { filterAuthorizedDevicePresence } from '@/server/services/deviceGateway/scopedDevicePresence';
+import {
+  canManageResourcePermission,
+  isResourceAuthorOrAdmin,
+} from '@/server/services/resourcePermission';
 
+import { assertCanUseWorkspaceAgent } from './_helpers/workspaceAgentGuard';
 import { preserveWorkspaceCache } from './deviceWorkingDirs';
-import { assertWorkspaceDeviceVisible, assertWorkspaceRootApproved } from './deviceWorkspaceGuard';
+import {
+  assertWorkspaceDeviceVisible,
+  assertWorkspaceGitRootApproved,
+  assertWorkspaceRootApproved,
+} from './deviceWorkspaceGuard';
 
 // Derive the zod enum from the canonical config so new platforms are
 // automatically covered without touching this file.
@@ -42,9 +63,6 @@ const remotePlatformEnum = z.enum(
 
 const CAPABILITY_TIMEOUT_MS = 5_000;
 const PROFILE_TIMEOUT_MS = 5_000;
-// Batch scan probes every agent type (which + --version per binary, with
-// login-shell PATH fallback), so it gets a longer budget than a single probe.
-const SCAN_TIMEOUT_MS = 10_000;
 
 /**
  * A workspace device's user-editable fields (rename, working dirs, remove) may
@@ -101,21 +119,66 @@ const deviceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
   const wsId = ctx.workspaceId ?? undefined;
   const deviceModel = new DeviceModel(ctx.serverDB, ctx.userId, wsId);
 
-  if (wsId) {
-    const raw = (await opts.getRawInput()) as { deviceId?: unknown } | undefined;
-    if (typeof raw?.deviceId === 'string') {
-      await assertWorkspaceDeviceVisible(deviceModel, raw.deviceId);
+  const raw = (await opts.getRawInput()) as { deviceId?: unknown } | undefined;
+  if (typeof raw?.deviceId === 'string') {
+    if (wsId) await assertWorkspaceDeviceVisible(deviceModel, raw.deviceId);
+    else if (!(await deviceModel.findByDeviceId(raw.deviceId))) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Personal device not found.' });
     }
   }
 
   return opts.next({
     ctx: {
+      agentModel: new AgentModel(ctx.serverDB, ctx.userId, wsId),
+      workspaceUserSettingsModel: wsId
+        ? new WorkspaceUserSettingsModel(ctx.serverDB, ctx.userId, wsId)
+        : undefined,
       deviceModel,
       userId: ctx.userId,
       workspaceId: wsId,
     },
   });
 });
+
+const deviceWritableProcedure = deviceProcedure.use(requireWorkspaceRole('member'));
+
+// Content and Git RPCs use three existing input names for the approved directory.
+const approvedDirectoryProcedure = (field: 'path' | 'root' | 'scope') =>
+  deviceProcedure.use(async (opts) => {
+    const input = z
+      .object({ deviceId: z.string(), [field]: z.string() })
+      .parse(await opts.getRawInput());
+    await assertWorkspaceRootApproved(
+      opts.ctx.deviceModel,
+      input.deviceId,
+      input[field],
+      opts.ctx.workspaceId,
+    );
+    return opts.next();
+  });
+const devicePathProcedure = approvedDirectoryProcedure('path').input(
+  z.object({ deviceId: z.string(), path: z.string() }),
+);
+const deviceScopeProcedure = approvedDirectoryProcedure('scope');
+const deviceRootProcedure = approvedDirectoryProcedure('root');
+const deviceGitProcedure = devicePathProcedure.use(async (opts) => {
+  await assertWorkspaceGitRootApproved(opts.ctx.deviceModel, {
+    ...opts.input,
+    userId: opts.ctx.userId,
+    workspaceId: opts.ctx.workspaceId,
+  });
+  return opts.next();
+});
+const devicePathWritableProcedure = devicePathProcedure
+  .use(requireWorkspaceRole('member'))
+  .use(async (opts) => {
+    await assertWorkspaceGitRootApproved(opts.ctx.deviceModel, {
+      ...opts.input,
+      userId: opts.ctx.userId,
+      workspaceId: opts.ctx.workspaceId,
+    });
+    return opts.next();
+  });
 
 // Personal metadata is owned by the authenticated user, independently of the
 // active workspace selector carried by the Settings UI or CLI client.
@@ -181,7 +244,7 @@ const deviceMcpFailure = (error: string | undefined): never => {
  * their personal row or a workspace row they can see. Without it a caller
  * could aim MCP probe/call traffic at a deviceId they should not address.
  */
-const deviceMcpProcedure = deviceProcedure.use(async (opts) => {
+const deviceMcpProcedure = deviceWritableProcedure.use(async (opts) => {
   const { ctx } = opts;
   const raw = (await opts.getRawInput()) as { deviceId?: unknown } | undefined;
   if (typeof raw?.deviceId !== 'string' || !raw.deviceId) {
@@ -207,9 +270,16 @@ const deviceMcpProcedure = deviceProcedure.use(async (opts) => {
  */
 const workspaceFileProcedure = deviceProcedure.input(workspaceFileInput).use(async (opts) => {
   const { deviceId, workingDirectory } = workspaceFileInput.parse(await opts.getRawInput());
-  await assertWorkspaceRootApproved(opts.ctx.deviceModel, deviceId, workingDirectory);
+  await assertWorkspaceRootApproved(
+    opts.ctx.deviceModel,
+    deviceId,
+    workingDirectory,
+    opts.ctx.workspaceId,
+  );
   return opts.next();
 });
+
+const workspaceFileWritableProcedure = workspaceFileProcedure.use(requireWorkspaceRole('member'));
 
 export const deviceRouter = router({
   /**
@@ -217,7 +287,7 @@ export const deviceRouter = router({
    * on the given device. Dispatches a `checkPlatformCapability` tool call to
    * the device via the gateway and waits up to 5 s for a response.
    */
-  checkCapability: deviceProcedure
+  checkCapability: deviceWritableProcedure
     .input(
       z.object({
         deviceId: z.string(),
@@ -263,30 +333,16 @@ export const deviceRouter = router({
    * returns an empty map plus the error so the client can distinguish
    * "nothing installed" from "scan failed".
    */
-  scanAgents: deviceProcedure
+  scanAgents: deviceWritableProcedure
     .input(z.object({ deviceId: z.string() }))
     .query(
       async ({ ctx, input }): Promise<{ agents: HeterogeneousAgentScanMap; error?: string }> => {
-        const result = await deviceGateway.executeToolCall(
-          { deviceId: input.deviceId, userId: ctx.userId, workspaceId: ctx.workspaceId },
-          {
-            apiName: 'scanHeterogeneousAgents',
-            arguments: JSON.stringify({}),
-            identifier: 'local',
-          },
-          SCAN_TIMEOUT_MS,
-        );
-
-        if (!result.success) {
-          return { agents: {}, error: result.error ?? 'Device tool call failed' };
-        }
-
-        try {
-          const parsed = JSON.parse(result.content) as { agents?: HeterogeneousAgentScanMap };
-          return { agents: parsed.agents ?? {} };
-        } catch {
-          return { agents: {}, error: 'Invalid response from device' };
-        }
+        const { agents, error } = await scanDeviceAgents(ctx.serverDB, {
+          deviceId: input.deviceId,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
+        return { agents, ...(error ? { error } : {}) };
       },
     ),
 
@@ -296,7 +352,7 @@ export const deviceRouter = router({
    * separate, differently-cadenced SWR hooks. Return `null` when offline / the
    * directory isn't a git repo.
    */
-  gitBranch: deviceProcedure
+  gitBranch: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.gitBranch({
@@ -308,7 +364,7 @@ export const deviceRouter = router({
       return result ?? null;
     }),
 
-  gitLinkedPullRequest: deviceProcedure
+  gitLinkedPullRequest: deviceGitProcedure
     .input(
       z.object({
         branch: z.string(),
@@ -329,7 +385,7 @@ export const deviceRouter = router({
       return result ?? null;
     }),
 
-  gitWorkingTreeStatus: deviceProcedure
+  gitWorkingTreeStatus: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.gitWorkingTreeStatus({
@@ -341,7 +397,7 @@ export const deviceRouter = router({
       return result ?? null;
     }),
 
-  gitAheadBehind: deviceProcedure
+  gitAheadBehind: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.gitAheadBehind({
@@ -377,7 +433,7 @@ export const deviceRouter = router({
       return result ?? null;
     }),
 
-  listHeterogeneousAgentPermissions: deviceProcedure
+  listHeterogeneousAgentPermissions: deviceWritableProcedure
     .input(
       z.object({
         args: z.array(z.string()).optional(),
@@ -397,7 +453,7 @@ export const deviceRouter = router({
     ),
 
   /** Query a heterogeneous CLI's model catalog on the device that will execute the agent. */
-  listHeterogeneousAgentModels: deviceProcedure
+  listHeterogeneousAgentModels: deviceWritableProcedure
     .input(
       z.object({
         args: z.array(z.string()).optional(),
@@ -406,6 +462,8 @@ export const deviceRouter = router({
         deviceId: z.string(),
         env: z.record(z.string(), z.string()).optional(),
         type: z.enum([
+          'claude-code',
+          'codex',
           'codebuddy',
           'cursor',
           'droid',
@@ -436,7 +494,7 @@ export const deviceRouter = router({
    * remote device, via the device's `listGitWorktrees` RPC. Lets the web/remote
    * worktree picker mirror the local desktop's, populated over IPC.
    */
-  listGitWorktrees: deviceProcedure
+  listGitWorktrees: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.listGitWorktrees({
@@ -453,7 +511,7 @@ export const deviceRouter = router({
    * `listGitBranches` RPC. Lets the web/remote branch switcher populate the same
    * dropdown the local desktop renders over IPC.
    */
-  listGitBranches: deviceProcedure
+  listGitBranches: deviceGitProcedure
     .input(
       z.object({
         deviceId: z.string(),
@@ -474,7 +532,7 @@ export const deviceRouter = router({
    * Checkout (or create) a branch in a directory on a remote device, via the
    * device's `checkoutGitBranch` RPC.
    */
-  checkoutGitBranch: deviceProcedure
+  checkoutGitBranch: devicePathWritableProcedure
     .input(
       z.object({
         branch: z.string(),
@@ -498,7 +556,7 @@ export const deviceRouter = router({
    * Rename a branch in a directory on a remote device, via the device's
    * `renameGitBranch` RPC.
    */
-  renameGitBranch: deviceProcedure
+  renameGitBranch: devicePathWritableProcedure
     .input(
       z.object({
         deviceId: z.string(),
@@ -522,7 +580,7 @@ export const deviceRouter = router({
    * Delete a branch in a directory on a remote device, via the device's
    * `deleteGitBranch` RPC.
    */
-  deleteGitBranch: deviceProcedure
+  deleteGitBranch: devicePathWritableProcedure
     .input(
       z.object({
         branch: z.string(),
@@ -544,7 +602,7 @@ export const deviceRouter = router({
    * Remove a worktree in a directory's repository on a remote device,
    * via the device's `removeGitWorktree` RPC.
    */
-  removeGitWorktree: deviceProcedure
+  removeGitWorktree: devicePathWritableProcedure
     .input(
       z.object({
         deviceId: z.string(),
@@ -552,15 +610,21 @@ export const deviceRouter = router({
         worktreePath: z.string(),
       }),
     )
-    .mutation(async ({ ctx, input }) =>
-      deviceGateway.removeGitWorktree({
+    .mutation(async ({ ctx, input }) => {
+      await assertWorkspaceRootApproved(
+        ctx.deviceModel,
+        input.deviceId,
+        input.worktreePath,
+        ctx.workspaceId,
+      );
+      return deviceGateway.removeGitWorktree({
         deviceId: input.deviceId,
         path: input.path,
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
         worktreePath: input.worktreePath,
-      }),
-    ),
+      });
+    }),
 
   /**
    * Add a linked worktree on a fresh branch in a directory's repository on a
@@ -571,7 +635,7 @@ export const deviceRouter = router({
    * crafted web call can't ask the device to check out at an arbitrary absolute
    * path — the branch is folded to `-` in the folder name, so it can't traverse.
    */
-  addGitWorktree: deviceProcedure
+  addGitWorktree: devicePathWritableProcedure
     .input(
       z.object({
         branch: z.string(),
@@ -579,22 +643,29 @@ export const deviceRouter = router({
         path: z.string(),
       }),
     )
-    .mutation(async ({ ctx, input }) =>
-      deviceGateway.addGitWorktree({
+    .mutation(async ({ ctx, input }) => {
+      const worktreePath = deriveWorktreePath(input.path, input.branch);
+      await assertWorkspaceRootApproved(
+        ctx.deviceModel,
+        input.deviceId,
+        worktreePath,
+        ctx.workspaceId,
+      );
+      return deviceGateway.addGitWorktree({
         branch: input.branch,
         deviceId: input.deviceId,
         path: input.path,
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
-        worktreePath: deriveWorktreePath(input.path, input.branch),
-      }),
-    ),
+        worktreePath,
+      });
+    }),
 
   /**
    * Pull (`--ff-only`) the current branch of a directory on a remote device, via
    * the device's `pullGitBranch` RPC.
    */
-  pullGitBranch: deviceProcedure
+  pullGitBranch: devicePathWritableProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .mutation(async ({ ctx, input }) =>
       deviceGateway.pullGitBranch({
@@ -609,7 +680,7 @@ export const deviceRouter = router({
    * Push the current branch of a directory on a remote device, via the device's
    * `pushGitBranch` RPC.
    */
-  pushGitBranch: deviceProcedure
+  pushGitBranch: devicePathWritableProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .mutation(async ({ ctx, input }) =>
       deviceGateway.pushGitBranch({
@@ -625,7 +696,7 @@ export const deviceRouter = router({
    * via the device's `getGitWorkingTreePatches` RPC. Powers the web/remote Review
    * panel's unstaged diff. Returns `null` when offline / not a git repo.
    */
-  getGitWorkingTreePatches: deviceProcedure
+  getGitWorkingTreePatches: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.getGitWorkingTreePatches({
@@ -641,7 +712,7 @@ export const deviceRouter = router({
    * Branch diff (current branch vs base ref) per-file patches for a directory on
    * a remote device, via the device's `getGitBranchDiff` RPC.
    */
-  getGitBranchDiff: deviceProcedure
+  getGitBranchDiff: deviceGitProcedure
     .input(z.object({ baseRef: z.string().optional(), deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.getGitBranchDiff({
@@ -658,7 +729,7 @@ export const deviceRouter = router({
    * List the remote branches of a directory on a remote device, via the device's
    * `listGitRemoteBranches` RPC. Populates the Review base-ref picker.
    */
-  listGitRemoteBranches: deviceProcedure
+  listGitRemoteBranches: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.listGitRemoteBranches({
@@ -675,7 +746,7 @@ export const deviceRouter = router({
    * device, via the device's `getGitWorkingTreeFiles` RPC. Powers the Files tab's
    * git-status overlay. Returns `null` when offline / not a git repo.
    */
-  getGitWorkingTreeFiles: deviceProcedure
+  getGitWorkingTreeFiles: deviceGitProcedure
     .input(z.object({ deviceId: z.string(), path: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.getGitWorkingTreeFiles({
@@ -692,7 +763,7 @@ export const deviceRouter = router({
    * device's `getProjectFileIndex` RPC. Powers the Files tab's tree. Returns
    * `null` when offline.
    */
-  getProjectFileIndex: deviceProcedure
+  getProjectFileIndex: deviceScopeProcedure
     .input(z.object({ deviceId: z.string(), scope: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.getProjectFileIndex({
@@ -701,6 +772,13 @@ export const deviceRouter = router({
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
       });
+      if (result)
+        await assertWorkspaceRootApproved(
+          ctx.deviceModel,
+          input.deviceId,
+          result.root,
+          ctx.workspaceId,
+        );
       return result ?? null;
     }),
 
@@ -709,7 +787,7 @@ export const deviceRouter = router({
    * tree calls this when the user expands a directory the index collapsed
    * (a fully git-ignored folder). Returns `null` when offline.
    */
-  listProjectDirectory: deviceProcedure
+  listProjectDirectory: deviceRootProcedure
     .input(z.object({ deviceId: z.string(), relativePath: z.string(), root: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.listProjectDirectory({
@@ -766,7 +844,7 @@ export const deviceRouter = router({
    * Search project files on a remote device. The device performs the match and
    * returns only the result subtree needed by the UI.
    */
-  searchProjectFiles: deviceProcedure
+  searchProjectFiles: deviceScopeProcedure
     .input(
       z.object({
         changedOnly: z.boolean().optional(),
@@ -788,6 +866,13 @@ export const deviceRouter = router({
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
       });
+      if (result)
+        await assertWorkspaceRootApproved(
+          ctx.deviceModel,
+          input.deviceId,
+          result.root,
+          ctx.workspaceId,
+        );
       return result ?? null;
     }),
 
@@ -813,7 +898,7 @@ export const deviceRouter = router({
       });
     }),
 
-  copyAssetForPublish: workspaceFileProcedure
+  copyAssetForPublish: workspaceFileWritableProcedure
     .input(z.object({ from: z.string(), to: z.string() }))
     .mutation(async ({ ctx, input }) =>
       deviceGateway.copyAssetForPublish({
@@ -843,7 +928,7 @@ export const deviceRouter = router({
    * remote device, via the device's `listProjectSkills` RPC. Powers the
    * Resources tab's skills group in device mode. Returns `null` when offline.
    */
-  listProjectSkills: deviceProcedure
+  listProjectSkills: deviceScopeProcedure
     .input(z.object({ deviceId: z.string(), scope: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await deviceGateway.listProjectSkills({
@@ -859,7 +944,7 @@ export const deviceRouter = router({
    * Revert a single file in a directory on a remote device, via the device's
    * `revertGitFile` RPC.
    */
-  revertGitFile: deviceProcedure
+  revertGitFile: devicePathWritableProcedure
     .input(z.object({ deviceId: z.string(), filePath: z.string(), path: z.string() }))
     .mutation(async ({ ctx, input }) =>
       deviceGateway.revertGitFile({
@@ -875,7 +960,7 @@ export const deviceRouter = router({
    * Move files/folders within a directory on a remote device, via the device's
    * `moveLocalFiles` RPC. Powers the Files tree's drag-to-move in device mode.
    */
-  moveProjectFiles: workspaceFileProcedure
+  moveProjectFiles: workspaceFileWritableProcedure
     .input(
       z.object({
         items: z.array(z.object({ newPath: z.string(), oldPath: z.string() })),
@@ -895,7 +980,7 @@ export const deviceRouter = router({
    * Rename a single file/folder in a directory on a remote device, via the
    * device's `renameLocalFile` RPC.
    */
-  renameProjectFile: workspaceFileProcedure
+  renameProjectFile: workspaceFileWritableProcedure
     .input(
       z.object({
         newName: z.string(),
@@ -917,7 +1002,7 @@ export const deviceRouter = router({
    * Save edited content back to a file on a remote device, via the device's
    * `writeLocalFile` RPC. Powers remote save in the LocalFile editor.
    */
-  writeProjectFile: workspaceFileProcedure
+  writeProjectFile: workspaceFileWritableProcedure
     .input(
       z.object({
         content: z.string(),
@@ -958,7 +1043,7 @@ export const deviceRouter = router({
    * installed on the given device. Used to pre-fill the creation modal.
    * Returns an empty object on failure or when the platform has no profile.
    */
-  getAgentProfile: deviceProcedure
+  getAgentProfile: deviceWritableProcedure
     .input(
       z.object({
         deviceId: z.string(),
@@ -993,6 +1078,81 @@ export const deviceRouter = router({
     .input(z.object({ deviceId: z.string() }))
     .query(async ({ ctx, input }) => {
       return deviceGateway.queryDeviceSystemInfo(ctx.userId, input.deviceId, ctx.workspaceId);
+    }),
+
+  /** Agent settings and unbound admission share installed-runtime eligibility. */
+  listAgentCandidates: deviceProcedure
+    .input(z.object({ agentId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const agent = await ctx.agentModel.getAgentConfigById(input.agentId);
+      if (!agent) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+      const canManageDiscovery =
+        !ctx.workspaceId ||
+        (await canManageResourcePermission({
+          db: ctx.serverDB,
+          resourceId: agent.id,
+          resourceType: 'agent',
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+          meta: {
+            userId: agent.userId,
+            visibility: agent.visibility,
+            workspaceId: agent.workspaceId,
+          },
+        }));
+      if (!canManageDiscovery)
+        await assertCanUseWorkspaceAgent({
+          agentId: agent.id,
+          db: ctx.serverDB,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
+      const canManageAgent =
+        agent.userId === ctx.userId ||
+        (!!ctx.workspaceId &&
+          (await isResourceAuthorOrAdmin({
+            db: ctx.serverDB,
+            resourceType: 'agent',
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+            meta: {
+              userId: agent.userId,
+              visibility: agent.visibility,
+              workspaceId: agent.workspaceId,
+            },
+          })));
+      const preference = await ctx.workspaceUserSettingsModel?.getPreference();
+      const agencyConfig = resolveAgentAgencyConfig(
+        agent.agencyConfig,
+        preference?.agentDeviceOverrides?.[agent.id],
+        {
+          canManage: canManageAgent,
+          visibility: agent.visibility,
+          workspaceId: ctx.workspaceId,
+        },
+      );
+      const memberOverride = preference?.agentDeviceOverrides?.[agent.id];
+      const memberSelectedDeviceId =
+        memberOverride?.executionTarget === 'device' &&
+        memberOverride.boundDeviceId === agencyConfig?.boundDeviceId
+          ? memberOverride.boundDeviceId
+          : undefined;
+      const provider = agencyConfig?.heterogeneousProvider;
+      const type = provider?.type ?? 'orvilo';
+      return listAuthorizedDeviceCandidates(ctx.serverDB, ctx.userId, ctx.workspaceId, {
+        agentOwnerId: agent.userId,
+        includeCallerPersonalDevices: canSelectCallerPersonalDevice({
+          agencyConfig,
+          agentOwnerId: agent.userId,
+          canManageAgent,
+          userId: ctx.userId,
+          visibility: agent.visibility,
+          workspaceId: ctx.workspaceId,
+        }),
+        referencedDevices: [{ deviceId: memberSelectedDeviceId }],
+        requiredOperation: { kind: 'agent-run', adapter: type },
+        runtimeRequirement: { agentType: type, command: provider?.command },
+      });
     }),
 
   /**
@@ -1652,7 +1812,7 @@ export const deviceRouter = router({
       return result;
     }),
 
-  register: deviceProcedure
+  register: personalDeviceProcedure
     .input(
       z.object({
         adapterVersion: z.string().max(32).nullish(),

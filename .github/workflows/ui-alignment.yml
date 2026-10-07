@@ -7,6 +7,7 @@ on:
       - 'src/features/**'
       - 'src/app/globals.css'
       - 'tests/ui-alignment/**'
+      - 'scripts/ci/hoverFeedback*'
       - 'postcss.config.mjs'
       - 'package.json'
       - 'pnpm-workspace.yaml'
@@ -20,6 +21,7 @@ on:
       - 'src/features/**'
       - 'src/app/globals.css'
       - 'tests/ui-alignment/**'
+      - 'scripts/ci/hoverFeedback*'
       - 'postcss.config.mjs'
       - 'package.json'
       - 'pnpm-workspace.yaml'
@@ -53,12 +55,14 @@ jobs:
           name: auth-spa-${{ github.sha }}
           path: dist/auth/
           retention-days: 14
+      - name: Verify hover judge positive and negative controls
+        run: node --test scripts/ci/hoverFeedback.test.mjs
       - name: Typecheck browser tests
         run: pnpm exec node scripts/type-check.mjs tsgo --noEmit -p tests/ui-alignment/tsconfig.json
       - run: pnpm exec playwright install --with-deps chromium
       - name: Record tested revision
         run: git rev-parse HEAD > ui-alignment-revision.txt
-      - name: Measure production components in Chromium
+      - name: Measure geometry and required hover feedback in Chromium
         env:
           UI_ALIGNMENT_SHA: ${{ github.sha }}
         run: bun run test:ui-alignment

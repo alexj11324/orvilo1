@@ -2,14 +2,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
-import { canManageResourcePermission, getResourceMeta } from '@/server/services/resourcePermission';
+import {
+  canManageResourcePermission,
+  canPerformResourceAction,
+  getResourceMeta,
+} from '@/server/services/resourcePermission';
 
+import { isWorkspaceIssueAgentReadable } from '../_helpers/workspaceIssueRead';
 import { resourcePermissionRouter } from '../resourcePermission';
 
 // `vi.mock` is hoisted above the imports at runtime, so the mocks are active
 // when the router module is evaluated. Kept below the imports to satisfy
 // `import-x/first`.
 vi.mock('@/database/models/resourcePermission', () => ({ ResourcePermissionModel: vi.fn() }));
+vi.mock('../_helpers/workspaceIssueRead', () => ({
+  isWorkspaceIssueAgentReadable: vi.fn().mockResolvedValue(false),
+}));
 vi.mock('../_helpers/workspaceAgentGuard', () => ({
   getWorkspaceGroupVirtualAgentIds: vi.fn().mockResolvedValue([]),
 }));
@@ -18,6 +26,7 @@ vi.mock('@/server/services/resourcePermission', async (importOriginal) => {
   return {
     ...actual,
     canManageResourcePermission: vi.fn(),
+    canPerformResourceAction: vi.fn().mockResolvedValue(false),
     getResourceMeta: vi.fn(),
   };
 });
@@ -148,6 +157,42 @@ describe('resourcePermissionRouter.getGeneralAccess', () => {
       userId: 'user_member',
       workspaceId: 'ws_1',
     } as any);
+
+  it('projects actual Agent Use independently of management and legacy general access', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'user_creator',
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    });
+    canManageMock.mockResolvedValue(true);
+    vi.mocked(canPerformResourceAction).mockResolvedValue(false);
+    await expect(
+      caller().getGeneralAccess({ resourceId: 'agent-1', resourceType: 'agent' }),
+    ).resolves.toMatchObject({ canManage: true, canUseResource: false });
+    vi.mocked(canPerformResourceAction).mockResolvedValue(true);
+    canManageMock.mockResolvedValue(false);
+    await expect(
+      caller().getGeneralAccess({ resourceId: 'agent-1', resourceType: 'agent' }),
+    ).resolves.toMatchObject({ canManage: false, canUseResource: true });
+  });
+
+  it('reports read-only Use for a private Agent referenced by a readable workspace Issue', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'user_creator',
+      visibility: 'private',
+      workspaceId: 'ws_1',
+    });
+    canManageMock.mockResolvedValue(false);
+    vi.mocked(canPerformResourceAction).mockResolvedValue(false);
+    vi.mocked(isWorkspaceIssueAgentReadable).mockResolvedValue(true);
+    await expect(
+      caller().getGeneralAccess({ resourceId: 'agent-1', resourceType: 'agent' }),
+    ).resolves.toMatchObject({ canUseResource: false, canManage: false });
+    vi.mocked(isWorkspaceIssueAgentReadable).mockResolvedValue(false);
+    await expect(
+      caller().getGeneralAccess({ resourceId: 'agent-1', resourceType: 'agent' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
 
   // Regression: a member opening someone else's workspace page got
   // `view` from the resource default, and the editor renders `view` as
@@ -307,6 +352,19 @@ describe('resourcePermissionRouter collaborators', () => {
     });
   });
 
+  it('can restore a revoked creator Agent Use row', async () => {
+    const db = dbWithResults([{ userId: 'user_creator' }]);
+    await caller(db).addCollaborators({
+      accessLevel: 'use',
+      resourceId: 'agent-1',
+      resourceType: 'agent',
+      userIds: ['user_creator'],
+    });
+    expect(collaboratorModelMock.upsertCollaborators).toHaveBeenCalledWith(
+      expect.objectContaining({ userIds: ['user_creator'], accessLevel: 'use' }),
+    );
+  });
+
   it('locks the membership rows it checks, inside the transaction that writes the grants', async () => {
     const db = dbWithResults([{ userId: 'member_a' }]);
 
@@ -406,6 +464,24 @@ describe('resourcePermissionRouter collaborators', () => {
     expect(result[0].user?.fullName).toBe('Member A');
     // A deleted account keeps the grant row visible so it can still be revoked.
     expect(result[1].user).toBeNull();
+  });
+
+  it('lists only selected active Agent Use members', async () => {
+    collaboratorModelMock.listCollaborators.mockResolvedValue([
+      { accessLevel: 'view', userId: 'viewer' },
+      { accessLevel: 'use', userId: 'active' },
+      { accessLevel: 'edit', userId: 'departed' },
+    ]);
+    const db = dbWithResults([{ userId: 'active' }], [{ id: 'active', fullName: 'Active member' }]);
+    await expect(
+      caller(db).listCollaborators({ resourceId: 'agent-1', resourceType: 'agent' }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        userId: 'active',
+        accessLevel: 'use',
+        user: expect.objectContaining({ fullName: 'Active member' }),
+      }),
+    ]);
   });
 
   it('removes one member grant', async () => {

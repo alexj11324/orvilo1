@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useConversationStore } from '@/features/Conversation/store';
@@ -478,6 +478,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
         role="button"
         tabIndex={0}
         className={cx(
+          buttonHoverFeedback,
           'flex flex-row items-center gap-2',
           cx(styles.dirItem, isActive && styles.dirItemActive),
         )}

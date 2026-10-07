@@ -27,7 +27,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import InstantSwitch from '@/components/InstantSwitch';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSandboxCapability';
@@ -326,9 +326,13 @@ const OptionRow = memo<OptionRowProps>(
     return (
       <div
         aria-current={active ? 'true' : undefined}
-        className={cx(styles.option, disabled && styles.optionDisabled)}
         role={disabled ? 'group' : 'button'}
         tabIndex={disabled ? -1 : 0}
+        className={cx(
+          !disabled && buttonHoverFeedback,
+          styles.option,
+          disabled && styles.optionDisabled,
+        )}
         onClick={() => {
           if (!disabled) onClick();
         }}

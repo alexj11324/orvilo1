@@ -144,8 +144,10 @@ vi.mock('../features/TaskPriorityTag', () => ({
 }));
 
 vi.mock('../features/IssueStatusPicker', () => ({
-  default: ({ children }: { children?: ReactNode }) => (
-    <span data-testid="issue-status-picker">{children ?? 'status'}</span>
+  default: ({ children, attentionReason }: { children?: ReactNode; attentionReason?: string }) => (
+    <span data-attention-reason={attentionReason} data-testid="issue-status-picker">
+      {children ?? 'status'}
+    </span>
   ),
 }));
 
@@ -289,12 +291,13 @@ describe('TaskSubtasks', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/task/T-child/child-task');
   });
 
-  it('renders the read-only execution badge when a subtask has an active topic run', () => {
+  it('keeps one Issue status marker when a subtask has an active topic run', () => {
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {
         assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
         identifier: 'T-child',
         name: 'Child task',
+        attentionReason: 'needs_input',
         runningTopic: { id: 'topic-running', operationId: 'op-running' },
         status: 'running',
       },
@@ -302,7 +305,12 @@ describe('TaskSubtasks', () => {
 
     render(<TaskSubtasks />);
 
-    expect(screen.getByTestId('execution-badge')).toBeTruthy();
+    expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('issue-status-picker')).toHaveLength(1);
+    expect(screen.getByTestId('issue-status-picker')).toHaveAttribute(
+      'data-attention-reason',
+      'needs_input',
+    );
   });
 });
 

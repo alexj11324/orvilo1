@@ -1,4 +1,4 @@
-import { useEditor } from '@lobehub/editor/react';
+import { Editor, useEditor } from '@lobehub/editor/react';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,11 +10,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { seedAttachments } from '@/features/EditorCanvas/attachmentRegistry';
+import { normalizeDescriptionReferenceLinks } from '@/features/EditorCanvas/descriptionReferences/actions';
+import { descriptionReferenceStyles } from '@/features/EditorCanvas/descriptionReferences/DescriptionReferenceChip';
+import { DescriptionReferenceNormalizationPlugin } from '@/features/EditorCanvas/descriptionReferences/DescriptionReferenceNormalizationPlugin';
+import { createDescriptionReferenceSchemaRules } from '@/features/EditorCanvas/descriptionReferences/schemaRules';
+import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { useRegisterTaskDescriptionEditor } from './TaskDescriptionReferenceProvider';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import { useAttachInstructionFiles } from './useAttachInstructionFiles';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
@@ -43,6 +49,20 @@ const TaskInstruction = memo(() => {
   const persistedFiles = useTaskDetailSelector(taskDetailSelectors.taskFiles);
   const updateTask = useTaskStore((s) => s.updateTask);
   const editor = useEditor();
+  const appOrigin = useAppOrigin();
+  const linkSchemaRules = useMemo(
+    () => createDescriptionReferenceSchemaRules(appOrigin),
+    [appOrigin],
+  );
+  const referencePlugins = useMemo(
+    () => [Editor.withProps(DescriptionReferenceNormalizationPlugin, { appOrigin })],
+    [appOrigin],
+  );
+  const normalizeReferences = useCallback(
+    (instance: NonNullable<typeof editor>) =>
+      normalizeDescriptionReferenceLinks(instance, appOrigin),
+    [appOrigin],
+  );
 
   // Collaborative edit lock for workspace tasks (same model as pages): read-only
   // when another member is editing; acquired implicitly on the first edit.
@@ -69,6 +89,10 @@ const TaskInstruction = memo(() => {
   // Read-only until the lock resolves, so the user can't start typing on a task
   // that turns out to be locked and get bounced mid-edit.
   const editable = canEditTask && !lock.lockedByOther && !lock.pending;
+  useRegisterTaskDescriptionEditor(editor, editable, appOrigin);
+  useEffect(() => {
+    if (editor) normalizeReferences(editor);
+  }, [editor, instructionRevision, normalizeReferences]);
   const lockHolder = useAuthorInfo(lock.lockedByOther ? (lock.holderId ?? undefined) : undefined);
 
   // The attach affordance shares the same edit capability as the editor body:
@@ -148,18 +172,21 @@ const TaskInstruction = memo(() => {
       >
         <div onFocus={handleFocus}>
           <EditorCanvas
+            className={descriptionReferenceStyles.editor}
             contentRevision={instructionRevision}
             // Linear's issue body runs 15px at a slightly darker weight than
             // the editor's 16/400 default — the description reads as prose,
             // not as a comment.
             contentStyle={{ fontSize: 15, fontWeight: 450 }}
-            disabled={!canEditTask}
-            editable={!lock.lockedByOther && !lock.pending}
+            editable={editable}
             editor={editor}
             editorData={editorData}
             entityId={taskId}
+            extraPlugins={referencePlugins}
+            linkSchemaRules={linkSchemaRules}
             placeholder={t('taskDetail.instructionPlaceholder')}
             onContentChange={handleContentChange}
+            onInit={normalizeReferences}
           />
         </div>
       </CollapsibleContent>

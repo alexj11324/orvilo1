@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import type { tasks } from '../../schemas';
 import {
+  agentOperations,
   agents,
   projectMembers,
   projectMilestones,
@@ -20,6 +21,7 @@ import {
   teamCycles,
   teamMembers,
   teams,
+  topics,
   users,
   workspaceMembers,
   workspaces,
@@ -52,6 +54,7 @@ const otherUserId = 'work-query-other';
 const workspaceId = 'work-query-ws';
 
 beforeEach(async () => {
+  await serverDB.delete(tasksTable);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
   await serverDB.insert(workspaces).values({
@@ -60,20 +63,103 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'work-query-ws',
   });
+  await serverDB
+    .insert(workspaceMembers)
+    .values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ])
+    .onConflictDoNothing();
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasksTable);
   await serverDB.delete(users);
 });
 
 const createTask = async (owner: string, values: Partial<typeof tasks.$inferInsert> = {}) => {
   const model = new TaskModel(serverDB, owner, workspaceId);
-  return model.create({ instruction: values.instruction ?? 'Do the work', ...values });
+  const category = values.workflowCategory;
+  if (category !== 'in_progress' && category !== 'in_review')
+    return model.create({ instruction: values.instruction ?? 'Do the work', ...values });
+
+  // Disposable relational query fixtures obey the active-entry invariant.
+  // This establishes correlation for grouping tests, not real-Agent acceptance.
+  const agentId = values.assigneeAgentId ?? `wq-active-agent_${owner}`;
+  await serverDB
+    .insert(agents)
+    .values({ id: agentId, slug: agentId, userId: owner })
+    .onConflictDoNothing();
+  const task = await model.create({
+    instruction: values.instruction ?? 'Do the work',
+    ...values,
+    assigneeAgentId: agentId,
+    assigneeUserId: values.assigneeUserId ?? owner,
+    workflowCategory: 'todo',
+  });
+  const topicId = `wq-topic_${task.id}`,
+    operationId = `wq-op_${task.id}`,
+    dispatchId = `wq-active_${task.id}`;
+  await serverDB.insert(topics).values({
+    id: topicId,
+    userId: owner,
+    agentId,
+    workspaceId,
+    metadata: { heteroCurrentMsgId: { operationId, msgId: 'producer' } },
+  });
+  await serverDB.insert(agentOperations).values({
+    id: operationId,
+    taskId: task.id,
+    topicId,
+    agentId,
+    userId: owner,
+    workspaceId,
+    status: 'running',
+    appContext: { dispatchId, dispatchFence: 1, executionGeneration: 1 },
+  });
+  await serverDB.insert(taskDispatches).values({
+    id: dispatchId,
+    taskId: task.id,
+    agentId,
+    operationId,
+    generation: 1,
+    fence: 1,
+    phase: 'running',
+    taskRevision: 1,
+    policyRevision: 1,
+    requirementRevision: 1,
+    idempotencyKey: dispatchId,
+    requestedBy: `manual:${owner}`,
+    workspaceId,
+  });
+  await serverDB.insert(taskTopics).values({
+    taskId: task.id,
+    topicId,
+    userId: owner,
+    workspaceId,
+    seq: 1,
+    operationId,
+    dispatchId,
+    executionGeneration: 1,
+    dispatchFence: 1,
+    runState: 'running',
+  });
+  await model.update(task.id, { currentTopicId: topicId, executionGeneration: 1 });
+  return (await model.update(task.id, { workflowCategory: category }))!;
 };
 
 // `tasks.status` is retired — a live run is an active dispatch row.
-const runDispatchFor = async (taskId: string, phase: TaskDispatchPhase = 'running') =>
-  serverDB.insert(taskDispatches).values({
+const runDispatchFor = async (taskId: string, phase: TaskDispatchPhase = 'running') => {
+  const [correlated] = await serverDB
+    .select({ id: taskDispatches.id })
+    .from(taskDispatches)
+    .where(eq(taskDispatches.id, `wq-active_${taskId}`));
+  if (correlated)
+    return serverDB
+      .update(taskDispatches)
+      .set({ phase })
+      .where(eq(taskDispatches.id, correlated.id));
+  return serverDB.insert(taskDispatches).values({
     generation: 1,
     id: `wq-disp_${taskId}_${phase}`,
     idempotencyKey: `wq:${taskId}:${phase}`,
@@ -85,6 +171,7 @@ const runDispatchFor = async (taskId: string, phase: TaskDispatchPhase = 'runnin
     taskRevision: 1,
     workspaceId,
   });
+};
 
 describe('applyWorkQueryLayout', () => {
   it('defaults a list to server status groups and keeps an explicit none flat', () => {
@@ -214,7 +301,43 @@ describe('WorkQueryModel', () => {
     });
   });
 
-  it('hydrates the parent breadcrumb only for parents the reader can see', async () => {
+  it('projects dispatch-only work as having no live executor through every task reader', async () => {
+    await serverDB.insert(agents).values({ id: 'agt_projection', slug: 'projection', userId });
+    const task = await createTask(userId, {
+      assigneeAgentId: 'agt_projection',
+      assigneeUserId: userId,
+      workflowCategory: 'todo',
+    });
+    await runDispatchFor(task.id);
+
+    const taskModel = new TaskModel(serverDB, userId, workspaceId);
+    expect(await taskModel.findById(task.id)).toMatchObject({ hasLiveExecutor: false });
+    expect((await taskModel.list()).tasks.find((row) => row.id === task.id)).toMatchObject({
+      hasLiveExecutor: false,
+    });
+    for (const groupBy of ['assignee', 'agent', 'member', 'priority'] as const) {
+      const groups = await taskModel.groupList({ groupBy });
+      expect(
+        groups.flatMap((group) => group.tasks).find((row) => row.id === task.id),
+      ).toMatchObject({
+        hasLiveExecutor: false,
+      });
+    }
+
+    const workQuery = new WorkQueryModel(serverDB, userId, workspaceId);
+    for (const groupBy of ['none', 'workflowCategory', 'assignee'] as const) {
+      const result = await workQuery.queryTasks({
+        query: { entityType: 'task', groupBy, layout: 'list', schemaVersion: 1 },
+      });
+      const rows = [
+        ...(result.tasks ?? []),
+        ...(result.groups ?? []).flatMap((group) => group.tasks),
+      ];
+      expect(rows.find((row) => row.id === task.id)).toMatchObject({ hasLiveExecutor: false });
+    }
+  });
+
+  it('hydrates workspace parent breadcrumbs regardless of legacy private visibility', async () => {
     const parent = await createTask(userId, { name: 'Handoff parent' });
     const hidden = await createTask(otherUserId, { name: 'Secret parent', visibility: 'private' });
     const child = await createTask(userId, {
@@ -249,7 +372,10 @@ describe('WorkQueryModel', () => {
         identifier: parent.identifier,
         name: 'Handoff parent',
       });
-      expect(rows.get(orphaned.id)?.parent).toBeNull();
+      expect(rows.get(orphaned.id)?.parent).toEqual({
+        identifier: hidden.identifier,
+        name: 'Secret parent',
+      });
       expect(rows.get(root.id)?.parent).toBeNull();
     }
   });
@@ -1187,7 +1313,7 @@ describe('WorkQueryModel', () => {
     expect(result.groups!.map((group) => group.key)).not.toContain('paused');
   });
 
-  it('keeps terminal rows and unreadable downstreams out of attention buckets', async () => {
+  it('keeps terminal rows out of attention while shared workspace downstreams promote blockers', async () => {
     const model = new WorkQueryModel(serverDB, userId, workspaceId);
     // A completed urgent issue is not an "Urgent issue" — terminal rows stay
     // in their workflow bucket.
@@ -1211,8 +1337,7 @@ describe('WorkQueryModel', () => {
       name: 'Still open',
       status: 'backlog',
     });
-    // A blocker whose only downstream is invisible to the caller must NOT be
-    // promoted — an unreadable task cannot change what the caller sees.
+    // Legacy private workspace downstreams are readable and contribute blocking attention.
     const hiddenDownstream = await createTask(otherUserId, {
       name: 'Other member private task',
       status: 'backlog',
@@ -1248,15 +1373,16 @@ describe('WorkQueryModel', () => {
     const byKey = new Map(result.groups!.map((group) => [group.key, group]));
 
     expect(byKey.get('urgent')?.total ?? 0).toBe(0);
-    expect(byKey.get('blocking')?.total ?? 0).toBe(0);
+    expect(byKey.get('blocking')?.total ?? 0).toBe(1);
+    expect(byKey.get('blocking')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
     expect(
       byKey
         .get('done')
         ?.tasks.map((task) => task.id)
         .sort(),
     ).toEqual([doneBlocker.id, urgentDone.id].sort());
-    expect(byKey.get('in_progress')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
-    // The private downstream row itself never leaks into the caller's list.
+    expect(byKey.get('in_progress')?.tasks.map((task) => task.id) ?? []).toEqual([]);
+    // The downstream belongs to the other member and stays outside the assigned filter.
     expect(result.groups!.flatMap((group) => group.tasks.map((task) => task.id))).not.toContain(
       hiddenDownstream.id,
     );
@@ -1323,7 +1449,7 @@ describe('WorkQueryModel', () => {
     expect(byId.get('apr_pr_evil')?.openUrl ?? null).toBeNull();
   });
 
-  it('does not list a private team or its public-visibility tasks to a non-member', async () => {
+  it('reads private-team Issues through workspace membership', async () => {
     await serverDB.insert(teams).values({
       createdByUserId: userId,
       id: 'wq-private-team',
@@ -1362,10 +1488,8 @@ describe('WorkQueryModel', () => {
     expect(memberHits.tasks.map((row) => row.id).sort()).toEqual([assigned.id, secret.id].sort());
 
     const outsiderHits = await asOutsider.queryTasks({ query: teamFilter });
-    expect(outsiderHits.tasks).toEqual([]);
-    expect(outsiderHits.total).toBe(0);
-    expect(outsiderHits.tasks.map((row) => row.name)).not.toContain('Private-team work');
-    expect(outsiderHits.tasks.map((row) => row.teamId)).not.toContain('wq-private-team');
+    expect(outsiderHits.tasks.map((row) => row.id).sort()).toEqual([assigned.id, secret.id].sort());
+    expect(outsiderHits.total).toBe(2);
 
     const outsiderIsNotNull = await asOutsider.queryTasks({
       query: {
@@ -1374,8 +1498,8 @@ describe('WorkQueryModel', () => {
         schemaVersion: 1,
       },
     });
-    expect(outsiderIsNotNull.tasks.map((row) => row.id)).not.toContain(secret.id);
-    expect(outsiderIsNotNull.tasks.map((row) => row.teamId)).not.toContain('wq-private-team');
+    expect(outsiderIsNotNull.tasks.map((row) => row.id)).toContain(secret.id);
+    expect(outsiderIsNotNull.tasks.map((row) => row.teamId)).toContain('wq-private-team');
 
     const assignedAnyway = await asOutsider.queryTasks({
       query: myWorkQueryForMode('assigned'),
@@ -1385,15 +1509,17 @@ describe('WorkQueryModel', () => {
     const outsiderAll = await asOutsider.queryTasks({
       query: { entityType: 'task', schemaVersion: 1 },
     });
-    expect(outsiderAll.tasks.map((row) => row.id)).not.toContain(secret.id);
-    expect(outsiderAll.tasks.map((row) => row.name)).not.toContain('Private-team work');
-    expect((await asOutsider.searchTasks('Private-team work')).map((row) => row.name)).toEqual([]);
+    expect(outsiderAll.tasks.map((row) => row.id)).toContain(secret.id);
+    expect(outsiderAll.tasks.map((row) => row.name)).toContain('Private-team work');
+    expect((await asOutsider.searchTasks('Private-team work')).map((row) => row.name)).toEqual([
+      'Private-team work',
+    ]);
     expect(
       (await asOutsider.searchTasks('Assigned on the private team')).map((row) => row.name),
     ).toEqual(['Assigned on the private team']);
   });
 
-  it('still finds a readable assigned task by title while a guessed teamId stays empty', async () => {
+  it('finds all workspace Issues by title and team filter independently of Team visibility', async () => {
     await serverDB.insert(teams).values({
       createdByUserId: userId,
       id: 'wq-hidden-team',
@@ -1421,7 +1547,9 @@ describe('WorkQueryModel', () => {
     });
 
     const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
-    expect((await outsider.searchTasks('Fleet briefing')).map((row) => row.name)).toEqual([]);
+    expect((await outsider.searchTasks('Fleet briefing')).map((row) => row.name)).toEqual([
+      'Fleet briefing',
+    ]);
     expect((await outsider.searchTasks('Assigned fleet note')).map((row) => row.name)).toEqual([
       'Assigned fleet note',
     ]);
@@ -1433,9 +1561,11 @@ describe('WorkQueryModel', () => {
         schemaVersion: 1,
       },
     });
-    expect(byTeam.tasks).toEqual([]);
-    expect(byTeam.total).toBe(0);
-    expect(byTeam.tasks.map((row) => row.teamId)).not.toContain('wq-hidden-team');
+    expect(byTeam.tasks.map((row) => row.name).sort()).toEqual([
+      'Assigned fleet note',
+      'Fleet briefing',
+    ]);
+    expect(byTeam.total).toBe(2);
   });
 
   it('does not treat integration-imported tasks as created by the installer', async () => {
@@ -1578,10 +1708,13 @@ describe('WorkQueryModel', () => {
   });
 
   it('hides private projects from search and lists unless the viewer has a grant', async () => {
-    await serverDB.insert(workspaceMembers).values([
-      { role: 'owner', userId, workspaceId },
-      { role: 'member', userId: otherUserId, workspaceId },
-    ]);
+    await serverDB
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ])
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-public-project',
@@ -1628,7 +1761,10 @@ describe('WorkQueryModel', () => {
   });
 
   it('boards projects by real status columns with per-column totals', async () => {
-    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId })
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-board-a',
@@ -1673,7 +1809,10 @@ describe('WorkQueryModel', () => {
   });
 
   it('pages a status-grouped project list by group and rejects a flat cursor', async () => {
-    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId })
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-list-a',
@@ -1730,7 +1869,10 @@ describe('WorkQueryModel', () => {
   });
 
   it('honours project sort by name and rejects a task-only groupBy', async () => {
-    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId })
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       { id: 'wq-sort-a', identifier: 'WSA', name: 'Zulu', userId, workspaceId },
       { id: 'wq-sort-b', identifier: 'WSB', name: 'Alpha', userId, workspaceId },
@@ -1754,10 +1896,13 @@ describe('WorkQueryModel', () => {
   });
 
   it('filters projects by ownerUserId and visibility predicates', async () => {
-    await serverDB.insert(workspaceMembers).values([
-      { role: 'owner', userId, workspaceId },
-      { role: 'member', userId: otherUserId, workspaceId },
-    ]);
+    await serverDB
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ])
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-filter-mine',
@@ -1921,10 +2066,13 @@ describe('WorkQueryModel', () => {
   });
 
   it('project options search server-side, page by cursor, and hydrate by id (VW04)', async () => {
-    await serverDB.insert(workspaceMembers).values([
-      { role: 'owner', userId, workspaceId },
-      { role: 'member', userId: otherUserId, workspaceId },
-    ]);
+    await serverDB
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ])
+      .onConflictDoNothing();
     // Distinct updatedAt values keep the keyset cursor deterministic on real
     // Postgres (timestamps are µs-precise; equal timestamps would rely on the
     // id tie-breaker hitting an eq-boundary).
@@ -2022,7 +2170,7 @@ describe('WorkQueryModel', () => {
     await serverDB.insert(teamMembers).values({
       role: 'member',
       teamId: 'wq-cyc-member',
-      userId,
+      userId: otherUserId,
       workspaceId,
     });
     const [cycleA, cycleB, cycleC] = await serverDB
@@ -2034,7 +2182,7 @@ describe('WorkQueryModel', () => {
       ])
       .returning();
 
-    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const model = new WorkQueryModel(serverDB, otherUserId, workspaceId);
 
     // No team scope → one authorized query across readable teams, not N calls.
     const all = await model.listCycleOptions({});

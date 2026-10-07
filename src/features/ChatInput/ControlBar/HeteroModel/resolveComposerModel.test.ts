@@ -1,14 +1,15 @@
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { getStaticModelOptions } from './modelOptions';
 import { resolveComposerModelView, withDefaultModelOption } from './resolveComposerModel';
 
 const claudeCode: HeterogeneousProviderConfig = { type: 'claude-code' };
-const claudeCodeOptions = getStaticModelOptions('claude-code').map((option) => ({
-  title: option.label,
-  value: option.value,
-}));
+// Synthetic runtime-advertised catalog; names are supplied data, never app aliases.
+const claudeCodeOptions = [
+  { title: 'Runtime Opus', value: 'opus' },
+  { title: 'Runtime Sonnet', value: 'sonnet' },
+  { title: 'Runtime Haiku', value: 'haiku' },
+];
 
 const view = (params: {
   composerSelection?: { model: string; provider: string };
@@ -49,7 +50,7 @@ describe('resolveComposerModelView', () => {
     expect(view({ composerSelection: { model: 'opus', provider: 'claude-code' } })).toMatchObject({
       current: 'opus',
       isDefault: false,
-      title: 'Opus',
+      title: 'Runtime Opus',
     });
   });
 
@@ -57,7 +58,7 @@ describe('resolveComposerModelView', () => {
     expect(view({ topicPin: { model: 'sonnet', provider: 'claude-code' } })).toMatchObject({
       current: 'sonnet',
       isDefault: false,
-      title: 'Sonnet',
+      title: 'Runtime Sonnet',
     });
   });
 
@@ -67,7 +68,7 @@ describe('resolveComposerModelView', () => {
         composerSelection: { model: 'opus', provider: 'claude-code' },
         topicPin: { model: 'haiku', provider: 'claude-code' },
       }),
-    ).toMatchObject({ current: 'haiku', title: 'Haiku' });
+    ).toMatchObject({ current: 'haiku', title: 'Runtime Haiku' });
   });
 
   it('ignores a pick or pin minted for another provider', () => {
@@ -86,7 +87,7 @@ describe('resolveComposerModelView', () => {
       view({
         provider: { model: 'opus', type: 'claude-code' },
       }),
-    ).toMatchObject({ current: 'opus', isDefault: false, title: 'Opus' });
+    ).toMatchObject({ current: 'opus', isDefault: false, title: 'Runtime Opus' });
   });
 
   it('falls back to the raw selector value while the harness list is unavailable', () => {
@@ -102,10 +103,24 @@ describe('resolveComposerModelView', () => {
   it('puts the harness default back at the top of the list, keeping the order', () => {
     expect(withDefaultModelOption(claudeCodeOptions, 'Default')).toEqual([
       { title: 'Default', value: 'default' },
-      { title: 'Fable', value: 'fable' },
-      { title: 'Opus', value: 'opus' },
-      { title: 'Sonnet', value: 'sonnet' },
-      { title: 'Haiku', value: 'haiku' },
+      { title: 'Runtime Opus', value: 'opus' },
+      { title: 'Runtime Sonnet', value: 'sonnet' },
+      { title: 'Runtime Haiku', value: 'haiku' },
+    ]);
+  });
+
+  it('uses the advertised default once when ACP includes its own default model', () => {
+    expect(
+      withDefaultModelOption(
+        [
+          { title: 'Default (recommended)', value: 'default' },
+          { title: 'Exact Runtime Name', value: 'runtime-id' },
+        ],
+        'Default',
+      ),
+    ).toEqual([
+      { title: 'Default (recommended)', value: 'default' },
+      { title: 'Exact Runtime Name', value: 'runtime-id' },
     ]);
   });
 
@@ -114,7 +129,11 @@ describe('resolveComposerModelView', () => {
     // `COMPOSER_DEFAULT_MODEL_LABEL_KEY`, so "let the CLI decide" has one name.
     const options = withDefaultModelOption(claudeCodeOptions, 'Default');
 
-    expect(view({ options })).toEqual({ current: 'default', isDefault: true, title: 'Default' });
+    expect(view({ options })).toEqual({
+      current: 'default',
+      isDefault: true,
+      title: 'Default',
+    });
   });
 
   it('reports the neutral default for a harness with no model dimension', () => {

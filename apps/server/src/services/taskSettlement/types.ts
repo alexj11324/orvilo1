@@ -66,9 +66,9 @@ export interface SettlementContext {
   issueCancel?: boolean;
   /** A manual "run now" on an automation task — not an automation-health signal. */
   manualAutomationRun?: boolean;
-
   /** Post-commit hook forwarded to the task-service write. */
   onStatusCommitted?: () => void;
+
   /** A verify failure spawned a repair run instead of settling. */
   repairSpawned?: boolean;
   // ── Write guards — the settle applies through exactly one. ──
@@ -84,6 +84,8 @@ export interface SettlementContext {
    * schedule/heartbeat bookkeeping) still run. Used for `complete` outcomes.
    */
   throughTaskService?: boolean;
+  /** Structured input remains unresolved after the run ended. */
+  unresolvedInput?: boolean;
   /** A confirmed verify plan owns this run's delivery acceptance. */
   verifyBound?: boolean;
 }

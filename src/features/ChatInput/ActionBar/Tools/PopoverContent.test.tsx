@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import ActionPopover from '../components/ActionPopover';
 import PopoverContent from './PopoverContent';
+import ToolsList from './ToolsList';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/hooks/useIsMobile', () => ({ useIsMobile: () => false }));
@@ -61,5 +62,34 @@ describe('Skills search keyboard handling', () => {
     expect(search).toHaveValue('alpha1');
     expect(search).toBeInTheDocument();
     expect(unhandledKey).not.toHaveBeenCalled();
+  });
+});
+
+describe('Skills row semantics', () => {
+  it('exposes button semantics only for clickable rows and keeps nested controls usable', () => {
+    const onClick = vi.fn();
+    const onNestedClick = vi.fn();
+    render(
+      <ToolsList
+        items={[
+          { key: 'clickable', label: 'Clickable skill', onClick },
+          {
+            key: 'nested',
+            label: <button onClick={onNestedClick}>Nested skill action</button>,
+          },
+        ]}
+      />,
+    );
+
+    const row = screen.getByRole('button', { name: 'Clickable skill' });
+    expect(row).toHaveAttribute('tabindex', '0');
+    fireEvent.click(row);
+    expect(onClick).toHaveBeenCalledOnce();
+
+    const nestedAction = screen.getByRole('button', { name: 'Nested skill action' });
+    expect(nestedAction.parentElement?.parentElement).not.toHaveAttribute('role');
+    expect(nestedAction.parentElement?.parentElement).not.toHaveAttribute('tabindex');
+    fireEvent.click(nestedAction);
+    expect(onNestedClick).toHaveBeenCalledOnce();
   });
 });

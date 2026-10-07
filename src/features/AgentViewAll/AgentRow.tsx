@@ -1,6 +1,7 @@
 'use client';
 
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -101,7 +102,10 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
   const { id, type, updatedAt } = item;
   // Groups have no personal name, so this resolves to their title.
   const displayTitle = agentDisplayName(item, t('agentViewAll.untitled'));
-  const roleTag = agentSecondaryDisplayName(item);
+  const roleTag = agentSecondaryDisplayName(
+    item,
+    getHeterogeneousTypeLabel(item.heterogeneousType),
+  );
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   // Right-click support (Task-List-style): the hook-bearing menu mounts on

@@ -23,8 +23,11 @@ vi.mock('@/database/models/goal', () => ({
 }));
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/database/utils/agent-access', () => ({
-  assertAgentUsableBy: vi.fn().mockResolvedValue(undefined),
+  assertAgentVisibleTo: vi.fn().mockResolvedValue(undefined),
 }));
 // `consumeForDispatch` is an instance field (arrow), not a prototype method —
 // intercept the class via the barrel so tests control the scoped single-use
@@ -80,7 +83,7 @@ afterEach(() => {
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
     assigneeAgentId: 'agt_assignee',
-    assigneeUserId: null,
+    assigneeUserId: 'user-owner',
     config: {},
     executionGeneration: 1,
     id: 'task-1',
@@ -182,7 +185,7 @@ const newRunner = () => {
   db.transaction = async (callback) => callback(db);
   const service = new TaskRunnerService(db as never, 'user-1', 'ws-1');
   (service as unknown as { agentModel: unknown }).agentModel = {
-    getAgentModelConfig: vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
+    getAgentModelConfigForExecution: vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
     getAgentConfig: vi.fn().mockResolvedValue({
       agencyConfig: {
         heterogeneousProvider: { type: 'codex' },
@@ -221,6 +224,18 @@ const useActualPromptBuilder = async () => {
 };
 
 describe('TaskRunnerService run intent (SA05-A)', () => {
+  it.each([{ assigneeUserId: null }, { assigneeAgentId: null }])(
+    'rejects admission before dispatch when an assignment is missing: %j',
+    async (assignment) => {
+      const { prepare, execAgent } = setupHappyPath(baseTask(assignment), []);
+      await expect(newRunner().runTask({ idOrIdentifier: 'task-1' })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+      });
+      expect(prepare).not.toHaveBeenCalled();
+      expect(execAgent).not.toHaveBeenCalled();
+    },
+  );
+
   it('blocks unadmitted events before task lookup, dispatch or runtime effects', async () => {
     const { execAgent, prepare } = setupHappyPath(baseTask(), []);
     const resolve = vi.mocked(TaskModel.prototype.resolve);

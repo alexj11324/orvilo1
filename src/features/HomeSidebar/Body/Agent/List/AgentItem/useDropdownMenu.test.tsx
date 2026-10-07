@@ -278,20 +278,25 @@ describe('useAgentDropdownMenu', () => {
     expect(getMenuKeys(result.current())).toEqual(['pin', 'openInNewWindow', 'moveGroup']);
   });
 
-  it('allows Agent duplication only on the Agents page', () => {
-    const { result } = renderHook(() =>
-      useAgentDropdownMenu({
-        anchor: null,
-        group: undefined,
-        id: 'agent-1',
-        openCreateGroupModal: vi.fn(),
-        pinned: false,
-        title: 'Agent',
-        creationEnabled: true,
-      }),
-    );
-    expect(getMenuKeys(result.current())).toContain('duplicate');
-  });
+  it.each([false, true])(
+    'only advertises copying protected configuration when Manage is %s',
+    (manageable) => {
+      mocks.canEditResource = manageable;
+      mocks.canManageResource = manageable;
+      const { result } = renderHook(() =>
+        useAgentDropdownMenu({
+          anchor: null,
+          group: undefined,
+          id: 'agent-1',
+          openCreateGroupModal: vi.fn(),
+          pinned: false,
+          title: 'Agent',
+          creationEnabled: true,
+        }),
+      );
+      expect(getMenuKeys(result.current()).includes('duplicate')).toBe(manageable);
+    },
+  );
 
   it('shows the Labels submenu only where it is enabled (the agents list page)', () => {
     const { result } = renderHook(() =>
@@ -460,7 +465,6 @@ describe('useAgentDropdownMenu', () => {
       'copy-agent',
       'divider',
       'permission',
-      'makePrivate',
       'divider',
       'delete',
     ]);

@@ -75,6 +75,40 @@ describe('heterogeneous agent model discovery', () => {
     vi.resetModules();
   });
 
+  it.each(['claude-code', 'codex'] as const)(
+    'returns %s ACP names and opaque IDs',
+    async (type) => {
+      resolveAcpSpawnTargetMock.mockResolvedValue({ commandPath: '/bridge', env: {} });
+      const models = [
+        {
+          id: 'new-model/id',
+          label: 'Actual Runtime Name',
+          modelId: 'new-model/id',
+          providerId: type,
+        },
+      ];
+      listStandardAcpModelsMock.mockResolvedValue(models);
+      const { listHeterogeneousAgentModels } = await importModule();
+      await expect(
+        listHeterogeneousAgentModels({ command: '/native', type }),
+      ).resolves.toMatchObject({ status: 'success', models });
+      expect(execFileMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['claude-code', 'codex'] as const)(
+    'keeps %s ACP failure honest without native catalog fallback',
+    async (type) => {
+      resolveAcpSpawnTargetMock.mockRejectedValue(new Error('ACP unavailable'));
+      resolveExecFile('invented/catalog');
+      const { listHeterogeneousAgentModels } = await importModule();
+      await expect(
+        listHeterogeneousAgentModels({ command: '/native', type }),
+      ).resolves.toMatchObject({ status: 'error', error: { code: 'command_failed' } });
+      expect(execFileMock).not.toHaveBeenCalled();
+    },
+  );
+
   it('parses opaque model ids, splitting only at the first slash and preserving order', async () => {
     const { parseOpenCodeModelCatalog } = await importModule();
 

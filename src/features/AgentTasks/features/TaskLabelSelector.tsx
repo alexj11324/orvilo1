@@ -239,6 +239,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
     return (
       <Popover>
         <PopoverTrigger
+          nativeButton={false}
           render={
             <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
               {children}

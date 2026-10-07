@@ -540,10 +540,18 @@ describe('AI Agent Router Integration Tests', () => {
   });
 
   describe('startExecution', () => {
-    const operationId = 'op_contract_test';
+    let operationId: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       mockStartExecution.mockReset();
+      operationId = `op_contract_${testAgentId}`;
+      await serverDB.insert(agentOperations).values({
+        id: operationId,
+        agentId: testAgentId,
+        userId,
+        status: 'running',
+        type: 'execAgent',
+      });
     });
 
     it('acknowledges an already-running run idempotently instead of a second start', async () => {

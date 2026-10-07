@@ -1,12 +1,10 @@
 import type { TaskStatus } from '@orvilo/types';
-import { cssVar, useThemeMode } from 'antd-style';
+import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import HeterogeneousTag from '@/features/HeterogeneousTag';
-import { useHomeStore } from '@/store/home';
-import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -24,32 +22,26 @@ const TaskDetailAssignee = memo(() => {
   const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const assigneeMeta = useAgentDisplayMeta(assigneeAgentId);
   const handoffTask = useTaskStore((s) => s.handoffTask);
-  // Same source as the home list so the runtime tag stays consistent.
-  const assigneeHeterogeneousType = useHomeStore(
-    (s) => homeAgentListSelectors.getAgentById(assigneeAgentId ?? '')(s)?.heterogeneousType,
-  );
-  const { isDarkMode } = useThemeMode();
-
   if (!taskId) return null;
 
   const chip = (
     <div
-      className="flex items-center gap-2 px-[11px] py-1"
+      aria-label={t('taskList.assignTo')}
+      className="flex min-w-0 cursor-pointer items-center gap-1.5"
       style={{
-        background: isDarkMode ? cssVar.colorFillSecondary : undefined,
-        border: isDarkMode ? undefined : `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
         cursor: 'pointer',
         flex: 'none',
         maxWidth: '100%',
-        minHeight: 32,
       }}
     >
       {assigneeAgentId ? (
         <>
-          <AssigneeAvatar agentId={assigneeAgentId} size={20} />
+          <Avatar
+            avatar={<AssigneeAvatar agentId={assigneeAgentId} size={16} />}
+            shape="circle"
+            size={16}
+          />
           <div className="truncate block font-medium">{assigneeMeta?.title}</div>
-          <HeterogeneousTag type={assigneeHeterogeneousType} />
         </>
       ) : (
         <>

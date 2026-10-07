@@ -7,7 +7,7 @@ import { initialState } from '@/store/chat/initialState';
 import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { merge } from '@/utils/merge';
 
-import { topicSelectors } from './selectors';
+import { resolveTopicHeteroPin, topicSelectors } from './selectors';
 
 // Mock i18next
 vi.mock('i18next', () => ({
@@ -959,4 +959,17 @@ describe('active topic ownership for composer controls', () => {
     expect(topicSelectors.activeTopicIdForAgent('route-a')(group)).toBe('topic-b');
     expect(topicSelectors.activeTopicIdForAgent('composer-b')(group)).toBeUndefined();
   });
+});
+
+it('rehydrates exact ACP default while preserving legacy default inheritance', () => {
+  expect(
+    resolveTopicHeteroPin({
+      model: 'default',
+      provider: 'claude-code',
+      metadata: { heteroModelExplicit: true },
+    }),
+  ).toEqual({ model: 'default', provider: 'claude-code', modelExplicit: true });
+  expect(
+    resolveTopicHeteroPin({ model: 'default', provider: 'claude-code', metadata: {} }),
+  ).toEqual({ model: 'default', provider: 'claude-code' });
 });

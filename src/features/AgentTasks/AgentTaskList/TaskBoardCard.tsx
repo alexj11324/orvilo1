@@ -24,7 +24,6 @@ import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
-import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
@@ -170,10 +169,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
     const status = toTaskStatus(task.status);
     const generating =
-      status === 'running' &&
-      (task.workflowCategory === 'in_progress' || task.workflowCategory === 'in_review');
+      (task.workflowCategory === 'in_progress' || task.workflowCategory === 'in_review') &&
+      Boolean(task.assigneeUserId && task.assigneeAgentId) &&
+      task.hasLiveExecutor === true &&
+      task.attentionReason !== 'needs_input';
     // One status mark per card: the workflow state when the task has one.
     const workflowGlyph = useTaskWorkflowGlyph({
+      attentionReason: task.attentionReason,
       executionStatus: task.status,
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,
@@ -437,7 +439,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           {shows('priority') ? (
             <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           ) : null}
-          <TaskExecutionBadge dispatchPhase={task.dispatchPhase} size={13} status={status} />
           <LinearTaskSyncStatus taskId={task.id} />
           {shows('project') && projectName ? (
             <Tag size="sm" variant="primary-outline">
@@ -452,11 +453,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               schedulePattern={task.schedulePattern}
               scheduleTimezone={task.scheduleTimezone}
             />
-          ) : null}
-          {status === 'scheduled' ? (
-            <div className="text-xs text-muted-foreground">
-              {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-            </div>
           ) : null}
         </div>
 

@@ -28,6 +28,7 @@ import useSWR from 'swr';
 
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -533,7 +534,11 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
             </div>
             <div className={styles.sectionRow}>
               <div className={styles.section}>{t('workingDirectory.branchesHeading')}</div>
-              <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
+              <div
+                className={cx(buttonHoverFeedback, styles.refreshButton)}
+                role="button"
+                onClick={handleRefresh}
+              >
                 <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
                   <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
                 </span>
@@ -608,7 +613,7 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                       <SimpleTooltip title={tCommon('copy')}>
                         <div
                           aria-label={tCommon('copy')}
-                          className={styles.rowAction}
+                          className={cx(buttonHoverFeedback, styles.rowAction)}
                           role="button"
                           onClick={(e) => void handleCopy(e, branch.name)}
                         >
@@ -619,7 +624,7 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                       </SimpleTooltip>
                       <SimpleTooltip title={t('workingDirectory.renameBranchAction')}>
                         <div
-                          className={styles.rowAction}
+                          className={cx(buttonHoverFeedback, styles.rowAction)}
                           role="button"
                           onClick={(e) => handleRename(e, branch.name)}
                         >
@@ -631,8 +636,12 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                       {!isCurrent && !owner && (
                         <SimpleTooltip title={t('workingDirectory.deleteBranchAction')}>
                           <div
-                            className={cx(styles.rowAction, styles.rowActionDanger)}
                             role="button"
+                            className={cx(
+                              buttonHoverFeedback,
+                              styles.rowAction,
+                              styles.rowActionDanger,
+                            )}
                             onClick={(e) => handleDelete(e, branch.name)}
                           >
                             <span className="anticon" role="img">

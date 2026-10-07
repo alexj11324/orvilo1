@@ -1,6 +1,5 @@
 'use client';
 
-import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,9 +16,6 @@ export const AgentGeneralSettings = ({ agentId }: { agentId: string }) => {
   const { t } = useTranslation('setting');
   const { allowed: canEdit } = usePermission('edit_own_content');
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  const provider = useAgentStore(
-    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider,
-  );
   const update = useAgentStore((s) => s.updateAgentMetaById);
   const [name, setName] = useState(meta.name ?? '');
   const { status, save, lastSavedAt, retry } = useSaveState();
@@ -52,13 +48,6 @@ export const AgentGeneralSettings = ({ agentId }: { agentId: string }) => {
             if (event.key === 'Enter') event.currentTarget.blur();
           }}
         />
-      </SettingsRow>
-      <SettingsRow label={t('settingAgent.generalSettings.agentLabel')}>
-        <span>
-          {provider
-            ? (HETEROGENEOUS_TYPE_LABELS[provider.type] ?? provider.type)
-            : t('settingAgent.generalSettings.legacyName')}
-        </span>
       </SettingsRow>
     </SettingsGroup>
   );

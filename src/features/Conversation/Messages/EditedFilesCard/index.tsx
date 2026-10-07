@@ -21,7 +21,7 @@ import { type KeyboardEvent, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { CodeBlock, CodeBlockCopyButton, parseUnifiedDiff } from '@/components/ui/code-block';
 
 import { type OperationEditedFile, summarizeEditedFilesTotals } from './deriveEditedFiles';
@@ -230,9 +230,12 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
     <div className={cn('flex flex-col', cx(styles.row, clickable && styles.rowClickable))}>
       <div
         aria-expanded={onOpen ? undefined : hasDiff ? expanded : undefined}
-        className={cn('flex items-center gap-2.5', styles.rowMain)}
         role={clickable ? 'button' : undefined}
         tabIndex={clickable ? 0 : undefined}
+        className={cx(
+          cn('flex items-center gap-2.5', styles.rowMain),
+          clickable && buttonHoverFeedback,
+        )}
         onClick={handleRowClick}
         onKeyDown={handleRowClick ? toggleOnKey(handleRowClick) : undefined}
       >
@@ -313,9 +316,12 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
         <div
           role={onOpen ? 'button' : undefined}
           tabIndex={onOpen ? 0 : undefined}
-          className={cn(
-            'flex items-center gap-2.5',
-            cx(styles.singleHeader, onOpen && styles.singleHeaderClickable),
+          className={cx(
+            cn(
+              'flex items-center gap-2.5',
+              cx(styles.singleHeader, onOpen && styles.singleHeaderClickable),
+            ),
+            onOpen && buttonHoverFeedback,
           )}
           onClick={onOpen}
           onKeyDown={onOpen ? toggleOnKey(onOpen) : undefined}
@@ -419,7 +425,7 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
         {hiddenCount > 0 && (
           <div
             aria-expanded={showAll}
-            className={cn('flex items-center gap-1.5', styles.showMore)}
+            className={cx(cn('flex items-center gap-1.5', styles.showMore), buttonHoverFeedback)}
             role={'button'}
             tabIndex={0}
             onClick={toggleShowAll}

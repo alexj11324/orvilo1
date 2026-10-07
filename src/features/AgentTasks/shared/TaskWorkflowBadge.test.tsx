@@ -60,6 +60,24 @@ const ALL_CATEGORIES: TaskWorkflowCategory[] = [
 ];
 
 describe('TaskWorkflowBadge', () => {
+  it('uses the board Needs Input mark instead of completed or failed run results', () => {
+    const { container, rerender } = render(
+      <TaskWorkflowBadge
+        attentionReason="needs_input"
+        executionStatus="completed"
+        workflowCategory="todo"
+      />,
+    );
+    expect(container.querySelector('[data-task-workflow-state="needs_input"]')).toBeTruthy();
+    expect(screen.getByText('taskList.attention.needsInput')).toBeTruthy();
+    expect(container.querySelector('svg.lucide-circle-alert')).toBeTruthy();
+    rerender(
+      <TaskWorkflowBadge attentionReason="none" executionStatus="failed" workflowCategory="todo" />,
+    );
+    expect(container.querySelector('[data-task-workflow-state="todo"]')).toBeTruthy();
+    expect(screen.queryByText('taskList.attention.needsInput')).toBeNull();
+  });
+
   it('draws the category mark for a local-only task — no provider link needed', () => {
     // `workflowCategory` IS the Issue Status; a task without a linked
     // `workflowStateId` still renders its canonical category mark.
@@ -70,7 +88,7 @@ describe('TaskWorkflowBadge', () => {
     expect(container.querySelector('[data-task-workflow-state="in_progress"]')).toBeInTheDocument();
   });
 
-  it('keeps external Done separate from an unverified delivery', () => {
+  it('keeps Done consistent with its board regardless of delivery', () => {
     render(
       <TaskWorkflowBadge
         executionStatus={'paused'}
@@ -79,7 +97,8 @@ describe('TaskWorkflowBadge', () => {
       />,
     );
 
-    expect(screen.getByText('taskDetail.workflow.category.done · Delivery pending')).toBeVisible();
+    expect(screen.getByText('taskDetail.workflow.category.done')).toBeVisible();
+    expect(screen.queryByText(/Delivery pending/)).toBeNull();
     expect(document.querySelector('[data-task-workflow-state="done"]')).toBeInTheDocument();
   });
 

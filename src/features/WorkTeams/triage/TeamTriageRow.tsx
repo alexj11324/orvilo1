@@ -6,13 +6,12 @@ import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
+import { getIssueStatusVisual } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
@@ -119,6 +118,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
   }) => {
     const { t, i18n } = useTranslation('common');
     const workflowGlyph = useTaskWorkflowGlyph({
+      attentionReason: task.attentionReason,
       executionStatus: task.status ?? '',
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,
@@ -184,6 +184,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       [overflowItems, runOverflow, t],
     );
 
+    const workflowVisual = getIssueStatusVisual(task);
     const age = triageAgeLabel(task.createdAt);
     const createdDate = formatTaskItemDate(task.createdAt, {
       formatOtherYear: t('time.formatOtherYear'),
@@ -213,7 +214,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
               </Tooltip>
             </TooltipProvider>
           ) : (
-            <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
+            <workflowVisual.icon color={workflowVisual.color} size={16} />
           )}
           {task.identifier ? (
             <span className={cn('text-sm', styles.identifier)}>{task.identifier}</span>

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useHomeStore } from '@/store/home';
 
@@ -150,10 +150,14 @@ const LabelFormContent = memo<LabelFormModalOptions>(({ assignTo, label, restore
             {LABEL_COLOR_PRESETS.map((preset) => (
               <span
                 aria-label={preset}
-                className={cx(styles.swatch, color === preset && styles.swatchActive)}
+                data-hover-paint="shadow"
                 key={preset}
                 role={'button'}
                 style={{ background: preset }}
+                className={cx(
+                  cx(styles.swatch, color === preset && styles.swatchActive),
+                  buttonHoverFeedback,
+                )}
                 onClick={() => setColor(preset)}
               />
             ))}

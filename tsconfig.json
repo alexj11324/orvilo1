@@ -49,7 +49,7 @@
     "temp",
     ".temp",
     "e2e/**",
-    "tests/ui-alignment/alignment.spec.ts",
+    "tests/ui-alignment/*.spec.ts",
     "tests/ui-alignment/playwright.config.ts",
     "knip.ts"
   ],

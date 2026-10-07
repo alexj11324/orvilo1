@@ -391,7 +391,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
 
   return (
     <Popover>
-      <PopoverTrigger render={trigger} />
+      <PopoverTrigger nativeButton={!children} render={trigger} />
       <PopoverContent align={'end'} className={`w-auto p-0 ${styles.popover}`}>
         {content}
       </PopoverContent>

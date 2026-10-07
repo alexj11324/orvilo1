@@ -202,12 +202,14 @@ const ProjectWorkspace = memo(() => {
               />
               <div className="flex flex-col" style={{ gap: 2 }}>
                 <ProjectOverviewField
+                  canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:name`}
                   kind="name"
                   value={project.name}
                   onSave={(name) => updateProject(project.id, { name })}
                 />
                 <ProjectOverviewField
+                  canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:summary`}
                   kind="summary"
                   value={project.summary ?? ''}
@@ -237,7 +239,7 @@ const ProjectWorkspace = memo(() => {
                   <Button
                     aria-label={t('properties.status')}
                     className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
-                    disabled={updatingStatus || lifecycleLocked}
+                    disabled={updatingStatus || lifecycleLocked || !detail.capabilities?.canEdit}
                     variant="ghost"
                   >
                     <ProjectStatusIcon
@@ -329,7 +331,7 @@ const ProjectWorkspace = memo(() => {
                   />
                 ) : (
                   <ProjectUpdateRow
-                    canEdit={canModerateUpdate(update)}
+                    {...canModerateUpdate(update)}
                     key={update.id}
                     update={update}
                     onChanged={() => void updatesSWR.mutate()}
@@ -339,6 +341,7 @@ const ProjectWorkspace = memo(() => {
               )}
             </div>
             <ProjectDescription
+              canEdit={detail.capabilities?.canEdit}
               description={project.description}
               key={project.id}
               projectId={project.id}

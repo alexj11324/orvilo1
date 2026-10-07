@@ -1,13 +1,14 @@
 'use client';
 
 import { cn } from 'cn';
-import { ArrowUpRight, CheckIcon } from 'lucide-react';
+import { ArrowUpRight, BoxIcon, CheckIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,8 +95,6 @@ const TaskProjectSection = memo(() => {
     [projectPending, applyProject, taskProjectId],
   );
 
-  if (!taskProjectId && !canPickProject) return null;
-
   const listedProject = taskProjectId
     ? projects.find((row) => row.id === taskProjectId)
     : undefined;
@@ -114,7 +113,10 @@ const TaskProjectSection = memo(() => {
   // Editable → the row is Linear's milestone picker (a dropdown trigger);
   // read-only → the same row links to the milestone-filtered issues list.
   const milestoneTrigger = (title?: string) => (
-    <div className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`} title={title}>
+    <div
+      className={`flex cursor-pointer items-center gap-2 ${styles.railRow} ${styles.interactiveControl}`}
+      title={title}
+    >
       <MilestoneIcon size={14} style={{ flex: 'none' }} />
       <div
         style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
@@ -141,7 +143,10 @@ const TaskProjectSection = memo(() => {
   const milestoneRow =
     canEdit && changeMilestone ? (
       <DropdownMenu>
-        <DropdownMenuTrigger render={milestoneTrigger(t('taskDetail.milestone.hint'))} />
+        <DropdownMenuTrigger
+          nativeButton={false}
+          render={milestoneTrigger(t('taskDetail.milestone.hint'))}
+        />
         <DropdownMenuContent align={'end'} className={'min-w-52'}>
           {milestones.map((row) => (
             <DropdownMenuItem key={row.id} onClick={() => void changeMilestone(row.id)}>
@@ -170,9 +175,11 @@ const TaskProjectSection = memo(() => {
         </DropdownMenuContent>
       </DropdownMenu>
     ) : (
-      <div
-        className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`}
+      <Button
+        className={`justify-start gap-2 ${styles.railRow} ${styles.interactiveControl}`}
+        disabled={!milestone || !projectRef}
         title={milestone ? t('overview.milestoneSeeIssues', { ns: 'project' }) : undefined}
+        variant="ghost"
         onClick={() =>
           milestone &&
           projectRef &&
@@ -194,7 +201,7 @@ const TaskProjectSection = memo(() => {
             {`· ${milestoneDate}`}
           </div>
         )}
-      </div>
+      </Button>
     );
 
   const projectValue = (
@@ -207,7 +214,9 @@ const TaskProjectSection = memo(() => {
           size={16}
           style={{ flex: 'none' }}
         />
-      ) : null}
+      ) : (
+        <BoxIcon aria-hidden size={16} style={{ flex: 'none' }} />
+      )}
       <div
         style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
         className={cn(
@@ -217,7 +226,7 @@ const TaskProjectSection = memo(() => {
           projectName ? undefined : 'text-muted-foreground',
         )}
       >
-        {projectName ?? t('taskDetail.noProject')}
+        {projectName ?? t('taskDetail.property.addProject')}
       </div>
     </>
   );
@@ -229,9 +238,10 @@ const TaskProjectSection = memo(() => {
     <div className={'flex items-center gap-1'} style={{ minWidth: 0 }}>
       <DropdownMenu>
         <DropdownMenuTrigger
+          nativeButton={false}
           render={
             <div
-              className={`flex flex-1 cursor-pointer items-center gap-2 ${styles.railRow}`}
+              className={`flex flex-1 cursor-pointer items-center gap-2 ${styles.railRow} ${styles.interactiveControl}`}
               style={{ minWidth: 0 }}
               title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
             >
@@ -276,24 +286,33 @@ const TaskProjectSection = memo(() => {
       ) : null}
     </div>
   ) : project && projectRef ? (
-    <div
-      className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`}
+    <Button
+      className={`justify-start gap-2 ${styles.railRow} ${styles.interactiveControl}`}
       title={project.name}
+      variant="ghost"
       onClick={() => navigate(`/project/${projectRef}`)}
     >
       {projectValue}
-    </div>
-  ) : null;
+    </Button>
+  ) : (
+    <Button disabled className={`justify-start gap-2 ${styles.railRow}`} variant="ghost">
+      {projectValue}
+    </Button>
+  );
 
   return (
-    <div className={styles.railSection}>
+    <div
+      data-task-project
+      className={styles.railSection}
+      data-wide-only={!taskProjectId || undefined}
+    >
       <span className={styles.railSectionLabel}>{t('taskDetail.project')}</span>
       {projectRow}
       {/* The milestone row only exists where a milestone could: set, or a
           catalog the picker can file under. A project with zero milestones
           shows no row at all — there is nothing to choose and no state to
           claim. */}
-      {(milestone || (canEdit && milestones.length > 0)) && project && milestoneRow}
+      {milestone && project && milestoneRow}
     </div>
   );
 });

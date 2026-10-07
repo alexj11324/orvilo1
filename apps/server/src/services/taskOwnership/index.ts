@@ -130,7 +130,16 @@ export const transferTaskExecutionOwnership = async (input: {
   if ((await taskModel.derivedStatusByIds([input.task.id]))[input.task.id] === 'running') {
     await TaskDispatchModel.requestStopForTasks(input.db, [input.task.id], input.reason);
   }
-  return taskModel.update(input.task.id, input.patch, {
+  const patch =
+    input.task.workflowCategory === 'in_progress' || input.task.workflowCategory === 'in_review'
+      ? {
+          ...input.patch,
+          workflowCategory: 'todo' as const,
+          workflowStateId: null,
+          workflowStateRefId: null,
+        }
+      : input.patch;
+  return taskModel.update(input.task.id, patch, {
     ...input.mutation,
     executionTransfer: true,
   });

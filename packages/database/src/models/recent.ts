@@ -19,8 +19,8 @@ import {
 import type { OrviloDatabase } from '../type';
 import { buildDocumentReadableWhere } from '../utils/documentAccess';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
+import { buildSharedTaskReadableWhere } from '../utils/sharedTaskReadable';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
-import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { legacyStatusExpr, TASK_OPEN_WORKFLOW } from './taskExecutionSql';
 
@@ -107,16 +107,13 @@ export class RecentModel {
     const scope = { userId: this.userId, workspaceId: this.workspaceId };
     const requestedTypes = types ? new Set(types) : undefined;
 
-    // Tasks use `createdByUserId` instead of `userId`. Match TaskModel.ownership:
-    // workspace visibility, then private-team membership (TRI05 / SEC06).
-    const taskVisible = buildWorkspaceWhere(scope, {
+    // Issues use the shared workspace-member read predicate, including legacy private rows.
+    const taskVisible = buildSharedTaskReadableWhere(scope, {
       userId: tasks.createdByUserId,
       visibility: tasks.visibility,
       workspaceId: tasks.workspaceId,
     });
-    const taskScopeWhere = this.workspaceId
-      ? and(taskVisible, buildTaskTeamReadableWhere(this.db, this.userId))
-      : taskVisible;
+    const taskScopeWhere = taskVisible;
 
     // Workspace rows are shared across members; `mineOnly` narrows a workspace
     // feed back to the viewer's own items. A no-op in personal mode, where the

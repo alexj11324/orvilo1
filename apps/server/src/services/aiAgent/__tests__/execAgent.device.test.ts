@@ -1,10 +1,13 @@
 import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
+import { TRPCError } from '@trpc/server';
 import type * as ModelBankModule from 'model-bank';
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import type * as FeatureFlagsModule from '@/server/featureFlags';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
+import { AgentService } from '@/server/services/agent';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 
@@ -117,6 +120,10 @@ const baseAgentConfig = {
   provider: 'openai',
   systemRole: 'You are a helpful assistant',
 };
+
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
@@ -336,6 +343,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(AgentService).mockImplementation(function () {
+      return { getAgentConfig: vi.fn().mockResolvedValue(baseAgentConfig) } as never;
+    });
+    vi.mocked(assertCanUseWorkspaceAgent).mockResolvedValue(undefined);
     mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: false });
     mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
       realDispatchRef.current!(deps, ctx, input),
@@ -392,6 +403,77 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     });
     service = new AiAgentService(mockDb, userId);
   };
+
+  it.each(['session_binding', 'agent_default'])(
+    'preserves the actual caller for remote %s',
+    async (reason) => {
+      vi.mocked(AgentService).mockImplementation(function () {
+        return {
+          getAgentConfig: vi.fn().mockResolvedValue({
+            ...baseAgentConfig,
+            userId: 'other-agent-creator',
+            workspaceId: 'workspace-1',
+            visibility: 'public',
+            agencyConfig: {
+              executionTarget: 'device',
+              boundDeviceId: 'personal-collision',
+              heterogeneousProvider: { type: 'openclaw' },
+            },
+          }),
+        } as never;
+      });
+      mockDeviceFindByDeviceId.mockResolvedValue({
+        deviceId: 'personal-collision',
+        userId,
+        workspaceId: null,
+      });
+      topicMock.findById.mockResolvedValue(
+        reason === 'session_binding'
+          ? ({
+              id: 'topic-1',
+              metadata: {
+                boundDeviceId: 'personal-collision',
+                executionConfig: { boundDeviceId: 'personal-collision', executionTarget: 'device' },
+              },
+            } as never)
+          : undefined,
+      );
+      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
+      await service.execAgent({
+        agentId: 'agent-1',
+        appContext: { topicId: 'topic-1' },
+        prompt: 'Probe caller identity',
+      });
+      expect(mockExecuteToolCall).toHaveBeenCalled();
+      const call = mockExecuteToolCall.mock.calls.find((c) => c[1]?.apiName === 'runHeteroTask');
+      expect(call?.[0]).toMatchObject({
+        deviceId: 'personal-collision',
+        userId,
+        workspaceId: undefined,
+      });
+      expect(resolveDeviceDispatchAuthorizationFailure).toHaveBeenCalledWith(
+        mockDb,
+        userId,
+        'personal-collision',
+        undefined,
+      );
+    },
+  );
+
+  it('refuses a run whose Use grant is revoked during preparation before Device spawn', async () => {
+    await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+    service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
+    vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValue(
+      new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Agent Use revoked',
+      }),
+    );
+    const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run after revoke' });
+    expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+    expect(mockExecuteToolCall).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: false, error: 'AGENT_USE_FORBIDDEN' });
+  });
 
   describe('default and sandbox targets', () => {
     it('fails a default (unset-target) run loudly — no silent cloud-sandbox fallback', async () => {

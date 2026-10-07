@@ -12,6 +12,11 @@ class DeviceService {
     return lambdaClient.device.listDevices.query();
   }
 
+  /** Authoritative installed-runtime candidates for the stored Agent. */
+  listAgentCandidates(input: Parameters<DeviceClient['listAgentCandidates']['query']>[0]) {
+    return lambdaClient.device.listAgentCandidates.query(input);
+  }
+
   /** Update user-editable device fields (defaultCwd / friendlyName / workingDirs). */
   updateDevice(input: Parameters<DeviceClient['updateDevice']['mutate']>[0]) {
     return lambdaClient.device.updateDevice.mutate(input);

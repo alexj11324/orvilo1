@@ -25,7 +25,7 @@ import {
 } from '@orvilo/heterogeneous-agents';
 import { DroidIcon, HETEROGENEOUS_AGENT_CLIENT_CONFIGS } from '@orvilo/heterogeneous-agents/client';
 import type { HeterogeneousReasoningEffort } from '@orvilo/types';
-import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
+import { applyHeteroSelection, HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 
 /**
  * One row in the connect wizard's agent inventory. `kind` mirrors the domain
@@ -70,6 +70,7 @@ interface BuildConnectAgentConfigOptions {
   effort?: HeterogeneousReasoningEffort;
   /** Model the create page picked — `'default'`/empty leaves the CLI's own. */
   model?: string;
+  modelExplicit?: boolean;
   overrides?: { description?: string; name?: string };
   profile?: ConnectAgentProfile;
   provider: ConnectableProvider;
@@ -135,6 +136,7 @@ export const buildPlatformAgencyConfig = (
 export const buildConnectAgentConfig = ({
   effort,
   model,
+  modelExplicit,
   overrides,
   profile,
   provider,
@@ -145,7 +147,9 @@ export const buildConnectAgentConfig = ({
   // selection sentinel, not a value the CLI flags understand.
   const selectorOverrides = {
     ...(effort && effort !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION ? { effort } : {}),
-    ...(model && model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION ? { model } : {}),
+    ...(model && (model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION || modelExplicit)
+      ? applyHeteroSelection(provider, { model, modelExplicit })
+      : {}),
   };
 
   if (provider.kind === 'platform' && isRemoteHeterogeneousType(provider.type)) {

@@ -33,6 +33,32 @@ describe('resolveAskUserAnswers', () => {
     });
   });
 
+  it.each(['pending', 'timed_out', 'session_ended', 'cancelled'])(
+    'does not present an attempted native answer as confirmed after %s',
+    (transition) => {
+      const state = {
+        askUserAnswers: { Scope: 'Narrow' },
+        heterogeneousIntervention: { transition },
+      };
+      expect(
+        resolveAskUserAnswers(state, '{"cancelled":true,"cancelReason":"timeout"}'),
+      ).toBeUndefined();
+    },
+  );
+
+  it('keeps acknowledged native answers and ignores cancelled content without native metadata', () => {
+    const state = {
+      askUserAnswers: { Scope: 'Narrow' },
+      heterogeneousIntervention: { transition: 'resolved', resolutionRequestId: 'answer-request' },
+    };
+    expect(resolveAskUserAnswers(state, '{"result":{"Scope":"Narrow"}}')).toEqual({
+      Scope: 'Narrow',
+    });
+    expect(
+      resolveAskUserAnswers({ askUserAnswers: { Scope: 'Narrow' } }, '{"cancelled":true}'),
+    ).toBeUndefined();
+  });
+
   it('ignores malformed or unsupported answer payloads', () => {
     expect(resolveAskUserAnswers(undefined, 'User submitted: not-json')).toBeUndefined();
     expect(resolveAskUserAnswers(undefined, 'Question(s) presented to the user.')).toBeUndefined();

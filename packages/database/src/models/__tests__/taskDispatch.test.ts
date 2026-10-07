@@ -305,6 +305,35 @@ describe('TaskDispatchModel', () => {
     ).toBe('created');
   });
 
+  it('passes the locked executor and actual actor to server authorization inside the transaction', async () => {
+    const task = await createTask('AUTH-CALLBACK', 3);
+    const agentId = 'agt-private-callback';
+    await db.insert(agents).values({ id: agentId, userId, workspaceId, visibility: 'private' });
+    await db.update(tasks).set({ assigneeAgentId: agentId }).where(eq(tasks.id, task.id));
+    let checked = false;
+    const result = await new TaskDispatchModel(db, workspaceId).request({
+      taskId: task.id,
+      trigger: 'manual',
+      requestedBy: 'audit-actor',
+      initiator: otherUserId,
+      executionUserId: otherUserId,
+      idempotencyKey: 'auth-callback',
+      authorizeExecutor: async ({ agentId: lockedAgentId, db: transaction, userId: actorId }) => {
+        expect(lockedAgentId).toBe(agentId);
+        expect(actorId).toBe(otherUserId);
+        expect(transaction).not.toBe(db);
+        const [lockedTask] = await transaction.select().from(tasks).where(eq(tasks.id, task.id));
+        expect(lockedTask.assigneeAgentId).toBe(lockedAgentId);
+        checked = true;
+      },
+    });
+    expect(checked).toBe(true);
+    expect(result.state).toBe('created');
+    if (result.state === 'busy') throw new Error('unexpected active dispatch');
+    expect(result.dispatch.initiator).toBe(otherUserId);
+    expect(result.dispatch.agentId).toBe(agentId);
+  });
+
   it('persists event identity and applies project admission on duplicate delivery', async () => {
     const task = await createTask('EVT-1', 101);
     const [project] = await db
@@ -459,6 +488,7 @@ describe('TaskDispatchModel', () => {
     const input = {
       eventEvidence: evidence,
       idempotencyKey: evidence.idempotencyKey,
+      initiator: userId,
       requestedBy: userId,
       taskId: task.id,
       trigger: 'event' as const,
@@ -479,6 +509,8 @@ describe('TaskDispatchModel', () => {
     });
     expect(candidates).toHaveLength(1);
     expect(candidates[0].eventEvidence).toEqual(evidence);
+    expect(candidates[0].initiator).toBe(userId);
+    expect(candidates[0].agentId).toBe(first.dispatch.agentId);
     expect((await model.request(input)).state).toBe('existing');
     await db
       .update(userConnectors)

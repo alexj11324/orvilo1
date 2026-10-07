@@ -31,6 +31,7 @@ import type { TaskTopicItem } from '../schemas/task';
 import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
+import { buildSharedTaskReadableWhere } from '../utils/sharedTaskReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { insertOutboxEvent, newEventId } from './eventOutbox';
 import { matchesDispatchAssignee, TaskDispatchModel } from './taskDispatch';
@@ -72,7 +73,7 @@ export class TaskTopicModel {
   }
 
   private ownership = () =>
-    buildWorkspaceWhere(
+    buildSharedTaskReadableWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       {
         userId: taskTopics.userId,
@@ -82,7 +83,7 @@ export class TaskTopicModel {
     );
 
   private taskOwnership = () =>
-    buildWorkspaceWhere(
+    buildSharedTaskReadableWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       {
         userId: tasks.createdByUserId,
@@ -905,6 +906,7 @@ export class TaskTopicModel {
   async findWithDetails(taskId: string) {
     return this.db
       .select({
+        agentId: topics.agentId,
         createdAt: topics.createdAt,
         handoff: taskTopics.handoff,
         id: topics.id,

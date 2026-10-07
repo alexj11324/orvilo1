@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useChatStore } from '@/store/chat';
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
@@ -170,9 +171,12 @@ const ProgressSection = memo<{ className?: string }>(({ className }) => {
       <div
         aria-controls={listId}
         aria-expanded={expanded}
-        className={cn('flex items-center gap-2 justify-between', styles.headerRow)}
         role="button"
         tabIndex={0}
+        className={cx(
+          cn('flex items-center gap-2 justify-between', styles.headerRow),
+          buttonHoverFeedback,
+        )}
         onClick={toggleExpanded}
         onKeyDown={handleHeaderKeyDown}
       >

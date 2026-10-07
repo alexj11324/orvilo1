@@ -1,9 +1,10 @@
 import type { TaskAttentionReason, TaskExecutionState, TaskItem } from '@orvilo/types';
+import { executionParkedReason } from '@orvilo/types';
 
 import type { VerifySettlementOutcome } from './types';
 
 /**
- * Attention reason attached to a verify-routed `in_review`. Mirrors the
+ * Attention reason attached to a verify-routed review hold. Mirrors the
  * settlement policy's mapping — kept here so read surfaces and the policy
  * cannot drift apart.
  */
@@ -32,16 +33,19 @@ export const attentionForVerifyOutcome = (
  * - execution `waiting` → `needs_input`
  * - execution `failed` / `outcome_unknown` → `execution_failed` /
  *   `outcome_unknown`
+ * - explicit parked review reason → retain review attention in any category
  * - workflow `in_review` → the verify outcome when known, else
  *   `review_required`
  * - anything else → `none`
  */
 export const deriveTaskAttention = (input: {
   execution: TaskExecutionState | null;
-  task: Pick<TaskItem, 'workflowCategory'>;
+  task: Pick<TaskItem, 'workflowCategory'> & Partial<Pick<TaskItem, 'context'>>;
   verifyOutcome?: VerifySettlementOutcome;
 }): TaskAttentionReason => {
   const { execution, task, verifyOutcome } = input;
+  const parkedReason = executionParkedReason(task.context);
+  if (parkedReason === 'needs_input') return 'needs_input';
   switch (execution) {
     case 'waiting': {
       return 'needs_input';
@@ -55,6 +59,13 @@ export const deriveTaskAttention = (input: {
     default: {
       break;
     }
+  }
+  if (
+    parkedReason === 'review_required' ||
+    parkedReason === 'needs_changes' ||
+    parkedReason === 'blocked'
+  ) {
+    return parkedReason;
   }
   if (task.workflowCategory === 'in_review') {
     return verifyOutcome ? attentionForVerifyOutcome(verifyOutcome) : 'review_required';

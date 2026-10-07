@@ -1,7 +1,13 @@
 import type { WorkingDirConfigValue } from '../device';
 import type { OrviloAgentChatConfig } from './chatConfig';
 import type { AgentGraph } from './graph';
-import { hasAnyCliFlag, hasCliConfigKey, hasCliFlag } from './heteroCliArgs';
+import {
+  getCliConfigValue,
+  getCliFlagValue,
+  hasAnyCliFlag,
+  hasCliConfigKey,
+  hasCliFlag,
+} from './heteroCliArgs';
 import type { HeterogeneousAgentType, LocalHeterogeneousAgentType } from './heterogeneousAgent';
 import {
   BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
@@ -58,6 +64,8 @@ export interface ListHeterogeneousAgentModelsParams {
   cwd?: string;
   env?: Record<string, string>;
   type:
+    | 'claude-code'
+    | 'codex'
     | 'codebuddy'
     | 'cursor'
     | 'devin'
@@ -309,6 +317,8 @@ export interface HeterogeneousProviderConfig {
 
 export interface HeterogeneousTopicModel {
   model: string;
+  /** Distinguishes an advertised ACP ID `default` from legacy inheritance. */
+  modelExplicit?: boolean;
   /**
    * Provider identity used by the topic pin — the declared provider type.
    * For the builtin Orvilo agent this is `'orvilo'` itself: Prime is its
@@ -352,7 +362,14 @@ export const resolveHeterogeneousProviderTopicModel = (
   }
 
   const model = getHeteroSelectorCapability(config.type)?.model?.resolve(config);
-  return model ? { model, provider: config.type } : undefined;
+  const modelExplicit =
+    model === HETEROGENEOUS_AGENT_DEFAULT_SELECTION &&
+    (getCliFlagValue(config.args, '--model') === 'default' ||
+      getCliFlagValue(config.args, '-m') === 'default' ||
+      getCliConfigValue(config.args, 'model') === 'default');
+  return model
+    ? { model, provider: config.type, ...(modelExplicit ? { modelExplicit: true } : {}) }
+    : undefined;
 };
 
 /**
@@ -394,7 +411,10 @@ const applyTopicModelPin = (
 
   return {
     ...config,
-    ...applyHeteroSelection(config, { model: topicModel.model }),
+    ...applyHeteroSelection(config, {
+      model: topicModel.model,
+      modelExplicit: topicModel.modelExplicit,
+    }),
   };
 };
 

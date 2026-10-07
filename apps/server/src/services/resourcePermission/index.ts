@@ -5,7 +5,10 @@ import { eq } from 'drizzle-orm';
 
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import { TeamModel } from '@/database/models/team';
-import { hasActiveWorkspaceMembership } from '@/database/models/workspace';
+import {
+  getActiveWorkspaceMembershipRole,
+  hasActiveWorkspaceMembership,
+} from '@/database/models/workspace';
 import type { PermissionResourceType, ResourceAccessLevel } from '@/database/schemas';
 import {
   agents,
@@ -42,6 +45,7 @@ export interface ResourceMeta {
 export interface ResourcePermissionState {
   accessLevel: ResourceAccessLevel;
   canManage: boolean;
+  canUseResource?: boolean;
   creatorId: string;
   /** @deprecated Compatibility value returned for released clients. */
   generalAccess: 'editor' | 'viewer';
@@ -51,6 +55,7 @@ export interface ResourcePermissionState {
 export const buildResourcePermissionState = (params: {
   accessLevel: ResourceAccessLevel;
   canManage: boolean;
+  canUseResource?: boolean;
   creatorId: string;
   visibility: 'private' | 'public' | 'team';
 }): ResourcePermissionState => ({
@@ -146,56 +151,7 @@ export const getResourceMeta = async (
   return row ?? null;
 };
 
-/**
- * Resolve the builtin markers for callers that hand-build `ResourceMeta` instead
- * of going through `getResourceMeta` (the agent-run path does, to reuse a config
- * it already loaded). Without this, missing markers silently downgrade a builtin
- * to an ordinary agent, so execution would classify a member differently from
- * configuration. Values the caller stated — including `null` / `false` — are real
- * and never re-fetched.
- */
-const resolveAgentBuiltinMarkers = async (
-  db: OrviloDatabase,
-  resourceId: string,
-): Promise<{ slug: string | null; virtual: boolean | null }> => {
-  const [row] = await db
-    .select({ slug: agents.slug, virtual: agents.virtual })
-    .from(agents)
-    .where(eq(agents.id, resourceId))
-    .limit(1);
-
-  return { slug: row?.slug ?? null, virtual: row?.virtual ?? null };
-};
-
-/**
- * Whether the resource is a workspace-level builtin agent that members are meant
- * to configure together.
- *
- * These rows are shared workspace infrastructure, not authored content: they are
- * created lazily by whichever member happens to trigger them first, so
- * `agents.user_id` records an accident of timing rather than authorship, and no
- * `resource_permissions` row is ever written for them (their effective General
- * access falls back to the resource default). Treating them as creator-owned locks
- * every other member out of the Agent Builder, of Orvilo AI's config page, and of
- * the Page Copilot's own settings, so they are governed by workspace
- * capability instead: anyone holding `agent:update:{owner,all}` may
- * read/use/configure them, while destructive and ownership actions (delete /
- * transfer / visibility) stay with the creator and the workspace primary owner.
- *
- * Residual risk, accepted deliberately: `virtual` is written by provisioning but
- * is not exclusive to it (group members carry it too), so a row that acquired a
- * reserved slug before `AgentModel.stripReservedSlug` existed would also match.
- * `agents_slug_workspace_id_unique` allows only one row per slug per workspace,
- * which means such a row is already what `getBuiltinAgent` resolves as that
- * workspace's Orvilo AI / builder — every member is already chatting with it, so
- * letting them configure it is not an escalation beyond what the row already is.
- * Distinguishing the two shapes for real needs a provisioning-only marker
- * (a column written solely by `getBuiltinAgent`) plus a backfill; that is a schema
- * change and is tracked separately. Group membership is NOT usable as the
- * discriminator: linking the real inbox into an agent group is supported, so
- * excluding linked rows would deny configuration on a legitimately provisioned
- * builtin and reproduce.
- */
+/** Identify provisioned collaborative infrastructure for profile/policy presentation. */
 export const isCollaborativeBuiltinAgent = (
   resourceType: PermissionResourceType,
   meta: ResourceMeta,
@@ -280,6 +236,34 @@ export const canPerformResourceAction = async (params: {
     return true;
   }
 
+  if (resourceType === 'agent') {
+    // Personal resources retain their owner boundary outside the workspace roster.
+    if (!meta.workspaceId) return meta.userId === userId;
+    const role = await getActiveWorkspaceMembershipRole(db, { userId, workspaceId });
+    if (!role || (action !== 'view' && !['owner', 'admin', 'member'].includes(role))) return false;
+    if (action === 'view' && meta.visibility !== 'private') return true;
+    if (action === 'use') {
+      const capability = await getWorkspaceScopedPermissionMatches({
+        action: getRbacAction(resourceType, action),
+        db,
+        grantedPermissions,
+        userId,
+        workspaceId,
+      });
+      if (!capability.hasAllScope && !capability.hasOwnerScope) return false;
+      const grant = await new ResourcePermissionModel(db, workspaceId).getCollaboratorLevel(
+        resourceType,
+        resourceId,
+        userId,
+      );
+      return grant === 'use';
+    }
+    if (action === 'edit' || action === 'manage' || action === 'delete') {
+      if (meta.visibility === 'private' && meta.userId !== userId) return false;
+      return meta.userId === userId || role === 'owner' || role === 'admin';
+    }
+  }
+
   const isCreator = meta.userId === userId;
   const isPrivate = meta.visibility === 'private';
   if (isPrivate && !isCreator) return false;
@@ -308,45 +292,10 @@ export const canPerformResourceAction = async (params: {
     if (isCreator) return true;
     return isWorkspacePrimaryOwner({ db, userId, workspaceId });
   }
-  // Collaboratively-configured workspace infrastructure answers to workspace
-  // capability, not to the member who first materialized the row. A hand-built
-  // `meta` may not carry the slug, so fill it in rather than misclassifying.
-  const needsBuiltinMarkers =
-    resourceType === 'agent' && (meta.slug === undefined || meta.virtual === undefined);
-  const resolvedMeta = needsBuiltinMarkers
-    ? { ...meta, ...(await resolveAgentBuiltinMarkers(db, resourceId)) }
-    : meta;
-  const isSharedWorkspaceAgent =
-    !isPrivate && isCollaborativeBuiltinAgent(resourceType, resolvedMeta);
-  // The bypass exists because these rows have no `resource_permissions` row and
-  // would silently inherit whatever the resource default happens to be — today
-  // that default is `edit` and the bypass is a no-op, but it must not become a
-  // lockout again if the default is ever lowered. An owner who *explicitly* sets
-  // a level still means it — otherwise the General-access control would persist a
-  // value it never enforces — so only the implicit default is overridden.
-  const hasExplicitAccessLevel = isSharedWorkspaceAgent
-    ? !!(await new ResourcePermissionModel(db, workspaceId).getAccessLevel(
-        resourceType,
-        resourceId,
-      ))
-    : false;
-  // Grants edit / use / view only — see the `manage` branch below.
-  const bypassesImplicitDefault = isSharedWorkspaceAgent && !hasExplicitAccessLevel;
-
-  // `manage` is authority over the row, not permission to configure it:
-  // `setGeneralAccess` authorizes ACL writes with it (a member could otherwise
-  // persist an explicit `use` row and lock every other member out again), and the
-  // client's `useAgentManagementAccess` uses it to decide whether model / mode /
-  // device picks mutate the shared agent. Collaborative builtins therefore grant
-  // *edit* to capable members, never `manage`.
   if (action === 'manage') return isCreator || (!isPrivate && hasAllScope);
   if (action === 'delete') return isCreator || (!isPrivate && hasAllScope);
 
   if (isCreator) return true;
-  // Collaboratively-configured workspace infrastructure is not creator-owned
-  // content, so an *implicit* default below `edit` must not lock members out. An
-  // explicitly configured level falls through to the comparison below.
-  if (bypassesImplicitDefault) return true;
   if (isPrivate) return false;
 
   // Ordinary members hold `READ:all` and `AI_MODEL_INVOKE:all`; those are the
@@ -435,6 +384,12 @@ export const isResourceAuthorOrAdmin = async (params: {
 }): Promise<boolean> => {
   const { db, grantedPermissions, meta, resourceType, userId, workspaceId } = params;
   if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
+  if (resourceType === 'agent') {
+    const role = await getActiveWorkspaceMembershipRole(db, { userId, workspaceId });
+    if (!role || role === 'viewer') return false;
+    if (meta.visibility === 'private' && meta.userId !== userId) return false;
+    return meta.userId === userId || role === 'owner' || role === 'admin';
+  }
   if (resourceType === 'document' && meta.visibility === 'team') {
     return canPerformResourceAction({
       action: 'manage',

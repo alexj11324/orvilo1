@@ -1,6 +1,7 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { createModal, DropdownMenu } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
@@ -9,6 +10,7 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessModelRating } from '@/business/client/hooks/useBusinessModelRating';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 
 import type { RatingDimensionKey } from '../ModelRatingRadar';
@@ -294,7 +296,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
             <span className={styles.chipName}>{model.displayName}</span>
             {selected.length > 1 && (
               <span
-                className={styles.chipRemove}
+                className={cn(styles.chipRemove, buttonHoverFeedback)}
                 role={'button'}
                 onClick={() => setSelectedIds((prev) => prev.filter((id) => id !== model.id))}
               >

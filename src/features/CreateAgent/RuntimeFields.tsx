@@ -2,7 +2,10 @@
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type { HeterogeneousReasoningEffort, OrviloAgentConfig } from '@orvilo/types';
-import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
+import {
+  HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+  HETEROGENEOUS_MODEL_INHERIT_SELECTION,
+} from '@orvilo/types';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,13 +22,11 @@ import {
 import { isBuiltinAgentUsable } from '@/features/AgentOnboarding/availability';
 import { ProviderSetupFields } from '@/features/AgentOnboarding/ProviderSetupFields';
 import { getEffortLabelKeys } from '@/features/ChatInput/ControlBar/HeteroModel/labels';
-import {
-  MODEL_LABELS,
-  modelDisplayLabel,
-} from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
+import { modelDisplayLabel } from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
 import { buildConnectAgentConfig, getConnectableProvider } from '@/features/ConnectAgent/providers';
 import { useAgentScan } from '@/features/ConnectAgent/useAgentScan';
 import { getDeviceLabel } from '@/features/DeviceManager/getDeviceLabel';
+import { resolveServerDefaultModelMeta } from '@/features/HeterogeneousAgent/modelPicker';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import {
   type FirstAgentProviderCheckpoint,
@@ -34,6 +35,7 @@ import {
 } from '@/services/agentOnboarding';
 import { deviceService } from '@/services/device';
 import { providerBindingService } from '@/services/providerBinding';
+import { useAiInfraStore } from '@/store/aiInfra';
 import { useFetchProviderBindings, useProviderBindingStore } from '@/store/providerBinding';
 
 import { AgentModelPicker } from './AgentModelPicker';
@@ -68,7 +70,7 @@ export const useAgentRuntimeForm = ({
   const [choice, setChoice] = useState<AgentChoice>(
     builtinOnly ? BUILTIN_AGENT_KEY : (initialType ?? BUILTIN_AGENT_KEY),
   );
-  const [model, setModel] = useState(HETEROGENEOUS_AGENT_DEFAULT_SELECTION as string);
+  const [model, setModel] = useState(HETEROGENEOUS_MODEL_INHERIT_SELECTION as string);
   const [effort, setEffort] = useState<HeterogeneousReasoningEffort>(
     HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   );
@@ -122,7 +124,7 @@ export const useAgentRuntimeForm = ({
   }, [effort, model, provider?.type]);
   const selectChoice = (value: AgentChoice) => {
     setChoice(value);
-    setModel(HETEROGENEOUS_AGENT_DEFAULT_SELECTION);
+    setModel(HETEROGENEOUS_MODEL_INHERIT_SELECTION);
     setEffort(HETEROGENEOUS_AGENT_DEFAULT_SELECTION);
   };
   const ready =
@@ -171,7 +173,8 @@ export const useAgentRuntimeForm = ({
       throw new Error('CREATE_AGENT_NO_PROVIDER');
     return buildConnectAgentConfig({
       effort: validEffortFor(provider.type, model, effort),
-      model,
+      model: model === HETEROGENEOUS_MODEL_INHERIT_SELECTION ? undefined : model,
+      modelExplicit: model !== HETEROGENEOUS_MODEL_INHERIT_SELECTION,
       provider,
       target: host.isLocal
         ? { deviceId: host.deviceId, kind: 'local' }
@@ -217,6 +220,7 @@ export const RuntimeFields = ({
   form: ReturnType<typeof useAgentRuntimeForm>;
 }) => {
   const { t } = useTranslation(['chat', 'common']);
+  const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
   const navigate = useWorkspaceAwareNavigate();
   const { host, choice } = form;
   const builtin = choice === BUILTIN_AGENT_KEY;
@@ -359,7 +363,8 @@ export const RuntimeFields = ({
                 options={[
                   ...form.bindings.map((binding) => ({
                     label:
-                      MODEL_LABELS[binding.model] ??
+                      resolveServerDefaultModelMeta(binding.model, builtinAiModelList)
+                        ?.displayName ??
                       modelDisplayLabel({ id: binding.model, modelId: binding.model }),
                     description: binding.name || binding.provider,
                     value: binding.id,
@@ -396,7 +401,7 @@ export const RuntimeFields = ({
                 options={[
                   {
                     label: t('heteroAgent.modelSelector.default'),
-                    value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+                    value: HETEROGENEOUS_MODEL_INHERIT_SELECTION,
                   },
                   ...form.modelOptions.options,
                 ]}

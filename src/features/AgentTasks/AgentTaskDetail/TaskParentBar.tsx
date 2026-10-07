@@ -1,14 +1,19 @@
-import type { TaskDetailData, TaskDetailSubtask, TaskWorkflowCategory } from '@orvilo/types';
+import type {
+  TaskAttentionReason,
+  TaskDetailData,
+  TaskDetailSubtask,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { getIssueStatusVisual } from '@/components/ExecutionStatus';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { taskService } from '@/services/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
-import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
@@ -41,10 +46,12 @@ const TaskParentBar = memo(() => {
   const [parentSubtasks, setParentSubtasks] = useState<TaskDetailSubtask[]>([]);
   const [parentStatus, setParentStatus] = useState<TaskStatus>('backlog');
   const [parentWorkflow, setParentWorkflow] = useState<{
+    attentionReason?: TaskAttentionReason;
     category?: TaskWorkflowCategory;
     stateId?: string | null;
   }>({});
   const workflowGlyph = useTaskWorkflowGlyph({
+    attentionReason: parentWorkflow.attentionReason,
     executionStatus: parentStatus,
     workflowCategory: parentWorkflow.category,
     workflowStateId: parentWorkflow.stateId,
@@ -65,7 +72,11 @@ const TaskParentBar = memo(() => {
         const detail = res.data as TaskDetailData;
         setFetchedParentAgent({ agentId: detail.agentId, identifier: parent.identifier });
         setParentStatus(toTaskStatus(detail.status));
-        setParentWorkflow({ category: detail.workflowCategory, stateId: detail.workflowStateId });
+        setParentWorkflow({
+          attentionReason: detail.attentionReason,
+          category: detail.workflowCategory,
+          stateId: detail.workflowStateId,
+        });
         setParentSubtasks(detail.subtasks ?? []);
       })
       .catch((err) => {
@@ -77,6 +88,11 @@ const TaskParentBar = memo(() => {
       isActive = false;
     };
   }, [parent?.identifier]);
+
+  const parentVisual = getIssueStatusVisual({
+    attentionReason: parentWorkflow.attentionReason,
+    workflowCategory: parentWorkflow.category,
+  });
 
   if (!parent) return null;
 
@@ -117,7 +133,7 @@ const TaskParentBar = memo(() => {
             </Tooltip>
           </TooltipProvider>
         ) : (
-          <TaskStatusIcon size={16} status={parentStatus} />
+          <parentVisual.icon color={parentVisual.color} size={16} />
         )}
         {/* Reference form: `◐ ORV-117 Handoff: …` — the identifier stays
             visible even when the name truncates. */}

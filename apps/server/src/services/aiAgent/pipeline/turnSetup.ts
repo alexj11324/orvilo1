@@ -79,7 +79,9 @@ export const resolveNewTopicSnapshot = (
     ? resolveHeterogeneousProviderTopicModel(heterogeneousProvider)
     : undefined;
   return {
-    metadata: resolveTopicReasoningSnapshot({ heterogeneousProvider }),
+    metadata: heteroModel?.modelExplicit
+      ? { ...resolveTopicReasoningSnapshot({ heterogeneousProvider }), heteroModelExplicit: true }
+      : resolveTopicReasoningSnapshot({ heterogeneousProvider }),
     model: heteroModel?.model ?? (heteroType ? undefined : model),
     provider: heteroModel?.provider ?? heteroType ?? provider,
   };
@@ -463,7 +465,7 @@ export const setupTurn = async (
       metadata:
         newTopicPins?.effort === undefined
           ? agentSnapshot.metadata
-          : { heteroEffort: newTopicPins.effort },
+          : { ...agentSnapshot.metadata, heteroEffort: newTopicPins.effort },
       model: newTopicPins?.model ?? agentSnapshot.model,
       provider: newTopicPins?.provider ?? agentSnapshot.provider,
     };
@@ -589,7 +591,11 @@ export const setupTurn = async (
     if (pinnedModel) {
       model = modelOverride || pinnedModel;
       provider = providerOverride || existingTopic?.provider || provider;
-      pinnedHeterogeneousTopicModel = { model, provider };
+      pinnedHeterogeneousTopicModel = {
+        model,
+        provider,
+        ...(existingTopic?.metadata?.heteroModelExplicit ? { modelExplicit: true } : {}),
+      };
       log(
         'execAgent: using topic-pinned model=%s provider=%s for topic %s',
         model,

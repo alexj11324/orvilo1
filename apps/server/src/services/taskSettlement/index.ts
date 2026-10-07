@@ -1,8 +1,10 @@
 import { deriveTaskExecutionState, type TaskItem, type TaskStatus } from '@orvilo/types';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
+import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import type { OrviloDatabase } from '@/database/type';
 
 import { resolveSettlementPlan } from './policy';
@@ -56,10 +58,27 @@ export const settleTaskExecution = async (
   if (!task) {
     return noWrite({ type: 'hold' }, null, 'no_task');
   }
+  let unresolvedInput =
+    !input.runStarted && !context?.issueCancel
+      ? await taskModel.hasUnresolvedInput(taskId, input.operationId)
+      : false;
+  if (input.outcome === 'waiting_for_input') {
+    const operation = input.operationId
+      ? await new AgentOperationModel(db, userId, workspaceId).findById(input.operationId)
+      : null;
+    const resumable =
+      operation &&
+      operation.taskId === taskId &&
+      operation.topicId === task.currentTopicId &&
+      !operation.completedAt &&
+      ['running', 'waiting_for_human', 'waiting_for_async_tool'].includes(operation.status);
+    if (resumable) unresolvedInput = false;
+    else if (!unresolvedInput) return noWrite({ type: 'hold' }, null, 'stale_generation');
+  }
   if (
-    task.workflowCategory === 'done' ||
+    (!unresolvedInput && task.workflowCategory === 'done') ||
     task.workflowCategory === 'canceled' ||
-    (TERMINAL_LEGACY_STATUSES.has(task.status) && !context?.expectedContract)
+    (TERMINAL_LEGACY_STATUSES.has(task.status) && !context?.expectedContract && !unresolvedInput)
   ) {
     return noWrite({ type: 'hold' }, null, 'terminal');
   }
@@ -85,13 +104,22 @@ export const settleTaskExecution = async (
     }
   }
 
+  if (input.runStarted) {
+    if (!input.operationId || !(await taskModel.hasLiveExecutor(taskId, input.operationId))) {
+      return noWrite({ type: 'hold' }, null, 'stale_generation');
+    }
+    if (task.workflowCategory === 'in_progress' || task.workflowCategory === 'in_review') {
+      return noWrite({ type: 'keep_open' }, 'running', 'unchanged');
+    }
+  }
+
   const reviewRequired =
     input.outcome === 'succeeded' && !context?.verifyBound
       ? await taskModel.resolveTaskReviewRequirement(task)
       : false;
 
   const plan = resolveSettlementPlan({
-    context,
+    context: { ...context, unresolvedInput },
     outcome: input.outcome,
     reviewRequired,
     runStarted: input.runStarted,
@@ -115,8 +143,10 @@ export const settleTaskExecution = async (
   // Resolve the workflow target onto the team's state list — the same
   // ambiguity rule as a board move (never a positional guess).
   let workflowAmbiguous = false;
-  let workflowPatch: TaskWorkflowPatch = {};
-  if (plan.workflowCategory) {
+  let workflowPatch: TaskWorkflowPatch = plan.workflowCategory
+    ? { workflowCategory: plan.workflowCategory }
+    : {};
+  if (plan.workflowCategory && plan.workflowCategory !== task.workflowCategory) {
     const stateWorkspaceId = workspaceId ?? task.workspaceId;
     const states =
       task.teamId && stateWorkspaceId
@@ -146,9 +176,41 @@ export const settleTaskExecution = async (
     execution,
     legacyStatus: plan.legacyStatus,
     workflowAmbiguous,
-    workflowCategory: workflowPatch.workflowCategory,
+    workflowCategory: plan.workflowCategory,
     task: updated,
   };
+};
+
+/** Persisted producer activity, shared by CLI ingestion and remote notify. */
+export const settleTaskExecutionStarted = async (
+  db: OrviloDatabase,
+  userId: string,
+  operation: AgentOperationItem,
+  workspaceId?: string,
+) => {
+  if (!operation.taskId || operation.status !== 'running' || operation.completedAt) return;
+  const task = await new TaskModel(db, userId, workspaceId).findById(operation.taskId);
+  if (!task) return;
+  return settleTaskExecution(
+    db,
+    userId,
+    {
+      context: {
+        expectedContract: {
+          assigneeAgentId: operation.agentId,
+          executionGeneration: operation.appContext?.executionGeneration ?? -1,
+          policyRevision: task.policyRevision,
+          requirementRevision: task.requirementRevision,
+        },
+      },
+      dispatchFence: operation.appContext?.dispatchFence,
+      executionGeneration: operation.appContext?.executionGeneration,
+      operationId: operation.id,
+      runStarted: true,
+      taskId: operation.taskId,
+    },
+    workspaceId,
+  );
 };
 
 /** Derive the current canonical execution state for callers that need it back. */
@@ -182,8 +244,11 @@ const applyPlan = async (
   const taskModel = new TaskModel(db, userId, workspaceId);
   const status = plan.legacyStatus ?? task.status;
 
+  const parkedReason =
+    status === 'paused' && plan.attention !== 'none' ? plan.attention : undefined;
   const extra = {
     ...workflowPatch,
+    ...(parkedReason ? { parkedReason } : {}),
     ...(context?.error !== undefined ? { error: context.error } : {}),
     ...(context?.clearRunReservation
       ? { runReservationExpiresAt: null as Date | null, runReservationId: null as string | null }
@@ -204,7 +269,7 @@ const applyPlan = async (
       expectedContract: context?.expectedContract,
       id: task.id,
       status: status as TaskStatus,
-      workflow: workflowPatch,
+      workflow: { ...workflowPatch, ...(parkedReason ? { parkedReason } : {}) },
     };
     const options = {
       beforeMutation: context?.beforeMutation,

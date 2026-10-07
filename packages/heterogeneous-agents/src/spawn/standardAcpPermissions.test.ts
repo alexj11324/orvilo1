@@ -341,3 +341,62 @@ describe('standard ACP permissions', () => {
     session.close();
   });
 });
+
+describe('standard ACP exact default model', () => {
+  it('sends advertised opaque default through its exact config ID before prompt', async () => {
+    const fake = spawnWithCatalog({
+      configOptions: [
+        {
+          type: 'select',
+          category: 'model',
+          id: 'harness-model',
+          name: 'Model',
+          currentValue: 'sonnet',
+          options: [
+            { name: 'CLI Default Model', value: 'default' },
+            { name: 'Sonnet', value: 'sonnet' },
+          ],
+        },
+      ],
+    });
+    await createStandardAcpSession(
+      'claude-code',
+      createSessionOptions({ args: [], initialModel: 'default' }),
+    ).run();
+    const set = fake.requests.find(({ method }) => method === 'session/set_config_option');
+    expect(set?.params).toEqual({
+      sessionId: 'native-session',
+      configId: 'harness-model',
+      value: 'default',
+    });
+    expect(fake.requests.indexOf(set!)).toBeLessThan(
+      fake.requests.findIndex(({ method }) => method === 'session/prompt'),
+    );
+  });
+  it('inherits the session model without a selector request when no explicit model was supplied', async () => {
+    const fake = spawnWithCatalog({
+      configOptions: [
+        {
+          type: 'select',
+          category: 'model',
+          id: 'harness-model',
+          name: 'Model',
+          currentValue: 'sonnet',
+          options: [
+            { name: 'CLI Default Model', value: 'default' },
+            { name: 'Sonnet', value: 'sonnet' },
+          ],
+        },
+      ],
+    });
+    await createStandardAcpSession(
+      'claude-code',
+      createSessionOptions({ args: [], initialModel: undefined }),
+    ).run();
+    expect(
+      fake.requests.some(
+        ({ method }) => method === 'session/set_config_option' || method === 'session/set_model',
+      ),
+    ).toBe(false);
+  });
+});

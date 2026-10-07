@@ -25,11 +25,20 @@ const ResourceConfigAccessGate = memo<ResourceConfigAccessGateProps>(
     const navigate = useWorkspaceAwareNavigate();
     const hasRedirected = useRef(false);
     const { allowed: canEditContent } = usePermission('edit_own_content');
-    const { accessError, canEditResource, isAccessResolved, isLoading, retryAccess } =
-      useResourceAccess(resourceType, resourceId);
+    const {
+      accessError,
+      canEditResource,
+      canManageResource,
+      isAccessResolved,
+      isLoading,
+      retryAccess,
+    } = useResourceAccess(resourceType, resourceId);
 
     const accessReady = !!resourceId && isAccessResolved && !isLoading;
-    const canConfigure = accessReady && canEditContent && canEditResource;
+    const canConfigure =
+      accessReady &&
+      canEditContent &&
+      (resourceType === 'agent' ? canManageResource : canEditResource);
 
     useEffect(() => {
       if (!accessReady || accessError || canConfigure || hasRedirected.current) return;
@@ -44,7 +53,7 @@ const ResourceConfigAccessGate = memo<ResourceConfigAccessGateProps>(
         resourceType === 'agent'
           ? isRoleRestricted
             ? 'permission.configAccess.agentRoleRestricted'
-            : 'permission.configAccess.agentChatOnly'
+            : 'permission.configAccess.agentManageRequired'
           : isRoleRestricted
             ? 'permission.configAccess.groupRoleRestricted'
             : 'permission.configAccess.groupChatOnly';

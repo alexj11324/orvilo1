@@ -165,16 +165,6 @@ const PRIORITY_RANK_MAP: Record<number, number> = {
   4: 3,
 };
 
-const STATUS_GROUP_RANK_MAP: Record<NonNullable<TaskGroupMeta['status']>, number> = {
-  paused: 0,
-  failed: 1,
-  running: 2,
-  scheduled: 3,
-  backlog: 4,
-  completed: 5,
-  canceled: 6,
-};
-
 const WORKFLOW_GROUP_RANK_MAP: Record<TaskWorkflowCategory, number> = {
   triage: 0,
   backlog: 1,
@@ -185,22 +175,7 @@ const WORKFLOW_GROUP_RANK_MAP: Record<TaskWorkflowCategory, number> = {
   canceled: 6,
 };
 
-const TASK_STATUS_TO_GROUP_MAP: Record<string, NonNullable<TaskGroupMeta['status']>> = {
-  backlog: 'backlog',
-  canceled: 'canceled',
-  completed: 'completed',
-  failed: 'failed',
-  paused: 'paused',
-  running: 'running',
-  // Scheduled tasks are idle-until-next-run, not executing — keep them in their
-  // own group instead of folding into "running" ("In progress"), whose label
-  // would otherwise assert a state the task isn't in.
-  scheduled: 'scheduled',
-};
-
 const getPriorityValue = (task: TaskListItem) => task.priority ?? 0;
-const getTaskStatusGroup = (task: TaskListItem): NonNullable<TaskGroupMeta['status']> =>
-  TASK_STATUS_TO_GROUP_MAP[task.status] ?? 'backlog';
 
 export const getTaskAssigneeGroupMeta = (agentId: string | null | undefined): TaskGroupMeta => {
   if (agentId) {
@@ -332,7 +307,9 @@ const getComparableValue = (task: TaskListItem, orderBy: TaskOrderBy): number | 
       return PRIORITY_RANK_MAP[getPriorityValue(task)];
     }
     case 'status': {
-      return STATUS_GROUP_RANK_MAP[getTaskStatusGroup(task)];
+      return task.attentionReason === 'needs_input'
+        ? -1
+        : WORKFLOW_GROUP_RANK_MAP[task.workflowCategory ?? 'backlog'];
     }
     case 'title': {
       return task.name || task.identifier;
@@ -405,29 +382,19 @@ export const getTaskGroupMeta = (
       return getTaskPriorityGroupMeta(getPriorityValue(task));
     }
     case 'status': {
-      if (task.workflowCategory) {
+      if (task.attentionReason === 'needs_input') {
         return {
           groupBy: 'status',
-          key: `workflow:${task.workflowCategory}`,
-          label: t(`taskDetail.workflow.category.${task.workflowCategory}`, { ns: 'chat' }),
-          workflowCategory: task.workflowCategory,
+          key: 'workflow:needs_input',
+          label: t('taskList.attention.needsInput', { ns: 'chat' }),
         };
       }
-      const groupedStatus = getTaskStatusGroup(task);
-      const labelKeyMap: Record<NonNullable<TaskGroupMeta['status']>, string> = {
-        backlog: 'taskDetail.status.backlog',
-        canceled: 'taskDetail.status.canceled',
-        completed: 'taskDetail.status.completed',
-        failed: 'taskDetail.status.failed',
-        paused: 'taskDetail.status.paused',
-        running: 'taskDetail.status.running',
-        scheduled: 'taskDetail.status.scheduled',
-      };
+      const category = task.workflowCategory ?? 'backlog';
       return {
         groupBy: 'status',
-        key: `status:${groupedStatus}`,
-        label: t(labelKeyMap[groupedStatus], { defaultValue: '', ns: 'chat' }),
-        status: groupedStatus,
+        key: `workflow:${category}`,
+        label: t(`taskDetail.workflow.category.${category}`, { ns: 'chat' }),
+        workflowCategory: category,
       };
     }
     case 'none': {
@@ -458,9 +425,9 @@ const getGroupRank = (group: TaskGroupMeta, groupBy: TaskGroupBy): number => {
       return PRIORITY_RANK_MAP[group.priority] ?? Number.MAX_SAFE_INTEGER;
     }
     case 'status': {
-      if (group.workflowCategory) return WORKFLOW_GROUP_RANK_MAP[group.workflowCategory];
-      if (!group.status) return Number.MAX_SAFE_INTEGER;
-      return STATUS_GROUP_RANK_MAP[group.status] ?? Number.MAX_SAFE_INTEGER;
+      return group.key === 'workflow:needs_input'
+        ? -1
+        : WORKFLOW_GROUP_RANK_MAP[group.workflowCategory ?? 'backlog'];
     }
     default: {
       return Number.MAX_SAFE_INTEGER;

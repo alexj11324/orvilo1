@@ -55,7 +55,9 @@ export function agentDisplayName(
  * A role the primary label already spells out is suppressed for the same
  * reason: a heterogeneous agent defaults to "Max 的 Kimi Code", and tagging it
  * "Kimi Code" again says nothing. Rename it to something that no longer echoes
- * the role and the tag comes back.
+ * the role and the tag comes back, unless a leading brand icon already
+ * conveys that runtime label. Identity summaries pass that explicit label;
+ * configuration fields keep their raw role.
  *
  * "Spells out" means the role is the name's whole suffix behind a word
  * boundary — the shape the generated "{owner} 的 {product}" / "{owner}'s
@@ -65,9 +67,10 @@ export function agentDisplayName(
  */
 export const agentSecondaryDisplayName = (
   agent: AgentNameFields | null | undefined,
+  runtimeLabel?: string,
 ): string | undefined => {
   const role = firstNonBlank(agent?.name) ? firstNonBlank(agent?.title) : undefined;
-  if (!role) return undefined;
+  if (!role || role === runtimeLabel?.trim()) return undefined;
 
   const primary = agentDisplayName(agent);
   if (!primary) return role;

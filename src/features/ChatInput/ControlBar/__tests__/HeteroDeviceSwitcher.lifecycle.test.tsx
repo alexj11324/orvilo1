@@ -57,6 +57,12 @@ vi.mock('@/features/ChatInput/hooks/useLocalSandboxCapability', () => ({
   useLocalSandboxCapability: () => ({ mutate: vi.fn() }),
 }));
 vi.mock('@/features/DeviceManager/useDeviceList', () => ({
+  useAgentDeviceCandidates: () => ({
+    data: undefined,
+    error: undefined,
+    isLoading: false,
+    mutate: vi.fn(),
+  }),
   useDeviceList: () => ({ data: targetFixture.devices, isLoading: false, mutate: vi.fn() }),
 }));
 vi.mock('@/hooks/useTopicAgencyConfig', async () => {

@@ -10,6 +10,7 @@ import {
   taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -21,6 +22,20 @@ const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'task-topic-test-user-id';
 const userId2 = 'task-topic-test-user-id-2';
+
+const seedWorkspaceReaders = async () => {
+  const rows = await serverDB.select({ id: workspaces.id }).from(workspaces);
+  if (rows.length)
+    await serverDB
+      .insert(workspaceMembers)
+      .values(
+        rows.flatMap(({ id }) => [
+          { workspaceId: id, userId, role: 'owner' as const },
+          { workspaceId: id, userId: userId2, role: 'member' as const },
+        ]),
+      )
+      .onConflictDoNothing();
+};
 
 const createTopic = async (id: string, uid = userId) => {
   await serverDB.insert(topics).values({ id, userId: uid }).onConflictDoNothing();
@@ -484,7 +499,8 @@ describe('TaskTopicModel', () => {
       const task = await taskModel.create({
         instruction: 'Recover succeeded dispatch',
         executionGeneration: 1,
-        workflowCategory: 'in_progress',
+        // Terminal-dispatch ownership does not establish a live executor.
+        workflowCategory: 'todo',
       });
       await createTopic(topicId);
       await taskModel.updateCurrentTopic(task.id, topicId);
@@ -1426,6 +1442,7 @@ describe('TaskTopicModel', () => {
         primaryOwnerId: userId,
         slug: workspaceId,
       });
+      await seedWorkspaceReaders();
       const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
       const memberTasks = new TaskModel(serverDB, userId2, workspaceId);
       const topicModel = new TaskTopicModel(serverDB, userId, workspaceId);

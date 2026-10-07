@@ -4,6 +4,7 @@ import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import DatePicker, { type DatePickerProps } from '@/components/DatePicker';
+import { buttonHoverFeedback } from '@/components/ui/button';
 
 interface ApiKeyDatePickerProps extends Omit<DatePickerProps, 'onChange'> {
   onChange?: (date: Dayjs | null) => void;
@@ -46,6 +47,7 @@ const ApiKeyDatePicker: FC<ApiKeyDatePickerProps> = ({
         showNeverExpiresFooter && (
           <div className="flex justify-center">
             <a
+              className={buttonHoverFeedback}
               role="button"
               style={{ cursor: 'pointer' }}
               tabIndex={0}

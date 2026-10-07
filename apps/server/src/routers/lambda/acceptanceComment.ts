@@ -26,7 +26,7 @@ import {
 import type { AcceptanceCommentRow } from '@/database/schemas/acceptanceComment';
 import type { AcceptanceItem } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
 import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createEvidenceFileResolver } from '@/server/services/verify/evidenceFiles';
@@ -308,7 +308,7 @@ const requireComment = async (
 };
 
 /**
- * A comment may only speak as an agent the caller is actually allowed to use.
+ * The author agent must be visible to the caller in their authorized scope.
  *
  * `author_agent_id` decides whose name, title and avatar the discussion shows,
  * and a public acceptance shows it to anyone with the link. Without this gate a
@@ -328,7 +328,7 @@ const assertAuthorAgentUsable = async (
 ) => {
   if (!agentId) return;
   try {
-    await assertAgentUsableBy(db, agentId, ctx);
+    await assertAgentVisibleTo(db, agentId, ctx);
   } catch (error) {
     if (error instanceof TRPCError && error.code === 'NOT_FOUND')
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Author agent not found' });

@@ -28,6 +28,7 @@ import {
   assertCanUseCreateMessageTargets,
   assertCanUseMessageTargets,
   assertCanUseTopicTargets,
+  assertCanViewTopicTargets,
 } from './_helpers/conversationResourceGuard';
 import { projectSharedTopicMessages } from './_helpers/projectSharedTopicMessages';
 import { resolveAgentIdFromSession, resolveContext } from './_helpers/resolveContext';
@@ -35,6 +36,7 @@ import {
   assertCreatorMessageTargets,
   assertCreatorTopicTargets,
 } from './_helpers/shareVisitorTargetGuard';
+import { projectWorkspaceConversationMetadata } from './_helpers/workspaceConversationMetadata';
 import { basicContextSchema } from './_schema/context';
 
 const { logTiming, runTimedStage } = createTimingHelpers('orvilo-server:chat:orvilo:timing');
@@ -464,11 +466,10 @@ export const messageRouter = router({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Authentication required' });
       }
 
-      // Align with every other topic-scoped procedure in this router: a raw
-      // `topicId` from the client must still pass the conversation
-      // General-access guard before its messages are read.
+      // Issue conversations follow workspace View membership. Standalone
+      // conversations still require Agent/Group View; mutations require Use.
       if (queryParams.topicId) {
-        await assertCanUseTopicTargets(
+        await assertCanViewTopicTargets(
           guardCtx({
             serverDB: ctx.serverDB,
             userId: ctx.userId,
@@ -482,9 +483,14 @@ export const messageRouter = router({
       const messageModel = new MessageModel(ctx.serverDB, ctx.userId, wsId);
       const fileService = new FileService(ctx.serverDB, ctx.userId, wsId);
 
-      return messageModel.query(queryParams, {
+      const messages = await messageModel.query(queryParams, {
         postProcessUrl: (path, file) => fileService.getFileAccessUrl({ id: file.id, url: path }),
       });
+      return projectWorkspaceConversationMetadata(
+        { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId },
+        messages,
+        queryParams.topicId,
+      );
     }),
 
   rankModels: messageProcedure.query(async ({ ctx }) => {

@@ -2,6 +2,7 @@ import { type OrviloDatabase } from '@orvilo/database';
 import type {
   AgentDeviceOverride,
   DeviceCandidate,
+  DeviceCapabilitySnapshot,
   DeviceResolutionErrorCode,
   DeviceResolutionReason,
   OrviloAgentAgencyConfig,
@@ -16,6 +17,10 @@ import { topics } from '@/database/schemas';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 
 import { deviceGateway } from './index';
+import {
+  type DeviceRuntimeRequirement,
+  verifyDeviceRuntimeInstallation,
+} from './installedRuntimeEvidence';
 import { filterAuthorizedDevicePresence } from './scopedDevicePresence';
 
 const log = debug('orvilo-server:execution-admission');
@@ -56,6 +61,18 @@ export type AdmissionRequiredOperation =
   | { kind: 'device-tool-call'; toolName: string }
   | { kind: 'device-operation'; operation: string };
 
+/** Existing member-choice policy, evaluated only from trusted server context. */
+export const canSelectCallerPersonalDevice = ({
+  agencyConfig,
+}: {
+  agencyConfig?: OrviloAgentAgencyConfig | null;
+  agentOwnerId?: string;
+  canManageAgent: boolean;
+  userId: string;
+  visibility?: 'private' | 'public';
+  workspaceId?: string;
+}): boolean => agencyConfig?.executionTargetSelectionPolicy !== 'fixed';
+
 /**
  * The caller's grant context. `devicePermissions` is a caller-computed
  * execute/view map (e.g. from a device-grants table): a device granted only
@@ -64,6 +81,7 @@ export type AdmissionRequiredOperation =
  * reports `permissions-unready`, distinguishable from a failed query and
  * from a genuinely empty set.
  */
+
 export interface AdmissionCandidatePolicy {
   devicePermissions?: Readonly<Record<string, 'execute' | 'view'>>;
   permissionsReady?: boolean;
@@ -90,7 +108,7 @@ export interface AdmissionDeviceCandidate extends DeviceCandidate {
   /**
    * The principal + registry the row was authorized under — the device
    * owner in a personal scope, the enrolling member + workspace for a
-   * workspace row, the agent owner's registry for a verified stored binding.
+   * workspace row. Stored Agent bindings never expand the caller's authority.
    */
   owner: { userId: string; workspaceId: string | null };
   /** The grant this candidate carries — only 'execute' rows ever appear. */
@@ -129,7 +147,8 @@ export type DeviceInventoryState =
   | 'not-requested'
   | 'pagination-incomplete'
   | 'permissions-unready'
-  | 'query-failed';
+  | 'query-failed'
+  | 'runtime-unverified';
 
 export interface DeviceCandidateInventory {
   candidates: AdmissionDeviceCandidate[];
@@ -139,6 +158,8 @@ export interface DeviceCandidateInventory {
    */
   inventoryComplete: boolean;
   inventoryState: DeviceInventoryState;
+  runtimeInventoryError?: string;
+  runtimeInventoryOfflineOnly?: boolean;
 }
 
 /**
@@ -187,7 +208,7 @@ const verifyCandidate = (params: {
   /** Persisted registry evidence from the devices row, when present. */
   registryEvidence?: {
     adapterVersion?: string | null;
-    capabilitySnapshot?: { supportedTools?: string[] } | null;
+    capabilitySnapshot?: DeviceCapabilitySnapshot | null;
     lastVerifiedAt?: Date | string | null;
   };
   owner: { userId: string; workspaceId: string | null };
@@ -317,11 +338,10 @@ export const listAuthorizedDeviceCandidates = async (
   userId: string,
   workspaceId: string | undefined,
   options?: {
-    /**
-     * The agent owner's user id — the registry where a shared `boundDeviceId`
-     * naturally lives (an author binds their own devices to a public agent).
-     */
+    /** Agent metadata only; never authority to access its creator's machine. */
     agentOwnerId?: string;
+    /** Internal server policy only; never accepted from a browser request. */
+    includeCallerPersonalDevices?: boolean;
     localDeviceId?: string;
     /** The caller's grant context — see {@link AdmissionCandidatePolicy}. */
     policy?: AdmissionCandidatePolicy;
@@ -334,18 +354,20 @@ export const listAuthorizedDeviceCandidates = async (
      * Devices the resolution inputs name (stored binding, session pin, member
      * pick, request, caller's own machine). A referenced id that is not in the
      * scoped registry list is verified individually — caller's personal
-     * registry, the run's workspace registry, and (for stored bindings only)
-     * the agent owner's registry. A referenced device that verifies nowhere is
+     * registry and the run's workspace registry. A stored Agent binding never
+     * expands that authority. A referenced device that verifies nowhere is
      * NOT a candidate — the resolver blocks it honestly instead of trusting a
      * stale reference.
      */
     referencedDevices?: ReadonlyArray<{
       deviceId?: string | null;
-      /** Also probe the agent owner's personal registry (stored bindings). */
+      /** Legacy caller metadata; never expands the actual caller's registry. */
       ownerRegistry?: boolean;
     }>;
     /** What the candidate set must be able to run — see {@link AdmissionRequiredOperation}. */
     requiredOperation?: AdmissionRequiredOperation;
+    /** Installed runtime eligibility for settings and never-bound automatic selection only. */
+    runtimeRequirement?: DeviceRuntimeRequirement;
   },
 ): Promise<DeviceCandidateInventory> => {
   const deviceModel = new DeviceModel(serverDB, userId, workspaceId);
@@ -366,7 +388,9 @@ export const listAuthorizedDeviceCandidates = async (
   }
 
   let inventoryComplete = true;
-  const [rows, online] = await Promise.all([
+  const includeCallerPersonalDevices =
+    !!workspaceId && options?.includeCallerPersonalDevices === true;
+  const [rows, online, callerPersonalRows, callerPersonalOnline] = await Promise.all([
     (workspaceId ? deviceModel.queryWorkspaceDevices() : deviceModel.queryPersonal()).catch(
       (error) => {
         // The registry is authoritative for candidacy. A failed read is an
@@ -381,6 +405,14 @@ export const listAuthorizedDeviceCandidates = async (
     // offline but does not shrink candidacy (offline devices stay selectable —
     // dispatch then fails honestly at the gateway).
     deviceGateway.queryDeviceList(userId, workspaceId),
+    includeCallerPersonalDevices
+      ? deviceModel.queryPersonal().catch((error) => {
+          inventoryComplete = false;
+          console.error('[device:personalCandidateInventory]', error);
+          return [] as Awaited<ReturnType<typeof deviceModel.queryPersonal>>;
+        })
+      : Promise.resolve([]),
+    includeCallerPersonalDevices ? deviceGateway.queryDeviceList(userId) : Promise.resolve([]),
   ]);
   if (!inventoryComplete)
     return { candidates: [], inventoryComplete, inventoryState: 'query-failed' };
@@ -423,8 +455,10 @@ export const listAuthorizedDeviceCandidates = async (
   }
 
   const seen = new Set<string>();
+  const runtimeSnapshots = new Map<string, DeviceCapabilitySnapshot | null | undefined>();
   const fromDb = executableRows.map((row): AdmissionDeviceCandidate => {
     seen.add(row.deviceId);
+    runtimeSnapshots.set(row.deviceId, row.capabilitySnapshot);
     const live = liveById.get(row.deviceId);
     return verifyCandidate({
       deviceId: row.deviceId,
@@ -463,28 +497,28 @@ export const listAuthorizedDeviceCandidates = async (
   for (const device of candidates) seen.add(device.deviceId);
 
   // Referenced-device verification: a stored binding, session pin or caller
-  // reference may name a device outside the scoped list — an author's personal
-  // device bound to a public workspace agent, or the caller's own desktop on a
+  // reference may name a device outside the scoped list — the caller's personal
+  // device bound to a workspace agent, or the caller's own desktop on a
   // `local` run. It joins the candidate set only when a registry lookup
   // confirms it exists (the same find-by-id calls dispatch itself trusts); an
   // unverifiable reference stays unauthorized.
-  const ownerModel =
-    options?.agentOwnerId && options.agentOwnerId !== userId
-      ? new DeviceModel(serverDB, options.agentOwnerId)
-      : undefined;
-  for (const ref of options?.referencedDevices ?? []) {
+  const personalById = new Map(callerPersonalRows.map((row) => [row.deviceId, row]));
+  const references = [
+    ...(options?.referencedDevices ?? []),
+    ...callerPersonalRows.map((row) => ({ deviceId: row.deviceId, ownerRegistry: false })),
+  ];
+  for (const ref of references) {
     if (!ref?.deviceId || seen.has(ref.deviceId)) continue;
     // A 'view'-granted reference never enters the execution set either.
     if (devicePermissions?.[ref.deviceId] === 'view') continue;
     try {
       const verifiedRow =
+        personalById.get(ref.deviceId) ??
         (await deviceModel.findByDeviceId(ref.deviceId)) ??
-        (workspaceId ? await deviceModel.findWorkspaceDeviceById(ref.deviceId) : undefined) ??
-        (ref.ownerRegistry && ownerModel
-          ? await ownerModel.findByDeviceId(ref.deviceId)
-          : undefined);
+        (workspaceId ? await deviceModel.findWorkspaceDeviceById(ref.deviceId) : undefined);
       if (!verifiedRow) continue;
       seen.add(ref.deviceId);
+      runtimeSnapshots.set(ref.deviceId, verifiedRow.capabilitySnapshot);
       // A verified reference can belong to the caller's personal registry
       // during a workspace-private run. Presence must use that row's principal;
       // workspace presence cannot establish personal-device liveness.
@@ -492,7 +526,9 @@ export const listAuthorizedDeviceCandidates = async (
       const referencePresence =
         verifiedRow.userId === userId && referenceWorkspaceId === workspaceId
           ? online
-          : await deviceGateway.queryDeviceList(verifiedRow.userId, referenceWorkspaceId);
+          : includeCallerPersonalDevices && verifiedRow.userId === userId && !referenceWorkspaceId
+            ? callerPersonalOnline
+            : await deviceGateway.queryDeviceList(verifiedRow.userId, referenceWorkspaceId);
       const isOnline = referencePresence.some((device) => device.deviceId === ref.deviceId);
       // Probe a referenced device that needs live evidence and is online.
       if (probeNeeded && isOnline && !probedInfo.has(ref.deviceId)) {
@@ -527,10 +563,75 @@ export const listAuthorizedDeviceCandidates = async (
     }
   }
 
+  let runtimeInventoryError: string | undefined;
+  let runtimeInventoryOfflineOnly = true;
+  if (options?.runtimeRequirement) {
+    const requirement = options.runtimeRequirement;
+    await Promise.all(
+      candidates.map(async (candidate) => {
+        try {
+          const result = await verifyDeviceRuntimeInstallation({
+            db: serverDB,
+            online: candidate.online,
+            owner: {
+              deviceId: candidate.deviceId,
+              userId,
+              workspaceId: candidate.owner.workspaceId ?? undefined,
+            },
+            requirement,
+            snapshot: runtimeSnapshots.get(candidate.deviceId),
+          });
+          candidate.capabilityStatus =
+            result.installed === 'unknown'
+              ? 'pending'
+              : result.installed
+                ? 'verified'
+                : 'incompatible';
+          candidate.capabilityOk = result.installed === true;
+          candidate.verification = {
+            ...candidate.verification,
+            adapter: requirement.agentType,
+            mode:
+              candidate.online && !result.error
+                ? 'live-probe'
+                : result.installed === 'unknown'
+                  ? 'none'
+                  : 'registry',
+            source:
+              candidate.online && !result.error
+                ? 'gateway:runtime-installation'
+                : result.installed === 'unknown'
+                  ? 'runtime:unverified'
+                  : 'registry:installedRuntimes',
+          };
+          if (result.installed === 'unknown' || result.error) {
+            inventoryComplete = false;
+            if (candidate.online) runtimeInventoryOfflineOnly = false;
+            runtimeInventoryError ??=
+              result.error ?? 'An authorized device has no verified installation for this runtime';
+          }
+        } catch (error) {
+          console.error('[device:runtimeInstallation]', error);
+          runtimeInventoryOfflineOnly = false;
+          candidate.capabilityStatus = 'pending';
+          candidate.capabilityOk = false;
+          inventoryComplete = false;
+          runtimeInventoryError ??=
+            error instanceof Error ? error.message : 'Device runtime verification failed';
+        }
+      }),
+    );
+  }
+
   return {
     candidates,
     inventoryComplete,
-    inventoryState: candidates.length === 0 ? 'empty' : 'complete',
+    inventoryState: !inventoryComplete
+      ? 'runtime-unverified'
+      : candidates.length === 0
+        ? 'empty'
+        : 'complete',
+    ...(runtimeInventoryError ? { runtimeInventoryError, runtimeInventoryOfflineOnly } : {}),
   };
 };
 
@@ -565,12 +666,10 @@ export interface ResolveHeteroExecutionPlanParams {
    * member override resolved, the shared-row default is never consulted.
    */
   agencyConfig?: OrviloAgentAgencyConfig;
-  /**
-   * The agent owner's user id — stored bindings verify against THEIR
-   * personal registry (an author's own device bound to a public workspace
-   * agent stays executable by every authorized member).
-   */
+  /** Agent metadata only; Device authority always belongs to the actual caller. */
   agentOwnerId?: string;
+  /** Existing effective-policy verdict from trusted run setup, used only for unbound auto. */
+  canSelectPersonalDevice?: boolean;
   /**
    * External senders (bot/IM/task surfaces without device grants) pass false —
    * they degrade to the sandbox when available and are denied otherwise.
@@ -678,7 +777,20 @@ export const resolveHeteroExecutionPlan = async (
     // intent short-circuits; a shared/pinned scope never auto-binds off the
     // shared row either way.
     const hasStoredIntent = agencyConfig?.executionTarget !== undefined;
-    if (hasStoredIntent || params.workspaceScoped || isFixedPolicy) {
+    // A genuinely unset first workspace send may use the existing installed-runtime
+    // singleton/CAS path. Stored choices and every prior binding keep their fences.
+    const firstWorkspaceSelection =
+      !!params.workspaceId &&
+      !hasStoredIntent &&
+      !isFixedPolicy &&
+      !agencyConfig?.boundDeviceId &&
+      !params.sessionBoundDeviceId &&
+      !params.memberDeviceOverride?.executionTarget &&
+      !params.memberDeviceOverride?.boundDeviceId &&
+      !params.explicitDeviceId &&
+      params.requiredOperation?.kind === 'agent-run' &&
+      !!params.requiredOperation.adapter;
+    if (hasStoredIntent || (params.workspaceScoped && !firstWorkspaceSelection) || isFixedPolicy) {
       return {
         code: 'EXECUTION_TARGET_NONE',
         detail: 'No execution target is selected for this agent — pick a device or cloud sandbox.',
@@ -687,28 +799,28 @@ export const resolveHeteroExecutionPlan = async (
     }
   }
 
-  const { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(
+  const candidateOptions: NonNullable<Parameters<typeof listAuthorizedDeviceCandidates>[3]> = {
+    agentOwnerId: params.agentOwnerId,
+    localDeviceId: params.localDeviceId,
+    policy: params.policy,
+    requiredOperation: params.requiredOperation ?? { kind: 'agent-run' },
+    referencedDevices: [
+      // Stored bindings still require the actual caller's registry authority.
+      { deviceId: agencyConfig?.boundDeviceId },
+      { deviceId: params.sessionBoundDeviceId },
+      { deviceId: params.memberDeviceOverride?.boundDeviceId },
+      // The caller's own machine and their explicit request verify only
+      // against the caller's + workspace registries — a member cannot
+      // request the author's personal device by id.
+      { deviceId: params.localDeviceId },
+      { deviceId: effectiveExplicitDeviceId },
+    ],
+  };
+  let { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(
     serverDB,
     params.userId,
     params.workspaceId,
-    {
-      agentOwnerId: params.agentOwnerId,
-      localDeviceId: params.localDeviceId,
-      policy: params.policy,
-      requiredOperation: params.requiredOperation ?? { kind: 'agent-run' },
-      referencedDevices: [
-        // Stored bindings resolve in the owner's registry — the agent's
-        // configured host is a prior authorization act.
-        { deviceId: agencyConfig?.boundDeviceId, ownerRegistry: true },
-        { deviceId: params.sessionBoundDeviceId, ownerRegistry: true },
-        { deviceId: params.memberDeviceOverride?.boundDeviceId, ownerRegistry: true },
-        // The caller's own machine and their explicit request verify only
-        // against the caller's + workspace registries — a member cannot
-        // request the author's personal device by id.
-        { deviceId: params.localDeviceId },
-        { deviceId: effectiveExplicitDeviceId },
-      ],
-    },
+    candidateOptions,
   );
 
   // A member override that resolved (executionTarget set) fully shadows the
@@ -750,17 +862,52 @@ export const resolveHeteroExecutionPlan = async (
   // DEVICE_BINDING_INVALID rather than erasing the evidence.
   const sessionBoundDeviceId = params.sessionBoundDeviceId ?? undefined;
 
-  const resolution = resolveExecutionDevice(
-    {
-      agentDefaultDeviceId,
-      deviceInventoryComplete: inventoryComplete,
-      explicitDeviceId: params.explicitDeviceId,
-      explicitRequestAllowed: !isFixedPolicy && !params.workspaceScoped,
-      sessionBoundDeviceId,
-      userAgentPreferenceDeviceId,
-    },
-    candidates,
-  );
+  const resolutionInput = {
+    agentDefaultDeviceId,
+    deviceInventoryComplete: inventoryComplete,
+    explicitDeviceId: params.explicitDeviceId,
+    explicitRequestAllowed: !isFixedPolicy && !params.workspaceScoped,
+    sessionBoundDeviceId,
+    userAgentPreferenceDeviceId,
+  };
+  let resolution = resolveExecutionDevice(resolutionInput, candidates);
+
+  // Existing explicit/default/session choices retain their launch proof path.
+  // Only a never-bound automatic choice counts hosts that installed this runtime.
+  const needsAutomaticEligibility =
+    (resolution.status === 'resolved' && resolution.reason === 'single_candidate') ||
+    (resolution.status === 'blocked' &&
+      ['DEVICE_REQUIRED', 'DEVICE_SELECTION_REQUIRED'].includes(resolution.code));
+  if (
+    needsAutomaticEligibility &&
+    !isFixedPolicy &&
+    !agencyConfig?.boundDeviceId &&
+    !params.sessionBoundDeviceId &&
+    !effectiveExplicitDeviceId &&
+    !userAgentPreferenceDeviceId &&
+    params.requiredOperation?.kind === 'agent-run' &&
+    params.requiredOperation.adapter
+  ) {
+    const runtimeInventory = await listAuthorizedDeviceCandidates(
+      serverDB,
+      params.userId,
+      params.workspaceId,
+      {
+        ...candidateOptions,
+        includeCallerPersonalDevices: params.canSelectPersonalDevice === true,
+        runtimeRequirement: {
+          agentType: params.requiredOperation.adapter,
+          command: agencyConfig?.heterogeneousProvider?.command,
+        },
+      },
+    );
+    candidates = runtimeInventory.candidates;
+    inventoryComplete = runtimeInventory.inventoryComplete;
+    resolution = resolveExecutionDevice(
+      { ...resolutionInput, deviceInventoryComplete: inventoryComplete },
+      candidates,
+    );
+  }
 
   if (resolution.status === 'resolved') {
     const candidate = candidates.find((d) => d.deviceId === resolution.deviceId);

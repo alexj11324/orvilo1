@@ -1281,6 +1281,11 @@ export class ConversationLifecycleActionImpl {
     const optimisticTopicMetadata: ChatTopicMetadata = {
       ...workingDirectoryMetadata,
       ...newTopicReasoningSnapshot,
+      ...(newTopicModelSnapshot &&
+      'modelExplicit' in newTopicModelSnapshot &&
+      newTopicModelSnapshot.modelExplicit
+        ? { heteroModelExplicit: true }
+        : {}),
       executionConfig: snapshotTopicExecutionConfig(agencyConfig),
     };
 

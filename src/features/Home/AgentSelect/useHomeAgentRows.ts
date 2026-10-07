@@ -1,5 +1,6 @@
 'use client';
 
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName, agentSecondaryDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { useMemo } from 'react';
@@ -96,7 +97,10 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
             heterogeneousType: item.heterogeneousType,
             id: item.id,
             pinned: item.pinned ?? false,
-            subtitle: agentSecondaryDisplayName(item),
+            subtitle: agentSecondaryDisplayName(
+              item,
+              getHeterogeneousTypeLabel(item.heterogeneousType),
+            ),
             title: agentDisplayName(item, t('untitledAgent')),
           });
         }

@@ -112,3 +112,18 @@ describe('snapshotAgentReasoning', () => {
     expect(await snapshotAgentReasoning(reasoning, modelSnapshot)).toBeUndefined();
   });
 });
+
+it('keeps exact ACP default provenance in the active new-topic metadata snapshot', async () => {
+  const id = seedAgent('explicit-default', {
+    agencyConfig: {
+      heterogeneousProvider: {
+        type: 'claude-code',
+        model: 'default',
+        args: ['--model', 'default'],
+      },
+    },
+  });
+  const model = snapshotAgentModel(id);
+  expect(model).toEqual({ model: 'default', provider: 'claude-code', modelExplicit: true });
+  expect(await snapshotAgentReasoning(id, model)).toEqual({ heteroModelExplicit: true });
+});

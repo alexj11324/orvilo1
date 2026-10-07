@@ -294,8 +294,10 @@ export const listHeterogeneousAgentModels = async (
           env: target.env,
           timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
         });
-        if (models.length > 0) return { models, status: 'success', updatedAt };
-      } catch {
+        if (models.length > 0 || params.type === 'claude-code' || params.type === 'codex')
+          return { models, status: 'success', updatedAt };
+      } catch (error) {
+        if (params.type === 'claude-code' || params.type === 'codex') throw error;
         // Fall through to the legacy catalog probe below.
       }
     }

@@ -219,6 +219,7 @@ describe('kanbanBoardModel', () => {
       // needsInput (paused+failed) or running (running+scheduled) bucket,
       // and no `st:` column.
       expect(ISSUE_WORKFLOW_COLUMNS.map((column) => column.key)).toEqual([
+        'needs_input',
         'triage',
         'backlog',
         'todo',
@@ -227,7 +228,14 @@ describe('kanbanBoardModel', () => {
         'done',
         'canceled',
       ]);
-      for (const column of ISSUE_WORKFLOW_COLUMNS) {
+      expect(ISSUE_WORKFLOW_COLUMNS[0]).toMatchObject({
+        key: 'needs_input',
+        droppable: false,
+        targetStatus: null,
+      });
+      for (const column of ISSUE_WORKFLOW_COLUMNS.filter(
+        (column) => column.key !== 'needs_input',
+      )) {
         expect(column.droppable).toBe(true);
         expect(column.targetStatus).toBeNull();
         expect(column.targetWorkflowCategory).toBe(column.key);
@@ -819,11 +827,14 @@ describe('externalVisibleKanbanColumns', () => {
  * user pick (run state is read-only).
  */
 describe('board-driven Issue status choices', () => {
-  it('mirrors the Issue board columns 1:1 — same options, order, labels and glyphs', () => {
+  it('mirrors selectable Issue workflow columns and excludes the input attention lane', () => {
     const choices = issueStatusChoices();
     expect(choices.map((choice) => choice.column.key)).toEqual(
-      ISSUE_WORKFLOW_COLUMNS.map((column) => column.key),
+      ISSUE_WORKFLOW_COLUMNS.filter((column) => column.targetWorkflowCategory).map(
+        (column) => column.key,
+      ),
     );
+    expect(choices.some((choice) => choice.column.key === 'needs_input')).toBe(false);
     // triage leads — the column a hardcoded status list used to miss.
     expect(choices[0].column.key).toBe('triage');
     for (const choice of choices) {

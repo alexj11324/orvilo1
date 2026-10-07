@@ -746,6 +746,7 @@ export class LinearPlanningWorker {
         const idempotencyKey = `planning:${revision.id}:resume:${task.id}`;
         const requested = await dispatchModel.request({
           idempotencyKey,
+          initiator: userId,
           planRevision: revision.inputRevision,
           requestedBy: `planning:${revision.id}`,
           taskId: task.id,

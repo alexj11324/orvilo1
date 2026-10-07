@@ -7,6 +7,7 @@ import { ChevronRightIcon, FileIcon, FolderIcon, type LucideIcon } from 'lucide-
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -436,11 +437,15 @@ const SkillRow = memo<SkillRowProps>(
                     render={
                       <span style={{ display: 'inline-flex' }}>
                         <div
+                          aria-disabled={action.disabled || undefined}
                           role={'button'}
                           className={cx(
-                            styles.rowAction,
-                            action.danger && !action.disabled && styles.rowActionDanger,
-                            action.disabled && styles.rowActionDisabled,
+                            cx(
+                              styles.rowAction,
+                              action.danger && !action.disabled && styles.rowActionDanger,
+                              action.disabled && styles.rowActionDisabled,
+                            ),
+                            !action.disabled && buttonHoverFeedback,
                           )}
                           onClick={(e) => {
                             e.stopPropagation();

@@ -11,6 +11,7 @@ import { Badge as Tag } from '@/components/reui/badge';
 import { openDocumentModal } from '@/features/DocumentModal/loader';
 import Time from '@/features/Home/components/Time';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -25,6 +26,7 @@ const flattenWorkspace = (nodes: TaskDetailWorkspaceNode[]): TaskDetailWorkspace
 
 const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
   const { t } = useTranslation('chat');
+  const { allowed: canEditTask } = usePermission('create_content');
   const unpinDocument = useTaskStore((s) => s.unpinDocument);
   const activeTaskId = useTaskDetailTaskId();
   // Tombstone: the viewer lost access to the pinned document (switched back
@@ -39,7 +41,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
 
   const handleDelete = useCallback(() => {
     const taskId = node.sourceTaskId ?? activeTaskId;
-    if (!taskId) return;
+    if (!canEditTask || !taskId) return;
     confirmModal({
       content: t('taskDetail.artifactMenu.deleteConfirm.content'),
       okButtonProps: { danger: true },
@@ -47,7 +49,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
       onOk: () => unpinDocument(taskId, node.documentId),
       title: t('taskDetail.artifactMenu.deleteConfirm.title'),
     });
-  }, [activeTaskId, node.documentId, node.sourceTaskId, t, unpinDocument]);
+  }, [activeTaskId, canEditTask, node.documentId, node.sourceTaskId, t, unpinDocument]);
 
   const menuItems = useMemo(
     () => [
@@ -103,15 +105,17 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
         </Tag>
       )}
       {node.createdAt && <Time date={node.createdAt} />}
-      <SidebarDropdownMenu items={menuItems}>
-        <ActionIcon
-          icon={MoreHorizontal}
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        />
-      </SidebarDropdownMenu>
+      {canEditTask ? (
+        <SidebarDropdownMenu items={menuItems}>
+          <ActionIcon
+            icon={MoreHorizontal}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          />
+        </SidebarDropdownMenu>
+      ) : null}
     </div>
   );
 });

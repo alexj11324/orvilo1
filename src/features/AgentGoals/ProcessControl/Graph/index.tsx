@@ -23,7 +23,7 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { PortalContent } from '@/features/Portal/router';
 import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
@@ -793,11 +793,14 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
         return (
           <div
             aria-pressed={!off}
-            className={`flex items-center gap-1 ${cx(styles.legendItem, off && styles.legendOff)}`}
             key={kind}
             role={'button'}
             tabIndex={0}
             title={t(off ? 'goalProcess.graph.legend.show' : 'goalProcess.graph.legend.hide')}
+            className={cx(
+              `flex items-center gap-1 ${cx(styles.legendItem, off && styles.legendOff)}`,
+              buttonHoverFeedback,
+            )}
             onClick={() => toggleKind(kind)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {

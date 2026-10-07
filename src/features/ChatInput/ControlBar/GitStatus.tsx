@@ -1,11 +1,13 @@
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownIcon, ArrowUpIcon, GitPullRequest } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
 import { toast } from '@/components/toast';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { getHostPort } from '@/platform';
 import { gitService } from '@/services/git';
 import {
@@ -403,8 +405,13 @@ const GitStatus = memo<GitStatusProps>(
         <div
           aria-busy={pulling}
           aria-disabled={syncBusy}
-          className={`${styles.syncTrigger} ${styles.behindStat} ${syncBusy ? styles.syncTriggerDisabled : ''}`}
           role="button"
+          className={cn(
+            buttonHoverFeedback,
+            styles.syncTrigger,
+            styles.behindStat,
+            syncBusy && styles.syncTriggerDisabled,
+          )}
           onClick={syncBusy ? undefined : handlePull}
         >
           <span className={styles.aheadBehindStat}>
@@ -426,8 +433,13 @@ const GitStatus = memo<GitStatusProps>(
         <div
           aria-busy={pushing}
           aria-disabled={syncBusy}
-          className={`${styles.syncTrigger} ${styles.aheadStat} ${syncBusy ? styles.syncTriggerDisabled : ''}`}
           role="button"
+          className={cn(
+            buttonHoverFeedback,
+            styles.syncTrigger,
+            styles.aheadStat,
+            syncBusy && styles.syncTriggerDisabled,
+          )}
           onClick={syncBusy ? undefined : handlePush}
         >
           <span className={styles.aheadBehindStat}>
@@ -447,7 +459,11 @@ const GitStatus = memo<GitStatusProps>(
     const diffNode = (() => {
       if (!hasChanges) return null;
       const diffButton = (
-        <div className={gitChipStyles.trigger} role="button" onClick={handleToggleReview}>
+        <div
+          className={cn(buttonHoverFeedback, gitChipStyles.trigger)}
+          role="button"
+          onClick={handleToggleReview}
+        >
           <span className={styles.diffStat}>
             {diffStats.additions > 0 && (
               <span className={styles.diffStatAdded}>+{diffStats.additions}</span>
@@ -480,7 +496,11 @@ const GitStatus = memo<GitStatusProps>(
           <>
             <div className={gitChipStyles.separator} />
             <SimpleTooltip title={prTooltip}>
-              <div className={gitChipStyles.prTrigger} role="button" onClick={handleOpenPr}>
+              <div
+                className={cn(buttonHoverFeedback, gitChipStyles.prTrigger)}
+                role="button"
+                onClick={handleOpenPr}
+              >
                 <span className="anticon" role="img">
                   <GitPullRequest fill={'transparent'} height={12} size={12} width={12} />
                 </span>

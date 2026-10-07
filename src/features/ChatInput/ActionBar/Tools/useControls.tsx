@@ -24,6 +24,7 @@ import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
@@ -1590,7 +1591,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   }) => (
     <div
       data-skill-activation-group
-      className={cx(styles.activationGroupHeader)}
+      className={cx(buttonHoverFeedback, styles.activationGroupHeader)}
       role="button"
       tabIndex={0}
       onClick={(event) => {

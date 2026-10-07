@@ -2,7 +2,6 @@ import type { HeterogeneousProviderConfig, HeteroSelectorCapability } from '@orv
 import { applyHeteroSelection, getHeteroSelectorCapability } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { getStaticModelOptions } from './modelOptions';
 import type { ModelCapability } from './selectorView';
 import {
   hasConversationEffortSelector,
@@ -54,20 +53,8 @@ describe('conversation selector dimensions', () => {
 });
 
 describe('selector capabilities behind the engine form', () => {
-  it('offers Astra before older Codex models', () => {
-    expect(getStaticModelOptions('codex')[0]).toEqual({
-      label: 'GPT-6 Astra',
-      value: 'gpt-6-astra',
-    });
-  });
-
-  it('labels Claude aliases without claiming a fixed model version', () => {
-    expect(getStaticModelOptions('claude-code')).toEqual([
-      { label: 'Fable', value: 'fable' },
-      { label: 'Opus', value: 'opus' },
-      { label: 'Sonnet', value: 'sonnet' },
-      { label: 'Haiku', value: 'haiku' },
-    ]);
+  it.each(['claude-code', 'codex'])('reads %s models from the runtime catalog', (type) => {
+    expect(capabilityOf(type).model.source).toBe('catalog');
   });
 
   it('narrows codex reasoning levels to what the model serves', () => {

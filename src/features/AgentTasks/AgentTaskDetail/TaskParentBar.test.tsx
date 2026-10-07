@@ -142,6 +142,26 @@ describe('TaskParentBar', () => {
     expect(screen.queryByText('status')).not.toBeInTheDocument();
   });
 
+  it('preserves the fetched parent Needs Input state ahead of a completed run', async () => {
+    mocks.getDetail.mockResolvedValue({
+      data: {
+        agentId: 'agt_parent',
+        identifier: 'T-parent',
+        instruction: 'Parent instruction',
+        status: 'completed',
+        workflowCategory: 'done',
+        attentionReason: 'needs_input',
+        subtasks: [],
+      },
+    });
+    const { container } = render(<TaskParentBar />);
+    await waitFor(() =>
+      expect(container.querySelector('.lucide-circle-alert')).toBeInTheDocument(),
+    );
+    expect(container.querySelector('[data-workflow-icon="done"]')).toBeNull();
+    expect(screen.queryByText('status')).not.toBeInTheDocument();
+  });
+
   it("opens parent subtasks inside the clicked subtask's owning agent route", async () => {
     mocks.getDetail.mockResolvedValue({
       data: {

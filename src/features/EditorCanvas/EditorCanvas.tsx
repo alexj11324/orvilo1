@@ -1,6 +1,6 @@
 'use client';
 
-import { type IEditor, type SlashOptions } from '@lobehub/editor';
+import { type IEditor, type ReactSchemaRule, type SlashOptions } from '@lobehub/editor';
 import type { ChatInputActionsProps, Editor, EditorProps } from '@lobehub/editor/react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
@@ -108,6 +108,9 @@ export interface EditorCanvasProps {
 
   /** Resolve the portal host used by slash and mention menus. */
   getPopupContainer?: EditorProps['getPopupContainer'];
+
+  /** Optional typed link renderers, scoped to this editor's document. */
+  linkSchemaRules?: ReactSchemaRule[];
 
   /** Structured @mention configuration forwarded to the editor. */
   mentionOption?: EditorProps['mentionOption'];

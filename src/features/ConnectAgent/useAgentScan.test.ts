@@ -182,3 +182,19 @@ describe('buildConnectAgentConfig selector picks', () => {
     expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('effort');
   });
 });
+
+describe('creating an Agent with an exact ACP default ID', () => {
+  it.each(['claude-code', 'codex'])('encodes explicit default in %s native args', (type) => {
+    const config = buildConnectAgentConfig({
+      model: 'default',
+      modelExplicit: true,
+      provider: getConnectableProvider(type)!,
+      target: { deviceId: 'local-desktop', kind: 'local' },
+    });
+    expect(config.agencyConfig?.heterogeneousProvider).toMatchObject({
+      model: 'default',
+      args: ['--model', 'default'],
+    });
+    expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('modelExplicit');
+  });
+});

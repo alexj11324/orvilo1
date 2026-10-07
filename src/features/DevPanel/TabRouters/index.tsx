@@ -3,6 +3,7 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 import { useElectronStore } from '@/store/electron';
 
@@ -113,7 +114,8 @@ const Row = memo<{ index: number; nextEvicted: boolean; row: TabRouterRow }>(
 
     return (
       <div
-        className={cx(styles.row, row.active && styles.rowActive)}
+        className={cx(cx(styles.row, row.active && styles.rowActive), buttonHoverFeedback)}
+        data-active={row.active || undefined}
         role={'button'}
         tabIndex={0}
         onClick={() => activateTab(row.id)}

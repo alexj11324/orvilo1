@@ -4,6 +4,8 @@ import { ChevronDownIcon, ChevronRightIcon, type LucideIcon } from 'lucide-react
 import { type ComponentProps, type ReactNode } from 'react';
 import { createElement, memo, Suspense, useState } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
+
 import CountBadge from '../CountBadge';
 import { homeType } from '../homeType';
 
@@ -68,8 +70,11 @@ const GroupBlock = memo<GroupBlockProps>(
             style={{ overflow: 'hidden' }}
             tabIndex={onCollapsedChange ? 0 : undefined}
             className={cx(
-              cx(onCollapsedChange && styles.heading),
-              'flex items-center flex-1 gap-1.5 justify-start',
+              cx(
+                cx(onCollapsedChange && styles.heading),
+                'flex items-center flex-1 gap-1.5 justify-start',
+              ),
+              onCollapsedChange && buttonHoverFeedback,
             )}
             onClick={onCollapsedChange ? () => onCollapsedChange(!collapsed) : undefined}
           >

@@ -10,6 +10,9 @@ import TaskDetailPage from './TaskDetailPage';
 import { formatCountdown, shouldPersistFallbackAssignee } from './TaskDetailRunPauseAction';
 
 const api = vi.hoisted(() => ({
+  canUseAgent: true,
+  canUseByAgent: undefined as Record<string, boolean> | undefined,
+  resourceAccess: vi.fn(),
   contractContext: vi.fn(),
   confirmModal: vi.fn((options: { onOk: () => void }) => options.onOk()),
   runMutation: vi.fn(),
@@ -26,6 +29,9 @@ vi.mock('@/libs/trpc/client', () => ({
 vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: api.confirmModal,
+}));
+vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
+  useResourceAccess: (type: string, id?: string) => api.resourceAccess(type, id),
 }));
 vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -88,6 +94,11 @@ describe('shouldPersistFallbackAssignee', () => {
 describe('task detail failure recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    api.canUseAgent = true;
+    api.canUseByAgent = undefined;
+    api.resourceAccess.mockImplementation((_type: string, id?: string) => ({
+      canUseResource: api.canUseByAgent?.[id ?? ''] ?? api.canUseAgent,
+    }));
     api.runMutation.mockResolvedValue({ success: true });
     const failedTask = {
       identifier: 'T-5',
@@ -105,6 +116,72 @@ describe('task detail failure recovery', () => {
       refreshTaskList: vi.fn().mockResolvedValue(undefined),
     });
   });
+
+  it.each([
+    { parentUse: true, childUse: false, explicitParentId: false },
+    { parentUse: false, childUse: true, explicitParentId: false },
+    { parentUse: true, childUse: false, explicitParentId: true },
+  ])(
+    'uses the parent run for Stop with parentUse=$parentUse childUse=$childUse explicitParentId=$explicitParentId',
+    async ({ parentUse, childUse, explicitParentId }) => {
+      api.canUseByAgent = {
+        'parent-agent': parentUse,
+        'child-agent': childUse,
+        'field-assignee': false,
+      };
+      api.canUseAgent = false;
+      useTaskStore.setState({
+        taskDetailMap: {
+          'T-5': {
+            ...useTaskStore.getState().taskDetailMap['T-5'],
+            id: 'parent-canonical-id',
+            status: 'running',
+            agentId: 'field-assignee',
+            activities: [
+              {
+                type: 'topic',
+                status: 'running',
+                sourceTaskId: 'child-canonical-id',
+                agentId: 'child-agent',
+                time: '2026-10-01T01:00:00Z',
+              },
+              {
+                type: 'topic',
+                status: 'running',
+                sourceTaskId: explicitParentId ? 'parent-canonical-id' : undefined,
+                author: { type: 'agent', id: 'parent-agent', name: 'Parent executor' },
+                time: '2026-10-01T02:00:00Z',
+              },
+            ],
+          },
+        },
+      });
+      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+      const button = await screen.findByRole('button', { name: 'taskDetail.stopTask' });
+      if (parentUse) expect(button).toBeEnabled();
+      else expect(button).toBeDisabled();
+      expect(api.resourceAccess).toHaveBeenCalledWith('agent', 'parent-agent');
+      expect(api.resourceAccess).not.toHaveBeenCalledWith('agent', 'child-agent');
+    },
+  );
+
+  it.each(['failed', 'running'] as const)(
+    'disables execution for a member without Agent Use while %s',
+    async (status) => {
+      api.canUseAgent = false;
+      useTaskStore.setState({
+        taskDetailMap: { 'T-5': { ...useTaskStore.getState().taskDetailMap['T-5'], status } },
+      });
+      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+      const button = await screen.findByRole('button', {
+        name: status === 'running' ? 'taskDetail.stopTask' : 'taskDetail.runTask',
+      });
+      expect(button).toBeDisabled();
+      await userEvent.click(button);
+      expect(api.contractContext).not.toHaveBeenCalled();
+      expect(api.runMutation).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     { status: 'paused', pendingConstraintEdits: false },

@@ -7,6 +7,8 @@ import { mutate } from '@/libs/swr';
  * array so the augmented and personal forms match the same prefix.
  */
 export const DEVICE_LIST_SWR_KEY = 'device/listDevices';
+export const agentDeviceCandidatesKey = (agentId: string) =>
+  [DEVICE_LIST_SWR_KEY, 'agentCandidates', agentId] as const;
 
 /** Revalidate the device list across whichever workspace context is active. */
 export const refreshDeviceList = () =>

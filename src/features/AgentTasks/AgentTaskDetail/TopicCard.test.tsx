@@ -11,12 +11,23 @@ import { useHomeStore } from '@/store/home';
 
 import TopicCard from './TopicCard';
 
+const permissions = vi.hoisted(() => ({ canUse: true, cancelTopic: vi.fn() }));
+vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
+  useResourceAccess: () => ({ canUseResource: permissions.canUse }),
+}));
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
+  }),
+}));
+
 vi.mock('@/store/task', () => ({
   useTaskStore: (selector: (state: any) => unknown) =>
     selector({
       activeTaskId: 'T-1',
       addComment: vi.fn(),
-      cancelTopic: vi.fn(),
+      cancelTopic: permissions.cancelTopic,
       openTopicDrawer: vi.fn(),
       taskDetailMap: {},
     }),
@@ -50,7 +61,24 @@ const activity = {
 describe('TopicCard', () => {
   afterEach(() => {
     cleanup();
+    permissions.canUse = true;
+    permissions.cancelTopic.mockClear();
     useHomeStore.setState({ ungroupedAgents: [] });
+  });
+
+  it('disables stopping a visible run for a member without Agent Use', async () => {
+    permissions.canUse = false;
+    const { container } = render(
+      <TopicCard activity={{ ...activity, status: 'running', agentId: 'foreign-agent' }} />,
+    );
+    const trigger = container.querySelector('button[aria-haspopup="menu"]');
+    expect(trigger).not.toBeNull();
+    await userEvent.click(trigger!);
+    expect(await screen.findByRole('menuitem', { name: 'Stop Run' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(permissions.cancelTopic).not.toHaveBeenCalled();
   });
 
   it('renders runtime branding for an agent author whose avatar is initials', () => {

@@ -12,7 +12,7 @@ import {
 import { taskService } from '@/services/task';
 import type { StoreSetter } from '@/store/types';
 
-import type { TaskStore } from '../../store';
+import { type TaskStore, useTaskStore } from '../../store';
 import type {
   TaskGroupItem,
   TaskKanbanGroupBy,
@@ -77,6 +77,7 @@ const effectiveGroupVisibility = (
 // workflow category; execution run states (`statuses` membership) never
 // appear on this board.
 const DEFAULT_KANBAN_GROUPS = [
+  { key: 'needs_input', attentionReasons: ['needs_input'] },
   { key: 'triage', workflowCategories: ['triage'] },
   { key: 'backlog', workflowCategories: ['backlog'] },
   { key: 'todo', workflowCategories: ['todo'] },
@@ -331,6 +332,13 @@ export class TaskListSliceActionImpl {
       projectId,
       scope,
     } = options;
+    // Native questions change the execution projection without writing the
+    // task row. Keep the grouped board current throughout the existing run.
+    const hasRunningRows = useTaskStore((state) =>
+      state.taskGroups.some((group) =>
+        group.tasks.some((task) => task.status === 'running' || task.status === 'pending'),
+      ),
+    );
     // A scoped board's project filter is part of its identity too — flipping
     // the "No project" chip must reset like a scope change, not share the
     // unfiltered scope's slot and groups.
@@ -420,7 +428,9 @@ export class TaskListSliceActionImpl {
                 groups: DEFAULT_KANBAN_GROUPS.map((group) => ({
                   ...group,
                   limit: groupLimits[group.key] ?? KANBAN_GROUP_PAGE_SIZE,
-                  workflowCategories: [...group.workflowCategories],
+                  ...('workflowCategories' in group
+                    ? { workflowCategories: [...group.workflowCategories] }
+                    : { attentionReasons: [...group.attentionReasons] }),
                 })),
               }
             : {
@@ -451,6 +461,7 @@ export class TaskListSliceActionImpl {
             'useFetchTaskGroupList/onSuccess',
           );
         },
+        refreshInterval: enabled && hasRunningRows ? 10_000 : 0,
         revalidateOnFocus: false,
       },
     );

@@ -181,14 +181,15 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
     const candidates = useMemo(() => {
       const existing = new Set((collaborators ?? []).map((item) => item.userId));
       const list = members.filter((member) => {
-        if (member.role && PRIVILEGED_ROLES.has(member.role)) return false;
-        if (member.userId === permission?.creatorId) return false;
+        if (resourceType !== 'agent' && member.role && PRIVILEGED_ROLES.has(member.role))
+          return false;
+        if (resourceType !== 'agent' && member.userId === permission?.creatorId) return false;
         return !existing.has(member.userId);
       });
       // Large workspaces list dozens of members — a stable alphabetical order
       // makes the list scannable beyond what search alone covers.
       return list.sort((a, b) => memberName(a).localeCompare(memberName(b)));
-    }, [members, collaborators, permission?.creatorId]);
+    }, [members, collaborators, permission?.creatorId, resourceType]);
 
     const filtered = useMemo(() => {
       const keyword = query.trim().toLowerCase();
@@ -244,9 +245,13 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
         </div>
         <div
           aria-multiselectable
-          aria-label={t('permission.collaborators.addModal.title')}
           className={cx('flex flex-col', styles.list)}
           role={'listbox'}
+          aria-label={t(
+            resourceType === 'agent'
+              ? 'settingAgent.useMembers.add'
+              : 'permission.collaborators.addModal.title',
+          )}
         >
           {isInitialLoading ? (
             [0, 1, 2].map((key) => (
@@ -261,7 +266,9 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
               description={t(
                 isSearchMiss
                   ? 'permission.collaborators.addModal.noMatch'
-                  : 'permission.collaborators.addModal.empty',
+                  : resourceType === 'agent'
+                    ? 'settingAgent.useMembers.empty'
+                    : 'permission.collaborators.addModal.empty',
               )}
             />
           ) : (

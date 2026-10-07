@@ -1,10 +1,12 @@
 import { isDesktop } from '@orvilo/const';
 import type { OpenInAppId } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
@@ -133,7 +135,7 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
               <span className="inline-flex">
                 <div
                   aria-label={t('tooltip', { appName: defaultDisplayName })}
-                  className={styles.leftButton}
+                  className={cn(styles.leftButton, buttonHoverFeedback)}
                   role="button"
                   onClick={() => {
                     void launch(defaultApp);
@@ -148,7 +150,11 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
         </Tooltip>
       </TooltipProvider>
       <SidebarDropdownMenu items={dropdownItems}>
-        <div aria-label={t('dropdownLabel')} className={styles.rightButton} role="button">
+        <div
+          aria-label={t('dropdownLabel')}
+          className={cn(styles.rightButton, buttonHoverFeedback)}
+          role="button"
+        >
           <ChevronDownIcon size={12} />
         </div>
       </SidebarDropdownMenu>

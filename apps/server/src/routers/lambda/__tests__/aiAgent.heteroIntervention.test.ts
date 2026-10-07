@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, messagePlugins, messages, topics } from '@orvilo/database/schemas';
+import {
+  agentOperations,
+  agents,
+  messagePlugins,
+  messages,
+  topics,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import { eq } from 'drizzle-orm';
@@ -193,8 +199,10 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     } as any);
 
   const insertOperation = async (id: string, ownerId: string) => {
-    const { agentOperations } = await import('@/database/schemas');
-    await serverDB.insert(agentOperations).values({ id, status: 'running', userId: ownerId });
+    await serverDB
+      .insert(agentOperations)
+      .values({ id, status: 'running', type: 'execAgent', userId: ownerId })
+      .onConflictDoNothing();
   };
 
   const insertPendingTool = async (params: {
@@ -205,6 +213,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     toolCallId: string;
   }) => {
     const ownerUserId = params.ownerUserId ?? userId;
+    await insertOperation(params.operationId, ownerUserId);
     await serverDB.insert(messages).values({
       content: '',
       id: params.messageId,
@@ -1171,6 +1180,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
   });
 
   it('does not dispatch again when another surface already won the source claim', async () => {
+    await insertOperation('operation-race', userId);
     businessV2.resolveAgentInterventionBySource.mockResolvedValueOnce({
       contractVersion: 2,
       handled: true,
@@ -2202,8 +2212,8 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     it("rejects an owner token reading another user's operation", async () => {
       const otherUserId = await createTestUser(serverDB);
       await insertOperation('op-others', otherUserId);
-      // The victim's answer lands on the stream…
-      await userCaller().submitHeteroIntervention({
+      // The victim's answer lands on the stream under the actual owner…
+      await ownerTokenCaller(otherUserId).submitHeteroIntervention({
         operationId: 'op-others',
         result: { secret: 'leak me' },
         toolCallId: 't-victim',

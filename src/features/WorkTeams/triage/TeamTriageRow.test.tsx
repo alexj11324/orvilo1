@@ -70,17 +70,37 @@ describe('TeamTriageRow status icon', () => {
     expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
   });
 
-  it('keeps the execution icon when the task has no workflow category', () => {
+  it('defaults missing Issue workflow categories to backlog without using execution state', () => {
     render(
       <TeamTriageRow
         {...props}
-        task={{ id: 'task-2b', name: 'Legacy issue', status: 'backlog' }}
+        task={{ id: 'task-2b', name: 'Legacy issue', status: 'completed' }}
       />,
     );
 
-    expect(screen.getByTestId('execution-icon')).toHaveTextContent('backlog');
-    expect(screen.getByRole('link').querySelector('[data-workflow-icon]')).toBeNull();
+    expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link').querySelector('[data-workflow-icon="backlog"]'),
+    ).toBeInTheDocument();
   });
+  it('shows Needs Input ahead of an ended run and its workflow category', () => {
+    render(
+      <TeamTriageRow
+        {...props}
+        task={{
+          id: 'task-attention',
+          name: 'Review answer',
+          status: 'completed',
+          workflowCategory: 'done',
+          attentionReason: 'needs_input',
+        }}
+      />,
+    );
+    expect(screen.getByRole('link').querySelector('.lucide-circle-alert')).toBeInTheDocument();
+    expect(screen.getByRole('link').querySelector('[data-workflow-icon="done"]')).toBeNull();
+    expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
+  });
+
   it('keeps accept and decline actions and explains disabled snooze', () => {
     render(
       <TeamTriageRow {...props} task={{ id: 'task-3', name: 'Local issue', status: 'backlog' }} />,

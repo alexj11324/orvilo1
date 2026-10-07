@@ -15,7 +15,7 @@ import {
 import { createElement, use } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 
 import { FlowAnchorContext } from './flowAnchor';
 import type { FlowGraphData } from './flowGraph';
@@ -107,7 +107,7 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
       <div className={styles.group}>
         {data.collapsed ? (
           <div
-            className={`flex items-start gap-2.5 ${styles.collapsed}`}
+            className={cn(`flex items-start gap-2.5 ${styles.collapsed}`, buttonHoverFeedback)}
             role="button"
             onClick={toggle}
           >

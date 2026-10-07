@@ -9,11 +9,13 @@ import {
   Text,
 } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownToDot, ArrowUpFromDot, CircleFadingArrowUp } from 'lucide-react';
 import type { FC } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import type { EnabledProviderWithModels } from '@/types/aiProvider';
 import { getModelDescriptionI18nKey } from '@/utils/modelDescriptionI18n';
 
@@ -227,9 +229,12 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                     {ratedDimensions.length >= RADAR_MIN_DIMENSIONS ? (
                       <Tooltip title={t('ModelSwitchPanel.detail.rating.clickHint')}>
                         <div
-                          className={styles.radarClickable}
-                          role={'button'}
-                          tabIndex={0}
+                          role={provider ? 'button' : undefined}
+                          tabIndex={provider ? 0 : undefined}
+                          className={cn(
+                            provider && styles.radarClickable,
+                            provider && buttonHoverFeedback,
+                          )}
                           onClick={() => {
                             if (provider) openBenchmarkModal({ modelId: model.id, provider });
                           }}

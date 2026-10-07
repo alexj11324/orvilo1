@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
@@ -519,7 +520,11 @@ const Review = memo<ReviewProps>(
             style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}
           >
             <SidebarDropdownMenu items={modeMenuItems} placement={'bottomLeft'}>
-              <span className={styles.scopeChip} role={'button'} tabIndex={0}>
+              <span
+                className={cn(styles.scopeChip, buttonHoverFeedback)}
+                role={'button'}
+                tabIndex={0}
+              >
                 {mode === 'branch'
                   ? t('workingPanel.review.mode.branch')
                   : t('workingPanel.review.mode.unstaged')}
@@ -533,7 +538,11 @@ const Review = memo<ReviewProps>(
                   placement={'bottomLeft'}
                   onOpenChange={setBasePickerOpen}
                 >
-                  <span className={styles.basePicker} role={'button'} tabIndex={0}>
+                  <span
+                    className={cn(styles.basePicker, buttonHoverFeedback)}
+                    role={'button'}
+                    tabIndex={0}
+                  >
                     <span className={styles.refName}>
                       {baseRef ?? t('workingPanel.review.baseRef.unresolved')}
                     </span>

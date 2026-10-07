@@ -1,4 +1,8 @@
-import { buildHeteroExecArgs } from '@orvilo/types';
+import {
+  applyTopicModelToHeterogeneousProvider,
+  buildHeteroExecArgs,
+  buildHeteroSpawnArgs,
+} from '@orvilo/types';
 import type * as ModelBankModule from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -225,6 +229,37 @@ describe('AiAgentService.execAgent - blank-composer new-topic pins', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('preserves exact ACP default from Agent settings into a new topic and its resumed execution', async () => {
+    const provider = {
+      type: 'claude-code' as const,
+      model: 'default',
+      args: ['--model', 'default'],
+    };
+    mockAgentConfig.mockResolvedValue({
+      ...agentRow,
+      agencyConfig: { ...agentRow.agencyConfig, heterogeneousProvider: provider },
+    });
+    await service.execAgent({ agentId: 'agent-1', prompt: 'First exact default turn' });
+    const created = mockTopicCreate.mock.calls[0][0];
+    expect(created).toMatchObject({
+      model: 'default',
+      provider: 'claude-code',
+      metadata: { heteroModelExplicit: true },
+    });
+    mockTopicFind.mockResolvedValue({ ...created, id: 'topic-1', agentId: 'agent-1' });
+    await service.execAgent({
+      agentId: 'agent-1',
+      appContext: { topicId: 'topic-1' },
+      prompt: 'Next exact default turn',
+    });
+    const pin = mockDispatchHeteroAgent.mock.calls.at(-1)![2].pinnedHeterogeneousTopicModel;
+    expect(pin).toMatchObject({ model: 'default', provider: 'claude-code', modelExplicit: true });
+    expect(buildHeteroSpawnArgs(applyTopicModelToHeterogeneousProvider(provider, pin))).toEqual([
+      '--model',
+      'default',
+    ]);
   });
 
   it('writes the picks onto the topic this run creates and runs on them', async () => {

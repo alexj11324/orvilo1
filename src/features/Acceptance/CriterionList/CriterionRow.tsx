@@ -5,6 +5,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { buttonHoverFeedback } from '@/components/ui/button';
 
 const styles = createStaticStyles(({ css }) => ({
   list: css`
@@ -106,9 +107,12 @@ export const CriterionRow = ({
   ...rest
 }: CriterionRowProps) => (
   <div
-    className={`flex items-center gap-2.5 ${cx(styles.row, onOpen && styles.rowClickable, className)}`}
     role={onOpen ? 'button' : undefined}
     tabIndex={onOpen ? 0 : undefined}
+    className={cx(
+      `flex items-center gap-2.5 ${cx(styles.row, onOpen && styles.rowClickable, className)}`,
+      onOpen && buttonHoverFeedback,
+    )}
     onClick={onOpen}
     onKeyDown={onOpen && rowKeyDownHandler(onOpen)}
     {...rest}

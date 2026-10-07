@@ -80,6 +80,18 @@ describe('useTaskCopyActions', () => {
     expect(mocks.toastSuccess).toHaveBeenCalledWith('taskList.contextMenu.copyIdSuccess');
   });
 
+  it('copies the readable identifier when the detail host is mounted by UUID', async () => {
+    mocks.taskState.activeTaskId = 'task-uuid';
+    mocks.taskState.taskDetailMap = { 'task-uuid': { identifier: 'ENG-42', name: 'Issue' } };
+    const { result } = renderHook(() => useTaskCopyActions());
+    await result.current.copyId();
+    expect(mocks.copyToClipboard).toHaveBeenCalledWith('ENG-42');
+    await result.current.copyLink();
+    expect(mocks.copyToClipboard).toHaveBeenCalledWith(
+      'https://example.com/ws-slug/task/ENG-42/issue',
+    );
+  });
+
   it('no-ops while no task is active, so the header buttons cannot copy a stale id', async () => {
     mocks.taskState.activeTaskId = undefined;
     const { result } = renderHook(() => useTaskCopyActions());

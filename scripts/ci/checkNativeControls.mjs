@@ -8,6 +8,8 @@
  * Rules (all scoped to src/features/**, src/routes/** .tsx):
  *   native-control          — literal <select>/<input>/<textarea>/<button> JSX.
  *                             `<input type="hidden">` is plumbing, not a control, and is ignored.
+ *   adhoc-button            — raw div/span role=button bypasses shared hover controls.
+ *   hover-feedback-override — caller removes hover fill/shadow without measured local coverage.
  *   adhoc-select-style      — `appearance-none` / `form-select` class hacks that
  *                             restyle a raw control into looking like a component.
  *   lobehub-form-control    — form-control imports from `@lobehub/ui/base-ui`
@@ -28,6 +30,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+
+import ts from 'typescript';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const ALLOWLIST_PATH = path.join(ROOT, 'scripts/ci/nativeControlsAllowlist.json');
@@ -138,6 +142,104 @@ export const scanSource = (relPath, source) => {
       rule: 'native-control',
     });
   }
+
+  // Parse JSX attributes at their owning node: arrows, strings, nested JSX
+  // and prop order must not truncate the control's opening tag.
+  const tree = ts.createSourceFile(
+    relPath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const feedbackNames = new Set();
+  const buttonNames = new Set(['Button', 'ActionIcon', 'button']);
+  for (const statement of tree.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier))
+      continue;
+    const owner = statement.moduleSpecifier.text;
+    const clause = statement.importClause;
+    if (owner === '@/components/ActionIcon' && clause?.name) buttonNames.add(clause.name.text);
+    if (
+      owner !== '@/components/ui/button' ||
+      !clause?.namedBindings ||
+      !ts.isNamedImports(clause.namedBindings)
+    )
+      continue;
+    for (const item of clause.namedBindings.elements) {
+      const imported = item.propertyName?.text ?? item.name.text;
+      if (imported === 'buttonHoverFeedback') feedbackNames.add(item.name.text);
+      if (imported === 'Button') buttonNames.add(item.name.text);
+    }
+  }
+  const containsFeedback = (node) => {
+    if (!node) return false;
+    if (ts.isIdentifier(node) && feedbackNames.has(node.text)) return true;
+    return ts.forEachChild(node, containsFeedback) === true;
+  };
+  const visit = (node) => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = node.tagName.getText(tree);
+      const attributes = new Map(
+        node.attributes.properties
+          .filter(ts.isJsxAttribute)
+          .map((attr) => [attr.name.getText(tree), attr.initializer]),
+      );
+      const role = attributes.get('role')?.getText(tree) ?? '';
+      const rawRole = tag === tag.toLowerCase() && tag !== 'button' && /['"]button['"]/.test(role);
+      const shared = containsFeedback(attributes.get('className'));
+      const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
+      if (rawRole && !shared)
+        violations.push({
+          detail:
+            'raw role=button — use Button or a measured design-system trigger with visible hover feedback',
+          line,
+          rule: 'adhoc-button',
+        });
+      if (rawRole || buttonNames.has(tag)) {
+        const className = attributes.get('className')?.getText(tree) ?? '';
+        const style = attributes.get('style');
+        const expression = style && ts.isJsxExpression(style) ? style.expression : undefined;
+        const paintKeys =
+          expression && ts.isObjectLiteralExpression(expression)
+            ? expression.properties
+                .filter(ts.isPropertyAssignment)
+                .map((property) =>
+                  ts.isStringLiteral(property.name)
+                    ? property.name.text
+                    : property.name.getText(tree),
+                )
+            : [];
+        const suppressed =
+          /hover:!?bg-transparent!?/.test(className) ||
+          paintKeys.some((key) => ['background', 'backgroundColor'].includes(key));
+        const shadow = attributes.get('data-hover-paint');
+        const shadowValue =
+          shadow && ts.isStringLiteral(shadow)
+            ? shadow.text
+            : shadow &&
+                ts.isJsxExpression(shadow) &&
+                shadow.expression &&
+                ts.isStringLiteral(shadow.expression)
+              ? shadow.expression.text
+              : undefined;
+        const ownsShadow =
+          shared &&
+          shadowValue === 'shadow' &&
+          !paintKeys.includes('boxShadow') &&
+          !/hover:!?shadow-none!?/.test(className);
+        if (suppressed && !ownsShadow)
+          violations.push({
+            detail:
+              'button caller suppresses shared hover paint — provide verified local feedback before overriding it',
+            line,
+            rule: 'hover-feedback-override',
+          });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
 
   clean.split('\n').forEach((line, index) => {
     if (ADHOC_STYLE.test(line)) {

@@ -57,7 +57,11 @@ vi.mock('@/server/services/workRegistration', () => ({
 
 const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const buildLifecycle = () => new CompletionLifecycle({} as any, 'user-1');
+const buildLifecycle = () => {
+  const lifecycle = new CompletionLifecycle({} as any, 'user-1');
+  vi.spyOn(lifecycle as any, 'hasUnresolvedTaskInput').mockResolvedValue(false);
+  return lifecycle;
+};
 
 describe('isSuccessLikeCompletionReason', () => {
   // Regression: file-Work registration was gated on `reason === 'done'` alone,
@@ -538,6 +542,56 @@ describe('CompletionLifecycle.buildLifecycleEvent', () => {
     );
 
     expect(assistantMessageId).toBeUndefined();
+  });
+});
+
+describe('CompletionLifecycle unresolved native input', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it('emits a failed completion signal for ended unresolved input', async () => {
+    const lifecycle = buildLifecycle();
+    vi.spyOn(lifecycle as any, 'hasUnresolvedTaskInput').mockResolvedValue(true);
+    const emitted = vi
+      .spyOn(agentSignalService, 'emitAgentSignalSourceEvent')
+      .mockResolvedValue(undefined as any);
+    await lifecycle.emitSignalEvents('op-1', { origin: { agentId: 'agent-1' } }, 'done');
+    expect(emitted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceType: 'agent.execution.failed',
+        payload: expect.objectContaining({ reason: 'error' }),
+      }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('downgrades successful ACP completion before persistence, hooks, verify and notification', async () => {
+    const lifecycle = buildLifecycle();
+    vi.spyOn(lifecycle as any, 'hasUnresolvedTaskInput').mockResolvedValue(true);
+    const persisted = vi.spyOn(lifecycle as any, 'persistCompletion').mockResolvedValue(true);
+    const dispatched = vi.spyOn(hookDispatcher, 'dispatch').mockResolvedValue(undefined as any);
+    vi.spyOn(hookDispatcher, 'unregister').mockImplementation(() => {});
+    const verify = vi.spyOn(verifyServices, 'runVerifyOnCompletion');
+    await lifecycle.dispatchHooks(
+      'op-1',
+      { messages: [{ role: 'assistant', content: 'Done' }] },
+      'done',
+    );
+    expect(persisted).toHaveBeenCalledWith(
+      'op-1',
+      expect.objectContaining({
+        status: 'error',
+        error: expect.objectContaining({ type: 'UnresolvedTaskInput' }),
+      }),
+      'error',
+    );
+    expect(dispatched).toHaveBeenCalledWith(
+      'op-1',
+      'onComplete',
+      expect.objectContaining({ reason: 'error' }),
+      undefined,
+    );
+    expect(verify).not.toHaveBeenCalled();
+    expect(mockNotifyAgentRunCompleted).not.toHaveBeenCalled();
   });
 });
 

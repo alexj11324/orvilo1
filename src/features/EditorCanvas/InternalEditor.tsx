@@ -47,8 +47,6 @@ const fileNodeStyles = createStaticStyles(({ css }) => ({
  * Base plugins for the editor (without image and toolbar, which need dynamic config)
  */
 const STATIC_PLUGINS = [
-  ReactLiteXmlPlugin,
-  ...createChatInputRichPlugins({ linkPlugin: ReactLinkPlugin }),
   // The kernel reads a plugin's config once at init, and `mentionOption` can
   // arrive later (workspace pages resolve their member source asynchronously),
   // so pin the member chip's markdown form here rather than relying on
@@ -118,6 +116,7 @@ const InternalEditor = memo<InternalEditorProps>(
     extraPlugins,
     floatingToolbar = true,
     getPopupContainer,
+    linkSchemaRules,
     mentionOption,
     onContentChange,
     onInit,
@@ -159,6 +158,20 @@ const InternalEditor = memo<InternalEditorProps>(
       [disabled],
     );
 
+    // Keep the link plugin component type stable across selection/toolbar updates.
+    const richPlugins = useMemo(
+      () =>
+        createChatInputRichPlugins({
+          linkPlugin: linkSchemaRules
+            ? Editor.withProps(ReactLinkPlugin, {
+                normalizeSchemaLinks: false,
+                schemaRules: linkSchemaRules,
+              })
+            : ReactLinkPlugin,
+        }),
+      [linkSchemaRules],
+    );
+
     // Build plugins array
     const plugins = useMemo(() => {
       // If custom plugins provided, use them directly
@@ -179,9 +192,14 @@ const InternalEditor = memo<InternalEditorProps>(
       });
 
       // Build base plugins with optional extra plugins prepended
-      const basePlugins = extraPlugins
-        ? [...extraPlugins, ...STATIC_PLUGINS, imagePlugin, filePlugin]
-        : [...STATIC_PLUGINS, imagePlugin, filePlugin];
+      const basePlugins = [
+        ...(extraPlugins ?? []),
+        ReactLiteXmlPlugin,
+        ...richPlugins,
+        ...STATIC_PLUGINS,
+        imagePlugin,
+        filePlugin,
+      ];
 
       // Add toolbar only when the editor is actually editable — a locked /
       // read-only page must not surface the floating formatting toolbar on
@@ -214,6 +232,7 @@ const InternalEditor = memo<InternalEditorProps>(
       handleFileUpload,
       handleImageUpload,
       handlePickFile,
+      richPlugins,
       toolbarExtraItems,
     ]);
 

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { describe, expect, it } from 'vitest';
 
 import { taskMilestoneById } from '@/features/Projects/milestoneFilter';
@@ -116,6 +117,18 @@ describe('automation mode grouping', () => {
 });
 
 describe('issue status grouping', () => {
+  it('places authoritative Needs Input ahead of its underlying workflow category', () => {
+    const input = task('input', {
+      attentionReason: 'needs_input',
+      status: 'completed',
+      workflowCategory: 'todo',
+    });
+    const ready = task('ready', { workflowCategory: 'todo' });
+    const groups = groupTaskItems([ready, input], 'status');
+    expect(groups.map(([group]) => group.key)).toEqual(['workflow:needs_input', 'workflow:todo']);
+    expect(groups[0][0].label).toBe(t('taskList.attention.needsInput', { ns: 'chat' }));
+  });
+
   it('groups linked issues by the workflow state shown on their board cards', () => {
     const todo = task('todo', {
       status: 'backlog',
@@ -148,11 +161,11 @@ describe('issue status grouping', () => {
     });
   });
 
-  it('keeps execution grouping for tasks without a linked workflow state', () => {
+  it('defaults uncategorized Issues to the canonical backlog board state', () => {
     const local = task('local', { status: 'running' });
     expect(groupTaskItems([local], 'status')[0][0]).toMatchObject({
-      key: 'status:running',
-      status: 'running',
+      key: 'workflow:backlog',
+      workflowCategory: 'backlog',
     });
   });
 });

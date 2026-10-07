@@ -4,7 +4,6 @@ import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
 import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
-import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
   TaskDispatchSettlementGrant,
@@ -28,7 +27,8 @@ import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
@@ -38,7 +38,6 @@ import {
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
-import { settleTaskExecution } from '@/server/services/taskSettlement';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskExecutionContract } from './buildTaskExecutionContract';
@@ -236,14 +235,26 @@ export class TaskRunnerService {
     if (!resolvedTask) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
+    if (!resolvedTask.assigneeUserId || !resolvedTask.assigneeAgentId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Assign both a human owner and an Agent before running this task.',
+      });
+    }
     // Reading a shared task does not grant use of its owner's personal Agent.
     // Validate the actual executor before mutating task policy or dispatch state.
     const assignedExecutor = delegation?.agentId ?? resolvedTask.assigneeAgentId;
     if (assignedExecutor) {
-      await assertAgentUsableBy(this.db, assignedExecutor, {
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      });
+      if (this.workspaceId) {
+        await assertCanUseWorkspaceAgent({
+          agentId: assignedExecutor,
+          db: this.db,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
+      } else {
+        await assertAgentVisibleTo(this.db, assignedExecutor, { userId: this.userId });
+      }
     }
     let task: TaskItem = resolvedTask;
     if (
@@ -350,7 +361,9 @@ export class TaskRunnerService {
     if (modelSnapshotAgentId) {
       const taskConfig = (task.config ?? {}) as Record<string, unknown>;
       if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
-        const snapshot = await this.agentModel.getAgentModelConfig(modelSnapshotAgentId);
+        const snapshot = this.workspaceId
+          ? await this.agentModel.getAgentModelConfigForExecution(modelSnapshotAgentId)
+          : await this.agentModel.getAgentModelConfig(modelSnapshotAgentId);
         if (snapshot) {
           const updated = await this.taskModel.updateTaskConfig(task.id, snapshot);
           if (updated) task = updated;
@@ -365,10 +378,10 @@ export class TaskRunnerService {
           eventEvidence,
           executionUserId: this.userId,
           idempotencyKey: resolvedIdempotencyKey,
-          // Raw actor persisted separately from the `trigger:actor` audit
-          // string — the persisted origin's initiator is what the final
-          // admission re-check authorizes against.
-          initiator: requestedBy,
+          // Persist the authenticated execution initiator separately from the
+          // audit actor (which may name a planner or coordinator). Durable
+          // admission rechecks must never substitute the task owner.
+          initiator: this.userId,
           // Execution origin for the shared admission boundary. `internal`
           // requires verified settlement evidence (verify association, not
           // marker presence); anything else reaching a CAID-orchestrated
@@ -437,40 +450,13 @@ export class TaskRunnerService {
       // A delegated run executes as the grant's agent — the task's stored
       // assignee and the inbox fallback are never substitutes for the
       // delegate the grant was minted for.
-      let executingAgentId = delegation?.agentId ?? task.assigneeAgentId;
-      if (!executingAgentId) {
-        const inboxAgent = await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID);
-        if (!inboxAgent) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to resolve fallback inbox agent for task',
-          });
-        }
-        // A human-assigned task still executes via the inbox agent, but the
-        // fallback must stay ephemeral — persisting it would silently replace
-        // the member assignment on the first run.
-        if (!task.assigneeUserId) {
-          // Goes through the logging path like every other assignee write: the
-          // chip visibly flips from unassigned to the inbox agent, so the feed
-          // has to be able to say who did it. No actor — nobody asked for this
-          // one, the runner needed an agent to execute with. `executionTransfer`
-          // because a task already 'running' here has no live executor (its
-          // dispatch died orphaned) — this write IS the transfer step.
-          await this.taskModel.updateWithLog(
-            task.id,
-            { assigneeAgentId: inboxAgent.id },
-            {},
-            { executionTransfer: true },
-          );
-        }
-        task.assigneeAgentId = inboxAgent.id;
-        executingAgentId = inboxAgent.id;
-        await this.taskDispatch.transition(preparedDispatch!, {
-          agentId: inboxAgent.id,
-          expected: ['claimed'],
-          phase: 'claimed',
+      if (!task.assigneeUserId || !task.assigneeAgentId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Assign both a human owner and an Agent before running this task.',
         });
       }
+      const executingAgentId = delegation?.agentId ?? task.assigneeAgentId;
 
       ownsKickoffClaim = await this.taskModel.claimRunKickoff(
         task.id,
@@ -737,19 +723,6 @@ export class TaskRunnerService {
         });
       }
       ownsReservation = true;
-      // Run-start settlement stamps the Issue Status layer (in_progress +
-      // exact state ref); the legacy 'running' projection is already on the
-      // row from reserveRun, so a no-op is an acceptable result here.
-      await settleTaskExecution(
-        this.db,
-        this.userId,
-        {
-          context: { reservationId },
-          runStarted: true,
-          taskId: task.id,
-        },
-        this.workspaceId,
-      );
       // Frozen contract content for `continue`/`repair`: instruction, verify
       // gate and dependency receipts re-render from the immutable source
       // contract, so editing the Task mid-flight can never silently rewrite

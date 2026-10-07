@@ -282,7 +282,10 @@ describe('AgentTaskItem', () => {
     it('keeps the category mark without a separate execution badge', () => {
       render(<AgentTaskItem routeScope={'global'} task={createTask('agent-1')} />);
 
-      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'category-default');
+      expect(screen.getByTestId('status-mark')).toHaveAttribute(
+        'data-glyph',
+        'WorkflowIcon(backlog)',
+      );
       expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
     });
 

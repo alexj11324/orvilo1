@@ -260,7 +260,7 @@ export function createCoreEventDispatchAdmission(dependencies: {
             workspaceId: request.workspaceId,
           },
           idempotencyKey: request.idempotencyKey,
-          initiator: `mcp-event:${request.triggerId}`,
+          initiator: request.userId,
           requestedBy: request.userId,
           sourceDispatchId: request.causationId,
           taskId: request.taskId,

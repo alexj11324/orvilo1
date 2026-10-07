@@ -1,11 +1,13 @@
 'use client';
 
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon, FoldVerticalIcon, UnfoldVerticalIcon } from 'lucide-react';
 import { type KeyboardEvent, memo, type MouseEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { buttonHoverFeedback } from '@/components/ui/button';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   // Sticky group header — appears once per repo (parent + each dirty submodule)
@@ -189,7 +191,7 @@ const GroupHeader = memo<GroupHeaderProps>(
     return (
       <div
         aria-expanded={!collapsed}
-        className={styles.header}
+        className={cn(styles.header, buttonHoverFeedback)}
         data-review-group-header={''}
         role={'button'}
         tabIndex={0}

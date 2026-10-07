@@ -14,7 +14,7 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
  */
 export const snapshotAgentModel = (
   agentId?: string | null,
-): { model?: string; provider?: string } => {
+): { model?: string; modelExplicit?: boolean; provider?: string } => {
   if (!agentId) return {};
 
   const agentState = getAgentStoreState();
@@ -40,7 +40,10 @@ export const snapshotAgentModel = (
   };
 };
 
-export type TopicReasoningSnapshot = Pick<ChatTopicMetadata, 'heteroEffort' | 'reasoningConfig'>;
+export type TopicReasoningSnapshot = Pick<
+  ChatTopicMetadata,
+  'heteroEffort' | 'heteroModelExplicit' | 'reasoningConfig'
+>;
 
 /**
  * Snapshot the reasoning effort that goes with {@link snapshotAgentModel} so a
@@ -57,7 +60,7 @@ export type TopicReasoningSnapshot = Pick<ChatTopicMetadata, 'heteroEffort' | 'r
  */
 export const snapshotAgentReasoning = async (
   agentId: string | null | undefined,
-  _modelSnapshot: { model?: string; provider?: string },
+  modelSnapshot: { model?: string; modelExplicit?: boolean; provider?: string },
 ): Promise<TopicReasoningSnapshot | undefined> => {
   if (!agentId) return undefined;
 
@@ -65,7 +68,11 @@ export const snapshotAgentReasoning = async (
     agentByIdSelectors.getAgencyConfigById(agentId)(getAgentStoreState())?.heterogeneousProvider;
   if (heterogeneousProvider) {
     const effort = heterogeneousProvider.effort;
-    return effort === undefined ? undefined : { heteroEffort: effort };
+    const metadata = {
+      ...(effort === undefined ? {} : { heteroEffort: effort }),
+      ...(modelSnapshot.modelExplicit ? { heteroModelExplicit: true } : {}),
+    };
+    return Object.keys(metadata).length ? metadata : undefined;
   }
 
   return undefined;

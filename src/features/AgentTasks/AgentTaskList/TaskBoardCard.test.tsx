@@ -233,10 +233,9 @@ describe('TaskBoardCard', () => {
 
     expect(screen.getByText('T-22')).toBeInTheDocument();
     expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
-    // One status mark — the workflow-category glyph slot — plus the read-only
-    // execution badge.
+    // One Issue status mark; execution results belong to run history.
     expect(document.querySelector('[data-collab-id$=":status"]')).toBeInTheDocument();
-    expect(screen.getByTestId('execution-badge')).toBeInTheDocument();
+    expect(screen.queryByTestId('execution-badge')).toBeNull();
     expect(screen.getByTestId('priority')).toBeInTheDocument();
     // Linear cards stamp the creation date — "Created <date>".
     expect(screen.getByText('Created Sep 15')).toBeInTheDocument();
@@ -272,20 +271,25 @@ describe('TaskBoardCard', () => {
 
   describe.each([false, true])('generating border (overlay: %s)', (overlay) => {
     it.each([
-      ['running', 'in_progress', true],
-      ['running', 'in_review', true],
-      ['running', 'todo', false],
-      ['running', 'backlog', false],
-      ['running', 'triage', false],
-      ['running', 'done', false],
-      ['running', 'canceled', false],
-      ['running', undefined, false],
-      ['paused', 'in_progress', false],
-      ['completed', 'in_review', false],
-    ] as const)('status %s in category %s animates: %s', (status, workflowCategory, generating) => {
-      const { container } = render(
-        <TaskBoardCard overlay={overlay} task={createTask({ status, workflowCategory })} />,
-      );
+      [{ workflowCategory: 'in_progress', hasLiveExecutor: true }, true],
+      [{ workflowCategory: 'in_review', hasLiveExecutor: true }, true],
+      [
+        { workflowCategory: 'in_progress', hasLiveExecutor: true, attentionReason: 'needs_input' },
+        false,
+      ],
+      [{ workflowCategory: 'todo', hasLiveExecutor: true }, false],
+      [{ workflowCategory: 'backlog', hasLiveExecutor: true }, false],
+      [{ workflowCategory: 'triage', hasLiveExecutor: true }, false],
+      [{ workflowCategory: 'done', hasLiveExecutor: true }, false],
+      [{ workflowCategory: 'canceled', hasLiveExecutor: true }, false],
+      [{ workflowCategory: undefined, hasLiveExecutor: true }, false],
+      [{ workflowCategory: 'in_progress', status: 'running', dispatchPhase: 'running' }, false],
+      [{ workflowCategory: 'in_review', hasLiveExecutor: false, status: 'running' }, false],
+      [{ workflowCategory: 'in_progress', hasLiveExecutor: true, status: 'backlog' }, true],
+      [{ workflowCategory: 'in_review', hasLiveExecutor: true, assigneeAgentId: null }, false],
+      [{ workflowCategory: 'in_progress', hasLiveExecutor: true, assigneeUserId: null }, false],
+    ])('task %j animates: %s', (task, generating) => {
+      const { container } = render(<TaskBoardCard overlay={overlay} task={createTask(task)} />);
 
       expect(container.querySelector('[data-generating]')).toHaveAttribute(
         'data-generating',

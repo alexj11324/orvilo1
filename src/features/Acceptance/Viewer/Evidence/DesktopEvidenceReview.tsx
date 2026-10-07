@@ -6,7 +6,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 import { ZOOM_STEPS } from '../Review/rejectDraft';
@@ -135,23 +135,27 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
             {evidence.length > 1 && (
               <div className="flex gap-2" style={{ overflowX: 'auto', flex: 'none' }}>
                 {evidence.map((item, index) => (
-                  <button
+                  <Button
                     aria-pressed={item.id === activeEvidence.id}
+                    data-hover-paint="shadow"
                     key={item.id}
                     style={{ flexShrink: 0 }}
                     type={'button'}
+                    variant="ghost"
                     aria-label={t('acceptance.review.imageNumber', {
                       current: index + 1,
                       total: evidence.length,
                     })}
                     className={cx(
+                      'p-0',
+                      buttonHoverFeedback,
                       styles.thumb,
                       item.id === activeEvidence.id && styles.thumbActive,
                     )}
                     onClick={() => model.selectEvidence(index)}
                   >
                     <img alt={''} src={item.fileUrl} />
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}

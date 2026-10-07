@@ -1,9 +1,11 @@
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { GitBranchIcon, GitForkIcon, GitPullRequest, RotateCcwIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,7 +157,11 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
         {pullRequest && (
           <>
             <div className={gitChipStyles.separator} />
-            <div className={gitChipStyles.prTrigger} role="button" onClick={handleOpenPr}>
+            <div
+              className={cn(buttonHoverFeedback, gitChipStyles.prTrigger)}
+              role="button"
+              onClick={handleOpenPr}
+            >
               <span className="anticon" role="img">
                 <GitPullRequest fill={'transparent'} height={12} size={12} width={12} />
               </span>

@@ -92,9 +92,11 @@ export const agents = pgTable(
 
     /**
      * Visibility within the owning workspace. `public` (default) means every
-     * workspace member can see and use the agent; `private` constrains it to
-     * the creator (`user_id`). Ignored in personal mode where the row is
-     * implicitly private to its owner.
+     * workspace member can discover its profile; `private` preserves the legacy
+     * standalone creator scope. This field does not grant execution: workspace
+     * Agent Use is the creator plus selected active member permission rows.
+     * A readable workspace Issue may expose only its assigned Agent's safe profile.
+     * Personal mode remains implicitly scoped to the owner.
      */
     visibility: text('visibility', { enum: AGENT_VISIBILITY }).default('public').notNull(),
 

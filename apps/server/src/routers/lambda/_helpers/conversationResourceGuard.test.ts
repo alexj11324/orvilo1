@@ -16,6 +16,7 @@ import {
   assertCanUseSessionTargets,
   assertCanUseTopicTargets,
   assertCanViewConversationTargets,
+  assertCanViewMessageTargets,
   assertCanViewTopicTargets,
   filterUserIdsByTopicViewAccess,
 } from './conversationResourceGuard';
@@ -41,9 +42,13 @@ const createDb = (rowsPerCall: any[][]) => {
   return {
     select: vi.fn(function () {
       return {
-        from: () => ({
-          where: async () => rowsPerCall[call++] ?? [],
-        }),
+        from: () => {
+          const chain = {
+            innerJoin: () => chain,
+            where: async () => rowsPerCall[call++] ?? [],
+          };
+          return chain;
+        },
       };
     }),
   } as any;
@@ -59,6 +64,7 @@ const wsMeta = { userId: 'creator', visibility: 'public', workspaceId: 'ws-1' };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  assertActionMock.mockResolvedValue(undefined);
   getResourceMetaMock.mockResolvedValue(wsMeta as any);
   getParentGroupIdsMock.mockResolvedValue([]);
 });
@@ -218,14 +224,43 @@ describe('assertCanUseTopicTargets', () => {
     );
   });
 
+  it('reads an Issue topic assigned to a private Agent without granting Agent Use', async () => {
+    const db = createDb([[{ topicId: 'issue-topic', agentId: 'private-agent' }]]);
+    getResourceMetaMock.mockResolvedValue({ ...wsMeta, visibility: 'private' } as any);
+    assertActionMock.mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
+
+    await expect(assertCanViewTopicTargets(baseCtx(db), ['issue-topic'])).resolves.toEqual([]);
+    expect(assertActionMock).not.toHaveBeenCalled();
+    await expect(
+      assertCanUseTopicTargets(baseCtx(createDb([[{ agentId: 'private-agent' }]])), [
+        'issue-topic',
+      ]),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
   it('can require read-only view access to the owning resource', async () => {
-    const db = createDb([[{ agentId: 'agent-1', groupId: null }]]);
+    const db = createDb([[], [{ agentId: 'agent-1', groupId: null }]]);
 
     await assertCanViewTopicTargets(baseCtx(db), ['t-1']);
 
     expect(assertActionMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'view', resourceId: 'agent-1', resourceType: 'agent' }),
     );
+  });
+});
+
+describe('assertCanViewMessageTargets', () => {
+  it('reads Issue messages without requiring private Agent View or Use', async () => {
+    const db = createDb([
+      [{ agentId: 'private-agent', topicId: 'issue-topic', workspaceId: 'ws-1' }],
+      [{ topicId: 'issue-topic' }],
+    ]);
+    getResourceMetaMock.mockResolvedValue({ ...wsMeta, visibility: 'private' } as any);
+    assertActionMock.mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
+    await expect(
+      assertCanViewMessageTargets(baseCtx(db), ['issue-message']),
+    ).resolves.toBeUndefined();
+    expect(assertActionMock).not.toHaveBeenCalled();
   });
 });
 

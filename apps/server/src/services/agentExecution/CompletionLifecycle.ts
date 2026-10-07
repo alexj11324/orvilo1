@@ -12,6 +12,7 @@ import {
   type RecordOperationStartParams,
 } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
+import { TaskModel } from '@/database/models/task';
 import { recomputeTopicUsage } from '@/database/models/topicUsage';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkModel } from '@/database/models/work';
@@ -492,6 +493,20 @@ export class CompletionLifecycle {
    */
   async emitSignalEvents(operationId: string, state: any, reason: string): Promise<SignalEvent[]> {
     try {
+      if (
+        isSuccessLikeCompletionReason(reason) &&
+        (await this.hasUnresolvedTaskInput(operationId, state))
+      ) {
+        reason = 'error';
+        state = {
+          ...state,
+          status: 'error',
+          error: {
+            type: 'UnresolvedTaskInput',
+            message: 'Required input was not acknowledged before execution ended.',
+          },
+        };
+      }
       const {
         assistantMessageId,
         metadata,
@@ -889,6 +904,20 @@ export class CompletionLifecycle {
     let shouldRetainHooksForRetry = false;
 
     try {
+      if (
+        isSuccessLikeCompletionReason(reason) &&
+        (await this.hasUnresolvedTaskInput(operationId, state))
+      ) {
+        reason = 'error';
+        state = {
+          ...state,
+          status: 'error',
+          error: {
+            type: 'UnresolvedTaskInput',
+            message: 'Required input was not acknowledged before execution ended.',
+          },
+        };
+      }
       const {
         assistantMessageId,
         event,
@@ -1082,6 +1111,16 @@ export class CompletionLifecycle {
         this.verifyPlanInstantiations.delete(operationId);
       }
     }
+  }
+
+  private async hasUnresolvedTaskInput(operationId: string, state: any): Promise<boolean> {
+    const operation = await this.agentOperationModel.findById(operationId);
+    const taskId = operation?.taskId ?? state?.origin?.taskId;
+    if (!taskId) return false;
+    return new TaskModel(this.serverDB, this.userId, this.workspaceId).hasUnresolvedInput(
+      taskId,
+      operationId,
+    );
   }
 
   /**

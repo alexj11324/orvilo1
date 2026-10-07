@@ -88,15 +88,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('TaskPrerequisites', () => {
-  it('renders the three sidebar fields with an add button each and no search until one is chosen', () => {
+  it('renders no empty relation groups before a relation is configured', () => {
     render(<TaskPrerequisites />);
-    expect(screen.getByText(relation('blockedBy'))).toBeTruthy();
-    expect(screen.getByText(relation('blocking'))).toBeTruthy();
-    expect(screen.getByText(relation('relates'))).toBeTruthy();
-    expect(screen.getAllByText(relation('none'))).toHaveLength(3);
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(document.querySelector('[data-relation-kind]')).toBeNull();
+    expect(screen.queryByText(relation('none'))).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.getAllByRole('button', { name: relation('add') })).toHaveLength(3);
   });
 
   it('shows blocking state until every prerequisite completes', () => {
@@ -134,10 +130,14 @@ describe('TaskPrerequisites', () => {
     render(<TaskPrerequisites />);
     expect(fieldFor('blockedBy').getByText('T-1')).toBeTruthy();
     expect(fieldFor('relates').getByText('T-3')).toBeTruthy();
-    expect(fieldFor('blocking').getByText(relation('none'))).toBeTruthy();
+    expect(document.querySelector('[data-relation-kind="blocking"]')).toBeNull();
   });
 
   it('adds a relates edge from search and a blocking edge from the other side', async () => {
+    setTask([
+      { dependsOn: 'T-existing', status: 'backlog', type: 'relates' },
+      { dependsOn: 'T-other', direction: 'blocking', status: 'backlog', type: 'blocks' },
+    ]);
     mocks.search.mockResolvedValue({
       data: [{ description: 'T-9', id: 'tsk_9', title: 'Ship it', type: 'task' }],
     });
@@ -158,14 +158,29 @@ describe('TaskPrerequisites', () => {
     });
   });
 
-  it('uses the board workflow glyph for a prerequisite with a provider state', () => {
+  it('shows Needs Input for an attention-bearing related Issue without a result glyph', () => {
+    setTask([
+      {
+        dependsOn: 'T-attention',
+        status: 'completed',
+        type: 'relates',
+        workflowCategory: 'done',
+        attentionReason: 'needs_input',
+      },
+    ]);
+    render(<TaskPrerequisites />);
+    const relatedIssue = screen.getByText('T-attention').closest('button');
+    expect(relatedIssue?.querySelector('.lucide-circle-alert')).toBeInTheDocument();
+    expect(relatedIssue?.querySelector('[data-workflow-icon="done"]')).toBeNull();
+  });
+
+  it('uses the board workflow glyph for an unlinked prerequisite', () => {
     setTask([
       {
         dependsOn: 'T-1',
         status: 'backlog',
         type: 'blocks',
         workflowCategory: 'in_progress',
-        workflowStateId: 'linear-state-progress',
       },
     ]);
     render(<TaskPrerequisites />);

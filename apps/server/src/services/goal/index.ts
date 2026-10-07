@@ -38,7 +38,7 @@ import { WorkModel } from '@/database/models/work';
 import { taskDispatches } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import {
-  assertAgentUsableBy,
+  assertAgentVisibleTo,
   findUsableAgentExecutionBinding,
 } from '@/database/utils/agent-access';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
@@ -259,7 +259,7 @@ export class GoalService {
       // rivals: the system planner leads, supervision recovers known transport
       // failures, and the main Agent is handed whatever neither can route (see
       // `gateOrTakeOver`). Ordering resolves what exclusivity used to.
-      await assertAgentUsableBy(this.db, creatorAgentId, {
+      await assertAgentVisibleTo(this.db, creatorAgentId, {
         userId: this.userId,
         workspaceId: this.workspaceId,
       });
@@ -1049,7 +1049,7 @@ export class GoalService {
     agentId: string,
     options?: { goalOnly?: boolean },
   ): Promise<{ goal: GoalItem; reassignedTaskIds: string[] }> => {
-    await assertAgentUsableBy(this.db, agentId, {
+    await assertAgentVisibleTo(this.db, agentId, {
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
@@ -1108,7 +1108,7 @@ export class GoalService {
     options?: { agentId?: string },
   ): Promise<{ goal: GoalItem; restartedTaskIds: string[] }> => {
     if (options?.agentId) {
-      await assertAgentUsableBy(this.db, options.agentId, {
+      await assertAgentVisibleTo(this.db, options.agentId, {
         userId: this.userId,
         workspaceId: this.workspaceId,
       });
@@ -2028,7 +2028,7 @@ export class GoalService {
       if (!fenced) return false;
       const claim = await new TaskDispatchModel(tx, this.workspaceId).request({
         idempotencyKey: attemptKey,
-        initiator: GOAL_COORDINATOR_ACTOR_ID,
+        initiator: this.userId,
         requestedBy: GOAL_COORDINATOR_ACTOR_ID,
         taskId: task.id,
         trigger: 'goal',

@@ -3,7 +3,6 @@ import type {
   TaskAttentionReason,
   TaskItem,
   TaskVerifyConfig,
-  TaskWorkflowCategory,
 } from '@orvilo/types';
 import { isAutomationRunTrigger } from '@orvilo/types';
 
@@ -17,13 +16,13 @@ import type { SettlementContext, SettlementPlan, VerifySettlementOutcome } from 
  * | event                        | workflow     | execution | attention        | legacy      |
  * | ---------------------------- | ------------ | --------- | ---------------- | ----------- |
  * | run starts                   | in_progress  | running   | none             | running     |
- * | run waits for user           | in_progress  | waiting   | needs_input      | running     |
- * | execution failed             | in_progress  | failed    | execution_failed | paused¹     |
+ * | run waits for user           | unchanged    | waiting   | needs_input      | running     |
+ * | execution failed             | unchanged    | failed    | execution_failed | paused¹     |
  * | success, no review required  | done         | succeeded | none             | completed   |
- * | success, review required     | in_review    | succeeded | review_required  | paused      |
+ * | success, review required     | unchanged    | succeeded | review_required  | paused      |
  * | verify passed                | done         | succeeded | none             | completed²  |
- * | verify failed + auto repair  | in_progress  | queued    | needs_changes    | running     |
- * | verify failed, no repair     | in_review    | succeeded | needs_changes    | paused      |
+ * | verify failed + auto repair  | unchanged    | queued    | needs_changes    | running     |
+ * | verify failed, no repair     | unchanged    | succeeded | needs_changes    | paused      |
  * | user cancels issue           | canceled     | canceled  | none             | canceled    |
  *
  * ¹ automation tasks keep their resting `scheduled` state (a fuse blow pauses).
@@ -45,21 +44,10 @@ export interface SettlementPlanContext {
   verifyOutcome?: VerifySettlementOutcome;
 }
 
-const KEEP_OPEN_WORKFLOW: Readonly<Set<TaskWorkflowCategory>> = new Set([
-  'backlog',
-  'todo',
-  'triage',
-  'in_progress',
-]);
-
-/** Workflow target for a task whose run is (or just was) in flight. */
-const openWorkflowCategory = (current: TaskWorkflowCategory): TaskWorkflowCategory | undefined =>
-  KEEP_OPEN_WORKFLOW.has(current) ? 'in_progress' : undefined;
-
 const plan = (p: SettlementPlan): SettlementPlan => p;
 
 /**
- * Whether a successful run parks the task in `in_review` or completes
+ * Whether a successful run parks for human review or completes
  * straight to `done` — the explicit-gates-only replacement for the retired
  * default-pause. `true` when any of:
  *
@@ -114,7 +102,7 @@ export const resolveSettlementPlan = ({
   const isAutomation = Boolean(task.automationMode);
   const isAutomationTick =
     !context?.manualAutomationRun && isAutomationRunTrigger(context?.runTrigger);
-  const workflowAfterRun = openWorkflowCategory(task.workflowCategory);
+  const workflowAfterRun = task.workflowCategory;
 
   // Issue-level cancel: the whole issue closes — the active run is canceled by
   // the caller before this settle lands.
@@ -135,7 +123,17 @@ export const resolveSettlementPlan = ({
       decision: { type: 'keep_open' },
       execution: 'running',
       legacyStatus: 'running',
-      workflowCategory: 'in_progress',
+      workflowCategory: task.workflowCategory === 'in_review' ? 'in_review' : 'in_progress',
+    });
+  }
+
+  if (context?.unresolvedInput) {
+    return plan({
+      attention: 'needs_input',
+      decision: { type: 'keep_open', attention: 'needs_input' },
+      execution: 'failed',
+      legacyStatus: 'paused',
+      workflowCategory: workflowAfterRun === 'done' ? 'todo' : workflowAfterRun,
     });
   }
 
@@ -165,7 +163,7 @@ export const resolveSettlementPlan = ({
         decision: { type: 'retry' },
         execution: 'queued',
         legacyStatus: 'running',
-        workflowCategory: 'in_progress',
+        workflowCategory: workflowAfterRun,
       });
     }
     // Non-pass outcomes route the task to a person (verify judges the run,
@@ -184,7 +182,7 @@ export const resolveSettlementPlan = ({
       decision: { type: 'review' },
       execution: 'succeeded',
       legacyStatus: 'paused',
-      workflowCategory: 'in_review',
+      workflowCategory: workflowAfterRun,
     });
   }
 
@@ -196,7 +194,7 @@ export const resolveSettlementPlan = ({
         decision: { type: 'keep_open', attention: 'needs_input' },
         execution: 'waiting',
         legacyStatus: 'running',
-        workflowCategory: 'in_progress',
+        workflowCategory: workflowAfterRun,
       });
     }
     case 'canceled': {
@@ -286,7 +284,7 @@ export const resolveSettlementPlan = ({
           decision: { type: 'review' },
           execution: 'succeeded',
           legacyStatus: 'paused',
-          workflowCategory: 'in_review',
+          workflowCategory: workflowAfterRun,
         });
       }
       return plan({

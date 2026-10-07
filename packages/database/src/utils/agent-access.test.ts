@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../core/getTestDB';
 import { agents, users, workspaces } from '../schemas';
 import type { OrviloDatabase } from '../type';
-import { assertAgentUsableBy } from './agent-access';
+import { assertAgentVisibleTo } from './agent-access';
 
 const serverDB: OrviloDatabase = await getTestDB();
 
@@ -35,7 +35,7 @@ afterEach(async () => {
   await serverDB.delete(users);
 });
 
-describe('assertAgentUsableBy', () => {
+describe('assertAgentVisibleTo', () => {
   describe('workspace mode', () => {
     it('passes for a public agent for any workspace member', async () => {
       const agentId = 'agt-public';
@@ -47,7 +47,7 @@ describe('assertAgentUsableBy', () => {
       });
 
       await expect(
-        assertAgentUsableBy(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
+        assertAgentVisibleTo(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
       ).resolves.toBeUndefined();
     });
 
@@ -61,7 +61,7 @@ describe('assertAgentUsableBy', () => {
       });
 
       await expect(
-        assertAgentUsableBy(serverDB, agentId, { userId: userA, workspaceId: workspaceA }),
+        assertAgentVisibleTo(serverDB, agentId, { userId: userA, workspaceId: workspaceA }),
       ).resolves.toBeUndefined();
     });
 
@@ -75,10 +75,10 @@ describe('assertAgentUsableBy', () => {
       });
 
       await expect(
-        assertAgentUsableBy(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
+        assertAgentVisibleTo(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
       ).rejects.toBeInstanceOf(TRPCError);
       await expect(
-        assertAgentUsableBy(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
+        assertAgentVisibleTo(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
@@ -92,13 +92,13 @@ describe('assertAgentUsableBy', () => {
       });
 
       await expect(
-        assertAgentUsableBy(serverDB, agentId, { userId: userA, workspaceId: workspaceB }),
+        assertAgentVisibleTo(serverDB, agentId, { userId: userA, workspaceId: workspaceB }),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it('throws NOT_FOUND when the agent does not exist', async () => {
       await expect(
-        assertAgentUsableBy(serverDB, 'missing-id', {
+        assertAgentVisibleTo(serverDB, 'missing-id', {
           userId: userA,
           workspaceId: workspaceA,
         }),
@@ -112,7 +112,7 @@ describe('assertAgentUsableBy', () => {
       await serverDB.insert(agents).values({ id: agentId, userId: userA });
 
       await expect(
-        assertAgentUsableBy(serverDB, agentId, { userId: userA }),
+        assertAgentVisibleTo(serverDB, agentId, { userId: userA }),
       ).resolves.toBeUndefined();
     });
 
@@ -120,9 +120,9 @@ describe('assertAgentUsableBy', () => {
       const agentId = 'agt-personal-other';
       await serverDB.insert(agents).values({ id: agentId, userId: userA });
 
-      await expect(assertAgentUsableBy(serverDB, agentId, { userId: userB })).rejects.toMatchObject(
-        { code: 'NOT_FOUND' },
-      );
+      await expect(
+        assertAgentVisibleTo(serverDB, agentId, { userId: userB }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it('throws NOT_FOUND when caller is personal mode but agent lives in a workspace', async () => {
@@ -134,9 +134,9 @@ describe('assertAgentUsableBy', () => {
         visibility: 'public',
       });
 
-      await expect(assertAgentUsableBy(serverDB, agentId, { userId: userA })).rejects.toMatchObject(
-        { code: 'NOT_FOUND' },
-      );
+      await expect(
+        assertAgentVisibleTo(serverDB, agentId, { userId: userA }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 });

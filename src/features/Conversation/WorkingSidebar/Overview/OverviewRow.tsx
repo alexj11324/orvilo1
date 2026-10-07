@@ -4,6 +4,8 @@ import type { LucideProps } from 'lucide-react';
 import { ChevronRightIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { type ComponentType, createElement, memo, type ReactNode } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
+
 export const rowStyles = createStaticStyles(({ css, cssVar }) => ({
   changeAdditions: css`
     font-variant-numeric: tabular-nums;
@@ -115,9 +117,12 @@ export const OverviewRow = memo<OverviewRowProps>(
   }) => (
     <div
       role={onClick || interactive ? 'button' : undefined}
-      className={cn(
-        'flex items-center gap-2.5',
-        cx(rowStyles.row, !onClick && !interactive && rowStyles.rowStatic),
+      className={cx(
+        cn(
+          'flex items-center gap-2.5',
+          cx(rowStyles.row, !onClick && !interactive && rowStyles.rowStatic),
+        ),
+        (onClick || interactive) && buttonHoverFeedback,
       )}
       onClick={onClick}
     >

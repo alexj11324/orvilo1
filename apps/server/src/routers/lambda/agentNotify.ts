@@ -22,6 +22,7 @@ import {
   remoteRunGenerationMatches,
   resolveRemoteCancel,
 } from '@/server/services/heterogeneousAgent/runAdmission';
+import { settleTaskExecutionStarted } from '@/server/services/taskSettlement';
 import { instantiateVerifyPlanOnStart } from '@/server/services/verify';
 
 // Module-level singleton so we don't create a new Redis connection per request.
@@ -254,15 +255,6 @@ export const agentNotifyRouter = router({
       return { messageId: undefined, operationId: undefined, topicId };
     }
 
-    // An accepted callback proves the remote run reached the execution host —
-    // latch the durable admission ledger to `running` (no-op once latched or
-    // for non-admitted ops).
-    if (remoteOperationId) {
-      await markRemoteRunRunning(ctx.serverDB, remoteOperationId).catch((err) =>
-        log('notify: admission running write failed op=%s: %O', remoteOperationId, err),
-      );
-    }
-
     const terminalOperation = activeOperation;
 
     /**
@@ -415,6 +407,28 @@ export const agentNotifyRouter = router({
       }
     };
 
+    const startPersistedRemoteExecution = async () => {
+      if (!remoteOperationId || isTerminal) return;
+      const operationModel = new AgentOperationModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      );
+      // Only this operation's persisted, nonterminal assistant activity can
+      // move the issue. A terminal-only callback cannot manufacture live work.
+      if (!(await operationModel.touchRunning(remoteOperationId))) return;
+      await markRemoteRunRunning(ctx.serverDB, remoteOperationId);
+      const operation = await operationModel.findById(remoteOperationId);
+      if (operation?.topicId === topicId) {
+        await settleTaskExecutionStarted(
+          ctx.serverDB,
+          ctx.userId,
+          operation,
+          ctx.workspaceId ?? undefined,
+        );
+      }
+    };
+
     // 2a. Assistant mode: write message directly without triggering LLM
     if (role === 'assistant') {
       try {
@@ -449,6 +463,7 @@ export const agentNotifyRouter = router({
             return { messageId: resolvedMessageId, operationId: undefined, topicId };
           }
           await ctx.messageModel.update(resolvedMessageId, { content });
+          await startPersistedRemoteExecution();
           if (isTerminal) await publishRemoteHeteroEvent(resolvedMessageId);
           else void publishRemoteHeteroEvent(resolvedMessageId);
           if (shouldContinue) {
@@ -480,6 +495,7 @@ export const agentNotifyRouter = router({
           topicId,
         });
 
+        await startPersistedRemoteExecution();
         if (isTerminal) await publishRemoteHeteroEvent(msg.id);
         else void publishRemoteHeteroEvent(msg.id);
 

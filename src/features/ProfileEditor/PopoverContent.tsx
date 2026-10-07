@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ItemType } from '@/components/Menu';
 import SearchBar from '@/components/SearchBar';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { ScrollSignalProvider } from '@/features/ChatInput/ActionBar/Tools/ScrollSignalContext';
 import ToolsList, { toolsListStyles } from '@/features/ChatInput/ActionBar/Tools/ToolsList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -90,7 +91,7 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
       </ScrollSignalProvider>
       <div className={styles.footer}>
         <div
-          className={toolsListStyles.item}
+          className={cx(toolsListStyles.item, buttonHoverFeedback)}
           role="button"
           tabIndex={0}
           onClick={() => {

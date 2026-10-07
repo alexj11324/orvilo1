@@ -159,7 +159,10 @@ export class TaskLifecycleService {
     const { taskId, taskIdentifier, topicId, reason: rawReason, lastAssistantContent } = params;
     const limited =
       rawReason === 'max_steps' || rawReason === 'cost_limit' || rawReason === 'timeout';
-    const reason = limited ? 'error' : rawReason;
+    const unresolvedInput =
+      ['done', 'error', 'interrupted', 'max_steps', 'cost_limit', 'timeout'].includes(rawReason) &&
+      (await this.taskModel.hasUnresolvedInput(taskId, params.operationId));
+    const reason = limited || unresolvedInput ? 'error' : rawReason;
     if (limited && !params.errorCode) params.errorCode = rawReason;
     if (limited && !params.errorMessage)
       params.errorMessage = `Execution stopped because of ${rawReason}.`;
@@ -258,11 +261,11 @@ export class TaskLifecycleService {
       topicId,
       params.operationId,
       reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed',
-      rawReason,
+      unresolvedInput ? 'error' : rawReason,
       ...dispatchClaimArgs,
     );
     if (!claimed) {
-      await this.persistAutomationResult(params);
+      if (!unresolvedInput) await this.persistAutomationResult(params);
       log(
         'onTopicComplete: duplicate or stale callback ignored task=%s currentTopic=%s receivedTopic=%s',
         taskIdentifier,
@@ -272,7 +275,7 @@ export class TaskLifecycleService {
       return;
     }
 
-    if (reason === 'interrupted') {
+    if (reason === 'interrupted' && !unresolvedInput) {
       log('onTopicComplete: interrupted run settled without advancing task=%s', taskIdentifier);
       try {
         await this.markAutomationResultReady(params);
@@ -332,6 +335,17 @@ export class TaskLifecycleService {
     let verifySettled = false;
     let lifecycleFailed = false;
     try {
+      if (unresolvedInput) {
+        await settleOwned({
+          context: {
+            error: 'Required input was not acknowledged before execution ended.',
+            expectedStatus: claimedTaskStatus,
+            reservationId: claimed,
+          },
+          outcome: 'failed',
+        });
+        return;
+      }
       const { TaskIntegrationService } = await import('@/server/services/taskIntegration');
       const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
 

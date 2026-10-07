@@ -1,3 +1,4 @@
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import { agentSecondaryDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +26,10 @@ const AgentItem = memo<AgentItemProps>(
     const title = agentTitle || t('untitledAgent');
     // Same name + muted role treatment as the sidebar's agent list, so a row
     // reads identically wherever an agent is listed.
-    const roleTag = agentSecondaryDisplayName(agent);
+    const roleTag = agentSecondaryDisplayName(
+      agent,
+      getHeterogeneousTypeLabel(agent?.heterogeneousType),
+    );
 
     return (
       <NavItem

@@ -5,6 +5,8 @@ import { FolderGit2Icon, FolderIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
+
 const styles = createStaticStyles(({ css, cssVar }) => ({
   dot: css`
     flex-shrink: 0;
@@ -88,9 +90,12 @@ const OverviewHeader = memo<OverviewHeaderProps>(
 
     return (
       <div
-        className={cn('flex items-center gap-2.5', styles.header)}
-        role={'button'}
+        role={onClick ? 'button' : undefined}
         title={path}
+        className={cx(
+          cn('flex items-center gap-2.5', styles.header),
+          onClick && buttonHoverFeedback,
+        )}
         onClick={onClick}
       >
         <span className={styles.tile}>

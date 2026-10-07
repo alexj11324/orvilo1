@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
 import { PluginModel } from '@/database/models/plugin';
+import { getResourceConfigAccess } from '@/server/routers/lambda/_helpers/resourceConfigGuard';
 import { DiscoverService } from '@/server/services/discover';
 
 import { agentManagementRuntime } from '../agentManagement';
@@ -26,6 +27,11 @@ const {
   mockGetAssistantList: vi.fn(),
   mockQueryAgents: vi.fn(),
   mockUpdateConfig: vi.fn(),
+}));
+
+vi.mock('@/server/routers/lambda/_helpers/resourceConfigGuard', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getResourceConfigAccess: vi.fn().mockResolvedValue('full'),
 }));
 
 vi.mock('@/database/models/agent', () => ({
@@ -85,8 +91,27 @@ const makeAgents = (count: number, startIndex = 0) =>
 describe('agentManagementRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getResourceConfigAccess).mockResolvedValue('full');
     mockCreateAgent.mockReset();
     mockInheritRuntime.mockReset();
+  });
+
+  it('keeps full config and prompts out of a Use-only workspace Agent tool detail', async () => {
+    mockGetAgentConfigById.mockResolvedValue({
+      id: 'agent-1',
+      title: 'Safe title',
+      systemRole: 'Confidential prompt',
+      plugins: ['private-tool'],
+      model: 'safe-model',
+      agencyConfig: { heterogeneousProvider: { type: 'codex', env: { SECRET: 'fixture' } } },
+    });
+    vi.mocked(getResourceConfigAccess).mockResolvedValue('profile');
+    const result = await createWorkspaceRuntime().getAgentDetail({ agentId: 'agent-1' });
+    expect(result.success).toBe(true);
+    expect(JSON.stringify(result)).not.toContain('Confidential prompt');
+    expect(JSON.stringify(result)).not.toContain('private-tool');
+    expect(JSON.stringify(result)).not.toContain('fixture');
+    expect(result.content).toContain('Safe title');
   });
 
   it('declares the agent management runtime identifier', () => {

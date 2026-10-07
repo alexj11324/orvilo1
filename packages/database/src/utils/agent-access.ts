@@ -12,19 +12,17 @@ interface AgentAccessCtx {
 }
 
 /**
- * Assert that `ctx.userId` in `ctx.workspaceId` is allowed to use the agent —
+ * Assert that the agent is visible to `ctx.userId` in `ctx.workspaceId` —
  * i.e. it's a public agent in the same workspace OR owned by the caller.
  *
  * Cross-user access to someone else's private agent (and any cross-workspace
  * lookup) throws `NOT_FOUND` rather than `FORBIDDEN`, so a caller cannot probe
  * for the existence of a private agent they don't own.
  *
- * Use at every entry point that stores an agentId for later execution
- * (task assignee, group member, signal marker, bot binding ...) and as a
- * fail-closed guard at execution time. The single predicate keeps every
- * surface in sync with `buildWorkspaceWhere` semantics.
+ * This checks visibility only; it does not grant permission to execute as
+ * the agent. The predicate follows `buildWorkspaceWhere` semantics.
  */
-export async function assertAgentUsableBy(
+export async function assertAgentVisibleTo(
   db: OrviloDatabase,
   agentId: string,
   ctx: AgentAccessCtx,
@@ -51,8 +49,8 @@ export async function assertAgentUsableBy(
 
 /**
  * The agent's execution-binding inputs (`agencyConfig`, `model`) when the
- * agent is usable by `ctx` — the same `buildWorkspaceWhere` visibility
- * semantics as `assertAgentUsableBy` — or null when it is missing or not
+ * agent is visible to `ctx` — the same `buildWorkspaceWhere` visibility
+ * semantics as `assertAgentVisibleTo` — or null when it is missing or not
  * visible. Callers that gate on engine capabilities (e.g. whether the
  * resolved binding can mount the builtin tool surface) read this instead of
  * re-checking visibility themselves.

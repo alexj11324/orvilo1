@@ -78,7 +78,10 @@ describe('TaskSubtaskProgressTag', () => {
     fireEvent.click(screen.getByTestId('subtask-T-2'));
 
     expect(onSubtaskClick).toHaveBeenCalledWith('T-2', 'agt_child', 'Child task');
-    expect(screen.getByTestId('subtask-T-2')).toHaveTextContent('status');
+    expect(screen.getByTestId('subtask-T-2').querySelector('svg')).toHaveAttribute(
+      'data-workflow-icon',
+      'backlog',
+    );
   });
 
   it('renders a lightweight progress summary without a subtask tree', () => {
@@ -87,7 +90,7 @@ describe('TaskSubtaskProgressTag', () => {
     expect(screen.getByText('2/3')).toBeInTheDocument();
   });
 
-  it('uses the board glyph for provider state without changing execution progress', () => {
+  it('uses the Issue category without a provider ID while preserving execution progress', () => {
     render(
       <TaskSubtaskProgressTag
         subtasks={[
@@ -96,7 +99,6 @@ describe('TaskSubtaskProgressTag', () => {
             name: 'Child task',
             status: 'completed',
             workflowCategory: 'in_progress',
-            workflowStateId: 'linear-state-progress',
           },
         ]}
         onSubtaskClick={vi.fn()}
@@ -108,6 +110,30 @@ describe('TaskSubtaskProgressTag', () => {
       'data-workflow-icon',
       'in_progress',
     );
+  });
+
+  it('shows Needs Input for an ended subtask while keeping its completed progress', () => {
+    render(
+      <TaskSubtaskProgressTag
+        subtasks={[
+          {
+            identifier: 'T-attention',
+            name: 'Review answer',
+            status: 'completed',
+            workflowCategory: 'done',
+            attentionReason: 'needs_input',
+          },
+        ]}
+        onSubtaskClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('1/1')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('subtask-T-attention').querySelector('.lucide-circle-alert'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('subtask-T-attention').querySelector('[data-workflow-icon="done"]'),
+    ).toBeNull();
   });
 
   it('uses the list summary until detail is refreshed, then yields to a newer list summary', async () => {

@@ -14,7 +14,7 @@ export default defineConfig({
   ],
   retries: 0,
   testDir: '.',
-  testMatch: 'alignment.spec.ts',
+  testMatch: '*.spec.ts',
   use: {
     baseURL: 'http://127.0.0.1:5188',
     browserName: 'chromium',

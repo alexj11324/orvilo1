@@ -20,6 +20,7 @@ import { cssVar } from 'antd-style';
 import { CircleAlert, OctagonAlert } from 'lucide-react';
 
 import {
+  ISSUE_NEEDS_INPUT_VISUAL,
   type StatusVisual,
   TASK_STATUS_VISUALS,
   WORKFLOW_CATEGORY_VISUALS,
@@ -79,15 +80,16 @@ export const getKanbanColumnHeaderVariant = ({
  * bucket). A Runs view grouping by raw execution state is the work-query
  * `st:` axis ({@link RAW_STATUS_KANBAN_COLUMNS}), not this board.
  */
-export const ISSUE_WORKFLOW_COLUMNS: KanbanColumnDefinition[] = WORK_QUERY_WORKFLOW_COLUMNS.map(
-  (category) => ({
+export const ISSUE_WORKFLOW_COLUMNS: KanbanColumnDefinition[] = [
+  { droppable: false, key: 'needs_input', targetStatus: null },
+  ...WORK_QUERY_WORKFLOW_COLUMNS.map((category) => ({
     droppable: true,
     key: category,
     targetStatus: null,
     targetWorkflowCategory: category,
     workflowCategories: [category],
-  }),
-);
+  })),
+];
 
 /** The Issue column a workflow category targets. */
 export const kanbanColumnForWorkflowCategory = (
@@ -192,14 +194,8 @@ export const buildKanbanColumns = (
  * the task store boards use. `in_review` is its own column here; it never
  * folds into a run-state bucket.
  */
-export const WORKFLOW_KANBAN_COLUMNS: KanbanColumnDefinition[] = WORK_QUERY_WORKFLOW_COLUMNS.map(
-  (category) => ({
-    droppable: true,
-    key: `wf:${category}`,
-    targetStatus: null,
-    targetWorkflowCategory: category,
-    workflowCategories: [category],
-  }),
+export const WORKFLOW_KANBAN_COLUMNS: KanbanColumnDefinition[] = ISSUE_WORKFLOW_COLUMNS.map(
+  (column) => ({ ...column, key: prefixWorkQueryBoardKey('workflowCategory', column.key) }),
 );
 
 /** Same for raw execution-status groups — `st:` columns keep `paused` and
@@ -262,6 +258,7 @@ export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanCol
 export const columnDefForBoardKey = (key: string): KanbanColumnDefinition => {
   const axis = workQueryBoardAxisOfKey(key);
   const raw = rawWorkQueryBoardKey(key);
+  if (raw === 'needs_input') return { droppable: false, key, targetStatus: null };
   if (axis === 'workflowCategory') {
     return {
       droppable: true,
@@ -365,6 +362,7 @@ export const externalBoardLanes = (
 export const COLUMN_I18N_KEYS: Record<string, string> = {
   'backlog': 'taskList.kanban.backlog',
   'blocking': 'taskList.attention.blocking',
+  'needs_input': 'taskList.attention.needsInput',
   'canceled': 'taskList.kanban.canceled',
   'done': 'taskList.kanban.done',
   'in_progress': 'taskList.kanban.inProgress',
@@ -400,6 +398,7 @@ export const COLUMN_STATUS_VISUAL: Record<string, StatusVisual> = {
   // Attention buckets (Linear My issues) are not execution statuses — urgent
   // keeps the app's urgent glyph, blocking the stop-marked one.
   'blocking': { color: cssVar.colorError, icon: OctagonAlert },
+  'needs_input': ISSUE_NEEDS_INPUT_VISUAL,
   'urgent': { color: cssVar.orange, icon: CircleAlert },
   // The Issue board's columns are the workflow categories — the header reads
   // the same canonical map the card's status mark uses.
@@ -453,13 +452,24 @@ export const workQueryKeyForKanbanColumn = (columnKey: string): string =>
 export const externalTaskColumnKey = (
   task: Pick<
     TaskListItem,
-    'assigneeAgentId' | 'assigneeUserId' | 'priority' | 'projectId' | 'status' | 'workflowCategory'
+    | 'assigneeAgentId'
+    | 'assigneeUserId'
+    | 'priority'
+    | 'projectId'
+    | 'status'
+    | 'workflowCategory'
+    | 'attentionReason'
   >,
   groupBy: WorkQueryBoardGroupBy,
 ): string => {
   switch (groupBy) {
     case 'workflowCategory': {
-      return prefixWorkQueryBoardKey('workflowCategory', task.workflowCategory ?? 'backlog');
+      return prefixWorkQueryBoardKey(
+        'workflowCategory',
+        task.attentionReason === 'needs_input'
+          ? 'needs_input'
+          : (task.workflowCategory ?? 'backlog'),
+      );
     }
     case 'status': {
       return prefixWorkQueryBoardKey('status', task.status ?? 'backlog');
@@ -752,7 +762,9 @@ export const kanbanColumnMoveScope = (
  */
 export const taskKanbanColumnKey = (task: TaskListItem, groupBy: TaskKanbanGroupBy): string => {
   if (groupBy === 'status') {
-    return task.workflowCategory ?? 'backlog';
+    return task.attentionReason === 'needs_input'
+      ? 'needs_input'
+      : (task.workflowCategory ?? 'backlog');
   }
   return getTaskGroupMeta(task, groupBy).key;
 };
@@ -833,7 +845,7 @@ export const taskStatusChoiceIsCurrent = (
  * surface (runs live on `TaskExecutionBadge` and the work-query `st:` axis).
  */
 export const issueStatusChoices = (): TaskStatusChoice[] =>
-  ISSUE_WORKFLOW_COLUMNS.map((column) => ({
+  ISSUE_WORKFLOW_COLUMNS.filter((column) => column.targetWorkflowCategory).map((column) => ({
     column,
     workflowCategory: column.targetWorkflowCategory,
   }));

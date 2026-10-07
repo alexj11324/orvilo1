@@ -122,6 +122,12 @@ vi.mock('@/hooks/useEffectiveAgencyConfig', () => ({
   useEffectiveAgencyConfig: () => mocks.effectiveConfig,
 }));
 vi.mock('@/features/DeviceManager/useDeviceList', () => ({
+  useAgentDeviceCandidates: () => ({
+    data: undefined,
+    error: undefined,
+    isLoading: false,
+    mutate: vi.fn(),
+  }),
   useDeviceList: () => ({ data: mocks.devices }),
 }));
 vi.mock('@/store/providerBinding', () => ({

@@ -17,6 +17,10 @@ const { cancelScheduled, scheduleNextTopic } = vi.hoisted(() => ({
   scheduleNextTopic: vi.fn(),
 }));
 
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(),
 }));
@@ -172,6 +176,7 @@ describe('TaskService', () => {
     existsById: vi.fn().mockResolvedValue(true),
     getAgentAvatarsByIds: vi.fn().mockResolvedValue([]),
     getAgentModelConfig: vi.fn().mockResolvedValue(null),
+    getAgentModelConfigForExecution: vi.fn().mockResolvedValue(null),
     getAgentSnapshotForTaskCreate: vi
       .fn()
       .mockResolvedValue({ snapshot: null, visibility: 'public' }),
@@ -342,6 +347,95 @@ describe('TaskService', () => {
   });
 
   describe('getTaskDetail', () => {
+    it.each(['none', 'needs_input'] as const)(
+      'preserves authoritative %s attention across readable nested summaries',
+      async (attentionReason) => {
+        mockTaskModel.resolve.mockResolvedValue({
+          id: 'root',
+          identifier: 'TASK-1',
+          instruction: 'Root',
+          parentTaskId: 'parent',
+          workflowCategory: 'in_progress',
+          status: 'running',
+          totalTopics: 0,
+        });
+        mockTaskModel.findById.mockResolvedValue({
+          id: 'parent',
+          identifier: 'TASK-P',
+          name: 'Parent',
+          attentionReason,
+        });
+        mockTaskModel.findAllDescendants.mockResolvedValue([
+          {
+            id: 'child',
+            identifier: 'TASK-C',
+            parentTaskId: 'root',
+            name: 'Child',
+            status: 'completed',
+            attentionReason,
+          },
+        ]);
+        mockTaskModel.getDependencies.mockResolvedValue([
+          { dependsOnId: 'relation', type: 'relates' },
+          { dependsOnId: 'unreadable', type: 'blocks' },
+        ]);
+        mockTaskModel.findByIds.mockResolvedValue([
+          {
+            id: 'relation',
+            identifier: 'TASK-R',
+            name: 'Related',
+            status: 'completed',
+            attentionReason,
+          },
+        ]);
+        mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+        mockBriefModel.findByTaskId.mockResolvedValue([]);
+        mockTaskModel.getComments.mockResolvedValue([]);
+        mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+        mockTaskModel.getDependenciesByTaskIds.mockResolvedValue([]);
+        mockTaskModel.getCheckpointConfig.mockReturnValue({});
+        mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+        const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+        expect(result?.parent?.attentionReason).toBe(attentionReason);
+        expect(result?.subtasks?.[0].attentionReason).toBe(attentionReason);
+        expect(result?.dependencies?.[0].attentionReason).toBe(attentionReason);
+        expect(result?.dependencies?.[1].attentionReason).toBeUndefined();
+      },
+    );
+
+    it.each([
+      [
+        { identifier: 'TASK-2', name: 'Canonical', isDeleted: false },
+        { identifier: 'TASK-2', name: 'Canonical' },
+      ],
+      [null, { unavailable: true }],
+      [{ identifier: 'TASK-2', name: 'Deleted secret', isDeleted: true }, { unavailable: true }],
+    ])('projects only the ACL-readable direct duplicate target', async (target, expected) => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'task_001',
+        identifier: 'TASK-1',
+        instruction: 'Duplicate',
+        duplicateOfTaskId: 'private-target-id',
+        workflowCategory: 'canceled',
+        status: 'canceled',
+        totalTopics: 0,
+      });
+      mockTaskModel.findById.mockResolvedValue(target);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getDependencies.mockResolvedValue([]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+      mockBriefModel.findByTaskId.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+      expect(result?.duplicateOf).toEqual(expected);
+      expect(JSON.stringify(result)).not.toContain('private-target-id');
+      expect(mockTaskModel.findById).toHaveBeenCalledWith('private-target-id');
+    });
+
     it('should return null when task is not found', async () => {
       mockTaskModel.resolve.mockResolvedValue(null);
 
@@ -352,63 +446,68 @@ describe('TaskService', () => {
       expect(mockTaskModel.resolve).toHaveBeenCalledWith('TASK-1');
     });
 
-    it('should return task detail for a simple task with no subtasks or dependencies', async () => {
-      const task = {
-        assigneeAgentId: 'agent-1',
-        assigneeUserId: 'user-1',
-        createdAt: new Date('2024-01-01T00:00:00Z'),
-        description: 'A simple task',
-        dispatchPhase: 'succeeded',
-        error: null,
-        heartbeatInterval: null,
-        heartbeatTimeout: null,
-        id: 'task_001',
-        identifier: 'TASK-1',
-        instruction: 'Do something',
-        lastHeartbeatAt: null,
-        name: 'Task One',
-        parentTaskId: null,
-        priority: 'normal',
-        startedAt: new Date('2024-01-01T00:02:00Z'),
-        status: 'completed',
-        totalTopics: 0,
-        workflowCategory: 'done',
-        workflowStateId: 'linear-state-done',
-      };
+    it.each(['none', 'needs_input'] as const)(
+      'returns authoritative %s attention in a simple detail response',
+      async (attentionReason) => {
+        const task = {
+          attentionReason,
+          assigneeAgentId: 'agent-1',
+          assigneeUserId: 'user-1',
+          createdAt: new Date('2024-01-01T00:00:00Z'),
+          description: 'A simple task',
+          dispatchPhase: 'succeeded',
+          error: null,
+          heartbeatInterval: null,
+          heartbeatTimeout: null,
+          id: 'task_001',
+          identifier: 'TASK-1',
+          instruction: 'Do something',
+          lastHeartbeatAt: null,
+          name: 'Task One',
+          parentTaskId: null,
+          priority: 'normal',
+          startedAt: new Date('2024-01-01T00:02:00Z'),
+          status: 'completed',
+          totalTopics: 0,
+          workflowCategory: 'done',
+          workflowStateId: 'linear-state-done',
+        };
 
-      mockTaskModel.resolve.mockResolvedValue(task);
-      mockTaskModel.findAllDescendants.mockResolvedValue([]);
-      mockTaskModel.getDependencies.mockResolvedValue([]);
-      mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
-      mockBriefModel.findByTaskId.mockResolvedValue([]);
-      mockTaskModel.getComments.mockResolvedValue([]);
-      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
-      mockTaskModel.findByIds.mockResolvedValue([]);
-      mockTaskModel.getCheckpointConfig.mockReturnValue({});
-      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+        mockTaskModel.resolve.mockResolvedValue(task);
+        mockTaskModel.findAllDescendants.mockResolvedValue([]);
+        mockTaskModel.getDependencies.mockResolvedValue([]);
+        mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+        mockBriefModel.findByTaskId.mockResolvedValue([]);
+        mockTaskModel.getComments.mockResolvedValue([]);
+        mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+        mockTaskModel.findByIds.mockResolvedValue([]);
+        mockTaskModel.getCheckpointConfig.mockReturnValue({});
+        mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
 
-      const service = new TaskService(db, userId);
-      const result = await service.getTaskDetail('TASK-1');
+        const service = new TaskService(db, userId);
+        const result = await service.getTaskDetail('TASK-1');
 
-      expect(result).not.toBeNull();
-      expect(result?.identifier).toBe('TASK-1');
-      expect(result?.name).toBe('Task One');
-      expect(result?.description).toBe('A simple task');
-      expect(result?.status).toBe('completed');
-      expect(result?.dispatchPhase).toBe('succeeded');
-      expect(result?.priority).toBe('normal');
-      expect(result?.agentId).toBe('agent-1');
-      expect(result?.userId).toBe('user-1');
-      expect(result?.workflowCategory).toBe('done');
-      expect(result?.workflowStateId).toBe('linear-state-done');
-      expect(result?.createdAt).toBe('2024-01-01T00:00:00.000Z');
-      expect(result?.startedAt).toBe('2024-01-01T00:02:00.000Z');
-      expect(result?.subtasks).toEqual([]);
-      expect(result?.dependencies).toEqual([]);
-      expect(result?.activities).toBeUndefined();
-      expect(result?.workspace).toBeUndefined();
-      expect(result?.parent).toBeNull();
-    });
+        expect(result).not.toBeNull();
+        expect(result?.identifier).toBe('TASK-1');
+        expect(result?.name).toBe('Task One');
+        expect(result?.description).toBe('A simple task');
+        expect(result?.status).toBe('completed');
+        expect(result?.dispatchPhase).toBe('succeeded');
+        expect(result?.attentionReason).toBe(attentionReason);
+        expect(result?.priority).toBe('normal');
+        expect(result?.agentId).toBe('agent-1');
+        expect(result?.userId).toBe('user-1');
+        expect(result?.workflowCategory).toBe('done');
+        expect(result?.workflowStateId).toBe('linear-state-done');
+        expect(result?.createdAt).toBe('2024-01-01T00:00:00.000Z');
+        expect(result?.startedAt).toBe('2024-01-01T00:02:00.000Z');
+        expect(result?.subtasks).toEqual([]);
+        expect(result?.dependencies).toEqual([]);
+        expect(result?.activities).toBeUndefined();
+        expect(result?.workspace).toBeUndefined();
+        expect(result?.parent).toBeNull();
+      },
+    );
 
     it('surfaces the effective inherited Acceptance policy', async () => {
       const task = {
@@ -1157,6 +1256,7 @@ describe('TaskService', () => {
         {
           authorAgentId: null,
           authorUserId: 'user_bob',
+          capabilities: { canEdit: false, canDelete: true },
           content: 'User comment',
           createdAt: new Date('2024-01-02T00:00:00Z'),
         },
@@ -1195,6 +1295,7 @@ describe('TaskService', () => {
 
       // Comment should have user author
       const commentActivity = result?.activities?.find((a) => a.type === 'comment');
+      expect(commentActivity?.commentCapabilities).toEqual({ canEdit: false, canDelete: true });
       expect(commentActivity?.author).toEqual({
         avatar: 'https://example.com/bob.png',
         id: 'user_bob',
@@ -2828,7 +2929,9 @@ describe('TaskService', () => {
   describe('handoffTask', () => {
     const runningTask = {
       assigneeAgentId: 'agent-a',
-      assigneeUserId: null,
+      assigneeUserId: 'owner-1',
+      workflowCategory: 'in_progress' as const,
+      workflowStateRefId: 'active-state',
       config: {},
       domainRevision: 7,
       id: 'task-1',
@@ -2846,11 +2949,18 @@ describe('TaskService', () => {
       topicId: 'topic-1',
     };
 
-    it('fences the incumbent, transfers ownership under CAS, then restarts on the successor', async () => {
+    it('fences the incumbent and restarts on a private successor with Agent Use', async () => {
       const service = new TaskService(db, userId, 'ws-1');
       mockAgentModel.getAgentSnapshotForTaskCreate.mockResolvedValue({
         snapshot: null,
         visibility: 'public',
+      });
+      // Visibility-only reads hide this private successor; Agent Use permits execution.
+      mockAgentModel.existsById.mockResolvedValueOnce(false);
+      mockAgentModel.getAgentModelConfigForExecution.mockResolvedValueOnce({
+        id: 'agent-b',
+        model: 'gpt-4o',
+        provider: 'openai',
       });
       mockTaskModel.resolve
         .mockResolvedValueOnce(runningTask)
@@ -2907,7 +3017,11 @@ describe('TaskService', () => {
       );
       expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
         'task-1',
-        expect.objectContaining({ assigneeAgentId: 'agent-b' }),
+        expect.objectContaining({
+          assigneeAgentId: 'agent-b',
+          workflowCategory: 'todo',
+          workflowStateRefId: null,
+        }),
         { userId },
         expect.objectContaining({ executionTransfer: true, expectedDomainRevision: 7 }),
       );
@@ -2968,6 +3082,16 @@ describe('TaskService', () => {
         'paused',
         expect.objectContaining({ error: expect.any(String) }),
       );
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({
+          assigneeAgentId: null,
+          workflowCategory: 'todo',
+          workflowStateRefId: null,
+        }),
+        { userId },
+        expect.objectContaining({ executionTransfer: true, expectedDomainRevision: 7 }),
+      );
       expect(runTaskMock).not.toHaveBeenCalled();
     });
 
@@ -2991,7 +3115,12 @@ describe('TaskService', () => {
       // running mid-flight must trip the guard, not bypass it.
       expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
         'task-1',
-        { assigneeAgentId: 'agent-b' },
+        {
+          assigneeAgentId: 'agent-b',
+          workflowCategory: 'todo',
+          workflowStateId: null,
+          workflowStateRefId: null,
+        },
         { userId },
         expect.objectContaining({ expectedDomainRevision: 7 }),
       );

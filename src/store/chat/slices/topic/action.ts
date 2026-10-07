@@ -243,7 +243,12 @@ export class ChatTopicActionImpl {
     const reasoningSnapshot =
       composerEffort === undefined
         ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
-        : { heteroEffort: composerEffort };
+        : {
+            heteroEffort: composerEffort,
+            ...('modelExplicit' in modelSnapshot && modelSnapshot.modelExplicit
+              ? { heteroModelExplicit: true }
+              : {}),
+          };
     const groupId = resolveIsGroupSupervisor(targetAgentId, activeGroupId)
       ? activeGroupId
       : undefined;
@@ -300,7 +305,12 @@ export class ChatTopicActionImpl {
     const reasoningSnapshot =
       composerEffort === undefined
         ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
-        : { heteroEffort: composerEffort };
+        : {
+            heteroEffort: composerEffort,
+            ...('modelExplicit' in modelSnapshot && modelSnapshot.modelExplicit
+              ? { heteroModelExplicit: true }
+              : {}),
+          };
     const topicId = await internal_createTopic({
       ...modelSnapshot,
       ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),

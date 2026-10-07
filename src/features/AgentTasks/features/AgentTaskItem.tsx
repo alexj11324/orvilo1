@@ -157,6 +157,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const status = toTaskStatus(task.status);
   const hasName = Boolean(task.name?.trim());
   const workflowGlyph = useTaskWorkflowGlyph({
+    attentionReason: task.attentionReason,
     executionStatus: task.status,
     workflowCategory: task.workflowCategory,
     workflowStateId: task.workflowStateId,
@@ -198,13 +199,6 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     [milestone, navigate, task.projectId],
   );
 
-  const scheduledBadge =
-    status === 'scheduled' ? (
-      <IssueRowChip>
-        {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-      </IssueRowChip>
-    ) : null;
-
   // Linear's issue-row milestone marker: `◆ name · Sep 30`, drawn with the
   // shared brand-indigo paint so it matches the overview/rail milestones.
   const milestoneBadge = milestone ? (
@@ -235,6 +229,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         style={{ display: 'inline-flex', flex: 'none' }}
       >
         <IssueStatusPicker
+          attentionReason={task.attentionReason}
           glyph={workflowGlyph}
           size={14}
           taskIdentifier={task.identifier}
@@ -268,7 +263,6 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           </div>
         </>
       ) : null}
-      {scheduledBadge}
       <TaskSubtaskProgressTag
         currentIdentifier={task.identifier}
         progress={task.subtaskProgress}

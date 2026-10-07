@@ -3,6 +3,7 @@
 import { isDesktop } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   ChevronRightIcon,
   FolderCogIcon,
@@ -17,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import SharedListSkeleton from '@/components/ListSkeleton';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { useElectronStore } from '@/store/electron';
 
 import DeviceDetailPanel from './DeviceDetailPanel';
@@ -168,7 +169,7 @@ interface ConnectOptionProps {
 
 const ConnectOption = memo<ConnectOptionProps>(({ icon: Icon, title, desc, badge, onClick }) => (
   <div
-    className={`flex items-start gap-4 ${styles.option}`}
+    className={cn(`flex items-start gap-4 ${styles.option}`, buttonHoverFeedback)}
     role={'button'}
     tabIndex={0}
     onClick={onClick}

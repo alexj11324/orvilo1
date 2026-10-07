@@ -1,12 +1,12 @@
-import type { TaskWorkflowCategory } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import type { TaskAttentionReason, TaskWorkflowCategory } from '@orvilo/types';
+import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { StatusVisual } from '@/components/ExecutionStatus';
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { getIssueStatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +79,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 interface IssueStatusPickerProps {
+  attentionReason?: TaskAttentionReason;
   children?: ReactNode;
   disableDropdown?: boolean;
   /**
@@ -111,10 +112,11 @@ interface IssueStatusPickerProps {
  * menu is the team's workflow states (or the board's category columns for an
  * unlinked task), and every pick commits the shared `moveIssueWorkflow`
  * command — the same CAS write a kanban drop performs. Execution run state is
- * never offered here; it is read-only and rendered by `TaskExecutionBadge`.
+ * never offered here; derived attention states are display-only.
  */
 const IssueStatusPicker = memo<IssueStatusPickerProps>(
   ({
+    attentionReason,
     children,
     disableDropdown,
     glyph,
@@ -130,13 +132,24 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
+    const theme = useTheme();
+    // The menu portals outside the App's CSS-variable scope. React's theme
+    // context remains available, so paint the canonical glyphs with its values.
+    const iconColors: Record<string, string> = {
+      [cssVar.colorTextQuaternary]: theme.colorTextQuaternary,
+      [cssVar.colorTextDescription]: theme.colorTextDescription,
+      [cssVar.colorTextTertiary]: theme.colorTextTertiary,
+      [cssVar.colorWarning]: theme.colorWarning,
+      [cssVar.colorSuccess]: theme.colorSuccess,
+      [cssVar.orange]: theme.orange,
+    };
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const moveWorkflow = useIssueStatusMove();
     // The Issue status menu: the team's own workflow states once the task is
     // linked, so two custom states in one category stay individually
     // pickable. Until the catalog lands (or for unlinked tasks) the board's
     // category columns carry the same write command.
-    const teamStates = useTeamWorkflowStates(workflowStateId != null ? teamId : null);
+    const teamStates = useTeamWorkflowStates(teamId);
 
     // The Issue board is the status source of truth: its columns are the
     // menu's options, order and glyphs, triage included.
@@ -230,7 +243,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
       },
     });
 
-    const defaultVisual = WORKFLOW_CATEGORY_VISUALS[workflowCategory ?? 'backlog'];
+    const defaultVisual = getIssueStatusVisual({ attentionReason, workflowCategory });
     const TriggerIcon = (glyph ?? defaultVisual).icon;
     const triggerNode =
       children ||
@@ -245,7 +258,16 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
       ) : (
         <span className={styles.trigger}>
           <SimpleTooltip
-            title={glyph?.label ?? t(COLUMN_I18N_KEYS[workflowCategory ?? 'backlog'] as never)}
+            title={
+              glyph?.label ??
+              t(
+                COLUMN_I18N_KEYS[
+                  attentionReason === 'needs_input'
+                    ? 'needs_input'
+                    : (workflowCategory ?? 'backlog')
+                ] as never,
+              )
+            }
           >
             <TriggerIcon color={(glyph ?? defaultVisual).color} size={size} />
           </SimpleTooltip>
@@ -298,7 +320,9 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
               currentColumnKey,
             );
             const visual =
-              WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+              WORKFLOW_CATEGORY_VISUALS[
+                choice.state?.category ?? choice.workflowCategory ?? 'backlog'
+              ];
             const VisualIcon = visual.icon;
             if (pickable) pickIndex += 1;
             const label = choiceLabel(choice);
@@ -311,7 +335,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
                   void handlePick(choice);
                 }}
               >
-                <VisualIcon color={visual.color} size={16} />
+                <VisualIcon color={iconColors[visual.color] ?? visual.color} size={16} />
                 <span className="flex-1">{label}</span>
                 {pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined}
               </DropdownMenuItem>

@@ -13,11 +13,8 @@ import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
-import {
-  MODEL_LABELS,
-  modelDisplayLabel,
-} from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
+import { resolveServerDefaultModelMeta } from '@/features/HeterogeneousAgent/modelPicker';
 import { type AgentRow, useHomeAgentRows } from '@/features/Home/AgentSelect/useHomeAgentRows';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
@@ -27,6 +24,7 @@ import { agentConfigKeys } from '@/libs/swr/keys';
 import { getHostContext } from '@/platform';
 import { agentService } from '@/services/agent';
 import { useAgentStore } from '@/store/agent';
+import { useAiInfraStore } from '@/store/aiInfra';
 import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -57,8 +55,9 @@ const AgentSettingsListRow = ({
   const { agencyConfig, workspaceScoped, isPreferenceLoading } = useEffectiveAgencyConfig(row.id);
   const devices = useDeviceList();
   const bindings = useProviderBindingStore((s) => s.bindings);
-  const bindingFetch = useFetchProviderBindings();
   const provider = config?.agencyConfig?.heterogeneousProvider;
+  const bindingFetch = useFetchProviderBindings(provider?.type === 'orvilo');
+  const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
   const target = resolveExecutionTarget(agencyConfig, {
     clientExecutionAvailable: desktop,
     isHetero: !!provider,
@@ -88,6 +87,10 @@ const AgentSettingsListRow = ({
     workspaceScoped,
   });
   const model = provider?.apiConfig?.model ?? provider?.model;
+  const modelLabel =
+    provider?.type === 'orvilo' && model
+      ? resolveServerDefaultModelMeta(model, builtinAiModelList)?.displayName
+      : undefined;
   const deviceLabel =
     device?.friendlyName ||
     device?.hostname ||
@@ -103,11 +106,8 @@ const AgentSettingsListRow = ({
           {provider
             ? (HETEROGENEOUS_TYPE_LABELS[provider.type] ?? provider.type)
             : t('settingAgent.generalSettings.legacyName')}{' '}
-          ·{' '}
-          {model
-            ? (MODEL_LABELS[model] ?? modelDisplayLabel({ id: model, modelId: model }))
-            : t('chat:heteroAgent.modelSelector.default')}{' '}
-          · {deviceLabel}
+          · {model ? (modelLabel ?? model) : t('chat:heteroAgent.modelSelector.default')} ·{' '}
+          {deviceLabel}
         </div>
         {error ? (
           <AsyncError

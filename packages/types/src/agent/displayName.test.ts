@@ -31,6 +31,19 @@ describe('agentDisplayName', () => {
 });
 
 describe('agentSecondaryDisplayName', () => {
+  it('does not append a runtime name already conveyed by the leading brand icon', () => {
+    expect(
+      agentSecondaryDisplayName({ name: 'Coding helper', title: 'Claude Code' }, 'Claude Code'),
+    ).toBeUndefined();
+    expect(
+      agentSecondaryDisplayName({ name: '小K', title: 'Kimi Code' }, 'Kimi Code'),
+    ).toBeUndefined();
+    expect(agentDisplayName({ name: 'Coding helper', title: 'Claude Code' })).toBe('Coding helper');
+    expect(
+      agentSecondaryDisplayName({ name: 'Coding helper', title: 'Code reviewer' }, 'Claude Code'),
+    ).toBe('Code reviewer');
+  });
+
   it('shows the role of a named agent', () => {
     expect(agentSecondaryDisplayName({ name: 'Alice', title: 'Health Assistant' })).toBe(
       'Health Assistant',

@@ -1,5 +1,6 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
+import type { TaskAttentionReason } from './stateModel';
 
 export * from './result';
 export * from './stateModel';
@@ -901,6 +902,8 @@ export interface TaskItem {
   assigneeLocked: boolean;
   assigneeUserId: string | null;
   assignmentMode: TaskAssignmentMode;
+  /** Current input/review attention, independent of Issue Status and execution liveness. */
+  attentionReason?: TaskAttentionReason;
   automationMode: TaskAutomationMode | null;
   completedAt: Date | null;
   config: unknown;
@@ -929,6 +932,8 @@ export interface TaskItem {
   editorData: unknown;
   error: string | null;
   executionGeneration: number;
+  /** Current live Agent executor correlated to this task, assignments, topic and generation. */
+  hasLiveExecutor?: boolean;
   heartbeatInterval: number | null;
   heartbeatTimeout: number | null;
   id: string;
@@ -1114,6 +1119,8 @@ export interface NewTask {
 export interface TaskDetailSubtaskAssignee {
   avatar: string | null;
   backgroundColor: string | null;
+  /** Display-only runtime brand for an Issue-referenced Agent identity. */
+  heterogeneousType?: string | null;
   id: string;
   title: string | null;
 }
@@ -1127,6 +1134,7 @@ export interface TaskDetailSubtask {
   assignee?: TaskDetailSubtaskAssignee | null;
   /** Human assignee (workspace member). Coexists with `assignee` (agent). */
   assigneeUserId?: string | null;
+  attentionReason?: TaskAttentionReason;
   automationMode?: TaskAutomationMode | null;
   blockedBy?: string;
   children?: TaskDetailSubtask[];
@@ -1175,6 +1183,8 @@ export interface TaskDetailWorkspaceNode {
 
 export interface TaskDetailActivityAuthor {
   avatar?: string | null;
+  /** Display-only runtime brand; it does not grant Agent Use or Manage. */
+  heterogeneousType?: string | null;
   id: string;
   name?: string | null;
   type: 'agent' | 'user';
@@ -1214,6 +1224,8 @@ export interface TaskDetailActivity {
   };
   author?: TaskDetailActivityAuthor;
   briefType?: string;
+  /** Comment-only: current server-authorized controls for this row. */
+  commentCapabilities?: { canEdit: boolean; canDelete: boolean };
   /**
    * Topic-only: ISO timestamp when the topic run terminated (any of
    * completed / failed / canceled / timeout). Pair with `time` (start) to
@@ -1324,6 +1336,8 @@ export interface TaskLabelSummary {
 export interface TaskDetailData {
   activities?: TaskDetailActivity[];
   agentId?: string | null;
+  /** Current-run required input and durable execution attention, independent of historical outcome. */
+  attentionReason?: TaskAttentionReason;
   // null/undefined = no automation configured
   automationMode?: TaskAutomationMode | null;
   checkpoint?: CheckpointConfig;
@@ -1332,6 +1346,7 @@ export interface TaskDetailData {
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;
   dependencies?: Array<{
+    attentionReason?: TaskAttentionReason;
     dependsOn: string;
     /**
      * Which side of a `blocks` edge this row is. `blocking` means this issue
@@ -1358,6 +1373,8 @@ export interface TaskDetailData {
   domainRevision?: number;
   /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
   dueDate?: string | null;
+  /** Direct canonical issue summary; unreadable targets expose no ID or title. */
+  duplicateOf?: { identifier?: string; name?: string | null; unavailable?: boolean };
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;
@@ -1378,7 +1395,12 @@ export interface TaskDetailData {
   /** Labels assigned to the task (Linear-style issue labels). */
   labels?: TaskLabelSummary[];
   name?: string | null;
-  parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
+  parent?: {
+    agentId?: string | null;
+    attentionReason?: TaskAttentionReason;
+    identifier: string;
+    name: string | null;
+  } | null;
   priority?: number | null;
   /** Owning project; drives the automation detail's project picker. */
   projectId?: string | null;
@@ -1414,3 +1436,5 @@ export interface TaskDetailData {
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;
 }
+
+export * from './resources';

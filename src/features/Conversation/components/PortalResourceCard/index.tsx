@@ -6,6 +6,7 @@ import { FileText } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { memo } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -143,9 +144,9 @@ const PortalResourceCard = memo<PortalResourceCardProps>(
         <div
           role={onOpen ? 'button' : undefined}
           tabIndex={onOpen ? 0 : undefined}
-          className={cn(
-            'flex items-center flex-1',
-            cx(styles.trigger, onOpen && styles.actionable),
+          className={cx(
+            cn('flex items-center flex-1', cx(styles.trigger, onOpen && styles.actionable)),
+            onOpen && buttonHoverFeedback,
           )}
           onClick={onOpen}
           onKeyDown={onOpen ? handleKeyDown : undefined}

@@ -20,8 +20,10 @@ import {
 } from '@/database/models/taskDispatch';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
 
@@ -129,6 +131,10 @@ export class TaskDispatchService {
     let requested;
     try {
       requested = await this.model.request({
+        authorizeExecutor: ({ agentId, db, userId }) =>
+          this.workspaceId
+            ? assertCanUseWorkspaceAgent({ agentId, db, userId, workspaceId: this.workspaceId })
+            : assertAgentVisibleTo(db, agentId, { userId }),
         delegatedAgentId: input.delegatedAgentId,
         eventEvidence: input.eventEvidence,
         executionUserId: input.executionUserId,

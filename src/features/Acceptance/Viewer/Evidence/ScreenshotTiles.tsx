@@ -6,6 +6,8 @@ import { Check, MessageSquare, X } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
+
 import type { EvidenceOverlay } from './overlay';
 import {
   annotationInSlice,
@@ -274,7 +276,8 @@ const OverlayRect = memo<OverlayRectProps>(
         )}
         {annotation.comment && (
           <button
-            className={cx(styles.marker, opened && styles.markerActive)}
+            className={cx(cx(styles.marker, opened && styles.markerActive), buttonHoverFeedback)}
+            data-hover-paint="shadow"
             style={{ background: color }}
             title={annotation.authorName}
             type={'button'}
@@ -405,7 +408,8 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
       annotations?.map((annotation, index) =>
         annotation.comment ? (
           <button
-            className={styles.pin}
+            className={cx(styles.pin, buttonHoverFeedback)}
+            data-hover-paint="shadow"
             key={index}
             title={annotation.authorName}
             type={'button'}

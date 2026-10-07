@@ -25,6 +25,7 @@ import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -43,6 +44,7 @@ import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
+import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskRunReport from './TaskRunReport';
 import TopicCard from './TopicCard';
@@ -535,11 +537,13 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
         {(['all', 'comments', 'updates'] as const).map((filter) => (
-          <button
+          <Button
             aria-pressed={feedFilter === filter}
-            className="text-xs"
+            className={`h-auto px-1.5 py-1 text-xs ${taskDetailLayoutStyles.interactiveControl}`}
             key={filter}
+            size="xs"
             type="button"
+            variant="ghost"
             style={{
               color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
               fontWeight: feedFilter === filter ? 600 : 400,
@@ -550,7 +554,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
             }}
           >
             {t(`taskDetail.activities.filter.${filter}`)}
-          </button>
+          </Button>
         ))}
       </div>
       {commentInput}

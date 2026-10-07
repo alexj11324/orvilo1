@@ -176,7 +176,7 @@ describe('assertRoomAccess (integration)', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
-  it("lets a member join a public task room but not another member's private task", async () => {
+  it('lets an active member join public and legacy private workspace Issue rooms', async () => {
     const publicTask = await insertTask({ creatorId: ownerId, workspaceId });
     await expect(
       assertRoomAccess(db, { userId: memberId, workspaceId }, { id: publicTask.id, scope: 'task' }),
@@ -193,8 +193,8 @@ describe('assertRoomAccess (integration)', () => {
         { userId: memberId, workspaceId },
         { id: privateTask.id, scope: 'task' },
       ),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    // …but the creator keeps access to their own private task room.
+    ).resolves.toEqual({ projectId: undefined });
+    // The creator remains an active workspace reader too.
     await expect(
       assertRoomAccess(db, { userId: ownerId, workspaceId }, { id: privateTask.id, scope: 'task' }),
     ).resolves.toEqual({ projectId: undefined });

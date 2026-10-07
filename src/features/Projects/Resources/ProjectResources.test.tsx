@@ -39,6 +39,7 @@ vi.mock('@/components/toast', () => ({
 }));
 
 vi.mock('@/store/project', () => ({
+  useCurrentProjectDetail: () => ({ capabilities: { canEdit: false, canManage: false } }),
   useProjectStore: (
     selector: (state: {
       saveProjectLink: typeof mocks.saveLink;

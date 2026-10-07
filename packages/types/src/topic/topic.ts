@@ -255,6 +255,8 @@ export interface ChatTopicMetadata {
    * agent's effort" by `applyTopicModelToHeterogeneousProvider`.
    */
   heteroEffort?: HeterogeneousReasoningEffort;
+  /** Exact ACP model default ID; absence preserves legacy CLI inheritance. */
+  heteroModelExplicit?: boolean;
   /**
    * Secret-free identity of the provider/auth binding that created
    * `heteroSessionId`. Resume is allowed only when this identity still matches.
@@ -600,6 +602,7 @@ export const chatTopicMetadataUpdateSchema = z.object({
   heteroEffort: z
     .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
     .optional(),
+  heteroModelExplicit: z.boolean().optional(),
   heteroSessionBindingKey: z.string().optional(),
   heteroSessionBindingKeyByWorkingDirectory: z.record(z.string(), z.string()).optional(),
   heteroSessionId: z.string().optional(),
@@ -691,6 +694,7 @@ export const chatTopicMetadataUpdateSchema = z.object({
 export const chatTopicCreateMetadataSchema = chatTopicMetadataUpdateSchema.pick({
   executionConfig: true,
   heteroEffort: true,
+  heteroModelExplicit: true,
   reasoningConfig: true,
 });
 

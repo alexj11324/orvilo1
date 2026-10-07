@@ -84,6 +84,57 @@ describe('TaskListSliceAction', () => {
   });
 
   describe('useFetchTaskGroupList', () => {
+    it('refreshes a running board through required input and stops after the run settles', async () => {
+      const { useClientDataSWR } = await import('@/libs/swr');
+      renderHook(() => useTaskStore.getState().useFetchTaskGroupList({ allAgents: true }));
+      const polling = () => vi.mocked(useClientDataSWR).mock.lastCall?.[2]?.refreshInterval;
+      expect(polling()).toBe(0);
+      const { act } = await import('@testing-library/react');
+      act(() =>
+        useTaskStore.setState({
+          taskGroups: [
+            {
+              key: 'in_progress',
+              total: 1,
+              tasks: [{ id: 'task-input', status: 'running', hasLiveExecutor: true }],
+            },
+          ] as any,
+        }),
+      );
+      expect(polling()).toBe(10_000);
+      act(() =>
+        useTaskStore.setState({
+          taskGroups: [
+            {
+              key: 'needs_input',
+              total: 1,
+              tasks: [
+                {
+                  id: 'task-input',
+                  status: 'running',
+                  attentionReason: 'needs_input',
+                  hasLiveExecutor: false,
+                },
+              ],
+            },
+          ] as any,
+        }),
+      );
+      expect(polling()).toBe(10_000);
+      act(() =>
+        useTaskStore.setState({
+          taskGroups: [
+            {
+              key: 'done',
+              total: 1,
+              tasks: [{ id: 'task-input', status: 'completed', hasLiveExecutor: false }],
+            },
+          ] as any,
+        }),
+      );
+      expect(polling()).toBe(0);
+    });
+
     it('keys and requests assignee groups independently from status groups', async () => {
       const { useClientDataSWR } = await import('@/libs/swr');
       const { taskService } = await import('@/services/task');

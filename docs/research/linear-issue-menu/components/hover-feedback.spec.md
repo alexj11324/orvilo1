@@ -1,0 +1,5 @@
+# Detail hover feedback
+
+Approved scope: enabled detail property picker values, actionable project/milestone controls and Activity All/Comments/Updates show a muted rounded semantic fill on hover/open/focus. Controls are transparent at rest; disabled and display-only values do not gain actionable feedback. Preserve value typography, sizing, ellipsis and existing click/keyboard behavior. No heavy shadow, global primitive change or nested buttons.
+
+Reuse one detail-owned feedback rule on actual enabled picker trigger roots through their existing data-slot markers. Due date and Activity filters use the existing ghost Button with the same semantic feedback. Project and milestone controls opt in only when actionable. Root owns runtime verification in light/dark and wide/narrow details; pointer-away/hover/open/focus, disabled controls, click outcomes and unaffected outside-detail controls are the acceptance checks. Existing screenshot supports a pale rounded wash; exact pixel matching has not been measured.

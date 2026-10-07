@@ -2,10 +2,13 @@
 
 import type { GitWorkingTreePatch } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { type KeyboardEvent, memo, useCallback } from 'react';
+
+import { buttonHoverFeedback } from '@/components/ui/button';
 
 import type { ComposerTarget } from '../../types';
 import FileItemBody, { FileItemHeader } from './FileItem';
@@ -113,7 +116,7 @@ const FileRow = memo<FileRowProps>(
         <div
           data-review-row
           aria-expanded={expanded}
-          className={styles.row}
+          className={cn(styles.row, buttonHoverFeedback)}
           role={'button'}
           style={indent ? { paddingInlineStart: 10 + indent } : undefined}
           tabIndex={0}

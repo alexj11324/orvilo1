@@ -31,6 +31,9 @@ export type PermissionResourceType = (typeof PERMISSION_RESOURCE_TYPES)[number];
  * Knowledge bases invert the usual view/use ordering: `use` means "mountable
  * on agents for retrieval" while browsing the internal file list is the
  * privileged act, so browsing requires `edit` and there is no `view` level.
+ * Ordinary Agent settings are also author/admin management; legacy global or
+ * member edit levels do not authorize those settings. Agent Use is evaluated
+ * from selected per-member use/edit rows, with the creator implicit.
  * Permission management is deliberately not an access level: it is derived
  * from creator ownership or a workspace-scoped `:all` RBAC capability.
  */
@@ -117,7 +120,9 @@ export const isResourceAccessLevelAllowed = (
  *   above the workspace-wide level. Grants only ever raise: evaluation
  *   resolves `max(workspace level, grant)`, so a grant at or below the
  *   workspace level is inert, never a demotion. Grants never pierce private
- *   resources or the RBAC capability ceiling, and are revoked when the member
+ *   resources or the RBAC capability ceiling, except an explicit Agent Use row
+ *   authorizes execution independently of legacy Agent profile visibility. Grants
+ *   are revoked when the member
  *   leaves the workspace — membership removal is a soft delete that
  *   re-inviting reactivates, so a surviving grant would silently come back
  *   with them.
@@ -129,8 +134,9 @@ export const isResourceAccessLevelAllowed = (
  * per-member rows; upserts repeat the matching predicate in `targetWhere`.
  *
  * Visibility itself stays on the resources' own `visibility` column; this
- * table only grades what visible workspace members may do. Rows staged on a
- * still-private resource are inert until it is published, and are removed
+ * table only grades what visible workspace members may do. Ordinary Agent Use
+ * is the explicit member list even on a legacy private workspace Agent; other
+ * still-private resources keep their staged rows inert until published. Rows are removed
  * together (`removeAll`) when the resource is deleted or transferred.
  */
 export const resourcePermissions = pgTable(

@@ -6,6 +6,7 @@ import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import RingLoadingIcon from '@/components/RingLoading';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import type { OperationGoal } from './deriveOperationGoals';
@@ -67,7 +68,7 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
 
   return (
     <div
-      className={cn('flex items-center gap-2.5', styles.card)}
+      className={cn(cn('flex items-center gap-2.5', styles.card), buttonHoverFeedback)}
       role={'button'}
       tabIndex={0}
       onClick={openGoal}

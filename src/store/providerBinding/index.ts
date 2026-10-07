@@ -28,11 +28,11 @@ const current = (captured: ReturnType<typeof scope>) =>
   captured.owner === userId() &&
   captured.generation === useProviderBindingStore.getState().generation;
 
-export function useFetchProviderBindings() {
+export function useFetchProviderBindings(enabled = true) {
   const owner = useUserStore(userProfileSelectors.userId);
   const generation = useProviderBindingStore((s) => s.generation);
   return useClientDataSWR(
-    owner ? providerBindingKeys.list(owner, generation) : null,
+    enabled && owner ? providerBindingKeys.list(owner, generation) : null,
     () => providerBindingService.list(),
     {
       onSuccess: (result) => {

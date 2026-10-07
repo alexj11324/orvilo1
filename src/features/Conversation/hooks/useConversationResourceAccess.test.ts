@@ -75,6 +75,26 @@ describe('useActiveConversationResourceAccess', () => {
     expect(mocks.useResourceAccess).toHaveBeenCalledWith('agent', 'agent-1');
   });
 
+  it('gates a private Agent through its actual Use member permission', () => {
+    mocks.agentState.agentMap['agent-1'].visibility = 'private';
+    mocks.useResourceAccess.mockReturnValue({ canUseResource: false, isLoading: false });
+    const { result } = renderHook(() => useActiveConversationResourceAccess());
+    expect(result.current.canUseResource).toBe(false);
+    expect(mocks.useResourceAccess).toHaveBeenCalledWith('agent', 'agent-1');
+  });
+
+  it('does not let group access substitute for the ordinary target Agent Use', () => {
+    mocks.chatState.activeGroupId = 'group-1';
+    mocks.groupState.groupMap = { 'group-1': { id: 'group-1', visibility: 'public' } };
+    mocks.useResourceAccess.mockImplementation((...args: unknown[]) => ({
+      canUseResource: args[0] === 'agentGroup',
+      isLoading: false,
+    }));
+    const { result } = renderHook(() => useActiveConversationResourceAccess());
+    expect(result.current.canUseResource).toBe(false);
+    expect(mocks.useResourceAccess).toHaveBeenCalledWith('agent', 'agent-1');
+  });
+
   it('resolves an active group without reading the ConversationStore provider', () => {
     mocks.chatState.activeGroupId = 'group-1';
     mocks.groupState.groupMap = {

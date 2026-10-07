@@ -1121,7 +1121,7 @@ export default {
   'settingAgent.modelSettings.primeHint':
     'Model routes come from your enabled Orvilo provider bindings.',
   'settingAgent.modelSettings.speedLabel': 'Speed',
-  'settingAgent.modelSettings.title': 'Model & reasoning',
+  'settingAgent.modelSettings.title': 'Model',
   'settingAgent.runtimeConfig.reasoningEffortHint':
     'Your default reasoning effort for this model. Shared by every agent using it; each topic keeps the effort it started with and can change it from the chat input.',
   'settingAgent.runtimeConfig.title': 'Model & Reasoning Effort',
@@ -3771,7 +3771,7 @@ export default {
   'workspaceSetting.members.previewTasks_other': '{{count}} assigned tasks',
   'workspaceSetting.members.previewTitle': 'This member still owns:',
   'workspaceSetting.members.projectRole.commenter': 'Commenter',
-  'workspaceSetting.members.projectRole.contributor': 'Contributor',
+  'workspaceSetting.members.projectRole.contributor': 'Participant',
   'workspaceSetting.members.projectRole.manager': 'Manager',
   'workspaceSetting.members.projectRole.viewer': 'Viewer',
   'workspaceSetting.members.projectsLabel': 'Add to projects',
@@ -4302,4 +4302,13 @@ export default {
   'settingAgent.list.noDevice': 'No execution target',
   'settingAgent.list.unavailable': 'Agent unavailable',
   'settingAgent.list.error': 'Could not load configuration',
+  'settingAgent.useMembers.title': 'Who can use this agent',
+  'settingAgent.useMembers.hint':
+    'Selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
+  'settingAgent.useMembers.add': 'Select members who can use this agent',
+  'settingAgent.useMembers.empty': 'No members can use this agent',
+  'settingAgent.deviceSettings.runtimeUnverifiedTitle': 'Device runtime verification incomplete',
+  'settingAgent.deviceSettings.runtimeUnverifiedDesc':
+    'Some authorized devices could not be checked for this agent runtime. Retry verification before choosing a device.',
+  'settingAgent.modelSettings.catalogEmpty': 'This agent did not advertise any models.',
 };

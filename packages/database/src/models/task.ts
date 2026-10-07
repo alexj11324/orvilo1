@@ -5,6 +5,7 @@ import type {
   NewTask,
   TaskActivityLogPayload,
   TaskActivityLogType,
+  TaskAttentionReason,
   TaskAutomationMode,
   TaskAutomationSnapshot,
   TaskDispatchPhase,
@@ -39,7 +40,7 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { alias as aliasTable, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { merge } from '@/utils/merge';
 
@@ -61,12 +62,16 @@ import {
   tasks,
   taskTopics,
 } from '../schemas/task';
+import { taskDescriptionHistories } from '../schemas/taskDescriptionHistory';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
+import { navigationFavorites } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
-import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
+import { buildDocumentReadableWhere } from '../utils/documentAccess';
+import { buildSharedTaskReadableWhere } from '../utils/sharedTaskReadable';
+import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { insertOutboxEvent, newEventId } from './eventOutbox';
 import { LinearSyncModel } from './linearSync';
@@ -74,6 +79,7 @@ import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
 import { TaskDependencyError } from './taskDependency';
 import {
   hasActiveExecution,
+  hasLiveTaskExecutor,
   hasUnresolvedExecution,
   isAutomationArmed,
   isExecutionParked,
@@ -85,8 +91,10 @@ import {
   predicateForLegacyStatus,
   predicateForLegacyStatuses,
   TASK_OPEN_WORKFLOW,
+  taskAttentionReasonExpr,
 } from './taskExecutionSql';
 import { workflowCategoryForLegacyStatus } from './workflowMove';
+import { getActiveWorkspaceMembershipRole } from './workspace';
 
 /**
  * Full task row for reads and `.returning()` — `status` projects the derived
@@ -98,6 +106,11 @@ const taskRowColumns = {
   ...getTableColumns(tasks),
   status: sql<TaskStatus>`${legacyStatusExpr}`,
   dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
+  visibility: sql<
+    'private' | 'public'
+  >`case when ${tasks.workspaceId} is not null then 'public' else ${tasks.visibility} end`,
+  hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`,
+  attentionReason: taskAttentionReasonExpr,
 };
 
 /** Columns whose change is worth a line in the task activity feed. */
@@ -146,6 +159,7 @@ const TASK_DOMAIN_COLUMNS = [
   'cycleRefId',
   'description',
   'duplicateOfTaskId',
+  'dueDate',
   'editorData',
   'heartbeatInterval',
   'heartbeatTimeout',
@@ -199,6 +213,8 @@ const TASK_POLICY_COLUMNS = [
 ] as const satisfies readonly (keyof NewTask)[];
 
 export interface TaskMutationContext {
+  /** Server-resolved Agent actor; HTTP claims are checked for Agent Use before reaching the model. */
+  actorAgentId?: string;
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
   /**
@@ -230,6 +246,8 @@ export interface TaskMutationContext {
 export interface TaskStatusTransitionExtra {
   completedAt?: Date;
   error?: string | null;
+  /** Reason inside the existing execution park marker; never a table column. */
+  parkedReason?: string;
   runReservationExpiresAt?: Date | null;
   runReservationId?: string | null;
   startedAt?: Date;
@@ -261,6 +279,16 @@ export class TaskHandoffRequiredError extends Error {
   constructor() {
     super('HANDOFF_REQUIRED');
     this.name = 'TaskHandoffRequiredError';
+  }
+}
+
+export class TaskDocumentAccessError extends Error {
+  constructor(
+    message: string,
+    readonly code: 'NOT_FOUND' | 'PRECONDITION_FAILED',
+  ) {
+    super(message);
+    this.name = 'TaskDocumentAccessError';
   }
 }
 
@@ -366,31 +394,10 @@ export const isTaskIdentifierUniqueViolation = (error: unknown): boolean => {
 };
 
 /**
- * Ownership helpers in this model come in three flavors. Choose by USE CASE,
- * not by table — picking the wrong one led to a `seq` allocation hotfix
- * (see git log).
- *
- * ┌────────────────────┬──────────────────────────────────────────────┬────────────────────────┐
- * │ Helper             │ Use for                                      │ Visibility-aware?      │
- * ├────────────────────┼──────────────────────────────────────────────┼────────────────────────┤
- * │ ownership()        │ list / read / per-row find on `tasks`        │ YES — public OR owner, │
- * │                    │                                              │ AND private-team ACL   │
- * │ ownershipSql()     │ raw-SQL CTEs that need the same predicate    │ YES — public OR owner  │
- * │                    │ (subtree walks from a readable root; keep    │                        │
- * │                    │ workspace visibility so an assignee can see  │                        │
- * │                    │ their descendants without team membership)   │                        │
- * │ childOwnership()   │ task_dependencies / task_documents /         │ YES when caller passes │
- * │                    │ task_comments etc. (per-child-table)         │ the visibility column  │
- * │ seqOwnership()     │ identifier / seq allocation on `tasks`       │ NO — workspace-wide    │
- * │                    │ (the `(workspace_id, identifier)` unique     │ (visibility filter     │
- * │                    │ constraint is workspace-wide, regardless     │ would skip other       │
- * │                    │ of visibility)                               │ members' rows and      │
- * │                    │                                              │ collide on insert)     │
- * └────────────────────┴──────────────────────────────────────────────┴────────────────────────┘
- *
- * Personal mode (no workspace) is always `created_by_user_id = $self AND
- * workspace_id IS NULL` for all four helpers — visibility is inert because
- * everything personal is implicitly owner-only.
+ * Issue reads, raw subtree walks and child records share active workspace
+ * membership. Legacy visibility and private-team labels no longer restrict
+ * workspace Issues; Agent Use independently controls execution. Personal
+ * rows remain owner-only. Identifier allocation stays workspace-wide.
  */
 /**
  * A task the automation runtime would still act on.
@@ -503,40 +510,22 @@ export class TaskModel {
     this.managedSubject = options.managedSubject ?? false;
   }
 
-  /**
-   * Compat-mode ownership predicate for the `tasks` table — **visibility-aware**
-   * and **team-readable**. `tasks` uses `createdByUserId` instead of `userId`.
-   * Workspace mode applies visibility-aware filtering: public tasks are
-   * visible to every member, private tasks only to their creator. Private-team
-   * tasks additionally require team membership, workspace admin/owner, or a
-   * personal assignee/reviewer/creator exception (TRI05 / SEC06). Use this for
-   * every list/read path. For identifier / seq allocation, use `seqOwnership`
-   * instead — that helper stays workspace-wide and must not AND team ACL.
-   */
-  private ownership = () => {
-    const workspaceVisible = buildWorkspaceWhere(
+  /** Legacy Issue visibility and private-team visibility do not restrict workspace member reads. */
+  private ownership = () =>
+    buildSharedTaskReadableWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
-      {
-        userId: tasks.createdByUserId,
-        visibility: tasks.visibility,
-        workspaceId: tasks.workspaceId,
-      },
+      { userId: tasks.createdByUserId, workspaceId: tasks.workspaceId },
     );
-    if (!this.workspaceId) return workspaceVisible;
-    return and(workspaceVisible, buildTaskTeamReadableWhere(this.db, this.userId))!;
-  };
 
   /**
-   * Ownership predicate for task child tables (deps / docs / comments) that
-   * use a `userId` column instead of `createdByUserId`. Pass `visibility` for
-   * tables that mirror the parent task's visibility column; leave it omitted
-   * for tables that stay workspace-shared (e.g. comments).
+   * Issue children follow workspace membership. Their legacy visibility
+   * column remains stored metadata, independent of Agent Use permission.
    */
   private childOwnership = (cols: {
     userId: AnyPgColumn;
     visibility?: AnyPgColumn;
     workspaceId: AnyPgColumn;
-  }) => buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, cols);
+  }) => buildSharedTaskReadableWhere({ userId: this.userId, workspaceId: this.workspaceId }, cols);
 
   /**
    * Workspace-wide ownership for `tasks.seq` / `identifier` allocation —
@@ -550,24 +539,13 @@ export class TaskModel {
       ? eq(tasks.workspaceId, this.workspaceId)
       : (and(eq(tasks.createdByUserId, this.userId), isNull(tasks.workspaceId)) as SQL);
 
-  /**
-   * Raw-SQL ownership clause for use inside `db.execute(sql...)` CTEs that
-   * can't easily compose with drizzle's `and(...)` helpers. Mirrors
-   * `buildWorkspaceWhere` semantics:
-   *   - workspace mode → `(workspace_id = $ws AND (visibility = 'public' OR created_by_user_id = $userId))
-   *                       OR (workspace_id IS NULL AND created_by_user_id = $userId)`
-   *     — the caller's own unfiled rows follow them into the workspace view,
-   *     matching `ownership()` so dependency edges stay visible on rows the
-   *     task read itself admits.
-   *   - personal mode  → `created_by_user_id = $userId AND workspace_id IS NULL`
-   */
-  private ownershipSql = (alias?: string) => {
-    const prefix = alias ? sql.raw(`${alias}.`) : sql.raw('');
-    return this.workspaceId
-      ? sql`((${prefix}workspace_id = ${this.workspaceId}
-            AND (${prefix}visibility = 'public' OR ${prefix}created_by_user_id = ${this.userId}))
-           OR (${prefix}workspace_id IS NULL AND ${prefix}created_by_user_id = ${this.userId}))`
-      : sql`${prefix}created_by_user_id = ${this.userId} AND ${prefix}workspace_id IS NULL`;
+  /** The same Issue read predicate for raw subtree/dependency queries. */
+  private ownershipSql = (tableAlias?: string) => {
+    const target = tableAlias ? aliasTable(tasks, tableAlias) : tasks;
+    return buildSharedTaskReadableWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      { userId: target.createdByUserId, workspaceId: target.workspaceId },
+    );
   };
 
   private buildListConditions = ({
@@ -599,7 +577,7 @@ export class TaskModel {
     } else if (projectId) {
       conditions.push(eq(tasks.projectId, projectId));
     }
-    if (visibility) conditions.push(eq(tasks.visibility, visibility));
+    if (visibility) conditions.push(eq(taskRowColumns.visibility, visibility));
 
     if (parentTaskId === null) {
       conditions.push(isNull(tasks.parentTaskId));
@@ -640,10 +618,7 @@ export class TaskModel {
    * races. Acquire it BEFORE task row locks to keep lock ordering consistent.
    */
   private async lockDependencyGraph(): Promise<void> {
-    const scope = this.workspaceId ? `workspace:${this.workspaceId}` : `user:${this.userId}`;
-    await this.db.execute(
-      sql`select pg_advisory_xact_lock(hashtext('task-prerequisites'), hashtext(${scope}))`,
-    );
+    await lockTaskDependencyGraph(this.db, this.userId, this.workspaceId);
   }
 
   private async withDependencyLock<T>(work: (model: TaskModel) => Promise<T>): Promise<T> {
@@ -830,6 +805,41 @@ export class TaskModel {
     return result[0] || null;
   }
 
+  /** Whether the current generation is demonstrably executing as both assigned actors. */
+  async hasLiveExecutor(id: string, operationId?: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ live: hasLiveTaskExecutor })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          operationId
+            ? sql`EXISTS (
+          SELECT 1 FROM ${taskTopics} current_run
+          WHERE current_run.task_id = ${tasks.id}
+            AND current_run.topic_id = ${tasks.currentTopicId}
+            AND current_run.operation_id = ${operationId}
+        )`
+            : undefined,
+        ),
+      )
+      .limit(1);
+    return row?.live === true;
+  }
+
+  /** Unmet input on the current run; drafts and unacknowledged answers are not completion. */
+  async hasUnresolvedInput(id: string, operationId?: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({
+        unmet: sql<boolean>`has_task_unresolved_input(${tasks.id}, ${operationId ?? null})`,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, id), this.ownership()))
+      .limit(1);
+    return row?.unmet === true;
+  }
+
   async findByIds(ids: string[]): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
     return this.db
@@ -898,12 +908,16 @@ export class TaskModel {
    * the column. Park transitions stamp the canonical parked marker under
    * `context.execution.parked`; every other transition clears it.
    */
-  private static statusTransitionPatch(transition: string) {
+  private static statusTransitionPatch(transition: string, parkedReason?: string) {
     if (transition === 'paused' || transition === 'failed') {
       return {
         context: parkMarkerSet({
           at: new Date().toISOString(),
-          ...(transition === 'failed' ? { reason: 'failed' } : {}),
+          ...(parkedReason
+            ? { reason: parkedReason }
+            : transition === 'failed'
+              ? { reason: 'failed' }
+              : {}),
         }),
       };
     }
@@ -917,6 +931,11 @@ export class TaskModel {
    * `workflowStateRefId` from the service layer). A caller-supplied
    * `workflowCategory` always wins.
    */
+  private static statusTransitionExtra(transition: string, extra?: TaskStatusTransitionExtra) {
+    const { parkedReason, ...columns } = extra ?? {};
+    return { ...columns, ...TaskModel.statusTransitionPatch(transition, parkedReason) };
+  }
+
   private static workflowCategorySet(
     transition: string | undefined,
     workflowCategory?: TaskWorkflowCategory,
@@ -941,7 +960,8 @@ export class TaskModel {
 
   async update(
     id: string,
-    data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
+    data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>> &
+      Pick<TaskStatusTransitionExtra, 'parkedReason'>,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
@@ -1016,9 +1036,9 @@ export class TaskModel {
       return null;
     };
 
-    const { status: transition, ...writeData } = data;
+    const { status: transition, parkedReason, ...writeData } = data;
     const transitionPatch =
-      transition === undefined ? {} : TaskModel.statusTransitionPatch(transition);
+      transition === undefined ? {} : TaskModel.statusTransitionPatch(transition, parkedReason);
     if (!eventType) {
       const updated = await this.db
         .update(tasks)
@@ -1040,6 +1060,17 @@ export class TaskModel {
 
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      const descriptionChanged = data.instruction !== undefined || data.editorData !== undefined;
+      const before = descriptionChanged
+        ? (
+            await runner
+              .select(taskRowColumns)
+              .from(tasks)
+              .where(and(...updateWhere))
+              .for('update')
+              .limit(1)
+          )[0]
+        : undefined;
       const [updated] = await runner
         .update(tasks)
         .set({
@@ -1058,6 +1089,50 @@ export class TaskModel {
         .returning(taskRowColumns);
       const task = await resolveUpdate(runner, updated);
       if (!task) return null;
+
+      if (
+        before &&
+        (before.instruction !== task.instruction ||
+          JSON.stringify(before.editorData) !== JSON.stringify(task.editorData))
+      ) {
+        const existingHistory = await runner
+          .select({ id: taskDescriptionHistories.id })
+          .from(taskDescriptionHistories)
+          .where(eq(taskDescriptionHistories.taskId, task.id))
+          .limit(1);
+        const baseline = existingHistory.length
+          ? []
+          : [
+              {
+                taskId: before.id,
+                userId: before.createdByUserId,
+                workspaceId: before.workspaceId,
+                authorUserId: null,
+                domainRevision: before.domainRevision,
+                instruction: before.instruction,
+                editorData: before.editorData,
+                captureSource: 'baseline' as const,
+                visibility: before.workspaceId ? ('public' as const) : before.visibility,
+              },
+            ];
+        await runner
+          .insert(taskDescriptionHistories)
+          .values([
+            ...baseline,
+            {
+              taskId: task.id,
+              userId: task.createdByUserId,
+              workspaceId: task.workspaceId,
+              authorUserId: mutation.source === 'user' ? this.userId : null,
+              domainRevision: task.domainRevision,
+              instruction: task.instruction,
+              editorData: task.editorData,
+              captureSource: 'edit',
+              visibility: task.workspaceId ? 'public' : task.visibility,
+            },
+          ])
+          .onConflictDoNothing();
+      }
 
       if (this.workspaceId && !mutation.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
@@ -1218,9 +1293,43 @@ export class TaskModel {
     return (await this.deleteMany([id], mutation)).length > 0;
   }
 
+  private async canGovernTask(task: TaskItem): Promise<boolean> {
+    if (!this.workspaceId) return task.workspaceId === null && task.createdByUserId === this.userId;
+    if (task.workspaceId !== this.workspaceId) return false;
+    const role = await getActiveWorkspaceMembershipRole(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (role === 'owner' || role === 'admin') return true;
+    if (role !== 'member') return false;
+    return (
+      !!task.projectId &&
+      (await new ProjectModel(this.db, this.userId, this.workspaceId).findManageableById(
+        task.projectId,
+      )) !== null
+    );
+  }
+
+  async canDeleteTask(task: TaskItem): Promise<boolean> {
+    if (await this.canGovernTask(task)) return true;
+    if (task.createdByUserId !== this.userId || task.workspaceId !== (this.workspaceId ?? null))
+      return false;
+    if (!this.workspaceId) return true;
+    return (
+      (await getActiveWorkspaceMembershipRole(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      })) === 'member'
+    );
+  }
+
   /** Validate the entire frozen deletion set before any rows disappear. */
   private async assertCanDeleteTasks(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
+    for (const task of await this.findByIds(ids)) {
+      if (!(await this.canDeleteTask(task)))
+        throw new Error('Issue creator, project manager or workspace admin rights are required');
+    }
     const inbound = await this.db
       .select({ id: taskDependencies.id })
       .from(taskDependencies)
@@ -1274,7 +1383,19 @@ export class TaskModel {
       .delete(tasks)
       .where(and(inArray(tasks.id, liveIds), this.ownership()))
       .returning({ id: tasks.id });
-    return deleted.map(({ id }) => id);
+    const deletedIds = deleted.map(({ id }) => id);
+    // Favorites are polymorphic and cannot use a task foreign-key cascade.
+    // Remove only canonical task targets, for every member, in this deletion transaction.
+    if (deletedIds.length > 0)
+      await this.db
+        .delete(navigationFavorites)
+        .where(
+          and(
+            eq(navigationFavorites.targetType, 'task'),
+            inArray(navigationFavorites.targetId, deletedIds),
+          ),
+        );
+    return deletedIds;
   }
 
   /**
@@ -1545,6 +1666,7 @@ export class TaskModel {
         offset?: number;
         statuses?: string[];
         workflowCategories?: TaskWorkflowCategory[];
+        attentionReasons?: TaskAttentionReason[];
       }>;
     },
   ): Promise<
@@ -1606,6 +1728,13 @@ export class TaskModel {
           ...getTableColumns(tasks),
           status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
           dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`.as('dispatch_phase'),
+          visibility: sql<
+            'private' | 'public'
+          >`case when ${tasks.workspaceId} is not null then 'public' else ${tasks.visibility} end`.as(
+            'visibility',
+          ),
+          hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`.as('has_live_executor'),
+          attentionReason: taskAttentionReasonExpr.as('attention_reason'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
             sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
@@ -1693,6 +1822,13 @@ export class TaskModel {
           ...getTableColumns(tasks),
           status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
           dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`.as('dispatch_phase'),
+          visibility: sql<
+            'private' | 'public'
+          >`case when ${tasks.workspaceId} is not null then 'public' else ${tasks.visibility} end`.as(
+            'visibility',
+          ),
+          hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`.as('has_live_executor'),
+          attentionReason: taskAttentionReasonExpr.as('attention_reason'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
             sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
@@ -1809,9 +1945,11 @@ export class TaskModel {
     } else {
       const statusGroups = (groups ?? []).map((group) => ({
         ...group,
+        attentionReasons: Array.from(new Set(group.attentionReasons ?? [])),
         statuses: Array.from(new Set(group.statuses ?? [])),
         workflowCategories: Array.from(new Set(group.workflowCategories ?? [])),
       }));
+      const attentionGroups = statusGroups.flatMap((group) => group.attentionReasons);
       const taskQueries = statusGroups.map(async (group) => {
         const workflowCategoryCondition =
           group.workflowCategories.length > 0
@@ -1823,7 +1961,15 @@ export class TaskModel {
               ? and(isNull(tasks.workflowStateId), predicateForLegacyStatuses(group.statuses))
               : predicateForLegacyStatuses(group.statuses)
             : undefined;
-        const membership = or(workflowCategoryCondition, legacyStatusCondition);
+        const membership =
+          group.attentionReasons.length > 0
+            ? inArray(taskAttentionReasonExpr, group.attentionReasons)
+            : and(
+                or(workflowCategoryCondition, legacyStatusCondition),
+                attentionGroups.length > 0
+                  ? notInArray(taskAttentionReasonExpr, attentionGroups)
+                  : undefined,
+              );
         if (!membership) throw new Error(`Task group ${group.key} has no membership criteria`);
         const conditions = [membership];
         const limit = group.limit ?? 50;
@@ -2293,7 +2439,10 @@ export class TaskModel {
       SELECT * FROM task_tree
     `);
 
-    return result.rows as unknown as TaskItem[];
+    return result.rows.map((row) => ({
+      ...row,
+      visibility: row.workspace_id ? 'public' : row.visibility,
+    })) as unknown as TaskItem[];
   }
 
   /**
@@ -2389,8 +2538,7 @@ export class TaskModel {
       .update(tasks)
       .set({
         updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.statusTransitionPatch(transition),
+        ...TaskModel.statusTransitionExtra(transition, extra),
         ...TaskModel.workflowCategorySet(transition, extra?.workflowCategory),
         ...TaskModel.reviewerBackfillSet(transition),
         domainRevision: sql`${tasks.domainRevision} + 1`,
@@ -2446,8 +2594,7 @@ export class TaskModel {
       .update(tasks)
       .set({
         updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.statusTransitionPatch(status),
+        ...TaskModel.statusTransitionExtra(status, extra),
         ...TaskModel.reviewerBackfillSet(status),
       })
       .where(
@@ -2645,8 +2792,7 @@ export class TaskModel {
         .update(tasks)
         .set({
           updatedAt: new Date(),
-          ...extra,
-          ...TaskModel.statusTransitionPatch(status),
+          ...TaskModel.statusTransitionExtra(status, extra),
           ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
           ...TaskModel.reviewerBackfillSet(status),
           domainRevision: sql`${tasks.domainRevision} + 1`,
@@ -2721,8 +2867,7 @@ export class TaskModel {
       .update(tasks)
       .set({
         updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.statusTransitionPatch(status),
+        ...TaskModel.statusTransitionExtra(status, extra),
         ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
         ...TaskModel.reviewerBackfillSet(status),
         domainRevision: sql`${tasks.domainRevision} + 1`,
@@ -3624,18 +3769,44 @@ export class TaskModel {
     });
 
   async pinDocument(taskId: string, documentId: string, pinnedBy: string = 'agent'): Promise<void> {
-    const visibility = await this.getTaskVisibility(taskId);
-    await this.db
-      .insert(taskDocuments)
-      .values({
-        documentId,
-        pinnedBy,
-        taskId,
-        userId: this.userId,
-        visibility,
-        workspaceId: this.workspaceId ?? null,
-      })
-      .onConflictDoNothing();
+    await this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const task = await new TaskModel(runner, this.userId, this.workspaceId).findById(taskId);
+      if (!task) throw new TaskDocumentAccessError('Task not found', 'NOT_FOUND');
+      const [document] = await runner
+        .select({ id: documents.id, visibility: documents.visibility })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.id, documentId),
+            sql`${documents.workspaceId} IS NOT DISTINCT FROM ${task.workspaceId}`,
+            buildDocumentReadableWhere(runner, {
+              userId: this.userId,
+              workspaceId: this.workspaceId,
+            }),
+          ),
+        )
+        .limit(1)
+        .for('share');
+      if (!document) throw new TaskDocumentAccessError('Document not found', 'NOT_FOUND');
+      if (task.workspaceId && document.visibility !== 'public') {
+        throw new TaskDocumentAccessError(
+          'Share the document with the workspace before attaching it to a shared issue.',
+          'PRECONDITION_FAILED',
+        );
+      }
+      await runner
+        .insert(taskDocuments)
+        .values({
+          documentId,
+          pinnedBy,
+          taskId,
+          userId: this.userId,
+          visibility: task.visibility,
+          workspaceId: task.workspaceId,
+        })
+        .onConflictDoNothing();
+    });
   }
 
   async unpinDocument(taskId: string, documentId: string): Promise<void> {
@@ -3651,9 +3822,21 @@ export class TaskModel {
   }
 
   async getPinnedDocuments(taskId: string) {
+    const task = await this.findById(taskId);
+    if (!task) return [];
     return this.db
-      .select()
+      .select(getTableColumns(taskDocuments))
       .from(taskDocuments)
+      .innerJoin(
+        documents,
+        and(
+          eq(taskDocuments.documentId, documents.id),
+          buildDocumentReadableWhere(this.db, {
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          }),
+        ),
+      )
       .where(and(eq(taskDocuments.taskId, taskId), this.docsOwnership()))
       .orderBy(taskDocuments.createdAt);
   }
@@ -3669,6 +3852,8 @@ export class TaskModel {
     taskId: string,
     since: Date,
   ): Promise<{ id: string; kind: string | null; title: string | null }[]> {
+    const task = await this.findById(taskId);
+    if (!task) return [];
     const rows = await this.db
       .select({
         fileType: documents.fileType,
@@ -3683,7 +3868,10 @@ export class TaskModel {
         documents,
         and(
           eq(taskDocuments.documentId, documents.id),
-          buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, documents),
+          buildDocumentReadableWhere(this.db, {
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          }),
         ),
       )
       .where(
@@ -3705,24 +3893,28 @@ export class TaskModel {
   async getTreePinnedDocuments(rootTaskId: string): Promise<WorkspaceData> {
     const rootOwnership = this.ownershipSql();
     const recursiveOwnership = this.ownershipSql('t');
-    const docsOwnership = this.workspaceId
-      ? sql`td.workspace_id = ${this.workspaceId}
-            AND (td.visibility = 'public' OR td.user_id = ${this.userId})`
-      : sql`td.user_id = ${this.userId} AND td.workspace_id IS NULL`;
+    const documentLinks = aliasTable(taskDocuments, 'td');
+    const docsOwnership = buildSharedTaskReadableWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      documentLinks,
+    );
     // Guard the referenced document row itself: `td.visibility` is a
     // write-time mirror of the TASK's visibility, so a document independently
     // switched back to private would otherwise still leak its title/metadata
     // through this join. A guarded-out document keeps its junction row but
     // joins as NULL → surfaced as an inaccessible tombstone node.
-    const documentVisibility = this.workspaceId
-      ? sql`d.workspace_id = ${this.workspaceId}
-            AND (d.visibility IS NULL OR d.visibility = 'public' OR d.user_id = ${this.userId})`
-      : sql`d.user_id = ${this.userId} AND d.workspace_id IS NULL`;
+    const readableDocumentIds = this.db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(
+        buildDocumentReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
+      );
+    const documentVisibility = sql`d.id IN ${readableDocumentIds}`;
     const result = await this.db.execute(sql`
       WITH RECURSIVE task_tree AS (
-        SELECT id, identifier FROM tasks WHERE id = ${rootTaskId} AND ${rootOwnership}
+        SELECT id, identifier, visibility, workspace_id FROM tasks WHERE id = ${rootTaskId} AND ${rootOwnership}
         UNION ALL
-        SELECT t.id, t.identifier FROM tasks t
+        SELECT t.id, t.identifier, t.visibility, t.workspace_id FROM tasks t
         JOIN task_tree tt ON t.parent_task_id = tt.id
         WHERE ${recursiveOwnership}
       )
@@ -3730,7 +3922,7 @@ export class TaskModel {
              d.id as document_ref_id,
              d.title as document_title, d.file_type as document_file_type, d.parent_id as document_parent_id,
              d.total_char_count as document_char_count, d.updated_at as document_updated_at,
-             w.origin_topic_id as source_topic_id, wt.title as source_topic_title
+             wt.id as source_topic_id, wt.title as source_topic_title
       FROM task_documents td
       JOIN task_tree tt ON td.task_id = tt.id
       LEFT JOIN documents d ON td.document_id = d.id AND ${documentVisibility}
@@ -3743,6 +3935,13 @@ export class TaskModel {
                        AND w.type = 'document'
                        AND w.user_id = ${this.userId}
       LEFT JOIN topics wt ON wt.id = w.origin_topic_id
+                          AND wt.workspace_id IS NOT DISTINCT FROM tt.workspace_id
+                          AND (wt.user_id = ${this.userId} OR EXISTS (
+                            SELECT 1 FROM task_topics source_tt
+                            WHERE source_tt.topic_id = wt.id
+                              AND source_tt.workspace_id = tt.workspace_id
+                              AND source_tt.task_id IN (SELECT id FROM task_tree)
+                          ))
       WHERE ${docsOwnership}
       ORDER BY td.created_at
     `);
@@ -3768,8 +3967,8 @@ export class TaskModel {
         pinnedBy: row.pinned_by,
         sourceTaskId: row.source_task_id,
         sourceTaskIdentifier: row.source_task_id !== rootTaskId ? row.source_task_identifier : null,
-        sourceTopicId: row.source_topic_id ?? null,
-        sourceTopicTitle: row.source_topic_title ?? null,
+        sourceTopicId: inaccessible ? null : (row.source_topic_id ?? null),
+        sourceTopicTitle: inaccessible ? null : (row.source_topic_title ?? null),
         title: inaccessible ? '' : row.document_title || 'Untitled',
         updatedAt: inaccessible ? null : row.document_updated_at,
       };
@@ -3916,6 +4115,15 @@ export class TaskModel {
     data: Omit<NewTaskComment, 'id'>,
     mutation: TaskMutationContext = {},
   ): Promise<TaskCommentItem> {
+    if (!(await this.findById(data.taskId))) throw new Error('Issue not found');
+    if (this.workspaceId) {
+      const role = await getActiveWorkspaceMembershipRole(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      if (!['owner', 'admin', 'member'].includes(role ?? ''))
+        throw new Error('Writable workspace membership is required');
+    }
     // Mirror the parent task's visibility onto the comment so subsequent
     // reads/writes can be filtered without a JOIN. Falls back to 'public'
     // if the task is somehow not visible (defensive — the caller should
@@ -3952,16 +4160,60 @@ export class TaskModel {
     return comment;
   }
 
-  async getComments(taskId: string): Promise<TaskCommentItem[]> {
-    if (!(await this.findById(taskId))) return [];
-    return this.db
+  async getComments(
+    taskId: string,
+  ): Promise<(TaskCommentItem & { capabilities: { canEdit: boolean; canDelete: boolean } })[]> {
+    const task = await this.findById(taskId);
+    if (!task) return [];
+    const role = this.workspaceId
+      ? await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })
+      : 'member';
+    const canWrite = ['owner', 'admin', 'member'].includes(role ?? '');
+    const canManage = canWrite && (await this.canGovernTask(task));
+    const comments = await this.db
       .select()
       .from(taskComments)
       .where(and(eq(taskComments.taskId, taskId), this.commentsOwnership()))
       .orderBy(taskComments.createdAt);
+    return comments.map((comment) => {
+      const isAuthor =
+        !comment.authorAgentId && (comment.authorUserId ?? comment.userId) === this.userId;
+      return {
+        ...comment,
+        capabilities: {
+          canEdit: canWrite && isAuthor,
+          canDelete: canWrite && (isAuthor || canManage),
+        },
+      };
+    });
   }
 
   async deleteComment(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
+    const current = await this.findCommentById(id);
+    if (!current) return false;
+    const task = await this.findById(current.taskId);
+    if (!task) return false;
+    if (
+      !(
+        (!current.authorAgentId && (current.authorUserId ?? current.userId) === this.userId) ||
+        (mutation.source === 'agent' && mutation.actorAgentId === current.authorAgentId)
+      ) &&
+      !(await this.canGovernTask(task))
+    )
+      return false;
+    if (
+      this.workspaceId &&
+      !['owner', 'admin', 'member'].includes(
+        (await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })) ?? '',
+      )
+    )
+      return false;
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const externalMapping = this.workspaceId
@@ -3990,12 +4242,39 @@ export class TaskModel {
     content: string,
     opts?: { editorData?: unknown; mutation?: TaskMutationContext },
   ): Promise<TaskCommentItem | undefined> {
+    if (
+      this.workspaceId &&
+      !['owner', 'admin', 'member'].includes(
+        (await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })) ?? '',
+      )
+    )
+      return undefined;
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const [previous] = await runner
         .select({ editorData: taskComments.editorData })
         .from(taskComments)
-        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .where(
+          and(
+            eq(taskComments.id, id),
+            this.commentsOwnership(),
+            or(
+              and(
+                isNull(taskComments.authorAgentId),
+                or(
+                  eq(taskComments.authorUserId, this.userId),
+                  and(isNull(taskComments.authorUserId), eq(taskComments.userId, this.userId)),
+                ),
+              ),
+              opts?.mutation?.source === 'agent' && opts.mutation.actorAgentId
+                ? eq(taskComments.authorAgentId, opts.mutation.actorAgentId)
+                : undefined,
+            ),
+          ),
+        )
         .for('update')
         .limit(1);
       if (!previous) return undefined;
@@ -4006,7 +4285,24 @@ export class TaskModel {
           ...(opts?.editorData !== undefined ? { editorData: opts.editorData as never } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .where(
+          and(
+            eq(taskComments.id, id),
+            this.commentsOwnership(),
+            or(
+              and(
+                isNull(taskComments.authorAgentId),
+                or(
+                  eq(taskComments.authorUserId, this.userId),
+                  and(isNull(taskComments.authorUserId), eq(taskComments.userId, this.userId)),
+                ),
+              ),
+              opts?.mutation?.source === 'agent' && opts.mutation.actorAgentId
+                ? eq(taskComments.authorAgentId, opts.mutation.actorAgentId)
+                : undefined,
+            ),
+          ),
+        )
         .returning();
       if (!comment) return undefined;
       await this.recordCommentMutation(runner, {

@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import type { HeterogeneousProviderConfig, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
@@ -11,7 +12,15 @@ import AgentOpeningSettings from './AgentOpeningSettings';
 dayjs.extend(relativeTime);
 
 const state = vi.hoisted(() => ({
-  config: { agencyConfig: { heterogeneousProvider: { type: 'orvilo' } } },
+  config: {
+    agencyConfig: { heterogeneousProvider: { type: 'orvilo' } as HeterogeneousProviderConfig },
+  },
+  effectiveAgencyConfig: {
+    executionTarget: 'device',
+    boundDeviceId: 'device-current',
+  } as OrviloAgentAgencyConfig,
+  candidateIds: [] as string[],
+  candidateInventoryComplete: true,
   bindings: [],
   response: {
     data: undefined as unknown,
@@ -20,13 +29,14 @@ const state = vi.hoisted(() => ({
     mutate: vi.fn(),
   },
   update: vi.fn(),
+  catalogModels: [{ id: 'model-one', modelId: 'model-one', label: 'Provider/Model One' }],
   catalogError: undefined as unknown,
   catalogRetry: vi.fn(),
 }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/store/agent', () => ({
   useAgentStore: (selector: (s: unknown) => unknown) =>
-    selector({ updateAgentConfigById: state.update }),
+    selector({ updateAgentConfigById: state.update, localAgentWorkingDirectoryMap: {} }),
 }));
 vi.mock('@/store/agent/selectors', () => ({
   agentSelectors: { getAgentConfigById: () => () => state.config },
@@ -46,7 +56,7 @@ vi.mock('@/store/electron', () => ({
 vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
 vi.mock('@/hooks/useEffectiveAgencyConfig', () => ({
   useEffectiveAgencyConfig: () => ({
-    agencyConfig: {},
+    agencyConfig: state.effectiveAgencyConfig,
     workspaceScoped: false,
     isPreferenceLoading: false,
   }),
@@ -55,14 +65,31 @@ vi.mock('@/hooks/useEffectiveWorkingDirectory', () => ({
   useEffectiveWorkingDirectory: () => '/tmp',
 }));
 vi.mock('@/features/DeviceManager/useDeviceList', () => ({
-  useDeviceList: () => ({ isLoading: false }),
+  useDeviceList: () => ({
+    isLoading: false,
+    data: [{ deviceId: 'device-one', defaultCwd: '/device-default' }],
+  }),
+  useAgentDeviceCandidates: () => ({
+    data: {
+      inventoryComplete: state.candidateInventoryComplete,
+      candidates: state.candidateIds.map((deviceId) => ({
+        deviceId,
+        scopeOk: true,
+        capabilityOk: true,
+        versionOk: true,
+        online: true,
+      })),
+    },
+    isLoading: false,
+    mutate: vi.fn(),
+  }),
 }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => vi.fn(),
 }));
 vi.mock('@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog', () => ({
-  useModelCatalog: () => ({
-    data: { models: [{ id: 'model-one', modelId: 'model-one', label: 'Provider/Model One' }] },
+  useModelCatalog: ({ targetReady }: { targetReady: boolean }) => ({
+    data: targetReady ? { models: state.catalogModels } : undefined,
     isLoading: false,
     error: state.catalogError,
     mutate: state.catalogRetry,
@@ -75,8 +102,12 @@ vi.mock('@/components/NeuralNetworkLoading', () => ({
 describe('Agent model settings states', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    state.config.agencyConfig.heterogeneousProvider.type = 'orvilo';
+    state.config.agencyConfig.heterogeneousProvider = { type: 'orvilo' };
     state.catalogError = undefined;
+    state.effectiveAgencyConfig = { executionTarget: 'device', boundDeviceId: 'device-current' };
+    state.candidateIds = [];
+    state.candidateInventoryComplete = true;
+    state.catalogModels = [{ id: 'model-one', modelId: 'model-one', label: 'Provider/Model One' }];
     state.response = { data: undefined, error: undefined, isLoading: true, mutate: vi.fn() };
   });
 
@@ -96,6 +127,86 @@ describe('Agent model settings states', () => {
     fireEvent.click(view.getByRole('button', { name: 'error.retry' }));
     expect(state.response.mutate).toHaveBeenCalledOnce();
   });
+
+  it('uses the Claude ACP catalog name and saves its exact ID with exact runtime identity', async () => {
+    state.config.agencyConfig.heterogeneousProvider = {
+      args: ['--model', 'old-alias', '--verbose'],
+      type: 'claude-code',
+    };
+    const view = render(<AgentModelSettings agentId="agt_one" />);
+    expect(view.queryByText('settingAgent.modelSettings.effortLabel')).toBeNull();
+    expect(view.queryByText('settingAgent.modelSettings.modeLabel')).toBeNull();
+    expect(view.queryByText('settingAgent.modelSettings.speedLabel')).toBeNull();
+    await userEvent.setup().click(view.getAllByRole('combobox')[0]);
+    expect(view.queryByRole('option', { name: 'Haiku' })).toBeNull();
+    await userEvent
+      .setup()
+      .click(view.getByRole('option', { name: 'Provider/Model One model-one' }));
+    await waitFor(() => expect(state.update).toHaveBeenCalledOnce());
+    expect(state.update.mock.calls[0][1]).toEqual({
+      agencyConfig: { heterogeneousProvider: { args: ['--verbose'], model: 'model-one' } },
+    });
+  });
+
+  it('keeps the advertised default once and distinguishes identical runtime names by ID', async () => {
+    state.config.agencyConfig.heterogeneousProvider = { type: 'claude-code' };
+    state.catalogModels = [
+      { id: 'default', modelId: 'default', label: 'Default (recommended)' },
+      { id: 'runtime-one', modelId: 'runtime-one', label: 'Exact Runtime Name' },
+      { id: 'runtime-two', modelId: 'runtime-two', label: 'Exact Runtime Name' },
+    ];
+    const view = render(<AgentModelSettings agentId="agt_one" />);
+    expect(view.getByRole('combobox').textContent).toContain('heteroAgent.modelSelector.default');
+    await userEvent.setup().click(view.getByRole('combobox'));
+    expect(view.getAllByRole('option')).toHaveLength(4);
+    expect(view.getByRole('option', { name: 'Exact Runtime Name runtime-one' })).toBeTruthy();
+    expect(view.getByRole('option', { name: 'Exact Runtime Name runtime-two' })).toBeTruthy();
+    await userEvent
+      .setup()
+      .click(view.getByRole('option', { name: 'Default (recommended) default' }));
+    await waitFor(() => expect(state.update).toHaveBeenCalledOnce());
+    expect(state.update.mock.calls[0][1]).toEqual({
+      agencyConfig: { heterogeneousProvider: { args: ['--model', 'default'], model: 'default' } },
+    });
+  });
+
+  it('shows an unknown saved model ID verbatim when discovery fails', () => {
+    state.config.agencyConfig.heterogeneousProvider = {
+      type: 'claude-code',
+      model: 'provider/full/unknown-id',
+    };
+    state.catalogModels = [];
+    state.catalogError = new Error('unavailable');
+    const view = render(<AgentModelSettings agentId="agt_one" />);
+    expect(view.getByRole('combobox').textContent).toContain('provider/full/unknown-id');
+    expect(view.getByText('settingAgent.modelSettings.catalogError')).toBeTruthy();
+  });
+
+  it('loads the real model catalog for an unbound, confirmed singleton without saving a device', async () => {
+    state.config.agencyConfig.heterogeneousProvider = { type: 'claude-code' };
+    state.effectiveAgencyConfig = {};
+    state.candidateIds = ['device-one'];
+    const view = render(<AgentModelSettings agentId="agt_one" />);
+    expect(view.queryByText('settingAgent.modelSettings.catalogPending')).toBeNull();
+    await userEvent.setup().click(view.getByRole('combobox'));
+    expect(view.getByRole('option', { name: 'Provider/Model One model-one' })).toBeTruthy();
+    expect(state.update).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    'does not guess an unbound model target from an incomplete or multiple candidate pool (%s)',
+    async (complete) => {
+      state.config.agencyConfig.heterogeneousProvider = { type: 'claude-code' };
+      state.effectiveAgencyConfig = {};
+      state.candidateIds = complete ? ['device-one', 'device-two'] : ['device-one'];
+      state.candidateInventoryComplete = complete;
+      const view = render(<AgentModelSettings agentId="agt_one" />);
+      expect(view.getByText('settingAgent.modelSettings.catalogPending')).toBeTruthy();
+      await userEvent.setup().click(view.getByRole('combobox'));
+      expect(view.queryByRole('option', { name: 'Provider/Model One model-one' })).toBeNull();
+      expect(state.update).not.toHaveBeenCalled();
+    },
+  );
 
   it('retries a failed catalog even when the picker is already open', async () => {
     state.config.agencyConfig.heterogeneousProvider.type = 'opencode';
@@ -118,12 +229,11 @@ describe('Agent model settings states', () => {
     expect(view.getByText('createAgent.model.empty')).toBeTruthy();
   });
 
-  it('shows the friendly model label without its catalog provider prefix', async () => {
+  it('preserves the model name advertised by the runtime', async () => {
     state.config.agencyConfig.heterogeneousProvider.type = 'opencode';
     const view = render(<AgentModelSettings agentId="agt_one" />);
     await userEvent.setup().click(view.getByRole('combobox'));
-    expect(view.getByRole('option', { name: 'Model One' })).toBeTruthy();
-    expect(view.queryByText('Provider/Model One')).toBeNull();
+    expect(view.getByRole('option', { name: 'Provider/Model One model-one' })).toBeTruthy();
   });
 });
 

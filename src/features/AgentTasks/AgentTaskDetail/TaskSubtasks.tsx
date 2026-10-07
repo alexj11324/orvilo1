@@ -27,7 +27,6 @@ import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import IssueStatusPicker from '../features/IssueStatusPicker';
-import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
@@ -69,7 +68,6 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
   const status = toTaskStatus(task.status);
   const isRunning = status === 'running';
   const handoffTask = useTaskStore((s) => s.handoffTask);
-  const hasRunningTopic = Boolean(task.runningTopic);
   const hasName = !!task.name;
   const activeWorkspaceId = useActiveWorkspaceId();
 
@@ -86,12 +84,12 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <IssueStatusPicker
+          attentionReason={task.attentionReason}
           size={14}
           taskIdentifier={task.identifier}
           workflowCategory={task.workflowCategory}
           workflowStateId={task.workflowStateId}
         />
-        {hasRunningTopic ? <TaskExecutionBadge size={14} status="running" /> : undefined}
       </span>
       {hasName && (
         <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>

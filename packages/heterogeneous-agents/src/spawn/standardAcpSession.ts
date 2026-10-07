@@ -508,7 +508,7 @@ export class StandardAcpSession extends AcpAgentSession<
   ): Promise<string | undefined> {
     let catalog = parseTraeAcpModelCatalog(sessionResult);
     const requestedModel = this.options.initialModel?.trim();
-    if (!requestedModel || requestedModel === 'default') return catalog?.currentModelId;
+    if (!requestedModel) return catalog?.currentModelId;
     if (!catalog && this.options.resumeSessionId) {
       catalog = await this.discoverResumeModelCatalog();
     }

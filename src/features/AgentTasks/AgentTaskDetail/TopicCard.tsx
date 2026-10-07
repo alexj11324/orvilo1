@@ -1,6 +1,7 @@
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   ChevronDown,
   ChevronRight,
@@ -25,6 +26,7 @@ import CollapsibleContent from '@/components/CollapsibleContent';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
+import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
@@ -111,6 +114,12 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
   const { allowed: canEditTask } = usePermission('create_content');
   const [commenting, setCommenting] = useState(false);
   const isRunning = activity.status === 'running';
+  const executingAgentId =
+    activity.agentId ||
+    activity.agent?.id ||
+    (activity.author?.type === 'agent' ? activity.author.id : undefined);
+  const { canUseResource } = useResourceAccess('agent', executingAgentId || undefined);
+  const canStopRun = canEditTask && !!executingAgentId && canUseResource;
   // A descendant run shown in a parent detail belongs to `sourceTaskId`, not the
   // currently open parent (`activeTaskId`) — file the follow-up on the task that
   // owns the run so it appears where the run lives. Direct runs fall back to the
@@ -169,7 +178,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
   }, [activity.operationId]);
 
   const handleStop = useCallback(() => {
-    if (!activity.id) return;
+    if (!canStopRun || !activity.id) return;
     const topicId = activity.id;
     confirmModal({
       cancelText: t('cancel', { ns: 'common' }),
@@ -179,11 +188,12 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
       }),
       okText: t('taskDetail.topicMenu.stop', { defaultValue: 'Stop Run' }),
       onOk: async () => {
+        if (!canStopRun) return;
         await cancelTopic(topicId);
       },
       title: t('taskDetail.topicMenu.stopConfirm.title', { defaultValue: 'Stop Run?' }),
     });
-  }, [activity.id, cancelTopic, t]);
+  }, [activity.id, canStopRun, cancelTopic, t]);
 
   // The server gates `task.deleteTopic` behind the same edit permission as
   // every other task mutation — a workspace viewer's confirm would only ever
@@ -238,6 +248,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {
             danger: true,
             icon: CircleStop,
+            disabled: !canStopRun,
             key: 'stop',
             label: t('taskDetail.topicMenu.stop', { defaultValue: 'Stop Run' }),
             onClick: handleStop,
@@ -342,7 +353,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           )}
           <div
             aria-disabled={activity.id ? undefined : true}
-            className="truncate block font-medium"
+            className={cn('truncate block font-medium', activity.id && buttonHoverFeedback)}
             role={activity.id ? 'button' : undefined}
             style={{ cursor: activity.id ? 'pointer' : undefined }}
             tabIndex={activity.id ? 0 : -1}

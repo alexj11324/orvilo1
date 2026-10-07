@@ -28,6 +28,7 @@ import { type IStreamEventManager } from '@/server/modules/AgentExecution/types'
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import type { SerializedHook } from '@/server/services/agentExecution/hooks/types';
 import { createDefaultSnapshotStore } from '@/server/services/agentExecution/snapshotStore';
+import { settleTaskExecutionStarted } from '@/server/services/taskSettlement';
 import { instantiateVerifyPlanOnStart } from '@/server/services/verify';
 
 import {
@@ -264,6 +265,15 @@ export class HeterogeneousAgentService {
     await markRemoteRunRunning(this.db, operationId).catch((err) =>
       log('heteroIngest: admission running write failed op=%s: %O', operationId, err),
     );
+
+    // A registered operation is pre-spawn. Only persisted producer activity
+    // may enter the issue's active workflow, under its immutable run fence.
+    if (events.some((event) => event.type !== 'agent_runtime_end')) {
+      const operation = await this.agentOperationModel.findById(operationId);
+      if (operation?.topicId === topicId) {
+        await settleTaskExecutionStarted(this.db, this.userId, operation, this.workspaceId);
+      }
+    }
 
     // Publish only events not yet delivered to the stream. The publish gate
     // (`publishedKeys`, peer of the persistence dedupe) makes a BatchIngester

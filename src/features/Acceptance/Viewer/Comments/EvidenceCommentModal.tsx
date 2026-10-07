@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { createModal, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 import type { AcceptanceEvidence } from '../Checks/types';
@@ -106,9 +106,13 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
             {images.map((item) => (
               <div
                 aria-pressed={item.id === active.id}
-                className={cx(styles.thumb, item.id === active.id && styles.thumbActive)}
+                data-hover-paint="shadow"
                 key={item.id}
                 role={'button'}
+                className={cx(
+                  cx(styles.thumb, item.id === active.id && styles.thumbActive),
+                  buttonHoverFeedback,
+                )}
                 onClick={() => {
                   setActiveId(item.id);
                   setRect(null);

@@ -90,12 +90,7 @@ export const canRequestOwnershipTransfer = (
   memberStatus(target) === 'active' &&
   (target.role === 'admin' || target.role === 'owner');
 
-export const PROJECT_ROLE_ORDER: readonly ProjectRole[] = [
-  'manager',
-  'contributor',
-  'commenter',
-  'viewer',
-];
+export const PROJECT_ROLE_ORDER: readonly ProjectRole[] = ['manager', 'contributor'];
 
 /**
  * Whether the caller may be OFFERED a project-scoped invite. Mirrors the

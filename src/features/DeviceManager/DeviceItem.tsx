@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -287,9 +287,12 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
   return (
     <div
       aria-pressed={selected}
-      className={`flex items-center gap-4 ${cx(styles.row, selected && styles.rowActive)}`}
       role={'button'}
       tabIndex={0}
+      className={cx(
+        `flex items-center gap-4 ${cx(styles.row, selected && styles.rowActive)}`,
+        buttonHoverFeedback,
+      )}
       onClick={onSelect}
       onKeyDown={(e) => {
         // Mirror native button keyboard semantics for the div-as-button row.

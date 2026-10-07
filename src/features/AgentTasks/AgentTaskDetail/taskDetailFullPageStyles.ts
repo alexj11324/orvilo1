@@ -11,18 +11,7 @@ export const taskDetailFullPageStyles = createStaticStyles(({ css }) => ({
       padding-block-start: 5px;
     }
 
-    /* Keep a readable main column until the rail fits beside it. */
-    @container work-surface (width < 1136px) {
-      [data-task-detail-header] {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      [data-task-detail-side] {
-        grid-column: auto;
-        grid-row: auto;
-      }
-    }
-
+    /* Column placement follows the issue's own container, including split panes. */
     @container work-surface (width >= 1136px) {
       padding-inline: 5.75% 17.4%;
 

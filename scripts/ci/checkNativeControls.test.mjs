@@ -123,3 +123,77 @@ test('the rebuilt HeterogeneousAgentStatusCard passes the gate', () => {
   const result = runGate(path.join(ROOT, 'src/routes/(main)/agent/profile/features/ProfileEditor'));
   assert.equal(result.code, 0, result.out);
 });
+
+test('raw role-button additions cannot bypass shared hover controls', () => {
+  const violations = scanSource(
+    'src/features/Demo.tsx',
+    '<div role="button" onClick={open}>Open</div>',
+  );
+  assert.ok(violations.some((v) => v.rule === 'adhoc-button'));
+  assert.deepEqual(scanSource('src/features/Demo.tsx', '<Button onClick={open}>Open</Button>'), []);
+});
+
+test('caller overrides that remove Button hover paint fail', () => {
+  for (const source of [
+    '<Button className="hover:bg-transparent">Open</Button>',
+    '<Button style={{ backgroundColor: "transparent" }}>Open</Button>',
+  ]) {
+    assert.ok(
+      scanSource('src/features/Demo.tsx', source).some((v) => v.rule === 'hover-feedback-override'),
+    );
+  }
+});
+
+test('explicit shared hover contract covers raw and conditional role buttons', () => {
+  const header = "import { buttonHoverFeedback } from '@/components/ui/button';";
+  for (const source of [
+    '<div role="button" className={buttonHoverFeedback} onClick={open}>Open</div>',
+    '<a role={enabled ? "button" : undefined} className={enabled && buttonHoverFeedback}>Open</a>',
+  ])
+    assert.deepEqual(scanSource('src/features/Demo.tsx', header + source), []);
+  assert.ok(
+    scanSource(
+      'src/features/Demo.tsx',
+      '<div role={enabled ? "button" : undefined}>Open</div>',
+    ).some((v) => v.rule === 'adhoc-button'),
+  );
+});
+
+test('content-preserving shadow contract allows a verified colored Button', () => {
+  const source =
+    "import { buttonHoverFeedback } from '@/components/ui/button';" +
+    '<Button className={buttonHoverFeedback} data-hover-paint="shadow" style={{ background: "red" }}>Color</Button>';
+  assert.deepEqual(scanSource('src/features/Demo.tsx', source), []);
+});
+
+test('removing only a shadow does not suppress a shared background wash', () => {
+  assert.deepEqual(
+    scanSource('src/features/Demo.tsx', '<ActionIcon className="hover:shadow-none" />'),
+    [],
+  );
+});
+
+test('JSX callbacks cannot hide later hover suppression props', () => {
+  for (const source of [
+    '<Button onClick={() => go()} className="hover:bg-transparent">Open</Button>',
+    '<Button onClick={() => go()} style={{ background: "transparent" }}>Open</Button>',
+    '<Button className="hover:!bg-transparent" />',
+    '<Button className="hover:bg-transparent!" />',
+  ])
+    assert.ok(
+      scanSource('src/features/Demo.tsx', source).some((v) => v.rule === 'hover-feedback-override'),
+      source,
+    );
+});
+
+test('raw shared role buttons with inline background require shadow feedback', () => {
+  const header = "import { buttonHoverFeedback } from '@/components/ui/button';";
+  for (const tag of ['div', 'span']) {
+    const source =
+      header +
+      `<${tag} role="button" className={buttonHoverFeedback} onClick={() => go()} style={{ background: 'transparent' }}>Open</${tag}>`;
+    assert.ok(
+      scanSource('src/features/Demo.tsx', source).some((v) => v.rule === 'hover-feedback-override'),
+    );
+  }
+});

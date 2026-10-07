@@ -2,12 +2,13 @@
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { useAgentScan } from '@/features/ConnectAgent/useAgentScan';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -148,7 +149,7 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
 
     return (
       <div
-        className={styles.row}
+        className={cn(buttonHoverFeedback, styles.row)}
         key={provider.type}
         role={'button'}
         tabIndex={0}

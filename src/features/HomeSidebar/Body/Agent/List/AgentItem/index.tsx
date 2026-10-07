@@ -1,3 +1,4 @@
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -100,7 +101,9 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
   const displayTitle = agentDisplayName(item, t('untitledAgent'));
   // The role shown beside the name — same rule for every agent, heterogeneous
   // ones included (see agentSecondaryDisplayName).
-  const roleTag = secondaryLabel || agentSecondaryDisplayName(item);
+  const roleTag =
+    secondaryLabel ||
+    agentSecondaryDisplayName(item, getHeterogeneousTypeLabel(item.heterogeneousType));
 
   const agentUrl = usePreservedAgentUrl(id);
 

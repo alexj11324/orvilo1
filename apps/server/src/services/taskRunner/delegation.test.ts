@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 
@@ -16,7 +17,10 @@ import { TaskRunnerService } from './index';
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
 vi.mock('@/database/utils/agent-access', () => ({
-  assertAgentUsableBy: vi.fn().mockResolvedValue(undefined),
+  assertAgentVisibleTo: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('./buildTaskPrompt', () => ({
   buildTaskPrompt: vi.fn().mockResolvedValue({
@@ -27,14 +31,15 @@ vi.mock('./buildTaskPrompt', () => ({
 }));
 
 afterEach(() => {
-  vi.mocked(assertAgentUsableBy).mockReset().mockResolvedValue(undefined);
+  vi.mocked(assertAgentVisibleTo).mockReset().mockResolvedValue(undefined);
+  vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
   vi.restoreAllMocks();
 });
 
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
     assigneeAgentId: 'agt_assignee',
-    assigneeUserId: null,
+    assigneeUserId: 'user-owner',
     config: {},
     id: 'task-1',
     identifier: 'T-1',
@@ -98,6 +103,7 @@ const newRunner = (
     assertMayCommit?: ReturnType<typeof vi.fn>;
     claimExecutionEpoch?: ReturnType<typeof vi.fn>;
     db?: unknown;
+    workspaceId?: string | null;
     getAgentModelConfig?: ReturnType<typeof vi.fn>;
     getBuiltinAgent?: ReturnType<typeof vi.fn>;
   } = {},
@@ -106,9 +112,15 @@ const newRunner = (
     transaction?: (callback: (tx: unknown) => Promise<void>) => Promise<void>;
   };
   db.transaction ??= async (callback) => callback(db);
-  const service = new TaskRunnerService(db as never, 'user-1', 'ws-1');
+  const service = new TaskRunnerService(
+    db as never,
+    'user-1',
+    overrides.workspaceId === null ? undefined : (overrides.workspaceId ?? 'ws-1'),
+  );
   const agentModel = {
     getAgentModelConfig:
+      overrides.getAgentModelConfig ?? vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
+    getAgentModelConfigForExecution:
       overrides.getAgentModelConfig ?? vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
     getBuiltinAgent: overrides.getBuiltinAgent ?? vi.fn(),
   };
@@ -130,13 +142,58 @@ const runParams = {
 };
 
 describe('TaskRunnerService delegated runs', () => {
-  it('rejects an inaccessible Agent before any shared task mutation or dispatch', async () => {
+  it('admits a private workspace Agent granted Use without requiring public visibility', async () => {
+    const task = baseTask({ visibility: 'public' });
+    const { execAgent } = setupHappyPath(task, {
+      operationId: 'op-1',
+      success: true,
+      topicId: 'tpc_1',
+    });
+    vi.mocked(assertAgentVisibleTo).mockRejectedValueOnce(new TRPCError({ code: 'NOT_FOUND' }));
+    const { service } = newRunner();
+    await expect(service.runTask({ ...runParams, delegation: undefined })).resolves.toMatchObject({
+      success: true,
+    });
+    expect(execAgent).toHaveBeenCalledOnce();
+  });
+
+  it('denies a visible workspace Agent without Use before policy, reservation or dispatch writes', async () => {
     const task = baseTask({ visibility: 'public' });
     setupHappyPath(task, { operationId: 'op-1', success: true, topicId: 'tpc_1' });
-    vi.mocked(assertAgentUsableBy).mockRejectedValueOnce(
-      new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' }),
+    vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValueOnce(
+      new TRPCError({ code: 'FORBIDDEN', message: 'Agent Use denied' }),
     );
     const { service } = newRunner();
+
+    await expect(service.runTask({ ...runParams, delegation: undefined })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(TaskModel.prototype.updateTaskConfig).not.toHaveBeenCalled();
+    expect(TaskModel.prototype.claimRunKickoff).not.toHaveBeenCalled();
+    expect(TaskDispatchService.prototype.prepare).not.toHaveBeenCalled();
+    expect(TaskTopicModel.prototype.startRun).not.toHaveBeenCalled();
+    expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
+  });
+
+  it('authorizes the actual delegated executor rather than the task assignee', async () => {
+    const task = baseTask({ visibility: 'public' });
+    setupHappyPath(task, { operationId: 'op-1', success: true, topicId: 'tpc_1' });
+    vi.mocked(assertCanUseWorkspaceAgent).mockImplementation(async ({ agentId }) => {
+      if (agentId === 'agt_delegate') throw new TRPCError({ code: 'FORBIDDEN' });
+    });
+    const { service } = newRunner();
+    await expect(service.runTask(runParams)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(TaskDispatchService.prototype.prepare).not.toHaveBeenCalled();
+    expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
+  });
+
+  it('rejects another user personal Agent before any task mutation or dispatch', async () => {
+    const task = baseTask({ workspaceId: null });
+    setupHappyPath(task, { operationId: 'op-1', success: true, topicId: 'tpc_1' });
+    vi.mocked(assertAgentVisibleTo).mockRejectedValueOnce(
+      new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' }),
+    );
+    const { service } = newRunner({ workspaceId: null });
 
     await expect(service.runTask({ ...runParams, delegation: undefined })).rejects.toMatchObject({
       code: 'NOT_FOUND',
@@ -159,7 +216,9 @@ describe('TaskRunnerService delegated runs', () => {
 
     await service.runTask({ ...runParams, delegation: undefined });
 
-    expect(assertAgentUsableBy).toHaveBeenCalledWith(expect.anything(), 'agt_assignee', {
+    expect(assertCanUseWorkspaceAgent).toHaveBeenCalledWith({
+      agentId: 'agt_assignee',
+      db: expect.anything(),
       userId: 'user-1',
       workspaceId: 'ws-1',
     });
@@ -177,7 +236,9 @@ describe('TaskRunnerService delegated runs', () => {
 
     await service.runTask(runParams);
 
-    expect(assertAgentUsableBy).toHaveBeenCalledWith(expect.anything(), 'agt_delegate', {
+    expect(assertCanUseWorkspaceAgent).toHaveBeenCalledWith({
+      agentId: 'agt_delegate',
+      db: expect.anything(),
       userId: 'user-1',
       workspaceId: 'ws-1',
     });
@@ -188,7 +249,7 @@ describe('TaskRunnerService delegated runs', () => {
       expect.objectContaining({ agentId: 'agt_assignee' }),
     );
     // Its model snapshot is pinned from the delegate, not the assignee.
-    expect(agentModel.getAgentModelConfig).toHaveBeenCalledWith('agt_delegate');
+    expect(agentModel.getAgentModelConfigForExecution).toHaveBeenCalledWith('agt_delegate');
     expect(agentModel.getBuiltinAgent).not.toHaveBeenCalled();
     // The run row is claimed for the grant and the epoch asserted before the
     // registration commits.
@@ -217,11 +278,11 @@ describe('TaskRunnerService delegated runs', () => {
     });
     const { agentModel, service } = newRunner();
 
-    await service.runTask(runParams);
-
-    // A delegated run on a human-assigned task must still run the delegate —
-    // the inbox fallback would silently substitute a different principal.
-    expect(execAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agt_delegate' }));
+    await expect(service.runTask(runParams)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Assign both a human owner and an Agent before running this task.',
+    });
+    expect(execAgent).not.toHaveBeenCalled();
     expect(agentModel.getBuiltinAgent).not.toHaveBeenCalled();
   });
 

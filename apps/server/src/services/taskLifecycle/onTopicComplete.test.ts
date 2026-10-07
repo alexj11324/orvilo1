@@ -231,6 +231,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     // `settleTaskExecution` constructs its own model instances — forward the
     // prototype methods to the same shared stubs the service instance uses.
     const taskModelProto = TaskModel.prototype;
+    vi.spyOn(taskModelProto, 'hasUnresolvedInput').mockResolvedValue(false);
     vi.spyOn(taskModelProto, 'findById').mockImplementation(
       async (id: string) => findById(id) as Promise<TaskItem | null>,
     );
@@ -263,6 +264,30 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   afterEach(() => {
     mockBrandingUrl.subscription = undefined;
     vi.restoreAllMocks();
+  });
+
+  it('fails an ended unanswered question without integration or completion fanout', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: null, workflowCategory: 'in_progress' }));
+    vi.spyOn(TaskModel.prototype, 'hasUnresolvedInput').mockResolvedValue(true);
+    await service.onTopicComplete({
+      taskId: 'task-1',
+      taskIdentifier: 'TASK-1',
+      topicId: 'topic-1',
+      operationId: 'op-1',
+      reason: 'done',
+      lastAssistantContent: 'Done',
+    });
+    expect(updateTopicStatus).toHaveBeenCalledWith('task-1', 'topic-1', 'op-1', 'failed', 'error');
+    expect(updateStatus).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      expect.objectContaining({ parkedReason: 'needs_input' }),
+    );
+    expect(captureRemoteIdentityOnComplete).not.toHaveBeenCalled();
+    expect(integrateOnComplete).not.toHaveBeenCalled();
+    expect(cascadeOnCompletion).not.toHaveBeenCalled();
+    expect(notifyCompleted).not.toHaveBeenCalled();
+    expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
   });
 
   it('does not publish a result until handoff and integration have both finished', async () => {
@@ -363,7 +388,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         'completion:op-1',
         'running',
         'paused',
-        { error: expect.stringContaining('prerequisite') },
+        { error: expect.stringContaining('prerequisite'), parkedReason: 'blocked' },
       );
       expect(model.releaseRunReservation).toHaveBeenCalledWith('task-1', 'completion:op-1');
       expect(cascadeOnCompletion).not.toHaveBeenCalled();
@@ -422,6 +447,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
 
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
         error: 'Workspace merge could not be completed',
+        parkedReason: 'blocked',
       });
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
@@ -479,7 +505,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
           policyRevision: 1,
           runReservationId: 'completion:op-1',
         }),
-        expect.objectContaining({ workflowCategory: 'in_review' }),
+        expect.objectContaining({
+          parkedReason: 'review_required',
+          workflowCategory: 'in_progress',
+        }),
       );
     });
 
@@ -979,7 +1008,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         'task-1',
         'running',
         'paused',
-        expect.objectContaining({ error: null, workflowCategory: 'in_review' }),
+        expect.objectContaining({ error: null, parkedReason: 'review_required' }),
       );
       expect(cascadeOnCompletion).not.toHaveBeenCalled();
     });
@@ -1307,6 +1336,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(captureRemoteIdentityOnComplete).not.toHaveBeenCalled();
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
         error: 'builder failed before push',
+        parkedReason: 'execution_failed',
       });
     });
 
@@ -1323,7 +1353,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: 'boom' });
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
+        error: 'boom',
+        parkedReason: 'execution_failed',
+      });
     });
 
     it('manual run of a schedule task fails → restored to scheduled, NOT paused', async () => {
@@ -1451,7 +1484,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
 
       // 2 prior + this one = 3 = fuse → pause.
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: 'boom' });
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
+        error: 'boom',
+        parkedReason: 'execution_failed',
+      });
       // Audit trail records the pause reason durably.
       expect(updateContext).toHaveBeenCalledWith(
         'task-1',

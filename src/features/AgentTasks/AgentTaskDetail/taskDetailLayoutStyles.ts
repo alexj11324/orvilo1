@@ -6,9 +6,31 @@ const SIDEBAR_WIDTH = 232;
 
 // One header, two forms, chosen by the column width rather than the viewport:
 // the same sections mount in the full page, the chat-side Portal and beside
-// the task-agent panel. The properties list is Plane's label/value rows at
-// every width.
+// the task-agent panel. One mounted property set wraps beneath the title in
+// narrow panes and stays in the right rail when that same container is wide.
+const controlFeedback = `
+  border-radius: ${cssVar.borderRadius};
+  background: transparent;
+  transition: background ${cssVar.motionDurationMid};
+
+  &:not(:disabled, [aria-disabled='true'], [data-disabled]) {
+    &:hover,
+    &:focus-visible,
+    &[aria-expanded='true'] {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 2px;
+    }
+  }
+`;
+
 export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
+  interactiveControl: css`
+    ${controlFeedback}
+  `,
   root: css`
     container-name: task-detail;
     container-type: inline-size;
@@ -25,9 +47,8 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     }
   `,
   /**
-   * Description sits under the title on every width. On a narrow pane the
-   * properties rail follows it, so the issue text is not buried under the
-   * property stack.
+   * Properties precede the description in DOM order; the wide grid puts them
+   * beside the title without mounting a second copy of the controls.
    */
   description: css`
     grid-column: 1;
@@ -45,7 +66,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
    * the grid's first track so in the wide layout it stays bounded beside the
    * rail instead of running underneath it (the reference keeps two columns for
    * the whole page; the space under the rail stays empty). In the narrow
-   * single-column grid this is simply the next block after the rail groups.
+   * single-column grid this follows the title, wrapping properties and description.
    */
   body: css`
     grid-column: 1;
@@ -63,9 +84,41 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     min-width: 0;
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      position: sticky;
+      inset-block-start: 16px;
+
       grid-column: 2;
       grid-row: 1 / 4;
+      align-self: start;
+
       padding-block-start: 0;
+    }
+  `,
+  propertyGroups: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+
+    min-width: 0;
+
+    > div {
+      display: contents;
+    }
+
+    > [data-wide-only='true'] {
+      display: none;
+    }
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      flex-flow: column nowrap;
+      gap: 24px;
+      align-items: stretch;
+
+      > div,
+      > [data-wide-only='true'] {
+        display: flex;
+      }
     }
   `,
   /**
@@ -80,8 +133,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     justify-content: flex-end;
   `,
   /**
-   * One labeled rail group ("Properties", "Project"). The heading stays
-   * visible at every width — Plane's properties block always titles itself.
+   * Group headings identify the wide rail; narrow panes use a compact strip.
    */
   railSection: css`
     display: flex;
@@ -90,37 +142,65 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     min-width: 0;
   `,
   railSectionLabel: css`
-    display: block;
+    display: none;
 
     font-size: 13px;
     font-weight: 500;
     line-height: 1.4;
     color: ${cssVar.colorText};
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: block;
+    }
   `,
   /** A stacked row inside a rail section — same hit area as a property cell. */
   railRow: css`
-    width: 100%;
+    width: fit-content;
     max-width: 100%;
-    height: 30px;
+    height: 28px;
     padding-inline: 8px 10px;
-    border-radius: ${cssVar.borderRadius};
+    border-radius: 999px;
 
     white-space: nowrap;
+
+    background: ${cssVar.colorFillTertiary};
+
+    &:not(:disabled, [aria-disabled='true'], [data-disabled]):hover {
+      background: ${cssVar.colorFillSecondary};
+    }
   `,
   properties: css`
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: stretch;
-
+    display: contents;
     max-width: 100%;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
   `,
-  /** Plane's property row: 120px tertiary label, then the value control. */
+  /** One value-only property; field names remain on its accessible trigger. */
   propertyRow: css`
     display: flex;
+    flex: none;
     gap: 8px;
-    align-items: flex-start;
+    align-items: center;
+
     min-width: 0;
+    max-width: 100%;
+
+    &[data-wide-only='true'] {
+      display: none;
+    }
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      width: 100%;
+
+      &[data-wide-only='true'] {
+        display: flex;
+      }
+    }
   `,
   propertyLabel: css`
     display: flex;
@@ -156,12 +236,13 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   `,
   propertyValue: css`
     display: flex;
-    flex: 1;
+    flex: none;
     flex-wrap: wrap;
     gap: 4px;
     align-items: center;
 
     min-width: 0;
+    max-width: 100%;
     min-height: 30px;
 
     font-size: 13px;
@@ -169,6 +250,29 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     line-height: 1.4;
     color: ${cssVar.colorText};
     letter-spacing: 0.13px;
+
+    > :is(
+      [data-slot='dropdown-menu-trigger'],
+      [data-slot='popover-trigger'],
+      [data-slot='button']
+    ) {
+      ${controlFeedback}
+      min-width: 0;
+      max-width: 100%;
+      padding-block: 4px;
+      padding-inline: 8px;
+      border-radius: 999px;
+
+      background: ${cssVar.colorFillTertiary};
+
+      &:not(:disabled, [aria-disabled='true'], [data-disabled]):hover {
+        background: ${cssVar.colorFillSecondary};
+      }
+    }
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      flex: 1;
+    }
   `,
   propertyPlaceholder: css`
     color: ${cssVar.colorTextPlaceholder};

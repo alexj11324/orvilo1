@@ -12,6 +12,7 @@ const serviceMocks = vi.hoisted(() => ({
 const swrState = vi.hoisted(() => ({
   data: undefined as unknown,
   keys: [] as unknown[],
+  permissionMutate: vi.fn(),
   mutate: vi.fn(),
 }));
 
@@ -25,6 +26,7 @@ vi.mock('@/services/resourcePermission', () => ({
 }));
 
 vi.mock('@/libs/swr', () => ({
+  mutate: swrState.permissionMutate,
   useClientDataSWR: (key: unknown) => {
     swrState.keys.push(key);
     return { data: swrState.data, error: undefined, isLoading: false, mutate: swrState.mutate };
@@ -60,6 +62,29 @@ describe('useResourceCollaborators', () => {
       'edit',
     );
     expect(swrState.mutate).toHaveBeenCalled();
+  });
+
+  it('revalidates actual Agent Use after granting or revoking a member', async () => {
+    serviceMocks.addCollaborators.mockResolvedValue(undefined);
+    serviceMocks.removeCollaborator.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useResourceCollaborators('agent', 'agent-1'));
+    await act(async () => {
+      await result.current.addCollaborators(['member-1'], 'use');
+    });
+    expect(swrState.permissionMutate).toHaveBeenCalledWith([
+      'resource-permission',
+      'agent',
+      'agent-1',
+    ]);
+    swrState.permissionMutate.mockClear();
+    await act(async () => {
+      await result.current.removeCollaborator('member-1');
+    });
+    expect(swrState.permissionMutate).toHaveBeenCalledWith([
+      'resource-permission',
+      'agent',
+      'agent-1',
+    ]);
   });
 
   it('reports a failed add so the caller can keep the picker open', async () => {

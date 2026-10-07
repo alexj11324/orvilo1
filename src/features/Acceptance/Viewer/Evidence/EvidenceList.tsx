@@ -4,6 +4,7 @@ import { Image } from '@lobehub/ui';
 import { useResponsive } from 'antd-style';
 import { memo } from 'react';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import AudioPlayer from '@/features/AudioPlayer';
 
 import {
@@ -155,6 +156,8 @@ export const EvidenceList = memo<{
         if (!md && onReviewEvidence && item.fileUrl && IMAGE_EVIDENCE.has(item.type)) {
           return (
             <button
+              className={buttonHoverFeedback}
+              data-hover-paint="shadow"
               key={item.id}
               type={'button'}
               style={{

@@ -1,6 +1,6 @@
-# 权限架构草案：工作区协作 + 项目治理 + Agent Use 名单
+# 权限架构：工作区协作 + 项目治理 + Agent Use 名单
 
-**DRAFT / Proposed，尚未采纳。2026-10-06。** 当前依据：隔离 worktree `issue-ui-corrections/orvilo1`，HEAD `4b2af76e2ccd1d804cdf98e6bdd2c932a9a298b7` 加冻结 WIP。以下是源码与一手资料研究，不能代表旧缓存后端或真实运行已经生效。本阶段仅维护本文；产品代码、fixture、授权数据与 Agent 运行继续 HOLD。
+**政策已批准实施。2026-10-06。** 当前依据：隔离 worktree `issue-ui-corrections/orvilo1`，HEAD `4b2af76e2ccd1d804cdf98e6bdd2c932a9a298b7` 加冻结 WIP。以下是源码与一手资料研究，不能代表旧缓存后端或真实运行已经生效。用户已批准按本文政策并行实施及独立最终验收；旧 private 数据公开与历史角色转换仍须经过逐记录迁移预览审批。
 
 ## 一个简单建议
 
@@ -10,7 +10,7 @@ Project 成员界面只保留**参与者 / 管理者**，复用 `contributor / m
 
 Agent 只有**一张所选成员 Use 名单**，创建者初始勾选且可取消；Manage 不推导 Use。Device 复用现有归属 /shared 注册表、工作区写上限与真实 runtime 就绪检查，不新增设备 ACL 名单。Document/KB 保留自身 ACL，关联或作为附件不会自动公开内容。
 
-用户已确认：Issue 对话对所有活跃工作区成员可读；Agent Use 按所选名单；没有 Use 时保留只读对话和灰色禁用的 Send/Run/Answer/Pause/Stop；尽量简单。其余表格为**Orvilo 待批准建议**，不是竞品默认规则或已经采纳的决定。
+用户已确认：Issue 对话对所有活跃工作区成员可读；Agent Use 按所选名单；没有 Use 时保留只读对话和灰色禁用的 Send/Run/Answer/Pause/Stop；尽量简单。本文目标能力表已获用户批准，作为 Orvilo 实施政策；竞品资料仅提供依据，不代表竞品默认规则。
 
 ## 一手资料支持什么
 
@@ -22,7 +22,7 @@ Agent 只有**一张所选成员 Use 名单**，创建者初始勾选且可取�
 
 Linear 依据官方文档；Plane 当前文档与 Community commit `5f7d92784c403f76284f0f16718f320221dc7fec`存在角色、评论治理差异，不合并成一个已验证产品；Multica 依据官方源码 commit `b4ca5b4a23e68b26292a680dca7689a952bb1cd5`及文档。没有做竞品线上 mutation 验收。Multica 的私有 direct chat 和按 View 取消任务规则不符合本次 Issue 公开 /noUse 不可 Stop 要求，不采用。[Plane Community 角色定义](https://github.com/makeplane/plane/blob/5f7d92784c403f76284f0f16718f320221dc7fec/apps/api/plane/app/permissions/base.py#L15)、[Multica 取消源码](https://github.com/multica-ai/multica/blob/b4ca5b4a23e68b26292a680dca7689a952bb1cd5/server/internal/handler/chat.go#L1759)。
 
-## 待批准后冻结的能力表
+## 已批准的冻结能力表
 
 每次工作区操作先检查**真实调用者、同一 workspace、当前活跃成员和 workspace 能力上限**；个人独立资源保持本人范围。Viewer 不能因 manager / 作者 / 旧 Use 行重新获得写或执行权；暂停、移除、跨 workspace 全部拒绝。
 
@@ -75,7 +75,7 @@ Linear 依据官方文档；Plane 当前文档与 Community commit `5f7d92784c40
 
 | 阶段                        | 改动与已有模块                                                                                                                                                                                                                                                                                                                                          | 完成条件                                                                                                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. 冻结政策与迁移预览       | 本表；`packages/business-server/src/membershipLifecycle/roles.ts`、`packages/database/src/schemas/projectMember.ts`、`resourcePermission.ts`现有字段仅用于拟定 mapping                                                                                                                                                                                  | 用户确认目标表、private flags / 旧角色 mapping 和作者可取消 Use；不执行回填或 runtime 写入。                                                                  |
+| 1. 冻结政策与迁移预览       | 本表；`packages/business-server/src/membershipLifecycle/roles.ts`、`packages/database/src/schemas/projectMember.ts`、`resourcePermission.ts`现有字段仅用于拟定 mapping                                                                                                                                                                                  | 目标表与作者可取消 Use 已批准；private flags / 旧角色 mapping 按具体 ID 预览审批，不执行未批准回填。                                                          |
 | 2. Project/Issue 统一       | `packages/database/src/models/project.ts`、`utils/projectReadable.ts`、`models/task.ts`；`packages/business-server/src/projectMembership/index.ts`；`apps/server/src/routers/lambda/project.ts/task.ts`；Project create / 成员 / 属性 /milestone/ 更新 UI 和`src/features/Teammates/api/{contract,hooks}.ts`                                            | 普通写统一 active writable member，管理统一 manager/admin；creator 初始化、Lead 不赋权；作者评论边界与 UI/API public 默认一致。批准历史记录后才切换对应范围。 |
 | 3. Agent 名单与 Device 补漏 | `apps/server/src/services/resourcePermission/index.ts`、`routers/lambda/resourcePermission.ts/agent.ts/device.ts`、`_helpers/workspaceAgentGuard.ts`；现有`taskDispatch{,Start,Resume}`/`taskRunner`与`packages/database/src/models/taskDispatch.ts`锁内检查；`src/features/ResourcePermission`、Conversation/ChatInput access hooks 与 Device selector | 名单是唯一 Use 来源、Manage 不绕过；actual caller 设备检查；Viewer direct 文件写拒绝；queue/revoke 与合法 producer 终态闭环。零新增 Device 名单 / ACL 系统。  |
 | 4. 批准回填与真实验收       | 具体迁移脚本 / SQL 及 owning Vitest 回归；`bun run check --lint`限改动文件、审阅 autofix；远程 CI Typecheck；候选 revision Electron 运行                                                                                                                                                                                                                | 回填幂等且未批准 private 数据不公开；行为证据附 PR/Actions artifact 并记录 commit SHA。本地不运行 tsgo，Web 不能代替本地 Agent/Device 的 Electron 验收。      |
@@ -90,4 +90,4 @@ Linear 依据官方文档；Plane 当前文档与 Community commit `5f7d92784c40
 - Agent WIP Use 仍有 creator 永久允许，private API 会清空 grants：`apps/server/src/services/resourcePermission/index.ts:289/:299`、`routers/lambda/agent.ts:384`。
 - Device 已有归属 /private/shared 与 approved-directory 边界，直接文件 mutation 须补统一 workspace 写门槛：`packages/database/src/models/device.ts:293`、`apps/server/src/routers/lambda/device.ts:74/:104/:1489`。不由这些源码结论推定当前旧进程已应用 WIP。
 
-\*\* 下一步审批内容只有目标表与一次性 mapping。\*\* 通过后再实施；不为证明草案提前创建真实授权、修改 fixture 或启动运行。
+实施政策已批准。仍待审批的是旧 private 记录公开及 commenter/viewer 一次性 mapping 的具体 ID 清单；预览限定本地 clone，生产数据不得自动公开。

@@ -1,6 +1,7 @@
 import type {
   ChatTopicStatus,
   ProjectStatus,
+  TaskAttentionReason,
   TaskExecutionState,
   TaskStatus,
   TaskWorkflowCategory,
@@ -11,6 +12,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
   Circle,
+  CircleAlert,
   CircleCheck,
   CircleDot,
   CircleHelpIcon,
@@ -104,6 +106,23 @@ export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, StatusVisua
   todo: { color: cssVar.colorTextTertiary, icon: WORKFLOW_CATEGORY_ICONS.todo },
   triage: { color: cssVar.orange, icon: WORKFLOW_CATEGORY_ICONS.triage },
 };
+
+/** Read-only attention lane, shared by the board header and Issue status slot. */
+export const ISSUE_NEEDS_INPUT_VISUAL: StatusVisual = {
+  color: cssVar.colorWarning,
+  icon: CircleAlert,
+};
+
+export const getIssueStatusVisual = ({
+  attentionReason,
+  workflowCategory,
+}: {
+  attentionReason?: TaskAttentionReason;
+  workflowCategory?: TaskWorkflowCategory | null;
+}): StatusVisual =>
+  attentionReason === 'needs_input'
+    ? ISSUE_NEEDS_INPUT_VISUAL
+    : WORKFLOW_CATEGORY_VISUALS[workflowCategory ?? 'backlog'];
 
 /**
  * The icon for the Status *property* (filter rows, bulk "Status" button,

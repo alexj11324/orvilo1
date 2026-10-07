@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -641,7 +642,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
     const trigger = children ?? (
       <div
         aria-label={t('workingDirectory.worktreesHeading')}
-        className={styles.trigger}
+        className={cx(buttonHoverFeedback, styles.trigger)}
         role="button"
       >
         <span className="anticon" role="img">
@@ -693,7 +694,11 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
             <div className={styles.list}>
               <div className={styles.sectionRow}>
                 <div className={styles.section}>{t('workingDirectory.worktreesHeading')}</div>
-                <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
+                <div
+                  className={cx(buttonHoverFeedback, styles.refreshButton)}
+                  role="button"
+                  onClick={handleRefresh}
+                >
                   <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
                     <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
                   </span>
@@ -783,8 +788,12 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
                             <SimpleTooltip title={t('workingDirectory.removeWorktreeAction')}>
                               <div
                                 aria-label={t('workingDirectory.removeWorktreeAction')}
-                                className={`${styles.rowAction} worktree-row-action`}
                                 role="button"
+                                className={cx(
+                                  buttonHoverFeedback,
+                                  styles.rowAction,
+                                  'worktree-row-action',
+                                )}
                                 onClick={(event) => handleRemoveWorktree(event, worktree)}
                               >
                                 <span className="anticon" role="img">

@@ -234,6 +234,7 @@ export const resolveTopicHeteroPin = (
   return {
     ...(topic.model ? { model: topic.model, provider: topic.provider || '' } : {}),
     ...(effort === undefined ? {} : { effort }),
+    ...(topic.metadata?.heteroModelExplicit ? { modelExplicit: true } : {}),
   };
 };
 

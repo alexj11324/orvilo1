@@ -1232,3 +1232,20 @@ describe('ACP permission dispatch', () => {
     ]);
   });
 });
+
+describe('Agent ACP default snapshot execution', () => {
+  it.each(['claude-code', 'codex'] as const)(
+    'replays an explicit default snapshot through %s native args',
+    (type) => {
+      const provider = { type, model: 'default', args: ['--model', 'default'] };
+      const snapshot = resolveHeterogeneousProviderTopicModel(provider);
+      const effective = applyTopicModelToHeterogeneousProvider(provider, snapshot);
+      expect(buildHeteroSpawnArgs(effective)).toEqual(['--model', 'default']);
+      expect(
+        buildHeteroSpawnArgs(
+          applyTopicModelToHeterogeneousProvider(provider, { model: 'default', provider: type }),
+        ),
+      ).toEqual([]);
+    },
+  );
+});

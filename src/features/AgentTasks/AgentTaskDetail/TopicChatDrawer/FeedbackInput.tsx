@@ -36,14 +36,14 @@ const FeedbackInput = memo<FeedbackInputProps>(
     const [expanded, setExpanded] = useState(defaultExpanded);
     const shouldSendOnEnter = useEnterToSend();
     // Task follow-ups send into the shared agent's topic — view-only members
-    // can watch the run but get no reply composer.
+    // can watch the run and retain a read-only reply composer.
     const { canUseResource } = useConversationResourceAccess();
 
-    const canSubmit = hasContent || hasAttachments;
+    const canSubmit = canUseResource && (hasContent || hasAttachments);
 
     useEffect(() => {
-      if (expanded) editor?.focus?.();
-    }, [expanded, editor]);
+      if (expanded && canUseResource) editor?.focus?.();
+    }, [expanded, editor, canUseResource]);
 
     const handleContentChange = useCallback(() => {
       const lexicalEditor = editor?.getLexicalEditor?.();
@@ -63,7 +63,7 @@ const FeedbackInput = memo<FeedbackInputProps>(
     );
 
     const handleSubmit = useCallback(async () => {
-      if (submitting) return;
+      if (submitting || !canUseResource) return;
       const editorData = editor?.getDocument?.('json') as Record<string, any> | undefined;
       const markdown = String(editor?.getDocument?.('markdown') ?? '').trim();
       const hasFiles = getAttachmentFileIdsFromEditor(editor).length > 0;
@@ -91,14 +91,12 @@ const FeedbackInput = memo<FeedbackInputProps>(
       } finally {
         setSubmitting(false);
       }
-    }, [editor, sendMessage, submitting]);
-
-    if (!canUseResource) return <OpStatusTray seamless />;
+    }, [editor, sendMessage, submitting, canUseResource]);
 
     // Surface the live running-op status flush above the reply affordance (seamless
     // inline row that renders nothing when idle), so the user can watch the agent
     // work without expanding the composer.
-    if (!expanded) {
+    if (!expanded && canUseResource) {
       return (
         <div className="flex flex-col gap-2">
           <OpStatusTray seamless />
@@ -121,18 +119,18 @@ const FeedbackInput = memo<FeedbackInputProps>(
               style={{ paddingInline: 8 }}
               left={
                 <div className="flex items-center gap-0.5">
-                  {!disableCollapse && (
+                  {!disableCollapse && canUseResource && (
                     <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
                       <ChevronDownIcon data-icon="inline-start" />
                       {t('taskDetail.collapseReply')}
                     </Button>
                   )}
-                  <AttachmentUploadButton onFiles={handleAttach} />
+                  {canUseResource && <AttachmentUploadButton onFiles={handleAttach} />}
                 </div>
               }
               right={
                 <SendButton
-                  disabled={!canSubmit && !submitting}
+                  disabled={!canUseResource || (!canSubmit && !submitting)}
                   loading={submitting}
                   shape={'round'}
                   title={t('taskDetail.replyInThread')}
@@ -144,13 +142,14 @@ const FeedbackInput = memo<FeedbackInputProps>(
           }
         >
           <EditorCanvas
+            editable={canUseResource}
             editor={editor}
             floatingToolbar={false}
             placeholder={t('taskDetail.replyPlaceholder')}
             style={{ paddingBlock: 0 }}
             onContentChange={handleContentChange}
             onPressEnter={({ event }) => {
-              if (shouldSendOnEnter(event)) {
+              if (canUseResource && shouldSendOnEnter(event)) {
                 handleSubmit();
                 return true;
               }

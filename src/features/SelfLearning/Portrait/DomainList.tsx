@@ -5,6 +5,7 @@ import { ChevronRightIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buttonHoverFeedback } from '@/components/ui/button';
 import type { ExpertiseDomainItem } from '@/services/expertise';
 
 import { portraitStyles as styles } from './styles';
@@ -33,7 +34,8 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
       >
         {domains.map((d) => (
           <button
-            className={cx(styles.row, 'flex items-center gap-3')}
+            className={cx(cx(styles.row, 'flex items-center gap-3'), buttonHoverFeedback)}
+            data-hover-paint="shadow"
             key={d.id}
             type={'button'}
             style={{

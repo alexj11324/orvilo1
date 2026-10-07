@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Badge } from '@/components/reui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonHoverFeedback } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
@@ -381,7 +381,7 @@ export const AcceptanceCheckRow = memo<{
         {!detailMode && (
           <div
             aria-expanded={ariaExpanded}
-            className={`flex items-start gap-2.5 ${styles.rowHeader}`}
+            className={cx(`flex items-start gap-2.5 ${styles.rowHeader}`, buttonHoverFeedback)}
             data-expanded={open ? '' : undefined}
             role={'button'}
             tabIndex={0}

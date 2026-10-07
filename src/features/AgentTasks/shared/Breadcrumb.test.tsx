@@ -68,6 +68,12 @@ describe('Breadcrumb', () => {
     cleanup();
   });
 
+  it('renders separators beside breadcrumb items without nested list elements', () => {
+    const { container } = render(<Breadcrumb taskId="T-child" />);
+    expect(container.querySelector('li li')).toBeNull();
+    expect(container.querySelectorAll('ol > [data-slot="breadcrumb-separator"]')).toHaveLength(3);
+  });
+
   it('uses the ancestor owner agent when building breadcrumb links', () => {
     render(<Breadcrumb taskId="T-child" />);
 

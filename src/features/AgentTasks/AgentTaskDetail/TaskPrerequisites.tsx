@@ -1,10 +1,10 @@
-import type { TaskWorkflowCategory } from '@orvilo/types';
+import type { TaskAttentionReason, TaskWorkflowCategory } from '@orvilo/types';
 import { Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { getIssueStatusVisual } from '@/components/ExecutionStatus';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +23,6 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { copyToClipboard } from '@/utils/clipboard';
 
-import TaskStatusIcon from '../features/TaskStatusIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import {
@@ -35,21 +34,6 @@ import {
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
-const TASK_STATUS_SET = new Set([
-  'backlog',
-  'canceled',
-  'completed',
-  'failed',
-  'paused',
-  'running',
-  'scheduled',
-]);
-
-type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
-
-const toTaskStatus = (status?: string | null): TaskStatus =>
-  status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
-
 /** Linear's field marks: an orange flag for "Blocked by", a red one for "Blocks". */
 const RELATION_MARKS = {
   blockedBy: { Icon: Flag, className: 'text-amber-500' },
@@ -58,6 +42,7 @@ const RELATION_MARKS = {
 } as const;
 
 interface RelationEdge {
+  attentionReason?: TaskAttentionReason;
   dependsOn: string;
   direction?: 'blockedBy' | 'blocking';
   id?: string;
@@ -246,6 +231,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
     <>
       {ISSUE_RELATION_KINDS.map((kind) => {
         const rows = grouped[kind];
+        if (rows.length === 0 && picker !== kind) return null;
         const { Icon, className: markClass } = RELATION_MARKS[kind];
         return (
           <div className="flex flex-col gap-0.5" data-relation-kind={kind} key={kind}>
@@ -323,10 +309,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
               rows.map((edge) => {
                 const index = edges.indexOf(edge);
                 const unavailable = !edge.status;
-                const workflowVisual =
-                  edge.workflowStateId && edge.workflowCategory
-                    ? WORKFLOW_CATEGORY_VISUALS[edge.workflowCategory]
-                    : undefined;
+                const workflowVisual = getIssueStatusVisual(edge);
                 const canUnlink = Boolean(edge.relationId || edge.id);
                 return (
                   <div
@@ -340,11 +323,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
                       type="button"
                       onClick={() => navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))}
                     >
-                      {workflowVisual ? (
-                        <workflowVisual.icon color={workflowVisual.color} size={16} />
-                      ) : (
-                        <TaskStatusIcon size={16} status={toTaskStatus(edge.status)} />
-                      )}
+                      <workflowVisual.icon color={workflowVisual.color} size={16} />
                       <span
                         className="shrink-0 font-mono text-muted-foreground"
                         style={{ fontSize: RAIL_VALUE_FONT_SIZE }}

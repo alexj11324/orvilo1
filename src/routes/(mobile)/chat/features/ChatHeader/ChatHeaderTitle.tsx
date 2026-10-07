@@ -5,6 +5,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { buttonHoverFeedback } from '@/components/ui/button';
 import { useFetchActiveTopicDetail } from '@/hooks/useFetchActiveTopicDetail';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
@@ -44,6 +45,8 @@ const ChatHeaderTitle = memo(() => {
           </span>
           <ActionIcon
             active
+            className={buttonHoverFeedback}
+            data-hover-paint="shadow"
             icon={ChevronDown}
             size={{ blockSize: 14, borderRadius: '50%', size: 12 }}
             style={{

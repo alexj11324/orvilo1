@@ -1,5 +1,6 @@
 import type {
   MyWorkMode,
+  TaskAttentionReason,
   TaskDispatchPhase,
   TaskLabelSummary,
   TaskStatus,
@@ -62,16 +63,18 @@ import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
-import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
-import { buildWorkspaceWhere } from '../utils/workspace';
+import { buildSharedTaskReadableWhere } from '../utils/sharedTaskReadable';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
 import {
+  hasLiveTaskExecutor,
+  hasUnresolvedTaskInput,
   latestDispatchPhase,
   legacyStatusExpr,
   predicateForLegacyStatus,
   predicateForLegacyStatuses,
   TASK_OPEN_WORKFLOW,
+  taskAttentionReasonExpr,
 } from './taskExecutionSql';
 import { TaskLabelModel, toTaskLabelSummary } from './taskLabel';
 import { TeamModel } from './team';
@@ -177,47 +180,6 @@ const assertInValues = (
     if (typeof item === 'string' || typeof item === 'number') return item;
     throw new WorkQueryError('INVALID_QUERY', `${op} values must be strings or numbers`);
   });
-};
-
-const compileTeamIdColumnPredicate = (
-  column: AnyPgColumn,
-  op: WorkQueryOp,
-  resolved: ReturnType<typeof resolveValue>,
-  readableTeamIds: ReadonlySet<string>,
-  currentUserId: string,
-): SQL => {
-  const readable = [...readableTeamIds];
-  switch (op) {
-    case 'isNull': {
-      return isNull(column);
-    }
-    case 'isNotNull': {
-      return readable.length ? inArray(column, readable) : FALSE_SQL;
-    }
-    case 'eq': {
-      if (typeof resolved !== 'string' || !readableTeamIds.has(resolved)) return FALSE_SQL;
-      return eq(column, resolved as never);
-    }
-    case 'in': {
-      const kept = assertInValues(resolved, 'in', currentUserId).filter(
-        (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
-      );
-      return kept.length ? inArray(column, kept) : FALSE_SQL;
-    }
-    case 'neq': {
-      if (typeof resolved !== 'string' || !readableTeamIds.has(resolved)) return TRUE_SQL;
-      return ne(column, resolved as never);
-    }
-    case 'notIn': {
-      const kept = assertInValues(resolved, 'notIn', currentUserId).filter(
-        (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
-      );
-      return kept.length ? notInArray(column, kept) : TRUE_SQL;
-    }
-    default: {
-      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
-    }
-  }
 };
 
 const countPredicates = (node: WorkQueryFilter | undefined, depth: number): number => {
@@ -425,11 +387,11 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
   }
 
   if (predicate.field === 'teamId') {
-    return compileTeamIdColumnPredicate(
+    // Team metadata may be private; its workspace Issues remain member-readable.
+    return compileColumnPredicate(
       tasks.teamId,
       predicate.op,
       resolveValue(predicate.value, ctx.currentUserId),
-      ctx.readableTeamIds,
       ctx.currentUserId,
     );
   }
@@ -994,6 +956,7 @@ const attentionGroupExpr = (ctx: {
   workspaceId?: string;
 }): SQL<string> =>
   sql<string>`CASE
+  WHEN ${hasUnresolvedTaskInput} OR ${tasks.context} #>> '{execution,parked,reason}' = 'needs_input' THEN 'needs_input'
   WHEN ${TASK_OPEN_WORKFLOW} AND ${tasks.priority} = 1 THEN 'urgent'
   WHEN ${TASK_OPEN_WORKFLOW} AND EXISTS (
     SELECT 1
@@ -1003,7 +966,7 @@ const attentionGroupExpr = (ctx: {
     WHERE attention_dep.depends_on_id = ${tasks.id}
       AND attention_dep.type = 'blocks'
       AND ${ATTENTION_OPEN_ALIAS_WORKFLOW}
-      AND ${buildWorkspaceWhere(
+      AND ${buildSharedTaskReadableWhere(
         { userId: ctx.userId, workspaceId: ctx.workspaceId },
         {
           userId: attentionBlockedTasks.createdByUserId,
@@ -1011,7 +974,6 @@ const attentionGroupExpr = (ctx: {
           workspaceId: attentionBlockedTasks.workspaceId,
         },
       )}
-      AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks as unknown as typeof tasks)}
   ) THEN 'blocking'
   ELSE ${tasks.workflowCategory}
 END`;
@@ -1049,7 +1011,7 @@ const axisExpr = (
       return legacyStatusExpr;
     }
     case 'workflowCategory': {
-      return sql`${tasks.workflowCategory}`;
+      return sql`CASE WHEN ${taskAttentionReasonExpr} = 'needs_input' THEN 'needs_input' ELSE ${tasks.workflowCategory} END`;
     }
     case 'priority': {
       return sql`coalesce(${tasks.priority}::text, '0')`;
@@ -1074,9 +1036,10 @@ const axisExpr = (
 
 /** Finite axes keep their empty buckets. Assignee and project only return keys that exist. */
 const finiteBoardKeys = (axis: string): readonly string[] | undefined => {
-  if (axis === 'attention') return ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
+  if (axis === 'attention')
+    return ['needs_input', 'urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
   if (axis === 'status') return WORK_QUERY_STATUS_COLUMNS;
-  if (axis === 'workflowCategory') return WORK_QUERY_WORKFLOW_COLUMNS;
+  if (axis === 'workflowCategory') return ['needs_input', ...WORK_QUERY_WORKFLOW_COLUMNS];
   if (axis === 'priority') return WORK_QUERY_PRIORITY_KEYS;
   return undefined;
 };
@@ -1305,7 +1268,7 @@ export class WorkQueryModel {
   ) {}
 
   private ownership = () =>
-    buildWorkspaceWhere(
+    buildSharedTaskReadableWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       {
         userId: tasks.createdByUserId,
@@ -1350,18 +1313,19 @@ export class WorkQueryModel {
     const rows = await this.db
       .select({ id: tasks.id, identifier: tasks.identifier, name: tasks.name })
       .from(tasks)
-      .where(
-        and(
-          inArray(tasks.id, ids),
-          this.ownership(),
-          buildTaskTeamReadableWhere(this.db, this.userId),
-        ),
-      );
+      .where(and(inArray(tasks.id, ids), this.ownership()));
     return new Map(rows.map((row) => [row.id, { identifier: row.identifier, name: row.name }]));
   };
 
   /** Labels + parent breadcrumb for a page of rows, in two batched reads. */
-  private hydrateTaskRows = async <T extends { id: string; parentTaskId: null | string }>(
+  private hydrateTaskRows = async <
+    T extends {
+      id: string;
+      parentTaskId: null | string;
+      workspaceId: string | null;
+      visibility: 'private' | 'public';
+    },
+  >(
     rows: T[],
   ) => {
     const [labelsByTask, parentsById, statusById] = await Promise.all([
@@ -1371,28 +1335,49 @@ export class WorkQueryModel {
     ]);
     return rows.map((row) => ({
       ...row,
+      visibility: row.workspaceId ? ('public' as const) : row.visibility,
       labels: labelsByTask.get(row.id) ?? [],
       parent: row.parentTaskId ? (parentsById.get(row.parentTaskId) ?? null) : null,
       // Deprecated wire field — derived from canonical workflow/execution
       // rows, never the stored `tasks.status` value.
       status: statusById.get(row.id)?.status ?? 'backlog',
       dispatchPhase: statusById.get(row.id)?.dispatchPhase ?? null,
+      hasLiveExecutor: statusById.get(row.id)?.hasLiveExecutor ?? false,
+      attentionReason: statusById.get(row.id)?.attentionReason ?? 'none',
     }));
   };
 
   private derivedTaskStatusByIds = async (ids: string[]) => {
     if (ids.length === 0)
-      return new Map<string, { status: TaskStatus; dispatchPhase: TaskDispatchPhase | null }>();
+      return new Map<
+        string,
+        {
+          status: TaskStatus;
+          dispatchPhase: TaskDispatchPhase | null;
+          hasLiveExecutor: boolean;
+          attentionReason: TaskAttentionReason;
+        }
+      >();
     const rows = await this.db
       .select({
         id: tasks.id,
         status: sql<TaskStatus>`${legacyStatusExpr}`,
         dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
+        hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`,
+        attentionReason: taskAttentionReasonExpr,
       })
       .from(tasks)
       .where(and(inArray(tasks.id, ids), this.ownership()));
     return new Map(
-      rows.map((row) => [row.id, { status: row.status, dispatchPhase: row.dispatchPhase }]),
+      rows.map((row) => [
+        row.id,
+        {
+          status: row.status,
+          dispatchPhase: row.dispatchPhase,
+          hasLiveExecutor: row.hasLiveExecutor,
+          attentionReason: row.attentionReason,
+        },
+      ]),
     );
   };
 
@@ -1410,7 +1395,7 @@ export class WorkQueryModel {
     mode: MyWorkMode | undefined,
     readableTeamIds: ReadonlySet<string>,
   ) => {
-    const conditions: SQL[] = [this.ownership(), buildTaskTeamReadableWhere(this.db, this.userId)];
+    const conditions: SQL[] = [this.ownership()];
     const filterSql = compileFilter(query.filter, this.compileCtx('task', readableTeamIds));
     if (filterSql) conditions.push(filterSql);
     if (mode === 'subscribed') {
@@ -2045,7 +2030,6 @@ export class WorkQueryModel {
       .where(
         and(
           this.ownership(),
-          buildTaskTeamReadableWhere(this.db, this.userId),
           or(
             sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
             sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,

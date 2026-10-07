@@ -1,8 +1,7 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { DEFAULT_AGENT_CONFIG, INBOX_SESSION_ID } from '@orvilo/const';
 import type { KnowledgeItem } from '@orvilo/types';
-import { AGENT_PERMISSION_POLICY_KEYS, CreateAgentSchema, KnowledgeType } from '@orvilo/types';
-import { isRecord } from '@orvilo/utils/object';
+import { CreateAgentSchema, KnowledgeType } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -32,11 +31,9 @@ import {
   TRANSFER_REQUEST_ALREADY_PENDING,
 } from '@/database/models/resourceTransferRequest';
 import { SessionModel } from '@/database/models/session';
-import { TaskModel } from '@/database/models/task';
 import { TopicModel } from '@/database/models/topic';
 import { TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS } from '@/database/models/topicComment';
 import { UserModel } from '@/database/models/user';
-import type { ResourceAccessLevel } from '@/database/schemas';
 import {
   DEFAULT_RESOURCE_ACCESS_LEVELS,
   LEGACY_VIEWER_ACCESS_LEVELS,
@@ -67,28 +64,7 @@ import {
 } from './_helpers/knowledgeBaseAccess';
 import { refuseRetiredAgencyConfigFields } from './_helpers/refuseRetiredAgencyConfigFields';
 import { getResourceConfigAccess, redactAgentConfig } from './_helpers/resourceConfigGuard';
-
-const getAgentPermissionPolicyPatch = (value: Record<string, unknown>) => {
-  const agencyConfig = value.agencyConfig;
-
-  return isRecord(agencyConfig) && AGENT_PERMISSION_POLICY_KEYS.some((key) => key in agencyConfig)
-    ? agencyConfig
-    : null;
-};
-
-const stripAgentPermissionPolicies = (value: Record<string, unknown>) => {
-  const policyPatch = getAgentPermissionPolicyPatch(value);
-  if (!policyPatch) return value;
-
-  const {
-    executionTargetSelectionPolicy: _executionTargetSelectionPolicy,
-    modelSelectionPolicy: _modelSelectionPolicy,
-    topicSharePolicy: _topicSharePolicy,
-    ...safeAgencyConfig
-  } = policyPatch;
-
-  return { ...value, agencyConfig: safeAgencyConfig };
-};
+import { getWorkspaceIssueAgentProfile } from './_helpers/workspaceIssueRead';
 
 const protectAgentConfig = async <T extends Record<string, any>>(
   ctx: {
@@ -206,6 +182,17 @@ export const agentRouter = router({
         ? await ctx.agentModel.getAssignableSessionGroupVisibility(input.groupId)
         : undefined;
 
+      if (
+        ctx.workspaceId &&
+        (folderVisibility === 'private' ||
+          input.visibility === 'private' ||
+          input.config?.visibility === 'private')
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'New workspace Agents must be public',
+        });
+
       if (folderVisibility && input.visibility && input.visibility !== folderVisibility)
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -270,15 +257,7 @@ export const agentRouter = router({
       return result;
     }),
 
-  /**
-   * Bidirectional visibility switch. Rules:
-   * - builtin agents (OrviloAI etc., identified by slug) can never change
-   *   visibility — the workspace copy must stay shared;
-   * - only the agent's creator may pull a published agent back to private
-   *: a workspace owner demoting another member's agent would
-   *   effectively appropriate it, so everyone else gets FORBIDDEN. The UI
-   *   hides the entry for them, this is the server-side backstop.
-   */
+  /** Promote a managed legacy private Agent without removing confirmed Use. */
   setAgentVisibility: agentProcedure
     .use(withScopedPermission('agent:update'))
     .input(
@@ -289,6 +268,9 @@ export const agentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.workspaceId && input.visibility === 'private')
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
+
       const meta = await ctx.agentModel.getAgentVisibilityMeta(input.id);
       if (!meta) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
 
@@ -307,36 +289,22 @@ export const agentRouter = router({
       }
       const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
       const permissionMeta = { ...meta, workspaceId: ctx.workspaceId };
-      const blockingTasksPromise =
-        input.visibility === 'private' && meta.visibility !== input.visibility
-          ? new TaskModel(
-              ctx.serverDB,
-              ctx.userId,
-              ctx.workspaceId,
-            ).countTasksBlockingAgentDemotion(input.id, meta.userId)
-          : Promise.resolve(0);
-      const [, blockingTasks] = await Promise.all([
-        assertCanPerformResourceAction({
-          action: 'changeVisibility',
-          db: ctx.serverDB,
-          grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
-            .workspacePermissionCodes,
-          meta: permissionMeta,
-          resourceId: input.id,
-          resourceType: 'agent',
-          userId: ctx.userId,
-          workspaceId: ctx.workspaceId,
-        }),
-        blockingTasksPromise,
-      ]);
+      await assertCanPerformResourceAction({
+        action: 'changeVisibility',
+        db: ctx.serverDB,
+        grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+          .workspacePermissionCodes,
+        meta: permissionMeta,
+        resourceId: input.id,
+        resourceType: 'agent',
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
 
       if (meta.visibility === input.visibility) {
         const accessLevel =
-          input.visibility === 'public'
-            ? (input.accessLevel ??
-              (await permissionModel.getEffectiveAccessLevel('agent', input.id)))
-            : 'edit';
-        if (input.visibility === 'public' && input.accessLevel) {
+          input.accessLevel ?? (await permissionModel.getEffectiveAccessLevel('agent', input.id));
+        if (input.accessLevel) {
           await permissionModel.setAccessLevel('agent', input.id, input.accessLevel, ctx.userId);
         }
         return buildResourcePermissionState({
@@ -347,51 +315,15 @@ export const agentRouter = router({
         });
       }
 
-      // Other members' tasks must keep a usable executor after demotion.
-      // The owner's shared tasks retain their owner-only Agent execution rights.
-      if (blockingTasks > 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'Cannot make this agent private while other members tasks still depend on it. Reassign those tasks first.',
-        });
-      }
-
-      // Same source-level guard for group chats, but only for the supervisor
-      // role: a private supervisor is unresolvable for every other viewer and
-      // bricks the whole group. Regular members are not blocked — roster
-      // reads drop a non-visible member per viewer instead.
-      if (input.visibility === 'private') {
-        const chatGroupModel = new ChatGroupModel(ctx.serverDB, ctx.userId, ctx.workspaceId);
-        const blockingGroups = await chatGroupModel.countGroupsBlockingAgentDemotion(
-          input.id,
-          meta.userId,
-        );
-        if (blockingGroups > 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message:
-              'Cannot make this agent private while it supervises workspace group chats. Remove it as supervisor first.',
-          });
-        }
-      }
-
       const updated = await ctx.agentModel.setVisibility(input.id, input.visibility);
       if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
 
-      let accessLevel: ResourceAccessLevel;
-      if (input.visibility === 'private') {
-        accessLevel = 'edit';
-        await permissionModel.removeAll('agent', input.id);
-      } else {
-        // Same rule as `publishAgentToWorkspace`: promotion keeps a level the
-        // creator already set while private instead of resetting to the default.
-        accessLevel =
-          input.accessLevel ??
-          (await permissionModel.getAccessLevel('agent', input.id)) ??
-          DEFAULT_RESOURCE_ACCESS_LEVELS.agent;
-        await permissionModel.setAccessLevel('agent', input.id, accessLevel, ctx.userId);
-      }
+      // Promotion keeps the configured level and all exact per-user Use rows.
+      const accessLevel =
+        input.accessLevel ??
+        (await permissionModel.getAccessLevel('agent', input.id)) ??
+        DEFAULT_RESOURCE_ACCESS_LEVELS.agent;
+      await permissionModel.setAccessLevel('agent', input.id, accessLevel, ctx.userId);
 
       return buildResourcePermissionState({
         accessLevel,
@@ -635,6 +567,14 @@ export const agentRouter = router({
     )
     .query(async ({ input, ctx }) => {
       const config = await ctx.agentService.getAgentConfigById(input.agentId);
+      if (!config) {
+        return getWorkspaceIssueAgentProfile(
+          ctx.serverDB,
+          input.agentId,
+          ctx.userId,
+          ctx.workspaceId,
+        );
+      }
       return protectAgentConfig(ctx, input.agentId, config);
     }),
 
@@ -1433,7 +1373,7 @@ export const agentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // General-access write guard: only `edit` permits collaborative updates.
+      // Ordinary Agent settings require author/admin management; per-user Use does not grant it.
       await assertCanEditResource({
         db: ctx.serverDB,
         resourceId: input.agentId,
@@ -1441,29 +1381,6 @@ export const agentRouter = router({
         userId: ctx.userId,
         workspaceId: ctx.workspaceId ?? undefined,
       });
-
-      let safeValue = input.value;
-
-      // Model / execution-environment / topic-share policies govern every member.
-      // Only the creator or workspace primary owner may write them; other
-      // collaborators send a fully merged agencyConfig, so strip the protected
-      // keys instead of comparing and later merging stale values over a newer
-      // owner update.
-      if (ctx.workspaceId) {
-        const policyPatch = getAgentPermissionPolicyPatch(input.value);
-
-        if (policyPatch) {
-          const canUpdatePolicies =
-            (await ctx.agentModel.existsOwnedById(input.agentId)) ||
-            (await isWorkspacePrimaryOwner({
-              db: ctx.serverDB,
-              userId: ctx.userId,
-              workspaceId: ctx.workspaceId,
-            }));
-
-          if (!canUpdatePolicies) safeValue = stripAgentPermissionPolicies(input.value);
-        }
-      }
 
       // Collaborative edit lock: reject writes to a workspace agent another
       // member is actively editing. Inert until a client acquires the lock.
@@ -1480,8 +1397,8 @@ export const agentRouter = router({
 
       // Use AgentService to update and return the updated agent data
       return input.replaceRuntime
-        ? ctx.agentService.updateAgentConfig(input.agentId, safeValue, true)
-        : ctx.agentService.updateAgentConfig(input.agentId, safeValue);
+        ? ctx.agentService.updateAgentConfig(input.agentId, input.value, true)
+        : ctx.agentService.updateAgentConfig(input.agentId, input.value);
     }),
 
   /**
@@ -1567,6 +1484,13 @@ export const agentRouter = router({
     .input(z.object({ agentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.workspaceId) return { expiresAt: null, holderId: null, lockedByOther: false };
+      await assertCanEditResource({
+        db: ctx.serverDB,
+        resourceId: input.agentId,
+        resourceType: 'agent',
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
       const prev = await ctx.editLockService.getActiveHolder('agent', input.agentId);
       const result = await ctx.editLockService.acquire('agent', input.agentId);
       if ((result.holderId ?? null) !== (prev ?? null)) {

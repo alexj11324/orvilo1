@@ -7,7 +7,9 @@ import { deviceService } from '@/services/device';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
-import { DEVICE_LIST_SWR_KEY } from './const';
+import { agentDeviceCandidatesKey, DEVICE_LIST_SWR_KEY } from './const';
+
+const isDeviceQueryReady = (isLogin: boolean | undefined) => isLogin || isDesktop;
 
 /**
  * Workspace-aware device list. ALWAYS use this (not
@@ -28,7 +30,17 @@ import { DEVICE_LIST_SWR_KEY } from './const';
 export const useDeviceList = (): SWRResponse<DeviceListItem[]> => {
   const isLogin = useUserStore(authSelectors.isLogin);
   return useClientDataSWR<DeviceListItem[]>(
-    isLogin || isDesktop ? [DEVICE_LIST_SWR_KEY] : null,
+    isDeviceQueryReady(isLogin) ? [DEVICE_LIST_SWR_KEY] : null,
     () => deviceService.listDevices(),
+  );
+};
+
+/** Runtime membership is server-owned; keep its cache isolated per Agent. */
+export const useAgentDeviceCandidates = (agentId?: string) => {
+  const isLogin = useUserStore(authSelectors.isLogin);
+  return useClientDataSWR<Awaited<ReturnType<typeof deviceService.listAgentCandidates>>>(
+    agentId && isDeviceQueryReady(isLogin) ? agentDeviceCandidatesKey(agentId) : null,
+    () => deviceService.listAgentCandidates({ agentId: agentId! }),
+    { shouldRetryOnError: false },
   );
 };

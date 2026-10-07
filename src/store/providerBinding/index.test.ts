@@ -26,6 +26,11 @@ beforeEach(() => {
 });
 
 describe('Provider account boundaries', () => {
+  it('disables unrelated binding discovery on external agent settings', () => {
+    const view = renderHook(() => useFetchProviderBindings(false));
+    expect(vi.mocked(useClientDataSWR).mock.calls.at(-1)![0]).toBeNull();
+    view.unmount();
+  });
   it('rejects stale list completion even when the same account signs back in', () => {
     const view = renderHook(() => useFetchProviderBindings());
     const oldCallback = vi.mocked(useClientDataSWR).mock.calls.at(-1)![2]!.onSuccess!;

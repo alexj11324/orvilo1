@@ -29,7 +29,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   footer: css`
     font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
+    color: ${cssVar.colorTextSecondary};
     text-align: center;
   `,
   header: css`

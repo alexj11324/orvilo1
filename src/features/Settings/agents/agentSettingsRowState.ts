@@ -23,7 +23,7 @@ export const agentSettingsRowState = ({
   devices: DeviceListItem[];
   error?: unknown;
   loading: boolean;
-  profile: OrviloAgentConfig | null | undefined;
+  profile: Pick<OrviloAgentConfig, 'agencyConfig'> | null | undefined;
   workspaceScoped: boolean;
 }) => {
   const provider = profile?.agencyConfig?.heterogeneousProvider;

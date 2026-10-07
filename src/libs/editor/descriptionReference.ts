@@ -79,5 +79,5 @@ export const validateDescriptionReference = (
 ): DescriptionReference | null => {
   if (!isRecord(value) || typeof value.url !== 'string') return null;
   const reference = parseDescriptionReference(value.url, appOrigin);
-  return reference?.id === value.id && reference.kind === value.kind ? reference : null;
+  return reference && reference.id === value.id && reference.kind === value.kind ? reference : null;
 };

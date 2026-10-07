@@ -16,7 +16,7 @@ export interface TaskIssueTemplateDefinition extends TaskDescriptionSnapshot {
   description?: string | null;
   labelIds: string[];
   name: string | null;
-  priority: number;
+  priority: number | null;
   projectId: string | null;
   teamId: string | null;
 }

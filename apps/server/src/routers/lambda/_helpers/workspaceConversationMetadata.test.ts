@@ -1,4 +1,5 @@
 // @vitest-environment node
+import type { ChatTopicMetadata } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -39,7 +40,7 @@ const topicId = 'conversation-metadata-topic';
 const taskId = 'task_conversation_metadata';
 const runtimeMetadata = {
   workingDirectory: 'fixture-private-directory',
-  workingDirectoryConfig: { custom: 'fixture-private-directory' },
+  workingDirectoryConfig: { path: 'fixture-private-directory' },
   heteroSessionId: 'fixture-native-session',
   heteroMessageId: 'fixture-native-message',
   heteroSessionIdByWorkingDirectory: { fixture: 'fixture-native-session' },
@@ -50,9 +51,12 @@ const runtimeMetadata = {
   bindingRevision: 2,
   model: 'codex',
   provider: 'subscription',
-  runningOperation: { operationId: 'fixture-operation' },
+  runningOperation: {
+    assistantMessageId: 'fixture-assistant-message',
+    operationId: 'fixture-operation',
+  },
   agentHandoffs: [{ at: 'fixture-time', fromAgentId: agentId, toAgentId: agentId }],
-};
+} satisfies ChatTopicMetadata & { heteroMessageId: string };
 const cleanup = async () => {
   await db.delete(users).where(eq(users.id, owner));
   await db.delete(users).where(eq(users.id, member));

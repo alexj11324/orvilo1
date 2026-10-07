@@ -53,6 +53,13 @@ describe('description reference authorized metadata', () => {
     ).rejects.toBe(denied);
   });
 
+  it('reports an unavailable PR reader result instead of exposing a saved preview', async () => {
+    mocks.pullRequest.mockResolvedValue(undefined);
+    await expect(
+      resolveDescriptionReference({ ...pr, title: 'Private snapshot' }, origin),
+    ).rejects.toThrow('Reference not readable');
+  });
+
   it.each([
     { ...pr, url: 'https://evil.example/pull/7' },
     { ...pr, id: 'gh:github.com:private:elsewhere:1' },

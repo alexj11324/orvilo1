@@ -44,7 +44,7 @@ beforeEach(async () => {
     key: 'IPT',
     workspaceId,
     visibility: 'private',
-    userId: owner,
+    createdByUserId: owner,
   });
   await db.insert(agents).values({
     id: 'issue-private-agent',

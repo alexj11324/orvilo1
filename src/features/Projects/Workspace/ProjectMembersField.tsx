@@ -264,7 +264,7 @@ export function ProjectMembersField({
             disabled={!canManage || mutating}
             key={member.userId}
             value={role}
-            items={['contributor', 'manager'].map((value) => ({
+            items={(['contributor', 'manager'] as const).map((value) => ({
               value,
               label: t(`setting:workspaceSetting.members.projectRole.${value}`),
             }))}

@@ -335,9 +335,7 @@ export class TaskListSliceActionImpl {
     // Native questions change the execution projection without writing the
     // task row. Keep the grouped board current throughout the existing run.
     const hasRunningRows = useTaskStore((state) =>
-      state.taskGroups.some((group) =>
-        group.tasks.some((task) => task.status === 'running' || task.status === 'pending'),
-      ),
+      state.taskGroups.some((group) => group.tasks.some((task) => task.status === 'running')),
     );
     // A scoped board's project filter is part of its identity too — flipping
     // the "No project" chip must reset like a scope change, not share the
@@ -426,7 +424,7 @@ export class TaskListSliceActionImpl {
           ...(groupBy === 'status'
             ? {
                 groups: DEFAULT_KANBAN_GROUPS.map((group) => ({
-                  ...group,
+                  key: group.key,
                   limit: groupLimits[group.key] ?? KANBAN_GROUP_PAGE_SIZE,
                   ...('workflowCategories' in group
                     ? { workflowCategories: [...group.workflowCategories] }

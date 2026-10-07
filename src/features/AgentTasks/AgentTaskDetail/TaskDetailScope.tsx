@@ -15,7 +15,13 @@ const TaskDetailTaskIdContext = createContext<string | undefined>(undefined);
  * TaskDetail at narrow widths — and each must read its own task regardless of
  * which one most recently wrote the shared `activeTaskId` slot.
  */
-export const TaskDetailScope = ({ children, taskId }: { children: ReactNode; taskId?: string }) => (
+export const TaskDetailScope = ({
+  children,
+  taskId,
+}: {
+  children?: ReactNode;
+  taskId?: string;
+}) => (
   <TaskDetailTaskIdContext value={taskId}>
     <TaskDescriptionReferenceProvider taskId={taskId}>{children}</TaskDescriptionReferenceProvider>
   </TaskDetailTaskIdContext>

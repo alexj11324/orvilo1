@@ -550,7 +550,6 @@ describe('AI Agent Router Integration Tests', () => {
         agentId: testAgentId,
         userId,
         status: 'running',
-        type: 'execAgent',
       });
     });
 

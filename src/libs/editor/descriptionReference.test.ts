@@ -63,6 +63,11 @@ describe('description reference identity', () => {
     expect(validateDescriptionReference(null, origin)).toBeNull();
   });
 
+  it('rejects unsafe URLs even when imported identity fields are absent', () => {
+    expect(validateDescriptionReference({ url: 'javascript:alert(1)' }, origin)).toBeNull();
+    expect(validateDescriptionReference({ url: '/unrelated' }, origin)).toBeNull();
+  });
+
   it('rejects an imported schema node whose toolbar/export URL differs from its payload', () => {
     const payload = parseDescriptionReference('https://github.com/acme/widgets/pull/7', origin)!;
     expect(

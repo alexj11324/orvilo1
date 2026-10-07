@@ -228,7 +228,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     'rejects admission before dispatch when an assignment is missing: %j',
     async (assignment) => {
       const { prepare, execAgent } = setupHappyPath(baseTask(assignment), []);
-      await expect(newRunner().runTask({ idOrIdentifier: 'task-1' })).rejects.toMatchObject({
+      await expect(newRunner().runTask({ taskId: 'task-1' })).rejects.toMatchObject({
         code: 'PRECONDITION_FAILED',
       });
       expect(prepare).not.toHaveBeenCalled();

@@ -329,9 +329,10 @@ describe('TaskDetailHeaderActions', () => {
     render(<TaskDetailHeaderActions />);
     fireEvent.click(screen.getByRole('button', { name: 'taskDetail.menu.actions' }));
     const destination = item('team')
-      ?.children?.flatMap((group) => group?.children ?? [])
+      ?.children?.flatMap((group) => (group && 'children' in group ? (group.children ?? []) : []))
       .find((child) => child?.key === 'team-team-1');
-    destination?.onClick?.({ domEvent: { stopPropagation: vi.fn() } } as never);
+    if (destination && 'onClick' in destination)
+      destination.onClick?.({ domEvent: { stopPropagation: vi.fn() } } as never);
     await waitFor(() =>
       expect(mocks.moveTeam).toHaveBeenCalledWith({
         expectedDomainRevision: 3,
@@ -347,9 +348,10 @@ describe('TaskDetailHeaderActions', () => {
     render(<TaskDetailHeaderActions />);
     fireEvent.click(screen.getByRole('button', { name: 'taskDetail.menu.actions' }));
     const destination = item('team')
-      ?.children?.flatMap((group) => group?.children ?? [])
+      ?.children?.flatMap((group) => (group && 'children' in group ? (group.children ?? []) : []))
       .find((child) => child?.key === 'team-team-1');
-    destination?.onClick?.({ domEvent: { stopPropagation: vi.fn() } } as never);
+    if (destination && 'onClick' in destination)
+      destination.onClick?.({ domEvent: { stopPropagation: vi.fn() } } as never);
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('teams.transferFailed'));
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
@@ -363,7 +365,9 @@ describe('TaskDetailHeaderActions', () => {
     const entry = item('remove')?.children?.find(
       (child) => child?.key === 'remove-link-resource-1',
     );
-    act(() => entry?.onClick?.({} as never));
+    act(() => {
+      if (entry && 'onClick' in entry) entry.onClick?.({} as never);
+    });
     await waitFor(() => expect(mocks.removeLink).toHaveBeenCalledWith('task-uuid-1', 'resource-1'));
     await waitFor(() => expect(mocks.resourceRefresh).toHaveBeenCalledTimes(1));
   });
@@ -375,8 +379,10 @@ describe('TaskDetailHeaderActions', () => {
     };
     render(<TaskDetailHeaderActions />);
     const entry = item('remove')?.children?.find((child) => child?.key === 'remove-duplicate');
-    expect(entry?.extra).toBe('T-canonical');
-    act(() => entry?.onClick?.({} as never));
+    expect(entry && 'extra' in entry ? entry.extra : undefined).toBe('T-canonical');
+    act(() => {
+      if (entry && 'onClick' in entry) entry.onClick?.({} as never);
+    });
     await waitFor(() =>
       expect(mocks.clearDuplicate).toHaveBeenCalledWith({
         id: 'task-uuid-1',
@@ -416,9 +422,10 @@ describe('TaskDetailHeaderActions', () => {
 
   it('saves a template and exposes the real create-from-template action', async () => {
     render(<TaskDetailHeaderActions />);
-    item('convertTo')
-      ?.children?.find((entry) => entry?.key === 'convert-template')
-      ?.onClick?.({} as never);
+    const template = item('convertTo')?.children?.find(
+      (entry) => entry?.key === 'convert-template',
+    );
+    if (template && 'onClick' in template) template.onClick?.({} as never);
     render(mocks.createModal.mock.calls[0][0].content);
     fireEvent.click(screen.getByRole('button', { name: 'taskDetail.menu.submit.template' }));
     await waitFor(() =>

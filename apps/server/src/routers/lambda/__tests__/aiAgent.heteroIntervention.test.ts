@@ -201,7 +201,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
   const insertOperation = async (id: string, ownerId: string) => {
     await serverDB
       .insert(agentOperations)
-      .values({ id, status: 'running', type: 'execAgent', userId: ownerId })
+      .values({ id, status: 'running', userId: ownerId })
       .onConflictDoNothing();
   };
 

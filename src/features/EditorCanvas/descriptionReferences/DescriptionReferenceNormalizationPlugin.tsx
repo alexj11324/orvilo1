@@ -1,12 +1,7 @@
-import type { SchemaRendererProps } from '@lobehub/editor';
-import {
-  ILinkService,
-  normalizeSchemaLinkNode,
-  useLexicalComposerContext,
-  useLexicalEditor,
-} from '@lobehub/editor';
+import type { normalizeSchemaLinkNode, SchemaRendererProps } from '@lobehub/editor';
+import { Kernel, useLexicalComposerContext, useLexicalEditor } from '@lobehub/editor';
 import type { Klass } from 'lexical';
-import { $getSelection, $isRangeSelection } from 'lexical';
+import { $applyNodeReplacement, $getSelection, $isRangeSelection } from 'lexical';
 import { useLayoutEffect, useRef } from 'react';
 
 import {
@@ -20,6 +15,8 @@ import { DescriptionReferenceChip } from './DescriptionReferenceChip';
 /** Keep clipboard/HTML-created schema nodes safe before they reach persistence or toolbars. */
 export const DescriptionReferenceNormalizationPlugin = ({ appOrigin }: { appOrigin: string }) => {
   const [kernel] = useLexicalComposerContext();
+  if (!(kernel instanceof Kernel))
+    throw new Error('Description references require an editor kernel');
   const schemaClass = useRef<Klass<SchemaRendererProps['node']> | null>(null);
   const linkClass = useRef<Klass<Parameters<typeof normalizeSchemaLinkNode>[0]> | null>(null);
   useLayoutEffect(
@@ -40,9 +37,12 @@ export const DescriptionReferenceNormalizationPlugin = ({ appOrigin }: { appOrig
       // Snapshot during Lexical decoration; the installed SchemaLink reads node getters
       // later during React render, outside the editor state scope.
       kernel.registerDecorator('schema-link', (node, lexical) => {
-        const schema = node as SchemaRendererProps['node'];
-        if (schema.getSchemaType() === DESCRIPTION_REFERENCE_SCHEMA)
-          return <DescriptionReferenceChip referenceNode={schema.exportJSON()} />;
+        if (
+          schemaClass.current &&
+          node instanceof schemaClass.current &&
+          node.getSchemaType() === DESCRIPTION_REFERENCE_SCHEMA
+        )
+          return <DescriptionReferenceChip referenceNode={node.exportJSON()} />;
         return typeof previous === 'function'
           ? previous(node, lexical)
           : previous?.render(node, lexical);
@@ -52,11 +52,12 @@ export const DescriptionReferenceNormalizationPlugin = ({ appOrigin }: { appOrig
             sanitizeDescriptionReferenceNode(node, appOrigin),
           )
         : undefined;
-      const service = kernel.requireService(ILinkService);
+      const SchemaNode = schemaClass.current;
       const unregisterLink =
-        linkClass.current && service
+        linkClass.current && SchemaNode
           ? editor.registerNodeTransform(linkClass.current, (node) => {
-              if (!parseDescriptionReference(node.getURL(), appOrigin)) return;
+              const reference = parseDescriptionReference(node.getURL(), appOrigin);
+              if (!reference) return;
               const selection = $getSelection();
               // The installed normalizer removes selected link text. Move the caret
               // to its parent before replacement so Lexical can commit the chip.
@@ -68,7 +69,16 @@ export const DescriptionReferenceNormalizationPlugin = ({ appOrigin }: { appOrig
                   node.isParentOf(selection.focus.getNode()))
               )
                 node.selectNext();
-              normalizeSchemaLinkNode(node, editor, service);
+              node.replace(
+                $applyNodeReplacement(
+                  new SchemaNode(
+                    reference.url,
+                    DESCRIPTION_REFERENCE_SCHEMA,
+                    reference,
+                    reference.id,
+                  ),
+                ),
+              );
             })
           : undefined;
       return () => {

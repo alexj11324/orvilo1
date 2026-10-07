@@ -1072,6 +1072,7 @@ export interface NewTask {
   deletedAt?: Date | null;
   description?: string | null;
   domainRevision?: number;
+  dueDate?: string | null;
   duplicateOfTaskId?: string | null;
   editorData?: unknown;
   error?: string | null;

@@ -135,13 +135,16 @@ describe('InternalEditor', () => {
         await moment();
       });
       const anchor = view.getByRole('link', { name: /Synthetic accessible PR/ });
-      const { setupRouteInterceptors } =
-        await import('../../../apps/desktop/src/preload/routeInterceptor');
+      const { setupRouteInterceptors } = await vi.importActual<{
+        setupRouteInterceptors: () => void;
+      }>('../../../apps/desktop/src/preload/routeInterceptor');
       const documentListener = vi.spyOn(document, 'addEventListener');
       setupRouteInterceptors();
       const preloadClick = documentListener.mock.calls.find(([event]) => event === 'click')!;
-      const { invoke } = await import('../../../apps/desktop/src/preload/invoke');
-      vi.mocked(invoke).mockClear();
+      const { invoke } = await vi.importMock<{ invoke: ReturnType<typeof vi.fn> }>(
+        '../../../apps/desktop/src/preload/invoke',
+      );
+      invoke.mockClear();
       // The actual desktop document-capture interceptor precedes editor listeners.
       try {
         fireEvent.click(anchor);
@@ -179,6 +182,45 @@ describe('InternalEditor', () => {
       );
       expect(String(instance!.getDocument('markdown'))).toContain(url);
     });
+
+    it.each([true, false])(
+      'keeps sibling content and one pure reference during repeated hydration (editable=%s)',
+      async (editable) => {
+        let instance: IEditor | undefined;
+        render(
+          <MinimalTestWrapper
+            editable={editable}
+            plugins={referencePlugins}
+            onEditorReady={(editor) => {
+              instance = editor;
+            }}
+          />,
+        );
+        await waitFor(() => expect(instance?.getLexicalEditor()).toBeTruthy());
+        await act(async () => {
+          instance!.setDocument('markdown', `**Before** [Private saved preview](${url}) *after*`);
+          normalizeDescriptionReferenceLinks(instance!, origin);
+          await moment();
+        });
+        const first = instance!.getDocument('json');
+        const json = JSON.stringify(first);
+        expect(json.match(/"type":"schema-link"/g)).toHaveLength(1);
+        expect(json).toContain('Before');
+        expect(json).toContain('after');
+        expect(json).not.toContain('Private saved preview');
+        expect(json).not.toContain('Synthetic accessible PR');
+        expect(String(instance!.getDocument('markdown'))).toContain('**Before**');
+        expect(String(instance!.getDocument('markdown'))).toContain('*after*');
+        await act(async () => {
+          instance!.setDocument('json', JSON.stringify(first), { keepId: true });
+          normalizeDescriptionReferenceLinks(instance!, origin);
+          normalizeDescriptionReferenceLinks(instance!, origin);
+          await moment();
+        });
+        expect(JSON.stringify(instance!.getDocument('json'))).toBe(json);
+        expect(instance!.getLexicalEditor()!.isEditable()).toBe(editable);
+      },
+    );
 
     it('renders a clickable authorized chip in a read-only editor after JSON reload', async () => {
       let instance: IEditor | undefined;

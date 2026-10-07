@@ -217,7 +217,6 @@ describe('Task execution Agent Use before effects', () => {
       userId: ownerId,
       agentId,
       topicId,
-      type: 'execAgent',
       status: 'running',
     });
     await testDB.update(taskTopics).set({ operationId }).where(eq(taskTopics.taskId, taskId));

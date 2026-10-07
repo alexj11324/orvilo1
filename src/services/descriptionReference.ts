@@ -30,7 +30,9 @@ export const resolveDescriptionReference = async (
     throw new Error('Reference not readable in this workspace');
 
   if (reference.kind === 'pull-request') {
-    const { data } = await pullRequestService.detail(reference.id);
+    const response = await pullRequestService.detail(reference.id);
+    if (!response) throw new Error('Reference not readable');
+    const { data } = response;
     return {
       isDraft: data.isDraft,
       kind: 'pull-request',

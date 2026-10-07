@@ -11,6 +11,7 @@ import {
   projects,
   taskDependencies,
   taskDispatches,
+  taskIssueTemplates,
   tasks,
   users,
   workspaceMembers,
@@ -204,6 +205,7 @@ describe('TaskIssueDefinitionService', () => {
       triageStatus: 'accepted',
       workflowCategory: 'canceled',
     });
+    // Legacy requested-private workspace Issues follow workspace collaboration.
     const privateSource = await model.create({
       instruction: 'Private',
       workflowCategory: 'todo',
@@ -213,6 +215,17 @@ describe('TaskIssueDefinitionService', () => {
       new TaskIssueDefinitionService(db, readerId, workspaceId).clearDuplicate({
         id: privateSource.id,
         expectedDomainRevision: privateSource.domainRevision,
+      }),
+    ).resolves.toMatchObject({ id: privateSource.id, visibility: 'public' });
+    const personal = await new TaskModel(db, userId).create({
+      instruction: 'Personal private issue',
+      workflowCategory: 'todo',
+      visibility: 'private',
+    });
+    await expect(
+      new TaskIssueDefinitionService(db, readerId).clearDuplicate({
+        id: personal.id,
+        expectedDomainRevision: personal.domainRevision,
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
@@ -251,7 +264,7 @@ describe('TaskIssueDefinitionService', () => {
       ]),
     );
   });
-  it('creates reusable templates with a real consume path and preserves private ACL', async () => {
+  it('shares reusable workspace templates through source Issue readability', async () => {
     const source = await model.create({
       name: 'Template issue',
       instruction: 'Template body',
@@ -275,8 +288,59 @@ describe('TaskIssueDefinitionService', () => {
       automationMode: null,
     });
     const other = new TaskIssueDefinitionService(db, readerId, workspaceId);
-    expect(await other.templates()).toHaveLength(0);
-    await expect(other.createFromTemplate({ templateId: template.id })).rejects.toMatchObject({
+    expect(await other.templates()).toMatchObject([{ id: template.id }]);
+    await expect(other.createFromTemplate({ templateId: template.id })).resolves.toMatchObject({
+      createdByUserId: readerId,
+      visibility: 'public',
+      workspaceId,
+    });
+    const foreign = new TaskIssueDefinitionService(db, readerId, 'foreign-template-workspace');
+    expect(await foreign.templates()).toHaveLength(0);
+    await expect(foreign.createFromTemplate({ templateId: template.id })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+  it('keeps personal and source-less templates creator-only', async () => {
+    const personalModel = new TaskModel(db, userId);
+    const personalService = new TaskIssueDefinitionService(db, userId);
+    const personal = await personalModel.create({
+      instruction: 'Personal private issue',
+      workflowCategory: 'todo',
+      visibility: 'private',
+    });
+    const personalTemplate = await personalService.convertToTemplate({
+      id: personal.id,
+      expectedDomainRevision: personal.domainRevision,
+      name: 'Personal template',
+    });
+    expect(await personalService.templates()).toMatchObject([{ id: personalTemplate.id }]);
+    const personalReader = new TaskIssueDefinitionService(db, readerId);
+    expect(await personalReader.templates()).toHaveLength(0);
+    await expect(
+      personalReader.createFromTemplate({ templateId: personalTemplate.id }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    const [sourceLess] = await db
+      .insert(taskIssueTemplates)
+      .values({
+        definition: {
+          editorData: null,
+          instruction: 'Source-less fixture',
+          labelIds: [],
+          name: null,
+          priority: null,
+          projectId: null,
+          teamId: null,
+        },
+        name: 'Source-less template',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      })
+      .returning();
+    expect((await service.templates()).map((template) => template.id)).toContain(sourceLess.id);
+    const reader = new TaskIssueDefinitionService(db, readerId, workspaceId);
+    expect(await reader.templates()).toHaveLength(0);
+    await expect(reader.createFromTemplate({ templateId: sourceLess.id })).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
   });

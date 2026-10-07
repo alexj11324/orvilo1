@@ -91,7 +91,32 @@ export const getWorkspaceIssueAgentProfile = async (
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.workspaceId, workspaceId)))
     .limit(1);
-  return agent ? redactAgentConfig(agent) : null;
+  if (!agent) return null;
+  const profile = redactAgentConfig(agent);
+  return {
+    ...pick(profile, [
+      'createdAt',
+      'description',
+      'id',
+      'marketIdentifier',
+      'slug',
+      'updatedAt',
+      'userId',
+      'visibility',
+      'workspaceId',
+    ]),
+    agencyConfig: profile.agencyConfig ?? undefined,
+    avatar: profile.avatar ?? undefined,
+    backgroundColor: profile.backgroundColor ?? undefined,
+    chatConfig: profile.chatConfig ?? undefined,
+    model: profile.model ?? undefined,
+    name: profile.name ?? undefined,
+    openingMessage: profile.openingMessage ?? undefined,
+    openingQuestions: profile.openingQuestions ?? undefined,
+    provider: profile.provider ?? undefined,
+    title: profile.title ?? undefined,
+    virtual: profile.virtual ?? undefined,
+  };
 };
 
 const projectIssueQuestions = (source: {

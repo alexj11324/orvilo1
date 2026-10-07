@@ -1,5 +1,6 @@
 import type {
   CheckpointConfig,
+  TaskAttentionReason,
   TaskAutomationMode,
   TaskInstructionSynthesis,
   TaskIntentAnalysis,
@@ -43,6 +44,7 @@ class TaskService {
     /** Per-column page sizes keyed by group key (dynamic groupings only). */
     groupLimits?: Record<string, number>;
     groups?: Array<{
+      attentionReasons?: TaskAttentionReason[];
       key: string;
       limit?: number;
       offset?: number;

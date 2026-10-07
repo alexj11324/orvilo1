@@ -98,6 +98,10 @@ describe('workspace Issue conversation read access', () => {
     });
     expect(profile).not.toHaveProperty('systemRole');
     expect(profile).not.toHaveProperty('plugins');
+    expect(profile).not.toHaveProperty('params');
+    expect(profile).not.toHaveProperty('tts');
+    expect(profile?.avatar).toBeUndefined();
+    expect(profile?.model).toBeUndefined();
     expect(profile).not.toHaveProperty('agencyConfig.heterogeneousProvider.env');
     expect(profile).not.toHaveProperty('agencyConfig.heterogeneousProvider.args');
     await db.update(tasks).set({ assigneeAgentId: null }).where(eq(tasks.id, 'issue-profile-task'));

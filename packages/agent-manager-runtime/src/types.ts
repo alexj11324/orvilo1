@@ -13,7 +13,7 @@ export interface IAgentService {
     agentId?: string;
   }>;
   duplicateAgent: (agentId: string, newTitle?: string) => Promise<{ agentId: string } | null>;
-  getAgentConfigById: (agentId: string) => Promise<OrviloAgentConfig | null>;
+  getAgentConfigById: (agentId: string) => Promise<Partial<OrviloAgentConfig> | null>;
   getRuntimeForCreation: (params: {
     agentId: string;
     model?: string;

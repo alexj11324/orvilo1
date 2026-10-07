@@ -1,5 +1,4 @@
 /** @vitest-environment node */
-import type { IPlugin } from '@lobehub/editor';
 import {
   createHeadlessEditor,
   DEFAULT_HEADLESS_EDITOR_PLUGINS,
@@ -17,8 +16,11 @@ const origin = 'https://orvilo.example';
 const editors: ReturnType<typeof createHeadlessEditor>[] = [];
 const createEditor = () => {
   const schemaRules = createDescriptionReferenceSchemaRules(origin);
-  const plugins = DEFAULT_HEADLESS_EDITOR_PLUGINS.map((plugin): IPlugin =>
-    Array.isArray(plugin) && plugin[0] === LinkPlugin ? [LinkPlugin, { schemaRules }] : plugin,
+  const plugins = DEFAULT_HEADLESS_EDITOR_PLUGINS.map(
+    (
+      plugin,
+    ): NonNullable<NonNullable<Parameters<typeof createHeadlessEditor>[0]>['plugins']>[number] =>
+      Array.isArray(plugin) && plugin[0] === LinkPlugin ? [LinkPlugin, { schemaRules }] : plugin,
   );
   const editor = createHeadlessEditor({ plugins });
   editors.push(editor);

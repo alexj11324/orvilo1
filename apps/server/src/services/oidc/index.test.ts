@@ -90,7 +90,7 @@ describe('OIDCService', () => {
 
   it('getInteractionDetails should delegate to provider with context request/response', async () => {
     const provider = createMockProvider();
-    provider.interactionDetails.mockResolvedValue({ prompt: 'login' });
+    provider.interactionDetails.mockResolvedValue({ prompt: 'login', uid: 'uid-1' });
     vi.mocked(createContextForInteractionDetails).mockResolvedValue({
       req: { id: 'req' },
       res: { id: 'res' },
@@ -101,7 +101,21 @@ describe('OIDCService', () => {
 
     expect(createContextForInteractionDetails).toHaveBeenCalledWith('uid-1');
     expect(provider.interactionDetails).toHaveBeenCalledWith({ id: 'req' }, { id: 'res' });
-    expect(result).toEqual({ prompt: 'login' });
+    expect(result).toEqual({ prompt: 'login', uid: 'uid-1' });
+  });
+
+  it('rejects a UID that does not match the signed interaction cookie', async () => {
+    const provider = createMockProvider();
+    provider.interactionDetails.mockResolvedValue({ uid: 'cookie-interaction' });
+    vi.mocked(createContextForInteractionDetails).mockResolvedValue({
+      req: { id: 'req' },
+      res: { id: 'res' },
+    } as any);
+
+    const service = new OIDCService(provider as any);
+    await expect(service.getInteractionDetails('different-interaction')).rejects.toThrow(
+      'interaction session not found',
+    );
   });
 
   it('getInteractionResult should return provider interaction result', async () => {
@@ -116,7 +130,9 @@ describe('OIDCService', () => {
     const payload = { login: true };
     const result = await service.getInteractionResult('uid-2', payload);
 
-    expect(provider.interactionResult).toHaveBeenCalledWith({ id: 'req' }, { id: 'res' }, payload);
+    expect(provider.interactionResult).toHaveBeenCalledWith({ id: 'req' }, { id: 'res' }, payload, {
+      mergeWithLastSubmission: false,
+    });
     expect(result).toEqual({ ok: true });
   });
 
@@ -153,7 +169,7 @@ describe('OIDCService', () => {
     expect(grant).toBe(existingGrant);
   });
 
-  it('findOrCreateGrants should destroy mismatched grant and create a new one', async () => {
+  it('findOrCreateGrants should preserve another account grant and create the authenticated account grant', async () => {
     const provider = createMockProvider();
     const staleGrant = {
       accountId: 'other-account',
@@ -170,7 +186,7 @@ describe('OIDCService', () => {
     const service = new OIDCService(provider as any);
     const grant = await service.findOrCreateGrants('account-2', 'client-1', 'grant-2');
 
-    expect(staleGrant.destroy).toHaveBeenCalledTimes(1);
+    expect(staleGrant.destroy).not.toHaveBeenCalled();
     expect(provider.Grant).toHaveBeenCalledWith({ accountId: 'account-2', clientId: 'client-1' });
     expect(grant).toBe(createdGrant);
   });
@@ -227,12 +243,12 @@ describe('OIDCService', () => {
       'grant-client-mismatch',
     );
 
-    expect(staleGrant.destroy).toHaveBeenCalledTimes(1);
+    expect(staleGrant.destroy).not.toHaveBeenCalled();
     expect(provider.Grant).toHaveBeenCalledWith({ accountId: 'account-5', clientId: 'client-5' });
     expect(grant).toBe(createdGrant);
   });
 
-  it('findOrCreateGrants should continue when destroy throws during mismatch cleanup', async () => {
+  it('findOrCreateGrants should never call mismatched grant destruction even when it would fail', async () => {
     const provider = createMockProvider();
     const staleGrant = {
       accountId: 'wrong-account',
@@ -249,7 +265,7 @@ describe('OIDCService', () => {
     const service = new OIDCService(provider as any);
     const grant = await service.findOrCreateGrants('account-6', 'client-6', 'grant-error');
 
-    expect(staleGrant.destroy).toHaveBeenCalledTimes(1);
+    expect(staleGrant.destroy).not.toHaveBeenCalled();
     expect(provider.Grant).toHaveBeenCalledWith({ accountId: 'account-6', clientId: 'client-6' });
     expect(grant).toBe(createdGrant);
   });

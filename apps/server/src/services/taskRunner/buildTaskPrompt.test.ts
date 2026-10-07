@@ -22,6 +22,7 @@ import {
   taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '@/database/schemas';
 
@@ -43,6 +44,7 @@ beforeEach(async () => {
       slug: workspaceId,
     })
     .onConflictDoNothing();
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
 });
 
 afterEach(async () => {

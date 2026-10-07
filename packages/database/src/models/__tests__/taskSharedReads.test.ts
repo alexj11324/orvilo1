@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   agents,
+  linearInstallations,
+  linearIssueLinks,
   tasks,
   taskTopics,
   teams,
@@ -204,6 +206,111 @@ describe('workspace Issue reads', () => {
       await readerAgents.getAgentAvatarsByIds(['issue-foreign-personal-agent'], [issue.id]),
     ).toEqual([]);
     await db.delete(users).where(eq(users.id, foreignOwner));
+  });
+
+  it('lets an active installed Linear subject read and update its linked public Issue', async () => {
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'issue-read-linear-org', workspaceId })
+      .returning();
+    const issue = await new TaskModel(db, owner, workspaceId).create({
+      instruction: 'Linked public Issue',
+      visibility: 'public',
+    });
+    await db.insert(linearIssueLinks).values({
+      installationId: installation.id,
+      lastConfirmedSnapshot: {
+        id: 'issue-read-linear-issue',
+        identifier: 'LIN-1',
+        title: 'Linked public Issue',
+      },
+      linearIdentifier: 'LIN-1',
+      linearIssueId: 'issue-read-linear-issue',
+      organizationId: installation.organizationId,
+      taskId: issue.id,
+      workspaceId,
+    });
+    const integration = new TaskModel(db, `linear-installation:${installation.id}`, workspaceId, {
+      managedSubject: true,
+    });
+    expect(await integration.findById(issue.id)).toMatchObject({ id: issue.id });
+    expect(
+      await integration.update(issue.id, { name: 'Linear update' }, { suppressLinearOutbox: true }),
+    ).toMatchObject({ id: issue.id, name: 'Linear update' });
+    expect(await new TaskModel(db, owner, workspaceId).findById(issue.id)).toMatchObject({
+      name: 'Linear update',
+    });
+  });
+
+  it.each([
+    'unknown installation',
+    'paused',
+    'revoked',
+    'error',
+    'no managed option',
+    'unlinked',
+    'wrong installation',
+    'foreign task',
+    'foreign installation',
+    'foreign link',
+    'personal task',
+    'personal scope',
+    'stored private',
+  ] as const)('denies managed Linear Issue access for %s', async (scenario) => {
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({
+        organizationId: 'issue-read-linear-org',
+        status: ['paused', 'revoked', 'error'].includes(scenario)
+          ? (scenario as 'paused' | 'revoked' | 'error')
+          : 'active',
+        workspaceId: scenario === 'foreign installation' ? otherWorkspaceId : workspaceId,
+      })
+      .returning();
+    const issue = await new TaskModel(
+      db,
+      owner,
+      scenario === 'personal task'
+        ? undefined
+        : scenario === 'foreign task'
+          ? otherWorkspaceId
+          : workspaceId,
+    ).create({
+      instruction: 'Restricted Issue',
+      visibility: scenario === 'stored private' ? 'private' : 'public',
+    });
+    let linkedInstallation = installation;
+    if (scenario === 'wrong installation') {
+      [linkedInstallation] = await db
+        .insert(linearInstallations)
+        .values({ organizationId: 'issue-read-other-linear-org', workspaceId })
+        .returning();
+    }
+    if (scenario !== 'unlinked') {
+      await db.insert(linearIssueLinks).values({
+        installationId: linkedInstallation.id,
+        lastConfirmedSnapshot: {
+          id: 'issue-read-linear-issue',
+          identifier: 'LIN-1',
+          title: 'Restricted Issue',
+        },
+        linearIdentifier: 'LIN-1',
+        linearIssueId: 'issue-read-linear-issue',
+        organizationId: linkedInstallation.organizationId,
+        taskId: issue.id,
+        workspaceId: scenario === 'foreign link' ? otherWorkspaceId : workspaceId,
+      });
+    }
+    const principal = `linear-installation:${scenario === 'unknown installation' ? '00000000-0000-4000-8000-000000000099' : installation.id}`;
+    const integration = new TaskModel(
+      db,
+      principal,
+      scenario === 'personal scope' ? undefined : workspaceId,
+      { managedSubject: scenario !== 'no managed option' },
+    );
+    expect(await integration.findById(issue.id)).toBeNull();
+    expect(await integration.update(issue.id, { name: 'Forbidden update' })).toBeNull();
+    expect((await db.select().from(tasks).where(eq(tasks.id, issue.id)))[0].name).toBe(issue.name);
   });
 
   it('keeps personal and cross-workspace Issues scoped and rejects suspended workspace readers', async () => {

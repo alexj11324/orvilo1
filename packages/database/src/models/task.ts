@@ -47,6 +47,7 @@ import { merge } from '@/utils/merge';
 import { agentOperations } from '../schemas/agentOperations';
 import { executionGrants } from '../schemas/executionGrant';
 import { documents } from '../schemas/file';
+import { linearInstallations, linearIssueLinks } from '../schemas/linearSync';
 import { mcpEventTriggers } from '../schemas/mcpEvents';
 import type {
   NewTaskActivity,
@@ -511,11 +512,31 @@ export class TaskModel {
   }
 
   /** Legacy Issue visibility and private-team visibility do not restrict workspace member reads. */
-  private ownership = () =>
-    buildSharedTaskReadableWhere(
+  private ownership = () => {
+    // Internal Linear subjects require an active installation and linked public
+    // Issue; human readers still require active workspace membership.
+    if (this.managedSubject) {
+      if (!this.workspaceId) return sql`false`;
+      return and(
+        eq(tasks.workspaceId, this.workspaceId),
+        eq(tasks.visibility, 'public'),
+        sql`exists (
+          select 1 from ${linearIssueLinks} managed_link
+          join ${linearInstallations} managed_installation
+            on managed_installation.id = managed_link.installation_id
+          where managed_link.task_id = ${tasks.id}
+            and managed_link.workspace_id = ${this.workspaceId}
+            and managed_installation.workspace_id = ${this.workspaceId}
+            and managed_installation.status = 'active'
+            and 'linear-installation:' || managed_installation.id::text = ${this.userId}
+        )`,
+      )!;
+    }
+    return buildSharedTaskReadableWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       { userId: tasks.createdByUserId, workspaceId: tasks.workspaceId },
     );
+  };
 
   /**
    * Issue children follow workspace membership. Their legacy visibility

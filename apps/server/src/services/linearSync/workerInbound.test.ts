@@ -14,6 +14,7 @@ import {
   taskDispatches,
   tasks,
   users,
+  workspaceMembers,
   workspaces,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
@@ -40,6 +41,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
   // Project creation provisions a coordinator via Prime inheritance; strict
   // admission requires an executable workspace-scoped runtime first.
   await seedPrimeRuntime(db, { userId, workspaceId });
@@ -579,9 +581,9 @@ describe('LinearSyncWorker inbound ordering', () => {
         name: 'Workflow task',
         projectId: project.id,
         seq: 1,
-        status: 'running',
+        status: 'backlog',
         visibility: 'public',
-        workflowCategory: 'in_progress',
+        workflowCategory: 'todo',
         workflowStateId: 'linear-state-todo',
         workspaceId,
       })
@@ -633,7 +635,7 @@ describe('LinearSyncWorker inbound ordering', () => {
 
     const [updated] = await db.select().from(tasks).where(eq(tasks.id, task.id));
     expect(updated).toMatchObject({
-      status: 'running',
+      status: 'backlog',
       workflowCategory: 'done',
       workflowStateId: 'linear-state-done',
     });
@@ -896,7 +898,7 @@ describe('LinearSyncWorker inbound ordering', () => {
         seq: 1,
         status: 'backlog',
         visibility: 'public',
-        workflowCategory: 'in_progress',
+        workflowCategory: 'todo',
         workflowStateId: 'linear-state-doing',
         workspaceId,
       })

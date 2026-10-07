@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
-import { users, workspaces } from '../../schemas';
+import { projects, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
 import { ProjectModel } from '../project';
@@ -25,6 +25,11 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'fav-ws',
   });
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId, workspaceId },
+    { role: 'member', userId: otherUserId, workspaceId },
+  ]);
+
   // Project creation provisions a coordinator through Prime inheritance.
   await seedPrimeRuntime(serverDB, { userId, workspaceId });
   await seedPrimeRuntime(serverDB, { userId: otherUserId, workspaceId });
@@ -91,7 +96,6 @@ describe('NavigationFavoriteModel', () => {
     const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
     const visitorTasks = new TaskModel(serverDB, otherUserId, workspaceId);
     const teams = new TeamModel(serverDB, userId, workspaceId);
-    const ownerProjects = new ProjectModel(serverDB, userId, workspaceId);
     const visitorProjects = new ProjectModel(serverDB, otherUserId, workspaceId);
     const visitor = new NavigationFavoriteModel(serverDB, otherUserId, workspaceId);
 
@@ -118,11 +122,16 @@ describe('NavigationFavoriteModel', () => {
       identifier: 'FAV01',
       name: 'Roadmap',
     });
-    const hiddenProject = await ownerProjects.create({
-      identifier: 'HID01',
-      name: 'Hidden Project',
-      visibility: 'private',
-    });
+    const [hiddenProject] = await serverDB
+      .insert(projects)
+      .values({
+        identifier: 'HID01',
+        name: 'Hidden Project',
+        userId,
+        visibility: 'private',
+        workspaceId,
+      })
+      .returning();
 
     await visitor.pin({ targetId: readableTask.id, targetType: 'task' });
     await visitor.pin({ targetId: hiddenTask.id, targetType: 'task' });
@@ -133,7 +142,7 @@ describe('NavigationFavoriteModel', () => {
 
     const listed = await visitor.list();
     expect(listed.find((row) => row.targetId === readableTask.id)?.title).toBe('Board picker');
-    expect(listed.find((row) => row.targetId === hiddenTask.id)?.title).toBeNull();
+    expect(listed.find((row) => row.targetId === hiddenTask.id)?.title).toBe('Secret task');
     expect(listed.find((row) => row.targetId === publicTeam.id)?.title).toBe('Public Team');
     expect(listed.find((row) => row.targetId === privateTeam.id)?.title).toBeNull();
     expect(listed.find((row) => row.targetId === readableProject.id)?.title).toBe('Roadmap');

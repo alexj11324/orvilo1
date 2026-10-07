@@ -13,6 +13,7 @@ import {
   taskDomainEvents,
   tasks,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import { LinearSyncModel } from '../linearSync';
@@ -224,6 +225,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
     const scoped = new TaskModel(db, userId, workspaceId);
     const a = await scoped.create({ instruction: 'A' });
     const b = await scoped.create({ instruction: 'B' });
@@ -243,6 +245,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
     const installationId = '00000000-0000-4000-8000-000000000031';
     await db.insert(linearInstallations).values({
       id: installationId,
@@ -377,7 +380,7 @@ describe('task prerequisite invariants', () => {
     expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(true);
   });
 
-  it('fails closed after visibility changes while allowing the dependent owner to remove the edge', async () => {
+  it('keeps completed prerequisites readable after legacy visibility changes', async () => {
     const workspaceId = 'prerequisite-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -385,18 +388,22 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
     const upstream = await owner.create({ instruction: 'Shared', status: 'completed' });
     const dependent = await member.create({ instruction: 'Dependent' });
     await member.addDependency(dependent.id, upstream.id);
     await owner.updateVisibility(upstream.id, 'private');
-    await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
+    await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
     await member.removeDependency(dependent.id, upstream.id);
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
   });
 
-  it('keeps an outgoing related placeholder when its target becomes private', async () => {
+  it('keeps an outgoing related issue readable when its legacy flag becomes private', async () => {
     const workspaceId = 'related-private-target-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -404,23 +411,29 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
     const current = await owner.create({ instruction: 'Visible issue' });
     const target = await owner.create({ instruction: 'Later private issue' });
     await owner.addDependency(current.id, target.id, 'relates');
     await owner.updateVisibility(target.id, 'private');
-    expect(await member.findById(target.id)).toBeNull();
+    expect(await member.findById(target.id)).toMatchObject({ id: target.id });
     expect(await member.getIssueRelations(current.id)).toMatchObject([
       { dependsOnId: target.id, type: 'relates' },
     ]);
-    expect(await member.getIssueRelations(target.id)).toEqual([]);
+    expect(await member.getIssueRelations(target.id)).toMatchObject([
+      { dependsOnId: current.id, type: 'relates' },
+    ]);
     const [relation] = await member.getIssueRelations(current.id);
     await member.removeDependencyByRelationId(current.id, relation.id);
     expect(await owner.getDependencies(current.id)).toEqual([]);
   });
 
-  it('keeps an incoming related placeholder removable when its source becomes private', async () => {
+  it('keeps an incoming related issue readable and removable after a legacy private flag', async () => {
     const workspaceId = 'related-private-source-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -428,13 +441,17 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
     const source = await owner.create({ instruction: 'Later private source' });
     const current = await member.create({ instruction: 'Visible issue' });
     await owner.addDependency(source.id, current.id, 'relates');
     await owner.updateVisibility(source.id, 'private');
-    expect(await member.findById(source.id)).toBeNull();
+    expect(await member.findById(source.id)).toMatchObject({ id: source.id });
     expect(await member.getIssueRelations(current.id)).toMatchObject([
       { dependsOnId: source.id, type: 'relates' },
     ]);
@@ -453,13 +470,17 @@ describe('prerequisite review regressions', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await db.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
     return {
       owner: new TaskModel(db, userId, workspaceId),
       member: new TaskModel(db, otherUserId, workspaceId),
     };
   };
 
-  it('keeps legacy member-authored edges visible to the dependent owner after demotion', async () => {
+  it('keeps legacy member-authored edges visible to active members after a private flag', async () => {
     const { owner, member } = await workspace();
     const upstream = await owner.create({ instruction: 'Upstream' });
     const dependent = await owner.create({ instruction: 'Shared dependent' });
@@ -471,7 +492,7 @@ describe('prerequisite review regressions', () => {
       .where(eq(taskDependencies.taskId, dependent.id));
     await owner.updateVisibility(dependent.id, 'private');
     expect(await owner.getDependencies(dependent.id)).toHaveLength(1);
-    expect(await member.getDependencies(dependent.id)).toEqual([]);
+    expect(await member.getDependencies(dependent.id)).toHaveLength(1);
     await expect(owner.reserveRun(dependent.id, 'blocked')).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
@@ -482,7 +503,7 @@ describe('prerequisite review regressions', () => {
     expect(await owner.getDependencies(dependent.id)).toEqual([]);
   });
 
-  it('evaluates mixed-visibility readiness in the dependent owner scope regardless of the last completer', async () => {
+  it('evaluates mixed legacy visibility readiness equally for active members', async () => {
     const { owner, member } = await workspace();
     const privateTask = await owner.create({
       instruction: 'Private upstream',
@@ -498,7 +519,7 @@ describe('prerequisite review regressions', () => {
     expect((await member.getUnlockedTasks(publicTask.id)).map(({ id }) => id)).toEqual([
       dependent.id,
     ]);
-    expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(false);
+    expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(true);
     expect(await owner.areAllDependenciesCompleted(dependent.id)).toBe(true);
   });
 

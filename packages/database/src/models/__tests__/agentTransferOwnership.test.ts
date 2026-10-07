@@ -33,6 +33,7 @@ import {
   userConnectors,
   userConnectorTools,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -80,6 +81,19 @@ const withRuntime = async (
 const createOwnerAgent = async (config: Parameters<AgentModel['create']>[0]) =>
   ownerModel.create(await withRuntime(config));
 
+const insertLegacyPrivateOwnerAgent = async (title: string) => {
+  const [agent] = await serverDB
+    .insert(agents)
+    .values({
+      ...(await withRuntime({ title })),
+      userId: ownerId,
+      visibility: 'private',
+      workspaceId: wsId,
+    })
+    .returning();
+  return agent;
+};
+
 const handover = (params: Parameters<AgentModel['transferAgentOwnership']>[1]) =>
   serverDB.transaction(async (trx) => recipientModel.transferAgentOwnership(trx, params));
 
@@ -94,6 +108,11 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'Handover WS', primaryOwnerId: ownerId, slug: 'handover-ws' }]);
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId: ownerId, workspaceId: wsId },
+    { role: 'member', userId: recipientId, workspaceId: wsId },
+    { role: 'member', userId: teammateId, workspaceId: wsId },
+  ]);
 });
 
 afterEach(async () => {
@@ -346,7 +365,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('leaves other members’ projects when a PRIVATE agent is handed over', async () => {
-    const agent = await createOwnerAgent({ title: 'Agent', visibility: 'private' });
+    const agent = await insertLegacyPrivateOwnerAgent('Agent');
     const coordinatorA = await createOwnerAgent({ title: 'Coord A', visibility: 'public' });
     const coordinatorB = await createOwnerAgent({ title: 'Coord B', visibility: 'public' });
     await serverDB.insert(projects).values([
@@ -824,7 +843,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('detaches other users’ tasks from a PRIVATE agent, keeps public-agent tasks intact', async () => {
-    const privateAgent = await createOwnerAgent({ title: 'Private', visibility: 'private' });
+    const privateAgent = await insertLegacyPrivateOwnerAgent('Private');
     const publicAgent = await createOwnerAgent({ title: 'Public', visibility: 'public' });
     await serverDB.insert(tasks).values([
       {
@@ -877,7 +896,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('leaves other members’ groups when a PRIVATE agent is handed over', async () => {
-    const agent = await createOwnerAgent({ title: 'Private', visibility: 'private' });
+    const agent = await insertLegacyPrivateOwnerAgent('Private');
     await serverDB.insert(chatGroups).values([
       { id: 'teammate-group', title: 'T', userId: teammateId, workspaceId: wsId },
       { id: 'recipient-group', title: 'R', userId: recipientId, workspaceId: wsId },

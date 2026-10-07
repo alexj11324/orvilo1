@@ -24,6 +24,9 @@ beforeEach(async () => {
     primaryOwnerId: creator,
     slug: 'ws-1',
   });
+  await clientDB
+    .insert(Schema.workspaceMembers)
+    .values({ role: 'owner', userId: creator, workspaceId: ws });
   // Creation admission requires a resolvable bound host.
   await clientDB.insert(Schema.devices).values([
     {
@@ -61,16 +64,21 @@ describe('workspace private pinned bucket', () => {
   it('pinned private agent goes to privatePinned, not the public pinned bucket', async () => {
     const agentModel = new AgentModel(clientDB, creator, ws);
 
-    const agent = await agentModel.create(
-      withRuntime(
-        {
-          systemRole: '',
-          title: 'Private Agent',
-          visibility: 'private',
-        } as any,
-        ws,
-      ),
-    );
+    const [agent] = await clientDB
+      .insert(Schema.agents)
+      .values({
+        ...withRuntime(
+          {
+            systemRole: '',
+            title: 'Private Agent',
+            visibility: 'private',
+          } as any,
+          ws,
+        ),
+        userId: creator,
+        workspaceId: ws,
+      })
+      .returning();
     await agentModel.update(agent.id, { pinned: true });
 
     const result = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();

@@ -7,6 +7,7 @@ import {
   taskDispatches,
   topics,
   works,
+  workspaceMembers,
   workspaces,
   workVersions,
 } from '../../../schemas';
@@ -895,9 +896,13 @@ describe('WorkModel · workspace task visibility', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: userId2, workspaceId },
+    ]);
   };
 
-  it('hides another member private-task Work from every list path', async () => {
+  it('shows live workspace Issue Work to active members on every list path', async () => {
     await seedWorkspace();
     const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
     const ownerWorks = new WorkModel(serverDB, userId, workspaceId);
@@ -921,18 +926,18 @@ describe('WorkModel · workspace task visibility', () => {
     // The registrant keeps full access.
     expect(await ownerWorks.listByConversation({ topicId })).toHaveLength(1);
 
-    // The other member sees nothing on any list path.
-    expect(await memberWorks.listByConversation({ topicId })).toHaveLength(0);
-    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
+    // The active member can read Work backed by a live workspace Issue.
+    expect(await memberWorks.listByConversation({ topicId })).toHaveLength(1);
+    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(1);
     expect(
       await memberWorks.listSummariesByRootOperations({
         rootOperationIds: ['op-private-visibility'],
       }),
-    ).toEqual({ 'op-private-visibility': [] });
-    expect(await memberWorks.listVersions(work!.id)).toHaveLength(0);
+    ).toMatchObject({ 'op-private-visibility': [{ id: work!.id }] });
+    expect(await memberWorks.listVersions(work!.id)).toHaveLength(1);
   });
 
-  it('keeps public-task Works member-visible until the task flips private', async () => {
+  it('keeps live Issue Work member-visible after its legacy flag flips private', async () => {
     await seedWorkspace();
     const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
     const ownerWorks = new WorkModel(serverDB, userId, workspaceId);
@@ -966,11 +971,11 @@ describe('WorkModel · workspace task visibility', () => {
       .where(eq(works.resourceId, task.id));
     expect(mirrored.visibility).toBe('private');
 
-    expect(await memberWorks.listByConversation({ topicId })).toHaveLength(0);
+    expect(await memberWorks.listByConversation({ topicId })).toHaveLength(1);
     expect(await ownerWorks.listByConversation({ topicId })).toHaveLength(1);
   });
 
-  it('does not let a member register a Work against another member private task', async () => {
+  it('lets an active member register Work against any live workspace Issue', async () => {
     await seedWorkspace();
     const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
     const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
@@ -993,7 +998,7 @@ describe('WorkModel · workspace task visibility', () => {
         taskId: privateTask.id,
         topicId,
       }),
-    ).toBeNull();
+    ).toMatchObject({ userId, visibility: 'private' });
 
     const memberRegisteredPublicWork = await memberWorks.registerTask({
       changeType: 'updated',

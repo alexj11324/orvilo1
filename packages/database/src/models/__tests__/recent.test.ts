@@ -744,6 +744,11 @@ describe('RecentModel', () => {
         await serverDB
           .insert(workspaces)
           .values({ id: workspaceId, name: 'ws', primaryOwnerId: userId, slug: workspaceId });
+        await serverDB.insert(workspaceMembers).values([
+          { role: 'owner', userId, workspaceId },
+          { role: 'member', userId: otherUserId, workspaceId },
+        ]);
+
         await serverDB
           .insert(agents)
           .values({ id: 'agent-ws', userId, slug: 'inbox', workspaceId });
@@ -1076,11 +1081,7 @@ describe('RecentModel', () => {
             userId,
             workspaceId,
           });
-          // project_members carries a composite FK to workspace_members.
-          await serverDB.insert(workspaceMembers).values([
-            { role: 'member', userId: otherUserId, workspaceId },
-            { role: 'owner', userId, workspaceId },
-          ]);
+          // Both actors already have workspace membership for the project grant FK.
           await serverDB.insert(projects).values({
             id: 'recent-proj-granted',
             identifier: 'RG',
@@ -1123,7 +1124,7 @@ describe('RecentModel', () => {
           ]);
         });
 
-        it('does not surface public-visibility private-team task titles to a non-member', async () => {
+        it('surfaces all live workspace tasks to an active member outside the private team', async () => {
           await serverDB.insert(teams).values([
             {
               createdByUserId: userId,
@@ -1202,11 +1203,13 @@ describe('RecentModel', () => {
             'Secret recents task',
           ]);
 
-          const outsider = new RecentModel(serverDB, otherUserId, workspaceId);
-          const outsiderRows = await outsider.queryRecent(20, ['task']);
-          expect(outsiderRows.map((row) => row.title).sort()).toEqual([
+          const otherMember = new RecentModel(serverDB, otherUserId, workspaceId);
+          const otherMemberRows = await otherMember.queryRecent(20, ['task']);
+          expect(otherMemberRows.map((row) => row.title).sort()).toEqual([
             'Assigned recents task',
+            'Private-visibility recents task',
             'Public-team recents task',
+            'Secret recents task',
           ]);
         });
 

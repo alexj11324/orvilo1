@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { users, workspaces } from '../../schemas';
+import { users, workspaceMembers, workspaces } from '../../schemas';
 import { projects } from '../../schemas/project';
 import { teamCycles, teamMembers, teams } from '../../schemas/team';
 import type { OrviloDatabase } from '../../type';
@@ -28,6 +28,10 @@ beforeEach(async () => {
     primaryOwnerId: ownerId,
     slug: 'view-ws',
   });
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId: ownerId, workspaceId },
+    { role: 'member', userId: visitorId, workspaceId },
+  ]);
 });
 
 afterEach(async () => {
@@ -158,10 +162,10 @@ describe('SavedViewModel', () => {
     expect((await ownerViews.findById(view.id))?.name).toBe('Owner view');
   });
 
-  it('redacts private task ids from a shared view definition', async () => {
+  it('retains live workspace task ids in a shared view definition', async () => {
     const ownerTasks = new TaskModel(serverDB, ownerId, workspaceId);
     const secret = await ownerTasks.create({
-      instruction: 'Keep this title off the visitor AST',
+      instruction: 'Legacy private workspace issue',
       name: 'Secret task',
       visibility: 'private',
     });
@@ -185,12 +189,12 @@ describe('SavedViewModel', () => {
     const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
     const presented = await visitorViews.present((await visitorViews.findById(view.id))!);
     const serialized = JSON.stringify(presented.queryAst);
-    expect(serialized).not.toContain(secret.id);
+    expect(serialized).toContain(secret.id);
     expect(serialized).toContain(open.id);
 
     const asVisitor = await visitorViews.evaluate((await visitorViews.findById(view.id))!);
-    expect(asVisitor.tasks?.map((row) => row.id)).toEqual([open.id]);
-    expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Secret task');
+    expect(asVisitor.tasks?.map((row) => row.id).sort()).toEqual([secret.id, open.id].sort());
+    expect(asVisitor.tasks?.map((row) => row.name)).toContain('Secret task');
   });
 
   it('redacts private team ids from a shared view definition', async () => {

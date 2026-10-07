@@ -19,6 +19,7 @@ import {
   tasks,
   userConnectors,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -39,6 +40,11 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'Manifest WS', primaryOwnerId: ownerId, slug: 'manifest-ws' }]);
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId: ownerId, workspaceId: wsId },
+    { role: 'member', userId: recipientId, workspaceId: wsId },
+    { role: 'member', userId: teammateId, workspaceId: wsId },
+  ]);
   // Creation admission requires a resolvable bound host; a codex-typed runtime
   // needs no provider bindings.
   await serverDB.insert(devices).values({
@@ -66,7 +72,14 @@ afterEach(async () => {
 
 describe('buildMemberTransferManifest', () => {
   it('reports the owner’s cron, device binding, and detachable tasks for a private agent', async () => {
-    const agent = await ownerModel.create(withRuntime({ title: 'Agent', visibility: 'private' }));
+    const [agent] = await serverDB
+      .insert(agents)
+      .values({
+        ...withRuntime({ title: 'Agent', visibility: 'private' }),
+        userId: ownerId,
+        workspaceId: wsId,
+      })
+      .returning();
     await serverDB
       .update(agents)
       .set({ agencyConfig: { boundDeviceId: 'dev-1' } })

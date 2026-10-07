@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -9,6 +9,7 @@ import {
   taskComments,
   tasks,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -27,6 +28,12 @@ beforeEach(async () => {
   await db.insert(workspaces).values([
     { id: workspaceA, name: 'Draft A', primaryOwnerId: alice, slug: workspaceA },
     { id: workspaceB, name: 'Draft B', primaryOwnerId: alice, slug: workspaceB },
+  ]);
+  await db.insert(workspaceMembers).values([
+    { role: 'owner', userId: alice, workspaceId: workspaceA },
+    { role: 'member', userId: bob, workspaceId: workspaceA },
+    { role: 'owner', userId: alice, workspaceId: workspaceB },
+    { role: 'member', userId: bob, workspaceId: workspaceB },
   ]);
 });
 
@@ -158,7 +165,10 @@ describe('TaskCommentDraftModel', () => {
     const bobDrafts = new TaskCommentDraftModel(db, bob, workspaceA);
     expect(await bobDrafts.upsert(task.id, 'Work in progress')).not.toBeNull();
 
-    await db.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, task.id));
+    await db
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(and(eq(workspaceMembers.workspaceId, workspaceA), eq(workspaceMembers.userId, bob)));
 
     expect(await bobDrafts.get(task.id)).toBeNull();
     expect(await bobDrafts.list()).toEqual([]);

@@ -10,7 +10,7 @@ import { devices } from '../../schemas/device';
 import { agentsToSessions } from '../../schemas/relations';
 import { sessionGroups, sessions } from '../../schemas/session';
 import { users } from '../../schemas/user';
-import { workspaces } from '../../schemas/workspace';
+import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 import { HomeRepository } from './index';
 
@@ -469,6 +469,7 @@ describe('HomeRepository', () => {
         slug: workspaceId,
       });
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspaceId);
+      await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
       // Creation admission requires a resolvable bound host.
       await serverDB.insert(devices).values({
         deviceId: `creation-host-${workspaceId}`,
@@ -477,16 +478,21 @@ describe('HomeRepository', () => {
         visibility: 'public',
         workspaceId,
       });
-      const agent = await workspaceAgentModel.create({
-        agencyConfig: {
-          boundDeviceId: `creation-host-${workspaceId}`,
-          executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
-        },
-        title: 'Transferred Private Agent',
-        virtual: false,
-        visibility: 'private',
-      });
+      const [agent] = await serverDB
+        .insert(agents)
+        .values({
+          agencyConfig: {
+            boundDeviceId: `creation-host-${workspaceId}`,
+            executionTarget: 'device',
+            heterogeneousProvider: { type: 'codex' },
+          },
+          title: 'Transferred Private Agent',
+          userId,
+          virtual: false,
+          visibility: 'private',
+          workspaceId,
+        })
+        .returning();
 
       await workspaceAgentModel.transferAgent(agent.id, null, userId);
 

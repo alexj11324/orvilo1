@@ -1,15 +1,15 @@
 import { NOTIFICATION_BULK_PREPARE_LIMIT } from '@orvilo/types';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
-import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
 import { agents } from '../../schemas/agent';
 import { messagePlugins, messages } from '../../schemas/message';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
+import { projects } from '../../schemas/project';
 import { projectMembers } from '../../schemas/projectMember';
 import { tasks as tasksTable, taskTopics } from '../../schemas/task';
 import { teamMembers, teams } from '../../schemas/team';
@@ -1235,7 +1235,7 @@ describe('NotificationModel (integration)', () => {
       expect((await model.listFeed()).map((row) => row.title)).toEqual(['System card']);
     });
 
-    it('stops listing a title after workspace visibility is revoked', async () => {
+    it('stops listing an Issue title after workspace membership is suspended', async () => {
       const workspaceId = 'notification-acl-ws';
       await serverDB.insert(workspaces).values({
         id: workspaceId,
@@ -1243,6 +1243,11 @@ describe('NotificationModel (integration)', () => {
         primaryOwnerId: userId,
         slug: 'acl-ws',
       });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+
       const task = await new TaskModel(serverDB, userId, workspaceId).create({
         instruction: 'Hidden later',
         name: 'Hidden later',
@@ -1263,15 +1268,20 @@ describe('NotificationModel (integration)', () => {
       expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
 
       await serverDB
-        .update(tasksTable)
-        .set({ visibility: 'private' })
-        .where(eq(tasksTable.id, task.id));
+        .update(workspaceMembers)
+        .set({ suspendedAt: new Date() })
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, workspaceId),
+            eq(workspaceMembers.userId, otherUserId),
+          ),
+        );
 
       expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
       expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
     });
 
-    it('stops listing a private-team task title after the viewer leaves the team', async () => {
+    it('keeps listing a live Issue title after the member leaves its private team', async () => {
       const workspaceId = 'notification-team-acl-ws';
       await serverDB.insert(workspaces).values({
         id: workspaceId,
@@ -1319,8 +1329,8 @@ describe('NotificationModel (integration)', () => {
 
       await serverDB.delete(teamMembers).where(eq(teamMembers.userId, otherUserId));
 
-      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
-      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Secret title']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
     });
 
     it('keeps a private-team task title for an assignee who is not a team member', async () => {
@@ -1379,11 +1389,16 @@ describe('NotificationModel (integration)', () => {
       ]);
       // Project creation provisions a coordinator through Prime inheritance.
       await seedPrimeRuntime(serverDB, { userId, workspaceId });
-      const project = await new ProjectModel(serverDB, userId, workspaceId).create({
-        identifier: 'SEC06',
-        name: 'Secret Project',
-        visibility: 'private',
-      });
+      const [project] = await serverDB
+        .insert(projects)
+        .values({
+          identifier: 'SEC06',
+          name: 'Secret Project',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        })
+        .returning();
       const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
       await viewer.create(
         baseNotification({
@@ -1413,11 +1428,16 @@ describe('NotificationModel (integration)', () => {
       ]);
       // Project creation provisions a coordinator through Prime inheritance.
       await seedPrimeRuntime(serverDB, { userId, workspaceId });
-      const project = await new ProjectModel(serverDB, userId, workspaceId).create({
-        identifier: 'GRANT',
-        name: 'Granted Project',
-        visibility: 'private',
-      });
+      const [project] = await serverDB
+        .insert(projects)
+        .values({
+          identifier: 'GRANT',
+          name: 'Granted Project',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        })
+        .returning();
       await serverDB.insert(projectMembers).values({
         projectId: project.id,
         role: 'contributor',

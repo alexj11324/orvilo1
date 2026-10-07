@@ -254,8 +254,7 @@ describe('ProjectModel milestone progress', () => {
     }
     await complete(ownerTasks, publicTask.id);
 
-    // Each reader counts their own scope over the same milestone: the owner
-    // sees both issues, the member only the public one.
+    // Both active workspace members count every linked live Issue.
     expect(await readoutFromPlanning(owner, project.id, milestoneId)).toEqual({
       completed: 1,
       issues: 2,
@@ -263,8 +262,8 @@ describe('ProjectModel milestone progress', () => {
     });
     expect(await readoutFromPlanning(member, project.id, milestoneId)).toEqual({
       completed: 1,
-      issues: 1,
-      percent: 100,
+      issues: 2,
+      percent: 50,
     });
   });
 });

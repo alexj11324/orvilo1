@@ -49,17 +49,25 @@ steps aside because a root `.env` exists.
 
 ## Run modes
 
-| Command                            | Starts                                                                                                                                 | Port                    |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `bun run dev`                      | Next.js + Vite SPA concurrently (full stack)                                                                                           | app 3010, SPA 9876      |
-| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend        | 9876                    |
-| `bun run dev:desktop:skip-login`   | Next.js + Electron with an isolated temporary desktop profile; signs in the existing local seed user and verifies renderer/server auth | app 3010, CDP 9263      |
-| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                        | —                       |
-| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                         | 3010 (`-p` to override) |
+| Command                            | Starts                                                                                                                                 | Port                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                   | app 3010, SPA 9876, auth 3018 |
+| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend        | 9876                          |
+| `bun run dev:desktop:skip-login`   | Next.js + Electron with an isolated temporary desktop profile; signs in the existing local seed user and verifies renderer/server auth | app 3010, CDP 9263            |
+| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                        | —                             |
+| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                         | 3010 (`-p` to override)       |
 
-**`APP_URL` is read at runtime.** Auth redirects (sign-in callback, OIDC
-handoff) are built from it, so the server must listen on the same port
-`APP_URL` uses — a server on 3010 with `APP_URL=…:3006` silently breaks login.
+**`bun run dev` derives local auth URLs from its selected ports.** It sets
+`APP_URL` and `INTERNAL_APP_URL` to the selected Next origin, then starts the
+accounts portal on `AUTH_SPA_PORT_RR` (first free port from 3018 by default).
+`AUTH_ACCOUNTS_URL` and `CLERK_AUTHORIZED_PARTIES` use that exact portal origin;
+`AUTH_API_PROXY` and `VITE_PORTAL_PRODUCT_ORIGIN` use the Next origin. All use
+literal `localhost`. An explicit port is used as requested; a busy explicit
+portal port fails instead of silently changing the login destination.
+
+For other server commands, **`APP_URL` is read at runtime**: its port must match
+the listener, because sign-in and OIDC callbacks use it. `dev:spa` retains its
+existing production Debug Proxy workflow; it does not run local full-stack auth.
 
 ## Seeds — which env gets which
 
@@ -71,9 +79,38 @@ handoff) are built from it, so the server must listen on the same port
 
 ## Sign in
 
-After `seed-user`: `http://localhost:3010/signin` →
-`agent-testing@orvilo.aspectlylabs.com` / `TestPassword123!`. First login
-auto-provisions a workspace.
+Normal local sign-in uses the existing Clerk **development instance**. Supply
+these two keys from the same instance through your existing secret workflow
+or development environment configuration (the examples below are placeholders):
+
+```dotenv
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_<development-publishable-key>
+CLERK_SECRET_KEY=sk_test_<development-secret-key>
+# Optional: derived from publishable-key metadata when absent.
+CLERK_ISSUER=https://<development-frontend-api-host>
+```
+
+Enable Google on that instance using Clerk's shared development credentials, or
+its already-configured development Google connection. Existing Clerk projects
+should retain their application and keys; do not run `clerk init` to replace them.
+The publishable key metadata and any declared issuer must agree. Startup rejects
+missing keys, malformed publishable keys, live keys, or mismatched issuers before starting servers,
+with errors naming only the variables. It checks configuration locally; it does
+not authenticate the secret key against Clerk's API.
+
+Run `bun run dev` and open the printed Next URL. `/signin` redirects to the
+printed local accounts portal. Google authentication returns through its
+`/login` route, which exchanges the Clerk token at local `/api/auth/clerk` before
+returning to the product. The resulting host-only `orvilo_auth` cookie retains
+Secure, HttpOnly and SameSite=Lax; local startup clears `AUTH_COOKIE_DOMAIN` in
+child processes. It also clears an inherited `CLERK_JWT_KEY` in child processes,
+so token verification uses the selected development issuer's JWKS rather than a
+parent instance's static public key. Reload should retain the session, and `/api/auth/session`
+should report the signed-in user. Normal Electron sign-in uses this same local
+server and the existing browser/PKCE callback flow.
+
+The seed user and Better Auth helper commands below are legacy test workflows;
+they do not validate the normal Clerk/Google sign-in path.
 
 For Electron development, run `bun run dev:desktop:skip-login` after the local
 database already has the seed user. The command starts Next.js and Electron,
@@ -90,6 +127,7 @@ different port. Both commands require an HTTP server on literal `localhost`.
 | Port | Service                                                  |
 | ---- | -------------------------------------------------------- |
 | 3010 | Next.js app (`APP_URL`)                                  |
+| 3018 | Local Clerk accounts portal (`AUTH_SPA_PORT_RR`)         |
 | 9876 | Vite SPA dev                                             |
 | 5432 | Postgres (brew / `.env.example.development` `orvilo` DB) |
 | 6379 | Redis                                                    |
@@ -109,8 +147,11 @@ The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
   the marker-ordering trap that permanently skips sandwiched migrations — is in
   [`.agents/skills/acceptance-dockerless-env/SKILL.md`](../../.agents/skills/acceptance-dockerless-env/SKILL.md);
   follow it rather than this summary.
-- **Auth redirects to the wrong port / login loops** — `APP_URL` port differs
-  from the listening port (see above).
+- **Local startup rejects Clerk configuration** — use the development publishable
+  key and development secret key from the same existing Clerk instance. If set,
+  `CLERK_ISSUER` must match the publishable key metadata. Production keys are not supported by `bun run dev`.
+- **Auth redirects to the wrong port / login loops** — use the URLs printed by
+  `bun run dev`; for standalone server commands match `APP_URL` to the listener.
 - **`EADDRINUSE`** — `lsof -ti:<port> | xargs kill -9`, or delete
   `.records/env/agent-testing-ports.env` to let the bootstrap re-allocate.
 - **`init-dev-env.sh` exits immediately** — a repo-root `.env` exists and wins

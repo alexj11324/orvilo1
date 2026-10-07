@@ -12,11 +12,13 @@ export type PortalConfig = {
 export const readPortalConfig = (): PortalConfig => {
   const injected = typeof globalThis === 'undefined' ? undefined : globalThis.__PORTAL_CONFIG__;
   return {
-    // Empty on prod: FAPI is reached via its own domain. Local dev sets
-    // VITE_CLERK_PROXY_URL=/__clerk so clerk-js traffic stays same-origin.
+    // FAPI uses its own domain unless an explicit proxy is configured.
     clerkProxyUrl: injected?.clerkProxyUrl ?? import.meta.env.VITE_CLERK_PROXY_URL ?? '',
     clerkPublishableKey:
       injected?.clerkPublishableKey ?? import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ?? '',
-    productOrigin: injected?.productOrigin || 'https://orvilo.aspectlylabs.com',
+    productOrigin:
+      injected?.productOrigin ||
+      (import.meta.env.DEV && import.meta.env.VITE_PORTAL_PRODUCT_ORIGIN) ||
+      'https://orvilo.aspectlylabs.com',
   };
 };

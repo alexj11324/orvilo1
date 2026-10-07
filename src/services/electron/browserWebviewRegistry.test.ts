@@ -32,7 +32,10 @@ describe('browserWebviewRegistry', () => {
         observe = vi.fn();
       },
     );
-    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+    vi.spyOn(
+      document as { createElement: (tagName: string) => HTMLElement },
+      'createElement',
+    ).mockImplementation((tagName: string) => {
       const element = originalCreateElement(tagName);
       if (tagName === 'webview') {
         Object.assign(element, { getWebContentsId: () => 42 });

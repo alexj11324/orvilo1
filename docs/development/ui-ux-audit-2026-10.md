@@ -2,7 +2,9 @@
 
 Findings from a three-layer audit (static code, visual, dynamic journey) of the
 main app surfaces — sidebar/nav, inbox, my-issues, task board, chat/composer,
-agent surfaces — judged against DESIGN.md and the Linear token gate.
+agent surfaces — judged against the DESIGN.md and Linear token gate in force at the time.
+
+This document records historical findings and fixes, not the current normative token contract. The current [DESIGN.md](../../DESIGN.md) owns approved visual roles and scoped measured exceptions; [design-system](../../.agents/skills/design-system/SKILL.md) owns architecture, **react** owns implementation choices, and **ux** owns behavior. Historical classifications such as “13px is drift” and universal mono timestamps below are superseded by those scoped roles. The recorded fixes and evidence remain historical facts, not instructions to repeat the sweep.
 
 ## Fixed
 
@@ -60,8 +62,8 @@ token rule).
 
 ### F6 — Off-ramp typography sweep
 
-Type scale is 12/14/16 with weights 400/500/600. Fixed across the audited
-surfaces: `fontSize: 13` → 12 or 14 (13px is treated as drift),
+The audit then used a 12/14/16 scale with weights 400/500/600. Fixed across the audited
+surfaces: `fontSize: 13` → 12 or 14 (the historical gate treated 13px as drift),
 `fontWeight: 450` → 400/500, `font-bold` → `font-semibold`,
 `text-[13px]`/`text-[12px]` → `text-sm`/`text-xs` (the linear-tokens gate
 rejects arbitrary values on added lines).

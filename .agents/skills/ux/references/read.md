@@ -16,8 +16,8 @@ clear next action (CTA + value props); distinguish "no data yet" (onboarding CTA
 "no match for filters" (clear-filters affordance) — they are different screens. When a
 surface keeps its toolbar/header mounted with no data (so a create / `+` affordance
 stays reachable), the **body** below must still render an empty placeholder —
-persistent chrome is no excuse for dead space. Loading uses a skeleton /
-`NeuralNetworkLoading`, never a flash of blank or a layout shift; error surfaces the
+persistent chrome is no excuse for dead space. Loading uses the appropriate project indicator (see Feedback §4.1 and **react**),
+never a flash of blank or a layout shift; error surfaces the
 reason and a retry/back path.
 
 The single most common way this breaks: the fetch reads only `{ data, isLoading }`, never
@@ -109,7 +109,7 @@ Distinguish `error` (transient → reason + retry, keep the URL) from a resolved
 - [ ] A list merged from a fetched set + a **static/frontend set** (`[...fetched, ...placeholders]`, a catalog padded with "coming soon" rows) branches `error` **before** merging — a failed fetch there keeps `length > 0` via the static entries, so neither the empty guard nor an error-unread call site catches it (a plausible partial catalog); `fallbackData: []` makes it automatic. _(Certainty・Meaningful)_
 - [ ] A detail page reads `error` before falling to `NotFound` — a failed fetch shows a reload state, not a "doesn't exist" 404 (deleted vs failed-to-load are different screens). _(Certainty・Meaningful)_
 - [ ] Always-rendered chrome still renders a body empty placeholder. _(Meaningful)_
-- [ ] Loading designed (skeleton / NeuralNetworkLoading), no layout shift — a detail page's "record not loaded yet" is a skeleton, never a bare `return null` / blank. _(Natural)_
+- [ ] Loading designed (see Feedback §4.1), no layout shift — a detail page's "record not loaded yet" is a skeleton, never a bare `return null` / blank. _(Natural)_
 - [ ] Error designed with reason + retry/back path. _(Meaningful)_
 
 ## 1.2 Lists at scale・Certainty・Natural
@@ -413,56 +413,26 @@ paths that already exist and blesses the absent ones.
 
 ## 1.10 Reuse the canonical list / nav row — don't hand-roll sidebar chrome・Certainty・Natural
 
-A navigation / list **sidebar** (topic list, report list, resource tree — any master-detail
-left panel) is a **solved surface class** in this codebase, and the polish is in the shared
-primitive, not in the individual screen. Rows go through **`NavItem`**
-(`src/features/NavPanel/components/NavItem.tsx`); collapsible groups through
-**`Accordion` / `AccordionItem`** (via the shared **`GroupedAccordion`** engine); the active
-row through **`Block variant='filled'`**; spacing through `Flexbox` / `Block` `gap` /
-`padding` props, never hand-picked px. Composing those buys — for free, and identical to every
-sibling panel — the four things bespoke rows get wrong:
+A navigation / list sidebar is a recurring surface class. Reuse the **current local shared row and grouping components** used by its sibling surfaces rather than rebuilding selection, hover, focus, action reveal, search, and inline editing independently. Inspect the current source before choosing a component: names and implementations change during migrations. **react** owns component/import priority and Tailwind layout mechanics; **DESIGN.md** owns visual roles and values.
 
-1. **The highlight box _is_ the padded content box.** `NavItem` makes the interactive
-   `Block` the hover/active surface, so the highlight always aligns to the row and content
-   can't bleed to the panel edge. A hand-rolled row whose list-container padding, item
-   padding, and highlight radius are chosen independently produces a highlight rectangle that
-   floats / insets differently from the text, and text that runs to the viewport edge.
-2. **The app-wide active treatment.** `variant={active ? 'filled' : 'borderless'}` is _the_
-   active row everywhere. A bespoke `data-active` + `colorFillSecondary` is a slightly-off
-   look that no longer matches the panel next to it.
-3. **A right-aligned `extra` slot + hover-revealed actions**, already solved (timestamp /
-   count on the right; `.nav-item-actions` reveal on `:hover`). Re-implementing the
-   `opacity: 0 → 1` reveal by hand is code that will drift.
-4. **Grouping at scale.** The canonical sidebar offers by-project / by-status / by-time
-   collapsible `Accordion` groups; a hand-rolled panel is almost always a **flat, ungrouped
-   dump** that has no structure once the list grows past a screen.
+Reuse must preserve these outcomes:
 
-The row is also where **Edit** (inline rename) and **Act** (delete / overflow menu) live —
-hand-rolling the row drags those into raw `<input>` / raw `<button>` too, missing the shared
-inline-edit and confirm patterns. Each miss is individually tiny; the sum is exactly what
-"做的非常不成熟 /unpolished" means. **Before building any left-panel list, grep the sibling
-surface (`NavItem`, `Accordion`, `GroupedAccordion`) and compose it**; fall to raw elements
-only for a genuinely novel row. (Component-priority _mechanics_ are in **react**; this is the
-UX consequence — a bespoke row is a visible consistency + craft regression.)
+1. The highlight aligns with the padded interactive content; text and actions do not bleed to the panel edge.
+2. Selection remains clearly visible and uses the same semantic treatment as sibling rows.
+3. Counts and metadata align consistently; row actions are available through hover, keyboard focus, and applicable touch interactions.
+4. Grouping makes large lists navigable, using shared grouping behavior where it exists.
 
-> ✅ **Topic sidebar** (`routes/(main)/agent/_layout/Sidebar/Topic/**`) composes `NavItem` rows
-> inside `Accordion` groups via one shared `GroupedAccordion` engine (by-project / by-status /
-> by-time), `Block variant='filled'` for the active row, and spacing as `Flexbox` / `Block`
-> props — every row aligns to its highlight and matches every other panel in the app.
-> ❌ **Verify report sidebar** (the since-removed `features/Verify/Workspace/ReportListPanel.tsx`) hand-rolls the
-> entire panel: a raw grid `<div className={styles.item}>` row with `data-active` +
-> `colorFillSecondary` (instead of `NavItem` / `Block variant`), a bordered `<label>` + `<input>`
-> search box, a raw `<input>` inline-rename, an `opacity`-toggled action reveal re-implemented
-> CSS, and a **flat, ungrouped** list — so the hover box misaligns from the text, content bleeds
-> to the panel edge, and the surface reads as off-rhythm next to the topic sidebar it sits beside.
+The row also hosts **Edit** (inline rename) and **Act** (delete / overflow menu), so composing it should preserve shared editing, confirmation, and keyboard behavior. A genuinely novel row may need a new implementation; inspect its sibling surfaces first.
+
+> Historical example: the Topic sidebar composed `NavItem`, `Accordion` / `GroupedAccordion`, and `Block variant='filled'`; the since-removed Verify report sidebar rebuilt those behaviors and produced misaligned highlights and ungrouped lists. This explains the reuse principle. It does not mandate the historical `Block` or `Flexbox` implementation for current work; follow **react** and the current local components.
 
 **Checklist**
 
-- [ ] Sidebar / nav list rows go through the canonical `NavItem` (or the surface's shared row primitive), not a hand-rolled `<div>` / `<button>` — so hover/active is the app-wide treatment and the highlight box **is** the padded content box (no floating/misaligned highlight, no edge-bleed). _(Certainty)_
-- [ ] Active row uses `Block variant='filled'` (the shared active treatment), not a bespoke `data-active` + `colorFill*` re-derivation. _(Certainty)_
-- [ ] Grouping at scale reuses `Accordion` / `GroupedAccordion` (by-project / status / time), not a flat ungrouped dump once the list grows past a screen. _(Natural)_
-- [ ] Search box, inline-rename, and row actions reuse the shared input / editing / action-reveal patterns, not raw `<input>` / `<label>` + hand CSS. _(Certainty)_
-- [ ] Spacing/padding expressed as `Flexbox` / `Block` `gap` / `padding` props (inherits the sidebar rhythm), not hand-picked px constants. _(Natural)_
+- [ ] Reuse the surface's current shared row primitive where available; highlights align to the padded content box without edge bleed. _(Certainty)_
+- [ ] Selection uses the approved semantic active treatment and stays visibly consistent with sibling rows. _(Certainty)_
+- [ ] Group large lists using shared grouping behavior; avoid an unstructured dump beyond a screen. _(Natural)_
+- [ ] Search, inline rename, and row actions preserve shared input, editing, action-reveal, and keyboard patterns. _(Certainty)_
+- [ ] Layout follows **react** and spacing follows the semantic roles in **DESIGN.md**. _(Natural)_
 
 ## 1.11 A persistent composer above a list must not bury the records・Meaningful・Natural
 

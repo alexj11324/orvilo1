@@ -114,7 +114,10 @@ describe('pickAndInsertAttachments', () => {
       triggerChange: () => handlers.forEach((handler) => handler()),
       type: '',
     };
-    vi.spyOn(document, 'createElement').mockReturnValue(input as unknown as HTMLElement);
+    vi.spyOn(
+      document as { createElement: (tagName: string) => HTMLElement },
+      'createElement',
+    ).mockReturnValue(input as unknown as HTMLElement);
     return input;
   };
 

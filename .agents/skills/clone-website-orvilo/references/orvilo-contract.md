@@ -7,8 +7,7 @@ The upstream directory is provenance only, not an alternate active skill.
 
 ## Existing application, real outcomes
 
-- Use the existing React/TypeScript, base-ui, antd-style, SPA router, SWR,
-  Zustand, TRPC and database conventions. Read the applicable repository skills.
+- Use the existing React/TypeScript, SPA router, SWR, Zustand, TRPC and database conventions. Read **react** for current local components, adapters, imports, and styling; **DESIGN.md** for approved visual roles/values; **design-system** for token architecture; and **ux** for interaction behavior. Upstream cloning examples do not override those owners.
 - Preserve Orvilo branding and agent-domain surfaces explicitly outside parity.
   Do not copy private user content, avatars, proprietary fonts or brand assets
   into distributed files without the necessary authorization.

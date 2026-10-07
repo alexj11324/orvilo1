@@ -15,32 +15,26 @@ const badgeVariants = cva(
         'default': 'bg-primary text-primary-foreground',
         'outline': 'border-border bg-transparent dark:bg-input/32',
         'secondary': 'bg-secondary text-secondary-foreground',
-        'info': 'bg-info text-white',
-        'success': 'bg-success text-white',
-        'warning': 'bg-warning text-white',
-        'destructive': 'bg-destructive text-white',
+        'info': 'bg-info text-info-on-fill',
+        'success': 'bg-success text-success-on-fill',
+        'warning': 'bg-warning text-warning-on-fill',
+        'destructive': 'bg-destructive text-destructive-on-fill',
         'focus': 'bg-focus text-focus-foreground',
         'invert': 'bg-invert text-invert-foreground',
-        'primary-light':
-          'border-primary/10 bg-primary/10 text-primary dark:border-primary/25 dark:bg-primary/15 dark:text-primary',
-        'warning-light':
-          'border-warning/15 bg-warning/10 text-warning-foreground dark:border-warning/25 dark:bg-warning/15 dark:text-warning',
-        'success-light':
-          'border-success/15 bg-success/10 text-success-foreground dark:border-success/25 dark:bg-success/15 dark:text-success',
-        'info-light':
-          'border-info/15 bg-info/10 text-info-foreground dark:border-info/25 dark:bg-info/15 dark:text-info',
-        'destructive-light':
-          'border-destructive/15 bg-destructive/10 text-destructive-foreground dark:border-destructive/25 dark:bg-destructive/15 dark:text-destructive',
+        'primary-light': 'border-primary/15 bg-primary-subtle text-primary-text',
+        'warning-light': 'border-warning/15 bg-warning-subtle text-warning-text',
+        'success-light': 'border-success/15 bg-success-subtle text-success-text',
+        'info-light': 'border-info/15 bg-info-subtle text-info-text',
+        'destructive-light': 'border-destructive/15 bg-destructive-subtle text-destructive-text',
         'invert-light':
           'border-invert/15 bg-invert/10 text-foreground dark:border-invert/45 dark:bg-invert/35 dark:text-invert-foreground',
         'focus-light':
           'border-focus/15 bg-focus/10 text-focus-foreground dark:border-focus/25 dark:bg-focus/15 dark:text-focus',
-        'primary-outline': 'bg-background border-border text-primary dark:bg-input/30',
-        'warning-outline': 'bg-background border-border text-warning-foreground dark:bg-input/30',
-        'success-outline': 'bg-background border-border text-success-foreground dark:bg-input/30',
-        'info-outline': 'bg-background border-border text-info-foreground dark:bg-input/30',
-        'destructive-outline':
-          'bg-background border-border text-destructive-foreground dark:bg-input/30',
+        'primary-outline': 'bg-background border-border text-primary-text dark:bg-input/30',
+        'warning-outline': 'bg-background border-border text-warning-text dark:bg-input/30',
+        'success-outline': 'bg-background border-border text-success-text dark:bg-input/30',
+        'info-outline': 'bg-background border-border text-info-text dark:bg-input/30',
+        'destructive-outline': 'bg-background border-border text-destructive-text dark:bg-input/30',
         'invert-outline': 'bg-background border-border text-invert-foreground dark:bg-input/30',
         'focus-outline': 'bg-background border-border text-focus-foreground dark:bg-input/30',
       },
@@ -53,7 +47,7 @@ const badgeVariants = cva(
       },
       /** `default`: active style radius. `full`: pill radius. */
       radius: {
-        default: 'rounded-sm',
+        default: 'rounded-(--radius-chip)',
         full: 'rounded-full',
       },
     },

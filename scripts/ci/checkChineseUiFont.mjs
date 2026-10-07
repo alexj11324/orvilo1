@@ -168,6 +168,45 @@ function visitFile(directory) {
       continue;
     }
     const parsed = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const importedNames = (module, exported) =>
+      new Set(
+        parsed.statements.flatMap((statement) => {
+          if (
+            !ts.isImportDeclaration(statement) ||
+            !ts.isStringLiteral(statement.moduleSpecifier) ||
+            statement.moduleSpecifier.text !== module ||
+            !statement.importClause?.namedBindings ||
+            !ts.isNamedImports(statement.importClause.namedBindings)
+          )
+            return [];
+          return statement.importClause.namedBindings.elements
+            .filter((binding) => (binding.propertyName ?? binding.name).text === exported)
+            .map((binding) => binding.name.text);
+        }),
+      );
+    const themeProviders = importedNames('@lobehub/ui', 'ThemeProvider');
+    const fontGenerators = importedNames('@/const/font', 'genFontFamily');
+    const isThemeFontToken = (node) => {
+      if (
+        node.name.getText(parsed).replaceAll(/["']/g, '') !== 'fontFamily' ||
+        !ts.isCallExpression(node.initializer) ||
+        !ts.isIdentifier(node.initializer.expression) ||
+        !fontGenerators.has(node.initializer.expression.text)
+      )
+        return false;
+      const token = node.parent.parent;
+      if (!ts.isPropertyAssignment(token) || token.name.getText(parsed) !== 'token') return false;
+      const expression = token.parent.parent;
+      if (!ts.isJsxExpression(expression)) return false;
+      const attribute = expression.parent;
+      if (!ts.isJsxAttribute(attribute) || attribute.name.text !== 'theme') return false;
+      const provider = attribute.parent.parent;
+      return (
+        (ts.isJsxOpeningElement(provider) || ts.isJsxSelfClosingElement(provider)) &&
+        ts.isIdentifier(provider.tagName) &&
+        themeProviders.has(provider.tagName.text)
+      );
+    };
     const walk = (node) => {
       if (ts.isTemplateExpression(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
         scanCss(node.getText(parsed).slice(1, -1), node.getStart(parsed) + 1);
@@ -176,7 +215,8 @@ function visitFile(directory) {
       }
       if (
         ts.isPropertyAssignment(node) &&
-        ['fontFamily', 'font'].includes(node.name.getText(parsed).replaceAll(/["']/g, ''))
+        ['fontFamily', 'font'].includes(node.name.getText(parsed).replaceAll(/["']/g, '')) &&
+        !isThemeFontToken(node)
       ) {
         checkValue(file, lineAt(node.getStart(parsed)), node.initializer.getText(parsed));
       }

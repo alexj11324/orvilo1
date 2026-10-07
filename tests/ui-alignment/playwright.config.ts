@@ -14,17 +14,28 @@ export default defineConfig({
   ],
   retries: 0,
   testDir: '.',
-  testMatch: 'alignment.spec.ts',
+  projects: [
+    { name: 'alignment', testMatch: 'alignment.spec.ts' },
+    { name: 'design', testMatch: 'design.spec.ts', use: { baseURL: 'http://127.0.0.1:5190' } },
+  ],
   use: {
     baseURL: 'http://127.0.0.1:5188',
     browserName: 'chromium',
     screenshot: 'on',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'pnpm exec vite --config tests/ui-alignment/vite.config.ts',
-    cwd: repository,
-    reuseExistingServer: !process.env.CI,
-    url: 'http://127.0.0.1:5188',
-  },
+  webServer: [
+    {
+      command: 'pnpm exec vite --config tests/ui-alignment/vite.config.ts',
+      cwd: repository,
+      reuseExistingServer: !process.env.CI,
+      url: 'http://127.0.0.1:5188',
+    },
+    {
+      command: 'pnpm exec vite --config tests/ui-alignment/design.vite.config.ts',
+      cwd: repository,
+      reuseExistingServer: !process.env.CI,
+      url: 'http://127.0.0.1:5190',
+    },
+  ],
 });

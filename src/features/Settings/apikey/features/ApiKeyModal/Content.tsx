@@ -131,7 +131,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
           rules={[{ required: true }]}
           style={itemStyle}
         >
-          <Input placeholder={t('apikey.form.fields.name.placeholder')} />
+          <Input className="h-9" placeholder={t('apikey.form.fields.name.placeholder')} />
         </Form.Item>
 
         <Form.Item label={t('apikey.form.fields.expiresAt.label')} style={itemStyle}>
@@ -146,7 +146,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
                 if (value) setExpiryPreset(value);
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full data-[size=default]:h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -159,8 +159,9 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
             </Select>
             {expiryPreset === 'custom' && (
               <ApiKeyDatePicker
+                className="rounded-(--radius-input)"
                 showNeverExpiresFooter={false}
-                style={{ width: '100%' }}
+                style={{ height: 36, width: '100%' }}
                 value={customDate}
                 onChange={setCustomDate}
               />
@@ -185,6 +186,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         <Button
           className="w-full"
           disabled={loading || scopeMissing || customDateMissing}
+          size="lg"
           type={'submit'}
           variant="default"
         >

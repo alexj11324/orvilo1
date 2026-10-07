@@ -1,13 +1,13 @@
 ---
 name: linear-ui-parity
-description: 'Use when implementing or auditing Orvilo screens against the live Linear product: page inventory, systematic discrepancy discovery (layout rules, ARIA inventory, type scale, state matrix), two-way comparison, runtime evidence, and the independent final page review. Pair with `linear-design` for the token values themselves.'
+description: 'Use when implementing or auditing Orvilo screens against the live Linear product: page inventory, systematic discrepancy discovery (layout rules, ARIA inventory, type scale, state matrix), two-way comparison, runtime evidence, and the independent final page review. Pair with `linear-design` for reference provenance and DESIGN.md for approved Orvilo values.'
 ---
 
 # Orvilo ↔ Linear UI parity
 
 The target is symmetric: every Linear element and behavior in the agreed surface must exist in Orvilo, and every visible Orvilo element without a Linear counterpart must be removed or folded into the matching flow. A useful Orvilo-only control is not an acceptable extra by default. Two kinds of exception stand: the intentional contract deltas documented in `linear-design` (for example Drafts and Try in the sidebar), and an explicit user exception. Record every exception's exact scope in the inventory row it affects.
 
-`linear-design` owns the token values (surfaces, type scale, radius, spacing). This skill owns the method: how to find every difference, prove each fix, and close a page.
+Linear owns the observed reference evidence. [DESIGN.md](../../../DESIGN.md) owns approved Orvilo visual roles, values, theme mappings, and scoped measured exceptions; [linear-design](../linear-design/SKILL.md) distinguishes archive provenance from live evidence. This skill owns the comparison method: how to find every difference, prove each fix, and close a page. Reference measurements do not silently override the project contract.
 
 ## 1. Establish a comparable pair
 
@@ -34,7 +34,7 @@ Use [the audit dimensions](references/audit-dimensions.md) for each page, its me
 ## 4. Fix, prove, and guard
 
 - Work in an isolated worktree on a branch per concern; stack on the PR you depend on rather than mixing concerns. Preserve other agents' changes.
-- Every bug fix gets a regression test that fails before the fix. When the fix is a style or layout rule, extract the rule into a shared style module and assert its invariant in a `.test.ts`, and add or extend a layout rule so the whole class of bug is caught in CI. See [implementation pitfalls](references/implementation-pitfalls.md) for the traps that recur on this stack.
+- Every behavior bug fix gets a meaningful regression test that fails before the fix. For style/layout failures, prefer real runtime geometry, clipping, focus, or interaction checks that demonstrate the defect. Follow AGENTS.md: skip a pure CSS test when the only practical assertion mirrors stylesheet source strings; do not extract a shared module solely to assert a CSS literal. See [implementation pitfalls](references/implementation-pitfalls.md) for the traps that recur on this stack.
 - Run the scoped `bun run check --lint --test <files>` and read the test count; full type-check belongs to CI.
 - Exercise the real product path in the affected states, including click results and any write/readback. Attach reviewer-readable evidence (probe output, screenshots of Orvilo) to the PR, bound to the commit SHA. Keep the PR draft while known gaps or verification remain.
 

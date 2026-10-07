@@ -6,14 +6,18 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 - Next.js 16 + React 19 + TypeScript
 - SPA inside Next.js with `react-router-dom`
-- `@lobehub/ui`, antd, and antd-style for UI implementation
+- Local ReUI/shadcn components and adapters, retained `@lobehub/ui` features, antd-style; see the **react** skill for component and styling choices
 - react-i18next for i18n; zustand for state management
 - SWR for data fetching; TRPC for type-safe backend
 - Drizzle ORM with PostgreSQL; Vitest for testing
 
 ## Agent Skills
 
-`AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
+`AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in their owners and cross-reference them; do not maintain equally normative copies.
+
+- **Design system**: Before visual or token work, read the installed [design-system](.agents/skills/design-system/SKILL.md) skill and its applicable token references. It owns primitive → semantic → component architecture and generation guidance. [`DESIGN.md`](./DESIGN.md) owns approved Orvilo visual roles, values, theme mappings, and exceptions. Upstream example palettes, slide scaffolds, `.dark` toggles, and Tailwind v3 configuration examples are examples to adapt to the current project, not a second application contract.
+
+- **Interaction behavior**: Read [ux](.agents/skills/ux/SKILL.md) for user-facing flows and their states. **react** owns component selection, imports, and styling; **DESIGN.md** owns visual values. When changing an owner, synchronize its routed cross-links and checks in the same change.
 
 - **Live application UI parity**: Read `clone-website-orvilo` and its required references before reference collection, specification or implementation. It owns evidence-backed state coverage, isolated builder handoffs and whole-page acceptance; use existing domain skills for the code changes. Its upstream directory is a provenance archive, not an alternate skill.
 
@@ -95,9 +99,10 @@ Use Brave with a copy of the currently used Brave profile when comparing Orvilo 
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
 - Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+- **GitHub Actions automation**: Within the current task, agents may automatically trigger workflows, rerun failed or cancelled jobs, and cancel obsolete or duplicate runs belonging to that task without asking for confirmation each time. Use an already-authorized connector or credential with the required permissions and target the correct repository, workflow and revision. Existing authorization boundaries for deployment, releases and other external effects still apply; a workflow is not authorization to expand the task.
 - **GitHub API credentials (Devin sessions)** — **DO NOT hunt for another token**: the only GitHub credential on a Devin machine is the platform-issued file below. Stop searching elsewhere; if an endpoint fails, report the permission gap instead of looking for a second credential.
   - **File**: `~/.devin/.devin-integration-gh-credentials` (absolute path; line 1 = `github.com/<owner>` + space + token). `gh` is authenticated via `GH_TOKEN` read from it: `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
-  - **Scope**: the `devin-ai-integration[bot]` GitHub App installation token — `contents`/`pull_requests` write (push, PRs, comments, merge-async), `actions`/`checks` **read only**. `actions:write` is **not** granted, so `POST .../dispatches`, `rerun-failed-jobs`, and `cancel` all 403 — those clicks are human-only; ask the user to rerun/dispatch in the GitHub UI or hand them a PAT.
+  - **Scope**: the `devin-ai-integration[bot]` GitHub App installation token — `contents`/`pull_requests` write (push, PRs, comments, merge-async), `actions`/`checks` **read only**. This token lacks `actions:write`, so workflow dispatch, rerun and cancellation requests using it return 403. This is a Devin credential limitation, not a human-approval requirement. Use an already-authorized connector with the required permission when available; otherwise report the permission gap without hunting for another token.
   - **Git protocol credentials** live separately in `~/.devin/.devin-integration-git-credentials` (`https://devin:<token>@git-manager.devin.ai`) — they authenticate the git proxy remote only, not the GitHub API.
 
 ### Cutting a Release
@@ -167,4 +172,4 @@ Tests, lint, and type-check remain separate quality gates; they do not replace p
 
 Before reviewing a PR / diff / branch change, read the **deep-review** skill. Ordinary review requests use its light mode (one independent reviewer against the dimension quick checklists); the full multi-subagent deep mode runs only on explicit invocation.
 
-When designing or reviewing user-facing flows (empty/loading/error states, confirmations, async feedback, button hierarchy, lists at scale, pickers), follow Orvilo's design values in [`DESIGN.md`](./DESIGN.md) — Natural / Meaningful / Certainty / Growth (自然 / 意义感 / 确定性 / 成长).
+When designing or reviewing user-facing flows, use **ux** for interaction behavior and design values, **react** for component/import/styling choices, and [`DESIGN.md`](./DESIGN.md) for the approved visual contract. Use **linear-ui-parity** for live comparison evidence; archived reference values do not override the project contract.

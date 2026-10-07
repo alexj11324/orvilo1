@@ -62,3 +62,46 @@ test('rejects inherited-stack resets and UI monospace', () => {
 test('rejects numeric-weight CSS font shorthand', () => {
   assert.match(checkFixture('const ui = css`font: 400 16px/1.5 SimSun;`'), /400 16px\/1.5 SimSun/);
 });
+
+test('accepts the canonical font generator at the theme-provider token boundary', () => {
+  assert.match(
+    checkFixture(`
+      import { ThemeProvider as RootTheme } from '@lobehub/ui';
+      import { genFontFamily as getUiFont } from '@/const/font';
+      const app = <RootTheme theme={{ token: {
+        fontFamily: getUiFont({ locale: 'zh-CN' }),
+      } }} />;
+    `),
+    /Chinese UI font guard passed/,
+  );
+});
+
+test('still rejects generated local styles, literal theme fonts and unowned generators', () => {
+  assert.match(
+    checkFixture(`
+      import { ThemeProvider } from '@lobehub/ui';
+      import { genFontFamily } from '@/const/font';
+      const local = { fontFamily: genFontFamily({ locale: 'zh-CN' }) };
+      const app = <ThemeProvider theme={{ token: { fontFamily: 'SimSun' } }} />;
+    `),
+    /local font-family override: genFontFamily/,
+  );
+  assert.match(
+    checkFixture(`
+      import { ThemeProvider } from '@lobehub/ui';
+      import { genFontFamily } from '@/const/font';
+      const app = <ThemeProvider theme={{ token: { fontFamily: 'SimSun' } }} />;
+    `),
+    /local font-family override: SimSun/,
+  );
+  assert.match(
+    checkFixture(`
+      import { ThemeProvider } from '@lobehub/ui';
+      import { genFontFamily } from './local-font';
+      const app = <ThemeProvider theme={{ token: {
+        fontFamily: genFontFamily({ locale: 'zh-CN' }),
+      } }} />;
+    `),
+    /local font-family override: genFontFamily/,
+  );
+});

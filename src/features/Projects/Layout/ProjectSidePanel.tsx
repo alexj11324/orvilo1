@@ -73,7 +73,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 12px;
     padding-inline: 11px;
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 10px;
+    border-radius: var(--radius-card);
 
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
   `,

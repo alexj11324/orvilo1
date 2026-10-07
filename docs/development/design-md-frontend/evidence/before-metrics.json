@@ -1,0 +1,804 @@
+{
+  "electron": "43.2.0",
+  "errors": [],
+  "phase": "before",
+  "rows": [
+    {
+      "width": 1280,
+      "theme": "light",
+      "language": "en",
+      "palette": "default",
+      "tokens": {
+        "--primary": "oklch(0.205 0 0)",
+        "--primary-foreground": "oklch(0.985 0 0)",
+        "--background": "oklch(1 0 0)",
+        "--foreground": "oklch(0.145 0 0)",
+        "--sidebar": "oklch(0.985 0 0)",
+        "--radius-input": "",
+        "--radius-overlay": ""
+      },
+      "cards": [
+        {
+          "radius": "6px",
+          "opacity": "1"
+        },
+        {
+          "radius": "6px",
+          "opacity": "1"
+        }
+      ],
+      "menu": {
+        "radius": "10px",
+        "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.145 0 0 / 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px"
+      },
+      "form": [
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(8, 8, 8)",
+          "border": "oklch(0.922 0 0)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(8, 8, 8)",
+          "border": "oklch(0.922 0 0)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(8, 8, 8)",
+          "border": "rgb(8, 8, 8)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "oklch(0.985 0 0)",
+          "border": "rgba(0, 0, 0, 0)",
+          "background": "oklch(0.205 0 0)"
+        }
+      ],
+      "validation": 1,
+      "errors": [
+        {
+          "color": "rgb(236, 94, 65)",
+          "text": "Please enter Name"
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "language": "zh",
+      "palette": "custom",
+      "tokens": {
+        "--primary": "oklch(0.922 0 0)",
+        "--primary-foreground": "oklch(0.205 0 0)",
+        "--background": "oklch(0.145 0 0)",
+        "--foreground": "oklch(0.985 0 0)",
+        "--sidebar": "oklch(0.205 0 0)",
+        "--radius-input": "",
+        "--radius-overlay": ""
+      },
+      "cards": [
+        {
+          "radius": "6px",
+          "opacity": "1"
+        },
+        {
+          "radius": "6px",
+          "opacity": "1"
+        }
+      ],
+      "menu": {
+        "radius": "10px",
+        "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.985 0 0 / 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px"
+      },
+      "form": [
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(255, 255, 255)",
+          "border": "oklch(1 0 0 / 0.15)",
+          "background": "oklab(1 0 0 / 0.045)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(255, 255, 255)",
+          "border": "oklch(1 0 0 / 0.15)",
+          "background": "oklab(1 0 0 / 0.045)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "oklch(0.205 0 0)",
+          "border": "rgba(0, 0, 0, 0)",
+          "background": "oklch(0.922 0 0)"
+        }
+      ],
+      "validation": 1,
+      "errors": [
+        {
+          "color": "rgb(244, 65, 108)",
+          "text": "Please enter 名称"
+        }
+      ]
+    },
+    {
+      "width": 900,
+      "theme": "light",
+      "language": "zh",
+      "palette": "yellow",
+      "tokens": {
+        "--primary": "oklch(0.205 0 0)",
+        "--primary-foreground": "oklch(0.985 0 0)",
+        "--background": "oklch(1 0 0)",
+        "--foreground": "oklch(0.145 0 0)",
+        "--sidebar": "oklch(0.985 0 0)",
+        "--radius-input": "",
+        "--radius-overlay": ""
+      },
+      "cards": [
+        {
+          "radius": "6px",
+          "opacity": "1"
+        },
+        {
+          "radius": "6px",
+          "opacity": "1"
+        }
+      ],
+      "menu": {
+        "radius": "10px",
+        "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.145 0 0 / 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px"
+      },
+      "form": [
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(17, 17, 17)",
+          "border": "oklch(0.922 0 0)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(17, 17, 17)",
+          "border": "oklch(0.922 0 0)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(17, 17, 17)",
+          "border": "rgb(17, 17, 17)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "oklch(0.985 0 0)",
+          "border": "rgba(0, 0, 0, 0)",
+          "background": "oklch(0.205 0 0)"
+        }
+      ],
+      "validation": 1,
+      "errors": [
+        {
+          "color": "rgb(236, 94, 65)",
+          "text": "Please enter 名称"
+        }
+      ]
+    },
+    {
+      "width": 900,
+      "theme": "dark",
+      "language": "en",
+      "palette": "default",
+      "tokens": {
+        "--primary": "oklch(0.922 0 0)",
+        "--primary-foreground": "oklch(0.205 0 0)",
+        "--background": "oklch(0.145 0 0)",
+        "--foreground": "oklch(0.985 0 0)",
+        "--sidebar": "oklch(0.205 0 0)",
+        "--radius-input": "",
+        "--radius-overlay": ""
+      },
+      "cards": [
+        {
+          "radius": "6px",
+          "opacity": "1"
+        },
+        {
+          "radius": "6px",
+          "opacity": "1"
+        }
+      ],
+      "menu": {
+        "radius": "10px",
+        "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.985 0 0 / 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px"
+      },
+      "form": [
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(255, 255, 255)",
+          "border": "oklch(1 0 0 / 0.15)",
+          "background": "oklab(1 0 0 / 0.045)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "rgb(255, 255, 255)",
+          "border": "oklch(1 0 0 / 0.15)",
+          "background": "oklab(1 0 0 / 0.045)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "1px",
+          "radius": "0px",
+          "color": "rgb(255, 255, 255)",
+          "border": "rgb(255, 255, 255)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "height": "32px",
+          "radius": "10px",
+          "color": "oklch(0.205 0 0)",
+          "border": "rgba(0, 0, 0, 0)",
+          "background": "oklch(0.922 0 0)"
+        }
+      ],
+      "validation": 1,
+      "errors": [
+        {
+          "color": "rgb(244, 65, 108)",
+          "text": "Please enter Name"
+        }
+      ]
+    }
+  ],
+  "sourceSHA": "2372352eff950301a0bd789f756c54fdb90c901e"
+}

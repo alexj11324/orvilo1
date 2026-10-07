@@ -8,6 +8,7 @@ interface AccordionArrowIconProps extends Omit<SVGProps<SVGSVGElement>, 'fill'> 
 const AccordionArrowIcon = memo<AccordionArrowIconProps>(
   ({ isOpen = false, size = 18, style, ...rest }) => (
     <svg
+      data-slot="accordion-arrow"
       fill="currentColor"
       fillRule="evenodd"
       height={size}

@@ -21,6 +21,7 @@ const ModalPortal = (props: ModalPortalProps) => <Dialog.Portal {...props} keepM
 type ModalBackdropProps = React.ComponentProps<typeof Dialog.Backdrop>;
 const ModalBackdrop = ({ className, ...rest }: ModalBackdropProps) => (
   <Dialog.Backdrop
+    data-slot="dialog-overlay"
     className={cn(
       'fixed inset-0 isolate bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
       BACKDROP_Z,
@@ -35,9 +36,10 @@ interface ModalPopupProps extends React.ComponentProps<typeof Dialog.Popup> {
 }
 const ModalPopup = ({ className, style, width, ...rest }: ModalPopupProps) => (
   <Dialog.Popup
+    data-slot="dialog-content"
     style={{ maxWidth: width ?? 520, ...style }}
     className={cn(
-      'fixed top-1/2 left-1/2 flex w-full max-w-[calc(100%-32px)] max-h-[calc(100dvh-64px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl bg-popover text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10 outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+      'fixed top-1/2 left-1/2 flex w-full max-w-[calc(100%-32px)] max-h-[calc(100dvh-64px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-(--radius-overlay) bg-popover text-sm text-popover-foreground shadow-(--shadow-dialog) ring-1 ring-foreground/10 outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
       POPUP_Z,
       className,
     )}
@@ -83,6 +85,7 @@ interface AlertModalBackdropProps extends React.ComponentProps<
 > {}
 const AlertModalBackdrop = ({ className, ...rest }: AlertModalBackdropProps) => (
   <AlertDialogPrimitive.Backdrop
+    data-slot="dialog-overlay"
     className={cn(
       'fixed inset-0 isolate bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
       BACKDROP_Z,
@@ -97,9 +100,10 @@ interface AlertModalPopupProps extends React.ComponentProps<typeof AlertDialogPr
 }
 const AlertModalPopup = ({ className, style, width, ...rest }: AlertModalPopupProps) => (
   <AlertDialogPrimitive.Popup
+    data-slot="dialog-content"
     style={{ maxWidth: width ?? 520, ...style }}
     className={cn(
-      'fixed top-1/2 left-1/2 flex w-full max-w-[calc(100%-32px)] max-h-[calc(100dvh-64px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl bg-popover text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10 outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+      'fixed top-1/2 left-1/2 flex w-full max-w-[calc(100%-32px)] max-h-[calc(100dvh-64px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-(--radius-overlay) bg-popover text-sm text-popover-foreground shadow-(--shadow-dialog) ring-1 ring-foreground/10 outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
       POPUP_Z,
       className,
     )}
@@ -125,7 +129,7 @@ const AlertModalClose = ({ className, children, style, ...rest }: AlertModalClos
     aria-label={t('close', { ns: 'common' })}
     style={{ ...modalCloseStyle, ...style }}
     className={cn(
-      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-lg border-none bg-transparent p-0 text-muted-foreground transition-all hover:scale-[1.04] hover:bg-muted hover:text-foreground',
+      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-(--radius-button) border-none bg-transparent p-0 text-muted-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:scale-[1.04] hover:bg-muted hover:text-foreground',
       className,
     )}
     {...rest}
@@ -142,7 +146,7 @@ const ModalClose = ({ className, children, style, ...rest }: ModalCloseProps) =>
     aria-label={t('close', { ns: 'common' })}
     style={{ ...modalCloseStyle, ...style }}
     className={cn(
-      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-lg border-none bg-transparent p-0 text-muted-foreground transition-all hover:scale-[1.04] hover:bg-muted hover:text-foreground',
+      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-(--radius-button) border-none bg-transparent p-0 text-muted-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:scale-[1.04] hover:bg-muted hover:text-foreground',
       className,
     )}
     {...rest}

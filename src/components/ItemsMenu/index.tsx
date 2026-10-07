@@ -25,7 +25,7 @@ export interface MenuProps {
 
 const POPUP_CLASSES = cn(
   POPUP_Z_CLASS,
-  'cn-menu-target cn-menu-translucent max-h-(--available-height) w-max min-w-48 max-w-(--available-width) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none',
+  'cn-menu-target cn-menu-translucent max-h-(--available-height) w-max min-w-48 max-w-(--available-width) overflow-x-hidden overflow-y-auto rounded-(--radius-overlay) bg-popover p-1 text-popover-foreground shadow-(--shadow-popover) ring-1 ring-foreground/10 outline-none',
 );
 
 export interface DropdownMenuProps {
@@ -70,7 +70,11 @@ const DropdownMenu = memo<DropdownMenuProps>(
             side={side}
             sideOffset={6}
           >
-            <MenuPrimitive.Popup className={cn(POPUP_CLASSES, popupClassName)} style={style}>
+            <MenuPrimitive.Popup
+              className={cn(POPUP_CLASSES, popupClassName)}
+              data-slot="dropdown-menu-content"
+              style={style}
+            >
               {renderMenuItems(resolvedItems)}
             </MenuPrimitive.Popup>
           </MenuPrimitive.Positioner>
@@ -97,7 +101,7 @@ const ContextMenuTrigger = memo<ContextMenuTriggerProps>(({ children, items, por
       <ContextMenuPrimitive.Trigger render={children as ReactElement} />
       <ContextMenuPrimitive.Portal {...portalProps}>
         <ContextMenuPrimitive.Positioner className={cn('isolate outline-none', POPUP_Z_CLASS)}>
-          <ContextMenuPrimitive.Popup className={POPUP_CLASSES}>
+          <ContextMenuPrimitive.Popup className={POPUP_CLASSES} data-slot="context-menu-content">
             {renderMenuItems(resolvedItems)}
           </ContextMenuPrimitive.Popup>
         </ContextMenuPrimitive.Positioner>

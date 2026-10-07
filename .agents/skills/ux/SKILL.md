@@ -15,12 +15,11 @@ conceptual layer; the execution checklists live in per-module reference files (s
 
 ## What lives where: DESIGN.md vs this skill
 
-Two documents, two jobs — don't duplicate; cross-reference.
+Each owner has one job — cross-reference rather than duplicate.
 
-- **[`DESIGN.md`](../../../DESIGN.md)** — the design **system**: what the product looks
-  and sounds like. Themeable tokens (color, typography, elevation, radius), the component
-  inventory, and Voice & Content (wording, tone). Reach for it when you need a token
-  value, a component, or copy tone.
+- **[`DESIGN.md`](../../../DESIGN.md)** — approved Orvilo visual roles, values, theme mappings, exceptions, and Voice & Content. Reach for it for visual values and copy tone.
+- **[design-system](../design-system/SKILL.md)** — token architecture and generation guidance; its examples are adapted through DESIGN.md.
+- **[react](../react/SKILL.md)** — component inventory/selection, imports, styling, and layout implementation.
 - **this `ux` skill** — interaction **behavior**: how a flow should behave over time.
   Empty / loading / error states, lists at scale, selection visibility, pickers, number
   formatting, draft safety, action flow & momentum, button hierarchy, entity lifecycle,
@@ -66,16 +65,7 @@ whether an element describes the current object or acts on it.
 
 ### Compose the canonical surface component, don't re-derive it・Certainty・Natural
 
-When a surface class already has a canonical component in this codebase — a sidebar row →
-`NavItem`, a collapsible group → `Accordion` / `GroupedAccordion`, an active surface →
-`Block variant='filled'` — **compose it**, don't rebuild the chrome from raw
-`<div>`/`<button>`/`<input>` + a bespoke `createStaticStyles` block. A hand-rolled parallel
-re-derives padding, hover/active states, alignment, and reveal-on-hover by hand, and drifts
-from its siblings on each one — the aggregate reads as "unpolished" even when every single gap
-is tiny. Before building a list / nav / master-detail panel, find the primitive the sibling
-surface uses (grep `NavItem`, `Accordion`) and compose it; fall to raw elements only for a
-genuinely novel row. See **[Read §1.10](references/read.md)** for the full pattern; the
-**react** component-priority rule covers the mechanics.
+When a surface already has a shared row or grouping component, compose the current sibling implementation so selection, focus, hover, action reveal, and editing behave consistently. Find the current local navigation/list primitives before building parallel chrome. A novel surface can need a new row; component selection and Tailwind layout mechanics belong to **react**, and visual roles belong to **DESIGN.md**. See **[Read §1.10](references/read.md)** for the behavioral checks.
 
 ## Checklist modules
 

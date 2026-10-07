@@ -1,6 +1,7 @@
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import { AlertTriangle, CheckCircle, ExternalLink, Terminal } from 'lucide-react';
+import { useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -56,7 +57,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   dependencyCard: css`
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusSM};
+    border-radius: var(--radius-card);
   `,
   footer: css`
     display: flex;
@@ -74,6 +75,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
   ({ identifier, systemDependencies }) => {
     const { t } = useTranslation(['plugin', 'common']);
+    const theme = useTheme();
+    const reducedMotion = useReducedMotion();
+    const motionEnabled = theme.motion !== false && !reducedMotion;
     const [installMCPPlugin, cancelInstallMCPPlugin] = useToolStore((s) => [
       s.installMCPPlugin,
       s.cancelInstallMCPPlugin,
@@ -97,14 +101,16 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
       <m.div
         animate={{ y: 0 }}
         className={styles.container}
-        initial={{ y: 8 }}
-        transition={{ delay: 0.1, duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+        initial={motionEnabled ? { y: 8 } : false}
+        transition={
+          motionEnabled ? { delay: 0.1, duration: 0.2, ease: [0.4, 0, 0.2, 1] } : { duration: 0 }
+        }
       >
         <m.div
           animate={{ opacity: 1, y: 0 }}
-          initial={{ opacity: 0, y: 4 }}
+          initial={motionEnabled ? { opacity: 0, y: 4 } : false}
           style={{ marginBottom: 8 }}
-          transition={{ delay: 0.15, duration: 0.2 }}
+          transition={motionEnabled ? { delay: 0.15, duration: 0.2 } : { duration: 0 }}
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
@@ -119,8 +125,8 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
 
         <m.div
           animate={{ opacity: 1, y: 0 }}
-          initial={{ opacity: 0, y: 4 }}
-          transition={{ delay: 0.2, duration: 0.2 }}
+          initial={motionEnabled ? { opacity: 0, y: 4 } : false}
+          transition={motionEnabled ? { delay: 0.2, duration: 0.2 } : { duration: 0 }}
         >
           <div className="flex flex-col gap-2">
             {systemDependencies.map((dep) => (
@@ -142,14 +148,14 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                         {dep.meetRequirement ? (
                           <>
                             <CheckCircle color={cssVar.colorSuccess} size={14} />
-                            <span className="text-[12px] text-success">
+                            <span className="text-[12px] text-success-text">
                               {t('mcpInstall.dependencyStatus.installed')}
                             </span>
                           </>
                         ) : (
                           <>
                             <AlertTriangle color={cssVar.colorWarning} size={14} />
-                            <span className="text-[12px] text-warning">
+                            <span className="text-[12px] text-warning-text">
                               {t('mcpInstall.dependencyStatus.notInstalled')}
                             </span>
                           </>
@@ -192,8 +198,8 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
         <m.div
           animate={{ opacity: 1, y: 0 }}
           className={styles.footer}
-          initial={{ opacity: 0, y: 4 }}
-          transition={{ delay: 0.3, duration: 0.2 }}
+          initial={motionEnabled ? { opacity: 0, y: 4 } : false}
+          transition={motionEnabled ? { delay: 0.3, duration: 0.2 } : { duration: 0 }}
         >
           <div className="flex justify-between">
             <Button size="sm" onClick={handleCancel}>

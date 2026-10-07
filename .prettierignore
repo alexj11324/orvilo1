@@ -79,3 +79,6 @@ packages/heterogeneous-agents/src/aegis/files.generated.ts
 
 # Frozen v4 execution packet — keep original bytes / SHA256SUMS
 docs/implementation/navigation-attention-v4/**
+
+# Installed upstream design-system skill — preserve upstream bytes
+.agents/skills/design-system/**

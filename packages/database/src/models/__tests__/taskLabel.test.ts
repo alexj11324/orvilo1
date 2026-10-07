@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskLabelBindings, taskLabels, users, workspaces } from '../../schemas';
+import { taskLabelBindings, taskLabels, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskLabelModel } from '../taskLabel';
@@ -31,6 +31,11 @@ beforeEach(async () => {
       primaryOwnerId: otherUserId,
       slug: 'task-label-test-ws-2',
     },
+  ]);
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId, workspaceId },
+    { role: 'member', userId: otherUserId, workspaceId },
+    { role: 'owner', userId: otherUserId, workspaceId: otherWorkspaceId },
   ]);
 });
 

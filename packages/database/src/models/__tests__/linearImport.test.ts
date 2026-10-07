@@ -11,6 +11,7 @@ import {
   projects,
   tasks,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -46,6 +47,7 @@ beforeEach(async () => {
   await db
     .insert(workspaces)
     .values({ id: workspaceId, name: 'Import test', slug: workspaceId, primaryOwnerId: userId });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
   await db
     .insert(linearInstallations)
     .values({ id: installationId, organizationId: 'org-1', workspaceId });

@@ -10,6 +10,7 @@ import {
   taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -40,6 +41,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
   await db.insert(agents).values([
     { id: 'agent-a', slug: 'agent-a', userId, workspaceId },
     { id: 'agent-b', slug: 'agent-b', userId, workspaceId },

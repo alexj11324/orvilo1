@@ -21,6 +21,7 @@ import {
   tasks,
   teams,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -57,6 +58,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
   await seedPrimeRuntime(db, { userId, workspaceId });
 });
 

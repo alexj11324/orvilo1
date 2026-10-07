@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { seedPrimeRuntime } from '../../../fixtures/seedPrimeRuntime';
-import { projectWorks, topics, works, workspaces } from '../../../schemas';
+import { projectWorks, topics, works, workspaceMembers, workspaces } from '../../../schemas';
 import { AgentDocumentModel } from '../../agentDocuments';
 import { ProjectModel } from '../../project';
 import { TaskModel } from '../../task';
@@ -245,6 +245,7 @@ describe('WorkModel · listByWorkspace', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
 
     const taskModel = new TaskModel(serverDB, userId, workspaceId);
     const workModel = new WorkModel(serverDB, userId, workspaceId);

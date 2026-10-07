@@ -180,6 +180,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
           detail?.project.id ? (
             <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
               <Badge
+                className="text-xs"
                 radius="full"
                 size="sm"
                 style={{ color: headerStatusVisual.color }}

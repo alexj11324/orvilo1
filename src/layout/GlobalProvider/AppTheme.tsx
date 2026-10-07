@@ -20,6 +20,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors, userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { GlobalStyle } from '@/styles';
+import { ThemeRoles } from '@/styles/themeRoles';
 import { setCookie } from '@/utils/client/cookie';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -188,6 +189,7 @@ const AppTheme = memo<AppThemeProps>(
         >
           {!!customFontURL && <FontLoader url={customFontURL} />}
           <GlobalStyle />
+          <ThemeRoles />
           {children}
         </ThemeProvider>
       </ConfigProvider>

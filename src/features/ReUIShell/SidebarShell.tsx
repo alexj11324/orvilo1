@@ -2,7 +2,6 @@
 
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
-import { useTheme } from 'next-themes';
 import { type CSSProperties, useEffect, useLayoutEffect } from 'react';
 
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
@@ -18,37 +17,12 @@ import { SHELL9_SIDEBAR_ICON_WIDTH, SHELL9_SIDEBAR_WIDTH } from './constants';
 
 const SIDEBAR_STYLE = {
   '--header-height': '50px',
-  '--sidebar': 'var(--color-zinc-900)',
-  '--sidebar-accent': 'var(--color-zinc-800)',
-  '--sidebar-accent-foreground': 'var(--color-zinc-100)',
-  '--sidebar-border': 'color-mix(in oklab, var(--color-zinc-700) 52%, transparent)',
-  '--sidebar-foreground': 'var(--color-zinc-100)',
-  '--sidebar-primary': 'var(--color-zinc-100)',
-  '--sidebar-primary-foreground': 'var(--color-zinc-900)',
-  '--sidebar-ring': 'var(--color-zinc-400)',
-  '--sidebar-muted': 'var(--color-zinc-300)',
-  '--sidebar-group': 'var(--color-zinc-400)',
   '--sidebar-width': `${SHELL9_SIDEBAR_WIDTH}px`,
   '--sidebar-width-icon': `${SHELL9_SIDEBAR_ICON_WIDTH}px`,
 };
 
 const useNativeTransparency = isDesktop && isMacOS();
-const DARK_NATIVE_SIDEBAR_STYLE = { ...SIDEBAR_STYLE, '--sidebar': 'transparent' };
-const LIGHT_SIDEBAR_STYLE = {
-  ...SIDEBAR_STYLE,
-  '--sidebar': 'transparent',
-  '--sidebar-accent': 'color-mix(in oklab, var(--color-zinc-300) 60%, transparent)',
-  '--sidebar-accent-foreground': 'var(--color-zinc-950)',
-  '--sidebar-border': 'color-mix(in oklab, var(--color-zinc-400) 45%, transparent)',
-  '--sidebar-foreground': 'var(--color-zinc-900)',
-  '--sidebar-primary': 'var(--color-zinc-900)',
-  '--sidebar-primary-foreground': 'var(--color-zinc-50)',
-  '--sidebar-muted': 'var(--color-zinc-700)',
-  '--sidebar-group': 'var(--color-zinc-600)',
-};
-// Solid-background variant of the light palette for platforms without
-// macOS vibrancy (web, non-Mac desktop, mobile).
-const LIGHT_SOLID_SIDEBAR_STYLE = { ...LIGHT_SIDEBAR_STYLE, '--sidebar': 'var(--color-zinc-100)' };
+const NATIVE_SIDEBAR_STYLE = { ...SIDEBAR_STYLE, '--sidebar': 'transparent' };
 
 // The host's unlayered Ant Design link/reset rules otherwise override the source utilities.
 const hostStyles = createStaticStyles(({ css }) => ({
@@ -74,7 +48,7 @@ const hostStyles = createStaticStyles(({ css }) => ({
 
     [data-sidebar='menu-button'][data-active] {
       color: var(--sidebar-accent-foreground);
-      background: var(--sidebar-accent);
+      background: var(--selected);
     }
 
     [data-slot='sidebar-menu-sub-button'] {
@@ -88,7 +62,7 @@ const hostStyles = createStaticStyles(({ css }) => ({
 
     [data-slot='sidebar-menu-sub-button'][data-active] {
       color: var(--sidebar-accent-foreground);
-      background: var(--sidebar-accent);
+      background: var(--selected);
     }
 
     [data-slot='sidebar-group-label'] {
@@ -133,14 +107,7 @@ function MobileBodyTheme({ sidebarStyle }: { sidebarStyle: typeof SIDEBAR_STYLE 
 }
 
 export function SidebarShell() {
-  const { resolvedTheme } = useTheme();
-  const sidebarStyle = useNativeTransparency
-    ? resolvedTheme === 'light'
-      ? LIGHT_SIDEBAR_STYLE
-      : DARK_NATIVE_SIDEBAR_STYLE
-    : resolvedTheme === 'light'
-      ? LIGHT_SOLID_SIDEBAR_STYLE
-      : SIDEBAR_STYLE;
+  const sidebarStyle = useNativeTransparency ? NATIVE_SIDEBAR_STYLE : SIDEBAR_STYLE;
   const isMobile = useIsMobile();
   const [open, drawerOpen, setOpen, setDrawerMode] = useGlobalStore((state) => [
     systemStatusSelectors.showLeftPanel(state),

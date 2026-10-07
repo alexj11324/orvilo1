@@ -73,6 +73,15 @@ const historicalEntries: JournalEntry[] = [
 const isHistoricalEntry = (entry: JournalEntry) =>
   historicalEntries.some((historical) => historical.tag === entry.tag);
 
+const entriesBeforeCoreRepair = (entries: JournalEntry[]) => {
+  const repairIndex = entries.findIndex(
+    (entry) => entry.tag === '0205_core_execution_storage_forward_repair',
+  );
+  if (repairIndex === -1)
+    throw new Error('Core storage forward repair is missing from the journal');
+  return entries.slice(0, repairIndex).filter((entry) => !isHistoricalEntry(entry));
+};
+
 describe('migration journal integrity', () => {
   const journal = readJournal(migrationsFolder);
   const canonicalEntries = journal.entries.filter((entry) => !isHistoricalEntry(entry));
@@ -211,6 +220,40 @@ const stageMigrationsFolder = (entries: JournalEntry[]): string => {
 };
 
 describe('Core storage forward repair (PGlite)', () => {
+  it('keeps Core storage absent until its exact repair boundary even with later migrations', async () => {
+    // Replay the receipt-bearing SQL selected by the same Stage A fixture as the
+    // real Postgres restart test; unrelated full-schema DDL is covered there.
+    const stageEntries = entriesBeforeCoreRepair(realEntries);
+    const receiptTags = new Set([
+      '0199_core_execution_authority',
+      '0205_core_execution_storage_forward_repair',
+    ]);
+    const stageA = stageMigrationsFolder(
+      stageEntries.filter((entry) => receiptTags.has(entry.tag)),
+    );
+    const stageB = stageMigrationsFolder([
+      journalEntry('0205_core_execution_storage_forward_repair'),
+    ]);
+    const client = new PGlite();
+    const db = pgliteDrizzle(client);
+    const storage = () =>
+      client.query<{ receipts: string | null; snapshots: string | null }>(
+        "SELECT to_regclass('action_receipts') AS receipts, to_regclass('core_session_snapshots') AS snapshots",
+      );
+    try {
+      await pgliteMigrate(db, { migrationsFolder: stageA });
+      expect((await storage()).rows).toEqual([{ receipts: null, snapshots: null }]);
+      await pgliteMigrate(db, { migrationsFolder: stageB });
+      expect((await storage()).rows).toEqual([
+        { receipts: 'action_receipts', snapshots: 'core_session_snapshots' },
+      ]);
+    } finally {
+      await client.close();
+      rmSync(stageA, { force: true, recursive: true });
+      rmSync(stageB, { force: true, recursive: true });
+    }
+  });
+
   it.each(['0203_device_capability_snapshot', '0204_automation_occurrences_forward_repair'])(
     'repairs storage skipped past %s and preserves rows on replay',
     async (boundaryTag) => {
@@ -501,13 +544,9 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     assertTestDatabaseUrl(adminUrl);
 
     const journal = readJournal(migrationsFolder);
-    const stageEntries = journal.entries.filter(
-      (entry) => entry.idx < 205 && !isHistoricalEntry(entry),
-    );
-    const tailEntries = journal.entries.filter(
-      (entry) => entry.idx >= 205 && !isHistoricalEntry(entry),
-    );
+    const stageEntries = entriesBeforeCoreRepair(journal.entries);
     const boundaryWhen = Math.max(...stageEntries.map((entry) => entry.when));
+    const pendingEntries = journal.entries.filter((entry) => entry.when > boundaryWhen);
 
     // Scratch database so the real migrator runs against a clean slate.
     const scratchName = `orvilo_mig_stage_${process.pid}_${Math.floor(Math.random() * 1e6)}`;
@@ -553,13 +592,13 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
         ).rows,
       ).toEqual([{ receipts: null, snapshots: null }]);
 
-      // Stage B: real folder — the deploy carrying the tail migration.
+      // Stage B: real folder — Core repair and every later pending migration.
       await nodeMigrate(db, { migrationsFolder });
 
       const appliedAfter = await pool.query<{ count: string }>(
         'SELECT COUNT(*) AS count FROM "drizzle"."__drizzle_migrations"',
       );
-      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + tailEntries.length);
+      expect(Number(appliedAfter.rows[0]?.count)).toBe(stageEntries.length + pendingEntries.length);
 
       expect(
         (

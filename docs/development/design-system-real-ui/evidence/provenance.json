@@ -1,62 +1,338 @@
 {
-  "backendDeploymentCommit": "not verified",
-  "backendOrigin": "https://orvilo.aspectlylabs.com",
-  "baselineCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511",
-  "baselineMethod": "temporarily restored the five candidate files from a8da6ed8; git diff a8da6ed8 was empty before capture",
-  "blocker": "First-agent setup gate covers normal pages until a usable configured Agent is returned. No Agent was created to bypass it.",
-  "candidateMethod": "ce737c937 source; restored exact committed file bytes after baseline capture",
-  "candidateProductCommit": "ce737c937445592c084e21bf91b145d8567482ec",
-  "captureDate": "2026-10-07",
-  "captureMethod": "native CUA application screenshot, original JPEG bytes",
-  "data": "real cloud account; transient unsaved creation form only",
-  "deviceScaleFactor": 2,
-  "identity": "same existing authenticated cloud account",
-  "images": [
+  "phases": [
     {
-      "path": "before/first-agent-light-zh.jpg",
-      "sha256": "af4afa1c1acd0b22f2f25025d8cbbb9047215f079da33a399f2f21ba42cf2980",
-      "mediaType": "image/jpeg",
-      "pixels": [2400, 1600],
-      "productCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511"
+      "backendDeploymentCommit": "not verified",
+      "backendOrigin": "https://orvilo.aspectlylabs.com",
+      "baselineCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511",
+      "baselineMethod": "temporarily restored the five candidate files from a8da6ed8; git diff a8da6ed8 was empty before capture",
+      "candidateMethod": "ce737c937 source; restored exact committed file bytes after baseline capture",
+      "candidateProductCommit": "ce737c937445592c084e21bf91b145d8567482ec",
+      "captureDate": "2026-10-07",
+      "captureMethod": "native CUA application screenshot, original JPEG bytes",
+      "data": "real cloud account; transient unsaved creation form only",
+      "deviceScaleFactor": 2,
+      "identity": "same existing authenticated cloud account",
+      "images": [
+        {
+          "path": "before/first-agent-light-zh.jpg",
+          "sha256": "af4afa1c1acd0b22f2f25025d8cbbb9047215f079da33a399f2f21ba42cf2980",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "productCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511"
+        },
+        {
+          "path": "after/first-agent-light-zh.jpg",
+          "sha256": "ceba3cbe8a550818a43c0a5a7716914e6dad5b4b0906f05c5a530ac34adadf26",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+        },
+        {
+          "path": "before/create-codex-dark-zh.jpg",
+          "sha256": "961c693a8a335dd83e8f6e859494a87ec693fb509498eef56c49d0711e4ddb41",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "productCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511"
+        },
+        {
+          "path": "after/create-codex-dark-zh.jpg",
+          "sha256": "bbfb264e30dc8f0bade5172f090ddb820a700010b25452498ca52bf17fa1d9a6",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+        },
+        {
+          "path": "after/first-agent-expanded-light-zh.jpg",
+          "sha256": "77b5ff3d7073ca77cca9a55c8162eb85b4ce53d1539d8fe125684c1203fedb07",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+        }
+      ],
+      "locale": "zh-CN",
+      "logicalWindow": [1200, 800],
+      "platform": "macOS native Electron 43.2.0, standard dev:desktop",
+      "route": "app://renderer/abx/tasks",
+      "unverifiedScope": [
+        "full Agent creation transaction",
+        "custom palette and native backdrop over work pages"
+      ],
+      "phase": "first-Agent form"
     },
     {
-      "path": "after/first-agent-light-zh.jpg",
-      "sha256": "ceba3cbe8a550818a43c0a5a7716914e6dad5b4b0906f05c5a530ac34adadf26",
-      "mediaType": "image/jpeg",
-      "pixels": [2400, 1600],
-      "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
-    },
-    {
-      "path": "before/create-codex-dark-zh.jpg",
-      "sha256": "961c693a8a335dd83e8f6e859494a87ec693fb509498eef56c49d0711e4ddb41",
-      "mediaType": "image/jpeg",
-      "pixels": [2400, 1600],
-      "productCommit": "a8da6ed8fda846ad4fc05432902caaf358c53511"
-    },
-    {
-      "path": "after/create-codex-dark-zh.jpg",
-      "sha256": "bbfb264e30dc8f0bade5172f090ddb820a700010b25452498ca52bf17fa1d9a6",
-      "mediaType": "image/jpeg",
-      "pixels": [2400, 1600],
-      "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
-    },
-    {
-      "path": "after/first-agent-expanded-light-zh.jpg",
-      "sha256": "77b5ff3d7073ca77cca9a55c8162eb85b4ce53d1539d8fe125684c1203fedb07",
-      "mediaType": "image/jpeg",
-      "pixels": [2400, 1600],
-      "productCommit": "ce737c937445592c084e21bf91b145d8567482ec"
+      "phase": "normal cloud Projects, API Key and custom MCP forms",
+      "baselineCommit": "54505515edd8e710344ed753d078f02dd356bf25",
+      "candidateProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0",
+      "captureDate": "2026-10-07",
+      "captureMethod": "native CUA application screenshot, original unedited JPEG bytes",
+      "logicalWindow": [1200, 800],
+      "deviceScaleFactor": 2,
+      "locale": "zh-CN",
+      "platform": "macOS native Electron 43.2.0, standard dev:desktop",
+      "backendOrigin": "https://orvilo.aspectlylabs.com",
+      "backendDeploymentCommit": "27f398621e48c7c7b7fdd10847152b345374153b",
+      "backendDeploymentRun": "https://github.com/alexj11324/orvilo1/actions/runs/37686628169",
+      "backendImageDigest": "sha256:4cf0f3c790f4451692b9c2dabd1d5133b0ab0afc628b85bc70f70b8be43cdc2e",
+      "backendVerification": "Actions deployment succeeded; read-only inspection confirmed running app, worker and gateway use the same digest and the private-Agent guard is present",
+      "routes": [
+        "app://renderer/abx/projects",
+        "app://renderer/abx/settings/apikey",
+        "app://renderer/abx/settings/connector"
+      ],
+      "identity": "same existing signed-in cloud account and abx workspace",
+      "data": "real cloud lists and unsaved forms; no fixture, seeded identity or local backend",
+      "sourceVerification": "all 11 final candidate SHA-256 hashes matched before and after normal commit hooks",
+      "sourceFiles": [
+        {
+          "path": "src/components/MCPStdioCommandInput/index.tsx",
+          "baselineSha256": "35ba55cf62ce0103592007e1a6df790f7e4e9868ac99d9aa2c23932bfc885133",
+          "candidateSha256": "4ddc9bfebf7cc603263c52fc18ce794fc32992cb4bf0531b0f62031e22de0e11"
+        },
+        {
+          "path": "src/features/PluginDevModal/MCPManifestForm/ArgsInput.tsx",
+          "baselineSha256": "3fe77bc076dd13c65317e7a8bf6e3940dd6715ebd521ae3b9287d389c90eef3a",
+          "candidateSha256": "767f264ccf1d283ac39763e974ae97f5b338b45bf7ac4b8cbcbf3742e9874828"
+        },
+        {
+          "path": "src/features/PluginDevModal/MCPManifestForm/MCPTypeSelect.tsx",
+          "baselineSha256": "2c2993af6fdfe5f1c78fa6a084bbe39a80b0c008a54e5041c1e7be1cef9e7c7b",
+          "candidateSha256": "c959fd774eeca1521414e6c447d6cd11da770c9cd8619cd18c007d9baf3d3c4d"
+        },
+        {
+          "path": "src/features/PluginDevModal/MCPManifestForm/QuickImportSection.tsx",
+          "baselineSha256": "bc6d1ac16318d1f721924ec653a0ea84d85efa259912bbad299fa63124d763c2",
+          "candidateSha256": "5ce07034a52e4218ae3517085b8c8af0f3deecbd46e0fb2407d422d0ba22a793"
+        },
+        {
+          "path": "src/features/PluginDevModal/MCPManifestForm/index.tsx",
+          "baselineSha256": "b80a64e4a967270b222834508752a186445611440cd92a97b375fd1df80a1966",
+          "candidateSha256": "c58a1f025a8683a2d5b094722faebd76b5e7496624e69fb3cf35d3b8767fe4fd"
+        },
+        {
+          "path": "src/features/PluginDevModal/index.tsx",
+          "baselineSha256": "e431452d225dcf7d60eefe6e4a5ef6a781cfa554832c5dd66457888a3b839980",
+          "candidateSha256": "740613178a94905d1ce717bbdffd987a17a4dee7cee40cbbdf76e98b0ccfd120"
+        },
+        {
+          "path": "src/features/Projects/CreateProjectContent.tsx",
+          "baselineSha256": "6a06408a4aa6179d119e18efae104965302f801e1b9401f4f10f336dd507da96",
+          "candidateSha256": "0e0f9fdbd3f291c0f18748c9369380e08e793f01cc0071019a255e44fe7ae449"
+        },
+        {
+          "path": "src/features/Projects/CreateProjectModal.tsx",
+          "baselineSha256": "2e7f73ab9f22d55467cae5a34a81c4664aa1aaa36475697a1dacb839e398bc1f",
+          "candidateSha256": "6774fdcd4ee5d4cc39109ea921ea9605a267f112a777f5bc8ec5ab75060efeb3"
+        },
+        {
+          "path": "src/features/Projects/List/index.tsx",
+          "baselineSha256": "5a8418e02059f77dfe417dc387a385310b04dbf73490edb0a4964d68378bd392",
+          "candidateSha256": "e7b8612b48403613b790064b4923addde0b40b2bf9de41c6286c1eca26053dfd"
+        },
+        {
+          "path": "src/features/Settings/apikey/features/ApiKey.tsx",
+          "baselineSha256": "2bd32c3da779f51928d20a3075d8d2eebe79f30cbb6321ed33970f0ff46e7f42",
+          "candidateSha256": "1fbe2cd736cae8f19dbf73b2d589c9991af0e130557c1544596e97306f25fa06"
+        },
+        {
+          "path": "src/features/Settings/apikey/features/ApiKeyModal/ScopeSelector.tsx",
+          "baselineSha256": "63cc004df4e59364af6834eae111ec1d1d025209225cbfde4756b78400054c9d",
+          "candidateSha256": "ba7d9738355c37f4f72f5957c99c9d2ee5b260b525190f67de0d48b2cb27713a"
+        }
+      ],
+      "images": [
+        {
+          "path": "before/apikey-page-light-zh.jpg",
+          "sha256": "b8deadec0ae9a88c6baabd5d13eb4f6aa788c975aed033e86889d2bf7fae7c0b",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "before/apikey-create-light-zh.jpg",
+          "sha256": "510d8691d0c49273f940be39fd94d8916ab71471301d41c20103c4b3e11f627d",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "before/projects-empty-light-zh.jpg",
+          "sha256": "83fc91b4a051ef5ea684b244abdab8f08947681bc21bd51ed5b12f326d78fe0b",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "before/create-project-light-zh.jpg",
+          "sha256": "fea142f24ec23c70f59787a58bc2453a96e99d2862b8f4093175f1b48e51bf32",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "before/mcp-http-light-zh.jpg",
+          "sha256": "bce11d90bb9d4c840db5b58e02333a6ce2b8c2c666c70d943d18e24edf391686",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "before/mcp-stdio-light-zh.jpg",
+          "sha256": "b2b790f719009e1b5da2a61cc2c304bdd44818e7b56d1440b18f0377e6cbb9be",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "before/mcp-import-light-zh.jpg",
+          "sha256": "b21554e42432e18b031acd2eb6d94c6cea916e8045ab982b560799ba0a1b20ca",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "original per-surface source at 54505515edd8e710344ed753d078f02dd356bf25",
+          "finalProductCommit": null
+        },
+        {
+          "path": "after/apikey-page-light-zh.jpg",
+          "sha256": "93e1be25660de117fbd8491cce4ce2758faa4482fc120a3e7aed77659a33007a",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/apikey-create-light-zh.jpg",
+          "sha256": "07d7287c770b2da1c09be87f888511fb76dee6c4b27b41f4389e609c55629f45",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/projects-empty-light-zh.jpg",
+          "sha256": "c6c29b35e8aa13e668a7b372899593254bc026953274948dbe0d1ce5ac924d9c",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/create-project-light-zh.jpg",
+          "sha256": "f385bb70fafccc9b18099b3baae5060c80d3bc2b65025004fef4357cb3eacb22",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-http-light-zh.jpg",
+          "sha256": "9ece4ddabc3ac64095f1be955a7db8a060e38f9c0a055f672016e34ccc80a50d",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "main MCP style candidate before the later environment/header-card and command-menu radius follow-ups; visible changed controls match final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-stdio-light-zh.jpg",
+          "sha256": "832d5b1fd8111a15c31f57914c7f369d52917fda22ddf192135dc89552ed568d",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "main MCP style candidate before the later environment/header-card and command-menu radius follow-ups; visible changed controls match final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-import-light-zh.jpg",
+          "sha256": "c32bfd386e791a72f4c7237725df0b1158f399703e26665da6d49c31c1f413c0",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "main MCP style candidate before the later environment/header-card and command-menu radius follow-ups; visible changed controls match final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/create-project-expanded-light-zh.jpg",
+          "sha256": "8ad2f20ff7c4730c6e8cbcd84dd352c724c9b7ba205705809f33f369035bd6ab",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/create-project-dark-zh.jpg",
+          "sha256": "92e86704308eeb9555f476f10fd4a7ee88be0e5fc3a025c121e623e573abac71",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/apikey-create-dark-zh.jpg",
+          "sha256": "5f591d5361f4ad71409d2189b3159095b911ca07a4538e5a0d1d3a4b2c875d70",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-http-dark-zh.jpg",
+          "sha256": "00600606886a180137a16469b70e6a29e87c593b85c7854bcddd9be129cb0111",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-stdio-dark-zh.jpg",
+          "sha256": "1e0dfa2108e1bcd20c125c2dce34cc765f91333a2feca2dfd066ce3e4124c6f8",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-bearer-light-zh.jpg",
+          "sha256": "4f733f8054f2ebccca5f08b608aee9d4a507bfcbcb0da60fe64f964f0f8e319d",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "main MCP style candidate before the later environment/header-card and command-menu radius follow-ups; visible changed controls match final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-command-menu-light-zh.jpg",
+          "sha256": "ace85aa98452b8c61c8f25f041822b57cbda26f4163e1dae3ea4bbe080c076b5",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "main MCP candidate plus final command-menu radius; before environment/header-card radius follow-up, which is outside this visible viewport",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        },
+        {
+          "path": "after/mcp-env-card-light-zh.jpg",
+          "sha256": "da8f1ab6483d34baa995aab396f3deb10c7fcacd7a5274f9409ec8d5757bd28d",
+          "mediaType": "image/jpeg",
+          "pixels": [2400, 1600],
+          "captureSourceState": "reviewed candidate bytes identical to final product commit",
+          "finalProductCommit": "fab614c49bef72be67cb66f98248d4be304bf1d0"
+        }
+      ],
+      "verifiedInteractions": [
+        "open/close API Key form and Tab to name field",
+        "open/close Project form, expand identifiers and scroll to its fixed footer",
+        "select HTTP/STDIO, inspect blank API Key auth fields",
+        "open/cancel JSON import with example placeholder only",
+        "keyboard Down opens command suggestions, Escape closes them",
+        "add two empty local argument rows, then cancel entire form",
+        "verify dark forms and restore Automatic theme"
+      ],
+      "unverifiedScope": [
+        "existing populated Project board/detail and task-round popovers",
+        "API Key generated-secret success view",
+        "MCP connection, install and official dependency-result views",
+        "OAuth credential submission and authorization"
+      ],
+      "businessMutations": "No API Key, Project or MCP connector was created; no connection test or installation was run. Private-Agent creation was not retried after the deployment because normal pages became accessible."
     }
-  ],
-  "locale": "zh-CN",
-  "logicalWindow": [1200, 800],
-  "platform": "macOS native Electron 43.2.0, standard dev:desktop",
-  "route": "app://renderer/abx/tasks",
-  "unverifiedScope": [
-    "Projects list/detail/create/filter/board",
-    "API Key settings and creation modal",
-    "MCP settings/install configuration",
-    "full agent creation transaction",
-    "custom palette and native backdrop over work pages"
   ]
 }

@@ -1,7 +1,9 @@
+import { TRPCError } from '@trpc/server';
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import type * as FeatureFlagsModule from '@/server/featureFlags';
+import type { AgentConfigWithId } from '@/server/services/agent';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import {
   openEmbeddedChatDispatchHost,
@@ -22,6 +24,7 @@ vi.mock('@/server/featureFlags', async (importOriginal) => ({
 
 const {
   mockDeviceFindByDeviceId,
+  mockAssertCanUseWorkspaceAgent,
   mockDeviceFindWorkspaceDeviceById,
   mockBuildRemoteDeviceHeteroContext,
   mockCreateOperationMetadata,
@@ -39,6 +42,7 @@ const {
   mockPublishAgentRuntimeEnd,
 } = vi.hoisted(() => ({
   mockBuildRemoteDeviceHeteroContext: vi.fn().mockReturnValue('device context'),
+  mockAssertCanUseWorkspaceAgent: vi.fn(),
   mockCreateOperationMetadata: vi.fn().mockResolvedValue(undefined),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
@@ -116,7 +120,10 @@ vi.mock('@/database/models/message', () => ({
   }),
 }));
 
-const heteroAgentConfig = {
+const heteroAgentConfig: Partial<AgentConfigWithId> & {
+  agencyConfig: NonNullable<AgentConfigWithId['agencyConfig']>;
+  id: string;
+} = {
   agencyConfig: {
     executionTarget: 'sandbox',
     heterogeneousProvider: { type: 'claude-code' },
@@ -275,6 +282,11 @@ vi.mock('@/server/services/deviceGateway/dispatchAuthorization', () => ({
   resolveDeviceDispatchAuthorizationFailure: vi.fn().mockResolvedValue(undefined),
 }));
 
+// The workspace routing fixtures represent selected Use for agent-1 only; denial is exercised below.
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: mockAssertCanUseWorkspaceAgent,
+}));
+
 vi.mock('@/server/services/heterogeneousAgent/remoteDeviceHeteroContext', () => ({
   buildRemoteDeviceHeteroContext: mockBuildRemoteDeviceHeteroContext,
 }));
@@ -310,6 +322,27 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAssertCanUseWorkspaceAgent
+      .mockReset()
+      .mockImplementation(
+        async ({
+          agentId,
+          userId: callerId,
+          workspaceId,
+        }: {
+          agentId?: string;
+          userId: string;
+          workspaceId?: string | null;
+        }) => {
+          if (
+            agentId === 'agent-1' &&
+            workspaceId === 'workspace-a' &&
+            [userId, 'member-user'].includes(callerId)
+          )
+            return;
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'No selected Agent Use fixture' });
+        },
+      );
     mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
     vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
@@ -1658,6 +1691,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect(mockDispatchAgentRun).toHaveBeenCalledWith(
         expect.objectContaining({ ingestWorkspaceId: 'workspace-a' }),
       );
+      expect(mockAssertCanUseWorkspaceAgent).toHaveBeenCalledWith(
+        expect.objectContaining({ agentId: 'agent-1', userId, workspaceId: 'workspace-a' }),
+      );
     });
 
     it('forwards the topic workspace into the cloud sandbox hetero spawn', async () => {
@@ -1686,6 +1722,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       (heteroAgentConfig as any).visibility = 'public';
       (heteroAgentConfig as any).workspaceId = 'workspace-a';
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });
+      mockDeviceFindByDeviceId.mockImplementation(async (deviceId: string) =>
+        deviceId === 'personal-desktop' ? { deviceId, userId, workspaceId: null } : undefined,
+      );
 
       await service.execAgent({
         agentId: 'agent-1',
@@ -1723,7 +1762,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       );
     });
 
-    it("routes a legacy author binding through the author's personal principal", async () => {
+    it('routes an accessible legacy binding through the actual caller personal principal', async () => {
       heteroAgentConfig.agencyConfig = {
         boundDeviceId: 'author-desktop',
         heterogeneousProvider: { type: 'openclaw' },
@@ -1732,6 +1771,11 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       (heteroAgentConfig as any).visibility = 'public';
       (heteroAgentConfig as any).workspaceId = 'workspace-a';
       service = new AiAgentService(mockDb, 'member-user', { workspaceId: 'workspace-a' });
+      mockDeviceFindByDeviceId.mockImplementation(async (deviceId: string) =>
+        deviceId === 'author-desktop'
+          ? { deviceId, userId: 'member-user', workspaceId: null }
+          : undefined,
+      );
 
       await service.execAgent({
         agentId: 'agent-1',
@@ -1742,7 +1786,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect(mockExecuteToolCall).toHaveBeenCalledWith(
         {
           deviceId: 'author-desktop',
-          userId: 'author-user',
+          userId: 'member-user',
           workspaceId: undefined,
         },
         expect.objectContaining({ apiName: 'runHeteroTask' }),
@@ -1752,11 +1796,57 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect(seed.runningOperation).toEqual(
         expect.objectContaining({
           deviceId: 'author-desktop',
-          deviceUserId: 'author-user',
+          deviceUserId: 'member-user',
           heteroType: 'openclaw',
         }),
       );
     });
+
+    it('does not dispatch a legacy binding to an author-only personal device', async () => {
+      heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'author-desktop',
+        heterogeneousProvider: { type: 'openclaw' },
+      };
+      Object.assign(heteroAgentConfig, {
+        userId: 'author-user',
+        visibility: 'public',
+        workspaceId: 'workspace-a',
+      });
+      service = new AiAgentService(mockDb, 'member-user', { workspaceId: 'workspace-a' });
+      mockDeviceFindByDeviceId.mockResolvedValue(undefined);
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        localDeviceId: 'member-desktop',
+        prompt: 'Reject inaccessible host',
+      });
+
+      expect(mockDeviceFindByDeviceId).toHaveBeenCalledWith('author-desktop');
+      expect(result.success).toBe(false);
+      expect(mockExecuteToolCall).not.toHaveBeenCalled();
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    });
+
+    it.each(['missing', 'revoked'])(
+      'does not spawn with %s selected Agent Use',
+      async (grantState) => {
+        service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });
+        mockAssertCanUseWorkspaceAgent.mockRejectedValue(
+          new TRPCError({
+            code: 'FORBIDDEN',
+            message: `Selected Agent Use ${grantState}`,
+          }),
+        );
+
+        const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Do not spawn' });
+
+        expect(result).toMatchObject({ error: 'AGENT_USE_FORBIDDEN', success: false });
+        expect(mockExecuteToolCall).not.toHaveBeenCalled();
+        expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+        expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      },
+    );
 
     it('cancels a platform task through the principal persisted at dispatch', async () => {
       mockExecuteToolCall.mockResolvedValueOnce({ success: true, state: { exited: true } });

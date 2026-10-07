@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, chatGroups, sessions, threads, topics } from '@orvilo/database/schemas';
+import {
+  agentOperations,
+  agents,
+  chatGroups,
+  sessions,
+  threads,
+  topics,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
@@ -246,6 +253,15 @@ describe('Agent Task Integration', () => {
     it('should interrupt running task', async () => {
       const threadId = 'thread-interrupt-test';
       const operationId = 'op-interrupt-test';
+
+      await serverDB.insert(agentOperations).values({
+        id: operationId,
+        agentId: testAgentId,
+        status: 'running',
+        topicId: testTopicId,
+        userId,
+        workspaceId: null,
+      });
 
       // Setup: Create thread in DB
       await serverDB.insert(threads).values({

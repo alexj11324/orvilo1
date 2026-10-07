@@ -10,6 +10,7 @@ import {
   mcpEventInbox,
   mcpEventTriggerRuns,
   mcpEventTriggers,
+  resourcePermissions,
   taskDispatches,
   tasks,
   topics,
@@ -79,11 +80,20 @@ const seed = async (
     workspaceId,
   });
   await db.insert(agents).values({ id: agentId, title: 'Event runner', userId, workspaceId });
+  await db.insert(resourcePermissions).values({
+    accessLevel: 'use',
+    createdBy: userId,
+    resourceId: agentId,
+    resourceType: 'agent',
+    userId,
+    workspaceId,
+  });
   // The runtime boundary reports the operation's topic id; the dispatch
   // ledger then pins it on the task row via the real topics FK.
   await db.insert(topics).values({ agentId, id: topicId, title: 'Event run', userId, workspaceId });
   await db.insert(tasks).values({
     assigneeAgentId: agentId,
+    assigneeUserId: userId,
     automationMode: 'event',
     config: { model: 'test-model', provider: 'test-provider' },
     createdByUserId: userId,

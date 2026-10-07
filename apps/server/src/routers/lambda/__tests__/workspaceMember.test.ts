@@ -310,7 +310,7 @@ describe('workspaceMemberRouter.invite', () => {
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
-  it('attaches project grants capped to the invitee workspace role', async () => {
+  it('attaches participant project grants without upgrading the invitee workspace viewer role', async () => {
     queries.findProjectsByIds.mockResolvedValue([
       { id: 'proj-1', userId: 'u-admin', visibility: 'public', workspaceId: 'ws-1' },
     ]);
@@ -323,7 +323,8 @@ describe('workspaceMemberRouter.invite', () => {
 
     expect(invitationModel.createInvitation).toHaveBeenCalledWith(
       expect.objectContaining({
-        projectGrants: [{ projectId: 'proj-1', role: 'commenter' }],
+        projectGrants: [{ projectId: 'proj-1', role: 'contributor' }],
+        role: 'viewer',
       }),
     );
   });

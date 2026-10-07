@@ -605,10 +605,10 @@ describe('Task Router Integration', () => {
       };
     };
 
-    it('rejects an Agent reassigned to private between member preflight and locked dispatch admission', async () => {
+    it('rejects an Agent reassigned without selected Use between preflight and locked admission', async () => {
       otherUserId = await createTestUser(serverDB);
       const { workspaceId, wsAgentId, wsCaller } = await setupWorkspace();
-      const { agents } = await import('@/database/schemas');
+      const { agents, resourcePermissions } = await import('@/database/schemas');
       const privateAgentId = 'agt_assignee_race_private';
       await serverDB.insert(agents).values({
         id: privateAgentId,
@@ -617,8 +617,17 @@ describe('Task Router Integration', () => {
         workspaceId,
         visibility: 'private',
       });
+      await serverDB.insert(resourcePermissions).values({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: wsAgentId,
+        resourceType: 'agent',
+        userId: otherUserId,
+        workspaceId,
+      });
       const created = await wsCaller.create({
         assigneeAgentId: wsAgentId,
+        assigneeUserId: otherUserId,
         instruction: 'Race executor',
       });
       const memberCaller = taskRouter.createCaller({
@@ -660,7 +669,7 @@ describe('Task Router Integration', () => {
         expect.soft(kickoff).not.toHaveBeenCalled();
         expect.soft(provision).not.toHaveBeenCalled();
         expect.soft(mockExecAgent).not.toHaveBeenCalled();
-        expect.soft(result).toMatchObject({ code: 'NOT_FOUND' });
+        expect.soft(result).toMatchObject({ code: 'FORBIDDEN' });
       } finally {
         prepare.mockRestore();
         kickoff.mockRestore();
@@ -689,7 +698,7 @@ describe('Task Router Integration', () => {
       const beforeRun = await teammate.findById(created.data.id);
 
       await expect(memberCaller.run({ id: created.data.id })).rejects.toMatchObject({
-        code: 'NOT_FOUND',
+        code: 'FORBIDDEN',
       });
       expect(await teammate.findById(created.data.id)).toEqual(beforeRun);
       expect(
@@ -700,18 +709,12 @@ describe('Task Router Integration', () => {
       ).toHaveLength(0);
       expect(mockExecAgent).not.toHaveBeenCalled();
 
-      await expect(
-        wsCaller.updateVisibility({ id: created.data.id, visibility: 'private' }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-      // Explicit privacy still requires clearing an assignee who would lose access.
-      await wsCaller.update({
+      const reassigned = await wsCaller.update({
         id: created.data.id,
-        assigneeUserId: null,
+        assigneeUserId: userId,
         expectedDomainRevision: await revisionOf(created.data.id),
       });
-      await wsCaller.updateVisibility({ id: created.data.id, visibility: 'private' });
-      expect(await teammate.findById(created.data.id)).toBeNull();
-      await wsCaller.updateVisibility({ id: created.data.id, visibility: 'public' });
+      expect(reassigned.data.visibility).toBe('public');
       expect(await teammate.findById(created.data.id)).toMatchObject({ visibility: 'public' });
     });
 
@@ -1089,17 +1092,35 @@ describe('Task Router Integration', () => {
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
       ).toBe(before?.requirementRevision);
+      await expect(
+        caller.updateComment({
+          commentId: comment.data.id,
+          content: 'Human changes the requirement',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe(before?.requirementRevision);
+      expect(
+        (await new TaskModel(serverDB, userId).findCommentById(comment.data.id))?.content,
+      ).toBe('Agent updates progress');
+      const humanComment = await caller.addComment({
+        content: 'Human requirement',
+        id: task.data.id,
+      });
+      const humanRevision = (await new TaskModel(serverDB, userId).findById(task.data.id))!
+        .requirementRevision;
       await caller.updateComment({
-        commentId: comment.data.id,
-        content: 'Human changes the requirement',
+        commentId: humanComment.data.id,
+        content: 'Human changes their requirement',
       });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
-      ).toBe((before?.requirementRevision ?? 0) + 1);
-      await caller.deleteComment({ commentId: comment.data.id });
+      ).toBe(humanRevision + 1);
+      await caller.deleteComment({ commentId: humanComment.data.id });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
-      ).toBe((before?.requirementRevision ?? 0) + 2);
+      ).toBe(humanRevision + 2);
     });
 
     it('should add agent-authored comments and support update/delete', async () => {
@@ -1114,7 +1135,14 @@ describe('Task Router Integration', () => {
       expect(added.data.authorAgentId).toBe(testAgentId);
       expect(added.data.authorUserId).toBeNull();
 
+      await expect(
+        caller.updateComment({
+          commentId: added.data.id,
+          content: 'Human edits Agent progress',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
       await caller.updateComment({
+        actorAgentId: testAgentId,
         commentId: added.data.id,
         content: 'Updated progress note',
       });
@@ -1124,7 +1152,7 @@ describe('Task Router Integration', () => {
       expect(updatedComment?.content).toBe('Updated progress note');
       expect(updatedComment?.agentId).toBe(testAgentId);
 
-      await caller.deleteComment({ commentId: added.data.id });
+      await caller.deleteComment({ actorAgentId: testAgentId, commentId: added.data.id });
 
       const deletedDetail = await caller.detail({ id: task.data.identifier });
       expect(deletedDetail.data.activities?.some((a) => a.id === added.data.id)).toBe(false);
@@ -1260,12 +1288,20 @@ describe('Task Router Integration', () => {
       );
 
       // Agent-authored progress notes never ping members, even with mentions.
-      const { agents } = await import('@/database/schemas');
+      const { agents, resourcePermissions } = await import('@/database/schemas');
       const wsAgentId = 'agt_task_comment_ws';
       await serverDB
         .insert(agents)
         .values({ id: wsAgentId, slug: wsAgentId, userId, workspaceId })
         .onConflictDoNothing();
+      await serverDB.insert(resourcePermissions).values({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: wsAgentId,
+        resourceType: 'agent',
+        userId,
+        workspaceId,
+      });
       await flushAfterResponse();
       mockNotifyTaskCommentActivity.mockClear();
       await wsCaller.addComment({
@@ -1326,7 +1362,7 @@ describe('Task Router Integration', () => {
       expect(mockNotifyTaskCommentActivity).toHaveBeenCalledTimes(1);
     });
 
-    it('should never notify members who cannot open a private task', async () => {
+    it('notifies mentioned members who can open the effective-public workspace Issue', async () => {
       otherUserId = await createTestUser(serverDB);
       const thirdUserId = await createTestUser(serverDB);
       const { wsCaller, workspaceId } = await setupWorkspace();
@@ -1334,23 +1370,28 @@ describe('Task Router Integration', () => {
       await serverDB
         .insert(workspaceMembers)
         .values({ role: 'member', userId: thirdUserId, workspaceId });
-      // A private task is visible to its creator only (assigning it to another
-      // member is rejected upstream), yet the creator can still @mention anyone.
       const task = await wsCaller.create({
-        instruction: 'Secret',
-        name: 'Secret',
-        visibility: 'private',
+        instruction: 'Shared workspace Issue',
+        name: 'Shared workspace Issue',
       });
+      expect(task.data.visibility).toBe('public');
+      expect(
+        await new TaskModel(serverDB, otherUserId!, workspaceId).findById(task.data.id),
+      ).toMatchObject({ visibility: 'public' });
 
-      // The mention must not leak the task's title and link to a member who
-      // cannot open it — neither on a new comment nor on an edit.
       const comment = await wsCaller.addComment({
         content: '@Member',
         editorData: editorDataWith(otherUserId!),
         id: task.data.id,
       });
       await flushAfterResponse();
-      expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      expect(mockNotifyTaskCommentActivity).toHaveBeenLastCalledWith({
+        actorUserId: userId,
+        commentId: comment.data.id,
+        recipients: [{ kind: 'mentioned', userId: otherUserId }],
+        taskId: task.data.id,
+        workspaceId,
+      });
 
       await wsCaller.updateComment({
         commentId: comment.data.id,
@@ -1358,7 +1399,14 @@ describe('Task Router Integration', () => {
         editorData: editorDataWith(otherUserId!, thirdUserId),
       });
       await flushAfterResponse();
-      expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      expect(mockNotifyTaskCommentActivity).toHaveBeenCalledTimes(2);
+      expect(mockNotifyTaskCommentActivity).toHaveBeenLastCalledWith({
+        actorUserId: userId,
+        commentId: comment.data.id,
+        recipients: [{ kind: 'mentioned', userId: thirdUserId }],
+        taskId: task.data.id,
+        workspaceId,
+      });
     });
 
     it('should never notify in personal mode', async () => {
@@ -1539,6 +1587,7 @@ describe('Task Router Integration', () => {
     it('resolves a task identifier to its row when starting a run', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1551,6 +1600,7 @@ describe('Task Router Integration', () => {
     it('should reject run when a topic is already running', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1564,6 +1614,7 @@ describe('Task Router Integration', () => {
     it('should reject continue on already running topic', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1581,6 +1632,7 @@ describe('Task Router Integration', () => {
 
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1609,6 +1661,7 @@ describe('Task Router Integration', () => {
 
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1720,6 +1773,7 @@ describe('Task Router Integration', () => {
     it('should cancel a running topic and pause task', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1736,6 +1790,7 @@ describe('Task Router Integration', () => {
     it('should reject cancel on non-running topic', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -1799,6 +1854,7 @@ describe('Task Router Integration', () => {
     it('should cancel running topics when task transitions out of running', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test cascade',
       });
 
@@ -1840,6 +1896,7 @@ describe('Task Router Integration', () => {
     it('rejects the status change and retains running work when interrupt fails', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test interrupt failure',
       });
 
@@ -1913,6 +1970,7 @@ describe('Task Router Integration', () => {
       const sub = await caller.create({ instruction: 'Sub', parentTaskId: parent.data.id });
       const external = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'External',
       });
       await caller.addDependency({ dependsOnId: sub.data.id, taskId: external.data.id });
@@ -1929,11 +1987,13 @@ describe('Task Router Integration', () => {
       const parent = await caller.create({ instruction: 'Parent' });
       const subA = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'A',
         parentTaskId: parent.data.id,
       });
       const subB = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'B',
         parentTaskId: parent.data.id,
       });
@@ -2015,6 +2075,7 @@ describe('Task Router Integration', () => {
     it('should auto-detect timeout on detail and pause task', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Test',
       });
 
@@ -2092,16 +2153,19 @@ describe('Task Router Integration', () => {
       const parent = await caller.create({ instruction: 'Book' });
       const ch1 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 1',
         parentTaskId: parent.data.id,
       });
       const ch2 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 2',
         parentTaskId: parent.data.id,
       });
       const ch3 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 3',
         parentTaskId: parent.data.id,
       });
@@ -2131,11 +2195,13 @@ describe('Task Router Integration', () => {
       const parent = await caller.create({ instruction: 'Inflight blocker' });
       const ch1 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 1',
         parentTaskId: parent.data.id,
       });
       const ch2 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 2',
         parentTaskId: parent.data.id,
       });
@@ -2156,11 +2222,13 @@ describe('Task Router Integration', () => {
       const parent = await caller.create({ instruction: 'Inflight runReady' });
       const ch1 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 1',
         parentTaskId: parent.data.id,
       });
       const ch2 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 2',
         parentTaskId: parent.data.id,
       });
@@ -2181,11 +2249,13 @@ describe('Task Router Integration', () => {
       // External blocker lives outside `parent`'s descendant tree
       const externalBlocker = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'External blocker',
       });
       const parent = await caller.create({ instruction: 'Cross-scope' });
       const ch1 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 1',
         parentTaskId: parent.data.id,
       });
@@ -2209,11 +2279,13 @@ describe('Task Router Integration', () => {
       const parent = await caller.create({ instruction: 'Cascade' });
       const ch1 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 1',
         parentTaskId: parent.data.id,
       });
       const ch2 = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Chapter 2',
         parentTaskId: parent.data.id,
       });
@@ -2277,6 +2349,7 @@ describe('Task Router Integration', () => {
       await setAgentModel('claude-sonnet-4-6', 'anthropic');
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Snapshot then drift',
       });
 
@@ -2295,6 +2368,7 @@ describe('Task Router Integration', () => {
       await setAgentModel(null, null);
       const task = await caller.create({
         assigneeAgentId: testAgentId,
+        assigneeUserId: userId,
         instruction: 'Pre-fix task',
       });
       expect(task.data.config).toEqual({});
@@ -2701,13 +2775,13 @@ describe('Task Router Integration', () => {
       expect(strandedCreate).toHaveLength(0);
     });
 
-    it('should keep private tasks creator-only for human assignees', async () => {
+    it('keeps workspace Issues public when human assignees change', async () => {
       otherUserId = await createTestUser(serverDB);
       const workspaceId = 'task-private-assignee-workspace';
       const { workspaces, workspaceMembers } = await import('@/database/schemas');
       await serverDB.insert(workspaces).values({
         id: workspaceId,
-        name: 'Task Private Assignee Workspace',
+        name: 'Task Assignee Workspace',
         primaryOwnerId: userId,
         slug: workspaceId,
       });
@@ -2716,50 +2790,30 @@ describe('Task Router Integration', () => {
         { role: 'member', userId: otherUserId!, workspaceId },
       ]);
       const wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
-
-      // Creating a private task assigned to another member is rejected.
-      await expect(
-        wsCaller.create({
-          assigneeUserId: otherUserId,
-          instruction: 'Private cross-member create',
-          visibility: 'private',
-        }),
-      ).rejects.toThrow('A private task can only be assigned to its creator');
-
-      // A private task can still be self-assigned; assigning another member is rejected.
-      const privateTask = await wsCaller.create({
+      const teammate = new TaskModel(serverDB, otherUserId!, workspaceId);
+      const task = await wsCaller.create({
         assigneeUserId: userId,
-        instruction: 'Private task',
-        visibility: 'private',
+        instruction: 'Workspace Issue',
       });
-      expect(privateTask.data.assigneeUserId).toBe(userId);
-      await expect(
-        wsCaller.update({
-          assigneeUserId: otherUserId,
-          expectedDomainRevision: await revisionOf(privateTask.data.id),
-          id: privateTask.data.id,
-        }),
-      ).rejects.toThrow('A private task can only be assigned to its creator');
-
-      // Demoting a member-assigned public task to private is rejected until unassigned.
-      const publicTask = await wsCaller.create({
+      expect(task.data).toMatchObject({ assigneeUserId: userId, visibility: 'public' });
+      const assigned = await wsCaller.update({
         assigneeUserId: otherUserId,
-        instruction: 'Public task assigned to member',
-        visibility: 'public',
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
       });
-      await expect(
-        wsCaller.updateVisibility({ id: publicTask.data.id, visibility: 'private' }),
-      ).rejects.toThrow('A private task can only be assigned to its creator');
-      await wsCaller.update({
+      expect(assigned.data).toMatchObject({ assigneeUserId: otherUserId, visibility: 'public' });
+      expect(await teammate.findById(task.data.id)).toMatchObject({ visibility: 'public' });
+
+      // Historical storage metadata does not hide a workspace Issue from members.
+      await serverDB.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, task.data.id));
+      expect(await teammate.findById(task.data.id)).toMatchObject({ visibility: 'public' });
+      const unassigned = await wsCaller.update({
         assigneeUserId: null,
-        expectedDomainRevision: await revisionOf(publicTask.data.id),
-        id: publicTask.data.id,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
       });
-      const demoted = await wsCaller.updateVisibility({
-        id: publicTask.data.id,
-        visibility: 'private',
-      });
-      expect(demoted.data.visibility).toBe('private');
+      expect(unassigned.data).toMatchObject({ assigneeUserId: null, visibility: 'public' });
+      expect(await teammate.findById(task.data.id)).toMatchObject({ visibility: 'public' });
     });
 
     it('should preserve the responsible assignee independently of automation', async () => {
@@ -2798,23 +2852,40 @@ describe('Task Router Integration', () => {
       expect(scheduled.data.assigneeUserId).toBe(userId);
     });
 
-    it('should keep inbox fallback ephemeral without clearing an explicit inbox assignment', async () => {
-      // Seed the builtin inbox agent so the runner's fallback path can resolve it.
+    it('rejects implicit inbox fallback and preserves an explicitly dual-assigned inbox task', async () => {
       const inboxAgentId = await createTestAgent(serverDB, userId, 'inbox');
-
       const humanTask = await caller.create({
         assigneeUserId: userId,
         instruction: 'Human-assigned task',
       });
-      await caller.run({ id: humanTask.data.id });
+      const unassignedTask = await caller.create({ instruction: 'Unassigned task' });
+      const prepare = vi.spyOn(TaskDispatchService.prototype, 'prepare');
+      const kickoff = vi.spyOn(TaskModel.prototype, 'claimRunKickoff');
+      const provision = vi.spyOn(TaskWorkspaceService.prototype, 'provision');
+      try {
+        for (const task of [humanTask, unassignedTask]) {
+          const beforeRun = await new TaskModel(serverDB, userId).findById(task.data.id);
+          await expect(caller.run({ id: task.data.id })).rejects.toMatchObject({
+            code: 'PRECONDITION_FAILED',
+          });
+          expect(await new TaskModel(serverDB, userId).findById(task.data.id)).toEqual(beforeRun);
+          expect(
+            await serverDB
+              .select()
+              .from(taskDispatches)
+              .where(eq(taskDispatches.taskId, task.data.id)),
+          ).toHaveLength(0);
+        }
+        expect(prepare).not.toHaveBeenCalled();
+        expect(kickoff).not.toHaveBeenCalled();
+        expect(provision).not.toHaveBeenCalled();
+        expect(mockExecAgent).not.toHaveBeenCalled();
+      } finally {
+        prepare.mockRestore();
+        kickoff.mockRestore();
+        provision.mockRestore();
+      }
 
-      const afterHumanRun = await caller.find({ id: humanTask.data.id });
-      expect(afterHumanRun.data.assigneeUserId).toBe(userId);
-      expect(afterHumanRun.data.assigneeAgentId).toBeNull();
-
-      // Inbox is also a valid explicit agent assignment. Once a member and an
-      // agent can be selected independently, the persisted pair must survive
-      // execution because it is indistinguishable from any historical fallback.
       const dualAssignedTask = await caller.create({
         assigneeUserId: userId,
         instruction: 'Inbox-and-member-assigned task',
@@ -2825,17 +2896,11 @@ describe('Task Router Integration', () => {
         id: dualAssignedTask.data.id,
       });
       await caller.run({ id: dualAssignedTask.data.id });
-
       const afterDualAssignedRun = await caller.find({ id: dualAssignedTask.data.id });
       expect(afterDualAssignedRun.data.assigneeUserId).toBe(userId);
       expect(afterDualAssignedRun.data.assigneeAgentId).toBe(inboxAgentId);
-
-      // Control: a fully unassigned task still gets the fallback persisted.
-      const unassignedTask = await caller.create({ instruction: 'Unassigned task' });
-      await caller.run({ id: unassignedTask.data.id });
-
-      const afterUnassignedRun = await caller.find({ id: unassignedTask.data.id });
-      expect(afterUnassignedRun.data.assigneeAgentId).toBe(inboxAgentId);
+      expect(afterDualAssignedRun.data.status).toBe('running');
+      expect(mockExecAgent).toHaveBeenCalledTimes(1);
     });
 
     it('should populate a user participant in list', async () => {

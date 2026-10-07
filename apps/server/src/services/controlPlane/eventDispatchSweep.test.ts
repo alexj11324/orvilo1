@@ -12,6 +12,7 @@ import {
   mcpEventInbox,
   mcpEventTriggerRuns,
   mcpEventTriggers,
+  resourcePermissions,
   taskDispatches,
   tasks,
   taskTopics,
@@ -100,6 +101,14 @@ describe('signed callback through the server admission sweep', () => {
       workspaceId,
     });
     await db.insert(agents).values({ id: agentId, slug: agentId, userId, workspaceId });
+    await db.insert(resourcePermissions).values({
+      accessLevel: 'use',
+      createdBy: userId,
+      resourceId: agentId,
+      resourceType: 'agent',
+      userId,
+      workspaceId,
+    });
     await db.insert(topics).values({ agentId, id: topicId, userId, workspaceId });
     vi.spyOn(AiAgentService.prototype, 'execAgent').mockResolvedValue({
       agentId,
@@ -116,6 +125,7 @@ describe('signed callback through the server admission sweep', () => {
     } satisfies ExecAgentResult);
     await db.insert(tasks).values({
       assigneeAgentId: agentId,
+      assigneeUserId: userId,
       automationMode: 'event',
       config: { model: 'test-model', provider: 'test-provider' },
       createdByUserId: userId,

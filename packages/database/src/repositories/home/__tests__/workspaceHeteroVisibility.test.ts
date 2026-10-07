@@ -1,10 +1,9 @@
-// Regression for a workspace heterogeneous agent flipped back to
-// `private` must stay visible to its creator (Private bucket) and invisible
+// A persisted legacy private workspace heterogeneous agent must stay visible
+// to its creator (Private bucket) and invisible
 // to other members across the whole sidebar payload.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
-import { AgentModel } from '../../../models/agent';
 import * as Schema from '../../../schemas';
 import { HomeRepository } from '../index';
 
@@ -24,14 +23,10 @@ beforeEach(async () => {
     primaryOwnerId: creator,
     slug: 'ws-1',
   });
-  // Creation admission requires a resolvable bound host.
-  await clientDB.insert(Schema.devices).values({
-    deviceId: `creation-host-${ws}`,
-    identitySource: 'installation',
-    userId: creator,
-    visibility: 'public',
-    workspaceId: ws,
-  });
+  await clientDB.insert(Schema.workspaceMembers).values([
+    { role: 'owner', userId: creator, workspaceId: ws },
+    { role: 'member', userId: member, workspaceId: ws },
+  ]);
 });
 
 afterEach(async () => {
@@ -39,29 +34,24 @@ afterEach(async () => {
   await clientDB.delete(Schema.workspaces);
 });
 
-describe('workspace hetero agent visibility flip ', () => {
-  it('hetero agent stays visible to creator after public -> private', async () => {
-    const agentModel = new AgentModel(clientDB, creator, ws);
-
-    // mirrors useCreateHeteroAgent -> lambda createAgent (public default)
-    const agent = await agentModel.create({
-      agencyConfig: {
-        boundDeviceId: `creation-host-${ws}`,
-        executionTarget: 'device',
-        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
-      } as any,
-      provider: 'claude-code',
-      systemRole: '',
-      title: 'CC Agent',
-    });
-
-    // sanity: visible in workspace sidebar (public)
-    const before = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();
-    expect(before.ungrouped.map((a) => a.id)).toContain(agent.id);
-
-    // flip back to private (router path: getAgentVisibilityMeta -> setVisibility)
-    const updated = await agentModel.setVisibility(agent.id, 'private');
-    expect(updated).not.toBeNull();
+describe('legacy private workspace hetero agent visibility', () => {
+  it('keeps the persisted private agent visible to its creator and hidden from other members', async () => {
+    // Legacy rows remain private; new workspace Agents cannot be created or demoted as private.
+    const [agent] = await clientDB
+      .insert(Schema.agents)
+      .values({
+        agencyConfig: {
+          executionTarget: 'device',
+          heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+        },
+        provider: 'claude-code',
+        systemRole: '',
+        title: 'CC Agent',
+        userId: creator,
+        visibility: 'private',
+        workspaceId: ws,
+      })
+      .returning();
 
     // creator should still see it in the Private bucket
     const after = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();

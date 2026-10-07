@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { users, workspaces } from '../../schemas';
+import { users, workspaceMembers, workspaces } from '../../schemas';
 import { TaskModel } from '../task';
 import { TaskResourceModel } from '../taskResource';
 
@@ -11,10 +11,12 @@ const db = await getTestDB();
 const userId = 'issue-resource-owner';
 const readerId = 'issue-resource-reader';
 const workspaceId = 'issue-resource-workspace';
+const otherWorkspaceId = 'issue-resource-other-workspace';
 const model = new TaskResourceModel(db, userId, workspaceId);
 const reader = new TaskResourceModel(db, readerId, workspaceId);
 const clean = async () => {
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+  await db.delete(workspaces).where(eq(workspaces.id, otherWorkspaceId));
   await db.delete(users).where(eq(users.id, userId));
   await db.delete(users).where(eq(users.id, readerId));
 };
@@ -24,6 +26,10 @@ beforeEach(async () => {
   await db
     .insert(workspaces)
     .values({ id: workspaceId, slug: workspaceId, name: 'Resources', primaryOwnerId: userId });
+  await db.insert(workspaceMembers).values([
+    { role: 'owner', userId, workspaceId },
+    { role: 'member', userId: readerId, workspaceId },
+  ]);
 });
 afterEach(clean);
 const create = (visibility: 'public' | 'private' = 'public') =>
@@ -62,17 +68,73 @@ describe('TaskResourceModel', () => {
     expect(await model.remove(task.id, link.id)).toBe(true);
     expect(await reload.list(task.id)).toHaveLength(1);
   });
-  it('does not leak private or foreign-workspace resources', async () => {
+  it('shares legacy-private workspace Issue resources with active members', async () => {
     const task = await create('private');
     await model.add(task.id, { kind: 'link', url: 'https://example.com/private' });
-    await expect(reader.list(task.id)).rejects.toThrow('Task not found');
-    await expect(
-      reader.add(task.id, { kind: 'link', url: 'https://example.com/foreign' }),
-    ).rejects.toThrow('Task not found');
-    await expect(
-      new TaskResourceModel(db, userId, 'other-workspace').list(task.id),
-    ).rejects.toThrow('Task not found');
+    expect(await reader.list(task.id)).toHaveLength(1);
+    await reader.add(task.id, { kind: 'link', url: 'https://example.com/member' });
+    expect(await model.list(task.id)).toHaveLength(2);
   });
+  it('does not leak resources across workspace scopes', async () => {
+    const task = await create();
+    await model.add(task.id, { kind: 'link', url: 'https://example.com/private' });
+    await db.insert(workspaces).values({
+      id: otherWorkspaceId,
+      slug: otherWorkspaceId,
+      name: 'Other resources',
+      primaryOwnerId: userId,
+    });
+    await db
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId: otherWorkspaceId });
+    const foreign = new TaskResourceModel(db, userId, otherWorkspaceId);
+    await expect(foreign.list(task.id)).rejects.toThrow('Task not found');
+    await expect(
+      foreign.add(task.id, { kind: 'link', url: 'https://example.com/foreign' }),
+    ).rejects.toThrow('Task not found');
+    expect(await model.list(task.id)).toHaveLength(1);
+  });
+  it('keeps personal Issue resources owner-only', async () => {
+    const task = await new TaskModel(db, userId).create({
+      instruction: 'Personal Issue',
+      visibility: 'private',
+      workflowCategory: 'todo',
+    });
+    const personal = new TaskResourceModel(db, userId);
+    await personal.add(task.id, { kind: 'link', url: 'https://example.com/personal' });
+    expect(await personal.list(task.id)).toHaveLength(1);
+    const other = new TaskResourceModel(db, readerId);
+    await expect(other.list(task.id)).rejects.toThrow('Task not found');
+    await expect(
+      other.add(task.id, { kind: 'link', url: 'https://example.com/foreign' }),
+    ).rejects.toThrow('Task not found');
+    await expect(reader.list(task.id)).rejects.toThrow('Task not found');
+    expect(await personal.list(task.id)).toHaveLength(1);
+  });
+  it.each(['nonmember', 'suspended', 'deleted'] as const)(
+    'denies workspace Issue resources to a %s caller',
+    async (state) => {
+      const task = await create('private');
+      await model.add(task.id, { kind: 'link', url: 'https://example.com/private' });
+      const membership = and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, readerId),
+      );
+      if (state === 'nonmember') {
+        await db.delete(workspaceMembers).where(membership);
+      } else {
+        await db
+          .update(workspaceMembers)
+          .set(state === 'suspended' ? { suspendedAt: new Date() } : { deletedAt: new Date() })
+          .where(membership);
+      }
+      await expect(reader.list(task.id)).rejects.toThrow('Task not found');
+      await expect(
+        reader.add(task.id, { kind: 'link', url: 'https://example.com/foreign' }),
+      ).rejects.toThrow('Task not found');
+      expect(await model.list(task.id)).toHaveLength(1);
+    },
+  );
   it.each(['javascript:alert(1)', 'file:///private/test', 'https://user:pass@example.com/test'])(
     'rejects unsafe URL %s',
     async (url) => {

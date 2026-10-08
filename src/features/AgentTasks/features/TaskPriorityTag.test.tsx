@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Button } from '@/components/ui/button';
+
 import TaskPriorityTag from './TaskPriorityTag';
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -19,6 +21,31 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('TaskPriorityTag', () => {
+  it.each(['{Enter}', ' '])('opens a native button trigger once with %s', async (key) => {
+    const user = userEvent.setup();
+    const click = vi.fn();
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      render(
+        <TaskPriorityTag nativeButton priority={3} onChange={vi.fn()}>
+          <Button onClick={click}>Project priority</Button>
+        </TaskPriorityTag>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Project priority' });
+      trigger.focus();
+      await user.keyboard(key);
+      expect(await screen.findByRole('menu')).toBeVisible();
+      expect(screen.getAllByRole('menu')).toHaveLength(1);
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      expect(click).toHaveBeenCalledOnce();
+      expect(errorLog).not.toHaveBeenCalled();
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
+
   it('opens its menu without navigating the clickable task card', async () => {
     const parentClick = vi.fn();
     const ClickableTaskCard = () => {

@@ -646,7 +646,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
             style={{ alignItems: 'center', gap: 6 }}
           >
             <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
-            <ProjectStatusIcon percent={percent ?? 0} size={14} status={status} />
+            <ProjectStatusIcon percent={percent ?? 0} size={16} status={status} />
             <span className="text-sm" style={{ fontSize: 12 }}>
               {percent == null ? '—' : `${percent}%`}
             </span>
@@ -835,7 +835,7 @@ export const ProjectListGroupHeader = memo<{
     const status = resolveProjectStatus(groupKey.slice(7));
     return (
       <>
-        <ProjectStatusIcon size={14} status={status} />
+        <ProjectStatusIcon size={16} status={status} />
         <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
           {t(`status.${status}`)}
         </span>

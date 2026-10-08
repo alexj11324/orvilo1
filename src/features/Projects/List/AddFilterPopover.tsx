@@ -420,7 +420,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                     selected,
                     status,
                   ),
-                <ProjectStatusIcon size={14} status={status} />,
+                <ProjectStatusIcon size={16} status={status} />,
               ),
             ),
           );

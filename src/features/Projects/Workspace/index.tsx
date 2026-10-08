@@ -94,29 +94,6 @@ const styles = createStaticStyles(({ css }) => ({
      carrying the team's accent glyph (14px) and name, and it is a real
      navigation target. Ours links to the team page — the destination this
      codebase already gives a team everywhere else. */
-  teamChip: css`
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 6px;
-    border-radius: 9999px;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: none;
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-    }
-  `,
 }));
 
 const editableStatuses = [
@@ -255,7 +232,12 @@ const ProjectWorkspace = memo(() => {
                 <ArrowRightIcon aria-hidden size={16} />
                 <ProjectDateField inline kind="targetDate" project={project} />
                 {teams.map((team) => (
-                  <WorkspaceLink className={styles.teamChip} key={team.id} to={`/teams/${team.id}`}>
+                  <WorkspaceLink
+                    // Same hover surface as the ghost-button property controls beside it.
+                    className="inline-flex h-7 items-center gap-2 rounded-full px-1.5 text-[13px] font-medium text-foreground no-underline outline-none hover:bg-muted hover:text-foreground hover:no-underline focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-muted/50"
+                    key={team.id}
+                    to={`/teams/${team.id}`}
+                  >
                     <TeamIdentity
                       color={team.color}
                       id={team.id}

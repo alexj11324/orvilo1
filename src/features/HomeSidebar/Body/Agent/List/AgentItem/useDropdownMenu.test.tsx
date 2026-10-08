@@ -222,6 +222,7 @@ describe('useAgentDropdownMenu', () => {
           pinned: false,
           updatedAt: new Date(),
           title: 'Renamed Orvilo',
+          heterogeneousType: 'orvilo',
           avatar: '⚡',
           backgroundColor: '#fff',
         }}
@@ -274,12 +275,22 @@ describe('useAgentDropdownMenu', () => {
       }),
     );
 
-    expect(getMenuKeys(result.current())).toEqual([
-      'pin',
-      'openInNewWindow',
-      'duplicate',
-      'moveGroup',
-    ]);
+    expect(getMenuKeys(result.current())).toEqual(['pin', 'openInNewWindow', 'moveGroup']);
+  });
+
+  it('allows Agent duplication only on the Agents page', () => {
+    const { result } = renderHook(() =>
+      useAgentDropdownMenu({
+        anchor: null,
+        group: undefined,
+        id: 'agent-1',
+        openCreateGroupModal: vi.fn(),
+        pinned: false,
+        title: 'Agent',
+        creationEnabled: true,
+      }),
+    );
+    expect(getMenuKeys(result.current())).toContain('duplicate');
   });
 
   it('shows the Labels submenu only where it is enabled (the agents list page)', () => {
@@ -445,7 +456,6 @@ describe('useAgentDropdownMenu', () => {
       'openInNewWindow',
       'divider',
       'rename',
-      'duplicate',
       'moveGroup',
       'copy-agent',
       'divider',

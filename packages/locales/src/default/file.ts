@@ -55,7 +55,8 @@ export default {
   'home.recentPages': 'Recent Pages',
   'home.uploadEntries.library.title': 'Create New Library',
   'home.viewAll': 'View all',
-  'library.hierarchy.empty.desc': 'Add files or create a folder to get started',
+  'library.hierarchy.empty.desc':
+    'Add files or create a folder from the library page to get started',
   'library.hierarchy.empty.title': 'Nothing here yet',
   'library.hierarchy.search.noResults': 'No matching files or pages',
   'library.hierarchy.search.placeholder': 'Search',

@@ -2045,6 +2045,8 @@ export default {
   'goalEmpty.step3.desc':
     'Every check is judged one by one. All passed means achieved; anything needing your call stops at pending acceptance.',
   'goalEmpty.step3.title': 'Acceptance runs every round',
+  'goalEmpty.recordsTitle': 'No goals yet',
+  'goalEmpty.recordsDescription': 'Goals created by your Agent will appear here.',
   'goalEmpty.title': 'Chase goals without limits',
   'goalList.acceptanceProgress': '{{passed}}/{{total}} passed',
   'goalList.agentRuns': '{{count}} runs',

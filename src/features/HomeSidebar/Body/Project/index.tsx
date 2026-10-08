@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRightIcon, PlusIcon } from 'lucide-react';
+import { ArrowRightIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,7 +9,6 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/
 import { Button } from '@/components/ui/button';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -59,9 +58,9 @@ const Project = memo<ProjectProps>(({ itemKey }) => {
           <SkeletonList rows={3} />
         ) : projects.length === 0 ? (
           <NavItem
-            icon={PlusIcon}
-            title={t('sidebar.emptyAction')}
-            onClick={() => openCreateProjectModal()}
+            icon={ArrowRightIcon}
+            title={t('list.viewAll')}
+            onClick={() => navigate('/projects')}
           />
         ) : (
           projects.map((project) => <ProjectItem key={project.id} project={project} />)

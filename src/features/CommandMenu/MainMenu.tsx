@@ -2,7 +2,6 @@ import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { Command } from 'cmdk';
 import {
-  Bot,
   FeatherIcon,
   LayersIcon,
   LibraryBig,
@@ -10,7 +9,6 @@ import {
   MessageSquarePlusIcon,
   Monitor,
   Star,
-  TargetIcon,
 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,16 +39,13 @@ const MainMenu = memo(() => {
   const isNewTopicSendInFlight = useChatStore(topicSelectors.isNewTopicSendInFlight);
 
   const {
-    handleCreateSession,
     handleCreateConversation,
-    handleCreateGoal,
     handleCreateTopic,
     handleCreateLibrary,
     handleCreateProject,
     handleCreateTask,
     handleNavigate,
     handleExternalLink,
-    handleCreateAgentTeam,
   } = useCommandMenu();
   const navigableRoutes = getNavigableRoutes().filter(
     (route) => route.id !== 'teams' || workspaceId,
@@ -71,38 +66,12 @@ const MainMenu = memo(() => {
         </CommandItem>
         <CommandItem
           disabled={!canCreate}
-          icon={<Bot />}
-          value="create new group chat"
-          onSelect={handleCreateAgentTeam}
-        >
-          {t('cmdk.newGroupChat')}
-        </CommandItem>
-        <Command.Separator />
-        <CommandItem
-          disabled={!canCreate}
-          icon={<Bot />}
-          value="create new agent assistant"
-          onSelect={handleCreateSession}
-        >
-          {t('cmdk.newAgent')}
-        </CommandItem>
-        <Command.Separator />
-        <CommandItem
-          disabled={!canCreate}
           icon={<ListTodo />}
           keywords={['task', 'todo', 'new']}
           value="create new task"
           onSelect={handleCreateTask}
         >
           {t('cmdk.newTask')}
-        </CommandItem>
-        <CommandItem
-          disabled={!canCreate}
-          icon={<TargetIcon />}
-          value="create new goal"
-          onSelect={handleCreateGoal}
-        >
-          {t('cmdk.newGoal')}
         </CommandItem>
         <CommandItem
           disabled={!canCreate}

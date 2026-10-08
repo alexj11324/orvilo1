@@ -13,13 +13,12 @@ export const SIDEBAR_SCHEMA_VERSION = 2;
 
 /** Top-level slots in canonical order. */
 export const FIXED_PRIMARY_KEYS = [
+  'tasks',
   'inbox',
   'my-work',
-  'reviews',
   'agent',
   'group',
   'drafts',
-  'create',
   'workspace',
   'favorites',
   'teams',
@@ -27,13 +26,14 @@ export const FIXED_PRIMARY_KEYS = [
 
 /**
  * Legacy primary keys a stored preference must never surface at the top
- * level again. Retiring the sidebar key does NOT retire the route — /tasks,
+ * level again. Retiring the sidebar key does NOT retire the route —
  * /automations, /resource and /projects all stay reachable through Workspace
  * → More, Team pages, search and existing deep links.
  */
 export const LEGACY_PRIMARY_KEYS = new Set([
   'home',
-  'tasks',
+  'reviews',
+  'create',
   'automations',
   'resource',
   'recents',
@@ -41,9 +41,6 @@ export const LEGACY_PRIMARY_KEYS = new Set([
   'project',
   'views',
 ]);
-
-/** `create` is the standalone quick-create row (Linear's `+`) — it renders an
- * action, not a destination, so it has no route and no nav item. */
 
 /** Optional sections a user may hide — everything else is structural. */
 export const OPTIONAL_SECTION_KEYS = new Set(['workspace', 'favorites', 'teams']);

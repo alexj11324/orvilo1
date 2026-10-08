@@ -1,11 +1,5 @@
 import { INBOX_SESSION_ID } from '@orvilo/const';
-import {
-  BotIcon,
-  GitPullRequestIcon,
-  InboxIcon,
-  MessagesSquareIcon,
-  SquareUserIcon,
-} from 'lucide-react';
+import { BotIcon, InboxIcon, ListTodoIcon, MessagesSquareIcon, SquareUserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -42,8 +36,8 @@ export const useNavLayout = (): NavLayout => {
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
 
   // Fixed primary IA (see features/Navigation/sidebarContract): the header
-  // carries the workspace switcher + search/new-issue icons; the body renders
-  // inbox/my-work/reviews/agent as core links (Agent is a flat row to /agent —
+  // carries the workspace switcher and search; the body renders
+  // issues/inbox/my-work/agent as core links (Agent is a flat row to /agent —
   // the workspace conversation; the /agents management directory stays a
   // secondary destination under Workspace → More) and the accordion sections
   // favorites, teams) separately. Retired surfaces keep their routes for deep
@@ -51,6 +45,12 @@ export const useNavLayout = (): NavLayout => {
   const topNavItems = useMemo(
     () =>
       [
+        {
+          icon: ListTodoIcon,
+          key: SidebarTabKey.Tasks,
+          title: t('tab.issues'),
+          url: '/tasks',
+        },
         {
           icon: InboxIcon,
           key: SidebarTabKey.Inbox,
@@ -62,12 +62,6 @@ export const useNavLayout = (): NavLayout => {
           key: SidebarTabKey.MyWork,
           title: t('tab.myWork'),
           url: '/my-issues',
-        },
-        {
-          icon: GitPullRequestIcon,
-          key: SidebarTabKey.Reviews,
-          title: t('tab.reviews'),
-          url: '/reviews',
         },
         {
           icon: BotIcon,

@@ -1,7 +1,7 @@
 'use client';
 
 import { cssVar } from 'antd-style';
-import { FolderPlusIcon } from 'lucide-react';
+import { FolderIcon } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { VList } from 'virtua';
@@ -12,7 +12,6 @@ import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useFileStore } from '@/store/file';
 import { useTreeStore } from '@/store/tree';
 
-import AddButton from '../Header/AddButton';
 import { KnowledgeBaseListProvider } from '../KnowledgeBaseListProvider';
 import { HierarchyNode } from './HierarchyNode';
 import SearchResults from './SearchResults';
@@ -76,7 +75,7 @@ const LibraryHierarchy = memo(() => {
       style={{ height: '100%', textAlign: 'center' }}
     >
       <span className="anticon" role="img">
-        <FolderPlusIcon
+        <FolderIcon
           color={cssVar.colorTextQuaternary}
           fill={'transparent'}
           height={36}
@@ -90,7 +89,6 @@ const LibraryHierarchy = memo(() => {
           {t('library.hierarchy.empty.desc')}
         </div>
       </div>
-      <AddButton />
     </div>
   );
 

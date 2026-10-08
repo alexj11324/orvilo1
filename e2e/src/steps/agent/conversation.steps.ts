@@ -7,7 +7,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 
 import { llmMockManager, presetResponses } from '../../mocks/llm';
-import { ensureTestUserPrimeAgent } from '../../support/bindExecutionDevice';
+import { E2E_PRIME_AGENT_TITLE, ensureTestUserPrimeAgent } from '../../support/bindExecutionDevice';
 import type { CustomWorld } from '../../support/world';
 import { WAIT_TIMEOUT } from '../../support/world';
 
@@ -225,10 +225,7 @@ Then('回复内容应该可见', async function (this: CustomWorld) {
             .last()
             .innerText()
             .catch(() => '')) || '';
-        finalText = rawText
-          .replaceAll(/Orvilo AI/gi, '')
-          .replaceAll(/[·•]/g, '')
-          .trim();
+        finalText = rawText.replaceAll(E2E_PRIME_AGENT_TITLE, '').replaceAll(/[·•]/g, '').trim();
         return finalText.length;
       },
       { timeout: 20_000 },

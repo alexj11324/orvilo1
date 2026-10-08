@@ -770,17 +770,15 @@ describe('CreateTaskInlineEntry', () => {
       );
     });
 
-    it('offers the goal handoff only for a request read as a standing goal', async () => {
+    it('keeps a standing-goal reading in the task composer without creating an application goal', async () => {
       analyzeIntentMock.mockResolvedValue({ ...clearReading, kind: 'goal' });
 
       render(<CreateTaskInlineEntry variant="hero" />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
-      fireEvent.click(await screen.findByText('taskIntent.goalCallout.action'));
-
-      expect(createGoalModalMock).toHaveBeenCalledWith(
-        expect.objectContaining({ initialTitle: 'Write the Q3 project plan' }),
-      );
+      await screen.findByText('taskIntent.reviewStep');
+      expect(screen.queryByText('taskIntent.goalCallout.action')).not.toBeInTheDocument();
+      expect(createGoalModalMock).not.toHaveBeenCalled();
       expect(createTaskMock).not.toHaveBeenCalled();
     });
 

@@ -12,7 +12,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useHomeStore } from '@/store/home';
 
-import { useCreateMenuItems, useSessionGroupMenuItems } from '../../../../hooks';
+import { useSessionGroupMenuItems } from '../../../../hooks';
 
 interface GroupDropdownMenuProps {
   anchor: HTMLElement | null;
@@ -28,7 +28,6 @@ export const useGroupDropdownMenu = ({
   anchor,
   id,
   isCustomGroup,
-  isPinned,
   name,
   openConfigGroupModal,
   visibility,
@@ -42,10 +41,6 @@ export const useGroupDropdownMenu = ({
   const { renameGroupMenuItem, configGroupMenuItem, deleteGroupMenuItem } =
     useSessionGroupMenuItems();
 
-  // Create menu items
-  const { createAgentMenuItem, createConnectAgentMenuItem, createGroupChatMenuItem } =
-    useCreateMenuItems();
-
   // "Publish to Workspace" is one-way and only meaningful in workspace mode
   // for the creator's own still-private folder. Once a folder is `public`,
   // members may have anchored their own work to it, so it can't be
@@ -56,9 +51,6 @@ export const useGroupDropdownMenu = ({
   const showPublishAction = Boolean(activeWorkspaceId && id && isCustomGroup) && isPrivate;
 
   return useMemo(() => {
-    const createAgentItem = createAgentMenuItem({ groupId: id, isPinned, visibility });
-    const createGroupChatItem = createGroupChatMenuItem({ groupId: id, visibility });
-    const connectAgentItem = createConnectAgentMenuItem({ groupId: id, visibility });
     const configItem = configGroupMenuItem(openConfigGroupModal);
     const renameItem = id && name ? renameGroupMenuItem(id, name, anchor) : null;
     const deleteItem = id ? deleteGroupMenuItem(id) : null;
@@ -112,10 +104,6 @@ export const useGroupDropdownMenu = ({
       : null;
 
     return [
-      createAgentItem,
-      createGroupChatItem,
-      ...(connectAgentItem ? [{ type: 'divider' as const }, connectAgentItem] : []),
-      { type: 'divider' as const },
       ...(isCustomGroup
         ? [
             renameItem,
@@ -130,12 +118,7 @@ export const useGroupDropdownMenu = ({
     anchor,
     isCustomGroup,
     id,
-    isPinned,
     name,
-    visibility,
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
     configGroupMenuItem,
     renameGroupMenuItem,
     deleteGroupMenuItem,

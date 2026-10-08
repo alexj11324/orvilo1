@@ -13,13 +13,11 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
-import CreateAgentButton from '../Agent/CreateAgentButton';
 import Group from '../Agent/List/Group';
 import SessionList from '../Agent/List/List';
 import { useKeepSidebarGroupsListed, useKeepSidebarListed } from '../Agent/List/useAgentList';
 
 interface PrivateListProps {
-  hideCreateButton?: boolean;
   onMoreClick?: () => void;
 }
 
@@ -27,7 +25,7 @@ interface PrivateListProps {
 // private folders, then ungrouped agents/chat groups. The server already filters out
 // items the viewer can't see (other members' private rows), so this list
 // is always the viewer's own.
-const PrivateList = memo<PrivateListProps>(({ hideCreateButton, onMoreClick }) => {
+const PrivateList = memo<PrivateListProps>(({ onMoreClick }) => {
   const { t } = useTranslation('chat');
   const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const rawPrivatePinned = useHomeStore(homeAgentListSelectors.privatePinnedAgents, isEqual);
@@ -62,16 +60,7 @@ const PrivateList = memo<PrivateListProps>(({ hideCreateButton, onMoreClick }) =
   // (e.g. the agent-detail switcher) pass their own navigation handler.
   const handleMoreClick = onMoreClick ?? (() => navigate('/agents?tab=private'));
 
-  // Empty state still surfaces the create-button so a fresh user has an
-  // obvious affordance for their first private agent.
-  if (!hasPinned && !hasGroups && !hasUngrouped) {
-    if (hideCreateButton) return null;
-    return (
-      <div className="flex flex-col gap-[1px] py-[1px]">
-        <CreateAgentButton visibility={'private'} />
-      </div>
-    );
-  }
+  if (!hasPinned && !hasGroups && !hasUngrouped) return null;
 
   return (
     <div className="flex flex-col gap-[1px] py-[1px]">
@@ -81,7 +70,6 @@ const PrivateList = memo<PrivateListProps>(({ hideCreateButton, onMoreClick }) =
       {hasMore && (
         <NavItem icon={MoreHorizontal} title={t('input.more')} onClick={handleMoreClick} />
       )}
-      {!hideCreateButton && <CreateAgentButton visibility={'private'} />}
     </div>
   );
 });

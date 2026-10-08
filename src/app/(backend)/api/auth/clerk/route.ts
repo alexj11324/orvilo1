@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { getServerDB } from '@/database/core/db-adaptor';
 import { authEnv } from '@/envs/auth';
+import { clearMismatchedOIDCSession } from '@/libs/oidc-provider/session-cleanup';
 import { ClerkAuthError, exchangeClerkSession } from '@/server/services/auth';
 
 const accountsOrigin = () => {
@@ -71,6 +72,10 @@ export const POST = async (request: NextRequest) => {
       },
       { headers: corsHeaders(request), status: 200 },
     );
+    await clearMismatchedOIDCSession(db, user.id, {
+      getCookie: (name) => request.cookies.get(name)?.value ?? null,
+      setCookie: (name, value, options) => response.cookies.set(name, value, options),
+    });
     response.cookies.set(cookie.name, cookie.value, cookie.options);
 
     return response;

@@ -7,10 +7,15 @@ const state = vi.hoisted(() => ({
   isInit: false,
   error: new Error('request failed'),
   isValidating: false,
+  data: undefined,
+  useFetchAgentList: vi.fn(),
   mutate: vi.fn(),
 }));
-vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: () => state }));
-vi.mock('@/store/home', () => ({ useHomeStore: () => state.isInit }));
+vi.mock('@/store/home', () => ({
+  useHomeStore: (selector: (value: typeof state) => unknown) => selector(state),
+}));
+vi.mock('@/store/user', () => ({ useUserStore: () => true }));
+vi.mock('@/store/user/slices/auth/selectors', () => ({ authSelectors: { isLogin: () => true } }));
 vi.mock('@/store/home/selectors', () => ({
   homeAgentListSelectors: { isAgentListInit: () => state.isInit },
 }));
@@ -19,6 +24,7 @@ describe('Agent directory retry state', () => {
     state.isInit = false;
     state.isValidating = false;
     vi.clearAllMocks();
+    state.useFetchAgentList.mockImplementation(() => state);
   });
   it('retains the initial error through retry and reports progress to the recovery surface', () => {
     const { result, rerender } = renderHook(() => useAgentListView(0));

@@ -8,10 +8,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
 
 interface MenuItem {
+  children?: MenuItem[];
+  disabled?: boolean;
+  extra?: ReactNode;
   key?: string;
   label?: ReactNode;
+  onClick?: () => void;
   type?: string;
 }
+
+const submenu = (key: string) => mocks.dropdownItems.find((item) => item?.key === key)?.children;
+const submenuKeys = (key: string) => submenu(key)?.map((item) => item.key);
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'ws-1' as string | undefined,
@@ -22,17 +29,31 @@ const mocks = vi.hoisted(() => ({
   isWorkspaceOwner: false,
   messageSuccess: vi.fn(),
   navigate: vi.fn(),
+  permissionAllowed: true,
+  removeDependency: vi.fn(),
+  removeIssueRelation: vi.fn(),
   taskState: {
     activeTaskId: 'T-1' as string | undefined,
     taskDetailMap: {
       'T-1': { visibility: 'private' as 'private' | 'public' },
-    } as Record<string, { createdByUserId?: string | null; visibility?: 'private' | 'public' }>,
+    } as Record<string, Record<string, unknown>>,
   },
+  toastError: vi.fn(),
   transferItems: [
     { key: 'transfer-task', label: 'Move to…' },
     { key: 'copy-task', label: 'Copy to...' },
   ] as MenuItem[],
+  updateTask: vi.fn(),
   updateTaskVisibility: vi.fn(),
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: { error: mocks.toastError, success: vi.fn() },
+}));
+
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({ allowed: mocks.permissionAllowed }),
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
@@ -99,6 +120,9 @@ vi.mock('@/store/task', () => ({
     selector({
       ...mocks.taskState,
       deleteTask: mocks.deleteTask,
+      removeDependency: mocks.removeDependency,
+      removeIssueRelation: mocks.removeIssueRelation,
+      updateTask: mocks.updateTask,
       updateTaskVisibility: mocks.updateTaskVisibility,
     }),
 }));
@@ -112,6 +136,10 @@ describe('TaskDetailHeaderActions', () => {
     mocks.activeWorkspaceId = 'ws-1';
     mocks.currentUserId = 'user-1';
     mocks.isWorkspaceOwner = false;
+    mocks.permissionAllowed = true;
+    mocks.updateTask.mockResolvedValue(undefined);
+    mocks.removeDependency.mockResolvedValue(undefined);
+    mocks.removeIssueRelation.mockResolvedValue(undefined);
   });
 
   it('includes task transfer and copy actions in the detail menu', () => {
@@ -133,9 +161,129 @@ describe('TaskDetailHeaderActions', () => {
       expect(keys).not.toContain('publishToWorkspace');
       expect(keys).not.toContain('makePrivate');
       expect(keys).toEqual(
-        expect.arrayContaining(['copyId', 'copyLink', 'transfer-task', 'copy-task', 'delete']),
+        expect.arrayContaining(['copy', 'transfer-task', 'copy-task', 'delete']),
       );
       expect(mocks.updateTaskVisibility).not.toHaveBeenCalled();
     },
   );
+
+  it('groups the clipboard actions into one Copy submenu', () => {
+    render(<TaskDetailHeaderActions />);
+
+    const keys = mocks.dropdownItems.map((item) => item?.key);
+    expect(keys).not.toContain('copyId');
+    expect(keys).not.toContain('copyLink');
+    expect(submenuKeys('copy')).toEqual([
+      'copyId',
+      'copyLink',
+      'copyTitle',
+      'copyTitleAsLink',
+      'copyMarkdown',
+    ]);
+  });
+
+  it('adds the branch entry to the Copy submenu only for workspace-bound tasks', () => {
+    mocks.taskState.taskDetailMap = {
+      'T-1': { config: { workspace: { provider: 'git' } }, identifier: 'ENG-1' },
+    };
+    render(<TaskDetailHeaderActions />);
+
+    expect(submenuKeys('copy')).toContain('copyBranch');
+  });
+
+  it('offers no Remove submenu for an issue with nothing linked', () => {
+    render(<TaskDetailHeaderActions />);
+
+    expect(mocks.dropdownItems.map((item) => item?.key)).not.toContain('remove');
+  });
+
+  it('lists the parent, each sub-issue and each relation under Remove', () => {
+    mocks.taskState.taskDetailMap = {
+      'T-1': {
+        dependencies: [
+          { dependsOn: 'ENG-5', id: 'uuid-5', type: 'blocks' },
+          { dependsOn: 'ENG-6', direction: 'blocking', type: 'blocks' },
+          { dependsOn: 'ENG-7', relationId: 'rel-7', type: 'relates' },
+          { dependsOn: 'ENG-8', type: 'duplicates' },
+        ],
+        parent: { identifier: 'ENG-1', name: 'Parent' },
+        subtasks: [{ identifier: 'ENG-2', status: 'backlog' }],
+      },
+    };
+    render(<TaskDetailHeaderActions />);
+
+    expect(submenu('remove')?.map((item) => [item.key, item.label, item.extra])).toEqual([
+      ['remove-parent', 'taskDetail.menu.removeParent', 'ENG-1'],
+      ['remove-sub-issue-ENG-2', 'taskDetail.menu.removeSubIssue', 'ENG-2'],
+      ['remove-relation-blockedBy-ENG-5', 'taskDetail.menu.removeBlocking', 'ENG-5'],
+      ['remove-relation-blocking-ENG-6', 'taskDetail.menu.removeBlocked', 'ENG-6'],
+      ['remove-relation-rel-7', 'taskDetail.menu.removeRelated', 'ENG-7'],
+    ]);
+  });
+
+  it('detaches the parent and a sub-issue by clearing the child side of the edge', () => {
+    mocks.taskState.taskDetailMap = {
+      'T-1': {
+        parent: { identifier: 'ENG-1', name: 'Parent' },
+        subtasks: [{ identifier: 'ENG-2', status: 'backlog' }],
+      },
+    };
+    render(<TaskDetailHeaderActions />);
+
+    submenu('remove')?.[0].onClick?.();
+    expect(mocks.updateTask).toHaveBeenLastCalledWith('T-1', { parentTaskId: null });
+
+    submenu('remove')?.[1].onClick?.();
+    expect(mocks.updateTask).toHaveBeenLastCalledWith('ENG-2', { parentTaskId: null });
+  });
+
+  it('unlinks each relation from the side that owns the edge', () => {
+    mocks.taskState.taskDetailMap = {
+      'T-1': {
+        dependencies: [
+          { dependsOn: 'ENG-5', id: 'uuid-5', type: 'blocks' },
+          { dependsOn: 'ENG-6', direction: 'blocking', type: 'blocks' },
+          { dependsOn: 'ENG-7', relationId: 'rel-7', type: 'relates' },
+          { dependsOn: 'ENG-9', type: 'relates' },
+        ],
+      },
+    };
+    render(<TaskDetailHeaderActions />);
+
+    for (const item of submenu('remove') ?? []) item.onClick?.();
+
+    expect(mocks.removeDependency.mock.calls).toEqual([
+      ['T-1', 'uuid-5', 'blocks'],
+      ['ENG-6', 'T-1', 'blocks'],
+      ['T-1', 'ENG-9', 'relates'],
+    ]);
+    expect(mocks.removeIssueRelation.mock.calls).toEqual([['T-1', 'rel-7']]);
+  });
+
+  it('reports a relation that could not be removed', async () => {
+    mocks.removeIssueRelation.mockRejectedValue(new Error('nope'));
+    mocks.taskState.taskDetailMap = {
+      'T-1': { dependencies: [{ dependsOn: 'ENG-7', relationId: 'rel-7', type: 'relates' }] },
+    };
+    render(<TaskDetailHeaderActions />);
+
+    submenu('remove')?.[0].onClick?.();
+
+    await vi.waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith('taskDetail.menu.removeFailed'),
+    );
+  });
+
+  it('disables every Remove entry without edit permission', () => {
+    mocks.permissionAllowed = false;
+    mocks.taskState.taskDetailMap = {
+      'T-1': {
+        dependencies: [{ dependsOn: 'ENG-7', relationId: 'rel-7', type: 'relates' }],
+        parent: { identifier: 'ENG-1', name: 'Parent' },
+      },
+    };
+    render(<TaskDetailHeaderActions />);
+
+    expect(submenu('remove')?.map((item) => item.disabled)).toEqual([true, true]);
+  });
 });

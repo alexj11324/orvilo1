@@ -1,7 +1,7 @@
 // @vitest-environment node
 import type { AutomationOccurrenceSnapshot, TaskExecutionContract, TaskItem } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { AgentModel } from '@/database/models/agent';
@@ -243,63 +243,72 @@ const useActualPromptBuilder = async () => {
 };
 
 describe('TaskRunnerService run intent (SA05-A)', () => {
-  it('dispatches a noncreator with explicit private Agent Use to the pinned Device', async () => {
-    const db = await getTestDB();
-    const ownerId = 'private-pinned-owner';
-    await db.insert(users).values([{ id: ownerId }, { id: 'user-1' }]);
-    await db
-      .insert(workspaces)
-      .values({ id: 'ws-1', slug: 'private-pinned', name: 'Pinned', primaryOwnerId: ownerId });
-    await db.insert(workspaceMembers).values([
-      { workspaceId: 'ws-1', userId: ownerId, role: 'owner' },
-      { workspaceId: 'ws-1', userId: 'user-1', role: 'member' },
-    ]);
-    await db.insert(agents).values({
-      id: 'agt_assignee',
-      workspaceId: 'ws-1',
-      userId: ownerId,
-      visibility: 'private',
-      model: 'm',
-      provider: 'p',
-      agencyConfig: {
-        heterogeneousProvider: { type: 'codex' },
-        executionTargetSelectionPolicy: 'fixed',
-        executionTarget: 'device',
-        boundDeviceId: 'pinned-device',
-      },
+  describe('private Agent Use with a pinned Device', () => {
+    let db: Awaited<ReturnType<typeof getTestDB>>;
+    let actualUse: typeof WorkspaceAgentGuardModule.assertCanUseWorkspaceAgent;
+
+    beforeAll(async () => {
+      db = await getTestDB();
+      const actualGuard = await vi.importActual<typeof WorkspaceAgentGuardModule>(
+        '@/server/routers/lambda/_helpers/workspaceAgentGuard',
+      );
+      actualUse = actualGuard.assertCanUseWorkspaceAgent;
     });
-    await db.insert(resourcePermissions).values({
-      resourceType: 'agent',
-      resourceId: 'agt_assignee',
-      workspaceId: 'ws-1',
-      userId: 'user-1',
-      createdBy: ownerId,
-      accessLevel: 'use',
-    });
-    try {
-      const task = baseTask({
-        config: { model: 'm', provider: 'p', automationDeviceId: 'pinned-device' },
+
+    it('dispatches a noncreator with explicit private Agent Use to the pinned Device', async () => {
+      const ownerId = 'private-pinned-owner';
+      await db.insert(users).values([{ id: ownerId }, { id: 'user-1' }]);
+      await db
+        .insert(workspaces)
+        .values({ id: 'ws-1', slug: 'private-pinned', name: 'Pinned', primaryOwnerId: ownerId });
+      await db.insert(workspaceMembers).values([
+        { workspaceId: 'ws-1', userId: ownerId, role: 'owner' },
+        { workspaceId: 'ws-1', userId: 'user-1', role: 'member' },
+      ]);
+      await db.insert(agents).values({
+        id: 'agt_assignee',
+        workspaceId: 'ws-1',
+        userId: ownerId,
+        visibility: 'private',
+        model: 'm',
+        provider: 'p',
+        agencyConfig: {
+          heterogeneousProvider: { type: 'codex' },
+          executionTargetSelectionPolicy: 'fixed',
+          executionTarget: 'device',
+          boundDeviceId: 'pinned-device',
+        },
       });
-      const { execAgent } = setupHappyPath(task);
-      const runner = newRunner();
-      const model = new AgentModel(db, 'user-1', 'ws-1');
-      expect(await model.getAgentConfig('agt_assignee')).toBeNull();
-      (runner as unknown as { agentModel: AgentModel }).agentModel = model;
-      const { assertCanUseWorkspaceAgent: actualUse } = await vi.importActual<
-        typeof WorkspaceAgentGuardModule
-      >('@/server/routers/lambda/_helpers/workspaceAgentGuard');
-      vi.mocked(assertCanUseWorkspaceAgent).mockImplementation((input) =>
-        actualUse({ ...input, db }),
-      );
-      await expect(runner.runTask(runParams)).resolves.toMatchObject({ success: true });
-      expect(execAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ agentId: 'agt_assignee', deviceId: 'pinned-device' }),
-      );
-    } finally {
-      await db.delete(workspaces).where(eq(workspaces.id, 'ws-1'));
-      await db.delete(users).where(eq(users.id, ownerId));
-      await db.delete(users).where(eq(users.id, 'user-1'));
-    }
+      await db.insert(resourcePermissions).values({
+        resourceType: 'agent',
+        resourceId: 'agt_assignee',
+        workspaceId: 'ws-1',
+        userId: 'user-1',
+        createdBy: ownerId,
+        accessLevel: 'use',
+      });
+      try {
+        const task = baseTask({
+          config: { model: 'm', provider: 'p', automationDeviceId: 'pinned-device' },
+        });
+        const { execAgent } = setupHappyPath(task);
+        const runner = newRunner();
+        const model = new AgentModel(db, 'user-1', 'ws-1');
+        expect(await model.getAgentConfig('agt_assignee')).toBeNull();
+        (runner as unknown as { agentModel: AgentModel }).agentModel = model;
+        vi.mocked(assertCanUseWorkspaceAgent).mockImplementation((input) =>
+          actualUse({ ...input, db }),
+        );
+        await expect(runner.runTask(runParams)).resolves.toMatchObject({ success: true });
+        expect(execAgent).toHaveBeenCalledWith(
+          expect.objectContaining({ agentId: 'agt_assignee', deviceId: 'pinned-device' }),
+        );
+      } finally {
+        await db.delete(workspaces).where(eq(workspaces.id, 'ws-1'));
+        await db.delete(users).where(eq(users.id, ownerId));
+        await db.delete(users).where(eq(users.id, 'user-1'));
+      }
+    });
   });
   it.each(['schedule', 'heartbeat'] as const)(
     'refuses a parked %s automation before dispatch or runtime effects',

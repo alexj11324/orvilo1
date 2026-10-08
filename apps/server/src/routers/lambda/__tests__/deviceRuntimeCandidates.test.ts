@@ -2,7 +2,7 @@
 import { getTestDB } from '@orvilo/database/test-utils';
 import { isSelectableDevice } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as AgentModelModule from '@/database/models/agent';
 import type * as WorkspaceModelModule from '@/database/models/workspace';
@@ -291,16 +291,26 @@ describe('server-derived Agent candidate scope', () => {
 });
 
 describe('selected legacy private Agent visibility-aware model boundary', () => {
-  it('resolves installed candidates for an authorized noncreator without making private config readable', async () => {
-    const db = await getTestDB();
-    const { AgentModel } =
-      await vi.importActual<typeof AgentModelModule>('@/database/models/agent');
-    const { getResourceMeta } = await vi.importActual<typeof ResourcePermissionModule>(
+  let db: Awaited<ReturnType<typeof getTestDB>>;
+  let AgentModel: typeof AgentModelModule.AgentModel;
+  let getResourceMeta: typeof ResourcePermissionModule.getResourceMeta;
+  let assertCanUseWorkspaceAgent: typeof WorkspaceAgentGuardModule.assertCanUseWorkspaceAgent;
+
+  beforeAll(async () => {
+    db = await getTestDB();
+    const agentModule = await vi.importActual<typeof AgentModelModule>('@/database/models/agent');
+    const permissionModule = await vi.importActual<typeof ResourcePermissionModule>(
       '@/server/services/resourcePermission',
     );
-    const { assertCanUseWorkspaceAgent } = await vi.importActual<typeof WorkspaceAgentGuardModule>(
+    const guardModule = await vi.importActual<typeof WorkspaceAgentGuardModule>(
       '../_helpers/workspaceAgentGuard',
     );
+    AgentModel = agentModule.AgentModel;
+    getResourceMeta = permissionModule.getResourceMeta;
+    assertCanUseWorkspaceAgent = guardModule.assertCanUseWorkspaceAgent;
+  });
+
+  it('resolves installed candidates for an authorized noncreator without making private config readable', async () => {
     const owner = 'device-private-inventory-owner';
     const workspaceId = 'device-private-inventory-workspace';
     await db

@@ -197,9 +197,9 @@ describe('TaskProperties', () => {
     }
   });
 
-  it('fills the loaded no-execution property without changing compact badges or unknown state', () => {
+  it('leaves the idle execution property out of the rail without changing compact badges', () => {
     const { unmount } = render(<TaskProperties />);
-    expect(screen.getByText('goalProcess.summary.notStarted')).toBeTruthy();
+    expect(screen.queryByText('goalProcess.summary.notStarted')).toBeNull();
     unmount();
     for (const props of [{ status: 'backlog' }, { showLabel: true }]) {
       const { container, unmount: dispose } = render(<TaskExecutionBadge {...props} />);
@@ -220,14 +220,11 @@ describe('TaskProperties', () => {
   it('renders value-only rows named by their field, without a label column', () => {
     render(<TaskProperties />);
 
+    // Default set, like Linear: Status, Assignee, Priority.
     for (const field of [
       'taskDetail.property.state',
-      'taskDetail.executionStatus',
       'taskDetail.assignee',
       'taskDetail.property.priority',
-      'taskDetail.dueDate',
-      'taskDetail.labels.title',
-      'taskDetail.property.schedule',
     ]) {
       expect(screen.getByRole('group', { name: field })).toBeTruthy();
       expect(screen.queryByText(field)).toBeNull();
@@ -236,8 +233,25 @@ describe('TaskProperties', () => {
     expect(screen.getByText('taskDetail.workflow.category.backlog')).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addAssignee')).toBeTruthy();
     expect(screen.getByText('priority')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.addLabels')).toBeTruthy();
+  });
+
+  it('hides unset optional fields and reveals them from the add-property menu', async () => {
+    render(<TaskProperties />);
+
+    for (const field of [
+      'taskDetail.executionStatus',
+      'taskDetail.dueDate',
+      'taskDetail.labels.title',
+      'taskDetail.property.schedule',
+    ]) {
+      expect(screen.queryByRole('group', { name: field })).toBeNull();
+    }
     expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+    fireEvent.click(await screen.findByText('taskDetail.dueDate'));
+
+    expect(screen.getByRole('group', { name: 'taskDetail.dueDate' })).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
   });
 });

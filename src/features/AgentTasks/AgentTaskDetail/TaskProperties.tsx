@@ -1,11 +1,19 @@
 import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { format, parseISO } from 'date-fns';
+import { CalendarIcon, ClockIcon, PlusIcon, TagIcon, UserCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
@@ -19,10 +27,13 @@ import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import TaskTriggerTag from '../features/TaskTriggerTag';
+import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
+import { ISSUE_RELATION_KINDS } from './relationGroups';
+import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskPrerequisites from './TaskPrerequisites';
@@ -54,6 +65,8 @@ const PropertyRow = ({ children, label }: { children: ReactNode; label: string }
 
 const TaskProperties = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
+  // Optional fields the user asked to add while they are still unset.
+  const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
 
   const taskId = useTaskDetailTaskId();
   const dispatchPhase = useTaskDetailSelector(taskDetailSelectors.taskDispatchPhase);
@@ -106,6 +119,26 @@ const TaskProperties = memo(() => {
     workflowCategory !== 'done';
   const priorityLevel = (priority as TaskPriority | undefined) ?? 0;
 
+  // Linear shows Status, Priority and Assignee by default; every other field
+  // appears once it has a value, or after it is added from the menu.
+  const optionalFields = {
+    dueDate: !!dueDate || revealed.has('dueDate'),
+    execution: (!!status && status !== 'backlog') || !!dispatchPhase,
+    labels: labels.length > 0 || revealed.has('labels'),
+    schedule: !!(schedulePattern || heartbeatInterval) || revealed.has('schedule'),
+  };
+  const addableFields = [
+    { key: 'dueDate', label: t('taskDetail.dueDate'), shown: optionalFields.dueDate },
+    { key: 'labels', label: t('taskDetail.labels.title'), shown: optionalFields.labels },
+    { key: 'schedule', label: t('taskDetail.property.schedule'), shown: optionalFields.schedule },
+    ...ISSUE_RELATION_KINDS.map((kind) => ({
+      key: kind,
+      label: t(`taskDetail.relations.${kind}` as never),
+      shown: revealed.has(kind),
+    })),
+  ];
+  const reveal = (key: string) => setRevealed((prev) => new Set(prev).add(key));
+
   const statusValue = (
     <div
       className="flex min-w-0 cursor-pointer items-center gap-1.5"
@@ -136,9 +169,15 @@ const TaskProperties = memo(() => {
           </IssueStatusPicker>
         </PropertyRow>
 
-        <PropertyRow label={t('taskDetail.executionStatus')}>
-          <TaskExecutionBadge showLabel dispatchPhase={dispatchPhase} size={16} status={status} />
+        <PropertyRow label={t('taskDetail.agent')}>
+          <TaskDetailAssignee />
         </PropertyRow>
+
+        {optionalFields.execution && (
+          <PropertyRow label={t('taskDetail.executionStatus')}>
+            <TaskExecutionBadge showLabel dispatchPhase={dispatchPhase} size={16} status={status} />
+          </PropertyRow>
+        )}
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
           <PropertyRow label={t('taskDetail.assignee')}>
@@ -156,9 +195,12 @@ const TaskProperties = memo(() => {
                     <span className="truncate">{memberMeta?.title}</span>
                   </>
                 ) : (
-                  <span className={styles.propertyPlaceholder}>
-                    {t('taskDetail.property.addAssignee')}
-                  </span>
+                  <>
+                    <UnassignedAssigneeIcon kind="human" size={16} />
+                    <span className={styles.propertyPlaceholder}>
+                      {t('taskDetail.property.addAssignee')}
+                    </span>
+                  </>
                 )}
               </div>
             </AssigneeMemberSelector>
@@ -181,44 +223,56 @@ const TaskProperties = memo(() => {
           </TaskPriorityTag>
         </PropertyRow>
 
-        <PropertyRow label={t('taskDetail.dueDate')}>
-          <div
-            className="flex min-w-0 cursor-pointer items-center"
-            onClick={() => openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })}
-          >
-            <span
-              className={
-                dueDateOverdue
-                  ? styles.propertyDanger
-                  : dueDate
-                    ? undefined
-                    : styles.propertyPlaceholder
+        {optionalFields.dueDate && (
+          <PropertyRow label={t('taskDetail.dueDate')}>
+            <div
+              className="flex min-w-0 cursor-pointer items-center gap-1.5"
+              onClick={() =>
+                openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })
               }
             >
-              {dueDate
-                ? format(parseISO(dueDate), 'MMM d, yyyy')
-                : t('taskDetail.property.addDueDate')}
-            </span>
-          </div>
-        </PropertyRow>
-
-        <PropertyRow label={t('taskDetail.labels.title')}>
-          <TaskLabelSelector
-            assignedLabels={labels}
-            disabled={status === 'running'}
-            taskIdentifier={taskId}
-          >
-            <div className="flex min-w-0 cursor-pointer items-center">
-              {labels.length > 0 ? (
-                <LabelChips labels={labels} max={3} />
-              ) : (
-                <span className={styles.propertyPlaceholder}>
-                  {t('taskDetail.property.addLabels')}
-                </span>
+              {!dueDate && (
+                <CalendarIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
               )}
+              <span
+                className={
+                  dueDateOverdue
+                    ? styles.propertyDanger
+                    : dueDate
+                      ? undefined
+                      : styles.propertyPlaceholder
+                }
+              >
+                {dueDate
+                  ? format(parseISO(dueDate), 'MMM d, yyyy')
+                  : t('taskDetail.property.addDueDate')}
+              </span>
             </div>
-          </TaskLabelSelector>
-        </PropertyRow>
+          </PropertyRow>
+        )}
+
+        {optionalFields.labels && (
+          <PropertyRow label={t('taskDetail.labels.title')}>
+            <TaskLabelSelector
+              assignedLabels={labels}
+              disabled={status === 'running'}
+              taskIdentifier={taskId}
+            >
+              <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+                {labels.length > 0 ? (
+                  <LabelChips labels={labels} max={3} />
+                ) : (
+                  <>
+                    <TagIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
+                    <span className={styles.propertyPlaceholder}>
+                      {t('taskDetail.property.addLabels')}
+                    </span>
+                  </>
+                )}
+              </div>
+            </TaskLabelSelector>
+          </PropertyRow>
+        )}
 
         {(workflowCategory === 'in_review' || reviewerUserId) &&
           shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
@@ -256,9 +310,16 @@ const TaskProperties = memo(() => {
                             <span className="truncate">{reviewerMeta?.title}</span>
                           </>
                         ) : (
-                          <span className={styles.propertyPlaceholder}>
-                            {t('taskDetail.property.addReviewer')}
-                          </span>
+                          <>
+                            <UserCheckIcon
+                              aria-hidden
+                              className={styles.propertyPlaceholder}
+                              size={16}
+                            />
+                            <span className={styles.propertyPlaceholder}>
+                              {t('taskDetail.property.addReviewer')}
+                            </span>
+                          </>
                         )}
                       </div>
                     }
@@ -269,23 +330,55 @@ const TaskProperties = memo(() => {
             </PropertyRow>
           )}
 
-        <PropertyRow label={t('taskDetail.property.schedule')}>
-          <TaskScheduleConfig>
-            <div className="flex min-w-0 cursor-pointer items-center">
-              <TaskTriggerTag
-                automationMode={automationMode}
-                heartbeatInterval={heartbeatInterval}
-                mode="inline"
-                schedulePattern={schedulePattern}
-                scheduleTimezone={scheduleTimezone}
-              />
-            </div>
-          </TaskScheduleConfig>
-        </PropertyRow>
+        {optionalFields.schedule && (
+          <PropertyRow label={t('taskDetail.property.schedule')}>
+            <TaskScheduleConfig>
+              <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+                {!(schedulePattern || heartbeatInterval) && (
+                  <ClockIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
+                )}
+                <TaskTriggerTag
+                  automationMode={automationMode}
+                  heartbeatInterval={heartbeatInterval}
+                  mode="inline"
+                  schedulePattern={schedulePattern}
+                  scheduleTimezone={scheduleTimezone}
+                />
+              </div>
+            </TaskScheduleConfig>
+          </PropertyRow>
+        )}
 
         {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
             Related — one flag-marked field per kind. */}
-        <TaskPrerequisites />
+        <TaskPrerequisites revealedKinds={revealed} />
+
+        {addableFields.some((field) => !field.shown) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label={t('taskDetail.property.add')}
+                  className="h-7 w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                  size="sm"
+                  variant="ghost"
+                >
+                  <PlusIcon />
+                  {t('taskDetail.property.add')}
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="start">
+              {addableFields
+                .filter((field) => !field.shown)
+                .map((field) => (
+                  <DropdownMenuItem key={field.key} onClick={() => reveal(field.key)}>
+                    {field.label}
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );

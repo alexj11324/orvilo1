@@ -69,6 +69,7 @@ const setTask = (dependencies: TaskDetailData['dependencies'] = [], id = 'T-4') 
 };
 const key = (suffix: string) => `taskDetail.prerequisites.${suffix}`;
 const relation = (suffix: string) => `taskDetail.relations.${suffix}`;
+const allKinds = new Set(['blockedBy', 'blocking', 'relates']);
 const fieldFor = (kind: string) => {
   const field = document.querySelector(`[data-relation-kind="${kind}"]`);
   if (!field) throw new Error(`Expected relation field ${kind}`);
@@ -89,7 +90,7 @@ afterEach(cleanup);
 
 describe('TaskPrerequisites', () => {
   it('renders the three sidebar fields with an add button each and no search until one is chosen', () => {
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
     expect(screen.getByText(relation('blockedBy'))).toBeTruthy();
     expect(screen.getByText(relation('blocking'))).toBeTruthy();
     expect(screen.getByText(relation('relates'))).toBeTruthy();
@@ -100,6 +101,16 @@ describe('TaskPrerequisites', () => {
     expect(screen.getAllByRole('button', { name: relation('add') })).toHaveLength(3);
   });
 
+  it('hides empty relation fields until they are revealed', () => {
+    setTask([{ dependsOn: 'T-3', status: 'backlog', type: 'relates' }]);
+    const view = render(<TaskPrerequisites />);
+    expect(screen.getByText('T-3')).toBeTruthy();
+    expect(document.querySelector('[data-relation-kind="blockedBy"]')).toBeNull();
+    expect(document.querySelector('[data-relation-kind="blocking"]')).toBeNull();
+    view.rerender(<TaskPrerequisites revealedKinds={new Set(['blocking'])} />);
+    expect(document.querySelector('[data-relation-kind="blocking"]')).toBeTruthy();
+  });
+
   it('shows blocking state until every prerequisite completes', () => {
     setTask([
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
@@ -107,7 +118,7 @@ describe('TaskPrerequisites', () => {
     ]);
     const view = render(
       <>
-        <TaskPrerequisites />
+        <TaskPrerequisites revealedKinds={allKinds} />
         <TaskBlockedNotice />
       </>,
     );
@@ -120,7 +131,7 @@ describe('TaskPrerequisites', () => {
     ]);
     view.rerender(
       <>
-        <TaskPrerequisites />
+        <TaskPrerequisites revealedKinds={allKinds} />
         <TaskBlockedNotice />
       </>,
     );
@@ -132,7 +143,7 @@ describe('TaskPrerequisites', () => {
       { dependsOn: 'T-1', status: 'backlog', type: 'blocks' },
       { dependsOn: 'T-3', status: 'backlog', type: 'relates' },
     ]);
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
     expect(fieldFor('blockedBy').getByText('T-1')).toBeTruthy();
     expect(fieldFor('relates').getByText('T-3')).toBeTruthy();
     expect(fieldFor('blocking').queryByText(relation('none'))).toBeNull();
@@ -142,7 +153,7 @@ describe('TaskPrerequisites', () => {
     mocks.search.mockResolvedValue({
       data: [{ description: 'T-9', id: 'tsk_9', title: 'Ship it', type: 'task' }],
     });
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
     fireEvent.click(fieldFor('relates').getByRole('button', { name: relation('add') }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
     await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
@@ -169,7 +180,7 @@ describe('TaskPrerequisites', () => {
         workflowStateId: 'linear-state-progress',
       },
     ]);
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
 
     const linkedIssue = screen.getByText('T-1').closest('button');
     expect(linkedIssue?.querySelector('svg')).toHaveAttribute('data-workflow-icon', 'in_progress');
@@ -179,7 +190,7 @@ describe('TaskPrerequisites', () => {
     setTask([{ dependsOn: 'task_hidden', id: 'task_hidden', status: null, type: 'blocks' }]);
     render(
       <>
-        <TaskPrerequisites />
+        <TaskPrerequisites revealedKinds={allKinds} />
         <TaskBlockedNotice />
       </>,
     );
@@ -201,7 +212,7 @@ describe('TaskPrerequisites', () => {
   it('unlinks an unreadable prerequisite using only the opaque relation id', async () => {
     const relationId = '5e3d328d-6c4a-46af-88b7-a492268839e1';
     setTask([{ dependsOn: 'Unavailable prerequisite', relationId, status: null, type: 'blocks' }]);
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
     fireEvent.click(
       screen.getByRole('button', {
         name: `${key('removeBlocker')}:Unavailable prerequisite`,
@@ -226,7 +237,7 @@ describe('TaskPrerequisites', () => {
         type: 'blocks',
       },
     ]);
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
 
     const buttons = screen.getAllByRole('button', { name: new RegExp(key('removeBlocker')) });
     expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
@@ -238,7 +249,7 @@ describe('TaskPrerequisites', () => {
   it('renders localized removal errors', async () => {
     setTask([{ dependsOn: 'T-1', id: 'task_1', status: 'backlog', type: 'blocks' }]);
     mocks.removeDependency.mockRejectedValue(new Error('Dependency not found'));
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
     fireEvent.click(screen.getByRole('button', { name: `${key('removeBlocker')}:T-1` }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(key('unavailable')));
   });
@@ -246,7 +257,7 @@ describe('TaskPrerequisites', () => {
   it('does not offer mutations to read-only users', () => {
     mocks.allowed = false;
     setTask([{ dependsOn: 'T-1', status: 'backlog', type: 'blocks' }]);
-    render(<TaskPrerequisites />);
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
     expect(screen.queryByRole('button', { name: `${key('removeBlocker')}:T-1` })).toBeNull();
     expect(screen.queryByRole('button', { name: relation('add') })).toBeNull();
     expect(screen.getByText('Read only')).toBeTruthy();

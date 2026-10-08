@@ -1,0 +1,7 @@
+{
+  "rendererRevision": "557d418a7",
+  "scope": "Actual native session-expired dialog visible following local authorization recovery attempts; presentation and dark shadow only",
+  "shadow": "none",
+  "text": "Session Expired\n\nYour sign-in session has expired. Please sign in again.\n\nSign In Again",
+  "theme": "dark"
+}

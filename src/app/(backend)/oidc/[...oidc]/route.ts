@@ -85,9 +85,42 @@ const handler = async (req: NextRequest) => {
       status: finalStatus,
     });
   } catch (error) {
-    // Provider errors can contain request credentials; log the boundary without raw values.
-    console.error(`[OIDC Route] Error handling ${req.method} ${requestUrl.pathname}`);
-    return new NextResponse(`Internal Server Error: ${(error as Error).message}`, { status: 500 });
+    // Provider errors can contain credentials. Retain bounded protocol diagnostics
+    // and a correlation ID, without logging arbitrary message/name/stack values.
+    const requestId = crypto.randomUUID();
+    const detail = error as { error?: unknown; statusCode?: unknown } | null;
+    const code =
+      typeof detail?.error === 'string' &&
+      [
+        'invalid_request',
+        'invalid_client',
+        'invalid_grant',
+        'unauthorized_client',
+        'unsupported_grant_type',
+        'invalid_scope',
+        'server_error',
+        'temporarily_unavailable',
+      ].includes(detail.error)
+        ? detail.error
+        : 'server_error';
+    const status =
+      typeof detail?.statusCode === 'number' &&
+      Number.isInteger(detail.statusCode) &&
+      detail.statusCode >= 400 &&
+      detail.statusCode <= 599
+        ? detail.statusCode
+        : 500;
+    console.error('[OIDC Route] Request failed', {
+      code,
+      method: req.method,
+      path: requestUrl.pathname,
+      requestId,
+      status,
+    });
+    return new NextResponse('Internal Server Error', {
+      headers: { 'X-Request-ID': requestId },
+      status: 500,
+    });
   }
 };
 

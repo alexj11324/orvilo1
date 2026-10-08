@@ -1055,6 +1055,7 @@ table accounts {
 
   indexes {
     user_id [name: 'account_userId_idx']
+    (provider_id, account_id) [name: 'account_providerId_accountId_idx']
   }
 }
 

@@ -6,8 +6,6 @@ import { createRemoteJWKSet, importSPKI, jwtVerify } from 'jose';
 import { account, type UserItem, users } from '@/database/schemas';
 import { authEnv } from '@/envs/auth';
 
-import { UserService } from '../user';
-
 const log = debug('orvilo-auth:clerk');
 
 const DEFAULT_CLERK_API_URL = 'https://api.clerk.com';
@@ -158,8 +156,7 @@ export const assertClerkUserUsable = (user: ClerkApiUser) => {
 };
 
 /**
- * Map the Clerk user onto the `users` row, creating it (and running the new-user
- * bootstrap) on first sign-in. Identity fields (id, email) track Clerk; display
+ * Map the Clerk user onto the `users` row, creating it on first sign-in. Identity fields (id, email) track Clerk; display
  * fields are only filled when empty so in-app edits survive.
  *
  * Accounts created before the Clerk switch carry a non-Clerk `users.id`, so the
@@ -171,7 +168,7 @@ export const assertClerkUserUsable = (user: ClerkApiUser) => {
 export const provisionClerkUser = async (
   db: OrviloDatabase,
   clerkUser: ClerkApiUser,
-): Promise<UserItem> => {
+): Promise<{ created: boolean; user: UserItem }> => {
   const email = primaryEmail(clerkUser);
   const emailVerified = email?.verification?.status === 'verified';
   const fullName =
@@ -214,17 +211,7 @@ export const provisionClerkUser = async (
       })
       .returning();
 
-    const userService = new UserService(db);
-    await userService.initUser({
-      createdAt: created.createdAt,
-      email: created.email,
-      firstName: clerkUser.first_name ?? null,
-      id: created.id,
-      lastName: clerkUser.last_name ?? null,
-      username: clerkUser.username ?? null,
-    });
-
-    return created;
+    return { created: true, user: created };
   }
 
   const patch: Partial<typeof existing> = {};
@@ -251,10 +238,10 @@ export const provisionClerkUser = async (
       .set(patch)
       .where(eq(users.id, existing.id))
       .returning();
-    return updated;
+    return { created: false, user: updated };
   }
 
-  return existing;
+  return { created: false, user: existing };
 };
 
 /** Fetch a Clerk user, rejecting banned/locked/email-less accounts. */

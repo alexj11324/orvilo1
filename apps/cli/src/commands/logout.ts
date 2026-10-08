@@ -22,16 +22,19 @@ export function registerLogoutCommand(program: Command) {
       try {
         const credentials = loadCredentials();
         if (credentials?.refreshToken) {
-          const response = await fetch(new URL('/oidc/token/revocation', resolveServerUrl()), {
-            body: new URLSearchParams({
-              client_id: 'orvilo-cli',
-              token: credentials.refreshToken,
-              token_type_hint: 'refresh_token',
-            }),
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            method: 'POST',
-            signal: AbortSignal.timeout(10_000),
-          });
+          const response = await fetch(
+            new URL(`${resolveServerUrl().replace(/\/+$/, '')}/oidc/token/revocation`),
+            {
+              body: new URLSearchParams({
+                client_id: 'orvilo-cli',
+                token: credentials.refreshToken,
+                token_type_hint: 'refresh_token',
+              }),
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              method: 'POST',
+              signal: AbortSignal.timeout(10_000),
+            },
+          );
           revocationFailed = !response.ok;
         }
       } catch {

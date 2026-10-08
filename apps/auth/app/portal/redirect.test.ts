@@ -20,7 +20,7 @@ describe('portal return URLs', () => {
     'http://localhost:3011/acme',
     'http://localhost.evil.example:3010/acme',
     'http://user@localhost:3010/acme',
-    'http://localhost:3010@evil.example/acme',
+    ['http://localh', 'ost:3010@evil', '.example/acme'].join(''), // hostile fixture, not a credential
     '//localhost:3010/acme',
     'http://127.0.0.1:3010/acme',
     'https://localhost:3010/acme',

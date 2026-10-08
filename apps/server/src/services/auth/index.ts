@@ -9,6 +9,7 @@ import {
 import { account, type UserItem } from '@/database/schemas';
 import { authEnv } from '@/envs/auth';
 
+import { UserService } from '../user';
 import {
   assertClerkSessionActive,
   ClerkAuthError,
@@ -49,8 +50,8 @@ export const exchangeClerkSession = async (
   const clerkUser = await fetchClerkUser(claims.userId);
   if (clerkUser.id !== claims.userId)
     throw new ClerkAuthError('Clerk user does not match verified session');
-  const { session, user } = await db.transaction(async (tx) => {
-    const user = await provisionClerkUser(tx as OrviloDatabase, clerkUser);
+  const { created, session, user } = await db.transaction(async (tx) => {
+    const { created, user } = await provisionClerkUser(tx as OrviloDatabase, clerkUser);
     const bindings = await tx.query.account.findMany({
       where: and(eq(account.providerId, 'clerk'), eq(account.accountId, claims.userId)),
     });
@@ -85,8 +86,25 @@ export const exchangeClerkSession = async (
       userAgent: params.userAgent,
       userId: user.id,
     });
-    return { session, user };
+    return { created, session, user };
   });
+
+  if (created) {
+    try {
+      await new UserService(db).initUser({
+        createdAt: user.createdAt,
+        email: user.email,
+        firstName: clerkUser.first_name ?? null,
+        id: user.id,
+        lastName: clerkUser.last_name ?? null,
+        username: clerkUser.username ?? null,
+      });
+    } catch {
+      // Authentication committed successfully; bootstrap failure must not invite
+      // another exchange or expose personal/credential-bearing error messages.
+      console.error('[Auth] Post-commit new-user initialization failed');
+    }
+  }
 
   return {
     cookie: {

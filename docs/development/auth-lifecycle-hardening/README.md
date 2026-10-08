@@ -34,3 +34,11 @@ Before this integration, a597 Test CI passed all 17 jobs and its required gate. 
 [evidence.jsonl](./evidence.jsonl) preserves each allowlisted original receipt as an exact UTF-8 string with its filename and SHA-256. This avoids altering immutable receipt hashes through JSON formatting. Parse a line, hash `utf8.encode('utf-8')`, and compare it with `sha256`; then parse the contained JSON when applicable. The original 24-receipt packet and supplementary native, backfill, integration and migration records are included. Private backing files themselves are omitted.
 
 All owned application/stub processes were stopped, and the copied browser profile was preserved. Owned synthetic fixtures were removed; one unidentified canonical candidate CLI grant was preserved because exact ownership was unproven. Production cutover, old-writer drain, production raw-row state and deployment contents are separate release facts and are not claimed here.
+
+## Follow-up validation and stack ordering
+
+The foundation supplies the account identity lookup index as migration 0207. This branch follows it with the regenerated, idempotent 0208 Clerk session binding migration. The generated snapshot diff adds only the two nullable session binding columns; index metadata remains inherited from 0207. No database migration or historical-data operation is executed by preparing these artifacts.
+
+A memory-only Desktop token rotation deletes the superseded persisted refresh token. CLI revocation preserves configured server path prefixes. OIDC failures retain bounded protocol diagnostics and a request correlation ID, without returning arbitrary error messages. The E2E Clerk fixture is required only for locally seeded authenticated runs. The environment-variable references specify a 7-day idle session lifetime and 30-day absolute cap.
+
+The evidence JSONL retains original test-artifact fingerprints. Copies of hostile redirect fixture URLs are explicitly redacted from embedded output, with a separate sanitized-text digest; they are public negative-test data, not account credentials. Real protected-storage/native and deployed lifecycle acceptance remain separate from mocked regression tests.

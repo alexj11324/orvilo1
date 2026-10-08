@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clearCredentials, loadCredentials } from '../auth/credentials';
 import { stopDaemon } from '../daemon/manager';
-import { saveActiveWorkspace } from '../settings';
+import { resolveServerUrl, saveActiveWorkspace } from '../settings';
 import { log } from '../utils/logger';
 import { registerLogoutCommand } from './logout';
 
@@ -24,6 +24,7 @@ vi.mock('../settings', () => ({
 describe('logout command', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(resolveServerUrl).mockReturnValue('https://server.test');
     process.exitCode = 0;
     vi.mocked(loadCredentials).mockReturnValue(null);
     vi.mocked(stopDaemon).mockReturnValue(false);
@@ -167,3 +168,20 @@ describe('logout command', () => {
     expect(stopDaemon).toHaveBeenCalled();
   });
 });
+
+it.each(['https://server.test/orvilo', 'https://server.test/orvilo/'])(
+  'preserves the configured base path during logout: %s',
+  async (base) => {
+    vi.mocked(resolveServerUrl).mockReturnValue(base);
+    vi.mocked(loadCredentials).mockReturnValue({ accessToken: 'access', refreshToken: 'refresh' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    const program = new Command();
+    registerLogoutCommand(program);
+    await program.parseAsync(['node', 'test', 'logout']);
+    expect(fetch).toHaveBeenCalledWith(
+      new URL('https://server.test/orvilo/oidc/token/revocation'),
+      expect.anything(),
+    );
+    vi.unstubAllGlobals();
+  },
+);

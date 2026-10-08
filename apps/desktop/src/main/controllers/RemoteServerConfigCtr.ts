@@ -312,6 +312,8 @@ export default class RemoteServerConfigCtr extends ControllerModule {
 
     if (!this.isProtectedStorageAvailable()) {
       logger.warn('Protected storage unavailable; credentials are memory-only');
+      // A rotated memory-only pair supersedes any previously persisted refresh token.
+      this.app.storeManager.delete(this.encryptedTokensKey);
       this.tokenEncoding = 'memory';
       this.encryptedAccessToken = accessToken;
       this.encryptedRefreshToken = refreshToken;

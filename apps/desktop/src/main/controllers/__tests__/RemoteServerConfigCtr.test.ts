@@ -313,6 +313,26 @@ describe('RemoteServerConfigCtr', () => {
       expect(safeStorage.encryptString).not.toHaveBeenCalled();
       expect(await controller.getRefreshToken()).toBe('refresh');
     });
+    it('removes a consumed persisted refresh token when rotation becomes memory-only', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('old-access', 'old-refresh');
+      let stored = mockStoreManager.set.mock.calls.at(-1)?.[1];
+      mockStoreManager.delete.mockImplementation((key) => {
+        if (key === 'encryptedTokens') stored = undefined;
+      });
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      await controller.saveTokens('rotated-access', 'rotated-refresh');
+      expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+      expect(await controller.getRefreshToken()).toBe('rotated-refresh');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      mockStoreManager.get.mockImplementation((key) =>
+        key === 'encryptedTokens' ? stored : { active: false, storageMode: 'cloud' },
+      );
+      const restarted = new RemoteServerConfigCtr(mockApp);
+      expect(await restarted.getRefreshToken()).toBeNull();
+      mockStoreManager.delete.mockReset();
+    });
     it('never returns ciphertext as plaintext during a backend outage', async () => {
       const { safeStorage } = await import('electron');
       vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);

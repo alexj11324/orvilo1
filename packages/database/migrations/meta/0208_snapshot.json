@@ -6,9 +6,9 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "3cecec09-cc21-49c1-a5aa-622a88b304ea",
+  "id": "17e2ccfc-c738-4fd8-9713-c86d51f749d1",
   "policies": {},
-  "prevId": "8b712ae1-ca79-4280-bc17-a3dbbb5e3871",
+  "prevId": "3cecec09-cc21-49c1-a5aa-622a88b304ea",
   "roles": {},
   "schemas": {},
   "sequences": {
@@ -9205,6 +9205,18 @@
       "name": "auth_sessions",
       "schema": "",
       "columns": {
+        "clerk_session_id": {
+          "name": "clerk_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clerk_user_id": {
+          "name": "clerk_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",

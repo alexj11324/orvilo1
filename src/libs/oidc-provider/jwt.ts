@@ -5,7 +5,10 @@ import urlJoin from 'url-join';
 import { getServerDB } from '@/database/core/db-adaptor';
 import { appEnv } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
-import { validateHeteroOperationClaims } from '@/libs/trpc/utils/internalJwt';
+import {
+  isLegacyHeteroOperationClaims,
+  validateHeteroOperationClaims,
+} from '@/libs/trpc/utils/internalJwt';
 
 import { assertOIDCGrantActive } from './access-control';
 
@@ -152,7 +155,9 @@ export const validateOIDCJWT = async (
             payload.client_id !== undefined ||
             protectedHeader.typ !== undefined)) ||
         (purpose === 'hetero-operation' &&
-          (!allowHeteroOperation || !validateHeteroOperationClaims(payload))) ||
+          (!allowHeteroOperation ||
+            (!validateHeteroOperationClaims(payload) &&
+              !isLegacyHeteroOperationClaims(payload)))) ||
         (purpose !== undefined && purpose !== 'cli-sandbox' && purpose !== 'hetero-operation')
       ) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API access token contract' });

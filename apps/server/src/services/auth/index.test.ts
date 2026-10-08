@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   fetchClerkUser: vi.fn(),
   provisionClerkUser: vi.fn(),
   mintSession: vi.fn(),
+  initUser: vi.fn(),
   verifyClerkSessionToken: vi.fn(),
 }));
 vi.mock('./clerk', async (original) => ({
@@ -25,7 +26,7 @@ vi.mock('./clerk', async (original) => ({
 
 vi.mock('../user', () => ({
   UserService: class {
-    initUser = async () => {};
+    initUser = mocks.initUser;
   },
 }));
 
@@ -122,7 +123,7 @@ describe('exchangeClerkSession trusted external identity binding', () => {
     });
     mocks.assertClerkSessionActive.mockResolvedValue(undefined);
     mocks.fetchClerkUser.mockResolvedValue({ id: externalId });
-    mocks.provisionClerkUser.mockResolvedValue({ id: canonicalId });
+    mocks.provisionClerkUser.mockResolvedValue({ created: false, user: { id: canonicalId } });
   });
   afterEach(() => vi.restoreAllMocks());
 
@@ -139,7 +140,7 @@ describe('exchangeClerkSession trusted external identity binding', () => {
     'binds verified Clerk identity before minting canonical session %s',
     async (localId) => {
       const { bindings, db } = createDb();
-      mocks.provisionClerkUser.mockResolvedValue({ id: localId });
+      mocks.provisionClerkUser.mockResolvedValue({ created: false, user: { id: localId } });
       const create = mint().mockImplementation(async ({ userId }: typeof session.$inferInsert) => {
         expect(bindings).toEqual([binding(localId)]);
         return {
@@ -313,5 +314,43 @@ describe('exchangeClerkSession trusted external identity binding', () => {
     expect(profiles).toEqual(initial);
     expect(bindings).toEqual(existing);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('post-commit initialization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.verifyClerkSessionToken.mockResolvedValue({ sessionId: 'session', userId: externalId });
+    mocks.fetchClerkUser.mockResolvedValue({ id: externalId });
+    mocks.provisionClerkUser.mockResolvedValue({ created: true, user: { id: canonicalId } });
+  });
+  it('never bootstraps a rolled-back exchange', async () => {
+    const { db } = createDb();
+    mocks.mintSession.mockRejectedValue(new Error('session insert failed'));
+    await expect(exchangeClerkSession(db, { sessionToken: 'fixture' })).rejects.toThrow(
+      'session insert failed',
+    );
+    expect(mocks.initUser).not.toHaveBeenCalled();
+  });
+  it('bootstraps only after the transaction has committed', async () => {
+    const { db } = createDb();
+    let committed = false;
+    const tx = db.transaction.bind(db);
+    vi.spyOn(db, 'transaction').mockImplementation(async (fn: any) => {
+      const result = await tx(fn);
+      committed = true;
+      return result;
+    });
+    mocks.mintSession.mockResolvedValue({
+      expiresAt: new Date(Date.now() + 60_000),
+      createdAt: new Date(),
+      token: 'fixture',
+      userId: canonicalId,
+    });
+    mocks.initUser.mockImplementation(async () => {
+      expect(committed).toBe(true);
+    });
+    await exchangeClerkSession(db, { sessionToken: 'fixture' });
+    expect(mocks.initUser).toHaveBeenCalledOnce();
   });
 });

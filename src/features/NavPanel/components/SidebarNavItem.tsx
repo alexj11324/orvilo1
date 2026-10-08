@@ -1,9 +1,9 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import {
   type ButtonHTMLAttributes,
+  type ComponentProps,
   type ComponentType,
   createElement,
   type FocusEvent,
@@ -24,14 +24,9 @@ import type { NavItemProps } from './NavItem';
 import SidebarContextMenu from './SidebarContextMenu';
 import { useLazyActions } from './useLazyActions';
 
-const hostStyles = createStaticStyles(({ css }) => ({
-  row: css`
-    color: inherit;
-    text-decoration: none;
-  `,
-}));
-
 export interface SidebarNavItemProps extends Omit<NavItemProps, 'ref'> {
+  /** Props for the row's li (e.g. a sortable wrapper's ref, listeners and transform). */
+  itemProps?: ComponentProps<typeof SidebarMenuItem>;
   ref?: Ref<HTMLElement>;
   render?: ReactElement;
 }
@@ -55,6 +50,7 @@ const SidebarNavItem = memo(
     href,
     icon,
     iconSize = 16,
+    itemProps,
     loading,
     onClick,
     onFocus,
@@ -90,20 +86,22 @@ const SidebarNavItem = memo(
       onPointerEnter?.(event as unknown as PointerEvent<HTMLDivElement>);
     };
 
-    const button = (
+    // The context menu composes INTO the button through `render`, so the button
+    // keeps its own slot / data-active attributes instead of being relabelled
+    // `context-menu-trigger` by a wrapper that clones it.
+    const renderButton = (rowRender?: ReactElement) => (
       <SidebarMenuButton
         {...buttonProps}
         aria-current={active && (href || render) ? 'page' : buttonProps['aria-current']}
         aria-disabled={disabled || buttonProps['aria-disabled']}
         isActive={active}
         ref={ref as Ref<HTMLButtonElement>}
-        render={buttonRender}
-        style={{ ...(buttonRender ? { textDecoration: 'none' } : undefined), ...style }}
+        render={rowRender}
+        style={style}
         tabIndex={disabled ? -1 : buttonProps.tabIndex}
         tooltip={typeof title === 'string' ? title : undefined}
         type={buttonRender ? undefined : 'button'}
         className={cn(
-          hostStyles.row,
           description && 'h-auto items-start py-2',
           disabled && 'cursor-not-allowed opacity-50',
           !disabled && 'cursor-pointer',
@@ -142,11 +140,16 @@ const SidebarNavItem = memo(
     );
 
     return (
-      <SidebarMenuItem>
-        {contextMenuItems ? (
-          <SidebarContextMenu items={contextMenuItems}>{button}</SidebarContextMenu>
+      <SidebarMenuItem {...itemProps}>
+        {contextMenuItems && buttonRender ? (
+          <SidebarContextMenu items={contextMenuItems}>
+            {(trigger) => renderButton(trigger(buttonRender))}
+          </SidebarContextMenu>
+        ) : contextMenuItems ? (
+          // A plain button row has no element of its own to compose the trigger into.
+          <SidebarContextMenu items={contextMenuItems}>{renderButton()}</SidebarContextMenu>
         ) : (
-          button
+          renderButton(buttonRender)
         )}
         {extra && (
           <SidebarMenuBadge

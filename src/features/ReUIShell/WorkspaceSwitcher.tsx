@@ -45,14 +45,11 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
       <SidebarMenu className="min-w-0 flex-1">
         <SidebarMenuItem>
           <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <SidebarMenuButton
-                  aria-label={t('common:reuiShell9.openWorkspaceMenu')}
-                  className="h-9 px-1.5"
-                  size="lg"
-                />
-              }
+            <SidebarMenuButton
+              aria-label={t('common:reuiShell9.openWorkspaceMenu')}
+              className="h-9 px-1.5"
+              render={<DropdownMenuTrigger />}
+              size="lg"
             >
               {activeWorkspace ? (
                 <>
@@ -69,9 +66,9 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
               )}
               <ChevronsUpDownIcon
                 aria-hidden
-                className="ml-auto size-4 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden"
+                className="ml-auto shrink-0 opacity-50 group-data-[collapsible=icon]:hidden"
               />
-            </DropdownMenuTrigger>
+            </SidebarMenuButton>
             <DropdownMenuContent align="start" className="min-w-56" side="bottom" sideOffset={4}>
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">

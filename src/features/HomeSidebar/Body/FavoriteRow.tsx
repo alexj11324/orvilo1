@@ -4,10 +4,10 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { NavigationFavorite, NavigationFavoriteTargetType } from '@orvilo/types';
 import { ChevronDown, ChevronUp, MoreHorizontalIcon, PinOff } from 'lucide-react';
-import { type MouseEventHandler, type RefObject } from 'react';
+import { type ComponentProps, type MouseEventHandler, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SidebarMenuAction } from '@/components/ui/sidebar';
+import { SidebarMenuAction, type SidebarMenuItem } from '@/components/ui/sidebar';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
@@ -24,6 +24,8 @@ interface FavoriteRowProps {
   index: number;
   item: NavigationFavorite;
   itemCount: number;
+  /** Props for the row's li; the sortable wrapper passes its ref and listeners here. */
+  itemProps?: ComponentProps<typeof SidebarMenuItem>;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
   onMove: (index: number, direction: 'down' | 'up') => void;
   onUnpin: (targetId: string, targetType: NavigationFavoriteTargetType) => void;
@@ -35,6 +37,7 @@ const FavoriteRow = ({
   index,
   item,
   itemCount,
+  itemProps,
   onClick,
   onMove,
   onUnpin,
@@ -72,6 +75,7 @@ const FavoriteRow = ({
     <SidebarNavItem
       contextMenuItems={menuItems}
       icon={FAVORITE_TARGET_ICONS[item.targetType]}
+      itemProps={itemProps}
       title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
       actions={
         <SidebarDropdownMenu items={menuItems}>
@@ -102,24 +106,29 @@ export const SortableFavoriteRow = ({ suppressClickRef, ...props }: SortableFavo
     id: favoriteKey(props.item),
   });
 
+  // The row's li is the sortable node, so the menu stays a valid ul > li list.
+  // dnd-kit's role="button" is dropped for the same reason.
+  const { role: _role, ...sortableAttributes } = attributes;
+
   return (
-    <div
-      {...attributes}
-      {...listeners}
-      ref={setNodeRef}
-      role="listitem"
-      style={{
-        opacity: isDragging ? 0.5 : undefined,
-        position: 'relative',
-        transform: CSS.Transform.toString(transform),
-        transition: transition ?? undefined,
-        zIndex: isDragging ? 1 : undefined,
+    <FavoriteRow
+      {...props}
+      itemProps={{
+        ...sortableAttributes,
+        ...listeners,
+        ref: setNodeRef,
+        style: {
+          opacity: isDragging ? 0.5 : undefined,
+          position: 'relative',
+          transform: CSS.Transform.toString(transform),
+          transition: transition ?? undefined,
+          zIndex: isDragging ? 1 : undefined,
+        },
+        onPointerDownCapture: dragGuard.onPointerDownCapture,
+        onPointerMoveCapture: dragGuard.onPointerMoveCapture,
       }}
-      onPointerDownCapture={dragGuard.onPointerDownCapture}
-      onPointerMoveCapture={dragGuard.onPointerMoveCapture}
-    >
-      <FavoriteRow {...props} onClick={dragGuard.onClick} />
-    </div>
+      onClick={dragGuard.onClick}
+    />
   );
 };
 

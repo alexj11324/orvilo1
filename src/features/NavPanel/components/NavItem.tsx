@@ -1,13 +1,16 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import {
   type ComponentType,
   createElement,
+  type ElementType,
   type FocusEvent,
   type HTMLAttributes,
   isValidElement,
+  type KeyboardEvent,
   memo,
   type MouseEvent,
   type PointerEvent,
@@ -29,9 +32,24 @@ const styles = createStaticStyles(({ css }) => ({
   interactive: css`
     cursor: pointer;
 
-    /* Keep themed anchor resets from overriding the row. */
+    /* Hover and selected share the sidebar roles used by the primary rows:
+       --sidebar-accent for hover, the stronger --selected for the current row.
+       The doubled selector keeps the host's unlayered anchor reset (link colour,
+       colour transition, blue focus outline) from overriding them. */
     &&:hover {
-      background-color: ${cssVar.colorFillSecondary};
+      background-color: var(--sidebar-accent);
+      transition-property: none;
+    }
+
+    &&[data-active] {
+      background-color: var(--selected);
+    }
+
+    /* Same indicator as the primitive's focus-visible:ring-2 ring-sidebar-ring. */
+    &&:focus-visible {
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 2px var(--sidebar-ring);
     }
   `,
   container: css`
@@ -174,8 +192,26 @@ const NavItem = memo<NavItemProps>(
     const textColor = titleColor ?? (active ? cssVar.colorText : cssVar.colorTextSecondary);
 
     const { titlePrefix, iconPostfix } = slots || {};
-    // Render a real anchor so cmd+click can open in a new tab
-    const RootElement = href ? 'a' : 'div';
+    // A real anchor lets cmd+click open a new tab; without an href the row is a
+    // real button, so it is focusable and Enter / Space activate it. A row that
+    // carries its own action buttons cannot nest them inside a button, so it keeps
+    // a div exposed as a button.
+    const RootElement: ElementType = href ? 'a' : actions ? 'div' : 'button';
+    const isPseudoButton = RootElement === 'div';
+    const interactiveProps: HTMLAttributes<HTMLElement> & { type?: 'button' } = href
+      ? {}
+      : isPseudoButton
+        ? {
+            onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+              // Only the row itself: Enter / Space inside a nested action are its own.
+              if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+              e.preventDefault();
+              if (!disabled) onClick?.(e as unknown as MouseEvent<HTMLElement>);
+            },
+            role: 'button',
+            tabIndex: disabled ? -1 : 0,
+          }
+        : { tabIndex: disabled ? -1 : undefined, type: 'button' };
 
     const mergedStyle =
       href || disabled || style
@@ -190,14 +226,18 @@ const NavItem = memo<NavItemProps>(
 
     const Content = (
       <RootElement
-        className={cx(
-          cx(styles.container, className),
+        aria-current={active && href ? 'page' : undefined}
+        aria-disabled={disabled || undefined}
+        data-active={active || undefined}
+        className={cn(
+          styles.container,
+          className,
           'flex items-center gap-2 px-1',
+          RootElement === 'button' && 'w-full text-left',
           !disabled && styles.interactive,
         )}
         style={{
           borderRadius: cssVar.borderRadius,
-          ...(active ? { background: cssVar.colorFillTertiary } : undefined),
           height: description ? undefined : 28,
           paddingBlock: description ? 8 : undefined,
           ...mergedStyle,
@@ -211,6 +251,7 @@ const NavItem = memo<NavItemProps>(
           if (disabled) return;
           onClick?.(e);
         }}
+        {...interactiveProps}
         {...rest}
         {...(href ? { href } : undefined)}
         onFocus={handleFocus}
@@ -243,7 +284,7 @@ const NavItem = memo<NavItemProps>(
 
         {iconPostfix}
         <div
-          className={cx(CONTENT_CLASS_NAME, 'flex items-center flex-1 gap-2')}
+          className={cn(CONTENT_CLASS_NAME, 'flex flex-1 items-center gap-2')}
           style={{ overflow: 'hidden' }}
         >
           {titlePrefix}
@@ -281,7 +322,7 @@ const NavItem = memo<NavItemProps>(
         </div>
         {actions && (
           <div
-            className={cx(ACTION_CLASS_NAME, 'flex items-center gap-0.5 justify-end')}
+            className={cn(ACTION_CLASS_NAME, 'flex items-center justify-end gap-0.5')}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

@@ -676,6 +676,7 @@ describe('Project and Issue collaboration boundaries', () => {
       },
     ]);
     await new TeamModel(db, member, workspaceId).linkProject(projectId, 'collab-team');
+    await db.update(teams).set({ status: 'archived' }).where(eq(teams.id, 'collab-team'));
     expect(
       await db.select().from(projectTeams).where(eq(projectTeams.projectId, projectId)),
     ).toHaveLength(1);
@@ -684,6 +685,15 @@ describe('Project and Issue collaboration boundaries', () => {
     ).rejects.toThrow('Writable workspace');
     await expect(
       new TeamModel(db, member, workspaceId).linkProject(projectId, 'collab-private-team'),
+    ).rejects.toThrow('Team not available');
+    await expect(
+      new TeamModel(db, member, workspaceId).unlinkProject(projectId, 'collab-private-team'),
+    ).rejects.toThrow('Team not available');
+    await expect(
+      new TeamModel(db, member, 'foreign-scope').unlinkProject(projectId, 'collab-team'),
+    ).rejects.toThrow('Writable workspace');
+    await expect(
+      new TeamModel(db, member, workspaceId).linkProject(projectId, 'collab-team'),
     ).rejects.toThrow('Team not available');
     await new TeamModel(db, member, workspaceId).unlinkProject(projectId, 'collab-team');
     expect(

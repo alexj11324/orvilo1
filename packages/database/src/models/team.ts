@@ -340,7 +340,11 @@ export class TeamModel {
 
   // ── Project participation (M:N, single project row) ────────────────────
 
-  private async assertProjectAssociation(projectId: string, teamId: string) {
+  private async assertProjectAssociation(
+    projectId: string,
+    teamId: string,
+    requireActive: boolean,
+  ) {
     const role = await getActiveWorkspaceMembershipRole(this.db, {
       userId: this.userId,
       workspaceId: this.workspaceId,
@@ -355,12 +359,16 @@ export class TeamModel {
       !(await project.getCapabilities(projectId)).canEdit
     )
       throw new Error('Project not available');
-    if (!(await this.listReadable()).some((team) => team.id === teamId && team.status === 'active'))
+    if (
+      !(await this.listReadable()).some(
+        (team) => team.id === teamId && (!requireActive || team.status === 'active'),
+      )
+    )
       throw new Error('Team not available');
   }
 
   linkProject = async (projectId: string, teamId: string) => {
-    await this.assertProjectAssociation(projectId, teamId);
+    await this.assertProjectAssociation(projectId, teamId, true);
     await this.db
       .insert(projectTeams)
       .values({
@@ -373,7 +381,7 @@ export class TeamModel {
   };
 
   unlinkProject = async (projectId: string, teamId: string) => {
-    await this.assertProjectAssociation(projectId, teamId);
+    await this.assertProjectAssociation(projectId, teamId, false);
     await this.db
       .delete(projectTeams)
       .where(

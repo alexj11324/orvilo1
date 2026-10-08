@@ -44,12 +44,12 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   // offer Reload instead of the terminal "task was deleted" dead-end below.
   if (error) {
     return (
-      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
+      <div className="relative flex h-full min-h-0 flex-1 flex-col">
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
         </div>
       </div>
@@ -58,19 +58,19 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
 
   if (isNotFound) {
     return (
-      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
+      <div className="relative flex h-full min-h-0 flex-1 flex-col">
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <NotFound
             desc={t('taskDetail.notFound.desc')}
             title={t('taskDetail.notFound.title')}
             extra={
-              <Link to={'/tasks'}>
-                <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
-              </Link>
+              <Button nativeButton={false} render={<Link to={'/tasks'} />} variant="default">
+                {t('taskDetail.notFound.backToTasks')}
+              </Button>
             }
           />
         </div>
@@ -80,7 +80,7 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
 
   return (
     <TaskDetailScope taskId={taskId}>
-      <WorkSurface style={{ position: 'relative' }}>
+      <WorkSurface className="relative">
         <NavHeader
           left={
             <>

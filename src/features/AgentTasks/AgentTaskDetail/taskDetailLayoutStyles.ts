@@ -188,6 +188,33 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       flex: 1;
     }
   `,
+  /**
+   * The due-date value as a Button. It keeps the value's own type and the
+   * rail's left edge (the 6px hover inset is pulled back out); the Button
+   * contributes focus, keyboard and hover only.
+   */
+  propertyButton: css`
+    height: 28px;
+    margin-inline: -6px;
+    padding-inline: 6px;
+    border: 0;
+
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+  `,
+  /**
+   * "Add property" keeps the Button's own ghost chrome. In the wide rail its
+   * icon lines up with the value-only rows above by pulling the button back by
+   * its inline-start padding (6px for a 28px Button with a leading icon).
+   */
+  addProperty: css`
+    width: fit-content;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      margin-inline-start: -6px;
+    }
+  `,
   propertyPlaceholder: css`
     color: ${cssVar.colorTextPlaceholder};
   `,

@@ -121,7 +121,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
       {integration.prUrl && (
         <a
           href={integration.prUrl}
-          rel={'noreferrer'}
+          rel={'noopener noreferrer'}
           style={{ color: cssVar.colorInfo, fontSize: 12 }}
           target={'_blank'}
           onClick={(event) => event.stopPropagation()}

@@ -44,12 +44,6 @@ type LabelOption =
   | { key: string; kind: 'label'; label: TaskLabelSummary };
 
 const styles = createStaticStyles(({ css }) => ({
-  dot: css`
-    flex: none;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  `,
   searchInput: css`
     width: 100%;
     padding-block: 6px;
@@ -239,6 +233,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
     return (
       <Popover>
         <PopoverTrigger
+          nativeButton={false}
           render={
             <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
               {children}
@@ -252,6 +247,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
         >
           <input
             autoFocus
+            aria-label={t('taskDetail.labels.searchPlaceholder')}
             className={styles.searchInput}
             placeholder={t('taskDetail.labels.searchPlaceholder')}
             value={search}
@@ -262,15 +258,13 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
             <SkeletonList rows={4} />
           ) : flatOptions.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-4">
-              <div className="text-[12px] text-muted-foreground">
-                {t('taskDetail.labels.empty')}
-              </div>
+              <div className="text-xs text-muted-foreground">{t('taskDetail.labels.empty')}</div>
             </div>
           ) : (
             <div
-              className="flex flex-col gap-1 p-2"
+              className="flex w-full flex-col gap-1 overflow-y-auto p-2"
               ref={listRef}
-              style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
+              style={{ maxHeight: '50vh' }}
             >
               {flatOptions.map((option, index) => (
                 <div
@@ -301,7 +295,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
                         titlePrefix: (
                           <span
                             aria-hidden
-                            className={styles.dot}
+                            className="size-2 flex-none rounded-full"
                             style={{
                               background: resolveLabelColor(option.label.name, option.label.color),
                             }}

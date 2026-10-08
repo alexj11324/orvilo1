@@ -8,9 +8,11 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -18,6 +20,7 @@ import {
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { usePermission } from '@/hooks/usePermission';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -30,6 +33,13 @@ import { useTaskProjectChange } from '../shared/useTaskProjectChange';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+
+/**
+ * A rail row drawn on the local 28px Button so it is focusable and keyboard
+ * operable. `railRow` owns the geometry; the utilities only undo the Button's
+ * centred, bordered label layout.
+ */
+const railRowButtonClass = cn('justify-start gap-2 border-0 font-normal', styles.railRow);
 
 /**
  * The rail's "Project" group — Linear files every issue under a project or a
@@ -111,90 +121,83 @@ const TaskProjectSection = memo(() => {
       })
     : null;
 
-  // Editable → the row is Linear's milestone picker (a dropdown trigger);
-  // read-only → the same row links to the milestone-filtered issues list.
-  const milestoneTrigger = (title?: string) => (
-    <div className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`} title={title}>
+  const milestoneValue = (
+    <>
       <MilestoneIcon size={14} style={{ flex: 'none' }} />
       <div
-        style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+        style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
         className={cn(
-          'truncate',
-          'block',
-          'font-medium',
+          'block min-w-0 truncate font-medium',
           milestone ? undefined : 'text-muted-foreground',
         )}
       >
         {milestone ? milestone.name : t('taskList.noMilestone')}
       </div>
       {milestoneDate && (
-        <div
-          className="text-muted-foreground"
-          style={{ flex: 'none', fontSize: RAIL_VALUE_FONT_SIZE }}
-        >
+        <div className="flex-none text-muted-foreground" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
           {`· ${milestoneDate}`}
         </div>
       )}
-    </div>
+    </>
   );
 
+  // Editable → the row is Linear's milestone picker (a dropdown trigger);
+  // read-only → the same row links to the milestone-filtered issues list.
   const milestoneRow =
     canEdit && changeMilestone ? (
       <DropdownMenu>
-        <DropdownMenuTrigger render={milestoneTrigger(t('taskDetail.milestone.hint'))} />
+        <DropdownMenuTrigger
+          render={
+            <Button
+              className={railRowButtonClass}
+              size="sm"
+              title={t('taskDetail.milestone.hint')}
+              variant="ghost"
+            />
+          }
+        >
+          {milestoneValue}
+        </DropdownMenuTrigger>
         <DropdownMenuContent align={'end'} className={'min-w-52'}>
-          {milestones.map((row) => (
-            <DropdownMenuItem key={row.id} onClick={() => void changeMilestone(row.id)}>
-              <span className={row.id === milestone?.id ? undefined : 'opacity-0'}>
-                <CheckIcon size={16} />
-              </span>
-              <span className={'flex-1'}>{row.name}</span>
-              {row.date && (
-                <div className="text-[12px] text-muted-foreground">
-                  {formatTaskItemDate(row.date, {
-                    formatOtherYear: tCommon('time.formatOtherYear'),
-                    formatThisYear: tCommon('time.formatThisYear'),
-                    locale: i18n.language,
-                  })}
-                </div>
-              )}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            {milestones.map((row) => (
+              <DropdownMenuItem key={row.id} onClick={() => void changeMilestone(row.id)}>
+                <CheckIcon className={cn(row.id !== milestone?.id && 'opacity-0')} />
+                <span className={'flex-1'}>{row.name}</span>
+                {row.date && (
+                  <div className="text-xs text-muted-foreground">
+                    {formatTaskItemDate(row.date, {
+                      formatOtherYear: tCommon('time.formatOtherYear'),
+                      formatThisYear: tCommon('time.formatThisYear'),
+                      locale: i18n.language,
+                    })}
+                  </div>
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void changeMilestone(null)}>
-            <span className={!milestone ? undefined : 'opacity-0'}>
-              <CheckIcon size={16} />
-            </span>
-            <span className={'flex-1'}>{t('taskList.noMilestone')}</span>
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={() => void changeMilestone(null)}>
+              <CheckIcon className={cn(milestone && 'opacity-0')} />
+              <span className={'flex-1'}>{t('taskList.noMilestone')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-    ) : (
-      <div
-        className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`}
-        title={milestone ? t('overview.milestoneSeeIssues', { ns: 'project' }) : undefined}
-        onClick={() =>
-          milestone &&
-          projectRef &&
-          navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))
-        }
+    ) : milestone && projectRef ? (
+      <Button
+        className={railRowButtonClass}
+        nativeButton={false}
+        render={<WorkspaceLink to={getProjectMilestoneIssuesPath(projectRef, milestone.id)} />}
+        size="sm"
+        title={t('overview.milestoneSeeIssues', { ns: 'project' })}
+        variant="ghost"
       >
-        <MilestoneIcon size={14} style={{ flex: 'none' }} />
-        <div
-          className="truncate block font-medium"
-          style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
-        >
-          {milestone ? milestone.name : t('taskList.noMilestone')}
-        </div>
-        {milestoneDate && (
-          <div
-            className="text-muted-foreground"
-            style={{ flex: 'none', fontSize: RAIL_VALUE_FONT_SIZE }}
-          >
-            {`· ${milestoneDate}`}
-          </div>
-        )}
-      </div>
+        {milestoneValue}
+      </Button>
+    ) : (
+      <div className={cn('flex items-center gap-2', styles.railRow)}>{milestoneValue}</div>
     );
 
   const projectValue = (
@@ -205,15 +208,12 @@ const TaskProjectSection = memo(() => {
           name={projectName}
           shape={'square'}
           size={16}
-          style={{ flex: 'none' }}
         />
       ) : null}
       <div
-        style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+        style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
         className={cn(
-          'truncate',
-          'block',
-          'font-medium',
+          'block min-w-0 truncate font-medium',
           projectName ? undefined : 'text-muted-foreground',
         )}
       >
@@ -226,44 +226,42 @@ const TaskProjectSection = memo(() => {
   // stays a distinct affordance beside it, so one click never both picks
   // and leaves the page. Read-only keeps the whole row as the link.
   const projectRow = canPickProject ? (
-    <div className={'flex items-center gap-1'} style={{ minWidth: 0 }}>
+    <div className="flex min-w-0 items-center gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <div
-              className={`flex flex-1 cursor-pointer items-center gap-2 ${styles.railRow}`}
-              style={{ minWidth: 0 }}
+            <Button
+              className={cn(railRowButtonClass, 'min-w-0 flex-1')}
+              size="sm"
               title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
-            >
-              {projectValue}
-            </div>
+              variant="ghost"
+            />
           }
-        />
+        >
+          {projectValue}
+        </DropdownMenuTrigger>
         <DropdownMenuContent align={'end'} className={'min-w-52'}>
-          {projects.map((row) => (
-            <DropdownMenuItem key={row.id} onClick={() => changeProject(row.id)}>
-              <span className={row.id === taskProjectId ? undefined : 'opacity-0'}>
-                <CheckIcon size={16} />
-              </span>
-              <Avatar
-                avatar={row.avatar || undefined}
-                name={row.name}
-                shape={'square'}
-                size={16}
-                style={{ flex: 'none' }}
-              />
-              <span className={'flex-1'} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {row.name}
-              </span>
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            {projects.map((row) => (
+              <DropdownMenuItem key={row.id} onClick={() => changeProject(row.id)}>
+                <CheckIcon className={cn(row.id !== taskProjectId && 'opacity-0')} />
+                <Avatar
+                  avatar={row.avatar || undefined}
+                  name={row.name}
+                  shape={'square'}
+                  size={16}
+                />
+                <span className="flex-1 truncate">{row.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => changeProject(null)}>
-            <span className={!taskProjectId ? undefined : 'opacity-0'}>
-              <CheckIcon size={16} />
-            </span>
-            <span className={'flex-1'}>{t('taskDetail.noProject')}</span>
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={() => changeProject(null)}>
+              <CheckIcon className={cn(taskProjectId && 'opacity-0')} />
+              <span className={'flex-1'}>{t('taskDetail.noProject')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
       {project && projectRef ? (
@@ -276,13 +274,16 @@ const TaskProjectSection = memo(() => {
       ) : null}
     </div>
   ) : project && projectRef ? (
-    <div
-      className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`}
+    <Button
+      className={railRowButtonClass}
+      nativeButton={false}
+      render={<WorkspaceLink to={`/project/${projectRef}`} />}
+      size="sm"
       title={project.name}
-      onClick={() => navigate(`/project/${projectRef}`)}
+      variant="ghost"
     >
       {projectValue}
-    </div>
+    </Button>
   ) : null;
 
   return (

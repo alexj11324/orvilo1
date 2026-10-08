@@ -171,8 +171,9 @@ const TaskInstruction = memo(() => {
                 // The wrapper span keeps the tooltip reachable — a disabled
                 // button swallows pointer events, so the reason would never
                 // surface.
-                <span style={{ display: 'inline-flex' }}>
+                <span className="inline-flex">
                   <ActionIcon
+                    aria-label={t('upload.action.tooltip')}
                     disabled={!editable}
                     icon={Paperclip}
                     size={'small'}

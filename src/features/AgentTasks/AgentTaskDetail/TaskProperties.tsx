@@ -1,4 +1,5 @@
 import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import { cn } from 'cn';
 import { format, parseISO } from 'date-fns';
 import { CalendarIcon, ClockIcon, PlusIcon, TagIcon, UserCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -216,7 +218,7 @@ const TaskProperties = memo(() => {
                 size={16}
                 taskIdentifier={taskId}
               />
-              <span className={priorityLevel === 0 ? styles.propertyPlaceholder : undefined}>
+              <span className={cn(priorityLevel === 0 && styles.propertyPlaceholder)}>
                 {t(`taskDetail.${priorityMeta.labelKey}` as never)}
               </span>
             </div>
@@ -225,29 +227,27 @@ const TaskProperties = memo(() => {
 
         {optionalFields.dueDate && (
           <PropertyRow label={t('taskDetail.dueDate')}>
-            <div
-              className="flex min-w-0 cursor-pointer items-center gap-1.5"
+            {/* A real button: the due date opens its dialog from the keyboard
+                as well as on click. */}
+            <Button
+              className={cn(styles.propertyButton, 'min-w-0 justify-start font-normal')}
+              variant="ghost"
               onClick={() =>
                 openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })
               }
             >
-              {!dueDate && (
-                <CalendarIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
-              )}
+              {!dueDate && <CalendarIcon aria-hidden className={styles.propertyPlaceholder} />}
               <span
-                className={
-                  dueDateOverdue
-                    ? styles.propertyDanger
-                    : dueDate
-                      ? undefined
-                      : styles.propertyPlaceholder
-                }
+                className={cn(
+                  dueDateOverdue && styles.propertyDanger,
+                  !dueDate && styles.propertyPlaceholder,
+                )}
               >
                 {dueDate
                   ? format(parseISO(dueDate), 'MMM d, yyyy')
                   : t('taskDetail.property.addDueDate')}
               </span>
-            </div>
+            </Button>
           </PropertyRow>
         )}
 
@@ -357,25 +357,22 @@ const TaskProperties = memo(() => {
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button
-                  aria-label={t('taskDetail.property.add')}
-                  className="h-7 w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-                  size="sm"
-                  variant="ghost"
-                >
-                  <PlusIcon />
+                <Button className={styles.addProperty} size="sm" variant="ghost">
+                  <PlusIcon data-icon="inline-start" />
                   {t('taskDetail.property.add')}
                 </Button>
               }
             />
             <DropdownMenuContent align="start">
-              {addableFields
-                .filter((field) => !field.shown)
-                .map((field) => (
-                  <DropdownMenuItem key={field.key} onClick={() => reveal(field.key)}>
-                    {field.label}
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuGroup>
+                {addableFields
+                  .filter((field) => !field.shown)
+                  .map((field) => (
+                    <DropdownMenuItem key={field.key} onClick={() => reveal(field.key)}>
+                      {field.label}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

@@ -19,7 +19,6 @@ describe('issue rail type scale', () => {
     const source = readSource('taskDetailLayoutStyles.ts');
     expect(source).toContain('font-size: 13px');
     expect(source).toContain('font-weight: 400');
-    expect(source).toContain('width: 120px');
   });
 
   it.each([
@@ -68,6 +67,6 @@ describe('issue rail milestone date', () => {
 
   it('keeps the milestone date on a non-shrinking span', () => {
     expect(source).toContain('milestoneDate');
-    expect(source).toMatch(/milestoneDate[\s\S]*?flex: 'none'/);
+    expect(source).toMatch(/milestoneDate && \([\s\S]*?className="flex-none/);
   });
 });

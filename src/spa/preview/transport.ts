@@ -1,14 +1,15 @@
 import superjson from 'superjson';
+
+import type { PreviewDatabase } from './fixtures';
 import {
-  createInitialDatabase,
   createAgent,
+  createInitialDatabase,
   PREVIEW_STORAGE_KEY,
   PREVIEW_USER_ID,
   previewUser,
   previewWorkspace,
   runtimeConfig,
 } from './fixtures';
-import type { PreviewDatabase } from './fixtures';
 
 type Input = Record<string, any>;
 export class PreviewUnsupportedError extends Error {}
@@ -42,27 +43,34 @@ export function createPreviewBackend(
     );
   function execute(path: string, input: Input = {}, mutation = false): unknown {
     switch (path) {
-      case 'config.getGlobalConfig':
+      case 'config.getGlobalConfig': {
         return runtimeConfig;
+      }
       case 'connector.list':
       case 'recent.getAll':
       case 'taskLabel.getLabels':
-      case 'agentDocument.listDocuments':
+      case 'agentDocument.listDocuments': {
         return [];
-      case 'workspace.list':
+      }
+      case 'workspace.list': {
         return [previewWorkspace];
-      case 'workspace.ensureDefault':
+      }
+      case 'workspace.ensureDefault': {
         return previewWorkspace;
+      }
       case 'team.teams':
-      case 'linearSync.issueLinks':
+      case 'linearSync.issueLinks': {
         return success([]);
-      case 'workspaceUserSettings.getPreference':
+      }
+      case 'workspaceUserSettings.getPreference': {
         return db.userState.preference;
-      case 'workspaceUserSettings.updatePreference':
+      }
+      case 'workspaceUserSettings.updatePreference': {
         db.userState.preference = { ...db.userState.preference, ...input };
         save();
         return db.userState.preference;
-      case 'workspaceMember.list':
+      }
+      case 'workspaceMember.list': {
         return [
           {
             userId: PREVIEW_USER_ID,
@@ -78,8 +86,10 @@ export function createPreviewBackend(
             projectCount: 1,
           },
         ];
-      case 'userMemory.getPersona':
+      }
+      case 'userMemory.getPersona': {
         return null;
+      }
       case 'resourcePermission.getGeneralAccess': {
         if (input.resourceType !== 'agent' || !db.agents.some((a) => a.id === input.resourceId))
           throw new Error('Resource is not part of the local preview.');
@@ -93,9 +103,10 @@ export function createPreviewBackend(
         };
       }
       case 'workAttention.favoriteList':
-      case 'providerBinding.list':
+      case 'providerBinding.list': {
         return success([]);
-      case 'pullRequest.queue':
+      }
+      case 'pullRequest.queue': {
         return success({
           items: [],
           total: 0,
@@ -106,7 +117,8 @@ export function createPreviewBackend(
           viewer: null,
           rateLimit: null,
         });
-      case 'home.getSidebarAgentList':
+      }
+      case 'home.getSidebarAgentList': {
         return {
           groups: [],
           pinned: [],
@@ -122,7 +134,8 @@ export function createPreviewBackend(
             groupId: null,
           })),
         };
-      case 'aiProvider.getAiProviderRuntimeState':
+      }
+      case 'aiProvider.getAiProviderRuntimeState': {
         return {
           enabledAiModels: [],
           enabledAiProviders: [],
@@ -135,17 +148,23 @@ export function createPreviewBackend(
           providerBindingAgentTypes: {},
           runtimeConfig: {},
         };
-      case 'config.getDefaultAgentConfig':
+      }
+      case 'config.getDefaultAgentConfig': {
         return {};
-      case 'user.getUserState':
+      }
+      case 'user.getUserState': {
         return db.userState;
-      case 'user.getUserSSOProviders':
+      }
+      case 'user.getUserSSOProviders': {
         return [];
-      case 'user.getUserRegistrationDuration':
+      }
+      case 'user.getUserRegistrationDuration': {
         return { createdAt: new Date(), updatedAt: new Date(), duration: 30 };
-      case 'user.getUserActivitySummary':
+      }
+      case 'user.getUserActivitySummary': {
         return { lastUserMessageAt: new Date(), userCreatedAt: new Date() };
-      case 'user.updateSettings':
+      }
+      case 'user.updateSettings': {
         db.userState.settings = {
           ...db.userState.settings,
           ...input,
@@ -153,30 +172,41 @@ export function createPreviewBackend(
         };
         save();
         return undefined;
-      case 'user.updatePreference':
+      }
+      case 'user.updatePreference': {
         db.userState.preference = { ...db.userState.preference, ...input };
         save();
         return undefined;
-      case 'agent.getBuiltinAgent':
+      }
+      case 'agent.getBuiltinAgent': {
         return agent(input.slug);
-      case 'agent.getAgentConfigById':
+      }
+      case 'agent.getAgentConfigById': {
         return agent(input.agentId);
-      case 'agent.getAgentConfig':
+      }
+      case 'agent.getAgentConfig': {
         return agent(input.sessionId);
-      case 'agent.resolveAgentIdBySlug':
+      }
+      case 'agent.resolveAgentIdBySlug': {
         return { agentId: agent(input.slug).id };
-      case 'agent.queryAgents':
+      }
+      case 'agent.queryAgents': {
         return db.agents.filter(
           (a) => !input.keyword || a.title.toLowerCase().includes(input.keyword.toLowerCase()),
         );
-      case 'agent.countAgents':
+      }
+      case 'agent.countAgents': {
         return db.agents.length;
-      case 'agent.getKnowledgeBasesAndFiles':
+      }
+      case 'agent.getKnowledgeBasesAndFiles': {
         return { files: [], knowledgeBases: [] };
-      case 'agent.getTransferJobStatus':
+      }
+      case 'agent.getTransferJobStatus': {
         return null;
-      case 'agent.getAgentRuntimeForCreation':
+      }
+      case 'agent.getAgentRuntimeForCreation': {
         return agent(input.agentId);
+      }
       case 'agent.createAgent': {
         const id = 'preview-agent-' + crypto.randomUUID();
         db.agents.push(createAgent(id, input.config?.title || `Agent ${db.agents.length + 1}`));
@@ -339,36 +369,43 @@ export function createPreviewBackend(
             : task,
         );
       }
-      case 'project.list':
+      case 'project.list': {
         return {
           ...success(
             db.projects.slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 100)),
           ),
           total: db.projects.length,
         };
-      case 'topic.getTopics':
+      }
+      case 'topic.getTopics': {
         return {
           items: db.topics.filter((t) => !input.agentId || t.agentId === input.agentId),
           total: db.topics.length,
         };
-      case 'topic.queryTopics':
+      }
+      case 'topic.queryTopics': {
         return input.cursor !== undefined || input.pageSize
           ? { items: db.topics, nextCursor: null }
           : db.topics;
-      case 'topic.getTopic':
+      }
+      case 'topic.getTopic': {
         return db.topics.find((t) => t.id === input.id) ?? null;
-      case 'message.getMessages':
+      }
+      case 'message.getMessages': {
         return db.messages.filter((m) => m.topicId === input.topicId);
+      }
       case 'task.getSubtasks':
       case 'task.getTopics':
       case 'task.getTaskTree':
       case 'task.getDependencies':
-      case 'task.getPinnedDocuments':
+      case 'task.getPinnedDocuments': {
         return success([]);
+      }
       case 'task.getCheckpoint':
       case 'task.getReview':
-      case 'task.getVerifyConfig':
+      case 'task.getVerifyConfig': {
         return success(null);
+      }
     }
     const emptyLists = new Set([
       'session.getSessions',

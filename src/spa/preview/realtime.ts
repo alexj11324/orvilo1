@@ -1,7 +1,7 @@
 import {
   type CollaborationRoom,
-  type PresenceState,
   getCollaborationStoreState,
+  type PresenceState,
   roomKey,
 } from '@/store/collaboration';
 

@@ -31,7 +31,7 @@ import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import NavHeader from '@/features/NavHeader';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
@@ -428,10 +428,10 @@ const AgentViewAllPage = memo(() => {
   const { errorProps, view: listView } = useAgentListView(filteredItems.length);
 
   return (
-    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
+    <WorkSurface>
       <NavHeader
         left={
-          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
+          <div className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
             {t('agentViewAll.title')}
           </div>
         }
@@ -445,7 +445,7 @@ const AgentViewAllPage = memo(() => {
           />
         }
       />
-      <WideScreenContainer className="gap-4 py-4" wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+      <WorkSurfaceCollection className="flex flex-col gap-4">
         {/* Mobile widths wrap the search/create cluster onto its own line
             rather than forcing the controls past the viewport. */}
         <div className="flex items-center gap-3 justify-between flex-wrap">
@@ -586,8 +586,8 @@ const AgentViewAllPage = memo(() => {
               : filteredItems.map(renderRow)}
           </div>
         )}
-      </WideScreenContainer>
-    </div>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

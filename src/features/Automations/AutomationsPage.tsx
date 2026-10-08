@@ -6,9 +6,9 @@ import { useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { usePermission } from '@/hooks/usePermission';
 
 import { AutomationScopeSwitch, AutomationStatusSelect } from './AutomationScheduleFilters';
@@ -78,13 +78,13 @@ const AutomationsPage = memo(() => {
 
   const headerLeft = (
     <div className="flex items-center gap-3">
-      <div className="text-[15px] font-semibold">{t('page.title')}</div>
+      <div className="text-sm font-medium">{t('page.title')}</div>
       <AutomationScopeSwitch scope={scope} onChange={setScope} />
     </div>
   );
 
   return (
-    <div className="flex flex-col flex-1 h-full">
+    <WorkSurface>
       <NavHeader
         left={headerLeft}
         styles={{ left: { gap: 12, paddingLeft: 8 } }}
@@ -120,26 +120,22 @@ const AutomationsPage = memo(() => {
           </div>
         }
       />
-      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer fullWidth style={{ paddingBlock: 16, paddingInline: 24 }}>
-          <AutomationScheduleList
-            error={error}
-            footer={<AutomationTemplateGallery persistent onStartBlank={startBlank} />}
-            hasSettled={hasSettled}
-            isFiltered={statusFilter !== 'all'}
-            isLoading={isLoading}
-            page={page}
-            tasks={tasks}
-            total={total}
-            emptyContent={
-              <AutomationTemplateGallery persistent={false} onStartBlank={startBlank} />
-            }
-            onPageChange={setPage}
-            onRefetch={() => mutate()}
-          />
-        </WideScreenContainer>
-      </div>
-    </div>
+      <WorkSurfaceCollection>
+        <AutomationScheduleList
+          emptyContent={<AutomationTemplateGallery persistent={false} onStartBlank={startBlank} />}
+          error={error}
+          footer={<AutomationTemplateGallery persistent onStartBlank={startBlank} />}
+          hasSettled={hasSettled}
+          isFiltered={statusFilter !== 'all'}
+          isLoading={isLoading}
+          page={page}
+          tasks={tasks}
+          total={total}
+          onPageChange={setPage}
+          onRefetch={() => mutate()}
+        />
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

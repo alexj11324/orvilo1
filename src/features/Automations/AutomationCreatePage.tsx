@@ -18,9 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 
@@ -152,7 +152,7 @@ const AutomationCreatePage = memo(() => {
   ]);
 
   return (
-    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
+    <WorkSurface>
       <NavHeader
         styles={{ left: { paddingLeft: 4 } }}
         left={
@@ -198,74 +198,72 @@ const AutomationCreatePage = memo(() => {
           </Button>
         }
       />
-      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer>
-          <div className="flex flex-col gap-6 py-4" style={{ maxWidth: 768 }}>
-            {createdIdentifier && (
-              <div className="flex flex-col items-start gap-2" role="status">
-                <div className="text-muted-foreground">{t('create.saved_configuration')}</div>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(automationDetailPath(createdIdentifier))}
-                >
-                  {t('create.open_draft')}
-                </Button>
-              </div>
-            )}
-            <Input
-              autoFocus
-              disabled={configurationLocked}
-              placeholder={t('create.title_placeholder')}
-              style={{ fontSize: 20, fontWeight: 600 }}
-              value={name}
-              onChange={(e) => setNameOverride(e.target.value)}
-            />
-            <div className="flex">
-              <AssigneeAgentSelector
-                currentAgentId={assigneeAgentId}
-                disabled={configurationLocked}
-                onChange={(agentId) => setAssigneeAgentId(agentId)}
+      <WorkSurfaceDocument>
+        <div className="flex flex-col gap-6" style={{ maxWidth: 768 }}>
+          {createdIdentifier && (
+            <div className="flex flex-col items-start gap-2" role="status">
+              <div className="text-muted-foreground">{t('create.saved_configuration')}</div>
+              <Button
+                variant="outline"
+                onClick={() => navigate(automationDetailPath(createdIdentifier))}
               >
-                <div
-                  className="flex items-center gap-2"
-                  style={{
-                    border: `1px solid ${cssVar.colorBorderSecondary}`,
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    paddingBlock: 6,
-                    paddingInline: 10,
-                    width: 'fit-content',
-                  }}
-                >
-                  <AssigneeAvatar agentId={assigneeAgentId} size={20} />
-                  <div className="text-[13px]">
-                    {assigneeAgentId && assigneeMeta
-                      ? agentDisplayName(assigneeMeta)
-                      : t('instructions.agent_placeholder')}
-                  </div>
-                  <ChevronRight color={cssVar.colorTextTertiary} size={14} />
-                </div>
-              </AssigneeAgentSelector>
+                {t('create.open_draft')}
+              </Button>
             </div>
-            <AutomationTriggerDraft
+          )}
+          <Input
+            autoFocus
+            disabled={configurationLocked}
+            placeholder={t('create.title_placeholder')}
+            style={{ fontSize: 20, fontWeight: 600 }}
+            value={name}
+            onChange={(e) => setNameOverride(e.target.value)}
+          />
+          <div className="flex">
+            <AssigneeAgentSelector
+              currentAgentId={assigneeAgentId}
               disabled={configurationLocked}
-              draft={draft}
-              onChange={setDraft}
-            />
-            <div className="flex flex-col gap-2">
-              <div className="text-[13px] font-semibold">{t('instructions.section')}</div>
-              <Textarea
-                className="min-h-[calc(4lh+0.75rem)]"
-                disabled={configurationLocked}
-                placeholder={t('create.instructions_placeholder')}
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-              />
-            </div>
+              onChange={(agentId) => setAssigneeAgentId(agentId)}
+            >
+              <div
+                className="flex items-center gap-2"
+                style={{
+                  border: `1px solid ${cssVar.colorBorderSecondary}`,
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  paddingBlock: 6,
+                  paddingInline: 10,
+                  width: 'fit-content',
+                }}
+              >
+                <AssigneeAvatar agentId={assigneeAgentId} size={20} />
+                <div className="text-[13px]">
+                  {assigneeAgentId && assigneeMeta
+                    ? agentDisplayName(assigneeMeta)
+                    : t('instructions.agent_placeholder')}
+                </div>
+                <ChevronRight color={cssVar.colorTextTertiary} size={14} />
+              </div>
+            </AssigneeAgentSelector>
           </div>
-        </WideScreenContainer>
-      </div>
-    </div>
+          <AutomationTriggerDraft
+            disabled={configurationLocked}
+            draft={draft}
+            onChange={setDraft}
+          />
+          <div className="flex flex-col gap-2">
+            <div className="text-[13px] font-semibold">{t('instructions.section')}</div>
+            <Textarea
+              className="min-h-[calc(4lh+0.75rem)]"
+              disabled={configurationLocked}
+              placeholder={t('create.instructions_placeholder')}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+          </div>
+        </div>
+      </WorkSurfaceDocument>
+    </WorkSurface>
   );
 });
 

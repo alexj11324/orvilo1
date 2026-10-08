@@ -23,8 +23,8 @@ import TablePagination from '@/components/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useTaskStore } from '@/store/task';
 
 import { AutomationRunsSkeleton } from './AutomationSkeleton';
@@ -163,13 +163,13 @@ const AutomationRunsPage = memo(() => {
   );
 
   return (
-    <div className="flex flex-col flex-1 h-full">
+    <WorkSurface>
       <NavHeader
         styles={{ left: { paddingLeft: 8 } }}
         left={
           <div className="flex items-center gap-2">
             <HistoryIcon color={cssVar.colorTextTertiary} size={16} />
-            <div className="text-[15px] font-semibold">{t('runs.title')}</div>
+            <div className="text-sm font-medium">{t('runs.title')}</div>
           </div>
         }
         right={
@@ -217,113 +217,111 @@ const AutomationRunsPage = memo(() => {
           </div>
         }
       />
-      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer fullWidth style={{ paddingBlock: 16, paddingInline: 24 }}>
-          {stats && (
-            <div className="flex gap-3" style={{ flexWrap: 'wrap', marginBlockEnd: 16 }}>
-              <StatCard
-                icon={CheckCircle2Icon}
-                label={t('runs.stat.completed_24h')}
-                value={stats.completed24h}
-              />
-              <StatCard
-                icon={CheckCircle2Icon}
-                label={t('runs.stat.completed_7d')}
-                value={stats.completed7d}
-              />
-              <StatCard
-                danger
-                icon={XCircleIcon}
-                label={t('runs.stat.failed_24h')}
-                value={stats.failed24h}
-              />
-              <StatCard
-                danger
-                icon={XCircleIcon}
-                label={t('runs.stat.failed_7d')}
-                value={stats.failed7d}
-              />
+      <WorkSurfaceCollection>
+        {stats && (
+          <div className="flex gap-3" style={{ flexWrap: 'wrap', marginBlockEnd: 16 }}>
+            <StatCard
+              icon={CheckCircle2Icon}
+              label={t('runs.stat.completed_24h')}
+              value={stats.completed24h}
+            />
+            <StatCard
+              icon={CheckCircle2Icon}
+              label={t('runs.stat.completed_7d')}
+              value={stats.completed7d}
+            />
+            <StatCard
+              danger
+              icon={XCircleIcon}
+              label={t('runs.stat.failed_24h')}
+              value={stats.failed24h}
+            />
+            <StatCard
+              danger
+              icon={XCircleIcon}
+              label={t('runs.stat.failed_7d')}
+              value={stats.failed7d}
+            />
+          </div>
+        )}
+        {error ? (
+          <AsyncError error={error} onRetry={() => void mutate()} />
+        ) : isLoading && runs.length === 0 ? (
+          <AutomationRunsSkeleton />
+        ) : runs.length === 0 ? (
+          <SimpleEmpty description={t('run_history.no_matches')} icon={BotMessageSquare} />
+        ) : (
+          <>
+            <div className={styles.headerRow}>
+              <span>{t('run_history.automation')}</span>
+              <span>{t('run_history.trigger')}</span>
+              <span>{t('run_history.triggered')}</span>
+              <span>{t('run_history.status')}</span>
+              <span>{t('run_history.duration')}</span>
+              <span />
             </div>
-          )}
-          {error ? (
-            <AsyncError error={error} onRetry={() => void mutate()} />
-          ) : isLoading && runs.length === 0 ? (
-            <AutomationRunsSkeleton />
-          ) : runs.length === 0 ? (
-            <SimpleEmpty description={t('run_history.no_matches')} icon={BotMessageSquare} />
-          ) : (
-            <>
-              <div className={styles.headerRow}>
-                <span>{t('run_history.automation')}</span>
-                <span>{t('run_history.trigger')}</span>
-                <span>{t('run_history.triggered')}</span>
-                <span>{t('run_history.status')}</span>
-                <span>{t('run_history.duration')}</span>
-                <span />
-              </div>
-              {runs.map((run) => (
+            {runs.map((run) => (
+              <div
+                className={styles.row}
+                key={run.topicId ?? run.operationId}
+                onClick={() => openRun(run)}
+              >
+                {run.sourceTaskIdentifier ? (
+                  <div style={{ minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <WorkspaceLink to={automationDetailPath(run.sourceTaskIdentifier)}>
+                      <div className="truncate min-w-0 font-medium" style={{ color: 'inherit' }}>
+                        {run.sourceTaskName || run.sourceTaskIdentifier}
+                      </div>
+                    </WorkspaceLink>
+                  </div>
+                ) : (
+                  <div className="truncate min-w-0 text-[13px] font-medium">
+                    {run.sourceTaskName ?? run.title ?? '—'}
+                  </div>
+                )}
+                <div className="text-[12px] text-muted-foreground">
+                  {t(`run_source.${runTriggerLabel(run.trigger)}`)}
+                </div>
                 <div
-                  className={styles.row}
-                  key={run.topicId ?? run.operationId}
-                  onClick={() => openRun(run)}
+                  className="truncate min-w-0 text-[12px] text-muted-foreground"
+                  title={run.createdAt ? dayjs(run.createdAt).format('LLL') : undefined}
                 >
-                  {run.sourceTaskIdentifier ? (
-                    <div style={{ minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
-                      <WorkspaceLink to={automationDetailPath(run.sourceTaskIdentifier)}>
-                        <div className="truncate min-w-0 font-medium" style={{ color: 'inherit' }}>
-                          {run.sourceTaskName || run.sourceTaskIdentifier}
-                        </div>
-                      </WorkspaceLink>
-                    </div>
-                  ) : (
-                    <div className="truncate min-w-0 text-[13px] font-medium">
-                      {run.sourceTaskName ?? run.title ?? '—'}
-                    </div>
+                  {run.createdAt ? dayjs(run.createdAt).fromNow() : '—'}
+                </div>
+                <RunStatusBadge status={run.status} />
+                <div className="text-[12px] text-muted-foreground">
+                  {runDuration(
+                    run.createdAt ? String(run.createdAt) : null,
+                    run.completedAt ? String(run.completedAt) : null,
                   )}
-                  <div className="text-[12px] text-muted-foreground">
-                    {t(`run_source.${runTriggerLabel(run.trigger)}`)}
-                  </div>
-                  <div
-                    className="truncate min-w-0 text-[12px] text-muted-foreground"
-                    title={run.createdAt ? dayjs(run.createdAt).format('LLL') : undefined}
-                  >
-                    {run.createdAt ? dayjs(run.createdAt).fromNow() : '—'}
-                  </div>
-                  <RunStatusBadge status={run.status} />
-                  <div className="text-[12px] text-muted-foreground">
-                    {runDuration(
-                      run.createdAt ? String(run.createdAt) : null,
-                      run.completedAt ? String(run.completedAt) : null,
-                    )}
-                  </div>
-                  <ActionIcon
-                    disabled={!run.topicId}
-                    icon={MessageSquareIcon}
-                    size={'small'}
-                    title={t('run.open_conversation')}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openRun(run);
-                    }}
-                  />
                 </div>
-              ))}
-              {total > PAGE_SIZE && (
-                <div className="flex justify-center py-4">
-                  <TablePagination
-                    current={page}
-                    pageSize={PAGE_SIZE}
-                    pageSizeOptions={[PAGE_SIZE]}
-                    total={total}
-                    onChange={(next) => setPage(next)}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </WideScreenContainer>
-      </div>
-    </div>
+                <ActionIcon
+                  disabled={!run.topicId}
+                  icon={MessageSquareIcon}
+                  size={'small'}
+                  title={t('run.open_conversation')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openRun(run);
+                  }}
+                />
+              </div>
+            ))}
+            {total > PAGE_SIZE && (
+              <div className="flex justify-center py-4">
+                <TablePagination
+                  current={page}
+                  pageSize={PAGE_SIZE}
+                  pageSizeOptions={[PAGE_SIZE]}
+                  total={total}
+                  onChange={(next) => setPage(next)}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

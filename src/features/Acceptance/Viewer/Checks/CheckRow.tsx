@@ -408,9 +408,10 @@ export const AcceptanceCheckRow = memo<{
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <span {...clickableProps()} className={CLICKABLE_FOCUS_RING}>
+                  <span>
                     <span
-                      className={cx(styles.seqChip, styles.seqChipClickable)}
+                      {...clickableProps()}
+                      className={cx(styles.seqChip, styles.seqChipClickable, CLICKABLE_FOCUS_RING)}
                       onClick={(event) => {
                         event.stopPropagation();
                         void navigator.clipboard.writeText(`C${check.seq}`);
@@ -562,9 +563,10 @@ export const AcceptanceCheckRow = memo<{
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span {...clickableProps()} className={CLICKABLE_FOCUS_RING}>
+                      <span>
                         <span
-                          className={cx(styles.chip, styles.chipClickable)}
+                          {...clickableProps()}
+                          className={cx(styles.chip, styles.chipClickable, CLICKABLE_FOCUS_RING)}
                           onClick={(event) => {
                             event.stopPropagation();
                             onRound(check.introducedAtRound);
@@ -595,9 +597,10 @@ export const AcceptanceCheckRow = memo<{
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span {...clickableProps()} className={CLICKABLE_FOCUS_RING}>
+                      <span>
                         <span
-                          className={cx(styles.chip, styles.chipClickable)}
+                          {...clickableProps()}
+                          className={cx(styles.chip, styles.chipClickable, CLICKABLE_FOCUS_RING)}
                           onClick={(event) => {
                             event.stopPropagation();
                             onRound(check.resultRound!);

@@ -196,7 +196,11 @@ const AgentViewAllPage = memo(() => {
 
   // The sidebar usually owns these fetches, but this page must survive a
   // direct deep link — SWR dedupes when both are mounted.
-  const { error: agentListError, mutate: retryAgentList } = useFetchAgentList();
+  const {
+    error: agentListError,
+    isValidating: retryingAgentList,
+    mutate: retryAgentList,
+  } = useFetchAgentList();
   useFetchAgentLabels();
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   useFetchWorkspaceUserPreference();
@@ -544,7 +548,12 @@ const AgentViewAllPage = memo(() => {
         {listView === 'loading' ? (
           <SkeletonList rows={8} />
         ) : listView === 'error' ? (
-          <AsyncError error={agentListError} variant="page" onRetry={() => void retryAgentList()} />
+          <AsyncError
+            error={agentListError}
+            retrying={retryingAgentList}
+            variant="page"
+            onRetry={() => void retryAgentList()}
+          />
         ) : listView === 'empty' ? (
           <div className="flex items-center justify-center flex-1 p-10">
             <Empty>

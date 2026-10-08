@@ -6,6 +6,7 @@ import { memo, type ReactNode } from 'react';
 import Avatar from '@/components/Avatar';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import Time from '@/features/Home/components/Time';
+import { inboxRowSelectKeyDown } from '@/features/WorkInbox/inboxRowKeyboard';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { resolveTopicTriggerTime, RunningElapsedTime } from './RunningElapsedTime';
@@ -44,7 +45,16 @@ const TopicRow = memo<TopicRowProps>(({ topic, leading, trailing }) => {
   };
 
   return (
-    <div className={cx(styles.row, 'flex items-center gap-2.5')} onClick={open}>
+    <div
+      role="button"
+      tabIndex={0}
+      className={cx(
+        styles.row,
+        'flex items-center gap-2.5 outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
+      )}
+      onClick={open}
+      onKeyDown={(event) => inboxRowSelectKeyDown(event, open)}
+    >
       {leading}
       {agent && (
         <Avatar

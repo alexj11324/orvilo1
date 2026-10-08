@@ -50,8 +50,11 @@ const SortableTaskCard = memo<{
   return (
     <div
       data-board-card
-      className={cx(isDragging && cardStyles.dragging)}
       ref={setNodeRef}
+      className={cx(
+        'rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50',
+        isDragging && cardStyles.dragging,
+      )}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition ?? undefined,

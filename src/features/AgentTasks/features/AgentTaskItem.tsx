@@ -377,12 +377,15 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   return (
     <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
       <div
-        className={styles.row}
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
         role="button"
         tabIndex={0}
+        className={cn(
+          styles.row,
+          'outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
+        )}
         style={{
           display: 'flex',
           flexDirection: 'column',

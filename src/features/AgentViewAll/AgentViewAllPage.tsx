@@ -13,6 +13,7 @@ import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +43,7 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 
 import AgentCard, { cardStyles } from './AgentCard';
+import { resolveAgentListView } from './agentListView';
 import AgentRow, { type AgentRowAuthor } from './AgentRow';
 import { flattenAgentBuckets } from './flattenBuckets';
 import ListConfig from './ListConfig';
@@ -194,7 +196,7 @@ const AgentViewAllPage = memo(() => {
 
   // The sidebar usually owns these fetches, but this page must survive a
   // direct deep link — SWR dedupes when both are mounted.
-  useFetchAgentList();
+  const { error: agentListError, mutate: retryAgentList } = useFetchAgentList();
   useFetchAgentLabels();
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   useFetchWorkspaceUserPreference();
@@ -445,6 +447,12 @@ const AgentViewAllPage = memo(() => {
     createOptions,
   ]);
 
+  const listView = resolveAgentListView({
+    error: agentListError,
+    isInit,
+    itemCount: filteredItems.length,
+  });
+
   return (
     <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
@@ -533,9 +541,11 @@ const AgentViewAllPage = memo(() => {
             )}
           </div>
         </div>
-        {!isInit ? (
+        {listView === 'loading' ? (
           <SkeletonList rows={8} />
-        ) : filteredItems.length === 0 ? (
+        ) : listView === 'error' ? (
+          <AsyncError error={agentListError} variant="page" onRetry={() => void retryAgentList()} />
+        ) : listView === 'empty' ? (
           <div className="flex items-center justify-center flex-1 p-10">
             <Empty>
               <EmptyHeader>

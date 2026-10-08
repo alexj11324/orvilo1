@@ -33,6 +33,7 @@ import { useActivityTime } from '@/hooks/useActivityTime';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selectors';
 
+import AssigneeAvatar from '../features/AssigneeAvatar';
 import { PRIORITY_META } from '../features/TaskPriorityTag';
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
@@ -183,7 +184,9 @@ const RowMark = ({
   author?: TaskDetailActivityAuthor | null;
   icon: StatusVisual['icon'];
 }) =>
-  author?.avatar ? (
+  author?.type === 'agent' ? (
+    <AssigneeAvatar agentId={author.id} size={16} />
+  ) : author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
   ) : (
     createElement(icon, { color: cssVar.colorTextTertiary, size: 14 })

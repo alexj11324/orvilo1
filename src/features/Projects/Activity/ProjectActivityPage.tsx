@@ -41,7 +41,7 @@ import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
 import { ActivityMarker } from './ActivityMarker';
 import { resolveEventMarker, resolveRowMarker, UPDATE_MARKER } from './activityMarkers';
 import { ActivityTimelineItem } from './ActivityTimelineItem';
-import { ProjectCreationActivity } from './ProjectCreationActivity';
+import { ProjectCreationTimelineItem } from './ProjectCreationTimelineItem';
 
 /**
  * Each line is a ReUI Timeline item: one 14px mark in a 28px bordered slot,
@@ -518,7 +518,7 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
             onUpdateChanged={() => void updatesSWR.mutate()}
           />
         ))}
-        {!nextCursor && <ProjectCreationActivity project={project} step={merged.length + 1} />}
+        {!nextCursor && <ProjectCreationTimelineItem project={project} step={merged.length + 1} />}
       </Timeline>
       {moreError ? (
         <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />

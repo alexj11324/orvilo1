@@ -59,6 +59,7 @@ describe('Agent display runtime identity', () => {
               title: 'Developer',
               type: 'agent',
               pinned: false,
+              updatedAt: new Date(),
             },
           ],
         });
@@ -82,6 +83,7 @@ describe('Agent display runtime identity', () => {
             title: 'Reviewer',
             type: 'agent',
             pinned: false,
+            updatedAt: new Date(),
           },
         ],
       });

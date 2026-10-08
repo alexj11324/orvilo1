@@ -64,6 +64,7 @@ describe('TopicCard', () => {
           heterogeneousType: 'codex',
           type: 'agent',
           pinned: false,
+          updatedAt: new Date(),
         },
       ],
     });

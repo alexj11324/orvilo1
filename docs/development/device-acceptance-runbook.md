@@ -37,6 +37,24 @@ Copy all three to the device in the same directory layout —
 Runtime: Node.js ≥22.15 (`engines`; needs `node:zlib` zstd). No bun needed on
 the device — `node index.js` runs everything.
 
+## Enrolling the current Desktop in a workspace
+
+Desktop sign-in connects and registers the machine in the user's personal device
+pool. That alone does not enroll it in a workspace. In Orvilo Desktop:
+
+1. Open the target workspace's **Settings → Devices**.
+2. Choose **Private** for your own use, or **Workspace** to make the device
+   available to workspace members.
+3. Choose **Connect Device → Via Desktop → Connect this computer**.
+4. Verify that the selected pool shows the real hostname, **Current device**,
+   and an online Desktop channel. Confirm an overwrite only if the displayed
+   visibility change is intended.
+
+The wizard uses the existing personal registration and workspace sharing API.
+Workspace enrollment has its own device ID; do not copy a personal ID into a
+workspace agent binding. A connection or enrollment failure remains visible in
+the wizard. The CLI enrollment method remains available for headless devices.
+
 ## Enrolling device B
 
 ### Auth

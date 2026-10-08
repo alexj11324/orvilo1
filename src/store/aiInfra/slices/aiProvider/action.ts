@@ -447,7 +447,13 @@ export class AiProviderActionImpl {
     value: UpdateAiProviderConfigParams,
   ): Promise<void> => {
     this.#get().internal_toggleAiProviderConfigUpdating(id, true);
-    await aiProviderService.updateAiProviderConfig(id, value);
+    try {
+      await aiProviderService.updateAiProviderConfig(id, value);
+    } catch (error) {
+      // A rejected write must not leave the provider stuck in its updating state.
+      this.#get().internal_toggleAiProviderConfigUpdating(id, false);
+      throw error;
+    }
 
     // Immediately update local state for instant UI feedback
     this.#set(

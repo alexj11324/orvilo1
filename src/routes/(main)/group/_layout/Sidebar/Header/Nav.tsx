@@ -20,7 +20,7 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 import { isModifierClick } from '@/utils/navigation';
 
 const Nav = memo(() => {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'common']);
   const params = useActiveRouteParams();
   const groupId = params.gid;
   const issuesHref = buildWorkspaceAwarePath('/tasks', useActiveWorkspaceSlug());

@@ -1,5 +1,5 @@
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import { FolderCogIcon, Trash } from 'lucide-react';
+import { FolderCogIcon, FolderPenIcon, Trash } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -12,7 +12,7 @@ import { useGlobalStore } from '@/store/global';
 import { isModifierClick } from '@/utils/navigation';
 
 const Nav = () => {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'common']);
   const activeSlug = useActiveWorkspaceSlug();
   const issuesHref = buildWorkspaceAwarePath('/tasks', activeSlug);
   const { pathname } = useActiveLocation();

@@ -317,7 +317,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
     }
 
     return (
-      <div className={cn('flex flex-col', styles.composer)}>
+      <div className="flex flex-col gap-3">
         {/* A posted row keeps its kind — edit mode drops the Comment/Update tabs.
           Editing a comment leaves the header empty, so it is skipped entirely. */}
         {(!editing || mode === 'update') && (
@@ -335,7 +335,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
                     { key: 'comment', label: t('overview.updateModeComment') },
                     { key: 'update', label: t('overview.updateModeUpdate') },
                   ].map((item) => (
-                    <TabsTrigger key={item.key} value={item.key}>
+                    <TabsTrigger className={styles.modeTab} key={item.key} value={item.key}>
                       {item.label}
                     </TabsTrigger>
                   ))}
@@ -359,44 +359,46 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             )}
           </div>
         )}
-        <ProjectUpdateEditor
-          disabled={posting}
-          initialContent={editorRevision === 0 ? initial.body : ''}
-          key={editorRevision}
-          label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
-          placeholder={t(
-            mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
-          )}
-          onChange={setBody}
-          onSubmit={() => void post()}
-        />
-        <div
-          className={cn('flex flex-row', styles.composerFooter)}
-          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
-        >
-          {editing && (
-            <Button
-              disabled={posting}
-              variant="outline"
-              onClick={() => {
-                settle();
-                onCancelEdit?.();
-              }}
-            >
-              {t('common:cancel')}
-            </Button>
-          )}
-          <Button
-            aria-busy={posting}
-            disabled={!body.trim() || posting}
-            variant="default"
-            onClick={() => void post()}
+        <div className={cn('flex flex-col', styles.composer)}>
+          <ProjectUpdateEditor
+            disabled={posting}
+            initialContent={editorRevision === 0 ? initial.body : ''}
+            key={editorRevision}
+            label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
+            placeholder={t(
+              mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
+            )}
+            onChange={setBody}
+            onSubmit={() => void post()}
+          />
+          <div
+            className={cn('flex flex-row', styles.composerFooter)}
+            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
           >
-            {posting && <Spinner />}
-            {editing
-              ? t('common:save')
-              : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
-          </Button>
+            {editing && (
+              <Button
+                disabled={posting}
+                variant="outline"
+                onClick={() => {
+                  settle();
+                  onCancelEdit?.();
+                }}
+              >
+                {t('common:cancel')}
+              </Button>
+            )}
+            <Button
+              aria-busy={posting}
+              disabled={!body.trim() || posting}
+              variant="default"
+              onClick={() => void post()}
+            >
+              {posting && <Spinner />}
+              {editing
+                ? t('common:save')
+                : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -466,12 +468,12 @@ export const ProjectUpdateRow = memo<{
   return (
     <div
       className={cn('flex flex-row', cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen))}
-      style={{ alignItems: 'flex-start', gap: 10 }}
+      style={{ alignItems: 'flex-start', gap: 12 }}
     >
       <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
       <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
         <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
+          <span className="text-sm" style={{ fontSize: 14, fontWeight: 500 }}>
             {update.authorName || t('overview.updateAnonymous', { defaultValue: 'Member' })}
           </span>
           {meta && update.health && (
@@ -524,7 +526,7 @@ export const ProjectUpdateRow = memo<{
             </div>
           )}
         </div>
-        <Markdown fontSize={15}>{update.body}</Markdown>
+        <Markdown fontSize={14}>{update.body}</Markdown>
       </div>
     </div>
   );

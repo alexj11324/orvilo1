@@ -544,6 +544,7 @@ export default {
   'navPanel.showingAllItems': 'Showing all items',
   'navPanel.visible': 'Visible',
   'navPanel.searchAgent': 'Search Agent...',
+  'navPanel.searchAgentFailed': "Couldn't search agents",
   'navPanel.searchFavorites': 'Search Favorites...',
   'navPanel.searchProject': 'Search projects...',
   'navPanel.viewAllAgents': 'View all',

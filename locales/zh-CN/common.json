@@ -601,6 +601,7 @@
   "navPanel.publicAgents": "工作区",
   "navPanel.resetDefault": "恢复默认",
   "navPanel.searchAgent": "搜索智能体…",
+  "navPanel.searchAgentFailed": "搜索智能体失败",
   "navPanel.searchFavorites": "搜索收藏…",
   "navPanel.searchProject": "搜索项目…",
   "navPanel.searchRecent": "搜索最近…",

@@ -4,6 +4,8 @@ import { ChevronDownIcon, ChevronRightIcon, type LucideIcon } from 'lucide-react
 import { type ComponentProps, type ReactNode } from 'react';
 import { createElement, memo, Suspense, useState } from 'react';
 
+import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
+
 import CountBadge from '../CountBadge';
 import { homeType } from '../homeType';
 
@@ -91,7 +93,7 @@ const GroupBlock = memo<GroupBlockProps>(
             {action}
           </div>
         </div>
-        {!collapsed && <Suspense fallback={'loading'}>{children}</Suspense>}
+        {!collapsed && <Suspense fallback={<BriefCardSkeleton />}>{children}</Suspense>}
       </div>
     );
   },

@@ -251,10 +251,6 @@ vi.mock('../shared/useAgentDisplayMeta', () => ({
   useAgentDisplayMeta: () => undefined,
 }));
 
-vi.mock('../shared/useAgentVisibility', () => ({
-  useAgentVisibility: (agentId?: string) => (agentId === 'agent-private' ? 'private' : undefined),
-}));
-
 /** Flips the Labs toggles the composer still reads. */
 const setLabs = (lab: { enableTopicAcceptance?: boolean }) => {
   userStateMock.lab = lab as Record<string, boolean>;

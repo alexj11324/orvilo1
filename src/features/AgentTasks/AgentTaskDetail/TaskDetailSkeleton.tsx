@@ -58,7 +58,7 @@ const TaskDetailBodySkeleton = () => (
         <div className={layout.properties}>
           {Array.from({ length: 3 }).map((_, index) => (
             <div className={layout.propertyRow} key={index}>
-              <div className={layout.propertyLabel}>
+              <div className="flex items-center gap-2">
                 <SkeletonBar height={16} radius={4} width={16} />
                 <SkeletonBar height={10} width={56} />
               </div>

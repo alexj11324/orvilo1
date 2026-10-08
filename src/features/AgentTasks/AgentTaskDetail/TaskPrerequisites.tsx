@@ -32,7 +32,6 @@ import {
   type IssueRelationKind,
   relationKindOf,
 } from './relationGroups';
-import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set([
@@ -249,8 +248,8 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
         const { Icon, className: markClass } = RELATION_MARKS[kind];
         return (
           <div className="flex flex-col gap-0.5" data-relation-kind={kind} key={kind}>
-            <div className={styles.propertyLabel} style={{ width: 'auto' }}>
-              <span className={styles.propertyMark}>
+            <div className="flex min-h-7 items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex size-4 items-center justify-center">
                 <Icon className={markClass} size={16} />
               </span>
               <span className="truncate">{t(`taskDetail.relations.${kind}`)}</span>

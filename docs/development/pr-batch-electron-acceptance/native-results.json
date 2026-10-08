@@ -36,5 +36,14 @@
   {
     "scenario": "PR509 all-completed Priority board: hidden notice survives empty boundary; Show restores persisted issues",
     "status": "pass"
+  },
+  {
+    "scenario": "PR513 native Copy title, paste through OS clipboard into Task title yields original title",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR530 Make a copy creates T-4, navigates to its real detail and persists title/route across reload",
+    "status": "pass",
+    "harnessCorrection": "Initial wait assumed Copy of prefix; actual localized title uses (copy) suffix. Corrected expectation verified current detail and reload."
   }
 ]

@@ -1,6 +1,6 @@
 import { agentDisplayName } from '@orvilo/types';
 import { cn } from 'cn';
-import { memo, type ReactNode } from 'react';
+import { Fragment, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
@@ -214,14 +214,16 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
     <UiBreadcrumb className={styles.breadcrumb}>
       <BreadcrumbList>
         {crumbs.map((crumb, index) => (
-          <BreadcrumbItem key={crumb.key ?? index}>
+          <Fragment key={crumb.key ?? index}>
             {index > 0 && <BreadcrumbSeparator />}
-            {index === crumbs.length - 1 ? (
-              <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
-            ) : (
-              crumb.title
-            )}
-          </BreadcrumbItem>
+            <BreadcrumbItem>
+              {index === crumbs.length - 1 ? (
+                <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+              ) : (
+                crumb.title
+              )}
+            </BreadcrumbItem>
+          </Fragment>
         ))}
       </BreadcrumbList>
     </UiBreadcrumb>

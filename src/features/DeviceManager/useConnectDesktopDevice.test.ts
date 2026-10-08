@@ -14,7 +14,22 @@ const state = vi.hoisted(() => ({
   share: vi.fn(),
   workspace: { id: 'workspace-one', name: 'Workspace One' },
 }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: setting } = await import('../../../locales/en-US/setting.json');
+  const i18n = createInstance();
+  await i18n.init({
+    keySeparator: false,
+    lng: 'en-US',
+    resources: { 'en-US': { translation: setting } },
+  });
+  return {
+    useTranslation: () => ({
+      t: (key: string, values?: Record<string, string>) =>
+        key === 'devices.share.overwriteConfirmDesc' ? i18n.t(key, values) : key,
+    }),
+  };
+});
 vi.mock('@/business/client/hooks/useActiveWorkspace', () => ({
   useActiveWorkspace: () => state.workspace,
 }));
@@ -112,6 +127,8 @@ describe('Desktop workspace enrollment', () => {
     expect(close).not.toHaveBeenCalled();
     expect(state.share).toHaveBeenCalledOnce();
     const confirmation = vi.mocked(confirmModal).mock.calls[0][0];
+    expect(confirmation.content).toContain('already shared with Workspace One');
+    expect(confirmation.content).not.toContain('{{');
     await act(async () => {
       await confirmation.onOk?.();
     });

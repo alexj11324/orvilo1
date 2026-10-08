@@ -68,6 +68,7 @@ export const useConnectDesktopDevice = ({
               confirmModal({
                 content: t('devices.share.overwriteConfirmDesc', {
                   current: label(enrollment.visibility ?? 'public'),
+                  name: target.name,
                   next: label(visibility),
                 }),
                 okText: t('devices.share.overwriteConfirmOk'),

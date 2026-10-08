@@ -50,6 +50,9 @@ pool. That alone does not enroll it in a workspace. In Orvilo Desktop:
    and an online Desktop channel. Confirm an overwrite only if the displayed
    visibility change is intended.
 
+The overwrite confirmation names the target workspace and shows its current and
+requested visibility. Canceling preserves the existing enrollment.
+
 The wizard uses the existing personal registration and workspace sharing API.
 Workspace enrollment has its own device ID; do not copy a personal ID into a
 workspace agent binding. A connection or enrollment failure remains visible in

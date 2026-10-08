@@ -1,4 +1,3 @@
-import type { ProjectOrchestrationPolicy } from '@orvilo/types';
 import { useLayoutEffect } from 'react';
 import type { SWRResponse } from 'swr';
 import { shallow } from 'zustand/shallow';
@@ -14,12 +13,8 @@ import { expose } from '@/store/middleware/expose';
 
 type ProjectListResponse = Awaited<ReturnType<typeof projectService.listAll>>;
 type ProjectDetailResponse = Awaited<ReturnType<typeof projectService.detail>>;
-type ProjectOrchestrationPolicyResponse = Awaited<
-  ReturnType<typeof projectService.getOrchestrationPolicy>
->;
 export type ProjectListItem = ProjectListResponse['data'][number];
 export type ProjectDetail = ProjectDetailResponse['data'];
-export type ProjectOrchestrationPolicyView = ProjectOrchestrationPolicyResponse['data'];
 
 const LIST_KEY = 'project/list';
 const listKey = (scope: string) => [LIST_KEY, scope] as const;
@@ -80,22 +75,12 @@ interface ProjectStore {
     id: string,
     input: Parameters<typeof projectService.update>[1],
   ) => Promise<ProjectListItem>;
-  updateProjectOrchestrationPolicy: (input: {
-    coordinatorAgentId: string;
-    expectedRevision: number;
-    id: string;
-    orchestrationPolicy: ProjectOrchestrationPolicy;
-  }) => Promise<ProjectOrchestrationPolicyView>;
   useFetchProjectDetail: (id?: string) => SWRResponse<ProjectDetailResponse>;
   useFetchProjectLabels: () => SWRResponse<Awaited<ReturnType<typeof projectService.labels>>>;
   useFetchProjectLinks: (
     id?: string,
   ) => SWRResponse<Awaited<ReturnType<typeof projectService.listLinks>>>;
   useFetchProjectList: (enabled?: boolean) => SWRResponse<ProjectListResponse>;
-  useFetchProjectOrchestrationPolicy: (
-    id?: string,
-    enabled?: boolean,
-  ) => SWRResponse<ProjectOrchestrationPolicyResponse>;
   useFetchProjectTeams: () => SWRResponse<Awaited<ReturnType<typeof projectService.teams>>>;
 }
 
@@ -253,55 +238,6 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
       if (result.refreshError) throw result.refreshError;
     },
     refreshProjectList: async () => mutate(listKey(getCacheScope())),
-    updateProjectOrchestrationPolicy: async ({ id, ...input }) => {
-      const response = await projectService.updateOrchestrationPolicy(id, input);
-      const policy = response.data;
-
-      set(
-        (state) => ({
-          projectDetails: Object.fromEntries(
-            Object.entries(state.projectDetails).map(([scope, details]) => [
-              scope,
-              Object.fromEntries(
-                Object.entries(details).map(([reference, detail]) => [
-                  reference,
-                  detail.project.id === id
-                    ? {
-                        ...detail,
-                        project: {
-                          ...detail.project,
-                          coordinatorAgentId: policy.coordinatorAgentId,
-                          orchestrationPolicy: policy.orchestrationPolicy,
-                          orchestrationPolicyRevision: policy.orchestrationPolicyRevision,
-                        },
-                      }
-                    : detail,
-                ]),
-              ),
-            ]),
-          ),
-          projectLists: Object.fromEntries(
-            Object.entries(state.projectLists).map(([scope, projects]) => [
-              scope,
-              projects.map((project) =>
-                project.id === id
-                  ? {
-                      ...project,
-                      coordinatorAgentId: policy.coordinatorAgentId,
-                      orchestrationPolicy: policy.orchestrationPolicy,
-                      orchestrationPolicyRevision: policy.orchestrationPolicyRevision,
-                    }
-                  : project,
-              ),
-            ]),
-          ),
-        }),
-        false,
-        'updateProjectOrchestrationPolicy/success',
-      );
-
-      return policy;
-    },
     updateProject: async (id, input) => {
       const requestScope = getCacheScope();
       const response = await projectService.update(id, input);
@@ -364,47 +300,6 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
           );
         },
       });
-    },
-    useFetchProjectOrchestrationPolicy: (id, enabled = true) => {
-      const scope = useCacheScope();
-      return useClientDataSWR(
-        enabled && id ? ['project/orchestrationPolicy', scope, id] : null,
-        () => projectService.getOrchestrationPolicy(id!),
-        {
-          onSuccess: (response: ProjectOrchestrationPolicyResponse) => {
-            if (scope !== getCacheScope()) return;
-
-            set(
-              (state) => ({
-                projectDetails: Object.fromEntries(
-                  Object.entries(state.projectDetails).map(([detailScope, details]) => [
-                    detailScope,
-                    Object.fromEntries(
-                      Object.entries(details).map(([reference, detail]) => [
-                        reference,
-                        detail.project.id === id
-                          ? {
-                              ...detail,
-                              project: {
-                                ...detail.project,
-                                coordinatorAgentId: response.data.coordinatorAgentId,
-                                orchestrationPolicy: response.data.orchestrationPolicy,
-                                orchestrationPolicyRevision:
-                                  response.data.orchestrationPolicyRevision,
-                              },
-                            }
-                          : detail,
-                      ]),
-                    ),
-                  ]),
-                ),
-              }),
-              false,
-              'useFetchProjectOrchestrationPolicy/success',
-            );
-          },
-        },
-      );
     },
     useFetchProjectList: (enabled = true) => {
       const scope = useCacheScope();

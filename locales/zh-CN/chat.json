@@ -2076,6 +2076,7 @@
   "taskList.contextMenu.copyId": "复制 ID",
   "taskList.contextMenu.copyIdSuccess": "ID 已复制",
   "taskList.contextMenu.copyIssueTitle": "复制标题",
+  "taskList.contextMenu.copyLabelsFailed": "任务已复制，但部分标签未能添加",
   "taskList.contextMenu.copyLink": "复制链接",
   "taskList.contextMenu.copyLinkSuccess": "链接已复制",
   "taskList.contextMenu.copyMarkdown": "复制为 Markdown",

@@ -141,14 +141,17 @@ const useDuplicateTask = () => {
       // `null` means another create is already in flight — nothing was made.
       if (!created) return;
 
-      // Labels have no create-time field; a label that fails to attach must not
-      // turn the already-committed copy into a reported failure.
-      await Promise.allSettled(
+      // Preserve the committed copy while reporting incomplete label attachment.
+      const labels = await Promise.allSettled(
         (detail.labels ?? []).map((label) =>
           toggleTaskLabel(created.identifier, label.id, true, label),
         ),
       );
-      toast.success(t('taskList.contextMenu.copySuccess'));
+      if (labels.some((result) => result.status === 'rejected')) {
+        toast.warning(t('taskList.contextMenu.copyLabelsFailed'));
+      } else {
+        toast.success(t('taskList.contextMenu.copySuccess'));
+      }
       navigate(
         taskDetailPath(created.identifier, created.assigneeAgentId ?? undefined, created.name),
       );

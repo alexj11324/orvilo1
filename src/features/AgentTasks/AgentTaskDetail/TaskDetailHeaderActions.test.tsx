@@ -43,6 +43,7 @@ const mocks = vi.hoisted(() => ({
   },
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
   toggleTaskLabel: vi.fn(),
   transferItems: [
     { key: 'transfer-task', label: 'Move to…' },
@@ -54,7 +55,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  toast: { error: mocks.toastError, success: mocks.toastSuccess },
+  toast: { error: mocks.toastError, success: mocks.toastSuccess, warning: mocks.toastWarning },
 }));
 
 vi.mock('@/features/Electron/navigation/appNavigate', () => ({
@@ -393,6 +394,8 @@ describe('TaskDetailHeaderActions', () => {
       item()?.onClick?.();
 
       await vi.waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/task/ENG-9'));
+      expect(mocks.toastWarning).toHaveBeenCalledWith('taskList.contextMenu.copyLabelsFailed');
+      expect(mocks.toastSuccess).not.toHaveBeenCalled();
       expect(mocks.toastError).not.toHaveBeenCalled();
     });
 

@@ -1181,6 +1181,7 @@ export default {
   'teams.membersEmpty': 'No members yet',
   'teams.menu': 'Team menu',
   'teams.navIssues': 'Issues',
+  'teams.newIssue': 'New issue',
   'teams.navProjects': 'Projects',
   'teams.navTriage': 'Triage',
   'teams.navViews': 'Views',

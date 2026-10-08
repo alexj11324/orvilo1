@@ -13,6 +13,11 @@ describe('workQueryLoadedTasks', () => {
     expect(workQueryLoadedTasks(tasks, [], 'none')).toEqual(tasks);
   });
 
+  it('keeps flat results when grouping is omitted', () => {
+    const tasks = [{ id: 'issue-1' }];
+    expect(workQueryLoadedTasks(tasks, [], undefined)).toEqual(tasks);
+  });
+
   it('uses grouped results and keeps an empty grouped result empty', () => {
     const tasks = [{ id: 'flat-issue' }];
     const groups = [{ hasMore: false, key: 'todo', tasks: [{ id: 'grouped-issue' }], total: 1 }];

@@ -8,6 +8,7 @@ import { useUserStore } from '@/store/user';
 import Content from './Content';
 
 const mocks = vi.hoisted(() => ({
+  onMetaChange: undefined as undefined | ((meta: object) => Promise<void>),
   agentState: {
     activeAgentId: 'inbox-agent',
     config: {},
@@ -25,9 +26,16 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/features/AgentSetting', () => ({
-  AgentSettings: ({ tab }: { tab: ChatSettingsTabs }) => (
-    <div data-tab={tab} data-testid="agent-settings-content" />
-  ),
+  AgentSettings: ({
+    tab,
+    onMetaChange,
+  }: {
+    tab: ChatSettingsTabs;
+    onMetaChange: (meta: object) => Promise<void>;
+  }) => {
+    mocks.onMetaChange = onMetaChange;
+    return <div data-tab={tab} data-testid="agent-settings-content" />;
+  },
   SettingsModalLayout: ({
     activeTab,
     tabs = [],
@@ -129,4 +137,21 @@ describe('AgentSettings Content', () => {
     const layout = screen.getByTestId('layout');
     expect(layout).toHaveAttribute('data-tabs', ChatSettingsTabs.Opening);
   });
+});
+
+it('propagates metadata persistence failure from the production callback', async () => {
+  const failure = new Error('write rejected');
+  mocks.agentState.optimisticUpdateAgentMeta.mockImplementation(
+    async (_id, _meta, _extra, options) => {
+      if (options?.rethrow) throw failure;
+    },
+  );
+  render(<Content />);
+  await expect(mocks.onMetaChange!({ title: 'new title' })).rejects.toBe(failure);
+  expect(mocks.agentState.optimisticUpdateAgentMeta).toHaveBeenCalledWith(
+    'inbox-agent',
+    { title: 'new title' },
+    undefined,
+    { rethrow: true },
+  );
 });

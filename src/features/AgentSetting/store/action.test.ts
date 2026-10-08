@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createStore } from './index';
 
@@ -18,6 +18,7 @@ const setup = (handlers: {
 };
 
 describe('AgentSetting store save feedback', () => {
+  afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     toastError.mockClear();
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -32,6 +33,28 @@ describe('AgentSetting store save feedback', () => {
     expect(toastError).toHaveBeenCalledWith('saveAgentConfigFail');
     expect(store.getState().saveStatus).toBe('idle');
     expect(store.getState().config.systemRole).toBe('edited');
+  });
+
+  it('does not report a superseded config failure after the latest edit saves', async () => {
+    let rejectOld!: (error: Error) => void;
+    const store = setup({
+      onConfigChange: vi
+        .fn()
+        .mockImplementationOnce(
+          () =>
+            new Promise((_resolve, reject) => {
+              rejectOld = reject;
+            }),
+        )
+        .mockResolvedValue(undefined),
+    });
+    const old = store.getState().dispatchConfig({ config: { systemRole: 'old' }, type: 'update' });
+    await store.getState().dispatchConfig({ config: { systemRole: 'latest' }, type: 'update' });
+    rejectOld(new Error('old save failed'));
+    await old;
+    expect(toastError).not.toHaveBeenCalled();
+    expect(store.getState().saveStatus).toBe('saved');
+    expect(store.getState().config.systemRole).toBe('latest');
   });
 
   it('tells the user when saving the meta fails', async () => {

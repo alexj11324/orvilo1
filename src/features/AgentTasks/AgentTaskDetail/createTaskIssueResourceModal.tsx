@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { openDocumentModal } from '@/features/DocumentModal/loader';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
 import { pullRequestService } from '@/services/pullRequest';
-import { trpcErrorMessage } from '@/utils/trpcError';
+import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 
 import { useTaskIssueResourceMutation } from './useTaskIssueResourceMutation';
 
@@ -36,6 +37,7 @@ export const TaskIssueResourcePicker = ({
     save,
     setFailure,
   } = useTaskIssueResourceMutation({ kind, taskId, onChanged });
+  const navigate = useWorkspaceAwareNavigate();
   const formId = useId();
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -86,7 +88,26 @@ export const TaskIssueResourcePicker = ({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          {error ? (
+          {error && isTrpcErrorCode(error, 'PRECONDITION_FAILED') ? (
+            // The server answers this code when GitHub is not connected (or the
+            // authorization expired). Its message is English-only, so show the
+            // localized prompt and send the user to where GitHub is connected.
+            <div className="flex flex-col items-start gap-2" role="alert">
+              <p className="text-sm text-muted-foreground">
+                {t('taskDetail.resources.githubNotConnected')}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  close();
+                  navigate('/settings/connector');
+                }}
+              >
+                {t('taskDetail.resources.openConnectors')}
+              </Button>
+            </div>
+          ) : error ? (
             <AsyncError
               description={trpcErrorMessage(error)}
               error={error}

@@ -10,7 +10,6 @@ import SearchSection from '@/features/SettingsSearch/SearchSection';
 
 import { AppSidebar } from './AppSidebar';
 import { NavMain } from './NavMain';
-import { NavWorkspace } from './NavWorkspace';
 import { NotificationsPopover } from './NotificationsPopover';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
@@ -306,7 +305,7 @@ describe('workspace destinations', () => {
   it('offers actual workspaces and no Personal destination that root routing would overwrite', () => {
     render(
       <SidebarProvider>
-        <NavWorkspace />
+        <WorkspaceSwitcher />
       </SidebarProvider>,
     );
     expect(screen.queryByRole('menuitem', { name: /workspaceSwitcher.personal/ })).toBeNull();
@@ -317,11 +316,44 @@ describe('workspace destinations', () => {
     workspace.items = [];
     render(
       <SidebarProvider>
-        <NavWorkspace />
+        <WorkspaceSwitcher />
       </SidebarProvider>,
     );
     expect(screen.queryByRole('menuitem', { name: /workspaceSwitcher.personal/ })).toBeNull();
-    expect(screen.queryByText('reuiShell9.organizations')).toBeNull();
+  });
+});
+
+describe('account menu inside the workspace switcher', () => {
+  it('carries the account entries that used to live in the footer user block', () => {
+    render(
+      <SidebarProvider>
+        <WorkspaceSwitcher />
+      </SidebarProvider>,
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /navPanel.members/ }));
+    expect(workspace.navigate).toHaveBeenCalledWith('/settings/members');
+    fireEvent.click(screen.getByRole('menuitem', { name: /userPanel.profile/ }));
+    expect(workspace.navigate).toHaveBeenCalledWith('/settings/profile', { escape: true });
+    expect(screen.getByRole('radiogroup', { name: 'settingCommon.themeMode.title' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /auth:signout/ })).toBeTruthy();
+    expect(screen.getByText('userPanel.docs')).toBeTruthy();
+  });
+  it('offers sign-out in the footer only where the switcher header is hidden', () => {
+    route.key = 'settings';
+    const { unmount } = render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'signout' })).toBeTruthy();
+    unmount();
+    route.key = 'home';
+    render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'signout' })).toBeNull();
   });
 });
 

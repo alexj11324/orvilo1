@@ -26,7 +26,7 @@ export function SearchForm(props: ComponentProps<'form'>) {
         <SidebarGroupContent className="relative">
           <Button
             aria-label={t('tab.search')}
-            className="h-8 w-full justify-start border-none bg-sidebar-accent text-sidebar-foreground pl-7 font-normal transition-[width] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground active:not-aria-[haspopup]:translate-y-0 in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:pl-4! "
+            className="h-8 w-full justify-start border-none bg-sidebar-accent text-sidebar-foreground pl-7 font-normal transition-[width] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring active:not-aria-[haspopup]:translate-y-0 in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:pl-4! "
             id="search"
             type="button"
             variant="outline"

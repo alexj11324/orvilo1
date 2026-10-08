@@ -33,15 +33,42 @@ global stylesheet sets `scrollbar-width: thin` on `*`. Unlayered rules beat the
 primitive's layered Tailwind utilities, so `hostStyles` is the single place that
 hands those properties back, keyed on `data-sidebar` (never `data-slot`):
 
-| Property    | Result                                                                                                                                       |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| hover       | `--sidebar-accent` background and `--sidebar-accent-foreground` text, changing together (`transition-property: width, height, padding` only) |
-| selected    | `--selected`, stronger than hover and kept on top of it                                                                                      |
-| focus       | transparent outline (same as `outline-hidden`), indicator is the primitive's `ring-2 ring-sidebar-ring`; background unchanged                |
-| group label | one colour (`--sidebar-group`), hover background when it is a button                                                                         |
-| scrollbar   | transparent until the content area is hovered                                                                                                |
+| Property    | Result                                                                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| hover       | `--sidebar-accent` background and `--sidebar-accent-foreground` text, changing together (`transition-property: width, height, padding` only)           |
+| selected    | `--selected`, stronger than hover and kept on top of it                                                                                                |
+| focus       | transparent outline plus one `0 0 0 2px var(--sidebar-ring)` shadow on every `data-sidebar` control, so no second ring can stack; background unchanged |
+| group label | one colour (`--sidebar-group`), hover background when it is a button                                                                                   |
+| scrollbar   | transparent until the content area is hovered                                                                                                          |
 
 `NavItem` uses the same roles in its own scoped styles.
+
+## Header and footer
+
+The shell has **one** account/workspace entry: the workspace switcher in
+`SidebarHeader` (`WorkspaceSwitcher`: `SidebarMenu > SidebarMenuItem >
+SidebarMenuButton size="lg" render={<DropdownMenuTrigger />}`). It is fixed (only
+`SidebarContent` scrolls), shows the workspace glyph and name, a visible
+`ChevronsUpDown` (`data-sidebar-affordance` opts it out of the dimmed-icon rule), has
+`aria-expanded` from the trigger and, in the icon rail, a tooltip with the name (the name
+stays in the accessibility tree as `sr-only`). `WorkspaceAvatar` has one shape
+(`rounded-md`, the same as team glyphs) on root, image, fallback and border.
+
+The former footer user block (`NavWorkspace`) is gone. Its contents moved into the
+switcher menu (`WorkspaceMenuContent`), grouped and separated like Linear:
+
+| Group     | Entries                                                                                 |
+| --------- | --------------------------------------------------------------------------------------- |
+| Workspace | Settings (`useMenu` key `setting`, keeps the Kbd and "Update available" badge), Members |
+| Switch    | Workspaces list (member count, check on the active one), New workspace                  |
+| Personal  | user name label, Account (`/settings/profile`), Import data / business items, Theme     |
+| Help      | Documentation, cloud promotion, Get App                                                 |
+| Session   | Sign out / Log in                                                                       |
+
+`groupUserMenuItems` (`userMenuGroups.ts`) splits `useMenu().mainItems` by key into those
+groups; unknown keys fall into Personal. Settings surfaces hide the switcher header, so
+they get a one-row `SidebarFooter` (`SettingsSignOut`) to keep sign-out reachable; no
+other surface renders a footer.
 
 ## NavItem (secondary panels)
 

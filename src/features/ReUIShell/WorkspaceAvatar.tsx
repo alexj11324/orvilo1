@@ -13,6 +13,7 @@ export interface WorkspaceAvatarOption {
 export const isImageAvatar = (avatar?: null | string) =>
   Boolean(avatar && (/^(?:data:|https?:|\/)/.test(avatar) || avatar.startsWith('blob:')));
 
+/** Workspace glyph. One rounded-square shape everywhere, matching the team glyphs. */
 export function WorkspaceAvatar({
   workspace,
   className,
@@ -21,11 +22,15 @@ export function WorkspaceAvatar({
   workspace: WorkspaceAvatarOption;
 }) {
   return (
-    <Avatar className={cn('shrink-0', className)}>
+    <Avatar className={cn('shrink-0 rounded-md after:rounded-md', className)}>
       {isImageAvatar(workspace.avatar) && (
-        <AvatarImage alt={workspace.name} src={workspace.avatar ?? undefined} />
+        <AvatarImage
+          alt={workspace.name}
+          className="rounded-md"
+          src={workspace.avatar ?? undefined}
+        />
       )}
-      <AvatarFallback className="border border-border bg-background text-sm font-medium text-foreground">
+      <AvatarFallback className="rounded-md border border-border bg-background text-sm font-medium text-foreground">
         {workspace.avatar && !isImageAvatar(workspace.avatar)
           ? workspace.avatar
           : workspace.name.charAt(0).toUpperCase()}

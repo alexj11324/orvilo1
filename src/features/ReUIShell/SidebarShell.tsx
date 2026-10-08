@@ -57,15 +57,26 @@ const hostStyles = createStaticStyles(({ css }) => ({
       transition-property: margin, opacity;
     }
 
-    /* Same as the primitive's 'outline-hidden'; the ring comes from 'ring-sidebar-ring'. */
-    [data-sidebar='menu-button']:focus-visible,
-    [data-sidebar='menu-sub-button']:focus-visible,
-    [data-sidebar='group-label']:focus-visible {
+    /* One focus indicator: a 2px ring in '--sidebar-ring'. The outline is the primitive's
+       'outline-hidden'; the box-shadow restates the primitive's 'ring-2 ring-sidebar-ring'
+       as the whole property, so no second ring (a host anchor outline, a Button's
+       'ring-3', a drop shadow) can stack on top of it. */
+    :is(
+      [data-sidebar='menu-button'],
+      [data-sidebar='menu-sub-button'],
+      [data-sidebar='menu-action'],
+      [data-sidebar='group-action'],
+      [data-sidebar='group-label'],
+      [data-sidebar='trigger']
+    ):focus-visible {
+      border-color: transparent;
       outline: 2px solid transparent;
       outline-offset: 2px;
+      box-shadow: 0 0 0 2px var(--sidebar-ring);
     }
 
-    [data-sidebar='menu-button'] > svg {
+    /* Leading icons rest dimmed; a trailing affordance (the switcher chevron) opts out. */
+    [data-sidebar='menu-button'] > svg:where(:not([data-sidebar-affordance])) {
       opacity: 0.55;
     }
 

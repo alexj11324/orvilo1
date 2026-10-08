@@ -323,7 +323,6 @@
   "createTask.visibility.memberAssigneeLocked": "A task with an Assignee stays visible to the workspace.",
   "createTask.visibility.private": "Private",
   "createTask.visibility.privateAgentDisabled": "Private agents can only run private tasks. Pick a workspace agent or switch this task to Private.",
-  "createTask.visibility.privateAgentLocked": "Private agents can only run private tasks.",
   "createTask.visibility.workspace": "Workspace",
   "creation.runtime.description": "Choose which agent powers the new one — Orvilo AI on one of your machines, or a connected coding agent.",
   "creation.runtime.devices": "Open Devices",

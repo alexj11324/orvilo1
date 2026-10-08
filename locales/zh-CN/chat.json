@@ -323,7 +323,6 @@
   "createTask.visibility.memberAssigneeLocked": "已指派负责人的任务需保持工作区可见",
   "createTask.visibility.private": "私人",
   "createTask.visibility.privateAgentDisabled": "私人智能体只能执行私人任务，请改用工作区智能体或将该任务切回私人。",
-  "createTask.visibility.privateAgentLocked": "私人智能体只能执行私人任务。",
   "createTask.visibility.workspace": "工作区",
   "creation.runtime.description": "选择由哪个智能体来驱动新智能体——运行在你某台设备上的 Orvilo AI，或一个已连接的编程智能体。",
   "creation.runtime.devices": "打开设备",

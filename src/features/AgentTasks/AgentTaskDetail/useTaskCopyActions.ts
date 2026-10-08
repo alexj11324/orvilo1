@@ -107,7 +107,5 @@ export const useTaskCopyActions = () => {
     taskId,
     /** Workspace-unaware route to this task — for in-app navigation. */
     taskPath,
-    /** Absolute, workspace-aware URL — the value "copy link" writes. */
-    taskUrl,
   };
 };

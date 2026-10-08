@@ -1,9 +1,11 @@
 import {
   CopyIcon,
+  CopyPlusIcon,
   FileTextIcon,
   GitBranchIcon,
   LinkIcon,
   MoreHorizontal,
+  PanelTopIcon,
   Trash,
   TypeIcon,
   UnlinkIcon,
@@ -13,8 +15,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
 import ActionIcon from '@/components/ActionIcon';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
+import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
   type SidebarMenuItemData,
@@ -25,6 +29,8 @@ import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { useIssueStatusMove } from '../features/useIssueStatusMove';
+import { taskDetailPath } from '../shared/taskDetailPath';
 import { relationKindOf } from './relationGroups';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import { useTaskCopyActions } from './useTaskCopyActions';
@@ -104,8 +110,56 @@ const useTaskRemoveMenuItems = (taskId: string | undefined, disabled: boolean) =
   }, [taskId, disabled, detail, t, updateTask, removeDependency, removeIssueRelation]);
 };
 
+/**
+ * "Make a copy": a new issue prefilled from the loaded detail — title with a
+ * copy suffix, description, priority, labels, project, team and assignees.
+ * Deliberately not carried over: parent, relations, schedule and status, so the
+ * copy starts as a fresh, unlinked issue in the default state.
+ */
+const useDuplicateTask = () => {
+  const { t } = useTranslation('chat');
+  const navigate = useWorkspaceAwareNavigate();
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const createTask = useTaskStore((s) => s.createTask);
+  const toggleTaskLabel = useTaskStore((s) => s.toggleTaskLabel);
+
+  return useCallback(async () => {
+    if (!detail) return;
+    try {
+      const created = await createTask({
+        assigneeAgentId: detail.agentId ?? undefined,
+        assigneeUserId: detail.userId ?? undefined,
+        description: detail.description ?? undefined,
+        editorData: detail.editorData ?? undefined,
+        instruction: detail.instruction,
+        name: t('taskDetail.menu.copyOfTitle', { title: detail.name || detail.identifier }),
+        priority: detail.priority || undefined,
+        projectId: detail.projectId ?? undefined,
+        teamId: detail.teamId ?? undefined,
+        visibility: detail.visibility,
+      });
+      // `null` means another create is already in flight — nothing was made.
+      if (!created) return;
+
+      // Labels have no create-time field; a label that fails to attach must not
+      // turn the already-committed copy into a reported failure.
+      await Promise.allSettled(
+        (detail.labels ?? []).map((label) =>
+          toggleTaskLabel(created.identifier, label.id, true, label),
+        ),
+      );
+      toast.success(t('taskList.contextMenu.copySuccess'));
+      navigate(
+        taskDetailPath(created.identifier, created.assigneeAgentId ?? undefined, created.name),
+      );
+    } catch {
+      toast.error(t('taskList.contextMenu.copyFailed'));
+    }
+  }, [detail, createTask, toggleTaskLabel, navigate, t]);
+};
+
 const TaskDetailHeaderActions = memo(() => {
-  const { t } = useTranslation(['chat', 'common']);
+  const { t } = useTranslation(['chat', 'common', 'topic']);
 
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEditTask } = usePermission('create_content');
@@ -118,8 +172,15 @@ const TaskDetailHeaderActions = memo(() => {
     copyTitleAsLink,
     hasBranch,
     taskId,
+    taskPath,
   } = useTaskCopyActions();
   const removeItems = useTaskRemoveMenuItems(taskId, !canEditTask);
+  const duplicateTask = useDuplicateTask();
+  const moveWorkflow = useIssueStatusMove();
+  const workflowCategory = useTaskDetailSelector(
+    (s, scopedTaskId) => taskDetailSelectors.taskDetail(s, scopedTaskId)?.workflowCategory,
+  );
+  const isClosed = workflowCategory === 'canceled' || workflowCategory === 'done';
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const transferItems = useTaskTransferMenuItem(taskId) as SidebarDropdownMenuProps['items'] | null;
 
@@ -140,6 +201,39 @@ const TaskDetailHeaderActions = memo(() => {
 
   const menuItems = useMemo<SidebarMenuItems>(() => {
     if (!taskId) return [];
+
+    // The host adapter decides what a tab is: an app tab on desktop, a browser
+    // tab on web.
+    const openInNewTabItem: SidebarMenuItemData = {
+      icon: <PanelTopIcon />,
+      key: 'openInNewTab',
+      label: t('actions.openInNewTab', { ns: 'topic' }),
+      onClick: () => appNavigate(taskPath, { target: 'newTab' }),
+    };
+    const makeCopyItem: SidebarMenuItemData = {
+      disabled: !canEditTask,
+      icon: <CopyPlusIcon />,
+      key: 'makeCopy',
+      label: t('taskDetail.menu.makeCopy'),
+      onClick: () => void duplicateTask(),
+    };
+    // The terminal toggle: cancel an open issue, or put a closed one back in
+    // Todo. Both go through the shared status command, which reports its own
+    // failures — and Todo never auto-starts a run.
+    // The glyph is the board's own mark for the state the click lands in.
+    const closeTarget = isClosed ? 'todo' : 'canceled';
+    const CloseTargetIcon = WORKFLOW_CATEGORY_VISUALS[closeTarget].icon;
+    const closeItem: SidebarMenuItemData = {
+      disabled: !canEditTask,
+      icon: <CloseTargetIcon color={WORKFLOW_CATEGORY_VISUALS[closeTarget].color} />,
+      key: isClosed ? 'reopen' : 'cancel',
+      label: t(isClosed ? 'taskDetail.menu.reopen' : 'taskDetail.menu.cancel'),
+      onClick: () =>
+        void moveWorkflow({
+          target: { category: closeTarget },
+          taskIdentifier: taskId,
+        }).catch(() => {}),
+    };
 
     // Clipboard actions fold into one submenu so the top level stays short;
     // "copy git branch" joins only for real workspace-bound tasks (see
@@ -213,10 +307,15 @@ const TaskDetailHeaderActions = memo(() => {
       typeof transferItems === 'function' ? transferItems() : transferItems;
 
     return [
+      openInNewTabItem,
       copyItem,
+      { type: 'divider' },
+      makeCopyItem,
       removeItem,
       { type: 'divider' },
       ...(resolvedTransferItems?.length ? [...resolvedTransferItems, { type: 'divider' }] : []),
+      closeItem,
+      { type: 'divider' },
       deleteItem,
     ];
   }, [
@@ -229,6 +328,10 @@ const TaskDetailHeaderActions = memo(() => {
     copyBranch,
     hasBranch,
     removeItems,
+    taskPath,
+    duplicateTask,
+    moveWorkflow,
+    isClosed,
     t,
     triggerDelete,
     canEditTask,

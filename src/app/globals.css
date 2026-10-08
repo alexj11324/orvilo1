@@ -1,3 +1,8 @@
+/* Layer order. `antd` (the cssinjs layer from AntdStyleLayer) must be declared
+   here: runtime-injected <style> tags would otherwise create it after
+   `utilities`. Keep this statement before every @import. */
+@layer theme, base, antd, components, utilities;
+
 @import 'tailwindcss' source('../..');
 @import 'antd/dist/reset.css' layer(base);
 @import "tw-animate-css";

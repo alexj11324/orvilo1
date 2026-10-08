@@ -2495,6 +2495,7 @@ export default {
   'taskList.contextMenu.copyMarkdown': 'Copy as Markdown',
   'taskList.contextMenu.copyMarkdownSuccess': 'Markdown copied',
   'taskList.contextMenu.copySuccess': 'Task copied',
+  'taskList.contextMenu.copyLabelsFailed': 'Task copied, but some labels could not be attached',
   'taskList.contextMenu.copyTitle': 'Copy task',
   'taskList.contextMenu.copyTitleAsLink': 'Copy title as link',
   'taskList.contextMenu.copyTitleSuccess': 'Title copied',

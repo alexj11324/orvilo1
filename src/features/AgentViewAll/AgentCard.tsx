@@ -45,6 +45,14 @@ export const cardStyles = createStaticStyles(({ css, cssVar }) => ({
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:hover {
+        transform: none;
+      }
+    }
   `,
   description: css`
     overflow: hidden;

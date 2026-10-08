@@ -1,7 +1,17 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { Button, Input, InputPassword, Select, Text, TextArea, toast, useModalContext } from '@lobehub/ui/base-ui';
+import {
+  Button,
+  Input,
+  InputPassword,
+  Select,
+  Text,
+  TextArea,
+  toast,
+  useModalContext,
+} from '@lobehub/ui/base-ui';
+import { errorMessageFrom } from '@orvilo/utils/error';
 import { Form } from 'antd';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
 import { memo, useState } from 'react';
@@ -51,6 +61,7 @@ const CreateNewProviderContent = memo(() => {
     } catch (e) {
       console.error(e);
       setLoading(false);
+      toast.error(errorMessageFrom(e) || t('createNewAiProvider.createFailed'));
     }
   };
 

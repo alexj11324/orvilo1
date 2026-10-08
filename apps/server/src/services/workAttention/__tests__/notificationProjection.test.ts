@@ -9,8 +9,10 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import {
   agents,
   eventOutbox,
+  notifications,
   tasks,
   taskTopics,
+  teams,
   topics,
   users,
   workspaceMembers,
@@ -281,7 +283,18 @@ describe('real Issue notification producers and projection', () => {
     expect(await feed(owner)).toHaveLength(1);
     expect(await feed(mentioned)).toEqual([]);
     expect(await feed(subscriber)).toEqual([]);
-    await db.update(tasks).set({ visibility: 'private' }).where(eq(tasks.id, 'projection-issue'));
+    // Workspace Issues are shared; a private Team the recipient is not in is the Issue ACL.
+    await db.insert(teams).values({
+      id: 'projection-private-team',
+      key: 'PRV',
+      name: 'Private team',
+      visibility: 'private',
+      workspaceId: wsId,
+    });
+    await db
+      .update(tasks)
+      .set({ teamId: 'projection-private-team' })
+      .where(eq(tasks.id, 'projection-issue'));
     await db
       .update(taskSubscriptions)
       .set({ unsubscribedAt: null })
@@ -297,5 +310,9 @@ describe('real Issue notification producers and projection', () => {
     });
     await project();
     expect(await feed(subscriber)).toEqual([]);
+    // The projection itself must not store the row; the feed's read ACL is a second gate.
+    expect(
+      await db.select().from(notifications).where(eq(notifications.userId, subscriber)),
+    ).toEqual([]);
   });
 });

@@ -893,15 +893,11 @@ export class NotificationModel {
           this.workspaceId
             ? eq(taskTopics.workspaceId, this.workspaceId)
             : isNull(taskTopics.workspaceId),
-          buildWorkspaceWhere(
-            { userId: this.userId, workspaceId: this.workspaceId ?? undefined },
-            {
-              userId: tasks.createdByUserId,
-              visibility: tasks.visibility,
-              workspaceId: tasks.workspaceId,
-            },
-          ),
-          this.taskTeamReadable(),
+          // Same live task ACL as `resourceReadable`: workspace scope plus team membership.
+          buildTaskReadableWhere(this.db, {
+            userId: this.userId,
+            workspaceId: this.workspaceId ?? undefined,
+          }),
           messageIds
             ? inArray(messages.id, messageIds)
             : or(

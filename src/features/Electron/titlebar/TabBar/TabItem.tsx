@@ -265,6 +265,7 @@ const TabItem = memo<TabItemProps>(
         {closable && (
           <ActionIcon
             data-tab-close
+            aria-label={t('tab.closeCurrentTab')}
             className={styles.closeIcon}
             icon={X}
             inert={closeInert}

@@ -174,7 +174,7 @@ export const PermissionSelector = ({ agentId }: { agentId: string }) => {
                   return (
                     <DropdownMenuItem
                       aria-current={chosen ? 'true' : undefined}
-                      className={chosen ? 'bg-muted hover:bg-muted' : undefined}
+                      className={chosen ? 'bg-muted hover:bg-accent' : undefined}
                       disabled={saving}
                       key={option.value}
                       onClick={() => void choose(catalog.configId, option.value)}

@@ -14,7 +14,7 @@ const Filter = memo(() => {
   return (
     <DropdownMenu items={menuItems}>
       <ActionIcon
-        className="data-[popup-open]:bg-muted data-[popup-open]:hover:bg-muted data-[popup-open]:text-foreground"
+        className="data-[popup-open]:bg-muted data-[popup-open]:hover:bg-accent data-[popup-open]:text-foreground"
         icon={ListFilter}
         size={'small'}
         title={t('filter.organize')}

@@ -101,7 +101,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   railRow: css`
     width: 100%;
     max-width: 100%;
-    height: 30px;
+    height: 28px;
     padding-inline: 8px 10px;
     border-radius: ${cssVar.borderRadius};
 
@@ -129,7 +129,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     width: 120px;
-    height: 30px;
+    height: 28px;
 
     font-size: 13px;
     font-weight: 400;
@@ -162,7 +162,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     min-width: 0;
-    min-height: 30px;
+    min-height: 28px;
 
     font-size: 13px;
     font-weight: 400;
@@ -188,7 +188,6 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
       width: 100%;
-      height: 30px;
       background: transparent;
     }
   `,

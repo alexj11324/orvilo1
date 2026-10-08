@@ -427,11 +427,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               scheduleTimezone={task.scheduleTimezone}
             />
           ) : null}
-          {status === 'scheduled' ? (
-            <div className="text-xs text-muted-foreground">
-              {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-            </div>
-          ) : null}
         </div>
 
         {/* Meta row — human owner + date on the left, subtask progress and the

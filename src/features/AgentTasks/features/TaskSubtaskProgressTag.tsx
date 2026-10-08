@@ -5,26 +5,10 @@ import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { getIssueStatusVisual } from '@/components/ExecutionStatus';
 import IssueRowChip from '@/components/IssueRowChip';
 import { DropdownMenu } from '@/components/ItemsMenu';
 import { toast } from '@/components/toast';
-
-import TaskStatusIcon from './TaskStatusIcon';
-
-type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
-
-const TASK_STATUS_SET = new Set([
-  'backlog',
-  'canceled',
-  'completed',
-  'failed',
-  'paused',
-  'running',
-]);
-
-const toTaskStatus = (status: string): TaskStatus =>
-  TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
 
 interface FlattenedSubtask {
   depth: number;
@@ -131,23 +115,15 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
 
     const navigationItems = flattenedSubtasks.map((subtask) => {
       const isActive = subtask.task.identifier === currentIdentifier;
-      const itemStatus = toTaskStatus(subtask.task.status);
-      const workflowVisual =
-        subtask.task.workflowStateId && subtask.task.workflowCategory
-          ? WORKFLOW_CATEGORY_VISUALS[subtask.task.workflowCategory]
-          : undefined;
-      const WorkflowIcon = workflowVisual?.icon;
+      const workflowVisual = getIssueStatusVisual(subtask.task);
+      const WorkflowIcon = workflowVisual.icon;
 
       return {
         key: subtask.task.identifier,
         label: (
           <div className="flex items-center gap-2">
             {subtask.depth > 0 && <div style={{ flex: 'none', width: subtask.depth * 16 }} />}
-            {WorkflowIcon && workflowVisual ? (
-              <WorkflowIcon color={workflowVisual.color} size={16} />
-            ) : (
-              <TaskStatusIcon size={16} status={itemStatus} />
-            )}
+            <WorkflowIcon color={workflowVisual.color} size={16} />
             <div className={cn('truncate', 'block', isActive ? 'font-semibold' : undefined)}>
               {subtask.task.name || subtask.task.identifier}
             </div>

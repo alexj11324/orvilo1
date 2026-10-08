@@ -78,7 +78,13 @@ describe('TaskSubtaskProgressTag', () => {
     fireEvent.click(screen.getByTestId('subtask-T-2'));
 
     expect(onSubtaskClick).toHaveBeenCalledWith('T-2', 'agt_child', 'Child task');
-    expect(screen.getByTestId('subtask-T-2')).toHaveTextContent('status');
+    // An uncategorized subtask reads as backlog — one workflow mark, never an
+    // execution status icon.
+    expect(screen.getByTestId('subtask-T-2').querySelector('svg')).toHaveAttribute(
+      'data-workflow-icon',
+      'backlog',
+    );
+    expect(screen.getByTestId('subtask-T-2')).not.toHaveTextContent('status');
   });
 
   it('renders a lightweight progress summary without a subtask tree', () => {
@@ -87,7 +93,7 @@ describe('TaskSubtaskProgressTag', () => {
     expect(screen.getByText('2/3')).toBeInTheDocument();
   });
 
-  it('uses the board glyph for provider state without changing execution progress', () => {
+  it('uses the Issue category without a provider link, leaving execution progress alone', () => {
     render(
       <TaskSubtaskProgressTag
         subtasks={[
@@ -96,7 +102,6 @@ describe('TaskSubtaskProgressTag', () => {
             name: 'Child task',
             status: 'completed',
             workflowCategory: 'in_progress',
-            workflowStateId: 'linear-state-progress',
           },
         ]}
         onSubtaskClick={vi.fn()}

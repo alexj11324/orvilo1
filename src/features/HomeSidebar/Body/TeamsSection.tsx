@@ -44,7 +44,6 @@ import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMen
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -62,6 +61,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { teamAccordionKey, useTeamSubNav } from '../hooks/useTeamSubNav';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
+import TeamListSkeleton from './TeamListSkeleton';
 import { buildTeamMenuEntries } from './teamMenu';
 import { resolveTeamsListView } from './teamsListView';
 import { useWorkFavoriteToggle } from './useWorkFavoriteToggle';
@@ -240,7 +240,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
 
   const userId = useUserStore(userProfileSelectors.userId);
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     activeWorkspaceId && userId ? ['sidebar-teams', userId, activeWorkspaceId] : null,
     () => lambdaClient.team.teams.query(),
     {
@@ -347,10 +347,15 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
                 />
               );
             })}
-            {view === 'loading' && <SkeletonList rows={2} />}
+            {view === 'loading' && <TeamListSkeleton collapsed={sidebarState === 'collapsed'} />}
             {view === 'error' && (
               <SidebarMenuItem>
-                <AsyncError variant="inline" onRetry={() => void mutate()} />
+                <AsyncError
+                  error={error}
+                  retrying={isValidating}
+                  variant="inline"
+                  onRetry={() => void mutate()}
+                />
               </SidebarMenuItem>
             )}
             {(view === 'fallback' || view === 'error') && (

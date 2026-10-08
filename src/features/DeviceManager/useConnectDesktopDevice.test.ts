@@ -19,14 +19,18 @@ vi.mock('react-i18next', async () => {
   const { default: setting } = await import('../../../locales/en-US/setting.json');
   const i18n = createInstance();
   await i18n.init({
+    defaultNS: 'setting',
     keySeparator: false,
     lng: 'en-US',
-    resources: { 'en-US': { translation: setting } },
+    resources: { 'en-US': { setting } },
   });
+  const translate = i18n.getFixedT('en-US', 'setting');
   return {
     useTranslation: () => ({
       t: (key: string, values?: Record<string, string>) =>
-        key === 'devices.share.overwriteConfirmDesc' ? i18n.t(key, values) : key,
+        key === 'devices.share.overwriteConfirmDesc'
+          ? translate(key, { name: values?.name ?? '' })
+          : key,
     }),
   };
 });

@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox, Icon, SearchBar } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
-import { SearchIcon } from 'lucide-react';
+import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import SearchBar from '@/components/SearchBar';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useAiInfraStore } from '@/store/aiInfra/store';
 
@@ -24,62 +23,27 @@ const Layout = memo(({ children, mobile }: ProviderMenuProps) => {
 
   const providerSearchKeyword = useAiInfraStore((s) => s.providerSearchKeyword);
 
-  const width = mobile ? undefined : 280;
   return (
-    <Flexbox
-      width={width}
-      style={{
-        background: cssVar.colorBgContainer,
-        borderRight: `1px solid ${cssVar.colorBorderSecondary}`,
-        minWidth: width,
-        overflow: mobile ? undefined : 'scroll',
-      }}
+    <aside
+      aria-label={t('menu.searchProviders')}
+      className={cn(
+        'flex flex-col bg-background',
+        !mobile && 'w-[264px] min-w-[264px] overflow-y-auto border-r border-border',
+      )}
     >
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
-        justify={'space-between'}
-        padding={8}
-        width={'100%'}
-        style={{
-          background: cssVar.colorBgContainer,
-          borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
-          marginBottom: 8,
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
+      <div className="sticky top-0 z-10 flex gap-2 bg-background px-3 pt-3 pb-2">
         <SearchBar
-          allowClear
+          className="flex-1"
           placeholder={t('menu.searchProviders')}
-          style={{ width: '100%' }}
           value={providerSearchKeyword}
-          variant={'borderless'}
-          prefix={
-            <Icon
-              color={cssVar.colorTextDescription}
-              icon={SearchIcon}
-              style={{
-                marginRight: 12,
-              }}
-            />
-          }
-          styles={{
-            input: {
-              paddingBlock: 3,
-              paddingLeft: 6,
-            },
-          }}
-          onInputChange={(v) => {
-            useAiInfraStore.setState({ providerSearchKeyword: v });
+          onChange={(e) => {
+            useAiInfraStore.setState({ providerSearchKeyword: e.target.value });
           }}
         />
         <AddNew />
-      </Flexbox>
+      </div>
       {children}
-    </Flexbox>
+    </aside>
   );
 });
 

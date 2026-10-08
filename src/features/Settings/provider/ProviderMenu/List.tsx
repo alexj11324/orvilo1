@@ -1,22 +1,17 @@
 'use client';
 
-import { ContextMenuTrigger, Flexbox, type MenuProps } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionRoot,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { ArrowDownUpIcon } from 'lucide-react';
+import { ArrowDownUpIcon, ChevronRightIcon } from 'lucide-react';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+import {
+  renderSidebarMenuItems,
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { aiProviderSelectors } from '@/store/aiInfra';
 import { useAiInfraStore } from '@/store/aiInfra/store';
 import { useGlobalStore } from '@/store/global';
@@ -31,46 +26,50 @@ import { SortType, useProviderDropdownMenu } from './useDropdownMenu';
 interface ProviderSectionProps {
   action?: ReactNode;
   children: ReactNode;
-  contextMenuItems: MenuProps['items'];
+  contextMenuItems: SidebarMenuItems;
+  count: number;
   title: string;
-  value: string;
 }
 
 const ProviderSection = ({
   action,
   children,
   contextMenuItems,
+  count,
   title,
-  value,
-}: ProviderSectionProps) => (
-  <AccordionItem value={value}>
-    <ContextMenuTrigger items={contextMenuItems}>
-      <AccordionHeader>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-            {title}
-          </Text>
-        </AccordionTrigger>
-        {action && (
-          <div
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-            )}
-          >
-            {action}
-          </div>
-        )}
-      </AccordionHeader>
-    </ContextMenuTrigger>
-    <AccordionPanel>
-      <Flexbox gap={4} paddingBlock={1}>
-        {children}
-      </Flexbox>
-    </AccordionPanel>
-  </AccordionItem>
-);
+}: ProviderSectionProps) => {
+  const header = (
+    <div className="mt-2 flex h-7 items-center pr-1">
+      <CollapsibleTrigger className="group/trigger flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
+        <span className="truncate">{title}</span>
+        <span className="font-normal tabular-nums">{count}</span>
+        <ChevronRightIcon
+          aria-hidden
+          className="size-3 flex-none opacity-0 transition-transform group-hover/trigger:opacity-100 group-focus-visible/trigger:opacity-100 group-data-[panel-open]/trigger:rotate-90"
+        />
+      </CollapsibleTrigger>
+      {action}
+    </div>
+  );
+
+  return (
+    <Collapsible defaultOpen>
+      {contextMenuItems.length > 0 ? (
+        <ContextMenu>
+          <ContextMenuTrigger render={header} />
+          <ContextMenuContent>
+            {renderSidebarMenuItems(contextMenuItems, [], 'context')}
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        header
+      )}
+      <CollapsibleContent>
+        <div className="flex flex-col">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
 
 const ProviderList = (props: {
   mobile?: boolean;
@@ -79,9 +78,6 @@ const ProviderList = (props: {
   const { onProviderSelect, mobile } = props;
   const { t } = useTranslation('modelProvider');
   const [open, setOpen] = useState(false);
-
-  // Accordion states - using array of active keys
-  const [expandedKeys, setExpandedKeys] = useState<string[]>(['enabled', 'custom', 'disabled']);
 
   const [sortType, updateSystemStatus] = useGlobalStore((s) => [
     systemStatusSelectors.disabledModelProvidersSortType(s),
@@ -143,7 +139,7 @@ const ProviderList = (props: {
   const canSortDisabled = disabledModelProviderList.length > 1;
 
   return (
-    <Flexbox gap={4} paddingInline={4} style={{ paddingBottom: 32 }}>
+    <div className="flex flex-col px-2 pb-8">
       {!mobile && <All onClick={onProviderSelect} />}
       {open && (
         <SortProviderModal
@@ -154,49 +150,47 @@ const ProviderList = (props: {
           }}
         />
       )}
-      <AccordionRoot
-        indicatorPlacement="inline"
-        value={expandedKeys}
-        onValueChange={(keys) => setExpandedKeys(keys as string[])}
+      <ProviderSection
+        contextMenuItems={[]}
+        count={enabledModelProviderList.length}
+        title={t('menu.list.enabled')}
+        action={
+          <ActionIcon
+            icon={ArrowDownUpIcon}
+            size={'small'}
+            title={t('menu.sort')}
+            onClick={() => setOpen(true)}
+          />
+        }
       >
+        {enabledModelProviderList.map((item) => (
+          <ProviderItem {...item} key={item.id} onClick={onProviderSelect} />
+        ))}
+      </ProviderSection>
+
+      {disabledCustomProviderList.length > 0 && (
         <ProviderSection
           contextMenuItems={[]}
-          title={t('menu.list.enabled')}
-          value="enabled"
-          action={
-            <ActionIcon
-              icon={ArrowDownUpIcon}
-              size={'small'}
-              title={t('menu.sort')}
-              onClick={() => setOpen(true)}
-            />
-          }
+          count={disabledCustomProviderList.length}
+          title={t('menu.list.custom')}
         >
-          {enabledModelProviderList.map((item) => (
+          {disabledCustomProviderList.map((item) => (
             <ProviderItem {...item} key={item.id} onClick={onProviderSelect} />
           ))}
         </ProviderSection>
+      )}
 
-        {disabledCustomProviderList.length > 0 && (
-          <ProviderSection contextMenuItems={[]} title={t('menu.list.custom')} value="custom">
-            {disabledCustomProviderList.map((item) => (
-              <ProviderItem {...item} key={item.id} onClick={onProviderSelect} />
-            ))}
-          </ProviderSection>
-        )}
-
-        <ProviderSection
-          action={canSortDisabled ? <Actions dropdownMenu={dropdownMenu} /> : undefined}
-          contextMenuItems={canSortDisabled ? dropdownMenu : []}
-          title={t('menu.list.disabled')}
-          value="disabled"
-        >
-          {sortedDisabledProviders.map((item) => (
-            <ProviderItem {...item} key={item.id} onClick={onProviderSelect} />
-          ))}
-        </ProviderSection>
-      </AccordionRoot>
-    </Flexbox>
+      <ProviderSection
+        action={canSortDisabled ? <Actions dropdownMenu={dropdownMenu} /> : undefined}
+        contextMenuItems={canSortDisabled ? dropdownMenu : []}
+        count={disabledModelProviderList.length}
+        title={t('menu.list.disabled')}
+      >
+        {sortedDisabledProviders.map((item) => (
+          <ProviderItem {...item} key={item.id} onClick={onProviderSelect} />
+        ))}
+      </ProviderSection>
+    </div>
   );
 };
 

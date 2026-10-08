@@ -97,6 +97,7 @@ import { normalizeAgentRuntimeIdentity } from '../utils/agentRuntimeIdentity';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
+import { buildProjectManageableWhere } from '../utils/projectReadable';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildTaskReadableWhere } from '../utils/taskTeamReadable';
 import {
@@ -112,7 +113,6 @@ import {
   rewriteMessageScopeForTopics,
   rewriteResidualMessageScope,
 } from './agentTransferJob';
-import { ProjectModel } from './project';
 import { ResourcePermissionModel } from './resourcePermission';
 import { TaskDispatchModel } from './taskDispatch';
 import { recordBulkTaskMutation } from './taskDomainMutation';
@@ -1138,11 +1138,19 @@ export class AgentModel {
         .where(and(eq(agents.id, agentId), this.executionScope()))
         .for('update');
       if (!agent) return;
-      const project = await new ProjectModel(
-        tx as OrviloDatabase,
-        this.userId,
-        this.workspaceId,
-      ).findManageableById(projectId);
+      const [project] = await tx
+        .select()
+        .from(projects)
+        .where(
+          and(
+            eq(projects.id, projectId),
+            buildProjectManageableWhere(tx as OrviloDatabase, {
+              userId: this.userId,
+              workspaceId: this.workspaceId,
+            }),
+          ),
+        )
+        .limit(1);
       if (!project || project.coordinatorAgentId !== agentId) {
         throw new TRPCError({
           code: 'FORBIDDEN',

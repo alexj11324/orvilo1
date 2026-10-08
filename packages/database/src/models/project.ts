@@ -50,9 +50,12 @@ import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { works } from '../schemas/work';
-import { workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
-import { buildProjectReadableWhere } from '../utils/projectReadable';
+import {
+  buildProjectCommentableWhere,
+  buildProjectManageableWhere,
+  buildProjectReadableWhere,
+} from '../utils/projectReadable';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
@@ -297,64 +300,17 @@ export class ProjectModel {
   }
 
   private manageable() {
-    return and(
-      this.commentable(),
-      or(
-        and(isNull(projects.workspaceId), eq(projects.userId, this.userId)),
-        exists(
-          this.db
-            .select({ one: sql`1` })
-            .from(workspaceMembers)
-            .where(
-              and(
-                eq(workspaceMembers.workspaceId, projects.workspaceId),
-                eq(workspaceMembers.userId, this.userId),
-                inArray(workspaceMembers.role, ['owner', 'admin']),
-                isNull(workspaceMembers.deletedAt),
-                isNull(workspaceMembers.suspendedAt),
-              ),
-            ),
-        ),
-        exists(
-          this.db
-            .select({ one: sql`1` })
-            .from(projectMembers)
-            .where(
-              and(
-                eq(projectMembers.projectId, projects.id),
-                eq(projectMembers.workspaceId, projects.workspaceId),
-                eq(projectMembers.userId, this.userId),
-                eq(projectMembers.role, 'manager'),
-                isNull(projectMembers.deletedAt),
-                isNull(projectMembers.suspendedAt),
-              ),
-            ),
-        ),
-      ),
-    );
+    return buildProjectManageableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
   }
 
   private commentable() {
-    return and(
-      this.readable(),
-      or(
-        isNull(projects.workspaceId),
-        exists(
-          this.db
-            .select({ one: sql`1` })
-            .from(workspaceMembers)
-            .where(
-              and(
-                eq(workspaceMembers.workspaceId, projects.workspaceId),
-                eq(workspaceMembers.userId, this.userId),
-                inArray(workspaceMembers.role, ['owner', 'admin', 'member']),
-                isNull(workspaceMembers.deletedAt),
-                isNull(workspaceMembers.suspendedAt),
-              ),
-            ),
-        ),
-      ),
-    );
+    return buildProjectCommentableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
   }
 
   private writable() {

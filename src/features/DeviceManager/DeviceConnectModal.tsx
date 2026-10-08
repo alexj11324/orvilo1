@@ -10,11 +10,16 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import CommandLine from '@/components/CommandLine';
-import ImperativeModal from '@/components/ImperativeModal';
+import { Modal } from '@/components/Modal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClientDataSWR } from '@/libs/swr';
+import { getHostContext } from '@/platform';
 import { cliReleaseService } from '@/services/cliRelease';
+import { useElectronStore } from '@/store/electron';
+
+import { useConnectDesktopDevice } from './useConnectDesktopDevice';
 
 const styles = createStaticStyles(({ css }) => ({
   footer: css`
@@ -89,29 +94,26 @@ interface DeviceConnectModalProps {
   visibility?: DeviceVisibility;
 }
 
-/**
- * Device enrollment wizard, shared by the personal and workspace device pages.
- * - Personal: Desktop (auto-connect) + CLI tabs.
- * - Workspace: CLI-only (shared machines are headless), and the connect step
- *   carries the `--workspace <id>` flag that routes the device to the workspace
- *   principal (plus `--public` when enrolling from the Workspace tab — the CLI
- *   defaults to a private enrollment). Member+ on the server.
- */
 const DeviceConnectModal = memo<DeviceConnectModalProps>(
   ({ onClose, open, initialTab, scope, visibility }) => {
     const { t } = useTranslation('setting');
     const workspaceId = useActiveWorkspaceId();
     const isWorkspace = scope === 'workspace';
+    const isDesktopHost = getHostContext().kind === 'desktop';
 
     const [active, setActive] = useState<'cli' | 'desktop'>(initialTab ?? 'desktop');
     useEffect(() => {
-      if (open) setActive(isWorkspace ? 'cli' : (initialTab ?? 'desktop'));
+      if (open) setActive(initialTab ?? 'desktop');
     }, [open, initialTab, isWorkspace]);
 
-    const cliRelease = useClientDataSWR(
-      open && (isWorkspace || active === 'cli') ? 'cli-release' : null,
-      () => cliReleaseService.getLatest(),
+    const cliRelease = useClientDataSWR(open && active === 'cli' ? 'cli-release' : null, () =>
+      cliReleaseService.getLatest(),
     );
+
+    const desktop = useConnectDesktopDevice({ scope, visibility, onClose });
+    const status = useElectronStore((s) => s.gatewayConnectionStatus);
+    const fetchStatus = useElectronStore((s) => s.useFetchGatewayStatus);
+    const statusQuery = fetchStatus();
 
     const connectCommand = isWorkspace
       ? `orvilo connect --workspace ${workspaceId ?? '<workspace-id>'}${
@@ -164,10 +166,13 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
     );
 
     return (
-      <ImperativeModal
+      <Modal
+        closable={!desktop.connecting}
         footer={null}
+        keyboard={!desktop.connecting}
+        maskClosable={!desktop.connecting}
         open={open}
-        width={560}
+        width={'min(92vw, 560px)'}
         title={
           isWorkspace
             ? t(
@@ -177,7 +182,9 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
               )
             : t('devices.connectWizard.title')
         }
-        onCancel={onClose}
+        onCancel={() => {
+          if (!desktop.connecting) onClose();
+        }}
       >
         <div className="flex flex-col gap-5">
           {!isWorkspace && (
@@ -186,11 +193,12 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
             </div>
           )}
 
-          {isWorkspace ? null : (
+          {
             <Tabs
               value={active}
               onValueChange={(key) => {
-                if (typeof key === 'string') setActive(key as 'cli' | 'desktop');
+                if (!desktop.connecting && typeof key === 'string')
+                  setActive(key as 'cli' | 'desktop');
               }}
             >
               <TabsList style={{ display: 'flex', width: '100%' }}>
@@ -204,9 +212,37 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-          )}
+          }
 
-          {!isWorkspace && active === 'desktop' ? (
+          {active === 'desktop' && isDesktopHost ? (
+            <div className="flex flex-col gap-4">
+              <div className="font-medium">
+                {desktop.identity.data?.hostname ?? t('devices.connectWizard.desktop.thisComputer')}
+              </div>
+              <div className="text-muted-foreground" role="status">
+                {t(`devices.connectWizard.desktop.status.${status}`)}
+              </div>
+              <div className="text-muted-foreground">
+                {t(
+                  isWorkspace
+                    ? visibility === 'public'
+                      ? 'devices.connectWizard.desktop.workspacePublic'
+                      : 'devices.connectWizard.desktop.workspacePrivate'
+                    : 'devices.connectWizard.desktop.personalDesc',
+                )}
+              </div>
+              {(desktop.error || desktop.identity.error || statusQuery.error) && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {desktop.error || desktop.identity.error?.message || statusQuery.error?.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Button loading={desktop.connecting} onClick={() => void desktop.connect()}>
+                {t('devices.connectWizard.desktop.connectThisComputer')}
+              </Button>
+            </div>
+          ) : active === 'desktop' ? (
             <div className="flex flex-col">
               <Step
                 desc={t('devices.connectWizard.desktop.step1Desc')}
@@ -227,9 +263,17 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
               />
               <Step
                 last
-                desc={t('devices.connectWizard.desktop.step3Desc')}
                 index={3}
-                title={t('devices.connectWizard.desktop.step3')}
+                desc={t(
+                  isWorkspace
+                    ? 'devices.connectWizard.desktop.workspaceStepDesc'
+                    : 'devices.connectWizard.desktop.step3Desc',
+                )}
+                title={t(
+                  isWorkspace
+                    ? 'devices.connectWizard.desktop.workspaceStep'
+                    : 'devices.connectWizard.desktop.step3',
+                )}
               />
             </div>
           ) : (
@@ -243,7 +287,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
             </div>
           </div>
         </div>
-      </ImperativeModal>
+      </Modal>
     );
   },
 );

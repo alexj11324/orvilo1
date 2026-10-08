@@ -15,9 +15,9 @@ import {
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import SharedListSkeleton from '@/components/ListSkeleton';
-import { Button } from '@/components/ui/button';
 import { useElectronStore } from '@/store/electron';
 
 import DeviceDetailPanel from './DeviceDetailPanel';
@@ -283,12 +283,19 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
     (d) => d.scope === scope && (!visibility || (d.visibility ?? 'public') === visibility),
   );
 
-  // The machine the user is on right now (desktop only) — personal pool only;
-  // a workspace device is never "this machine" in the personal sense.
+  // Workspace enrollment has its own ID; resolve it through the personal share map.
+  const workspaceId = useActiveWorkspaceId();
   const useFetchDeviceInfo = useElectronStore((s) => s.useFetchGatewayDeviceInfo);
   const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   useFetchDeviceInfo();
-  const currentDeviceId = !isWorkspace && isDesktop ? gatewayDeviceInfo?.deviceId : undefined;
+  const personal = data?.find(
+    (d) => d.scope === 'personal' && d.deviceId === gatewayDeviceInfo?.deviceId,
+  );
+  const currentDeviceId = isDesktop
+    ? isWorkspace
+      ? personal?.sharedWorkspaces?.find((share) => share.workspaceId === workspaceId)?.deviceId
+      : gatewayDeviceInfo?.deviceId
+    : undefined;
 
   const [selectedId, setSelectedId] = useState<string>();
 
@@ -296,10 +303,6 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
   // Now gated by AsyncBoundary so a *failed* device fetch renders a failure +
   // Retry instead of this "connect your first device" onboarding (which falsely
   // told the user they own no devices — ux Read §1.1 error-as-empty trap).
-  // Workspace machines are headless (CLI-only enrollment), so that scope gets
-  // a single primary button instead of the personal page's connect-method
-  // cards + capabilities. The copy is pool-agnostic; only the hero icon forks
-  // between the shared (server) and private (own machine) pools.
   const isPrivatePool = isWorkspace && visibility === 'private';
   const emptyState = (
     <div className="flex flex-col gap-8">
@@ -318,35 +321,23 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
           <div className="text-muted-foreground" style={{ maxWidth: 440 }}>
             {t(isWorkspace ? 'workspaceSetting.devices.heroDesc' : 'devices.empty.desc')}
           </div>
-          {isWorkspace && (
-            <Button
-              style={{ marginBlockStart: 8 }}
-              variant="default"
-              onClick={() => onConnect('cli')}
-            >
-              {<TerminalIcon />}
-              {t('devices.empty.methodCli.title')}
-            </Button>
-          )}
         </div>
 
-        {!isWorkspace && (
-          <div className={styles.optionGrid}>
-            <ConnectOption
-              badge={t('devices.empty.methodDesktop.badge')}
-              desc={t('devices.empty.methodDesktop.desc')}
-              icon={MonitorDownIcon}
-              title={t('devices.empty.methodDesktop.title')}
-              onClick={() => onConnect('desktop')}
-            />
-            <ConnectOption
-              desc={t('devices.empty.methodCli.desc')}
-              icon={TerminalIcon}
-              title={t('devices.empty.methodCli.title')}
-              onClick={() => onConnect('cli')}
-            />
-          </div>
-        )}
+        <div className={styles.optionGrid}>
+          <ConnectOption
+            badge={t('devices.empty.methodDesktop.badge')}
+            desc={t('devices.empty.methodDesktop.desc')}
+            icon={MonitorDownIcon}
+            title={t('devices.empty.methodDesktop.title')}
+            onClick={() => onConnect('desktop')}
+          />
+          <ConnectOption
+            desc={t('devices.empty.methodCli.desc')}
+            icon={TerminalIcon}
+            title={t('devices.empty.methodCli.title')}
+            onClick={() => onConnect('cli')}
+          />
+        </div>
       </div>
 
       {!isWorkspace && <Capabilities />}

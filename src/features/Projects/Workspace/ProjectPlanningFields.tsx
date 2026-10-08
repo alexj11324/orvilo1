@@ -305,7 +305,7 @@ export function ProjectPriorityField({
   );
 }
 
-function ProjectDateInput({
+export function ProjectDateInput({
   disabled,
   onCommit,
   precision,

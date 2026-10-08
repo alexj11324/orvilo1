@@ -238,7 +238,7 @@ const ProjectWorkspace = memo(() => {
                 <DropdownMenu items={statusItems}>
                   <Button
                     aria-label={t('properties.status')}
-                    className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+                    className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
                     disabled={updatingStatus || lifecycleLocked}
                     variant="ghost"
                   >

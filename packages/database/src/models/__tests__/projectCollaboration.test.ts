@@ -131,7 +131,7 @@ describe('Project and Issue collaboration boundaries', () => {
         title: 'Independent history',
       })
       .returning();
-    const [message] = await db
+    const messageResult = await db
       .insert(messages)
       .values({
         userId: member,
@@ -143,6 +143,7 @@ describe('Project and Issue collaboration boundaries', () => {
         content: 'Keep original history',
       })
       .returning();
+    const [message] = Array.isArray(messageResult) ? messageResult : messageResult.rows;
     return { session, topic, message };
   };
   const replaceCoordinator = async (projectId: string, agentId: string) => {

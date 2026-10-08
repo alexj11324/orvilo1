@@ -179,7 +179,7 @@ describe('resourcePermissionRouter.getGeneralAccess', () => {
   });
 
   it('projects a virtual Agent Use grant through its existing parent Group ceiling', async () => {
-    getResourceMetaMock.mockImplementation(async (resourceType) => ({
+    getResourceMetaMock.mockImplementation(async (_db, resourceType) => ({
       userId: 'user_creator',
       visibility: 'public',
       workspaceId: 'ws_1',

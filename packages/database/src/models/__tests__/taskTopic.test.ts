@@ -69,9 +69,7 @@ describe('TaskTopicModel', () => {
     const task = await new TaskModel(serverDB, userId, workspaceId).create({
       instruction: 'Shared Issue',
     });
-    await serverDB
-      .insert(topics)
-      .values({ id: 'issue-private-topic', userId, workspaceId, visibility: 'private' });
+    await serverDB.insert(topics).values({ id: 'issue-private-topic', userId, workspaceId });
     await serverDB.insert(taskTopics).values({
       taskId: task.id,
       topicId: 'issue-private-topic',

@@ -25,7 +25,7 @@ import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useClientDataSWRWithSync } from '@/libs/swr';
 import { agentConfigKeys } from '@/libs/swr/keys';
 import { getHostContext } from '@/platform';
-import { agentService } from '@/services/agent';
+import { agentService, isFullAgentConfig } from '@/services/agent';
 import { useAgentStore } from '@/store/agent';
 import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
@@ -48,17 +48,18 @@ const AgentSettingsListRow = ({
     () => agentService.getAgentConfigById(row.id),
     {
       onData: (data) => {
-        if (data)
+        if (isFullAgentConfig(data))
           useAgentStore.setState((state) => ({ agentMap: { ...state.agentMap, [row.id]: data } }));
       },
     },
   );
-  const config = configFetch.data;
+  const profile = configFetch.data;
+  const config = profile === undefined ? undefined : isFullAgentConfig(profile) ? profile : null;
   const { agencyConfig, workspaceScoped, isPreferenceLoading } = useEffectiveAgencyConfig(row.id);
   const devices = useDeviceList();
   const bindings = useProviderBindingStore((s) => s.bindings);
   const bindingFetch = useFetchProviderBindings();
-  const provider = config?.agencyConfig?.heterogeneousProvider;
+  const provider = profile?.agencyConfig?.heterogeneousProvider;
   const target = resolveExecutionTarget(agencyConfig, {
     clientExecutionAvailable: desktop,
     isHetero: !!provider,
@@ -98,7 +99,7 @@ const AgentSettingsListRow = ({
     <div className="flex items-center gap-3 border-b py-4 last:border-0">
       <AgentRuntimeIcon size={32} type={provider?.type ?? row.heterogeneousType} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{agentDisplayName(config, row.title)}</div>
+        <div className="truncate text-sm font-medium">{agentDisplayName(profile, row.title)}</div>
         <div className="mt-1 truncate text-xs text-muted-foreground">
           {provider
             ? (HETEROGENEOUS_TYPE_LABELS[provider.type] ?? provider.type)

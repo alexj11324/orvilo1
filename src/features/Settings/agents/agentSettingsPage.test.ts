@@ -14,12 +14,16 @@
 import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
+import { describe, expect, it, vi } from 'vitest';
 
 import { shouldShowAgentBreadcrumb } from '@/features/AgentBreadcrumb/shouldShowAgentBreadcrumb';
 import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
+import { isFullAgentConfig } from '@/services/agent';
 
 import { agentSettingsRowState } from './agentSettingsRowState';
+
+vi.mock('@/libs/trpc/client', () => ({ lambdaClient: {} }));
 
 const repoRoot = path.resolve(import.meta.dirname, '../../../..');
 
@@ -195,6 +199,26 @@ describe('settings Agent row profile loading boundary', () => {
     workspaceScoped: false,
     loading: false,
   };
+  it('keeps a cached safe profile out of config hydration and marks configuration unavailable', () => {
+    const cachedProfile = {
+      ...DEFAULT_AGENT_CONFIG,
+      id: 'agent-1',
+      title: 'Issue executor',
+      visibility: 'private' as const,
+      workspaceId: 'workspace-1',
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' as const } },
+    };
+    for (const field of ['params', 'systemRole', 'tts', 'plugins', 'chatConfig'])
+      Reflect.deleteProperty(cachedProfile, field);
+    const hydrated: unknown[] = [];
+    if (isFullAgentConfig(cachedProfile)) hydrated.push(cachedProfile);
+    const config = isFullAgentConfig(cachedProfile) ? cachedProfile : null;
+
+    expect(hydrated).toEqual([]);
+    expect(agentSettingsRowState({ ...input, profile: config }).state).toBe('unavailable');
+    expect(cachedProfile.title).toBe('Issue executor');
+    expect(cachedProfile.agencyConfig.heterogeneousProvider.type).toBe('claude-code');
+  });
   it('retains unresolved, absent and failed profile states without reading an absent config', () => {
     expect(agentSettingsRowState({ ...input, profile: undefined }).state).toBe('loading');
     expect(agentSettingsRowState({ ...input, profile: null }).state).toBe('unavailable');

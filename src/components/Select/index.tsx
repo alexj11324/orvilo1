@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Combobox,
@@ -14,6 +15,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
+import { Input } from '@/components/ui/input';
 import {
   Select as SelectPrimitive,
   SelectContent,
@@ -93,6 +95,7 @@ const Select = <Value extends string | number = string>({
   style,
   value,
 }: SelectProps<Value>) => {
+  const { t } = useTranslation('common');
   const [query, setQuery] = useState('');
   const items = (options ?? []).flatMap((option) =>
     isGroup(option)
@@ -193,9 +196,9 @@ const Select = <Value extends string | number = string>({
       <SelectContent className={popupClassName}>
         {showSearch && (
           <div className="px-1 pb-1">
-            <input
-              aria-label="search"
-              className="h-7 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none"
+            <Input
+              aria-label={t('search')}
+              className="h-7 px-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => event.stopPropagation()}

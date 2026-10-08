@@ -36,17 +36,16 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
 
   breadcrumb: css`
     overflow: hidden;
-
-    /* The header stretches this nav to its row height; center the trail so it
-       shares a midline with the star and overflow buttons beside it. */
-    display: flex;
-    align-items: center;
     min-width: 0;
 
     ol {
       flex-wrap: nowrap;
       align-items: center;
       min-width: 0;
+
+      /* The global list reset gives every ol a 14px bottom margin, which
+         lifted the trail above the star and overflow buttons beside it. */
+      margin: 0;
     }
 
     li {

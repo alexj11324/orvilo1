@@ -106,6 +106,17 @@ export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, StatusVisua
 };
 
 /**
+ * The one status mark an Issue draws on a board card, list row, sub-issue row
+ * or group header. An Issue without a category reads as backlog — never as an
+ * execution status icon.
+ */
+export const getIssueStatusVisual = ({
+  workflowCategory,
+}: {
+  workflowCategory?: TaskWorkflowCategory | null;
+}): StatusVisual => WORKFLOW_CATEGORY_VISUALS[workflowCategory ?? 'backlog'];
+
+/**
  * The icon for the Status *property* (filter rows, bulk "Status" button,
  * context-menu "Status" submenu, "changed status" activity) — as opposed to
  * the per-value marks above. One mark, so the same field never reads as two.

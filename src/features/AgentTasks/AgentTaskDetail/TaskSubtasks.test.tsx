@@ -289,7 +289,7 @@ describe('TaskSubtasks', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/task/T-child/child-task');
   });
 
-  it('renders the read-only execution badge when a subtask has an active topic run', () => {
+  it('keeps one Issue status mark when a subtask has an active topic run', () => {
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {
         assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
@@ -302,7 +302,8 @@ describe('TaskSubtasks', () => {
 
     render(<TaskSubtasks />);
 
-    expect(screen.getByTestId('execution-badge')).toBeTruthy();
+    expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('issue-status-picker')).toHaveLength(1);
   });
 });
 

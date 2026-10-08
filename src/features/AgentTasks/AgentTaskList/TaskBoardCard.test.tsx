@@ -278,6 +278,13 @@ describe('TaskBoardCard', () => {
     },
   );
 
+  it('does not repeat a scheduled execution state as a label in the chip row', () => {
+    render(<TaskBoardCard task={createTask({ status: 'scheduled' })} />);
+
+    expect(document.querySelectorAll('[data-collab-id$=":status"]')).toHaveLength(1);
+    expect(screen.queryByText('Scheduled')).not.toBeInTheDocument();
+  });
+
   it('falls back to the identifier as title when the task has no name', () => {
     render(<TaskBoardCard task={createTask({ name: null })} />);
 

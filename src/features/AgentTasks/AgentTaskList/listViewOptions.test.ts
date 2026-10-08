@@ -148,11 +148,11 @@ describe('issue status grouping', () => {
     });
   });
 
-  it('keeps execution grouping for tasks without a linked workflow state', () => {
+  it('defaults an uncategorized Issue to the backlog group, never an execution group', () => {
     const local = task('local', { status: 'running' });
     expect(groupTaskItems([local], 'status')[0][0]).toMatchObject({
-      key: 'status:running',
-      status: 'running',
+      key: 'workflow:backlog',
+      workflowCategory: 'backlog',
     });
   });
 });

@@ -70,16 +70,18 @@ describe('TeamTriageRow status icon', () => {
     expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
   });
 
-  it('keeps the execution icon when the task has no workflow category', () => {
+  it('reads an uncategorized task as backlog, never as an execution icon', () => {
     render(
       <TeamTriageRow
         {...props}
-        task={{ id: 'task-2b', name: 'Legacy issue', status: 'backlog' }}
+        task={{ id: 'task-2b', name: 'Legacy issue', status: 'running' }}
       />,
     );
 
-    expect(screen.getByTestId('execution-icon')).toHaveTextContent('backlog');
-    expect(screen.getByRole('link').querySelector('[data-workflow-icon]')).toBeNull();
+    expect(
+      screen.getByRole('link').querySelector('[data-workflow-icon="backlog"]'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
   });
   it('keeps accept and decline actions and explains disabled snooze', () => {
     render(

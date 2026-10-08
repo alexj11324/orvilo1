@@ -2,13 +2,12 @@ import { cssVar } from 'antd-style';
 import { CalendarClock, HeartPulse } from 'lucide-react';
 import { createElement, memo } from 'react';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { getIssueStatusVisual } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
-import TaskStatusIcon from '../features/TaskStatusIcon';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
@@ -53,11 +52,8 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
   }
 
   if (group.groupBy === 'status') {
-    if (group.workflowCategory) {
-      const visual = WORKFLOW_CATEGORY_VISUALS[group.workflowCategory];
-      return createElement(visual.icon, { color: visual.color, size: 16 });
-    }
-    return <TaskStatusIcon size={16} status={group.status ?? 'backlog'} />;
+    const visual = getIssueStatusVisual(group);
+    return createElement(visual.icon, { color: visual.color, size: 16 });
   }
 
   return null;

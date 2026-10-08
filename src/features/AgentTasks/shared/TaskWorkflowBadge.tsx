@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { getIssueStatusVisual, type StatusVisual } from '@/components/ExecutionStatus';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -19,23 +19,22 @@ interface TaskWorkflowBadgeProps {
 /**
  * The Issue Status as a bare workflow glyph — what a task row or board card
  * draws in its one status slot (Linear shows a single status mark per row).
- * `workflowCategory` is the canonical Issue Status: every categorized task
- * renders its category mark, linked or not. `undefined` only when the task
- * has no category at all.
+ * `workflowCategory` is the canonical Issue Status: every task renders its
+ * category mark, linked or not. A task without a category reads as backlog,
+ * so the slot always holds exactly one mark.
  */
 export const useTaskWorkflowGlyph = ({
   executionStatus,
-  workflowCategory,
+  workflowCategory = 'backlog',
   workflowStateId,
-}: TaskWorkflowBadgeProps): (StatusVisual & { label: ReactNode }) | undefined => {
+}: TaskWorkflowBadgeProps): StatusVisual & { label: ReactNode } => {
   const { t } = useTranslation('chat');
-  if (!workflowCategory) return undefined;
 
   const categoryLabel = t(`taskDetail.workflow.category.${workflowCategory}` as never);
   const deliveryPending = workflowCategory === 'done' && executionStatus !== 'completed';
 
   return {
-    ...WORKFLOW_CATEGORY_VISUALS[workflowCategory],
+    ...getIssueStatusVisual({ workflowCategory }),
     label: (
       <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
         <div className="text-xs text-muted-foreground">
@@ -64,8 +63,7 @@ export const useTaskWorkflowGlyph = ({
 const TaskWorkflowBadge = memo<TaskWorkflowBadgeProps>((props) => {
   const { t } = useTranslation('chat');
   const glyph = useTaskWorkflowGlyph(props);
-  const { executionStatus, workflowCategory } = props;
-  if (!glyph || !workflowCategory) return null;
+  const { executionStatus, workflowCategory = 'backlog' } = props;
 
   const categoryLabel = t(`taskDetail.workflow.category.${workflowCategory}` as never);
   const label =

@@ -282,8 +282,22 @@ describe('AgentTaskItem', () => {
     it('keeps the category mark without a separate execution badge', () => {
       render(<AgentTaskItem routeScope={'global'} task={createTask('agent-1')} />);
 
-      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'category-default');
+      // An uncategorized row reads as backlog — still exactly one mark.
+      expect(screen.getByTestId('status-mark')).toHaveAttribute(
+        'data-glyph',
+        'WorkflowIcon(backlog)',
+      );
       expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
+    });
+
+    it('does not repeat a scheduled execution state as a chip beside the title', () => {
+      render(
+        <AgentTaskItem routeScope={'global'} task={{ ...workflowTask(), status: 'scheduled' }} />,
+      );
+
+      expect(screen.getAllByTestId('status-mark')).toHaveLength(1);
+      expect(screen.queryByText('Scheduled')).not.toBeInTheDocument();
+      expect(screen.queryByText('taskDetail.status.scheduled')).not.toBeInTheDocument();
     });
 
     it.each([

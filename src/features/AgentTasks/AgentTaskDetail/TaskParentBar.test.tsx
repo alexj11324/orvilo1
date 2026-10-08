@@ -142,6 +142,24 @@ describe('TaskParentBar', () => {
     expect(screen.queryByText('status')).not.toBeInTheDocument();
   });
 
+  it('reads an uncategorized parent as backlog, never as an execution icon', async () => {
+    mocks.getDetail.mockResolvedValue({
+      data: {
+        agentId: 'agt_parent',
+        identifier: 'T-parent',
+        instruction: 'Parent instruction',
+        status: 'running',
+        subtasks: [],
+      },
+    });
+
+    const { container } = render(<TaskParentBar />);
+
+    await waitFor(() => expect(mocks.getDetail).toHaveBeenCalledWith('T-parent'));
+    expect(container.querySelector('[data-workflow-icon="backlog"]')).toBeInTheDocument();
+    expect(screen.queryByText('status')).not.toBeInTheDocument();
+  });
+
   it("opens parent subtasks inside the clicked subtask's owning agent route", async () => {
     mocks.getDetail.mockResolvedValue({
       data: {

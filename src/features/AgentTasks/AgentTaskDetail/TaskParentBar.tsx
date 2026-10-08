@@ -8,7 +8,6 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { taskService } from '@/services/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
-import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
@@ -103,22 +102,18 @@ const TaskParentBar = memo(() => {
           navigate(taskDetailPath(parent.identifier, parentAgentId ?? undefined, parent.name))
         }
       >
-        {workflowGlyph ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span style={{ display: 'inline-flex' }}>
-                    <workflowGlyph.icon color={workflowGlyph.color} size={16} />
-                  </span>
-                }
-              />
-              <TooltipContent>{workflowGlyph.label}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <TaskStatusIcon size={16} status={parentStatus} />
-        )}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <workflowGlyph.icon color={workflowGlyph.color} size={16} />
+                </span>
+              }
+            />
+            <TooltipContent>{workflowGlyph.label}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         {/* Reference form: `◐ ORV-117 Handoff: …` — the identifier stays
             visible even when the name truncates. */}
         <div className="truncate block" style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}>

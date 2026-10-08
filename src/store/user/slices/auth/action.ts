@@ -36,10 +36,15 @@ export class UserAuthActionImpl {
 
     try {
       const { hasPasswordAccount, providers } = await fetchAuthProvidersData();
-      this.#set({ authProviders: providers, hasPasswordAccount, isLoadedAuthProviders: true });
+      this.#set({
+        authProviders: providers,
+        authProvidersError: undefined,
+        hasPasswordAccount,
+        isLoadedAuthProviders: true,
+      });
     } catch (error) {
       console.error('Failed to fetch auth providers:', error);
-      this.#set({ isLoadedAuthProviders: true });
+      this.#set({ authProvidersError: error, isLoadedAuthProviders: false });
     }
   };
 
@@ -89,9 +94,15 @@ export class UserAuthActionImpl {
   refreshAuthProviders = async (): Promise<void> => {
     try {
       const { hasPasswordAccount, providers } = await fetchAuthProvidersData();
-      this.#set({ authProviders: providers, hasPasswordAccount });
+      this.#set({
+        authProviders: providers,
+        authProvidersError: undefined,
+        hasPasswordAccount,
+        isLoadedAuthProviders: true,
+      });
     } catch (error) {
       console.error('Failed to refresh auth providers:', error);
+      this.#set({ authProvidersError: error });
     }
   };
 }

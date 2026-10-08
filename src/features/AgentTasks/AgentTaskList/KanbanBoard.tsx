@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
@@ -219,6 +220,8 @@ interface KanbanBoardProps {
    * to agents (active execution grant) — My Work's Delegated tab.
    */
   myTaskScope?: 'assigned' | 'created' | 'delegated';
+  /** Clears `hideCompleted`; without it the board explains the hiding but cannot undo it. */
+  onShowHiddenCompleted?: () => void;
   onViewAll?: () => void;
   options: TaskListViewOptions;
   /** `null` narrows to tasks with no project — My Work's "No project" chip. */
@@ -233,6 +236,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     emptyDescription,
     external,
     myTaskScope,
+    onShowHiddenCompleted,
     onViewAll,
     options,
     projectId,
@@ -1025,24 +1029,43 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     </DndContext>
   );
 
+  const hiddenCompletedNotice = options.hideCompleted ? (
+    <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
+      <span>{t('taskList.hiddenCompleted.boardNotice')}</span>
+      {onShowHiddenCompleted ? (
+        <Button size="xs" variant="ghost" onClick={onShowHiddenCompleted}>
+          {t('taskList.hiddenCompleted.show')}
+        </Button>
+      ) : null}
+    </div>
+  ) : null;
+
   // Error gated ahead of empty by AsyncBoundary so a failed fetch shows Retry
   // instead of the "no tasks" empty. `data` is the SWR result —
   // undefined until the first fetch settles.
   return (
     <AsyncBoundary
       data={(isQueryScopeCurrent && isTaskGroupListInit) || undefined}
-      empty={emptyState}
       error={error}
+      isEmpty={totalTasks === 0 && groupBy !== 'status'}
       errorVariant={'block'}
       // Status boards always have their columns — an empty workspace still
       // renders the empty board (Cordy's behavior), not a centered empty state.
       // Only dynamic groupings with zero groups fall back to `empty`.
-      isEmpty={totalTasks === 0 && groupBy !== 'status'}
       isLoading={isLoading || (!isQueryScopeCurrent && !error) || (!isTaskGroupListInit && !error)}
       loading={skeletonBoard}
+      empty={
+        <div className="flex min-h-0 flex-1 flex-col">
+          {hiddenCompletedNotice}
+          {emptyState}
+        </div>
+      }
       onRetry={() => mutate()}
     >
-      {board}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {hiddenCompletedNotice}
+        {board}
+      </div>
     </AsyncBoundary>
   );
 });

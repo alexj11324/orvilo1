@@ -1,5 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -1479,6 +1488,10 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
   // runningOperation.hooks in serialized (webhook-only) form on BOTH dispatch
   // targets.
   describe('terminal hook seeding onto runningOperation (regression guard)', () => {
+    beforeAll(async () => {
+      await getTestDB();
+    });
+
     const taskHook = {
       handler: async () => {},
       id: 'task-on-complete',

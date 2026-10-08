@@ -1,9 +1,8 @@
-import { cssVar } from 'antd-style';
-import { Loader2Icon } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import React, { memo, useCallback, useMemo } from 'react';
 
 import LibraryStatusIcon from '@/components/LibIcon/StatusIcon';
+import { Spinner } from '@/components/ui/spinner';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -86,17 +85,7 @@ const KnowledgeBaseItem = memo<KnowledgeBaseItemProps>(
     // active-library header and its switcher.
     const icon = useMemo(() => {
       if (isLoading) {
-        return (
-          <span className="anticon animate-spin" role="img">
-            <Loader2Icon
-              color={cssVar.colorTextDescription}
-              fill={'transparent'}
-              height={18}
-              size={18}
-              width={18}
-            />
-          </span>
-        );
+        return <Spinner className="size-[18px] text-muted-foreground" />;
       }
 
       return (

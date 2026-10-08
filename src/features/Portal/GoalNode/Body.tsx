@@ -20,6 +20,7 @@ import {
   type GoalNodeView,
 } from '@/features/AgentGoals/ProcessControl/goalGraphViewModel';
 import { KindDot } from '@/features/AgentGoals/ProcessControl/shared';
+import PortalBodyState from '@/features/Portal/components/PortalBodyState';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { goalSelectors, useGoalStore } from '@/store/goal';
@@ -134,12 +135,26 @@ const Body = memo(() => {
   const openTaskDetail = useChatStore((s) => s.openTaskDetail);
   const openGoalNode = useChatStore((s) => s.openGoalNode);
   const snapshot = useGoalStore(goalSelectors.goalGraph(view?.goalId ?? ''));
+  const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
+  // Same SWR key as the goal page, so this shares its request; it only adds the
+  // loading / error status the store snapshot alone cannot express.
+  const { error, isLoading, mutate } = useFetchGoalGraph(view?.goalId);
 
   const graph = useMemo(() => (snapshot ? buildGoalGraphView(snapshot) : undefined), [snapshot]);
-  if (!view || !graph || !snapshot) return null;
+  if (!view) return null;
 
-  const nodeView = graph.byId[view.nodeId];
-  if (!nodeView) return null;
+  const nodeView = graph?.byId[view.nodeId];
+  if (!graph || !snapshot || !nodeView) {
+    return (
+      <PortalBodyState
+        error={snapshot ? undefined : error}
+        isLoading={!snapshot && isLoading}
+        notFoundDesc={t('goalDetail.notFoundDescription')}
+        notFoundTitle={t('goalDetail.notFoundTitle')}
+        onRetry={() => void mutate()}
+      />
+    );
+  }
   const { node } = nodeView;
   if (isExperiment(graph, nodeView))
     return (

@@ -55,6 +55,7 @@ const ThemeButton: FC<{ placement?: ThemePlacement; size?: number }> = ({ placem
       <DropdownMenuTrigger
         render={
           <ActionIcon
+            aria-label={t('theme', { ns: 'common' })}
             icon={themeIcons[(theme as 'dark' | 'light' | 'system') || 'system']}
             size={size || { blockSize: 32, size: 16 }}
           />

@@ -9,7 +9,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Carousel,
   type CarouselApi,
@@ -243,15 +243,13 @@ const ItemContent = memo<{
         ) : (
           item.linkUrl && (
             <a
-              className={styles.action}
+              className={cn(buttonVariants({ variant: 'default' }), styles.action, 'w-full')}
               href={item.linkUrl}
               rel="noopener noreferrer"
               target="_blank"
               onClick={handleLinkClick}
             >
-              <Button className="w-full" variant="default">
-                {resolved.linkLabel ?? t('billboard.learnMore')}
-              </Button>
+              {resolved.linkLabel ?? t('billboard.learnMore')}
             </a>
           )
         )}
@@ -266,6 +264,7 @@ const BILLBOARD_IMPRESSION_STORAGE_PREFIX = 'billboard:impression:';
 
 const BillboardCarousel = memo<BillboardCarouselProps>(
   ({ set, onClose, closing, exitTarget, onAnimationFinish, cardAttr }) => {
+    const { t: tCommon } = useTranslation('common');
     const [paused, setPaused] = useState(false);
     const [current, setCurrent] = useState(0);
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
@@ -353,7 +352,13 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
           if (closing) onAnimationFinish?.();
         }}
       >
-        <ActionIcon className={styles.closeButton} icon={X} size={14} onClick={onClose} />
+        <ActionIcon
+          aria-label={tCommon('close')}
+          className={styles.closeButton}
+          icon={X}
+          size={14}
+          onClick={onClose}
+        />
         {single ? (
           <ItemContent
             billboardSlug={set.slug}

@@ -32,7 +32,12 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, selectedId }) => {
         }}
       >
         <span style={{ fontWeight: 600 }}>{t('connector.title', 'Connectors')}</span>
-        <ActionIcon icon={PlusIcon} size="small" onClick={() => setShowAdd(true)} />
+        <ActionIcon
+          aria-label={t('addNew', { ns: 'common' })}
+          icon={PlusIcon}
+          size="small"
+          onClick={() => setShowAdd(true)}
+        />
       </div>
 
       {connected.length > 0 && (

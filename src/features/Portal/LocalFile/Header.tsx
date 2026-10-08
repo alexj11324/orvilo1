@@ -53,7 +53,12 @@ const Header = memo(() => {
       left={
         <Fragment>
           {canGoBack && (
-            <ActionIcon icon={ArrowLeft} size={DESKTOP_HEADER_ICON_SMALL_SIZE} onClick={goBack} />
+            <ActionIcon
+              aria-label={t('back', { ns: 'common' })}
+              icon={ArrowLeft}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              onClick={goBack}
+            />
           )}
           <TabStrip />
         </Fragment>

@@ -105,6 +105,7 @@ const buildAgentProfileMarkdown = (params: {
 };
 
 const Header = memo(() => {
+  const { t: tCommon } = useTranslation('common');
   const { i18n, t } = useTranslation(['setting', 'chat', 'file', 'common', 'agent']);
   const dateLocale = i18n?.resolvedLanguage || i18n?.language;
   const navigate = useWorkspaceAwareNavigate();
@@ -399,7 +400,11 @@ const Header = memo(() => {
             />
           )}
           <SidebarDropdownMenu items={menuItems} placement="bottomRight">
-            <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+            <ActionIcon
+              aria-label={tCommon('more')}
+              icon={MoreHorizontal}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            />
           </SidebarDropdownMenu>
           {!isHeterogeneous && isStatusInit && !lockedByOther && !lockPending && (
             <ToggleRightPanelButton

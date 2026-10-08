@@ -3,7 +3,7 @@ import { cssVar } from 'antd-style';
 import { Link2 } from 'lucide-react';
 import { memo } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { type MemorySource } from '@/database/repositories/userMemory';
 import Link from '@/libs/router/Link';
 
@@ -14,28 +14,19 @@ const SourceLink = memo<{ source?: MemorySource | null }>(({ source }) => {
 
   return (
     <Link
+      className={buttonVariants({ size: 'sm', variant: 'ghost' })}
       href={AGENT_CHAT_TOPIC_URL(source.agentId, source.id)}
+      title={title}
       style={{
         flex: 1,
         maxWidth: '100%',
         overflow: 'hidden',
       }}
     >
-      <Button
-        size="sm"
-        title={title}
-        variant="ghost"
-        style={{
-          flex: 1,
-          maxWidth: '100%',
-          overflow: 'hidden',
-        }}
-      >
-        <Link2 data-icon="inline-start" />
-        <div className="truncate" style={{ color: cssVar.colorTextSecondary }}>
-          {title}
-        </div>
-      </Button>
+      <Link2 data-icon="inline-start" />
+      <div className="truncate" style={{ color: cssVar.colorTextSecondary }}>
+        {title}
+      </div>
     </Link>
   );
 });

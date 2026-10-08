@@ -3,14 +3,15 @@
 import { Github } from '@lobehub/icons';
 import { type SkillResourceTreeNode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { DotIcon, ExternalLinkIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
 import PublishedTime from '@/components/PublishedTime';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import SkillAvatar from '@/components/SkillAvatar';
+import { buttonVariants } from '@/components/ui/button';
 import FileTree, { FileTreeSkeleton } from '@/features/FileTree';
 import { useToolStore } from '@/store/tool';
 
@@ -135,20 +136,33 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
                 {(repository || sourceUrl) && (
                   <div className="flex items-center gap-0.5" style={{ flexShrink: 0 }}>
                     {repository && (
-                      <a href={repository} rel="noreferrer" target={'_blank'}>
-                        <ActionIcon
-                          fill={cssVar.colorTextDescription}
-                          icon={Github}
-                          title={t('agentSkillDetail.repository')}
-                        />
+                      <a
+                        aria-label={t('agentSkillDetail.repository')}
+                        href={repository}
+                        rel="noreferrer"
+                        target={'_blank'}
+                        title={t('agentSkillDetail.repository')}
+                        className={cn(
+                          buttonVariants({ size: 'icon-xs', variant: 'ghost' }),
+                          'text-muted-foreground',
+                        )}
+                      >
+                        <Github fill={cssVar.colorTextDescription} size={14} />
                       </a>
                     )}
                     {sourceUrl && (
-                      <a href={sourceUrl} rel="noreferrer" target={'_blank'}>
-                        <ActionIcon
-                          icon={ExternalLinkIcon}
-                          title={t('agentSkillDetail.sourceUrl')}
-                        />
+                      <a
+                        aria-label={t('agentSkillDetail.sourceUrl')}
+                        href={sourceUrl}
+                        rel="noreferrer"
+                        target={'_blank'}
+                        title={t('agentSkillDetail.sourceUrl')}
+                        className={cn(
+                          buttonVariants({ size: 'icon-xs', variant: 'ghost' }),
+                          'text-muted-foreground',
+                        )}
+                      >
+                        <ExternalLinkIcon size={14} />
                       </a>
                     )}
                   </div>

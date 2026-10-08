@@ -1,7 +1,7 @@
 'use client';
 
 import { type BinaryStatus } from '@orvilo/electron-client-ipc';
-import { CheckCircle2, Copy, Loader2Icon, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, RefreshCw, XCircle } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -87,11 +87,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
       >
-        {createElement(Loader2Icon, {
-          size: 16,
-          style: { opacity: 0.5 },
-          className: 'animate-spin',
-        })}
+        <Spinner className="opacity-50" />
         <span className={'text-muted-foreground'}>{t('settingSystemTools.detecting')}</span>
       </div>
     );
@@ -156,6 +152,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
                     {status.path}
                   </span>
                   <Button
+                    aria-label={t('copy', { ns: 'common' })}
                     size="icon-sm"
                     type="button"
                     variant="ghost"

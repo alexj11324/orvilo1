@@ -43,7 +43,13 @@ const Header = memo(() => {
     <NavHeader
       left={
         <>
-          {onBack && <ActionIcon icon={ArrowLeftIcon} onClick={onBack} />}
+          {onBack && (
+            <ActionIcon
+              aria-label={t('back', { ns: 'common' })}
+              icon={ArrowLeftIcon}
+              onClick={onBack}
+            />
+          )}
           {/* Breadcrumb - show when page has a parent folder */}
           {parentId && <Breadcrumb />}
           {/* Show icon and title only when there's no parent folder */}
@@ -66,7 +72,11 @@ const Header = memo(() => {
           {documentId && <ShareButton documentId={documentId} />}
           {/* Three-dot menu */}
           <SidebarDropdownMenu items={menuItems} placement="bottomRight">
-            <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+            <ActionIcon
+              aria-label={t('more', { ns: 'common' })}
+              icon={MoreHorizontal}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            />
           </SidebarDropdownMenu>
           {canExpandRightPanel && (
             <ToggleRightPanelButton

@@ -3,6 +3,7 @@
 import { DOWNLOAD_URL } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { DownloadIcon, MonitorDownIcon, ShieldCheckIcon, TerminalIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +13,7 @@ import AsyncBoundary from '@/components/AsyncBoundary';
 import CommandLine from '@/components/CommandLine';
 import { Modal } from '@/components/Modal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClientDataSWR } from '@/libs/swr';
 import { getHostContext } from '@/platform';
@@ -249,11 +250,14 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
                 index={1}
                 title={t('devices.connectWizard.desktop.step1')}
               >
-                <a href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank">
-                  <Button variant="default">
-                    {<DownloadIcon />}
-                    {t('devices.connectWizard.desktop.downloadLink')}
-                  </Button>
+                <a
+                  className={cn(buttonVariants({ variant: 'default' }))}
+                  href={DOWNLOAD_URL.default}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {<DownloadIcon />}
+                  {t('devices.connectWizard.desktop.downloadLink')}
                 </a>
               </Step>
               <Step

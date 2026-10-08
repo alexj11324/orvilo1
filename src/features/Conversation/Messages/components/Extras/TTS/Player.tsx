@@ -30,7 +30,12 @@ const Player = memo<PlayerProps>(({ onRetry, error, onDelete, audio, isLoading, 
             <Button size="sm" variant="default" onClick={onRetry}>
               {t('retry', { ns: 'common' })}
             </Button>
-            <ActionIcon icon={X} size="small" onClick={onDelete} />
+            <ActionIcon
+              aria-label={t('remove', { ns: 'common' })}
+              icon={X}
+              size="small"
+              onClick={onDelete}
+            />
           </AlertAction>
           {error.body && (
             <Collapsible className="col-start-2">

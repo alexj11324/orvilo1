@@ -1,9 +1,10 @@
-import { Loader2, SquareArrowOutUpRight } from 'lucide-react';
+import { SquareArrowOutUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -245,9 +246,7 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
             className="flex flex-row items-center gap-1"
             onClick={(event) => event.stopPropagation()}
           >
-            <span className="anticon animate-spin" role="img">
-              <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-            </span>
+            <Spinner className="size-[1em]" />
           </div>
         );
       }
@@ -274,11 +273,7 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
       switch (server.status) {
         case OrviloSkillStatus.CONNECTED: {
           if (isToggling) {
-            return (
-              <span className="anticon animate-spin" role="img">
-                <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-              </span>
-            );
+            return <Spinner className="size-[1em]" />;
           }
           return (
             <Checkbox
@@ -299,9 +294,7 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
                 className="flex flex-row items-center gap-1"
                 onClick={(event) => event.stopPropagation()}
               >
-                <span className="anticon animate-spin" role="img">
-                  <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                </span>
+                <Spinner className="size-[1em]" />
               </div>
             );
           }

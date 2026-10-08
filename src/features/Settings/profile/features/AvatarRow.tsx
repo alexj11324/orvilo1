@@ -1,9 +1,10 @@
 'use client';
 
-import { Loader2Icon, PencilIcon } from 'lucide-react';
+import { PencilIcon } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { Upload } from '@/components/Upload';
 import UserAvatar from '@/features/User/UserAvatar';
 import { useUserStore } from '@/store/user';
@@ -60,7 +61,7 @@ const AvatarRow = () => {
           style={uploading ? { opacity: 1 } : undefined}
         >
           {uploading ? (
-            <Loader2Icon className="size-4 animate-spin text-white" />
+            <Spinner className="size-4 text-white" />
           ) : (
             <PencilIcon className="size-4 text-white" />
           )}

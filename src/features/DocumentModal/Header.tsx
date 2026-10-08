@@ -66,7 +66,11 @@ const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
           <AutoSaveHint documentId={documentId} style={{ marginLeft: 4 }} />
         )}
         <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
-          <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+          <ActionIcon
+            aria-label={t('more', { ns: 'common' })}
+            icon={MoreHorizontal}
+            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+          />
         </DropdownMenu>
       </div>
       <div className="flex items-center gap-1">

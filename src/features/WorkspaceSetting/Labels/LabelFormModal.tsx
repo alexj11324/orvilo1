@@ -1,7 +1,6 @@
 import { type AgentLabelListItem } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { t as translate } from 'i18next';
-import { Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -173,10 +172,10 @@ const LabelFormContent = memo<LabelFormModalOptions>(({ assignTo, label, restore
         <Button
           aria-busy={loading}
           disabled={!name.trim() || !isValidLabelColor(color) || loading}
+          loading={loading}
           variant="default"
           onClick={handleSave}
         >
-          {loading && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {t('ok', { defaultValue: 'OK', ns: 'common' })}
         </Button>
       </ModalFooter>

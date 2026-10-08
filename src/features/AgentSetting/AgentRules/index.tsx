@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +10,7 @@ import urlJoin from 'url-join';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import { FormGroup } from '@/components/GroupForm';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { useExpertiseOverview } from '@/features/SelfLearning/hooks';
 import { useAgentStore } from '@/store/agent';
 
@@ -94,10 +95,8 @@ const AgentRules = memo(() => {
             {t('agentRules.summary', { count: ruleCount })}
           </div>
           {openPath && (
-            <Link to={openPath}>
-              <Button size="sm" variant="ghost">
-                {t('agentRules.open')}
-              </Button>
+            <Link className={cn(buttonVariants({ size: 'sm', variant: 'ghost' }))} to={openPath}>
+              {t('agentRules.open')}
             </Link>
           )}
         </div>

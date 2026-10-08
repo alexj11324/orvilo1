@@ -44,6 +44,7 @@ const ChatHeaderTitle = memo(() => {
           </span>
           <ActionIcon
             active
+            aria-label={t('toggle', { ns: 'common' })}
             icon={ChevronDown}
             size={{ blockSize: 14, borderRadius: '50%', size: 12 }}
             style={{

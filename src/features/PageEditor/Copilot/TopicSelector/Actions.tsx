@@ -1,5 +1,6 @@
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import SidebarDropdownMenu, {
@@ -11,12 +12,13 @@ interface ActionsProps {
 }
 
 const Actions = memo<ActionsProps>(({ dropdownMenu }) => {
+  const { t: tCommon } = useTranslation('common');
   if (!dropdownMenu || (typeof dropdownMenu !== 'function' && dropdownMenu.length === 0))
     return null;
 
   return (
     <SidebarDropdownMenu items={dropdownMenu}>
-      <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
+      <ActionIcon aria-label={tCommon('more')} icon={MoreHorizontalIcon} size={'small'} />
     </SidebarDropdownMenu>
   );
 });

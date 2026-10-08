@@ -10,7 +10,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import Marquee from 'react-fast-marquee';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { OFFICIAL_URL } from '@/const/url';
 import { useIsDark } from '@/hooks/useIsDark';
 import { isOnServerSide } from '@/utils/env';
@@ -88,13 +88,12 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
       >
         {isTruncated ? <Marquee pauseOnHover>{content}</Marquee> : content}
         <a
+          className={cn(buttonVariants({ size: 'sm', variant: 'default' }))}
           href={`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}&utm_medium=banner`}
           rel="noreferrer"
           target="_blank"
         >
-          <Button size="sm" variant="default">
-            {t('alert.cloud.action')} <ArrowRightIcon />
-          </Button>
+          {t('alert.cloud.action')} <ArrowRightIcon />
         </a>
       </div>
     </div>

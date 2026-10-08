@@ -67,8 +67,8 @@ import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { usePermission } from '@/hooks/usePermission';
@@ -920,7 +920,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             : undefined
         }
       >
-        <div className="flex h-full flex-1 flex-col">
+        <WorkSurface>
           {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
             <div
@@ -943,58 +943,54 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
             </div>
           ) : isScheduledCollection ? (
-            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-              <div className="flex flex-col gap-4 px-4 py-4">
-                <AutomationScheduleList
-                  error={collectionSWR.error}
-                  hasSettled={isCollectionListInit}
-                  isFiltered={automationStatusFilter !== 'all'}
-                  isLoading={!isCollectionListInit && !collectionSWR.error}
-                  page={collectionPage}
-                  tasks={collectionTasks}
-                  total={collectionTasksTotal}
-                  emptyContent={
-                    <div className="flex flex-col items-center py-12">
-                      <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
-                    </div>
-                  }
-                  onPageChange={setCollectionPage}
-                  onRefetch={() => collectionSWR.mutate()}
-                />
-              </div>
-            </WideScreenContainer>
-          ) : isMineCollection ? (
-            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-              <div className="flex flex-col gap-4 px-4 py-4">
-                <TaskList
-                  data={isCollectionListInit || undefined}
-                  error={collectionSWR.error}
-                  items={collectionTasks}
-                  options={myTaskViewOptions}
-                  routeScope={routeScope}
-                  emptyDescription={t(
-                    myTaskScope === 'created'
-                      ? 'taskList.mine.emptyCreated'
-                      : 'taskList.mine.emptyAssigned',
-                  )}
-                  isLoading={
-                    collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
-                  }
-                  onRetry={() => collectionSWR.mutate()}
-                />
-                {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-                  <div className="flex justify-center py-2">
-                    <TablePagination
-                      current={collectionPage}
-                      pageSize={COLLECTION_PAGE_SIZE}
-                      pageSizeOptions={[COLLECTION_PAGE_SIZE]}
-                      total={collectionTasksTotal}
-                      onChange={(page) => setCollectionPage(page)}
-                    />
+            <WorkSurfaceCollection className="flex flex-col gap-4">
+              <AutomationScheduleList
+                error={collectionSWR.error}
+                hasSettled={isCollectionListInit}
+                isFiltered={automationStatusFilter !== 'all'}
+                isLoading={!isCollectionListInit && !collectionSWR.error}
+                page={collectionPage}
+                tasks={collectionTasks}
+                total={collectionTasksTotal}
+                emptyContent={
+                  <div className="flex flex-col items-center py-12">
+                    <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
                   </div>
+                }
+                onPageChange={setCollectionPage}
+                onRefetch={() => collectionSWR.mutate()}
+              />
+            </WorkSurfaceCollection>
+          ) : isMineCollection ? (
+            <WorkSurfaceCollection className="flex flex-col gap-4">
+              <TaskList
+                data={isCollectionListInit || undefined}
+                error={collectionSWR.error}
+                items={collectionTasks}
+                options={myTaskViewOptions}
+                routeScope={routeScope}
+                emptyDescription={t(
+                  myTaskScope === 'created'
+                    ? 'taskList.mine.emptyCreated'
+                    : 'taskList.mine.emptyAssigned',
                 )}
-              </div>
-            </WideScreenContainer>
+                isLoading={
+                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                }
+                onRetry={() => collectionSWR.mutate()}
+              />
+              {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
+                <div className="flex justify-center py-2">
+                  <TablePagination
+                    current={collectionPage}
+                    pageSize={COLLECTION_PAGE_SIZE}
+                    pageSizeOptions={[COLLECTION_PAGE_SIZE]}
+                    total={collectionTasksTotal}
+                    onChange={(page) => setCollectionPage(page)}
+                  />
+                </div>
+              )}
+            </WorkSurfaceCollection>
           ) : ordinarySurface === 'board' ? (
             <div
               className="flex flex-1 flex-col"
@@ -1032,115 +1028,113 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             </div>
           ) : (
             <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
-              <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-                <div className="flex flex-col gap-4 px-4 py-4">
-                  {projectId && (
-                    <IssueFilterChips
-                      agentName={agentName}
-                      filters={issueFilters}
-                      labelName={labelName}
-                      memberName={memberName}
-                      onClearAll={() => updateIssueFilters([])}
-                      onRemove={(key) =>
-                        updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
-                      }
+              <WorkSurfaceCollection className="flex flex-col gap-4">
+                {projectId && (
+                  <IssueFilterChips
+                    agentName={agentName}
+                    filters={issueFilters}
+                    labelName={labelName}
+                    memberName={memberName}
+                    onClearAll={() => updateIssueFilters([])}
+                    onRemove={(key) =>
+                      updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+                    }
+                  />
+                )}
+                {!inlineCollapsed && (
+                  <CreateTaskInlineEntry
+                    agentId={agentId}
+                    lockAssignee={!!agentId}
+                    projectId={projectId}
+                  />
+                )}
+                {serverGroupedList ? (
+                  issueListPages.error && issueListGroups.length === 0 ? (
+                    <AsyncError
+                      error={issueListPages.error}
+                      variant={'block'}
+                      onRetry={() => issueListPages.refresh()}
                     />
-                  )}
-                  {!inlineCollapsed && (
-                    <CreateTaskInlineEntry
-                      agentId={agentId}
-                      lockAssignee={!!agentId}
-                      projectId={projectId}
-                    />
-                  )}
-                  {serverGroupedList ? (
-                    issueListPages.error && issueListGroups.length === 0 ? (
-                      <AsyncError
-                        error={issueListPages.error}
-                        variant={'block'}
-                        onRetry={() => issueListPages.refresh()}
-                      />
-                    ) : (
-                      <WorkQueryResults
-                        nestInGroups
-                        axisKeyRank={issueGroupRank}
-                        emptyLabel={t('taskList.empty')}
-                        flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
-                        groupBy={issueListQuery?.groupBy}
-                        groupIcon={issueGroupIcon}
-                        groupTitle={issueGroupTitle}
-                        groups={issueListGroups}
-                        layout={'list'}
-                        loadMoreGroupErrors={issueListGroupErrors}
-                        loadMoreLabel={t('topicComment.loadMore')}
-                        loadingLabel={t('taskList.filter.loading')}
-                        peekOnSelect={peekOnSelect}
-                        selectedTaskId={selectedIdentifier ?? undefined}
-                        subGroupBy={issueListQuery?.subGroupBy}
-                        tasks={issueListPages.tasks}
-                        total={issueListPages.total}
-                        loading={
-                          issueListPages.isLoading ||
-                          (!issueListPages.settled && !issueListPages.error)
-                        }
-                        milestoneFor={(task) =>
-                          viewOptions.showMilestone && task.projectMilestoneId
-                            ? projectMilestones?.find(
-                                (milestone) => milestone.id === task.projectMilestoneId,
-                              )
-                            : undefined
-                        }
-                        onRetryLoadMoreGroup={retryIssueListGroup}
-                        onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                        onLoadMoreGroup={(key) =>
-                          runIssueListGroup(key, () => issueListPages.loadMoreGroup(key))
-                        }
-                        onOpenTask={(task) =>
-                          navigate(taskDetailPath(task.identifier, undefined, task.name))
-                        }
-                      />
-                    )
                   ) : (
-                    <TaskList
-                      error={issueListQuery ? issueListPages.error : error}
-                      items={filteredIssueTasks}
-                      milestones={projectId ? projectMilestones : undefined}
-                      options={viewOptions}
+                    <WorkQueryResults
+                      nestInGroups
+                      axisKeyRank={issueGroupRank}
+                      emptyLabel={t('taskList.empty')}
+                      flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
+                      groupBy={issueListQuery?.groupBy}
+                      groupIcon={issueGroupIcon}
+                      groupTitle={issueGroupTitle}
+                      groups={issueListGroups}
+                      layout={'list'}
+                      loadMoreGroupErrors={issueListGroupErrors}
+                      loadMoreLabel={t('topicComment.loadMore')}
+                      loadingLabel={t('taskList.filter.loading')}
                       peekOnSelect={peekOnSelect}
-                      routeScope={routeScope}
-                      selectedIdentifier={selectedIdentifier ?? undefined}
-                      data={
-                        issueListQuery
-                          ? issueListPages.settled || undefined
-                          : isTaskListInit || undefined
+                      selectedTaskId={selectedIdentifier ?? undefined}
+                      subGroupBy={issueListQuery?.subGroupBy}
+                      tasks={issueListPages.tasks}
+                      total={issueListPages.total}
+                      loading={
+                        issueListPages.isLoading ||
+                        (!issueListPages.settled && !issueListPages.error)
                       }
-                      isLoading={
-                        issueListQuery
-                          ? issueListPages.isLoading ||
-                            (!issueListPages.settled && !issueListPages.error)
-                          : isLoading || (!isTaskListInit && !error)
+                      milestoneFor={(task) =>
+                        viewOptions.showMilestone && task.projectMilestoneId
+                          ? projectMilestones?.find(
+                              (milestone) => milestone.id === task.projectMilestoneId,
+                            )
+                          : undefined
                       }
-                      onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
+                      onRetryLoadMoreGroup={retryIssueListGroup}
                       onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                      onShowHiddenCompleted={handleShowHiddenCompleted}
+                      onLoadMoreGroup={(key) =>
+                        runIssueListGroup(key, () => issueListPages.loadMoreGroup(key))
+                      }
                       onOpenTask={(task) =>
                         navigate(taskDetailPath(task.identifier, undefined, task.name))
                       }
                     />
-                  )}
-                  {issueListQuery && !serverGroupedList && issueListPages.hasMore ? (
-                    <div className="flex justify-center py-2">
-                      <Button
-                        disabled={issueListPages.loadingMore}
-                        variant="outline"
-                        onClick={() => void issueListPages.loadMore()}
-                      >
-                        {t('topicComment.loadMore')}
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              </WideScreenContainer>
+                  )
+                ) : (
+                  <TaskList
+                    error={issueListQuery ? issueListPages.error : error}
+                    items={filteredIssueTasks}
+                    milestones={projectId ? projectMilestones : undefined}
+                    options={viewOptions}
+                    peekOnSelect={peekOnSelect}
+                    routeScope={routeScope}
+                    selectedIdentifier={selectedIdentifier ?? undefined}
+                    data={
+                      issueListQuery
+                        ? issueListPages.settled || undefined
+                        : isTaskListInit || undefined
+                    }
+                    isLoading={
+                      issueListQuery
+                        ? issueListPages.isLoading ||
+                          (!issueListPages.settled && !issueListPages.error)
+                        : isLoading || (!isTaskListInit && !error)
+                    }
+                    onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
+                    onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                    onShowHiddenCompleted={handleShowHiddenCompleted}
+                    onOpenTask={(task) =>
+                      navigate(taskDetailPath(task.identifier, undefined, task.name))
+                    }
+                  />
+                )}
+                {issueListQuery && !serverGroupedList && issueListPages.hasMore ? (
+                  <div className="flex justify-center py-2">
+                    <Button
+                      disabled={issueListPages.loadingMore}
+                      variant="outline"
+                      onClick={() => void issueListPages.loadMore()}
+                    >
+                      {t('topicComment.loadMore')}
+                    </Button>
+                  </div>
+                ) : null}
+              </WorkSurfaceCollection>
               {peekOnSelect && (
                 <div className={styles.detailPane}>
                   <IssueDetailPane
@@ -1161,7 +1155,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onClose={() => setAdvancedFilterOpen(false)}
             />
           )}
-        </div>
+        </WorkSurface>
       </LinearTaskSyncProvider>
     </CollaborationProvider>
   );

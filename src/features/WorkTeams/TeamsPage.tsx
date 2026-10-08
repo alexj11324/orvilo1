@@ -5,11 +5,12 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { SearchIcon, SearchXIcon, UsersIcon, XIcon } from 'lucide-react';
-import { createElement, memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import {
   InputGroup,
   InputGroupAddon,
@@ -164,12 +165,7 @@ const TeamsPage = memo(() => {
         }
       />
       {!workspaceId ? (
-        <div className="flex flex-col items-center justify-center flex-1">
-          <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-            <UsersIcon aria-hidden className="size-8" />
-            <p>{t('teams.personal')}</p>
-          </div>
-        </div>
+        <SimpleEmpty description={t('teams.personal')} icon={UsersIcon} />
       ) : (
         <WorkSurfaceCollection
           toolbar={
@@ -198,21 +194,16 @@ const TeamsPage = memo(() => {
           {error ? (
             <AsyncError error={error} onRetry={() => revalidate()} />
           ) : isLoading ? (
-            <div aria-busy className="flex flex-col gap-2">
+            <div aria-busy className="flex flex-col gap-0.5">
               {Array.from({ length: 8 }, (_, index) => (
-                <Skeleton className="h-10 w-full" key={index} />
+                <Skeleton className="h-9 w-full" key={index} />
               ))}
             </div>
           ) : teams.length === 0 ? (
-            <div className="flex flex-col items-center justify-center flex-1 p-12">
-              <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-                {createElement(searching ? SearchXIcon : UsersIcon, {
-                  'aria-hidden': true,
-                  'className': 'size-8',
-                })}
-                <p>{searching ? t('teams.searchEmpty') : t('teams.empty')}</p>
-              </div>
-            </div>
+            <SimpleEmpty
+              description={searching ? t('teams.searchEmpty') : t('teams.empty')}
+              icon={searching ? SearchXIcon : UsersIcon}
+            />
           ) : (
             <div className="flex flex-col" style={{ gap: 2 }}>
               {teams.map((team) => (

@@ -62,6 +62,7 @@ const KVRow: FC<KVRowProps> = ({ keyName, value }) => {
             {visible ? <EyeOff size={16} /> : <Eye size={16} />}
           </Button>
           <Button
+            aria-label={t('copy', { ns: 'common' })}
             size="icon-sm"
             type="button"
             variant="ghost"

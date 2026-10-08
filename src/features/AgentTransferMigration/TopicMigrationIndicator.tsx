@@ -1,8 +1,8 @@
 'use client';
 
-import { cssVar } from 'antd-style';
-import { Loader2 } from 'lucide-react';
 import { memo } from 'react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 import { useTopicMigrationPending } from './MigrationBanner';
 import type { MigrationTarget } from './useAgentTransferJob';
@@ -22,7 +22,7 @@ const TopicMigrationIndicator = memo<TopicMigrationIndicatorProps>(
 
     if (!topicPending) return null;
 
-    return <Loader2 className="animate-spin" color={cssVar.colorTextQuaternary} size={12} />;
+    return <Spinner className="size-3 text-muted-foreground" />;
   },
 );
 

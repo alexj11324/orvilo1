@@ -81,7 +81,12 @@ const InstallInstructionsHover = memo<{
       <PopoverTrigger
         render={
           <span onMouseEnter={scheduleOpen} onMouseLeave={scheduleClose}>
-            <ActionIcon color={cssVar.colorTextDescription} icon={DownloadIcon} size={'small'} />
+            <ActionIcon
+              aria-label={t('download', { ns: 'common' })}
+              color={cssVar.colorTextDescription}
+              icon={DownloadIcon}
+              size={'small'}
+            />
           </span>
         }
       />

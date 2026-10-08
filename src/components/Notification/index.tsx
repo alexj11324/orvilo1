@@ -4,6 +4,7 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { type HTMLAttributes, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { useIsDark } from '@/hooks/useIsDark';
@@ -73,6 +74,7 @@ const Notification = memo<NotificationProps>(
     className,
     ...rest
   }) => {
+    const { t: tCommon } = useTranslation('common');
     const isDarkMode = useIsDark();
     const { className: wrapperClassName, ...restWrapper } = wrapper;
     return (
@@ -86,7 +88,12 @@ const Notification = memo<NotificationProps>(
           {...rest}
         >
           {showCloseIcon && (
-            <ActionIcon className={styles.cancelIcon} icon={XIcon} onClick={() => onCancel?.()} />
+            <ActionIcon
+              aria-label={tCommon('close')}
+              className={styles.cancelIcon}
+              icon={XIcon}
+              onClick={() => onCancel?.()}
+            />
           )}
           <div
             style={{ padding: '20px 20px 16px' }}

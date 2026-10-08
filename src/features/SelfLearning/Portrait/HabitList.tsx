@@ -235,7 +235,11 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
         <RecentDots recent={habit.recent} />
         <div className={cx('teach', 'flex items-center gap-1')} style={{ flex: 'none' }}>
           <DropdownMenu items={menu}>
-            <ActionIcon icon={MoreHorizontalIcon} size="small" />
+            <ActionIcon
+              aria-label={t('more', { ns: 'common' })}
+              icon={MoreHorizontalIcon}
+              size="small"
+            />
           </DropdownMenu>
         </div>
       </div>

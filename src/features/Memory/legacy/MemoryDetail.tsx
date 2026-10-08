@@ -3,6 +3,8 @@ import { Button, Text } from '@lobehub/ui/base-ui';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import DetailLoading from '@/routes/(main)/memory/features/DetailLoading';
+import DetailNotFound from '@/routes/(main)/memory/features/DetailNotFound';
 import HighlightedContent from '@/routes/(main)/memory/features/HighlightedContent';
 import { useUserMemoryStore } from '@/store/userMemory';
 import { type LayersEnum } from '@/types/userMemory';
@@ -41,10 +43,11 @@ export default function MemoryDetail({
       </Flexbox>
       <AsyncBoundary
         data={data}
-        empty={<Text>{t('detail.notFound.title')}</Text>}
+        empty={<DetailNotFound />}
         error={error}
         isEmpty={!data}
         isLoading={isLoading}
+        loading={<DetailLoading />}
         onRetry={() => void mutate()}
       >
         {fields

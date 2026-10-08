@@ -15,6 +15,7 @@ import {
 } from '@/features/AgentGoals/ProcessControl/goalGraphViewModel';
 import { KindDot } from '@/features/AgentGoals/ProcessControl/shared';
 import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
+import PortalBodyState from '@/features/Portal/components/PortalBodyState';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -556,11 +557,27 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
 Liveness.displayName = 'GoalMetricLiveness';
 
 const Body = memo(() => {
+  const { t } = useTranslation('chat');
   const view = useChatStore(chatPortalSelectors.goalMetricView);
   const snapshot = useGoalStore(goalSelectors.goalGraph(view?.goalId ?? ''));
+  const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
+  // Same SWR key as the goal page, so this shares its request; it only adds the
+  // loading / error status the store snapshot alone cannot express.
+  const { error, isLoading, mutate } = useFetchGoalGraph(view?.goalId);
   const graph = useMemo(() => (snapshot ? buildGoalGraphView(snapshot) : undefined), [snapshot]);
 
-  if (!view || !graph) return null;
+  if (!view) return null;
+  if (!graph) {
+    return (
+      <PortalBodyState
+        error={error}
+        isLoading={isLoading}
+        notFoundDesc={t('goalDetail.notFoundDescription')}
+        notFoundTitle={t('goalDetail.notFoundTitle')}
+        onRetry={() => void mutate()}
+      />
+    );
+  }
   const { goalId, metric } = view;
 
   return (

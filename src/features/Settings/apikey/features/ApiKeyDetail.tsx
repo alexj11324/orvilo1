@@ -1,5 +1,5 @@
 'use client';
-import { Loader2, Pencil, Trash } from 'lucide-react';
+import { Pencil, Trash } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -79,6 +79,7 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
           </Button>
           <Button
             disabled={saving || scopeMissing}
+            loading={saving}
             type="button"
             variant="default"
             onClick={async () => {
@@ -96,7 +97,6 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
               }
             }}
           >
-            {saving && <Loader2 className="animate-spin" />}
             {t('apikey.detail.permissions.save')}
           </Button>
         </div>

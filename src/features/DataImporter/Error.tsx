@@ -40,7 +40,6 @@ const Error = memo<ErrorProps>(({ error, onClick }) => {
               components={[
                 <span key="0" />,
                 <a
-                  aria-label={'issue'}
                   href={GITHUB_ISSUES}
                   key="1"
                   rel="noreferrer"

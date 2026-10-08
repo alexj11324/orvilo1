@@ -133,7 +133,16 @@ type PreviewProject = {
 };
 
 const previewProjectGroups = (
-  data: { projectGroups?: { hasMore: boolean; key: string; projects: PreviewProject[]; total: number }[] } | undefined,
+  data:
+    | {
+        projectGroups?: {
+          hasMore: boolean;
+          key: string;
+          projects: PreviewProject[];
+          total: number;
+        }[];
+      }
+    | undefined,
 ): WorkQueryGroupPage<PreviewProject>[] => {
   if (!data?.projectGroups) return [];
   return data.projectGroups.map((group) => ({
@@ -181,8 +190,7 @@ const TeamViewsSurface = ({
               ...current,
               builder: { any: [], rows: [], slots: [] },
               entityType,
-              groupBy:
-                entityType === 'task' || current.layout === 'board' ? 'status' : 'none',
+              groupBy: entityType === 'task' || current.layout === 'board' ? 'status' : 'none',
             },
       );
     }
@@ -227,7 +235,9 @@ const TeamViewsSurface = ({
   const [taskTail, setTaskTail] = useState<WorkQueryResultTask[]>([]);
   const [groupTail, setGroupTail] = useState<WorkQueryGroupPage<WorkQueryResultTask>[]>([]);
   const [projectTail, setProjectTail] = useState<PreviewProject[]>([]);
-  const [projectGroupTail, setProjectGroupTail] = useState<WorkQueryGroupPage<PreviewProject>[]>([]);
+  const [projectGroupTail, setProjectGroupTail] = useState<WorkQueryGroupPage<PreviewProject>[]>(
+    [],
+  );
   const {
     loadMoreError,
     loadMoreGroupErrors,
@@ -525,10 +535,8 @@ const TeamViewsSurface = ({
                 groups={projectGroups}
                 loadMoreGroupErrors={loadMoreGroupErrors}
                 loadMoreLabel={t('savedViews.loadMore')}
+                onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreProjectGroup(key))}
                 onRetryLoadMoreGroup={retryLoadMoreGroup}
-                onLoadMoreGroup={(key) =>
-                  runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
-                }
               />
             ) : projectGrouped ? (
               projectGroups.some((group) => group.total > 0 || group.tasks.length > 0) ? (
@@ -536,10 +544,8 @@ const TeamViewsSurface = ({
                   groups={projectGroups}
                   loadMoreGroupErrors={loadMoreGroupErrors}
                   loadMoreLabel={t('savedViews.loadMore')}
+                  onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreProjectGroup(key))}
                   onRetryLoadMoreGroup={retryLoadMoreGroup}
-                  onLoadMoreGroup={(key) =>
-                    runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
-                  }
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-12">
@@ -554,11 +560,7 @@ const TeamViewsSurface = ({
                   <SavedViewProjectRow key={project.id} project={project} />
                 ))}
                 {loadMoreError ? (
-                  <AsyncError
-                    error={loadMoreError}
-                    variant={'inline'}
-                    onRetry={retryLoadMore}
-                  />
+                  <AsyncError error={loadMoreError} variant={'inline'} onRetry={retryLoadMore} />
                 ) : workQueryHasMore(projectRows.length, result?.total) ? (
                   <div className="flex flex-row justify-center">
                     <Button size="sm" onClick={() => runLoadMore(loadMoreProjects)}>
@@ -589,14 +591,10 @@ const TeamViewsSurface = ({
               subGroupBy={query.subGroupBy}
               tasks={tasks}
               total={result?.total}
+              onLoadMore={draft.layout === 'list' ? () => runLoadMore(loadMoreTasks) : undefined}
+              onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreTaskGroup(key))}
               onRetryLoadMore={retryLoadMore}
               onRetryLoadMoreGroup={retryLoadMoreGroup}
-              onLoadMore={
-                draft.layout === 'list' ? () => runLoadMore(loadMoreTasks) : undefined
-              }
-              onLoadMoreGroup={(key) =>
-                runLoadMoreGroup(key, () => loadMoreTaskGroup(key))
-              }
             />
           )}
         </div>
@@ -627,9 +625,9 @@ const TeamViewsSurface = ({
         {error && sortedViews.length === 0 ? (
           <AsyncError error={error} onRetry={onRetry} />
         ) : isLoading && sortedViews.length === 0 ? (
-          <div aria-busy aria-label={t('savedViews.loading')} className="flex flex-col gap-2">
+          <div aria-busy aria-label={t('savedViews.loading')} className="flex flex-col gap-0.5">
             {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton className="h-10 w-full" key={index} />
+              <Skeleton className="h-11 w-full" key={index} />
             ))}
           </div>
         ) : sortedViews.length ? (

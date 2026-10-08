@@ -40,13 +40,7 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
               ns={'file'}
               components={[
                 <span key="0" />,
-                <a
-                  aria-label={'todo'}
-                  href={MORE_FILE_PREVIEW_REQUEST_URL}
-                  key="1"
-                  rel="noreferrer"
-                  target="_blank"
-                />,
+                <a href={MORE_FILE_PREVIEW_REQUEST_URL} key="1" rel="noreferrer" target="_blank" />,
               ]}
             />
           </div>

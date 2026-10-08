@@ -2113,6 +2113,7 @@
   "taskList.details.close": "Close details",
   "taskList.details.open": "Open details",
   "taskList.details.selectIssue": "Select an issue to see its details",
+  "taskList.displayOptions": "Display options",
   "taskList.empty": "No tasks yet",
   "taskList.filter.add": "Add filter",
   "taskList.filter.advanced": "Advanced filter",

@@ -5,6 +5,7 @@
   "agentLabel.create": "新建标签",
   "agentLabel.manage": "管理标签",
   "agentLabel.menuTitle": "标签",
+  "agentViewAll.createAgent": "创建智能体",
   "agentViewAll.empty": "暂无智能体",
   "agentViewAll.form.grouping": "分组",
   "agentViewAll.form.ordering": "排序",

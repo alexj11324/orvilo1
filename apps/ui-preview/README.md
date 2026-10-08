@@ -4,15 +4,15 @@ This is the existing Web SPA, not a separately implemented UI. Baseline: `alexj1
 
 ## Component provenance
 
-| Surface | Existing source retained |
-| --- | --- |
+| Surface               | Existing source retained                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
 | Web entry and routing | `src/spa/entry.web.tsx`, `src/spa/router/desktopRouter.config.tsx`, `desktopRouter.shared.tsx` |
-| Sidebar | `src/features/HomeSidebar`, `src/features/NavPanel` |
-| Issues | `src/features/AgentTasks`, `src/store/task` |
-| Conversation | Existing Agent/Conversation route, chat components and stores |
-| Settings | Existing Settings routes and components |
-| Shared work surface | `src/features/WorkSurface/WorkSurface.tsx` |
-| Primitive components | Existing `src/components/ui` and the repository theme tokens |
+| Sidebar               | `src/features/HomeSidebar`, `src/features/NavPanel`                                            |
+| Issues                | `src/features/AgentTasks`, `src/store/task`                                                    |
+| Conversation          | Existing Agent/Conversation route, chat components and stores                                  |
+| Settings              | Existing Settings routes and components                                                        |
+| Shared work surface   | `src/features/WorkSurface/WorkSurface.tsx`                                                     |
+| Primitive components  | Existing `src/components/ui` and the repository theme tokens                                   |
 
 `src/spa/preview/entry.ts` installs fixtures before dynamically importing the shipped Web entry. It does not define a replacement router, shell, page set, or state store. The production entry/config is unchanged.
 
@@ -42,6 +42,7 @@ Reset sample data from the browser console with `window.__ORVILO_PREVIEW__.reset
 ## Original-component improvements
 
 - The original `TaskBoardCard` title is a native, workspace-aware link. Keyboard focus is visible; normal card clicks, context menus, draggable attributes and drag-overlay inertness are preserved.
+- Title keyboard events stay on the link so Enter opens the issue instead of activating the surrounding sortable card.
 - Card surfaces and identifier contrast use existing semantic tokens. Heavy fixed black shadows are removed and reduced-motion preferences are respected.
 - The original `WorkSurface` establishes `min-width: 0` throughout its flex hierarchy and a stable scroll gutter, reducing overflow and scrollbar-driven layout movement.
 

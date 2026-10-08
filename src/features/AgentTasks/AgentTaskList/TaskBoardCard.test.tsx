@@ -336,6 +336,19 @@ describe('TaskBoardCard', () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
+  it('keeps title keyboard activation out of the sortable card listener', () => {
+    const startDrag = vi.fn();
+    render(
+      <div onKeyDown={startDrag}>
+        <TaskBoardCard task={createTask()} />
+      </div>,
+    );
+    const link = screen.getByRole('link', { name: /T-22/ });
+    expect(fireEvent.keyDown(link, { key: 'Enter' })).toBe(true);
+    expect(fireEvent.keyDown(link, { key: ' ' })).toBe(true);
+    expect(startDrag).not.toHaveBeenCalled();
+  });
+
   it('does not add a duplicate focus stop to the drag overlay', () => {
     const { container } = render(<TaskBoardCard overlay task={createTask()} />);
     expect(container.querySelector('a')).toBeNull();

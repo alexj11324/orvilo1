@@ -111,8 +111,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-weight: 500;
     line-height: 20px;
     color: ${cssVar.colorText};
-    word-break: break-word;
     text-decoration: none;
+    word-break: break-word;
 
     &:focus-visible {
       border-radius: 2px;
@@ -427,6 +427,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               className={styles.title}
               href={detailHref}
               onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
             >
               {hasName ? task.name : task.identifier}
             </Link>

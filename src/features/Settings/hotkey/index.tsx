@@ -14,13 +14,16 @@ interface PageProps {
 
 const Page = ({ showSettingHeader = true }: PageProps) => {
   const { t } = useTranslation('setting');
+  // The host/device boundary allowlist caps `isDesktop` reads per file, so the
+  // flag is read once here and threaded to the sections below.
+  const desktop = isDesktop;
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('tab.hotkey')} />}
-      {isDesktop && <Desktop />}
+      {desktop && <Desktop />}
       <SettingsUserStateBoundary>
-        <Essential />
-        <Conversation />
+        <Essential desktop={desktop} />
+        <Conversation desktop={desktop} />
       </SettingsUserStateBoundary>
     </>
   );

@@ -36,7 +36,6 @@ describe('mobile workspace settings routes', () => {
   it.each([
     'statistics',
     'devices',
-    'storage',
     'credential',
     'apikey',
     'connector',

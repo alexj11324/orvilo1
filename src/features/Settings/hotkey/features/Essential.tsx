@@ -18,8 +18,14 @@ import { settingsSelectors } from '@/store/user/selectors';
 import { type HotkeyItem } from '@/types/hotkey';
 
 import { hotkeyFormStyles } from './styles';
+import { getHotkeyConflicts, getVisibleHotkeys } from './visibleHotkeys';
 
-const HotkeySetting = memo(() => {
+interface HotkeySettingProps {
+  /** Whether the Electron-only shortcuts apply on this surface. */
+  desktop: boolean;
+}
+
+const HotkeySetting = memo<HotkeySettingProps>(({ desktop }) => {
   const { t } = useTranslation(['setting', 'hotkey']);
   const [form] = Form.useForm();
 
@@ -37,12 +43,7 @@ const HotkeySetting = memo(() => {
   };
 
   const mapHotkeyItem = (item: HotkeyItem) => {
-    const hotkeyConflicts = Object.entries(hotkey)
-      .map(([key, value]) => {
-        if (key === item.id) return false;
-        return value;
-      })
-      .filter(Boolean) as string[];
+    const hotkeyConflicts = getHotkeyConflicts(hotkey, item.id, HOTKEYS_REGISTRATION);
 
     return {
       children: (
@@ -62,7 +63,7 @@ const HotkeySetting = memo(() => {
   };
 
   const essential: FormGroupItemType = {
-    children: HOTKEYS_REGISTRATION.filter((item) => item.group === HotkeyGroupEnum.Essential).map(
+    children: getVisibleHotkeys(HOTKEYS_REGISTRATION, HotkeyGroupEnum.Essential, desktop).map(
       (item) => mapHotkeyItem(item),
     ),
     extra:

@@ -33,7 +33,6 @@ export enum ChatSettingsTabs {
   Graph = 'graph',
   Opening = 'opening',
   Plugin = 'plugin',
-  Prompt = 'prompt',
   Rules = 'rules',
   SelfIteration = 'selfIteration',
 }

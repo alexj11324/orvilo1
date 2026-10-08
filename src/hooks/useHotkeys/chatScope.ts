@@ -31,10 +31,6 @@ export const useToggleTerminalPanelHotkey = () => {
   });
 };
 
-// Note: useRegenerateMessageHotkey has been moved to ConversationStore
-// Note: useDeleteAndRegenerateMessageHotkey has been moved to ConversationStore
-// Note: useDeleteLastMessageHotkey has been moved to ConversationStore
-
 export const useAddUserMessageHotkey = (send: () => void) => {
   return useHotkeyById(
     HotkeyEnum.AddUserMessage,
@@ -56,7 +52,6 @@ export const useRegisterChatHotkeys = () => {
   useOpenChatSettingsHotkey();
 
   // Conversation
-  // Note: Regenerate and delete hotkeys have been moved to ConversationStore
   useSaveTopicHotkey();
 
   useEffect(() => {

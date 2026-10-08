@@ -363,7 +363,6 @@
   "generation.promptModeration.blocked": "内容政策检查未通过。请修改你的提示。",
   "getApp": "获取应用",
   "getDesktopApp": "获取桌面应用",
-  "getMobileApp": "在手机浏览器使用",
   "globalSearch.empty": "没有找到“{{query}}”的结果",
   "globalSearch.error": "搜索失败，请稍后重试。",
   "globalSearch.loading": "搜索中…",

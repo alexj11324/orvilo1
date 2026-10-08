@@ -146,6 +146,17 @@ describe('resolveSettingsCapability', () => {
     expect(isSettingsTabAvailable('apikey', ctx)).toBe(true);
   });
 
+  it('answers not-found for Notification where nothing hosts the page', () => {
+    // On the Web without business pages the component is a blank placeholder.
+    const plainWeb = context({ enableBusinessFeatures: false, isDesktop: false });
+
+    expect(isSettingsTabAvailable('notification', plainWeb)).toBe(false);
+    expect(isSettingsTabAvailable('notification', context({ isDesktop: true }))).toBe(true);
+    expect(isSettingsTabAvailable('notification', context({ enableBusinessFeatures: true }))).toBe(
+      true,
+    );
+  });
+
   it('answers every kind of id with exactly one of the five statuses', () => {
     // This is the table the page renderer switches on: only `enabled` renders a
     // component, `retired` with a `redirectTo` moves, everything else is a

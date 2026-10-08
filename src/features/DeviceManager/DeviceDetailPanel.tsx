@@ -100,10 +100,22 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
   // mutation; personal devices stay userId-scoped. Route by the device's own
   // scope.
   const onUpdateSuccess = () => refreshDeviceList();
+  // A failed save must not leave the edited text sitting in the inputs as if it
+  // had been stored: roll back the local fields the failed request carried.
+  const onUpdateError = (
+    _error: unknown,
+    variables: { defaultCwd?: unknown; friendlyName?: unknown },
+  ) => {
+    if ('friendlyName' in variables) setName(device.friendlyName ?? '');
+    if ('defaultCwd' in variables) setCwd(device.defaultCwd ?? '');
+    toast.error(t('devices.edit.saveFailed'));
+  };
   const updatePersonal = lambdaQuery.device.updateDevice.useMutation({
+    onError: onUpdateError,
     onSuccess: onUpdateSuccess,
   });
   const updateWorkspace = lambdaQuery.device.updateWorkspaceDevice.useMutation({
+    onError: onUpdateError,
     onSuccess: onUpdateSuccess,
   });
   const update = device.scope === 'workspace' ? updateWorkspace : updatePersonal;

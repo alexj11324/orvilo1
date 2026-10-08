@@ -385,7 +385,6 @@ export default {
   'drafts.untitled': 'Untitled',
   'getApp': 'Get App',
   'getDesktopApp': 'Get Desktop App',
-  'getMobileApp': 'Use in your phone browser',
   'goToTarget': 'Go to target',
   'duplicate': 'Duplicate',
   'edit': 'Edit',

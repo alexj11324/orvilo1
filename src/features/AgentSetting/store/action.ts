@@ -13,9 +13,11 @@ import {
   SUMMARY_TAGS_JSON_SCHEMA,
   SUMMARY_TAGS_PROMPT_VERSION,
 } from '@orvilo/prompts';
+import { t as translate } from 'i18next';
 import { type PartialDeep } from 'type-fest';
 import { type StateCreator } from 'zustand/vanilla';
 
+import { toast } from '@/components/toast';
 import { analyticsClient } from '@/libs/analytics/client';
 import { aiChatService } from '@/services/aiChat';
 import { globalHelpers } from '@/store/global/helpers';
@@ -317,6 +319,10 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
         } else {
           console.error('[AgentSettings] Failed to save config:', error);
           get().updateSaveStatus('idle');
+          // Nothing in the UI reads `saveStatus`, so a swallowed failure looks
+          // saved. The edit stays in the form on purpose (same policy as the
+          // agent store: a rollback would clobber in-flight edits) — just say so.
+          toast.error(translate('saveAgentConfigFail', { ns: 'common' }));
         }
       }
     }
@@ -337,6 +343,7 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
         } else {
           console.error('[AgentSettings] Failed to save meta:', error);
           get().updateSaveStatus('idle');
+          toast.error(translate('saveAgentConfigFail', { ns: 'common' }));
         }
       }
     }

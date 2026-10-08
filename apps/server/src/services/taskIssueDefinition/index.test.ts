@@ -118,9 +118,9 @@ describe('TaskIssueDefinitionService', () => {
     ).toHaveLength(0);
     expect((await model.findById(child.id))?.parentTaskId).toBe(source.id);
   });
-  it('rejects a stale copy revision after a concurrent issue edit', async () => {
+  it('rejects a stale copy revision after a deadline edit', async () => {
     const source = await model.create({ instruction: 'Source', workflowCategory: 'todo' });
-    await model.update(source.id, { name: 'Renamed' });
+    await model.update(source.id, { dueDate: '2026-10-10' });
     await expect(
       service.copyIssue({ id: source.id, expectedDomainRevision: source.domainRevision }),
     ).rejects.toThrow('TASK_REVISION_CONFLICT');

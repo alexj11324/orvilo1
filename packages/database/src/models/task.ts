@@ -151,6 +151,7 @@ const TASK_DOMAIN_COLUMNS = [
   'cycleRefId',
   'description',
   'duplicateOfTaskId',
+  'dueDate',
   'editorData',
   'heartbeatInterval',
   'heartbeatTimeout',

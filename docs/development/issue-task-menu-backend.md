@@ -67,6 +67,9 @@
 - `task_issue_recurrences`：一个源 Issue 至多一条 (`source_task_id` 唯一)。记录节奏、时区、
   下一次到期日和下一次创建时刻。
 
+`dueDate` 属于 `TASK_DOMAIN_COLUMNS`：改到期日会提升 `domainRevision` 并发出领域事件，所以
+`convertToRecurring` 写入到期日之后，客户端必须用返回的新版本号才能继续写。
+
 `TaskModel` 的依赖图咨询锁抽到了 `packages/database/src/utils/taskDependencyLock.ts`，
 这样 `TaskIssueDefinitionService` 可以按 “先图锁、后行锁” 的同一顺序加锁。
 
@@ -93,9 +96,6 @@
 
 本后端移植自 `codex/issue-ui-corrections`，以下几点按 canary 的现状做了调整：
 
-- **到期日不提升 `domainRevision`**：原型把 `dueDate` 加进了 `TASK_DOMAIN_COLUMNS`，这会让每次
-  改到期日都发领域事件 (规划器、Linear outbox)。这里没有带上，所以 `convertToRecurring`
-  写完到期日后，客户端手里的 `expectedDomainRevision` 仍然有效。
 - **成员校验在路由层**：原型把 “有效成员” 判断下沉到了模型的读取谓词里。canary 由
   `wsCompatProcedure` 负责，模型层不重复判断，对应的路由级用例在
   `apps/server/src/routers/lambda/__tests__/integration/taskMenu.integration.test.ts`。

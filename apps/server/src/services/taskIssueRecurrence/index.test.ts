@@ -128,9 +128,6 @@ describe('TaskIssueRecurrenceService', () => {
     await expect(
       new TaskIssueRecurrenceModel(db, readerId, workspaceId).findForTask(task.id),
     ).resolves.toMatchObject({ sourceTaskId: task.id, enabled: true });
-    // A concurrent domain edit (not the due date the conversion itself writes)
-    // is what invalidates the revision the client converted against.
-    await model.update(task.id, { name: 'Renamed' });
     await expect(
       service.convert({
         id: task.id,

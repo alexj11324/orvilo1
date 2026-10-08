@@ -94,6 +94,7 @@ import { shareChatRouter } from './shareChat';
 import { taskRouter } from './task';
 import { taskDraftRouter } from './taskDraft';
 import { taskLabelRouter } from './taskLabel';
+import { taskMenuRouter } from './taskMenu';
 import { teamRouter } from './team';
 import { teamResourceRouter } from './teamResource';
 import { threadRouter } from './thread';
@@ -185,6 +186,7 @@ export const lambdaRouter = router({
   task: taskRouter,
   taskDraft: taskDraftRouter,
   taskLabel: taskLabelRouter,
+  taskMenu: taskMenuRouter,
   team: teamRouter,
   teamResource: teamResourceRouter,
   thread: threadRouter,

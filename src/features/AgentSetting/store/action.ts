@@ -13,9 +13,11 @@ import {
   SUMMARY_TAGS_JSON_SCHEMA,
   SUMMARY_TAGS_PROMPT_VERSION,
 } from '@orvilo/prompts';
+import { t as translate } from 'i18next';
 import { type PartialDeep } from 'type-fest';
 import { type StateCreator } from 'zustand/vanilla';
 
+import { toast } from '@/components/toast';
 import { analyticsClient } from '@/libs/analytics/client';
 import { aiChatService } from '@/services/aiChat';
 import { globalHelpers } from '@/store/global/helpers';
@@ -91,319 +93,334 @@ export type Store = Action & State;
 
 const t = setNamespace('AgentSettings');
 
-export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, get) => ({
-  ...initialState,
-  autoPickEmoji: async () => {
-    const { config, meta, dispatchMeta } = get();
+export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, get) => {
+  let configRevision = 0;
+  let metaRevision = 0;
+  return {
+    ...initialState,
+    autoPickEmoji: async () => {
+      const { config, meta, dispatchMeta } = get();
 
-    const systemRole = config.systemRole;
+      const systemRole = config.systemRole;
 
-    const { model, provider } = get().internal_getSystemAgentForMeta();
+      const { model, provider } = get().internal_getSystemAgentForMeta();
 
-    get().updateLoadingState('avatar', true);
-    try {
-      const { data } = await aiChatService.generateJSON(
-        {
-          ...chainPickEmoji([meta.title, meta.description, systemRole].filter(Boolean).join(',')),
-          model,
-          provider,
-          schema: PICK_EMOJI_JSON_SCHEMA,
-          tracing: {
-            agentId: get().id,
-            promptVersion: PICK_EMOJI_PROMPT_VERSION,
-            scenario: TRACING_SCENARIOS.AgentMeta,
-            schemaName: PICK_EMOJI_JSON_SCHEMA.name,
-          },
-        },
-        new AbortController(),
-      );
-
-      const emoji = (data as { emoji?: string } | undefined)?.emoji;
-      if (emoji) dispatchMeta({ type: 'update', value: { avatar: emoji } });
-    } catch (error) {
-      console.error('[AgentSettings] autoPickEmoji failed:', error);
-    } finally {
-      get().updateLoadingState('avatar', false);
-    }
-  },
-  autocompleteAgentDescription: async () => {
-    const { dispatchMeta, config, meta, updateLoadingState } = get();
-
-    const systemRole = config.systemRole;
-
-    if (!systemRole) return;
-
-    const preValue = meta.description;
-
-    // Replace with ...
-    dispatchMeta({ type: 'update', value: { description: '...' } });
-
-    const { model, provider } = get().internal_getSystemAgentForMeta();
-
-    updateLoadingState('description', true);
-    try {
-      const { data } = await aiChatService.generateJSON(
-        {
-          ...chainSummaryDescription(systemRole, globalHelpers.getCurrentLanguage()),
-          model,
-          provider,
-          schema: SUMMARY_DESCRIPTION_JSON_SCHEMA,
-          tracing: {
-            agentId: get().id,
-            promptVersion: SUMMARY_DESCRIPTION_PROMPT_VERSION,
-            scenario: TRACING_SCENARIOS.AgentMeta,
-            schemaName: SUMMARY_DESCRIPTION_JSON_SCHEMA.name,
-          },
-        },
-        new AbortController(),
-      );
-
-      const description = (data as { description?: string } | undefined)?.description ?? preValue;
-      dispatchMeta({ type: 'update', value: { description } });
-    } catch {
-      dispatchMeta({ type: 'update', value: { description: preValue } });
-    } finally {
-      updateLoadingState('description', false);
-    }
-  },
-  autocompleteAgentTags: async () => {
-    const { dispatchMeta, config, meta, updateLoadingState } = get();
-
-    const systemRole = config.systemRole;
-
-    if (!systemRole) return;
-
-    const preValue = meta.tags;
-
-    // Replace with ...
-    dispatchMeta({ type: 'update', value: { tags: ['...'] } });
-
-    const { model, provider } = get().internal_getSystemAgentForMeta();
-
-    updateLoadingState('tags', true);
-    try {
-      const { data } = await aiChatService.generateJSON(
-        {
-          ...chainSummaryTags(
-            [meta.title, meta.description, systemRole].filter(Boolean).join(','),
-            globalHelpers.getCurrentLanguage(),
-          ),
-          model,
-          provider,
-          schema: SUMMARY_TAGS_JSON_SCHEMA,
-          tracing: {
-            agentId: get().id,
-            promptVersion: SUMMARY_TAGS_PROMPT_VERSION,
-            scenario: TRACING_SCENARIOS.AgentMeta,
-            schemaName: SUMMARY_TAGS_JSON_SCHEMA.name,
-          },
-        },
-        new AbortController(),
-      );
-
-      const tags = (data as { tags?: string[] } | undefined)?.tags ?? preValue;
-      dispatchMeta({ type: 'update', value: { tags } });
-    } catch {
-      dispatchMeta({ type: 'update', value: { tags: preValue } });
-    } finally {
-      updateLoadingState('tags', false);
-    }
-  },
-  autocompleteAgentTitle: async () => {
-    const { dispatchMeta, config, meta, updateLoadingState } = get();
-
-    const systemRole = config.systemRole;
-
-    if (!systemRole) return;
-
-    const previousTitle = meta.title;
-
-    // Replace with ...
-    dispatchMeta({ type: 'update', value: { title: '...' } });
-
-    const { model, provider } = get().internal_getSystemAgentForMeta();
-
-    updateLoadingState('title', true);
-    try {
-      const { data } = await aiChatService.generateJSON(
-        {
-          ...chainSummaryAgentName(
-            [meta.description, systemRole].filter(Boolean).join(','),
-            globalHelpers.getCurrentLanguage(),
-          ),
-          model,
-          provider,
-          schema: SUMMARY_AGENT_NAME_JSON_SCHEMA,
-          tracing: {
-            agentId: get().id,
-            promptVersion: SUMMARY_AGENT_NAME_PROMPT_VERSION,
-            scenario: TRACING_SCENARIOS.AgentMeta,
-            schemaName: SUMMARY_AGENT_NAME_JSON_SCHEMA.name,
-          },
-        },
-        new AbortController(),
-      );
-
-      const title = (data as { name?: string } | undefined)?.name ?? previousTitle;
-      dispatchMeta({ type: 'update', value: { title } });
-    } catch {
-      dispatchMeta({ type: 'update', value: { title: previousTitle } });
-    } finally {
-      updateLoadingState('title', false);
-    }
-  },
-  autocompleteAllMeta: (replace) => {
-    const { meta } = get();
-
-    if (!meta.title || replace) {
-      get().autocompleteAgentTitle();
-    }
-
-    if (!meta.description || replace) {
-      get().autocompleteAgentDescription();
-    }
-
-    if (!meta.avatar || replace) {
-      get().autoPickEmoji();
-    }
-
-    if (!meta.tags || replace) {
-      get().autocompleteAgentTags();
-    }
-  },
-  autocompleteMeta: (key) => {
-    const {
-      autoPickEmoji,
-      autocompleteAgentTitle,
-      autocompleteAgentDescription,
-      autocompleteAgentTags,
-    } = get();
-
-    switch (key) {
-      case 'avatar': {
-        autoPickEmoji();
-        return;
-      }
-
-      case 'description': {
-        autocompleteAgentDescription();
-        return;
-      }
-
-      case 'title': {
-        autocompleteAgentTitle();
-        return;
-      }
-
-      case 'tags': {
-        autocompleteAgentTags();
-        return;
-      }
-    }
-  },
-  dispatchConfig: async (payload) => {
-    const nextConfig = configReducer(get().config, payload);
-
-    set({ config: nextConfig }, false, payload);
-
-    if (get().onConfigChange) {
-      get().updateSaveStatus('saving');
+      get().updateLoadingState('avatar', true);
       try {
-        await get().onConfigChange?.(nextConfig);
-        get().updateSaveStatus('saved');
-      } catch (error: any) {
-        if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
-          get().updateSaveStatus('idle');
-        } else {
-          console.error('[AgentSettings] Failed to save config:', error);
-          get().updateSaveStatus('idle');
+        const { data } = await aiChatService.generateJSON(
+          {
+            ...chainPickEmoji([meta.title, meta.description, systemRole].filter(Boolean).join(',')),
+            model,
+            provider,
+            schema: PICK_EMOJI_JSON_SCHEMA,
+            tracing: {
+              agentId: get().id,
+              promptVersion: PICK_EMOJI_PROMPT_VERSION,
+              scenario: TRACING_SCENARIOS.AgentMeta,
+              schemaName: PICK_EMOJI_JSON_SCHEMA.name,
+            },
+          },
+          new AbortController(),
+        );
+
+        const emoji = (data as { emoji?: string } | undefined)?.emoji;
+        if (emoji) dispatchMeta({ type: 'update', value: { avatar: emoji } });
+      } catch (error) {
+        console.error('[AgentSettings] autoPickEmoji failed:', error);
+      } finally {
+        get().updateLoadingState('avatar', false);
+      }
+    },
+    autocompleteAgentDescription: async () => {
+      const { dispatchMeta, config, meta, updateLoadingState } = get();
+
+      const systemRole = config.systemRole;
+
+      if (!systemRole) return;
+
+      const preValue = meta.description;
+
+      // Replace with ...
+      dispatchMeta({ type: 'update', value: { description: '...' } });
+
+      const { model, provider } = get().internal_getSystemAgentForMeta();
+
+      updateLoadingState('description', true);
+      try {
+        const { data } = await aiChatService.generateJSON(
+          {
+            ...chainSummaryDescription(systemRole, globalHelpers.getCurrentLanguage()),
+            model,
+            provider,
+            schema: SUMMARY_DESCRIPTION_JSON_SCHEMA,
+            tracing: {
+              agentId: get().id,
+              promptVersion: SUMMARY_DESCRIPTION_PROMPT_VERSION,
+              scenario: TRACING_SCENARIOS.AgentMeta,
+              schemaName: SUMMARY_DESCRIPTION_JSON_SCHEMA.name,
+            },
+          },
+          new AbortController(),
+        );
+
+        const description = (data as { description?: string } | undefined)?.description ?? preValue;
+        dispatchMeta({ type: 'update', value: { description } });
+      } catch {
+        dispatchMeta({ type: 'update', value: { description: preValue } });
+      } finally {
+        updateLoadingState('description', false);
+      }
+    },
+    autocompleteAgentTags: async () => {
+      const { dispatchMeta, config, meta, updateLoadingState } = get();
+
+      const systemRole = config.systemRole;
+
+      if (!systemRole) return;
+
+      const preValue = meta.tags;
+
+      // Replace with ...
+      dispatchMeta({ type: 'update', value: { tags: ['...'] } });
+
+      const { model, provider } = get().internal_getSystemAgentForMeta();
+
+      updateLoadingState('tags', true);
+      try {
+        const { data } = await aiChatService.generateJSON(
+          {
+            ...chainSummaryTags(
+              [meta.title, meta.description, systemRole].filter(Boolean).join(','),
+              globalHelpers.getCurrentLanguage(),
+            ),
+            model,
+            provider,
+            schema: SUMMARY_TAGS_JSON_SCHEMA,
+            tracing: {
+              agentId: get().id,
+              promptVersion: SUMMARY_TAGS_PROMPT_VERSION,
+              scenario: TRACING_SCENARIOS.AgentMeta,
+              schemaName: SUMMARY_TAGS_JSON_SCHEMA.name,
+            },
+          },
+          new AbortController(),
+        );
+
+        const tags = (data as { tags?: string[] } | undefined)?.tags ?? preValue;
+        dispatchMeta({ type: 'update', value: { tags } });
+      } catch {
+        dispatchMeta({ type: 'update', value: { tags: preValue } });
+      } finally {
+        updateLoadingState('tags', false);
+      }
+    },
+    autocompleteAgentTitle: async () => {
+      const { dispatchMeta, config, meta, updateLoadingState } = get();
+
+      const systemRole = config.systemRole;
+
+      if (!systemRole) return;
+
+      const previousTitle = meta.title;
+
+      // Replace with ...
+      dispatchMeta({ type: 'update', value: { title: '...' } });
+
+      const { model, provider } = get().internal_getSystemAgentForMeta();
+
+      updateLoadingState('title', true);
+      try {
+        const { data } = await aiChatService.generateJSON(
+          {
+            ...chainSummaryAgentName(
+              [meta.description, systemRole].filter(Boolean).join(','),
+              globalHelpers.getCurrentLanguage(),
+            ),
+            model,
+            provider,
+            schema: SUMMARY_AGENT_NAME_JSON_SCHEMA,
+            tracing: {
+              agentId: get().id,
+              promptVersion: SUMMARY_AGENT_NAME_PROMPT_VERSION,
+              scenario: TRACING_SCENARIOS.AgentMeta,
+              schemaName: SUMMARY_AGENT_NAME_JSON_SCHEMA.name,
+            },
+          },
+          new AbortController(),
+        );
+
+        const title = (data as { name?: string } | undefined)?.name ?? previousTitle;
+        dispatchMeta({ type: 'update', value: { title } });
+      } catch {
+        dispatchMeta({ type: 'update', value: { title: previousTitle } });
+      } finally {
+        updateLoadingState('title', false);
+      }
+    },
+    autocompleteAllMeta: (replace) => {
+      const { meta } = get();
+
+      if (!meta.title || replace) {
+        get().autocompleteAgentTitle();
+      }
+
+      if (!meta.description || replace) {
+        get().autocompleteAgentDescription();
+      }
+
+      if (!meta.avatar || replace) {
+        get().autoPickEmoji();
+      }
+
+      if (!meta.tags || replace) {
+        get().autocompleteAgentTags();
+      }
+    },
+    autocompleteMeta: (key) => {
+      const {
+        autoPickEmoji,
+        autocompleteAgentTitle,
+        autocompleteAgentDescription,
+        autocompleteAgentTags,
+      } = get();
+
+      switch (key) {
+        case 'avatar': {
+          autoPickEmoji();
+          return;
+        }
+
+        case 'description': {
+          autocompleteAgentDescription();
+          return;
+        }
+
+        case 'title': {
+          autocompleteAgentTitle();
+          return;
+        }
+
+        case 'tags': {
+          autocompleteAgentTags();
+          return;
         }
       }
-    }
-  },
-  dispatchMeta: async (payload) => {
-    const nextValue = metaDataReducer(get().meta, payload);
+    },
+    dispatchConfig: async (payload) => {
+      const revision = ++configRevision;
+      const nextConfig = configReducer(get().config, payload);
 
-    set({ meta: nextValue }, false, payload);
+      set({ config: nextConfig }, false, payload);
 
-    if (get().onMetaChange) {
-      get().updateSaveStatus('saving');
-      try {
-        await get().onMetaChange?.(nextValue);
-        get().updateSaveStatus('saved');
-      } catch (error: any) {
-        if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
-          get().updateSaveStatus('idle');
-        } else {
-          console.error('[AgentSettings] Failed to save meta:', error);
-          get().updateSaveStatus('idle');
+      if (get().onConfigChange) {
+        get().updateSaveStatus('saving');
+        try {
+          await get().onConfigChange?.(nextConfig);
+          if (revision !== configRevision) return;
+          get().updateSaveStatus('saved');
+        } catch (error: any) {
+          if (revision !== configRevision) return;
+          if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+            get().updateSaveStatus('idle');
+          } else {
+            console.error('[AgentSettings] Failed to save config:', error);
+            get().updateSaveStatus('idle');
+            // Nothing in the UI reads `saveStatus`, so a swallowed failure looks
+            // saved. The edit stays in the form on purpose (same policy as the
+            // agent store: a rollback would clobber in-flight edits) — just say so.
+            toast.error(translate('saveAgentConfigFail', { ns: 'common' }));
+          }
         }
       }
-    }
-  },
-  internal_getSystemAgentForMeta: () => {
-    return systemAgentSelectors.agentMeta(useUserStore.getState());
-  },
+    },
+    dispatchMeta: async (payload) => {
+      const revision = ++metaRevision;
+      const nextValue = metaDataReducer(get().meta, payload);
 
-  resetAgentConfig: async () => {
-    await get().dispatchConfig({ type: 'reset' });
-  },
+      set({ meta: nextValue }, false, payload);
 
-  resetAgentMeta: async () => {
-    await get().dispatchMeta({ type: 'reset' });
-  },
-  setAgentConfig: async (config) => {
-    await get().dispatchConfig({ config, type: 'update' });
-  },
-  setAgentMeta: async (meta) => {
-    const { dispatchMeta, id, meta: currentMeta } = get();
-    const mergedMeta = merge(currentMeta, meta);
+      if (get().onMetaChange) {
+        get().updateSaveStatus('saving');
+        try {
+          await get().onMetaChange?.(nextValue);
+          if (revision !== metaRevision) return;
+          get().updateSaveStatus('saved');
+        } catch (error: any) {
+          if (revision !== metaRevision) return;
+          if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+            get().updateSaveStatus('idle');
+          } else {
+            console.error('[AgentSettings] Failed to save meta:', error);
+            get().updateSaveStatus('idle');
+            toast.error(translate('saveAgentConfigFail', { ns: 'common' }));
+          }
+        }
+      }
+    },
+    internal_getSystemAgentForMeta: () => {
+      return systemAgentSelectors.agentMeta(useUserStore.getState());
+    },
 
-    try {
-      void analyticsClient.track({
-        name: 'agent_meta_updated',
-        properties: {
-          assistant_avatar: mergedMeta.avatar,
-          assistant_background_color: mergedMeta.backgroundColor,
-          assistant_description: mergedMeta.description,
-          assistant_name: mergedMeta.title,
-          assistant_tags: mergedMeta.tags,
-          is_inbox: id === 'inbox',
-          session_id: id || 'unknown',
-          timestamp: Date.now(),
-          user_id: useUserStore.getState().user?.id || 'anonymous',
+    resetAgentConfig: async () => {
+      await get().dispatchConfig({ type: 'reset' });
+    },
+
+    resetAgentMeta: async () => {
+      await get().dispatchMeta({ type: 'reset' });
+    },
+    setAgentConfig: async (config) => {
+      await get().dispatchConfig({ config, type: 'update' });
+    },
+    setAgentMeta: async (meta) => {
+      const { dispatchMeta, id, meta: currentMeta } = get();
+      const mergedMeta = merge(currentMeta, meta);
+
+      try {
+        void analyticsClient.track({
+          name: 'agent_meta_updated',
+          properties: {
+            assistant_avatar: mergedMeta.avatar,
+            assistant_background_color: mergedMeta.backgroundColor,
+            assistant_description: mergedMeta.description,
+            assistant_name: mergedMeta.title,
+            assistant_tags: mergedMeta.tags,
+            is_inbox: id === 'inbox',
+            session_id: id || 'unknown',
+            timestamp: Date.now(),
+            user_id: useUserStore.getState().user?.id || 'anonymous',
+          },
+        });
+      } catch (error) {
+        console.warn('Failed to track agent meta update:', error);
+      }
+      await dispatchMeta({ type: 'update', value: meta });
+    },
+
+    setChatConfig: async (config) => {
+      await get().setAgentConfig({ chatConfig: config });
+    },
+
+    toggleAgentPlugin: (id, state) => {
+      get().dispatchConfig({ pluginId: id, state, type: 'togglePlugin' });
+    },
+
+    updateLoadingState: (key, value) => {
+      set(
+        { loadingState: { ...get().loadingState, [key]: value } },
+        false,
+        t('updateLoadingState', { key, value }),
+      );
+    },
+
+    updateSaveStatus: (status) => {
+      set(
+        {
+          lastUpdatedTime: status === 'saved' ? new Date() : get().lastUpdatedTime,
+          saveStatus: status,
         },
-      });
-    } catch (error) {
-      console.warn('Failed to track agent meta update:', error);
-    }
-    await dispatchMeta({ type: 'update', value: meta });
-  },
-
-  setChatConfig: async (config) => {
-    await get().setAgentConfig({ chatConfig: config });
-  },
-
-  toggleAgentPlugin: (id, state) => {
-    get().dispatchConfig({ pluginId: id, state, type: 'togglePlugin' });
-  },
-
-  updateLoadingState: (key, value) => {
-    set(
-      { loadingState: { ...get().loadingState, [key]: value } },
-      false,
-      t('updateLoadingState', { key, value }),
-    );
-  },
-
-  updateSaveStatus: (status) => {
-    set(
-      {
-        lastUpdatedTime: status === 'saved' ? new Date() : get().lastUpdatedTime,
-        saveStatus: status,
-      },
-      false,
-      t('updateSaveStatus', { status }),
-    );
-  },
-});
+        false,
+        t('updateSaveStatus', { status }),
+      );
+    },
+  };
+};

@@ -4,6 +4,7 @@ import { type OrviloUser } from '@/types/user';
 
 export interface UserAuthState {
   authProviders?: SSOProvider[];
+  authProvidersError?: unknown;
   /**
    * Whether user registered with email/password (credential login)
    */

@@ -887,6 +887,10 @@ describe('TaskModel', () => {
           slug: workspaceId,
           primaryOwnerId: userId2,
         });
+        await serverDB.insert(workspaceMembers).values([
+          { workspaceId, userId: userId2, role: 'owner' },
+          { workspaceId, userId, role: 'member' },
+        ]);
         await serverDB
           .insert(agents)
           .values({ id: agentId, userId: userId2, workspaceId, visibility: 'private' });
@@ -916,6 +920,11 @@ describe('TaskModel', () => {
           slug: otherWorkspaceId,
           primaryOwnerId: userId2,
         },
+      ]);
+      await serverDB.insert(workspaceMembers).values([
+        { workspaceId, userId, role: 'owner' },
+        { workspaceId, userId: userId2, role: 'member' },
+        { workspaceId: otherWorkspaceId, userId: userId2, role: 'owner' },
       ]);
       const model = new TaskModel(serverDB, userId, workspaceId);
       const created = await model.create({
@@ -1714,6 +1723,8 @@ describe('TaskModel', () => {
         primaryOwnerId: userId,
         slug: workspaceId,
       });
+
+      await seedWorkspaceReaders();
 
       const ownerModel = new TaskModel(serverDB, userId, workspaceId);
       const task = await ownerModel.create({ instruction: 'Shared task' });
@@ -2619,6 +2630,11 @@ describe('TaskModel', () => {
           slug: 'ws-activity-demote',
         })
         .onConflictDoNothing();
+      await serverDB.insert(workspaceMembers).values({
+        workspaceId: 'ws_activity_demote',
+        userId,
+        role: 'owner',
+      });
       const model = new TaskModel(serverDB, userId, 'ws_activity_demote');
       const task = await model.create({ instruction: 'Test', visibility: 'public' });
 
@@ -3364,6 +3380,8 @@ describe('TaskModel', () => {
         .insert(workspaces)
         .values({ id: wsId, name: 'Docs WS', primaryOwnerId: userId, slug: 'task-tree-docs-ws' })
         .onConflictDoNothing();
+
+      await serverDB.insert(workspaceMembers).values({ workspaceId: wsId, userId, role: 'owner' });
 
       const wsModel = new TaskModel(serverDB, userId, wsId);
       const root = await wsModel.create({ instruction: 'Root' });

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { tasks, users, workspaces } from '../../schemas';
+import { tasks, users, workspaceMembers, workspaces } from '../../schemas';
 import { projects } from '../../schemas/project';
 import { teamCycles, teamMembers, teams } from '../../schemas/team';
 import type { OrviloDatabase } from '../../type';
@@ -29,6 +29,10 @@ beforeEach(async () => {
     primaryOwnerId: ownerId,
     slug: 'view-ws',
   });
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId: ownerId, workspaceId },
+    { role: 'member', userId: visitorId, workspaceId },
+  ]);
 });
 
 afterEach(async () => {
@@ -159,11 +163,11 @@ describe('SavedViewModel', () => {
     expect((await ownerViews.findById(view.id))?.name).toBe('Owner view');
   });
 
-  it('redacts private-team task ids while retaining shared legacy-private task ids', async () => {
+  it('retains shared private-Team and legacy-private Issue ids while redacting foreign-workspace ids', async () => {
     const ownerTasks = new TaskModel(serverDB, ownerId, workspaceId);
     const secret = await ownerTasks.create({
-      instruction: 'Keep this title off the visitor AST',
-      name: 'Secret task',
+      instruction: 'Shared Issue in a private Team',
+      name: 'Shared Team Issue',
       visibility: 'private',
     });
     const open = await ownerTasks.create({
@@ -188,13 +192,31 @@ describe('SavedViewModel', () => {
       .update(tasks)
       .set({ visibility: 'private' })
       .where(eq(tasks.id, legacyShared.id));
+    await serverDB.insert(workspaces).values({
+      id: 'view-foreign-ws',
+      name: 'Foreign workspace',
+      primaryOwnerId: ownerId,
+      slug: 'view-foreign-ws',
+    });
+    const foreign = await new TaskModel(serverDB, ownerId).create({
+      instruction: 'Foreign Issue',
+      name: 'Foreign Issue',
+    });
+    await serverDB
+      .update(tasks)
+      .set({ workspaceId: 'view-foreign-ws' })
+      .where(eq(tasks.id, foreign.id));
     const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
     const view = await ownerViews.create({
       entityType: 'task',
       name: 'Mixed ids',
       query: {
         entityType: 'task',
-        filter: { all: [{ field: 'id', op: 'in', value: [secret.id, open.id, legacyShared.id] }] },
+        filter: {
+          all: [
+            { field: 'id', op: 'in', value: [secret.id, open.id, legacyShared.id, foreign.id] },
+          ],
+        },
         schemaVersion: 1,
       },
       visibility: 'workspace',
@@ -203,13 +225,17 @@ describe('SavedViewModel', () => {
     const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
     const presented = await visitorViews.present((await visitorViews.findById(view.id))!);
     const serialized = JSON.stringify(presented.queryAst);
-    expect(serialized).not.toContain(secret.id);
+    expect(serialized).toContain(secret.id);
+    expect(serialized).not.toContain(foreign.id);
     expect(serialized).toContain(open.id);
     expect(serialized).toContain(legacyShared.id);
 
     const asVisitor = await visitorViews.evaluate((await visitorViews.findById(view.id))!);
-    expect(asVisitor.tasks?.map((row) => row.id).sort()).toEqual([open.id, legacyShared.id].sort());
-    expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Secret task');
+    expect(asVisitor.tasks?.map((row) => row.id).sort()).toEqual(
+      [secret.id, open.id, legacyShared.id].sort(),
+    );
+    expect(asVisitor.tasks?.map((row) => row.name)).toContain('Shared Team Issue');
+    expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Foreign Issue');
   });
 
   it('redacts private team ids from a shared view definition', async () => {

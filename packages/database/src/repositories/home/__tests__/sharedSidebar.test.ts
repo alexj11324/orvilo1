@@ -26,6 +26,10 @@ beforeEach(async () => {
     primaryOwnerId: memberA,
     slug: ws,
   });
+  await clientDB.insert(Schema.workspaceMembers).values([
+    { workspaceId: ws, userId: memberA, role: 'owner' },
+    { workspaceId: ws, userId: memberB, role: 'member' },
+  ]);
   // Creation admission requires a resolvable bound host.
   await clientDB.insert(Schema.devices).values([
     {

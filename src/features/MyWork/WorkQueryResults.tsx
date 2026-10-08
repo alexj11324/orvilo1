@@ -63,6 +63,7 @@ import { workQueryHierarchyRows } from './workQueryHierarchy';
 import {
   type WorkQueryGroupPage,
   workQueryHasMore,
+  workQueryLoadedTasks,
   type WorkQueryResultTask,
 } from './workQueryPaging';
 import WorkQueryVirtualList from './WorkQueryVirtualList';
@@ -818,7 +819,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const listLane =
       layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
-    const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
+    const allTasks = workQueryLoadedTasks(tasks, groups, groupBy);
     const nestRows =
       Boolean(flatNested) &&
       (Boolean(nestInGroups) || listGroupBy === 'none' || listGroupBy === 'attention');

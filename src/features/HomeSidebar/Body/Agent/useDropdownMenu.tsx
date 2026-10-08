@@ -22,10 +22,9 @@ export const useAgentActionsDropdownMenu = ({
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
   // Create menu items
-  const { createSessionGroupMenuItem, configMenuItem } = useCreateMenuItems();
+  const { configMenuItem } = useCreateMenuItems();
 
   return useMemo(() => {
-    const createSessionGroupItem = createSessionGroupMenuItem();
     const configItem = configMenuItem(openConfigGroupModal);
 
     const pageSizeOptions = [5, 10, 15, 20];
@@ -39,7 +38,6 @@ export const useAgentActionsDropdownMenu = ({
     }));
 
     return [
-      createSessionGroupItem,
       configItem,
       { type: 'divider' as const },
       {
@@ -57,12 +55,5 @@ export const useAgentActionsDropdownMenu = ({
         onClick: () => openCustomizeSidebarModal(),
       },
     ].filter(Boolean) as SidebarMenuItems;
-  }, [
-    agentPageSize,
-    updateSystemStatus,
-    createSessionGroupMenuItem,
-    configMenuItem,
-    openConfigGroupModal,
-    t,
-  ]);
+  }, [agentPageSize, updateSystemStatus, configMenuItem, openConfigGroupModal, t]);
 };

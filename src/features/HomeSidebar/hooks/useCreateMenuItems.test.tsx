@@ -5,7 +5,6 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCreateMenuItems } from './useCreateMenuItems';
-import { useSessionGroupMenuItems } from './useSessionGroupMenuItems';
 
 const mocks = vi.hoisted(() => ({
   createAgent: vi.fn(),
@@ -167,127 +166,13 @@ describe('unified creation entries', () => {
     expect(mocks.createAgent).not.toHaveBeenCalled();
   });
 
-  it('group creation opens prerequisites instead of creating an empty group immediately', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    await result.current.createEmptyGroup({ groupId: 'g1', visibility: 'private' });
-    expect(mocks.openCreateGroupChatModal).toHaveBeenCalledWith(
-      expect.objectContaining({
-        groupId: 'g1',
-        visibility: 'private',
-      }),
-    );
-    expect(mocks.createGroup).not.toHaveBeenCalled();
-    expect(mocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it('lists conversation, group chat and Agent creation in the approved order', () => {
+  it('lists conversation and Agent creation without Group creation outside its page', () => {
     const { result } = renderHook(() => useCreateMenuItems());
     expect(result.current.createTopLevelMenuItems().map((item) => item.key ?? item.type)).toEqual([
       'newConversation',
-      'newGroupChat',
       'divider',
       'newAgent',
       'divider',
     ]);
-  });
-});
-
-describe('template runtime admission', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.createGroupWithMembers.mockResolvedValue({ groupId: 'new-group' });
-  });
-  it('does not insert a template group when runtime selection is cancelled', async () => {
-    mocks.requestAgentRuntime.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useCreateMenuItems());
-    let created;
-    await act(async () => {
-      created = await result.current.createGroupFromTemplate('team');
-    });
-    expect(created).toBe(false);
-    expect(mocks.createGroupWithMembers).not.toHaveBeenCalled();
-  });
-  it('chooses one runtime for the whole template while preserving member prompts', async () => {
-    const runtime = {
-      agencyConfig: {
-        executionTarget: 'device',
-        boundDeviceId: 'host-2',
-        heterogeneousProvider: { type: 'codex' },
-      },
-      model: 'gpt-model',
-      provider: 'codex',
-      title: 'Codex',
-    };
-    mocks.requestAgentRuntime.mockResolvedValue(runtime);
-    const { result } = renderHook(() => useCreateMenuItems());
-    let created;
-    await act(async () => {
-      created = await result.current.createGroupFromTemplate('team');
-    });
-    expect(created).toBe(true);
-    expect(mocks.requestAgentRuntime).toHaveBeenCalledTimes(1);
-    const [, members] = mocks.createGroupWithMembers.mock.calls[0];
-    expect(members.map((member: any) => member.agencyConfig)).toEqual([
-      runtime.agencyConfig,
-      runtime.agencyConfig,
-    ]);
-    expect(members.map((member: any) => [member.title, member.systemRole])).toEqual([
-      ['Writer', 'Write prose'],
-      ['Editor', 'Edit prose'],
-    ]);
-  });
-});
-
-describe('category template runtime admission', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.createGroup.mockResolvedValue('new-group');
-    mocks.createAgent.mockResolvedValue({ agentId: 'member' });
-  });
-  it('cancelling the chooser inserts neither members nor group', async () => {
-    mocks.requestAgentRuntime.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useSessionGroupMenuItems());
-    await act(async () => {
-      expect(await result.current.createGroupFromTemplate('team')).toBe(false);
-    });
-    expect(mocks.createAgent).not.toHaveBeenCalled();
-    expect(mocks.createGroup).not.toHaveBeenCalled();
-  });
-  it('uses the private category host pool once for every selected member', async () => {
-    vi.useFakeTimers();
-    const runtime = {
-      agencyConfig: {
-        executionTarget: 'device',
-        boundDeviceId: 'host-private',
-        heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
-      },
-      model: 'prime-model',
-      provider: 'openai',
-      title: 'Orvilo AI',
-    };
-    mocks.requestAgentRuntime.mockResolvedValue(runtime);
-    const { result } = renderHook(() => useSessionGroupMenuItems());
-    await act(async () => {
-      const pending = result.current.createGroupFromTemplate('team', undefined, {
-        groupId: 'private-category',
-      });
-      await vi.runAllTimersAsync();
-      expect(await pending).toBe(true);
-    });
-    expect(mocks.requestAgentRuntime).toHaveBeenCalledExactlyOnceWith({ visibility: 'private' });
-    expect(
-      mocks.createAgent.mock.calls.map(([params]) => [
-        params.config.agencyConfig,
-        params.visibility,
-      ]),
-    ).toEqual([
-      [runtime.agencyConfig, 'private'],
-      [runtime.agencyConfig, 'private'],
-    ]);
-    expect(mocks.createGroup.mock.calls[0][0]).toMatchObject({
-      groupId: 'private-category',
-      visibility: 'private',
-    });
-    vi.useRealTimers();
   });
 });

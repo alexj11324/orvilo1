@@ -3,7 +3,7 @@
 import { OptionCard } from '@orvilo/shared-tool-ui/components';
 import type { TaskIntentAnalysis } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { ArrowLeft, Check, Sparkles, Target } from 'lucide-react';
+import { ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -31,12 +31,6 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 8px;
     padding-inline: 8px 16px;
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  goalCallout: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
   `,
   head: css`
     padding-block: 12px 0;
@@ -119,7 +113,6 @@ export interface TaskIntentReviewProps {
   onBack: () => void;
   onConfirm: () => void;
   /** Omitted when goals are unavailable — the exit is then simply not offered. */
-  onSwitchToGoal?: () => void;
   onTitleChange: (title: string) => void;
   title: string;
 }
@@ -135,17 +128,8 @@ export interface TaskIntentReviewProps {
  * the brief is written from the answers and the task created in one step.
  */
 const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
-  const {
-    analysis,
-    answers,
-    isCreating,
-    onAnswerChange,
-    onBack,
-    onConfirm,
-    onSwitchToGoal,
-    onTitleChange,
-    title,
-  } = props;
+  const { analysis, answers, isCreating, onAnswerChange, onBack, onConfirm, onTitleChange, title } =
+    props;
   const { t } = useTranslation('chat');
 
   // One question at a time, exactly like AskUserQuestionView: stacking them all
@@ -177,7 +161,6 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
     [answers, clarifications, onAnswerChange],
   );
 
-  const showGoalExit = analysis.kind === 'goal' && Boolean(onSwitchToGoal);
   const active = clarifications[activeIndex];
   const onLastQuestion = activeIndex >= clarifications.length - 1;
 
@@ -209,21 +192,6 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
 
       <div className={`flex flex-col gap-4 ${styles.body}`}>
         <div className="text-sm text-muted-foreground">{analysis.summary}</div>
-
-        {showGoalExit && (
-          <div className={`flex items-center gap-3 ${styles.goalCallout}`}>
-            <Target color={cssVar.colorTextSecondary} size={16} />
-            <div className="flex flex-1 flex-col gap-0.5">
-              <div className="text-sm font-medium">{t('taskIntent.goalCallout.title')}</div>
-              <div className="text-xs text-muted-foreground">
-                {analysis.kindReason || t('taskIntent.goalCallout.desc')}
-              </div>
-            </div>
-            <Button size="sm" variant="secondary" onClick={onSwitchToGoal}>
-              {t('taskIntent.goalCallout.action')}
-            </Button>
-          </div>
-        )}
 
         {clarifications.length > 0 && (
           <Tabs

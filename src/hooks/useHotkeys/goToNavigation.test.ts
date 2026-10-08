@@ -51,11 +51,10 @@ vi.mock('./useHotkeyById', () => ({
 }));
 
 describe('GO_TO_DESTINATIONS', () => {
-  it('covers every Linear go-to chord exactly once', () => {
+  it('covers every active go-to chord exactly once', () => {
     expect(GO_TO_DESTINATIONS.map((d) => d.id)).toEqual([
       HotkeyEnum.GoToInbox,
       HotkeyEnum.GoToMyIssues,
-      HotkeyEnum.GoToReviews,
       HotkeyEnum.GoToDrafts,
       HotkeyEnum.GoToProjects,
       HotkeyEnum.GoToViews,

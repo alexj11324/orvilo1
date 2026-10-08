@@ -1,12 +1,10 @@
 /**
  * @vitest-environment happy-dom
  */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type * as React from 'react';
 import type { MouseEventHandler, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { toast } from '@/components/toast';
 
 import Nav from './Nav';
 
@@ -174,183 +172,36 @@ describe('Agent sidebar header nav', () => {
     useParamsMock.mockReturnValue({ aid: 'agt_eH4zL98zBx5u', topicId: 'tpc_2FCHvjS7d4CA' });
   });
 
-  it('returns to the agent chat route after opening a new topic from a topic page document route', async () => {
-    usePathnameMock.mockReturnValue(
-      '/agent/agt_eH4zL98zBx5u/tpc_2FCHvjS7d4CA/page/docs_9B8hFkmEOZyPZb60',
-    );
-
-    render(<Nav />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
-
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u'));
-    expect(mutateMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('pushes the agent chat route even when already on it', async () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
-    render(<Nav />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
-
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u'));
-    expect(mutateMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('waits for the topic action before navigating away from its source conversation', async () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
-    let complete!: () => void;
-    const pending = new Promise<void>((resolve) => {
-      complete = resolve;
-    });
-    mutateMock.mockReturnValue(pending);
-    openNewTopicOrSaveTopicMock.mockReturnValue(pending);
-    render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
-    expect(pushMock).not.toHaveBeenCalled();
-    await act(async () => {
-      complete();
-    });
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u'));
-  });
-
-  it('does not overwrite a newer topic started while the blank-topic refresh is pending', async () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
-    let complete!: () => void;
-    openNewTopicOrSaveTopicMock.mockReturnValue(
-      new Promise<void>((resolve) => {
-        complete = resolve;
-      }),
-    );
-    render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
-    chatState.activeTopicId = 'tpc_new_send';
-    await act(async () => {
-      complete();
-    });
-    expect(pushMock).not.toHaveBeenCalled();
-  });
-
-  it('does not overwrite a newer navigation while the topic action is pending', async () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
-    let complete!: () => void;
-    openNewTopicOrSaveTopicMock.mockReturnValue(
-      new Promise<void>((resolve) => {
-        complete = resolve;
-      }),
-    );
-    const { rerender } = render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tasks');
-    rerender(<Nav />);
-    await act(async () => {
-      complete();
-    });
-    expect(pushMock).not.toHaveBeenCalled();
-  });
-
-  it('keeps the source route on failure and allows retry without duplicating pending actions', async () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
-    let reject!: (error: Error) => void;
-    const pending = new Promise<void>((_, fail) => {
-      reject = fail;
-    });
-    openNewTopicOrSaveTopicMock.mockReturnValueOnce(pending);
-    render(<Nav />);
-    const button = screen.getByRole('button', { name: 'actions.addNewTopic' });
-    fireEvent.click(button);
-    fireEvent.click(button);
-    expect(openNewTopicOrSaveTopicMock).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      reject(new Error('offline'));
-    });
-    expect(pushMock).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith('unknownError');
-    expect(button).not.toBeDisabled();
-    fireEvent.click(button);
-    await waitFor(() => expect(pushMock).toHaveBeenCalledTimes(1));
-    expect(openNewTopicOrSaveTopicMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('disables starting a new topic for workspace viewers', () => {
-    permissionMock.create_content = false;
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/profile');
-
-    render(<Nav />);
-
-    const startButton = screen.getByRole('button', { name: 'actions.addNewTopic' });
-    expect(startButton).toBeDisabled();
-
-    fireEvent.click(startButton);
-
-    expect(pushMock).not.toHaveBeenCalled();
-    expect(mutateMock).not.toHaveBeenCalled();
-  });
-
-  it('opens workspace tasks from a new conversation without an agent route parameter', () => {
-    useParamsMock.mockReturnValue({});
-    usePathnameMock.mockReturnValue('/chat/new');
-    render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'tab.tasks' }));
-    expect(pushMock).toHaveBeenCalledWith('/tasks');
-  });
-
-  it('navigates to the agent tasks page', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
-    render(<Nav />);
-    fireEvent.click(screen.getByRole('button', { name: 'tab.tasks' }));
-
-    expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
-    expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/tasks');
-  });
-
-  it.each(['/agent/agt_eH4zL98zBx5u/tasks', '/agent/agt_eH4zL98zBx5u/task/task_2FCHvjS7d4CA'])(
-    'keeps the tasks entry active on %s',
-    (pathname) => {
-      usePathnameMock.mockReturnValue(pathname);
-
-      render(<Nav />);
-
-      expect(screen.getByRole('button', { name: 'tab.tasks' })).toHaveAttribute(
-        'data-active',
-        'true',
-      );
-    },
-  );
-
-  it('removes goals and self-learning entries even when their labs toggles are enabled', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
-    render(<Nav />);
-
-    expect(screen.queryByText('goalList.title')).toBeNull();
-    expect(screen.queryByText('title')).toBeNull();
-  });
-
-  it('orders home, new topic, search, and tasks in one navigation list', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
+  it('offers Issues and search without sidebar creation or a duplicate Home', () => {
+    usePathnameMock.mockReturnValue('/agent/agent-1');
     const { container } = render(<Nav />);
-
     expect(Array.from(container.querySelectorAll('a, button'), (item) => item.textContent)).toEqual(
-      ['tab.home', 'actions.addNewTopic', 'tab.search', 'tab.tasks'],
+      ['common:tab.issues', 'tab.search'],
     );
+    expect(screen.queryByText('actions.addNewTopic')).not.toBeInTheDocument();
+    expect(screen.queryByText('tab.home')).not.toBeInTheDocument();
+  });
+
+  it('lets modifier-clicking Issues keep the native link destination', () => {
+    useActiveWorkspaceSlugMock.mockReturnValue('acme');
+    render(<Nav />);
+    const issues = screen.getByRole('link', { name: 'common:tab.issues' });
+    expect(issues).toHaveAttribute('href', '/acme/tasks');
+    fireEvent.click(issues, { metaKey: true });
+    expect(appNavigateMock).not.toHaveBeenCalled();
   });
 
   it.each([
-    [null, '/'],
-    ['acme', '/acme/'],
-  ])('returns home in workspace %s with its native link destination', (slug, href) => {
+    [null, '/tasks'],
+    ['acme', '/acme/tasks'],
+  ])('reaches the same Issues destination in workspace %s', (slug, href) => {
     useActiveWorkspaceSlugMock.mockReturnValue(slug);
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
-
+    usePathnameMock.mockReturnValue('/chat/new');
     render(<Nav />);
-    const home = screen.getByRole('link', { name: 'tab.home' });
-    expect(home).toHaveAttribute('href', href);
-    fireEvent.click(home);
-
+    const issues = screen.getByRole('link', { name: 'common:tab.issues' });
+    expect(issues).toHaveAttribute('href', href);
+    fireEvent.click(issues);
     expect(appNavigateMock).toHaveBeenCalledWith(href, { escape: true });
+    expect(openNewTopicOrSaveTopicMock).not.toHaveBeenCalled();
   });
 });

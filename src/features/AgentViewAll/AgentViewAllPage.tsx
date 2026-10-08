@@ -397,13 +397,7 @@ const AgentViewAllPage = memo(() => {
   );
 
   const { allowed: canCreate, reason: createBlockedReason } = usePermission('create_content');
-  const {
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-    isMutatingAgent,
-  } = useCreateMenuItems();
+  const { createAgentMenuItem, createConnectAgentMenuItem, isMutatingAgent } = useCreateMenuItems();
 
   // Creating from the Private tab lands the item in the private bucket, so
   // the new row appears in the list the user is currently looking at.
@@ -419,22 +413,11 @@ const AgentViewAllPage = memo(() => {
   // very page.
   const createMenuItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem(createOptions);
-    const groupFromDescription = createGroupFromDescriptionMenuItem(createOptions);
     return [
       createAgentMenuItem(createOptions),
-      createGroupChatMenuItem(createOptions),
-      // Optional secondary: template generation stays available but never gates
-      // the direct-create path above.
-      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
     ];
-  }, [
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-    createOptions,
-  ]);
+  }, [createAgentMenuItem, createConnectAgentMenuItem, createOptions]);
 
   const { errorProps, view: listView } = useAgentListView(filteredItems.length);
 

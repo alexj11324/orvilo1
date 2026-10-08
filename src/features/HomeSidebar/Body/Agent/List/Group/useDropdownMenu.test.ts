@@ -47,7 +47,7 @@ const getMenuLayout = (items: ReturnType<typeof useGroupDropdownMenu>) =>
   });
 
 describe('Category useGroupDropdownMenu', () => {
-  it('includes Connect External Agents with the current category context', () => {
+  it('keeps category organization without sidebar creation actions', () => {
     const { result } = renderHook(() =>
       useGroupDropdownMenu({
         anchor: null,
@@ -59,20 +59,7 @@ describe('Category useGroupDropdownMenu', () => {
       }),
     );
 
-    expect(getMenuLayout(result.current)).toEqual([
-      'newAgent',
-      'newGroupChat',
-      'divider',
-      'newPlatformAgent',
-      'divider',
-      'rename',
-      'config',
-      'divider',
-      'delete',
-    ]);
-    expect(createConnectAgentMenuItemMock).toHaveBeenCalledWith({
-      groupId: 'group-1',
-      visibility: 'private',
-    });
+    expect(getMenuLayout(result.current)).toEqual(['rename', 'config', 'divider', 'delete']);
+    expect(createConnectAgentMenuItemMock).not.toHaveBeenCalled();
   });
 });

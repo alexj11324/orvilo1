@@ -1,4 +1,4 @@
-import { LucideCopy, Pen, PictureInPicture2Icon, Pin, PinOff, Trash } from 'lucide-react';
+import { Pen, PictureInPicture2Icon, Pin, PinOff, Trash } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,9 +46,8 @@ export const useGroupDropdownMenu = ({
   const canManage = useResourceManageable(userId);
 
   const openAgentInNewWindow = useGlobalStore((s) => s.openAgentInNewWindow);
-  const [pinAgentGroup, duplicateAgentGroup, removeAgentGroup] = useHomeStore((s) => [
+  const [pinAgentGroup, removeAgentGroup] = useHomeStore((s) => [
     s.pinAgentGroup,
-    s.duplicateAgentGroup,
     s.removeAgentGroup,
   ]);
   const transferMenuItems = useAgentGroupTransferMenuItem(id, {
@@ -95,16 +94,6 @@ export const useGroupDropdownMenu = ({
                   }
                 },
                 sfSymbol: 'pencil',
-              },
-              {
-                icon: <LucideCopy size={16} />,
-                key: 'duplicate',
-                label: t('duplicate', { ns: 'common' }),
-                onClick: ({ domEvent }: any) => {
-                  domEvent.stopPropagation();
-                  duplicateAgentGroup(id);
-                },
-                sfSymbol: 'doc.on.doc',
               },
             ]
           : []),
@@ -168,7 +157,6 @@ export const useGroupDropdownMenu = ({
       pinAgentGroup,
       id,
       title,
-      duplicateAgentGroup,
       openAgentInNewWindow,
       removeAgentGroup,
       transferMenuItems,

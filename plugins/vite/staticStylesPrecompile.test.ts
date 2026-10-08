@@ -152,6 +152,19 @@ export const styles = createStaticStyles(({ css }) => ({ root: css\`color: red;\
 `;
     expect(precompileStaticStyles(code, evaluator)).toBeUndefined();
   });
+
+  it('bakes the cascade layer into the compiled rules when a layer is given', async () => {
+    const layered = await loadAntdStyleEvaluator('antd-style');
+    const output = precompileStaticStyles(PURE, layered)!;
+
+    // One layer block per class, hover and media query nested inside it.
+    expect(output).toMatch(
+      /"root": __orviloStaticStyle\("acss-[a-z0-9]+", \["@layer antd-style\{\.acss-/,
+    );
+    expect(output).toContain('@media (max-width: 479.98px){.acss-');
+    expect(output).not.toMatch(/\["\.acss-/);
+    expect(parseAst(output)).toBeDefined();
+  });
 });
 
 describe('insertPrecompiledStyle', () => {

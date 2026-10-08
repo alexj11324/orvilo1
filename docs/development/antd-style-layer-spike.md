@@ -34,8 +34,14 @@ fixed page by page.
    instance). It is the first import of `src/initialize.ts`, which is the first import of every
    renderer entry (`entry.web|desktop|mobile|popup|auth`), so it runs before any
    `createStaticStyles` call in the \~980 files. It logs `console.error` if rules were already inserted.
-3. `src/app/globals.css`: `@layer theme, base, antd, components, antd-style, utilities;`.
-4. Single switch: `ANTD_STYLE_LAYER_ENABLED` in `antdStyleLayer.ts`.
+3. Production builds do not go through `cache.insert` for most rules. `plugins/vite/staticStylesPrecompile.ts`
+   (`apply: 'build'`, covers `src` and `@lobehub/ui`) evaluates pure `createStaticStyles` callbacks at build time
+   with its own emotion instance and the runtime inserts the result with `cache.sheet.insert(rule)`. The same
+   wrapper is applied to that build-time cache (`loadAntdStyleEvaluator(layer)`), so each class compiles to one
+   `@layer antd-style{...}` rule. Impure callbacks and the dev server use the runtime patch from point 2.
+   `cx()` merges re-serialize the raw registered styles and insert through `cache.insert`, so they are layered too.
+4. `src/app/globals.css`: `@layer theme, base, antd, components, antd-style, utilities;`.
+5. Single switch: `ANTD_STYLE_LAYER_ENABLED` in `layerEmotionCache.ts`, read by both paths.
 
 Why this and not the alternatives:
 
@@ -50,10 +56,14 @@ Why this and not the alternatives:
 Facts checked in `node_modules` (antd-style 4.1.0, @emotion/css 11.13):
 
 - Runtime `createStyles` is effectively unused: 0 files in `src`, 1 file in `@lobehub/ui` es vs 160 using
-  `createStaticStyles`. `<StyleProvider speedy>` in `SPAGlobalProvider`/`ShareAppShell` creates a second
-  emotion instance (same key `acss`) that only `createStyles` would use. It is not patched; the 1 lobehub
-  `createStyles` file would stay unlayered. If that matters, drop the provider (loses `speedy` in prod) or
-  patch via `stylisPlugins`.
+  `createStaticStyles`. `<StyleProvider speedy>` in `SPAGlobalProvider`/`ShareAppShell` builds a new emotion
+  instance, but `createStyleProvider` then does `instance.cache = cacheManager.add(instance.cache)` and
+  `CacheManager.add` returns the already registered cache for the same key (`acss`), and `createStyles` reads
+  `EmotionContext.cache`. By reading the source it therefore shares the patched default cache. Not checked at
+  runtime; a `<StyleProvider prefix="...">` with another key would not be layered.
+- `viteEmotionSpeedy` (`plugins/vite/emotionSpeedy.ts`) rewrites antd-style's `speedy: false` to `true`, so rules
+  go through `insertRule`. A `@layer` block with nested rules is valid there (Chromium 99+, which Tailwind v4
+  requires anyway), but it was not exercised.
 - `createGlobalStyle` uses `@emotion/react` `<Global>` and its own default cache (key `css`), not antd-style's.
   Global styles are therefore unaffected (stay unlayered), which matches PR #565's decision for `html/body`.
 - `src/app` has no `extractStaticStyle` use. `apps/auth|share|workbench` do (`entry.server.tsx`), with their own
@@ -172,7 +182,8 @@ either way.
 1. Land PR #565 first (cssinjs `@layer antd`, lobehub reset in `@layer base`).
 2. Land this behind `ANTD_STYLE_LAYER_ENABLED = false` (declaring the layer is harmless).
 3. In an Electron run with the flag on, capture before/after computed styles for the 33 listed sites
-   plus a sweep of the 160 files (the scan script can emit the list). Fix flips page by page by moving the
+   plus a sweep of the 160 files (the throwaway scan script behind the numbers is not committed; rerun it as an
+   AST scan if the list is needed). Fix flips page by page by moving the
    override to the element as Tailwind classes through `cn()` so tailwind-merge resolves the conflict, or by
    deleting the antd-style rule when the primitive default is the intended design.
 4. Flip the flag; keep the fixes small and reviewable per feature area.
@@ -187,6 +198,13 @@ either way.
 ## Not verified
 
 No dev server, Electron or browser run. Unverified in particular: that `@lobehub/ui` is deduped to the
-same antd-style instance in Vite's dev pre-bundle and in the production build (installed tree shows a
-single symlinked instance); that no entry evaluates an antd-style module before `src/initialize.ts`;
-visual parity of any flipped site; the apps/\* SSR path.
+same antd-style instance in Vite's dev pre-bundle and in the production build (the installed tree shows a
+single symlinked instance and `antd-style` is in `sharedOptimizeDeps.include`, but it is not in
+`sharedRendererDedupe`, so a second copy through a different peer-variant path is possible); that no entry
+evaluates an antd-style module before `src/initialize.ts`; the production precompile output in a real
+build; visual parity of any flipped site; the apps/\* SSR path.
+
+Tests run: `src/styles/layerEmotionCache.test.ts` (wrapper against a real antd-style instance) and
+`plugins/vite/staticStylesPrecompile.test.ts` (including a Vite build and the new layered-precompile case).
+`src/initialize.test.ts` fails in this worktree with and without the change (`sonner` is not installed in the
+shared `node_modules`).

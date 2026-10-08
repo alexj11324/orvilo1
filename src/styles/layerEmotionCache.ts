@@ -14,6 +14,13 @@
 
 export const ANTD_STYLE_LAYER = 'antd-style';
 
+/**
+ * The single switch. Read by the runtime patch (`antdStyleLayer.ts`) and by the
+ * Vite build-time precompile (`plugins/vite/staticStylesPrecompile.ts`), which
+ * bypasses `cache.insert` and therefore needs the same layering baked in.
+ */
+export const ANTD_STYLE_LAYER_ENABLED = true;
+
 interface SerializedStyles {
   name: string;
   styles: string;

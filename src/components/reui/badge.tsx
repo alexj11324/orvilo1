@@ -19,7 +19,6 @@ const badgeVariants = cva(
         'success': 'bg-success text-success-on-fill',
         'warning': 'bg-warning text-warning-on-fill',
         'destructive': 'bg-destructive text-destructive-on-fill',
-        'focus': 'bg-focus text-focus-foreground',
         'invert': 'bg-invert text-invert-foreground',
         'primary-light': 'border-primary/15 bg-primary-subtle text-primary-text',
         'warning-light': 'border-warning/15 bg-warning-subtle text-warning-text',
@@ -28,15 +27,12 @@ const badgeVariants = cva(
         'destructive-light': 'border-destructive/15 bg-destructive-subtle text-destructive-text',
         'invert-light':
           'border-invert/15 bg-invert/10 text-foreground dark:border-invert/45 dark:bg-invert/35 dark:text-invert-foreground',
-        'focus-light':
-          'border-focus/15 bg-focus/10 text-focus-foreground dark:border-focus/25 dark:bg-focus/15 dark:text-focus',
         'primary-outline': 'bg-background border-border text-primary-text dark:bg-input/30',
         'warning-outline': 'bg-background border-border text-warning-text dark:bg-input/30',
         'success-outline': 'bg-background border-border text-success-text dark:bg-input/30',
         'info-outline': 'bg-background border-border text-info-text dark:bg-input/30',
         'destructive-outline': 'bg-background border-border text-destructive-text dark:bg-input/30',
         'invert-outline': 'bg-background border-border text-invert-foreground dark:bg-input/30',
-        'focus-outline': 'bg-background border-border text-focus-foreground dark:bg-input/30',
       },
       size: {
         xs: 'px-1 py-0.25 text-[0.6rem] leading-none h-4 min-w-4 gap-1',

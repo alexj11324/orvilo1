@@ -138,7 +138,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
   );
 
   const headerButtonClassName = cn(
-    'text-secondary-foreground/80 hover:bg-secondary data-[state=open]:bg-secondary hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-lg',
+    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-lg',
     className,
   );
 

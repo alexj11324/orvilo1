@@ -5,6 +5,8 @@ import { fireEvent, render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SidebarAgentItem } from '@/database/repositories/home';
+
 import AgentSelectorAction from './AgentSelectorAction';
 
 const mocks = vi.hoisted(() => ({
@@ -35,7 +37,7 @@ const mocks = vi.hoisted(() => ({
     ungroupedAgents: [
       { id: 'agt_custom', title: 'Custom Agent', type: 'agent' },
       { id: 'grp_custom', title: 'Custom Group', type: 'group' },
-    ],
+    ] as Pick<SidebarAgentItem, 'heterogeneousType' | 'id' | 'title' | 'type'>[],
   },
 }));
 
@@ -121,6 +123,10 @@ describe('AgentSelectorAction', () => {
   });
 
   it('uses the builtin runtime icon and forwards agent changes', () => {
+    mocks.homeState.ungroupedAgents = [
+      { heterogeneousType: 'orvilo', id: 'agt_task', title: 'Task Manager', type: 'agent' },
+      ...mocks.homeState.ungroupedAgents,
+    ];
     const onAgentChange = vi.fn();
     const { container, getByText } = render(<AgentSelectorAction onAgentChange={onAgentChange} />);
 

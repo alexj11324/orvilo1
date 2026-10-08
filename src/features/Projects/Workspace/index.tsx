@@ -12,6 +12,7 @@ import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
@@ -88,39 +89,6 @@ const styles = createStaticStyles(({ css }) => ({
     flex: 1;
     gap: 2px 4px;
     min-width: 0;
-  `,
-  status: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-
-    height: 28px;
-    padding-block: 3px;
-    padding-inline: 6px;
-    border: 0;
-    border-radius: 9999px;
-
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-    }
-
-    &:disabled {
-      cursor: default;
-      opacity: 0.6;
-    }
   `,
   /* The reference's fifth property chip is the project's team: a 28px pill
      carrying the team's accent glyph (14px) and name, and it is a real
@@ -267,11 +235,11 @@ const ProjectWorkspace = memo(() => {
                 style={{ alignItems: 'center', flexWrap: 'wrap' }}
               >
                 <DropdownMenu items={statusItems}>
-                  <button
+                  <Button
                     aria-label={t('properties.status')}
-                    className={styles.status}
+                    className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
                     disabled={updatingStatus || lifecycleLocked}
-                    type="button"
+                    variant="ghost"
                   >
                     <ProjectStatusIcon
                       percent={projectIssueProgressPercent(detail.tasks) ?? 0}
@@ -279,7 +247,7 @@ const ProjectWorkspace = memo(() => {
                       status={project.status}
                     />
                     {t(`status.${project.status}`, { defaultValue: project.status })}
-                  </button>
+                  </Button>
                 </DropdownMenu>
                 <ProjectPriorityField inline project={project} />
                 <ProjectLeadField inline project={project} />
@@ -330,6 +298,7 @@ const ProjectWorkspace = memo(() => {
             <div className="flex flex-col" style={{ gap: 8 }}>
               <ProjectUpdateComposer
                 emptyState={updatesEmpty}
+                key={project.id}
                 projectId={project.id}
                 onPosted={() => void updatesSWR.mutate()}
                 onExpand={() =>

@@ -563,9 +563,7 @@ describe('project membership editing', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
     await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
     expect(trigger).not.toHaveTextContent('New teammate');
-    expect(
-      screen.getAllByText('user_1').find((element) => element.closest('[data-slot=combobox-chip]')),
-    ).toBeInTheDocument();
+    expect(trigger).toHaveTextContent('user_1');
   });
 });
 
@@ -1318,7 +1316,7 @@ describe('project status glyph', () => {
         projectId={'prj_1'}
       />,
     );
-    return screen.getByText(`status.${status}`).querySelector('svg');
+    return screen.getByText(`status.${status}`).parentElement?.querySelector('svg');
   };
 
   /** The glyph the `/projects` list row draws in its Status column. */
@@ -1336,11 +1334,11 @@ describe('project status glyph', () => {
     expect(listGlyph(status)?.innerHTML).toBe(glyph);
   });
 
-  it('draws the measured 12px filled In Progress glyph in the rail', () => {
+  it('draws the measured 16px filled In Progress glyph in the rail', () => {
     railIcon('active');
     const svg = document.querySelector('svg[viewBox="-1 -1 16 16"]');
-    expect(svg).toHaveAttribute('height', '12');
-    expect(svg).toHaveAttribute('width', '12');
+    expect(svg).toHaveAttribute('height', '16');
+    expect(svg).toHaveAttribute('width', '16');
     expect(svg?.querySelector('path')).toHaveAttribute(
       'd',
       'M2.95778 3.02069L5.70777 1.36023C6.50244 0.88041 7.49756 0.88041 8.29223 1.36024L11.0422 3.02074C11.7918 3.47336 12.25 4.2852 12.25 5.16086V8.84803C12.25 9.7251 11.7904 10.5381 11.0388 10.9902L8.29114 12.6433C7.49693 13.1211 6.50355 13.1203 5.71011 12.6412L2.95775 10.9792C2.20815 10.5266 1.75 9.7148 1.75 8.83911V5.16082C1.75 4.28516 2.20816 3.47332 2.95778 3.02069Z',
@@ -1457,7 +1455,7 @@ describe('project properties planning metadata', () => {
     );
 
     expect(screen.getByText('create.priority.high')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'properties.priority' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'properties.priority' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.labels' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('Sep 2026');

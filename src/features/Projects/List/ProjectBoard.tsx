@@ -105,7 +105,7 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
         return (
           <div className={styles.column} key={group.key}>
             <div className={styles.columnHeader}>
-              <ProjectStatusIcon size={14} status={status} />
+              <ProjectStatusIcon size={16} status={status} />
               <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
                 {t(`status.${status}`)}
               </span>

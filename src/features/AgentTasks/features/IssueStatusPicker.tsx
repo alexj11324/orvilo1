@@ -266,7 +266,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
     let pickIndex = 0;
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuTrigger nativeButton={false} render={triggerNode as ReactElement} />
         <DropdownMenuContent className="min-w-52">
           <Input
             autoFocus

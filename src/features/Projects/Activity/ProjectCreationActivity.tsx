@@ -2,6 +2,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import type { ProjectDetail } from '@/store/project';
 
 import { ProjectIcon } from '../ProjectIcon';
@@ -51,7 +52,7 @@ export function ProjectCreationActivity({ project }: { project: ProjectDetail['p
         {creator ? t('activity.createdBy', { name: creator }) : t('activity.created')}
         {' · '}
         <time dateTime={date.toISOString()} title={date.format('YYYY-MM-DD HH:mm')}>
-          {date.format('MMM D')}
+          {formatProjectDay(date)}
         </time>
       </span>
     </div>

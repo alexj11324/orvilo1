@@ -1,7 +1,6 @@
 'use client';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +10,7 @@ import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { ProjectIcon } from '@/features/Projects/ProjectIcon';
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectListItem } from '@/store/project';
@@ -163,7 +163,7 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                         />
                       ) : null}
                       {properties.targetDate && project.targetDate ? (
-                        <span>{dayjs(project.targetDate).format('MMM D')}</span>
+                        <span>{formatProjectDay(project.targetDate)}</span>
                       ) : null}
                       {properties.issues && typeof project.taskCount === 'number' ? (
                         <span>{project.taskCount}</span>

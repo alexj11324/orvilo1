@@ -17,6 +17,9 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+import { useCalendarLocale } from './calendarLocale';
 
 type PickerMode = 'date' | 'day' | 'month' | 'quarter' | 'halfYear' | 'year';
 
@@ -41,23 +44,29 @@ export interface DatePickerProps {
   'size'?: 'default' | 'small';
   'style'?: CSSProperties;
   'suffixIcon'?: ReactNode;
+  /** Hover hint for the trigger; suppressed while the popover is open. */
+  'tooltip'?: ReactNode;
   'value'?: Dayjs | null;
-  'variant'?: string;
+  /**
+   * `ghost` renders the trigger as a bare ghost `Button` that takes its whole
+   * look from `className` (used by property pills); default is the bordered field.
+   */
+  'variant'?: 'field' | 'ghost';
 }
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const cellButtonClass = 'w-full rounded-lg hover:bg-accent';
 const cellVariant = (selected: boolean) => (selected ? 'default' : 'ghost');
 
 const PeriodGrid = ({
   disabledBefore,
+  localeCode,
   onPick,
   picker,
   viewYear,
   value,
 }: {
   disabledBefore?: Dayjs;
+  localeCode?: string;
   onPick: (date: Dayjs) => void;
   picker: PickerMode;
   viewYear: number;
@@ -65,6 +74,9 @@ const PeriodGrid = ({
 }) => {
   const { t } = useTranslation('common');
   const [year, setYear] = useState(viewYear);
+  const months = Array.from({ length: 12 }, (_, i) =>
+    new Date(2000, i, 1).toLocaleString(localeCode, { month: 'short' }),
+  );
   const header = (
     <div className="flex items-center justify-between px-1 pb-1">
       <Button
@@ -147,7 +159,7 @@ const PeriodGrid = ({
     <div className="w-64 p-2">
       {header}
       <div className="grid grid-cols-3 gap-1">
-        {MONTHS.map((label, i) => {
+        {months.map((label, i) => {
           const date = dayjs().year(year).month(i).startOf('month');
           const selected = value?.year() === year && value?.month() === i;
           return (
@@ -189,9 +201,12 @@ const DatePicker = memo<DatePickerProps>(
     size,
     style,
     suffixIcon,
+    tooltip,
     value,
+    variant = 'field',
   }) => {
     const { t } = useTranslation('common');
+    const calendarLocale = useCalendarLocale();
     const [innerOpen, setInnerOpen] = useState(false);
     const [innerValue, setInnerValue] = useState<Dayjs | null>(defaultValue ?? null);
     const open = openProp ?? innerOpen;
@@ -229,13 +244,16 @@ const DatePicker = memo<DatePickerProps>(
           <Calendar
             defaultMonth={currentValue?.toDate() ?? minDate?.toDate()}
             disabled={minDate ? { before: minDate.startOf('day').toDate() } : undefined}
+            locale={calendarLocale}
             mode="single"
             selected={currentValue?.toDate()}
+            weekStartsOn={1}
             onSelect={(date) => pick(date ? dayjs(date) : null)}
           />
         ) : (
           <PeriodGrid
             disabledBefore={minDate}
+            localeCode={calendarLocale.code}
             picker={picker}
             value={currentValue}
             viewYear={currentValue?.year() ?? dayjs().year()}
@@ -246,29 +264,19 @@ const DatePicker = memo<DatePickerProps>(
       </>
     );
 
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          render={
-            <Button
-              aria-label={ariaLabel}
-              disabled={disabled}
-              style={style}
-              type="button"
-              variant="outline"
-              className={cn(
-                'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
-                size === 'small' && 'h-7 text-[13px]',
-                className,
-              )}
-            />
-          }
+    const triggerContent = (
+      <>
+        {prefix ?? <CalendarIcon className="text-muted-foreground" size={13} />}
+        <span
+          className={cn(
+            'truncate text-left',
+            variant === 'field' && 'flex-1',
+            !display && 'text-muted-foreground',
+          )}
         >
-          {prefix ?? <CalendarIcon className="text-muted-foreground" size={13} />}
-          <span className={cn('flex-1 truncate text-left', !display && 'text-muted-foreground')}>
-            {display || placeholder}
-          </span>
-          {allowClear && currentValue ? (
+          {display || placeholder}
+        </span>
+        {allowClear && currentValue ? (
             <span
               {...clickableProps()}
               aria-label={t('datePicker.clear')}
@@ -287,9 +295,38 @@ const DatePicker = memo<DatePickerProps>(
             >
               <X size={13} />
             </span>
-          ) : suffixIcon === null ? null : (
-            (suffixIcon ?? null)
+        ) : suffixIcon === null ? null : (
+          (suffixIcon ?? null)
+        )}
+      </>
+    );
+
+    const triggerProps = {
+      'aria-label': ariaLabel,
+      'disabled': disabled,
+      style,
+    };
+
+    const trigger =
+      variant === 'ghost' ? (
+        <Button className={className} type="button" variant="ghost" {...triggerProps} />
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          {...triggerProps}
+          className={cn(
+            'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
+            size === 'small' && 'h-7 text-[13px]',
+            className,
           )}
+        />
+      );
+
+    const popover = (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger render={tooltip ? <TooltipTrigger render={trigger} /> : trigger}>
+          {triggerContent}
         </PopoverTrigger>
         <PopoverContent
           align="start"
@@ -299,6 +336,14 @@ const DatePicker = memo<DatePickerProps>(
           {panelRender ? panelRender(panel) : panel}
         </PopoverContent>
       </Popover>
+    );
+
+    if (!tooltip) return popover;
+    return (
+      <Tooltip disabled={open}>
+        {popover}
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
     );
   },
 );

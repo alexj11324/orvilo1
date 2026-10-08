@@ -24,7 +24,6 @@ import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
-import { ProjectDateField } from './ProjectPlanningFields';
 import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
@@ -1288,10 +1287,9 @@ describe('project overview inline properties', () => {
     expect(screen.getByRole('button', { name: 'properties.status' })).toBeDisabled();
   });
 
-  it('renders both date glyphs in the main property row', () => {
+  it('renders one calendar glyph per date control in the main property row', () => {
     render(<ProjectWorkspace />);
-    expect(document.querySelector('svg.lucide-calendar-days')).toBeInTheDocument();
-    expect(document.querySelector('svg.lucide-calendar')).toBeInTheDocument();
+    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(2);
   });
 
   // The reference's property row is Status / Priority / Lead / dates / Teams /
@@ -1376,25 +1374,15 @@ describe('project properties row geometry', () => {
   const pickerClasses = () =>
     [...document.querySelectorAll('[data-datepicker]')].map((el) => el.className);
 
-  it('keeps the Dates row on one line instead of the fixed 120px boxes', () => {
+  it('keeps the Dates row on one line and styles both controls as property pills', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
     const inCard = pickerClasses();
     expect(inCard).toHaveLength(2);
-    // The row cannot wrap any more (this reads the prop the component passes;
-    // jsdom cannot measure the 60px → 28px row height it buys).
+    expect(inCard[0]).toBe(inCard[1]);
+    expect(inCard[0]).toContain('hover:bg-accent');
     expect(screen.getByText('properties.dates').parentElement?.children[1]).not.toHaveAttribute(
       'wrap',
     );
-
-    cleanup();
-
-    // The standalone usage in the overview's chip row keeps its fixed box, so
-    // the difference is exactly that class — and it must be absent in the card.
-    render(<ProjectDateField kind={'startDate'} project={dated.project} />);
-    const standalone = pickerClasses()[0] ?? '';
-    const cardTokens = new Set((inCard[0] ?? '').split(/\s+/));
-    const onlyOnStandalone = standalone.split(/\s+/).filter((token) => !cardTokens.has(token));
-    expect(onlyOnStandalone).toHaveLength(1);
   });
 
   // On the reference each rail date button carries a leading 16px calendar
@@ -1403,8 +1391,7 @@ describe('project properties row geometry', () => {
   it('draws a leading calendar glyph inside each rail date control, split by an svg arrow', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
 
-    expect(document.querySelectorAll('svg.lucide-calendar-days')).toHaveLength(1);
-    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(1);
+    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(2);
     expect(document.querySelector('svg.lucide-arrow-right')).toBeInTheDocument();
     expect(screen.queryByText('→')).not.toBeInTheDocument();
   });
@@ -1577,7 +1564,7 @@ describe('project properties planning metadata', () => {
     expect(screen.getByRole('button', { name: 'properties.priority' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.labels' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('Sep 2026');
+    expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('2026/09');
     expect(screen.getByRole('button', { name: 'create.targetDate' })).toHaveTextContent('2027 Q1');
     expect(screen.getByText('UI parity')).toBeInTheDocument();
     expect(screen.getByText('orvilo')).toBeInTheDocument();

@@ -1,10 +1,10 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import { memo } from 'react';
 
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { useCurrentProjectDetail } from '@/store/project';
 
 import { pickNextMilestone } from './displayOptions';
@@ -54,7 +54,7 @@ const ProjectMilestoneChip = memo<{ projectId: string }>(({ projectId }) => {
       <MilestoneIcon size={10} />
       <span className={styles.name}>{milestone.name}</span>
       {milestone.date ? (
-        <span className={styles.date}>{dayjs(milestone.date).format('MMM D')}</span>
+        <span className={styles.date}>{formatProjectDay(milestone.date)}</span>
       ) : null}
     </span>
   );

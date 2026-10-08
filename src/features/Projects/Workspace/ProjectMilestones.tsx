@@ -295,7 +295,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
         <DatePicker
           allowClear
           aria-label={t('create.milestone.date')}
-          format="MMM D, YYYY"
+          format="YYYY/MM/DD"
           placeholder={t('create.milestone.date')}
           prefix={<CalendarIcon size={13} />}
           size="small"
@@ -520,7 +520,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     allowClear
                     aria-label={t('overview.milestoneChooseDate')}
                     disabled={saving}
-                    format="MMM D"
+                    format="YYYY/MM/DD"
                     placeholder={t('overview.milestoneSetDate')}
                     prefix={<CalendarIcon size={13} />}
                     size="small"

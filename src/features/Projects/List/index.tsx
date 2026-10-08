@@ -39,6 +39,7 @@ import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { PROJECT_ENTITY_ICON, ProjectIcon } from '@/features/Projects/ProjectIcon';
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -523,9 +524,9 @@ const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) =
   <span
     className={cn('text-sm', styles.cell)}
     style={{ fontSize: 12 }}
-    title={value ? dayjs(value).format('MMM D, YYYY h:mm A') : undefined}
+    title={value ? dayjs(value).format('YYYY/MM/DD h:mm A') : undefined}
   >
-    {value ? dayjs(value).format('MMM D') : '—'}
+    {value ? formatProjectDay(value) : '—'}
   </span>
 ));
 

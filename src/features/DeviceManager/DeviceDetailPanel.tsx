@@ -252,7 +252,12 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
             {isCurrent && <Tag size="sm">{t('devices.currentBadge')}</Tag>}
           </div>
         </div>
-        <ActionIcon icon={XIcon} size={'small'} onClick={onClose} />
+        <ActionIcon
+          aria-label={t('close', { ns: 'common' })}
+          icon={XIcon}
+          size={'small'}
+          onClick={onClose}
+        />
       </div>
 
       {/* Visible hint when the caller can't mutate the row — explains why the
@@ -418,6 +423,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
                     {item.id}
                   </div>
                   <ActionIcon
+                    aria-label={t('remove', { ns: 'common' })}
                     icon={XIcon}
                     size={'small'}
                     onClick={() => handleRemoveRecent(item.id)}

@@ -130,7 +130,11 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
                   <TooltipTrigger
                     render={
                       <span style={{ display: 'inline-flex' }}>
-                        <ActionIcon icon={SmilePlus} size="small" />
+                        <ActionIcon
+                          aria-label={t('messageAction.reaction')}
+                          icon={SmilePlus}
+                          size="small"
+                        />
                       </span>
                     }
                   />

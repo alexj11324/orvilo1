@@ -78,7 +78,6 @@ const Footer = memo<PropsWithChildren>(() => {
         <div style={{ textAlign: 'center' }}>
           <MessageSquareHeart /> {`${t('footer.title')} `}
           <a
-            aria-label={'star'}
             href={GITHUB}
             onClick={(e) => {
               e.preventDefault();
@@ -89,7 +88,6 @@ const Footer = memo<PropsWithChildren>(() => {
           </a>
           {` ${t('footer.and')} `}
           <a
-            aria-label={'feedback'}
             href={GITHUB_ISSUES}
             onClick={(e) => {
               e.preventDefault();

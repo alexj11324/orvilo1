@@ -178,6 +178,7 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
         }}
       />
       <ActionIcon
+        aria-label={t('save', { ns: 'common' })}
         data-testid="editing-popover-save"
         icon={Check}
         size={'small'}

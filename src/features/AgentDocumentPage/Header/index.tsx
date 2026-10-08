@@ -70,7 +70,11 @@ const Header = memo<HeaderProps>(
               {resolvedTitle}
             </div>
             <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
-              <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+              <ActionIcon
+                aria-label={t('more', { ns: 'common' })}
+                icon={MoreHorizontal}
+                size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              />
             </DropdownMenu>
           </div>
         }

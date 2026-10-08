@@ -148,7 +148,11 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
         />
       )}
       <SidebarDropdownMenu items={menuItems} placement="bottomRight">
-        <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+        <ActionIcon
+          aria-label={t('more', { ns: 'common' })}
+          icon={MoreHorizontal}
+          size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+        />
       </SidebarDropdownMenu>
     </div>
   );

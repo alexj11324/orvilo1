@@ -88,6 +88,7 @@ const ArgsInput = memo<ArgsInputProps>(({ value = [], onChange, ...res }) => {
                 onKeyDown={(e) => handleKeyDown(e, index)}
               />
               <ActionIcon
+                aria-label={t('remove', { ns: 'common' })}
                 icon={X}
                 size="small"
                 style={{ flexShrink: 0 }}

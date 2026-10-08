@@ -3,6 +3,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
 import { createElement, memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import SidebarDropdownMenu, {
@@ -16,6 +17,7 @@ const themeIcons = {
 } as const;
 
 const AuthThemeButton = memo<{ size?: number }>((props) => {
+  const { t: tCommon } = useTranslation('common');
   const { setTheme, theme } = useNextThemesTheme();
 
   const items = useMemo<SidebarDropdownMenuProps['items']>(
@@ -45,6 +47,7 @@ const AuthThemeButton = memo<{ size?: number }>((props) => {
   return (
     <SidebarDropdownMenu items={items}>
       <ActionIcon
+        aria-label={tCommon('theme')}
         icon={themeIcons[(theme as 'dark' | 'light' | 'system') || 'system']}
         size={props.size || { blockSize: 32, size: 16 }}
       />

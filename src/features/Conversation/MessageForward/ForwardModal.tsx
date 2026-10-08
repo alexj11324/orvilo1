@@ -162,6 +162,7 @@ const ForwardModalContent = memo(() => {
           />
           {keyword && (
             <button
+              aria-label={t('close', { ns: 'common' })}
               className="-translate-y-1/2 absolute top-1/2 right-2 text-muted-foreground"
               type="button"
               onClick={() => setKeyword('')}

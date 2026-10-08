@@ -1,9 +1,10 @@
+import { cn } from 'cn';
 import { HistoryIcon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -91,11 +92,12 @@ const AutomationsPage = memo(() => {
         right={
           <div className="flex items-center gap-1.5">
             <AutomationStatusSelect value={statusFilter} onChange={setStatusFilter} />
-            <WorkspaceLink to={'/automations/runs'}>
-              <Button size="sm" variant="ghost">
-                <HistoryIcon data-icon="inline-start" />
-                {t('overview.all_runs')}
-              </Button>
+            <WorkspaceLink
+              className={cn(buttonVariants({ size: 'sm', variant: 'ghost' }))}
+              to={'/automations/runs'}
+            >
+              <HistoryIcon data-icon="inline-start" />
+              {t('overview.all_runs')}
             </WorkspaceLink>
             <TooltipProvider>
               <Tooltip>

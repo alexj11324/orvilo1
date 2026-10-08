@@ -182,6 +182,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               children: (
                 <div className="flex items-center gap-2">
                   <ActionIcon
+                    aria-label={t('sort', { ns: 'common' })}
                     size={'small'}
                     style={{ borderRadius: 9999 }}
                     icon={

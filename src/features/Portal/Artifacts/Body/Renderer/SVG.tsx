@@ -105,7 +105,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button size="icon" variant="outline">
+              <Button aria-label={t('download', { ns: 'common' })} size="icon" variant="outline">
                 <DownloadIcon data-icon="inline-start" />
               </Button>
             }
@@ -121,6 +121,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
         </DropdownMenu>
         <SimpleTooltip title={t('artifacts.svg.copyAsImage')}>
           <Button
+            aria-label={t('artifacts.svg.copyAsImage')}
             variant="outline"
             onClick={async () => {
               const dataUrl = await generatePng();

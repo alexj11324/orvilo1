@@ -664,6 +664,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
         </div>
         <SimpleTooltip title={t('heteroAgent.quota.refresh')}>
           <ActionIcon
+            aria-label={t('refresh', { ns: 'common' })}
             disabled={loading}
             icon={RefreshCwIcon}
             size={'small'}

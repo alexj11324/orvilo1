@@ -335,6 +335,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ActionIcon
+                  aria-label={t('toggle', { ns: 'common' })}
                   icon={ChevronDown}
                   size={'small'}
                   style={{ width: 20 }}

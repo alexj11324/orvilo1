@@ -256,7 +256,7 @@ export const LinearFileCard = memo<LinearFileCardProps>(({ node, uploadTracker }
       </div>
       <div className={styles.download} data-orvilo-file-download="">
         <ActionIcon
-          aria-label="Download"
+          aria-label={t('download', { ns: 'common' })}
           icon={DownloadIcon}
           size={'small'}
           variant={'filled'}

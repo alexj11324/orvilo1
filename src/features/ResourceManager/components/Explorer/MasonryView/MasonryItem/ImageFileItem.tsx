@@ -316,7 +316,12 @@ const ImageFileItem = memo<ImageFileItemProps>(
                   }
                 }}
               >
-                <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                <Button
+                  aria-label={t('FileManager.actions.chunkingTooltip')}
+                  loading={isCreatingFileParseTask}
+                  size="sm"
+                  variant="ghost"
+                >
                   <FileBoxIcon data-icon="inline-start" />
                 </Button>
               </div>

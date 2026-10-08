@@ -4,6 +4,7 @@ import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Trash2 } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { EvidenceOverlay } from './overlay';
 import { useAnnotationGesture } from './useAnnotationGesture';
@@ -238,6 +239,7 @@ interface AnnotationCanvasProps {
  */
 export const AnnotationCanvas = memo<AnnotationCanvasProps>(
   ({ annotations, drawing = true, imageWidth, onDraw, onRemove, onUpdate, src }) => {
+    const { t: tCommon } = useTranslation('common');
     const { draft, handlers, imageRef, startEdit } = useAnnotationGesture({
       drawing,
       onDraw,
@@ -276,6 +278,7 @@ export const AnnotationCanvas = memo<AnnotationCanvasProps>(
           >
             <span className={styles.badge}>{index + 1}</span>
             <button
+              aria-label={tCommon('remove')}
               className={styles.badgeDelete}
               type={'button'}
               onPointerDown={(event) => event.stopPropagation()}

@@ -112,7 +112,12 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <ActionIcon icon={X} size="small" onClick={() => onSetPref(key, null)} />
+                          <ActionIcon
+                            aria-label={t('heteroImport.action.unwatch')}
+                            icon={X}
+                            size="small"
+                            onClick={() => onSetPref(key, null)}
+                          />
                         }
                       />
                       <TooltipContent>{t('heteroImport.action.unwatch')}</TooltipContent>
@@ -123,6 +128,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                         <TooltipTrigger
                           render={
                             <ActionIcon
+                              aria-label={t('heteroImport.action.watch')}
                               icon={Timer}
                               size="small"
                               onClick={() => onSetPref(key, 'watched')}
@@ -135,6 +141,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                         <TooltipTrigger
                           render={
                             <ActionIcon
+                              aria-label={t('heteroImport.action.ignore')}
                               icon={EyeOff}
                               size="small"
                               onClick={() => {
@@ -313,6 +320,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                                 <TooltipTrigger
                                   render={
                                     <ActionIcon
+                                      aria-label={t('heteroImport.action.restore')}
                                       icon={Eye}
                                       size="small"
                                       onClick={() => onSetPref(key, null)}

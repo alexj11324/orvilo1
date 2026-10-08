@@ -252,6 +252,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
             }}
           />
           <ActionIcon
+            aria-label={t('delete', { ns: 'common' })}
             icon={Trash2}
             size="small"
             onClick={() => setDraftItems(draftItems.filter((_, i) => i !== index))}

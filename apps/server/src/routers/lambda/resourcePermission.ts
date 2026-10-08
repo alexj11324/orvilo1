@@ -234,6 +234,21 @@ export const resourcePermissionRouter = router({
     return buildResourcePermissionState({
       accessLevel,
       canManage,
+      ...(input.resourceType === 'agent'
+        ? {
+            canUseResource: await canPerformResourceAction({
+              action: 'use',
+              db: ctx.serverDB,
+              grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+                .workspacePermissionCodes,
+              meta,
+              resourceId: input.resourceId,
+              resourceType: input.resourceType,
+              userId: ctx.userId,
+              workspaceId: ctx.workspaceId,
+            }),
+          }
+        : {}),
       creatorId: meta.userId,
       visibility: (meta.visibility ?? 'public') as 'private' | 'public' | 'team',
     });
@@ -386,6 +401,21 @@ export const resourcePermissionRouter = router({
       return buildResourcePermissionState({
         accessLevel,
         canManage: true,
+        ...(input.resourceType === 'agent'
+          ? {
+              canUseResource: await canPerformResourceAction({
+                action: 'use',
+                db: ctx.serverDB,
+                grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+                  .workspacePermissionCodes,
+                meta,
+                resourceId: input.resourceId,
+                resourceType: input.resourceType,
+                userId: ctx.userId,
+                workspaceId: ctx.workspaceId,
+              }),
+            }
+          : {}),
         creatorId: meta.userId,
         visibility: (meta.visibility ?? 'public') as 'private' | 'public' | 'team',
       });

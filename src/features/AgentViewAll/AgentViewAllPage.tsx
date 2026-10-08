@@ -33,7 +33,6 @@ import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownM
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
-import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
@@ -43,7 +42,6 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 
 import AgentCard, { cardStyles } from './AgentCard';
-import { resolveAgentListView } from './agentListView';
 import AgentRow, { type AgentRowAuthor } from './AgentRow';
 import { flattenAgentBuckets } from './flattenBuckets';
 import ListConfig from './ListConfig';
@@ -53,6 +51,7 @@ import {
   normalizeAgentListViewOptions,
   resolveAgentViewMode,
 } from './listViewOptions';
+import { useAgentListView } from './useAgentListView';
 
 type SegmentValue = 'private' | 'workspace';
 type ViewMode = AgentListViewMode;
@@ -194,18 +193,10 @@ const AgentViewAllPage = memo(() => {
     [updateSystemStatus, viewOptions],
   );
 
-  // The sidebar usually owns these fetches, but this page must survive a
-  // direct deep link — SWR dedupes when both are mounted.
-  const {
-    error: agentListError,
-    isValidating: retryingAgentList,
-    mutate: retryAgentList,
-  } = useFetchAgentList();
   useFetchAgentLabels();
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   useFetchWorkspaceUserPreference();
 
-  const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const pinnedAgents = useHomeStore(homeAgentListSelectors.pinnedAgents, isEqual);
   const agentGroups = useHomeStore(homeAgentListSelectors.agentGroups, isEqual);
   const ungroupedAgents = useHomeStore(homeAgentListSelectors.ungroupedAgents, isEqual);
@@ -451,11 +442,7 @@ const AgentViewAllPage = memo(() => {
     createOptions,
   ]);
 
-  const listView = resolveAgentListView({
-    error: agentListError,
-    isInit,
-    itemCount: filteredItems.length,
-  });
+  const { errorProps, view: listView } = useAgentListView(filteredItems.length);
 
   return (
     <div className="flex flex-col flex-1" style={{ height: '100%' }}>
@@ -548,12 +535,7 @@ const AgentViewAllPage = memo(() => {
         {listView === 'loading' ? (
           <SkeletonList rows={8} />
         ) : listView === 'error' ? (
-          <AsyncError
-            error={agentListError}
-            retrying={retryingAgentList}
-            variant="page"
-            onRetry={() => void retryAgentList()}
-          />
+          <AsyncError {...errorProps} variant="page" />
         ) : listView === 'empty' ? (
           <div className="flex items-center justify-center flex-1 p-10">
             <Empty>

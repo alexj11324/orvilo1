@@ -6,7 +6,7 @@ import { cn } from 'cn';
 import dayjs from 'dayjs';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { createElement, memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
@@ -17,6 +17,7 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getDraft, removeDraft } from '@/features/ChatInput/draftStorage';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { useClientDataSWR } from '@/libs/swr';
@@ -24,6 +25,12 @@ import { projectService } from '@/services/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import {
+  persistProjectUpdateDraft,
+  PROJECT_UPDATE_HEALTH_ORDER,
+  projectUpdateDraftKey,
+  resolveProjectUpdateDraft,
+} from './projectUpdateDraft';
 import { ProjectUpdateEditor } from './ProjectUpdateEditor';
 
 /**
@@ -139,8 +146,6 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const PROJECT_UPDATE_HEALTH_ORDER: ProjectHealth[] = ['onTrack', 'atRisk', 'offTrack'];
-
 const toUpdate = (row: {
   authorAvatar?: null | string;
   authorId: string;
@@ -213,14 +218,22 @@ export const ProjectUpdateComposer = memo<{
   }) => {
     const { t } = useTranslation(['project', 'common']);
     const editing = !!editingUpdate;
-    const [body, setBody] = useState(editingUpdate?.body ?? '');
-    const [health, setHealth] = useState<ProjectHealth>(editingUpdate?.health ?? 'onTrack');
+    const userId = useUserStore(userProfileSelectors.userId);
+    const draftKey = projectUpdateDraftKey(userId, projectId, editingUpdate?.id);
+    const [initial] = useState(() =>
+      resolveProjectUpdateDraft(getDraft(draftKey), editingUpdate, defaultMode),
+    );
+    const [body, setBody] = useState(initial.body);
+    const [health, setHealth] = useState<ProjectHealth>(initial.health);
     const [posting, setPosting] = useState(false);
     const [editorRevision, setEditorRevision] = useState(0);
 
     const [expanded, setExpanded] = useState(defaultExpanded || editing);
     // `kind` is immutable once posted — edit mode never switches modes.
-    const [mode, setMode] = useState<ProjectUpdateKind>(editingUpdate?.kind ?? defaultMode);
+    const [mode, setMode] = useState<ProjectUpdateKind>(initial.mode);
+    useEffect(() => {
+      persistProjectUpdateDraft(draftKey, { body, health, mode });
+    }, [body, draftKey, health, mode]);
 
     const post = async () => {
       const content = body.trim();
@@ -242,6 +255,7 @@ export const ProjectUpdateComposer = memo<{
           setEditorRevision((revision) => revision + 1);
           if (!defaultExpanded) setExpanded(false);
         }
+        removeDraft(draftKey);
         onPosted?.();
       } catch (error) {
         console.error('Failed to save project update', error);
@@ -331,7 +345,7 @@ export const ProjectUpdateComposer = memo<{
         )}
         <ProjectUpdateEditor
           disabled={posting}
-          initialContent={editingUpdate?.body}
+          initialContent={editorRevision === 0 ? initial.body : ''}
           key={editorRevision}
           label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
           placeholder={t(

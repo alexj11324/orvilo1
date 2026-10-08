@@ -6,9 +6,10 @@ import { cn } from 'cn';
 import dayjs from 'dayjs';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { createElement, memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
@@ -17,7 +18,6 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getDraft, removeDraft } from '@/features/ChatInput/draftStorage';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { useClientDataSWR } from '@/libs/swr';
@@ -26,9 +26,11 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import {
+  clearProjectUpdateDraft,
   persistProjectUpdateDraft,
   PROJECT_UPDATE_HEALTH_ORDER,
   projectUpdateDraftKey,
+  readProjectUpdateDraft,
   resolveProjectUpdateDraft,
 } from './projectUpdateDraft';
 import { ProjectUpdateEditor } from './ProjectUpdateEditor';
@@ -195,7 +197,7 @@ export const useCanModerateProjectUpdate = (
   );
 };
 
-export const ProjectUpdateComposer = memo<{
+interface ProjectUpdateComposerProps {
   defaultExpanded?: boolean;
   defaultMode?: ProjectUpdateKind;
   /** When set, the composer edits this row instead of posting a new one. */
@@ -205,10 +207,18 @@ export const ProjectUpdateComposer = memo<{
   onExpand?: () => void;
   onPosted?: () => void;
   projectId: string;
-}>(
+}
+
+/**
+ * One mount per draft scope: `draftKey` is fixed for the lifetime of this
+ * component (the wrapper below remounts it when the scope changes), so its
+ * state and draft writes can never land under another scope's key.
+ */
+const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey?: string }>(
   ({
     defaultExpanded,
     defaultMode = 'update',
+    draftKey,
     editingUpdate,
     emptyState,
     onCancelEdit,
@@ -218,10 +228,8 @@ export const ProjectUpdateComposer = memo<{
   }) => {
     const { t } = useTranslation(['project', 'common']);
     const editing = !!editingUpdate;
-    const userId = useUserStore(userProfileSelectors.userId);
-    const draftKey = projectUpdateDraftKey(userId, projectId, editingUpdate?.id);
     const [initial] = useState(() =>
-      resolveProjectUpdateDraft(getDraft(draftKey), editingUpdate, defaultMode),
+      resolveProjectUpdateDraft(readProjectUpdateDraft(draftKey), editingUpdate, defaultMode),
     );
     const [body, setBody] = useState(initial.body);
     const [health, setHealth] = useState<ProjectHealth>(initial.health);
@@ -231,9 +239,16 @@ export const ProjectUpdateComposer = memo<{
     const [expanded, setExpanded] = useState(defaultExpanded || editing);
     // `kind` is immutable once posted — edit mode never switches modes.
     const [mode, setMode] = useState<ProjectUpdateKind>(initial.mode);
+    // Set once the edit is saved or cancelled: nothing may be stored afterwards.
+    const settled = useRef(false);
     useEffect(() => {
-      persistProjectUpdateDraft(draftKey, { body, health, mode });
-    }, [body, draftKey, health, mode]);
+      if (settled.current) return;
+      persistProjectUpdateDraft(draftKey, { body, health, mode }, editingUpdate);
+    }, [body, draftKey, editingUpdate, health, mode]);
+    const settle = () => {
+      settled.current = true;
+      clearProjectUpdateDraft(draftKey);
+    };
 
     const post = async () => {
       const content = body.trim();
@@ -245,6 +260,7 @@ export const ProjectUpdateComposer = memo<{
             body: content,
             health: mode === 'update' ? health : undefined,
           });
+          settle();
         } else {
           await projectService.createUpdate(projectId, {
             body: content,
@@ -254,8 +270,8 @@ export const ProjectUpdateComposer = memo<{
           setBody('');
           setEditorRevision((revision) => revision + 1);
           if (!defaultExpanded) setExpanded(false);
+          clearProjectUpdateDraft(draftKey);
         }
-        removeDraft(draftKey);
         onPosted?.();
       } catch (error) {
         console.error('Failed to save project update', error);
@@ -359,7 +375,14 @@ export const ProjectUpdateComposer = memo<{
           style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
         >
           {editing && (
-            <Button disabled={posting} variant="outline" onClick={onCancelEdit}>
+            <Button
+              disabled={posting}
+              variant="outline"
+              onClick={() => {
+                settle();
+                onCancelEdit?.();
+              }}
+            >
               {t('common:cancel')}
             </Button>
           )}
@@ -379,6 +402,29 @@ export const ProjectUpdateComposer = memo<{
     );
   },
 );
+
+ScopedProjectUpdateComposer.displayName = 'ScopedProjectUpdateComposer';
+
+export const ProjectUpdateComposer = memo<ProjectUpdateComposerProps>((props) => {
+  const userId = useUserStore(userProfileSelectors.userId);
+  const workspaceId = useActiveWorkspaceId();
+  const { editingUpdate, projectId } = props;
+  const draftKey = projectUpdateDraftKey({
+    projectId,
+    updateId: editingUpdate?.id,
+    userId,
+    workspaceId,
+  });
+
+  // Signed out there is no draft key, yet a project or row change still remounts.
+  return (
+    <ScopedProjectUpdateComposer
+      {...props}
+      draftKey={draftKey}
+      key={draftKey ?? `${projectId}:${editingUpdate?.id ?? 'new'}`}
+    />
+  );
+});
 
 ProjectUpdateComposer.displayName = 'ProjectUpdateComposer';
 

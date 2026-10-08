@@ -32,7 +32,10 @@ import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPag
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
 import { MY_WORK_PRIORITY_LABEL_KEYS } from '@/features/MyWork/myWorkDisplay';
-import { workQueryBoardGroups, workQuerySourceKeysForKanbanColumn } from '@/features/MyWork/workQueryBoard';
+import {
+  workQueryBoardGroups,
+  workQuerySourceKeysForKanbanColumn,
+} from '@/features/MyWork/workQueryBoard';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import IssueDetailPane from '@/features/Projects/Issues/IssueDetailPane';
@@ -620,20 +623,17 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
     },
     [projectMilestones],
   );
-  const issueGroupIcon = useCallback(
-    (axis: string, key: string) => {
-      if (axis === 'priority') {
-        return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
-      }
-      if (axis === 'milestone') return <MilestoneIcon muted={key === 'none'} size={14} />;
-      if (axis === 'agent') {
-        if (key === 'none') return <UnassignedAssigneeIcon kind={'human'} size={14} />;
-        return <AssigneeAvatar agentId={key} size={18} />;
-      }
-      return undefined;
-    },
-    [],
-  );
+  const issueGroupIcon = useCallback((axis: string, key: string) => {
+    if (axis === 'priority') {
+      return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
+    }
+    if (axis === 'milestone') return <MilestoneIcon muted={key === 'none'} size={14} />;
+    if (axis === 'agent') {
+      if (key === 'none') return <UnassignedAssigneeIcon kind={'human'} size={14} />;
+      return <AssigneeAvatar agentId={key} size={18} />;
+    }
+    return undefined;
+  }, []);
   const useFetchMyTaskList = useTaskStore((s) => s.useFetchMyTaskList);
   const mineSWR = useFetchMyTaskList({
     enabled: isMineCollection && !isMineBoard,
@@ -936,6 +936,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     ? 'taskList.mine.emptyCreated'
                     : 'taskList.mine.emptyAssigned',
                 )}
+                onShowHiddenCompleted={handleShowHiddenCompleted}
                 onViewAll={() =>
                   updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
                 }
@@ -1023,6 +1024,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                       }
                     : undefined
                 }
+                onShowHiddenCompleted={handleShowHiddenCompleted}
                 onViewAll={() =>
                   updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
                 }

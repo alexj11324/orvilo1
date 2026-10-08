@@ -2157,6 +2157,7 @@
   "taskList.groupBy.priority": "优先级",
   "taskList.groupBy.schedule": "定时",
   "taskList.groupBy.status": "状态",
+  "taskList.hiddenCompleted.boardNotice": "已按显示选项隐藏已完成的任务。",
   "taskList.hiddenCompleted.count_one": "{{count}} 个任务",
   "taskList.hiddenCompleted.count_other": "{{count}} 个任务",
   "taskList.hiddenCompleted.show": "显示",

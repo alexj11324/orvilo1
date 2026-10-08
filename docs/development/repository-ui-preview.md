@@ -1,0 +1,3 @@
+# Repository UI preview
+
+The dedicated fixture-backed Vite preview imports the existing SPA after fixture installation. Only the preview mode installs fixture service bindings and replaces realtime subscriptions. Fixture dates and supported optimistic writes persist locally; unsupported backend writes and execution fail explicitly. Issue-card title links retain keyboard navigation and surrounding drag/card behavior. This draft preview uses a dedicated deployment target and still needs the documented responsive and real-write acceptance; a loaded fixture page is not evidence that backend execution works. Loading layouts are inherited from the existing SPA.

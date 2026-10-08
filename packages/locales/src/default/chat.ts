@@ -2531,6 +2531,7 @@ export default {
   'taskList.kanban.todo': 'Todo',
   'taskList.kanban.triage': 'Triage',
   'taskList.view.board': 'Board',
+  'taskList.displayOptions': 'Display options',
   'taskList.view.list': 'List',
   'taskList.viewAll': 'View all',
   'thread.closeSubagentThread': 'Hide Detail',

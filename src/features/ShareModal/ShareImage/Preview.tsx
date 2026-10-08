@@ -3,9 +3,9 @@ import { agentDisplayName, type ConversationContext, type UIChatMessage } from '
 import { cx } from 'antd-style';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
 import { ModelTag } from '@/components/OrviloIcons';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import PluginTag from '@/features/PluginTag';
 import { filterToolIds } from '@/helpers/toolFilters';
 import { useAgentStore } from '@/store/agent';
@@ -45,8 +45,7 @@ const Preview = memo<PreviewProps>(
       systemRole,
       isInbox,
       currentTitle,
-      currentAvatar,
-      currentBackgroundColor,
+      displayAgentId,
       headerMeta,
       headerModel,
       headerPlugins,
@@ -61,8 +60,7 @@ const Preview = memo<PreviewProps>(
         agentSelectors.currentAgentSystemRole(s),
         builtinAgentSelectors.isInboxAgent(s),
         agentSelectors.currentAgentDisplayName(s),
-        agentSelectors.currentAgentAvatar(s),
-        agentSelectors.currentAgentBackgroundColor(s),
+        resolvedHeaderAgentId ?? s.activeAgentId,
         resolvedHeaderAgentId
           ? agentSelectors.getAgentMetaById(resolvedHeaderAgentId)(s)
           : undefined,
@@ -86,8 +84,6 @@ const Preview = memo<PreviewProps>(
       (isHeaderInbox ?? isInbox)
         ? 'Orvilo AI'
         : agentDisplayName(headerMeta) || title || currentTitle;
-    const displayAvatar = headerMeta?.avatar || currentAvatar;
-    const displayBackgroundColor = headerMeta?.backgroundColor || currentBackgroundColor;
     const displayModel = headerModel || currentModel;
     const displayPlugins = headerPlugins || currentPlugins;
 
@@ -109,13 +105,7 @@ const Preview = memo<PreviewProps>(
           >
             <div className={styles.header}>
               <div className="flex flex-row items-center gap-3">
-                <Avatar
-                  avatar={displayAvatar}
-                  background={displayBackgroundColor}
-                  shape={'square'}
-                  size={28}
-                  title={displayTitle ?? undefined}
-                />
+                <AssigneeAvatar agentId={displayAgentId} size={28} />
                 <div className="font-semibold text-[16px]">{displayTitle}</div>
                 <div className="flex flex-row gap-1">
                   <ModelTag model={displayModel} />

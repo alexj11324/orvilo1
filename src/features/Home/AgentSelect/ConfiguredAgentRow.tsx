@@ -97,7 +97,7 @@ export const ConfiguredAgentRow = ({
         variant="ghost"
         onClick={() => onSelect(row.id)}
       >
-        <AgentRuntimeIcon size={24} type={type ?? row.heterogeneousType} />
+        <AgentRuntimeIcon size={24} type={type || row.heterogeneousType || 'orvilo'} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{row.title}</span>
           {!ready && (

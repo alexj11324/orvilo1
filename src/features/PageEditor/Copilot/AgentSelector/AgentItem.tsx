@@ -30,7 +30,7 @@ const AgentItem = memo<AgentItemProps>(
     return (
       <NavItem
         active={active}
-        icon={<AgentRuntimeIcon size={22} type={agent?.heterogeneousType} />}
+        icon={<AgentRuntimeIcon size={22} type={agent?.heterogeneousType || 'orvilo'} />}
         style={{ flexShrink: 0 }}
         title={
           roleTag ? (

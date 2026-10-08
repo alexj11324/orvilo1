@@ -142,7 +142,7 @@ export const TopicForwardContent = ({
                     )
                   }
                 >
-                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType} />
+                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType || 'orvilo'} />
                   <div className="truncate" style={{ flex: 1 }}>
                     {agent.title || t('untitledAgent')}
                   </div>

@@ -56,9 +56,8 @@ import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
 import { ProjectCreationActivity } from './ProjectCreationActivity';
 
 /**
- * Reference geometry (project-activity/SLICE.md, measured on Linear): compact
- * inline rows — a 16px glyph with no circular backing, 12px/450 text, ~17px
- * row height, 12px between glyph and text. Long-form comments render as
+ * Inline rows: a 16px glyph with no circular backing, 14px/22px body copy,
+ * 12px timestamps, 12px between glyph and text. Long-form comments render as
  * bordered cards, not inline rows.
  */
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -96,7 +95,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     justify-content: center;
 
     width: 16px;
-    height: 17px;
+    height: 22px;
 
     color: ${cssVar.colorTextTertiary};
   `,
@@ -113,12 +112,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     display: flex;
     gap: 12px;
     align-items: flex-start;
-    padding-block: 3px;
+    padding-block: 6px;
   `,
   sentence: css`
-    font-size: 12px;
-    font-weight: 450;
-    line-height: 17px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 22px;
     color: ${cssVar.colorTextSecondary};
 
     strong {
@@ -137,6 +136,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   time: css`
     flex: none;
+
+    font-size: 12px;
+    line-height: 22px;
     color: ${cssVar.colorTextTertiary};
     white-space: nowrap;
   `,

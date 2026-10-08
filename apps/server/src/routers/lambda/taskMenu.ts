@@ -14,6 +14,8 @@ import { EditLockService } from '@/server/services/editLock';
 import { TaskIssueDefinitionService } from '@/server/services/taskIssueDefinition';
 import { TaskIssueRecurrenceService } from '@/server/services/taskIssueRecurrence';
 
+import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
+
 const taskMenuProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
   const workspaceId = ctx.workspaceId ?? undefined;
@@ -53,7 +55,34 @@ const assertSourceWritable = async (
   return task;
 };
 
-const failure = (error: unknown): never => {
+const describeError = (error: unknown) => ({
+  code:
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code: unknown }).code)
+      : undefined,
+  name: error instanceof Error ? error.name : typeof error,
+});
+
+/**
+ * A recurrence keeps creating issues as the member who set it up, so only that
+ * member or a workspace owner may pause, resume or remove it — the same
+ * creator-or-owner rule `task.ts` applies to automation settings.
+ */
+const assertRecurrenceManageable = async (
+  ctx: {
+    issueRecurrences: TaskIssueRecurrenceModel;
+    userId: string;
+    workspaceId?: string | null;
+    workspaceRole?: string;
+  },
+  id: string,
+) => {
+  const recurrence = await ctx.issueRecurrences.findForTask(id);
+  if (!recurrence) throw new TRPCError({ code: 'NOT_FOUND', message: 'Recurring issue not found' });
+  assertWorkspaceRowManageable(ctx, recurrence.userId, 'recurring issue');
+};
+
+const failure = (error: unknown, procedure: string): never => {
   if (error instanceof TRPCError) throw error;
   if (error instanceof TaskDependencyError)
     throw new TRPCError({ code: error.code, message: error.message, cause: error });
@@ -76,12 +105,10 @@ const failure = (error: unknown): never => {
   if (error instanceof Error && error.message === 'This is the current description version') {
     throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
   }
-  console.error('[taskMenu]', error);
-  throw new TRPCError({
-    cause: error,
-    code: 'INTERNAL_SERVER_ERROR',
-    message: 'Issue update failed',
-  });
+  // Ids and error codes only: the raw error can carry issue text, link URLs
+  // or bound query parameters.
+  console.error('[taskMenu] %s failed', procedure, describeError(error));
+  throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Issue update failed' });
 };
 
 export const taskMenuRouter = router({
@@ -92,7 +119,7 @@ export const taskMenuRouter = router({
         await assertSourceWritable(ctx, input.id);
         return { data: await ctx.issueDefinitions.clearDuplicate(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'clearDuplicate');
       }
     }),
   addLink: writeProcedure
@@ -107,7 +134,7 @@ export const taskMenuRouter = router({
       try {
         return { data: await ctx.taskResources.add(input.id, input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'addLink');
       }
     }),
   convertToProject: writeProcedure
@@ -129,7 +156,7 @@ export const taskMenuRouter = router({
         await assertSourceWritable(ctx, input.id);
         return { data: await ctx.issueDefinitions.convertToProject(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'convertToProject');
       }
     }),
   convertToRecurring: writeProcedure
@@ -145,9 +172,12 @@ export const taskMenuRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         await assertSourceWritable(ctx, input.id);
+        // Replacing a series another member set up follows the same rule as pausing it.
+        const existing = await ctx.issueRecurrences.findForTask(input.id);
+        if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'recurring issue');
         return { data: await ctx.issueRecurrenceService.convert(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'convertToRecurring');
       }
     }),
   convertToTemplate: writeProcedure
@@ -161,7 +191,7 @@ export const taskMenuRouter = router({
       try {
         return { data: await ctx.issueDefinitions.convertToTemplate(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'convertToTemplate');
       }
     }),
   copyIssue: writeProcedure
@@ -181,7 +211,7 @@ export const taskMenuRouter = router({
       try {
         return { data: await ctx.issueDefinitions.copyIssue(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'copyIssue');
       }
     }),
   createFromTemplate: writeProcedure
@@ -190,7 +220,7 @@ export const taskMenuRouter = router({
       try {
         return { data: await ctx.issueDefinitions.createFromTemplate(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'createFromTemplate');
       }
     }),
   createRelated: writeProcedure
@@ -208,7 +238,7 @@ export const taskMenuRouter = router({
         if (input.kind === 'parent') await assertSourceWritable(ctx, input.id);
         return { data: await ctx.issueDefinitions.createRelated(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'createRelated');
       }
     }),
   descriptionHistory: taskMenuProcedure
@@ -222,14 +252,14 @@ export const taskMenuRouter = router({
       try {
         return { data: await ctx.taskHistory.list(input.id, input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'descriptionHistory');
       }
     }),
   links: taskMenuProcedure.input(idInput).query(async ({ input, ctx }) => {
     try {
       return { data: await ctx.taskResources.list(input.id), success: true };
     } catch (error) {
-      return failure(error);
+      return failure(error, 'links');
     }
   }),
   markDuplicate: writeProcedure
@@ -244,14 +274,14 @@ export const taskMenuRouter = router({
         await assertSourceWritable(ctx, input.id);
         return { data: await ctx.issueDefinitions.markDuplicate(input), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'markDuplicate');
       }
     }),
   recurrence: taskMenuProcedure.input(idInput).query(async ({ input, ctx }) => {
     try {
       return { data: await ctx.issueRecurrences.findForTask(input.id), success: true };
     } catch (error) {
-      return failure(error);
+      return failure(error, 'recurrence');
     }
   }),
   removeLink: writeProcedure
@@ -260,14 +290,15 @@ export const taskMenuRouter = router({
       try {
         return { data: await ctx.taskResources.remove(input.id, input.linkId), success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'removeLink');
       }
     }),
   removeRecurrence: writeProcedure.input(idInput).mutation(async ({ input, ctx }) => {
     try {
+      await assertRecurrenceManageable(ctx, input.id);
       return { data: await ctx.issueRecurrences.remove(input.id), success: true };
     } catch (error) {
-      return failure(error);
+      return failure(error, 'removeRecurrence');
     }
   }),
   restoreDescription: writeProcedure
@@ -285,26 +316,27 @@ export const taskMenuRouter = router({
 
         return { data: updated, success: true };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'restoreDescription');
       }
     }),
   setRecurrenceEnabled: writeProcedure
     .input(idInput.extend({ enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       try {
+        await assertRecurrenceManageable(ctx, input.id);
         return {
           data: await ctx.issueRecurrences.setEnabled(input.id, input.enabled),
           success: true,
         };
       } catch (error) {
-        return failure(error);
+        return failure(error, 'setRecurrenceEnabled');
       }
     }),
   templates: taskMenuProcedure.query(async ({ ctx }) => {
     try {
       return { data: await ctx.issueDefinitions.templates(), success: true };
     } catch (error) {
-      return failure(error);
+      return failure(error, 'templates');
     }
   }),
 });

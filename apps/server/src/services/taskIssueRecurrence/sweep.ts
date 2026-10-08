@@ -77,7 +77,15 @@ export const runTaskIssueRecurrenceSweep = async (
           created += 1;
         });
       } catch (error) {
-        console.error('[task-issue-recurrence] creation failed', error);
+        // Ids and error codes only: the raw error can carry the issue definition.
+        console.error('[task-issue-recurrence] creation failed', {
+          code:
+            typeof error === 'object' && error !== null && 'code' in error
+              ? String((error as { code: unknown }).code)
+              : undefined,
+          name: error instanceof Error ? error.name : typeof error,
+          recurrenceId: row.id,
+        });
         await executor
           .update(taskIssueRecurrences)
           .set({

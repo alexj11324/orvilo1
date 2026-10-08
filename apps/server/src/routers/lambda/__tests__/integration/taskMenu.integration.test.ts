@@ -5,7 +5,15 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskModel } from '@/database/models/task';
-import { taskResources, users, workspaceMembers, workspaces } from '@/database/schemas';
+import { TaskResourceModel } from '@/database/models/taskResource';
+import {
+  taskIssueRecurrences,
+  taskIssueTemplates,
+  taskResources,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '@/database/schemas';
 import { EditLockService } from '@/server/services/editLock';
 
 import { taskMenuRouter } from '../../taskMenu';
@@ -250,6 +258,218 @@ describe('Task Menu Router', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
     const current = await new TaskModel(testDB, ownerId, workspaceId).findById(task.id);
     expect(current).toMatchObject({ dueDate: null, duplicateOfTaskId: null });
+  });
+
+  type MenuCaller = ReturnType<typeof callerFor>;
+  type Issue = Awaited<ReturnType<typeof createIssue>>;
+  const templateId = '00000000-0000-4000-8000-000000000001';
+  const writes: [string, (caller: MenuCaller, task: Issue) => Promise<unknown>][] = [
+    [
+      'addLink',
+      (caller, task) => caller.addLink({ id: task.id, kind: 'link', url: 'https://example.com' }),
+    ],
+    ['removeLink', (caller, task) => caller.removeLink({ id: task.id, linkId: templateId })],
+    [
+      'restoreDescription',
+      (caller, task) =>
+        caller.restoreDescription({
+          expectedDomainRevision: task.domainRevision,
+          historyId: templateId,
+          id: task.id,
+        }),
+    ],
+    [
+      'markDuplicate',
+      (caller, task) =>
+        caller.markDuplicate({
+          expectedDomainRevision: task.domainRevision,
+          id: task.id,
+          targetId: task.id,
+        }),
+    ],
+    [
+      'clearDuplicate',
+      (caller, task) =>
+        caller.clearDuplicate({ expectedDomainRevision: task.domainRevision, id: task.id }),
+    ],
+    [
+      'copyIssue',
+      (caller, task) =>
+        caller.copyIssue({ expectedDomainRevision: task.domainRevision, id: task.id }),
+    ],
+    [
+      'createRelated',
+      (caller, task) =>
+        caller.createRelated({
+          expectedDomainRevision: task.domainRevision,
+          id: task.id,
+          kind: 'related',
+          name: 'Related',
+        }),
+    ],
+    [
+      'convertToProject',
+      (caller, task) =>
+        caller.convertToProject({
+          expectedDomainRevision: task.domainRevision,
+          id: task.id,
+          identifier: 'MENU',
+          issueName: 'Issue',
+          name: 'Project',
+        }),
+    ],
+    [
+      'convertToTemplate',
+      (caller, task) =>
+        caller.convertToTemplate({
+          expectedDomainRevision: task.domainRevision,
+          id: task.id,
+          name: 'Template',
+        }),
+    ],
+    [
+      'convertToRecurring',
+      (caller, task) =>
+        caller.convertToRecurring({
+          cadence: 'week',
+          expectedDomainRevision: task.domainRevision,
+          firstDueDate: '2026-10-05',
+          id: task.id,
+          timezone: 'UTC',
+        }),
+    ],
+    [
+      'setRecurrenceEnabled',
+      (caller, task) => caller.setRecurrenceEnabled({ enabled: false, id: task.id }),
+    ],
+    ['removeRecurrence', (caller, task) => caller.removeRecurrence({ id: task.id })],
+  ];
+
+  const snapshot = async (task: Issue) => ({
+    issues: (await new TaskModel(testDB, ownerId, workspaceId).list({})).tasks.length,
+    links: (await testDB.select().from(taskResources)).length,
+    recurrences: (await testDB.select().from(taskIssueRecurrences)).length,
+    row: await new TaskModel(testDB, ownerId, workspaceId).findById(task.id),
+    templates: (await testDB.select().from(taskIssueTemplates)).length,
+  });
+
+  describe.each(writes)('%s', (_name, write) => {
+    it.each([
+      ['a non-member', outsiderId, workspaceId, 'FORBIDDEN'],
+      ['a read-only member', viewerId, workspaceId, 'FORBIDDEN'],
+      ['a member of another workspace', outsiderId, otherWorkspaceId, 'NOT_FOUND'],
+    ] as const)('is rejected for %s', async (_who, userId, scope, code) => {
+      const task = await createIssue();
+      const before = await snapshot(task);
+
+      await expect(write(callerFor(userId, scope), task)).rejects.toMatchObject({ code });
+      expect(await snapshot(task)).toEqual(before);
+    });
+  });
+
+  it('createFromTemplate is rejected for a non-member and a read-only member', async () => {
+    for (const userId of [outsiderId, viewerId])
+      await expect(callerFor(userId).createFromTemplate({ templateId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+  });
+
+  it('rejects ids that belong to another workspace', async () => {
+    const task = await createIssue();
+    const foreignIssue = await createIssue(outsiderId, otherWorkspaceId);
+    const foreign = callerFor(outsiderId, otherWorkspaceId);
+    const foreignLink = await foreign.addLink({
+      id: foreignIssue.id,
+      kind: 'link',
+      url: 'https://example.com/foreign',
+    });
+    const foreignTemplate = await foreign.convertToTemplate({
+      expectedDomainRevision: foreignIssue.domainRevision,
+      id: foreignIssue.id,
+      name: 'Foreign',
+    });
+    const member = callerFor(memberId);
+
+    await expect(
+      member.markDuplicate({
+        expectedDomainRevision: task.domainRevision,
+        id: task.id,
+        targetId: foreignIssue.id,
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      member.createFromTemplate({ templateId: foreignTemplate.data.id }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect((await member.templates()).data).toEqual([]);
+    expect((await member.removeLink({ id: task.id, linkId: foreignLink.data.id })).data).toBe(
+      false,
+    );
+    expect((await foreign.links({ id: foreignIssue.id })).data).toHaveLength(1);
+    expect(await new TaskModel(testDB, ownerId, workspaceId).findById(task.id)).toMatchObject({
+      duplicateOfTaskId: null,
+    });
+  });
+
+  it('lets only its creator or a workspace owner pause, replace or remove a recurrence', async () => {
+    const task = await createIssue();
+    const convert = (caller: MenuCaller) =>
+      caller.convertToRecurring({
+        cadence: 'week',
+        expectedDomainRevision: task.domainRevision,
+        firstDueDate: '2026-10-05',
+        id: task.id,
+        timezone: 'UTC',
+      });
+    await testDB
+      .insert(workspaceMembers)
+      .values({ role: 'member', userId: outsiderId, workspaceId });
+    await convert(callerFor(memberId));
+    const other = callerFor(outsiderId);
+
+    expect((await other.recurrence({ id: task.id })).data).toMatchObject({ userId: memberId });
+    await expect(other.setRecurrenceEnabled({ enabled: false, id: task.id })).rejects.toMatchObject(
+      { code: 'FORBIDDEN' },
+    );
+    await expect(other.removeRecurrence({ id: task.id })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(convert(other)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect((await other.recurrence({ id: task.id })).data).toMatchObject({
+      enabled: true,
+      userId: memberId,
+    });
+
+    const owner = callerFor(ownerId);
+    expect((await owner.setRecurrenceEnabled({ enabled: false, id: task.id })).data).toMatchObject({
+      enabled: false,
+    });
+    expect((await callerFor(memberId).removeRecurrence({ id: task.id })).data).toBe(true);
+  });
+
+  it('logs only the procedure and error code when a write fails unexpectedly', async () => {
+    const task = await createIssue();
+    const secretUrl = 'https://example.com/secret-path?token=abc';
+    const error = Object.assign(new Error(`insert failed for ${secretUrl} "Private title"`), {
+      code: '23505',
+      params: [secretUrl, 'Private title'],
+    });
+    vi.spyOn(TaskResourceModel.prototype, 'add').mockRejectedValue(error);
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const failure = await callerFor(memberId)
+      .addLink({ id: task.id, kind: 'link', title: 'Private title', url: secretUrl })
+      .catch((cause) => cause);
+
+    expect(failure).toMatchObject({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Issue update failed',
+    });
+    expect(failure.cause).toBeUndefined();
+    expect(logged).toHaveBeenCalledExactlyOnceWith('[taskMenu] %s failed', 'addLink', {
+      code: '23505',
+      name: 'Error',
+    });
+    expect(JSON.stringify(logged.mock.calls)).not.toMatch(/secret-path|Private title/);
   });
 
   it('marks and clears a duplicate, and creates a related issue, inside the caller workspace', async () => {

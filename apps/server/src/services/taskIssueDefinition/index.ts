@@ -295,6 +295,14 @@ export class TaskIssueDefinitionService {
       const service = new TaskIssueDefinitionService(db, this.userId, this.workspaceId);
       const source = await service.lockSource(input.id, input.expectedDomainRevision);
       const issues = await service.completeSubtree(source);
+      // Same team gate as creating an issue in that team.
+      if (
+        source.teamId &&
+        this.workspaceId &&
+        !(await new TeamModel(db, this.userId, this.workspaceId).hasWriteAccess(source.teamId))
+      ) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });
+      }
       const project = await new ProjectModel(db, this.userId, this.workspaceId).create({
         description: source.instruction,
         identifier: input.identifier,

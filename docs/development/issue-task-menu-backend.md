@@ -44,6 +44,12 @@
 - 会改写源 Issue 自身行的过程 (`restoreDescription`、`markDuplicate`、`clearDuplicate`、
   `convertToProject`、`convertToRecurring`、`createRelated` 的 `parent`) 复用 `task.update`
   的协同编辑锁：别的成员正持有该 Issue 的编辑锁时返回 `CONFLICT`。
+- 周期由设置它的成员身份持续建 Issue，所以 `setRecurrenceEnabled`、`removeRecurrence`，以及用
+  `convertToRecurring` 覆盖已有周期，只允许该周期的创建者或 workspace owner 操作
+  (`assertWorkspaceRowManageable`，与 `task.ts` 对自动化设置的规则相同)，其他成员得到 `FORBIDDEN`。
+- `convertToProject` 在源 Issue 属于某个团队时要求调用者对该团队有写权限，与在该团队建 Issue 一致。
+- 日志只记过程名、错误名和错误码 (sweep 另记周期 id)，不输出 Issue 正文、链接 URL / 标题或完整入参；
+  兜底的 `INTERNAL_SERVER_ERROR` 也不再携带原始 `cause`。
 - 带 `expectedDomainRevision` 的过程是乐观并发控制，版本不一致返回 `CONFLICT`
   (`TASK_REVISION_CONFLICT`)。
 - `addLink` 的 URL 在两处校验：路由 schema 只接受 `http` / `https`；`TaskResourceModel.add`
@@ -93,6 +99,7 @@
 - **成员校验在路由层**：原型把 “有效成员” 判断下沉到了模型的读取谓词里。canary 由
   `wsCompatProcedure` 负责，模型层不重复判断，对应的路由级用例在
   `apps/server/src/routers/lambda/__tests__/integration/taskMenu.integration.test.ts`。
+- **周期的创建者规则、`convertToProject` 的团队写权限、脱敏日志**：原型没有，这里补上。
 - **编辑锁覆盖更多写过程**：原型只在 `restoreDescription` 检查，这里扩展到所有改写源 Issue 的过程。
 
 ## 测试

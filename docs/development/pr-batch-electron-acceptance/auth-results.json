@@ -1,0 +1,16 @@
+{
+  "callbackResponse": 200,
+  "consentResponses": [200, 200],
+  "database": "orvilo_pr_acceptance_v2",
+  "desktopSignedInAfterInitialization": true,
+  "fixtureWebSessionStatus": 200,
+  "harnessNote": "Immediate post-login assertion hit an initialization race; separately waited for real user store initialization and confirmed signed-in native renderer.",
+  "limitations": [
+    "External Clerk sign-in not exercised",
+    "Linux safeStorage basic_text; persistent protected credential storage not exercised",
+    "Offline Agent fixture; local CLI producer execution not exercised"
+  ],
+  "nativePKCERequest": true,
+  "provider": "local Clerk fixture; production verifier and native token exchange",
+  "schemaTail": ["0208_auth_session_clerk_binding", "0209_issue_resources_history_definitions"]
+}

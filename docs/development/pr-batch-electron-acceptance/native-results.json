@@ -1,0 +1,40 @@
+[
+  {
+    "scenario": "PR511 populated grouping none; no-match filter; clear restores; reload",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR516 focus list row and Enter opens real Issue detail",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR 535: Shift+Tab reveals heading focus outline; Enter commits rename; reload preserves it",
+    "status": "pass",
+    "focus": {
+      "visible": true,
+      "style": "solid",
+      "width": "1px",
+      "color": "oklab(0.20818 0.00000951889 0.00000415313 / 0.728626)"
+    }
+  },
+  {
+    "scenario": "PR531 compact project selectors render at28px height and14px type; keyboard project heading rename/reload",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR541 native c shortcut navigates from project to Issues and opens retained modal",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR546 native dark theme selected through workspace menu, persists reload; muted/secondary/accent=.06 white wash, selected=.10",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR515 native board card title focused and Enter opens T-3 detail",
+    "status": "pass"
+  },
+  {
+    "scenario": "PR509 all-completed Priority board: hidden notice survives empty boundary; Show restores persisted issues",
+    "status": "pass"
+  }
+]

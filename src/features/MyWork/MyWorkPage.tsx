@@ -618,9 +618,9 @@ const MyWorkPage = memo(() => {
       apply: (task: WorkQueryResultTask) => Promise<unknown>,
       doneKey: 'myWork.bulk.deleted' | 'myWork.bulk.updated',
     ) => {
-      if (bulkBusy) return;
+      if (bulkBusy) return 0;
       const targets = bulkTasks;
-      if (targets.length === 0) return;
+      if (targets.length === 0) return 0;
       setBulkBusy(true);
       let failed = 0;
       for (const task of targets) {
@@ -638,6 +638,7 @@ const MyWorkPage = memo(() => {
       } else {
         toast.error(t('myWork.bulk.failed', { failed, total: targets.length }));
       }
+      return failed;
     },
     [bulkBusy, bulkTasks, refresh, t],
   );
@@ -700,8 +701,11 @@ const MyWorkPage = memo(() => {
       okText: t('delete'),
       title: t('myWork.bulk.deleteConfirmTitle', { count }),
       onOk: async () => {
-        await runBulk((task) => taskService.delete(task.id), 'myWork.bulk.deleted');
-        clearBulk();
+        const failed = await runBulk((task) => taskService.delete(task.id), 'myWork.bulk.deleted');
+        // Rows that failed to delete are still listed, and the selection is
+        // pruned to listed rows on refetch — so keeping it leaves exactly the
+        // failures selected for a retry.
+        if (failed === 0) clearBulk();
       },
     });
   }, [bulkTasks.length, clearBulk, runBulk, t]);

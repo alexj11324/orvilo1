@@ -111,6 +111,148 @@ describe('TaskModel', () => {
     });
   });
 
+  describe('managed integration task scope', () => {
+    const wsId = 'task-managed-ws';
+    const foreignWs = 'task-managed-foreign-ws';
+    const publicTeam = 'task-managed-public-team';
+    const privateTeam = 'task-managed-private-team';
+    const foreignTeam = 'task-managed-foreign-team';
+    const principal = 'linear-installation:task-managed-test';
+    const mutation = {
+      source: 'linear' as const,
+      suppressDomainEvent: true,
+      suppressLinearOutbox: true,
+    };
+    const service = () => new TaskModel(serverDB, principal, wsId, { managedSubject: true });
+    const row = async (id: string, patch: Partial<typeof tasks.$inferInsert> = {}) => {
+      const [task] = await serverDB
+        .insert(tasks)
+        .values({
+          id,
+          identifier: id,
+          seq: 1,
+          instruction: 'Original',
+          name: 'Original',
+          createdByUserId: userId,
+          workspaceId: wsId,
+          visibility: 'public',
+          isDeleted: false,
+          ...patch,
+        })
+        .returning();
+      return task;
+    };
+
+    beforeEach(async () => {
+      await serverDB.insert(workspaces).values(
+        [wsId, foreignWs].map((id) => ({
+          id,
+          name: id,
+          slug: id,
+          primaryOwnerId: userId,
+        })),
+      );
+      await serverDB.insert(teams).values([
+        { id: publicTeam, workspaceId: wsId, key: 'PUB', name: 'Public', visibility: 'public' },
+        { id: privateTeam, workspaceId: wsId, key: 'PRI', name: 'Private', visibility: 'private' },
+        {
+          id: foreignTeam,
+          workspaceId: foreignWs,
+          key: 'FOR',
+          name: 'Foreign',
+          visibility: 'public',
+        },
+      ]);
+    });
+
+    it.each([null, publicTeam])(
+      'reads and updates public integration tasks with team %s through transaction guards',
+      async (teamId) => {
+        const task = await row('managed-public', { teamId });
+        const model = service();
+        expect(await model.findById(task.id)).toMatchObject({ id: task.id });
+        expect(await model.update(task.id, { name: 'Synced' }, mutation)).toMatchObject({
+          name: 'Synced',
+        });
+        expect(await model.update(task.id, { assigneeAgentId: null }, mutation)).toMatchObject({
+          id: task.id,
+        });
+        expect(await model.update(task.id, { status: 'paused' }, mutation)).toMatchObject({
+          id: task.id,
+        });
+        expect(await derivedStatus(task.id)).toBe('paused');
+        expect(await model.update(task.id, { isDeleted: true }, mutation)).toMatchObject({
+          isDeleted: true,
+        });
+        expect(await serverDB.select().from(workspaceMembers)).toEqual([]);
+      },
+    );
+
+    it.each([
+      ['raw private', { visibility: 'private' as const }],
+      ['private Team', { teamId: privateTeam }],
+      ['foreign Team', { teamId: foreignTeam }],
+      ['foreign workspace', { workspaceId: foreignWs }],
+      ['personal', { workspaceId: null }],
+    ])('denies integration reads and writes for %s without creator fallback', async (_, patch) => {
+      const task = await row('managed-denied', patch);
+      for (const model of [
+        service(),
+        new TaskModel(serverDB, userId, wsId, { managedSubject: true }),
+      ]) {
+        expect(await model.findById(task.id)).toBeNull();
+        expect(await model.update(task.id, { name: 'Forbidden' }, mutation)).toBeNull();
+        expect(await model.update(task.id, { isDeleted: true }, mutation)).toBeNull();
+      }
+      const [stored] = await serverDB.select().from(tasks).where(eq(tasks.id, task.id));
+      expect(stored).toMatchObject({ name: 'Original', isDeleted: false });
+    });
+
+    it('denies managed reads and writes when workspace scope is absent', async () => {
+      const task = await row('managed-no-scope');
+      const model = new TaskModel(serverDB, principal, undefined, { managedSubject: true });
+      expect(await model.findById(task.id)).toBeNull();
+      expect(await model.update(task.id, { name: 'Forbidden' }, mutation)).toBeNull();
+    });
+
+    it('applies the same public integration boundary to recursive task aliases', async () => {
+      const root = await row('managed-root');
+      await row('managed-public-child', { parentTaskId: root.id, seq: 2, teamId: publicTeam });
+      await row('managed-private-child', { parentTaskId: root.id, seq: 3, visibility: 'private' });
+      await row('managed-private-team-child', {
+        parentTaskId: root.id,
+        seq: 4,
+        teamId: privateTeam,
+      });
+      expect((await service().getTaskTree(root.id)).map(({ id }) => id).sort()).toEqual([
+        'managed-public-child',
+        'managed-root',
+      ]);
+    });
+
+    it('keeps the active human workspace policy for legacy private tasks', async () => {
+      const task = await row('managed-human-boundary', {
+        visibility: 'private',
+        teamId: privateTeam,
+      });
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ workspaceId: wsId, userId: userId2, role: 'viewer' });
+      const model = new TaskModel(serverDB, userId2, wsId);
+      expect(await model.findById(task.id)).toMatchObject({ id: task.id, visibility: 'public' });
+      await serverDB
+        .update(workspaceMembers)
+        .set({ suspendedAt: new Date() })
+        .where(eq(workspaceMembers.userId, userId2));
+      expect(await model.findById(task.id)).toBeNull();
+      await serverDB
+        .update(workspaceMembers)
+        .set({ suspendedAt: null, deletedAt: new Date() })
+        .where(eq(workspaceMembers.userId, userId2));
+      expect(await model.findById(task.id)).toBeNull();
+    });
+  });
+
   describe('run kickoff claim', () => {
     it('allows only one concurrent owner and releases only for that owner', async () => {
       const model = new TaskModel(serverDB, userId);

@@ -26,6 +26,7 @@ import {
   and,
   desc,
   eq,
+  exists,
   getTableColumns,
   gt,
   gte,
@@ -488,8 +489,7 @@ export class TaskModel {
   }
 
   /** Shared workspace Issue metadata and personal ownership. */
-  private ownership = () =>
-    buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
+  private ownership = () => this.ownershipSql();
 
   /**
    * Ownership predicate for task child tables (deps / docs / comments) that
@@ -515,13 +515,37 @@ export class TaskModel {
       ? eq(tasks.workspaceId, this.workspaceId)
       : (and(eq(tasks.createdByUserId, this.userId), isNull(tasks.workspaceId)) as SQL);
 
-  /** Same active workspace read policy for recursive SQL aliases. */
-  private ownershipSql = (tableAlias?: string) =>
-    buildTaskReadableWhere(
+  /** Same scope for direct and recursive reads; integrations remain strictly public. */
+  private ownershipSql = (tableAlias?: string) => {
+    const target = tableAlias ? alias(tasks, tableAlias) : tasks;
+    if (this.managedSubject) {
+      if (!this.workspaceId) return sql`false`;
+      return and(
+        eq(target.workspaceId, this.workspaceId),
+        eq(target.visibility, 'public'),
+        or(
+          isNull(target.teamId),
+          exists(
+            this.db
+              .select({ one: sql`1` })
+              .from(teams)
+              .where(
+                and(
+                  eq(teams.id, target.teamId),
+                  eq(teams.workspaceId, this.workspaceId),
+                  eq(teams.visibility, 'public'),
+                ),
+              ),
+          ),
+        ),
+      )!;
+    }
+    return buildTaskReadableWhere(
       this.db,
       { userId: this.userId, workspaceId: this.workspaceId },
-      tableAlias ? alias(tasks, tableAlias) : tasks,
+      target,
     );
+  };
 
   private buildListConditions = ({
     assigneeAgentId,
@@ -602,7 +626,9 @@ export class TaskModel {
   private async withDependencyLock<T>(work: (model: TaskModel) => Promise<T>): Promise<T> {
     if (this.dependencyLockHeld) return work(this);
     return this.db.transaction(async (tx) => {
-      const model = new TaskModel(tx as OrviloDatabase, this.userId, this.workspaceId);
+      const model = new TaskModel(tx as OrviloDatabase, this.userId, this.workspaceId, {
+        managedSubject: this.managedSubject,
+      });
       await model.lockDependencyGraph();
       model.dependencyLockHeld = true;
       return work(model);
@@ -917,7 +943,9 @@ export class TaskModel {
       // leaves `running` in the same statement is already consistent.
       return this.db.transaction(async (tx) => {
         const runner = tx as OrviloDatabase;
-        const scoped = new TaskModel(runner, this.userId, this.workspaceId);
+        const scoped = new TaskModel(runner, this.userId, this.workspaceId, {
+          managedSubject: this.managedSubject,
+        });
         await scoped.lockDependencyGraph();
         scoped.dependencyLockHeld = true;
         scoped.assigneeGuardHeld = true;

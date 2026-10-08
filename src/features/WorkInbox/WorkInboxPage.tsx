@@ -43,6 +43,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
@@ -141,44 +142,11 @@ const styles = createStaticStyles(({ css }) => ({
   tabsRow: css`
     display: flex;
     flex: none;
-    align-items: stretch;
+    align-items: center;
 
-    height: 36px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  tab: css`
-    cursor: pointer;
-
-    position: relative;
-
+    height: 44px;
     padding-inline: 12px;
-    border: 0;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-
-    appearance: none;
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    &[data-active='true'] {
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  tabUnderline: css`
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline: 0;
-
-    height: 2px;
-    border-radius: 4px 4px 0 0;
-
-    background: ${cssVar.colorPrimary};
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
   appliedFilters: css`
     display: flex;
@@ -1034,31 +1002,24 @@ const WorkInboxPage = memo(() => {
           </DropdownMenu>
         </div>
       </div>
-      <div className={styles.tabsRow} role="tablist">
-        {INBOX_TABS.map((which) => {
-          const count = tabCount(which);
-          return (
-            <button
-              aria-selected={tab === which}
-              className={styles.tab}
-              data-active={tab === which}
-              key={which}
-              role="tab"
-              type="button"
-              onClick={() => writeInboxParams({ tab: which })}
-            >
-              <span className="flex h-full items-center justify-center gap-1">
-                {t(`inbox.tab.${which}`)}
-                {count > 0 ? (
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs leading-none text-muted-foreground">
-                    {count}
-                  </span>
-                ) : null}
-              </span>
-              {tab === which ? <span className={styles.tabUnderline} /> : null}
-            </button>
-          );
-        })}
+      <div className={styles.tabsRow}>
+        <Tabs value={tab} onValueChange={(value) => writeInboxParams({ tab: value as InboxTab })}>
+          <TabsList>
+            {INBOX_TABS.map((which) => {
+              const count = tabCount(which);
+              return (
+                <TabsTrigger key={which} value={which}>
+                  {t(`inbox.tab.${which}`)}
+                  {count > 0 ? (
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs leading-none text-muted-foreground">
+                      {count}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </Tabs>
       </div>
       {typeFilters.length > 0 ? (
         <div className={styles.appliedFilters}>

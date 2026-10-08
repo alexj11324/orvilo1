@@ -1,0 +1,3 @@
+# Key-value credential form recovery
+
+Key and value must both be supplied for each nonempty credential row. Whitespace-only keys and completely blank rows are omitted. Edit forms load decrypted values before accepting writes: a failed decrypt or malformed success response blocks editing and saving rather than substituting an empty credential. Reload retries the read and restores the original values. Create and update rejection keep the modal open with the entered values and display the server message, or a localized fallback when no message is available. The error state replaces the form inside the same modal; normal pending saves retain the button spinner.

@@ -1,7 +1,7 @@
 'use client';
 
 import { cssVar } from 'antd-style';
-import { createElement, isValidElement, memo, useState } from 'react';
+import { createElement, isValidElement, memo, useCallback, useState } from 'react';
 
 import MobileContentLayout from '@/components/server/MobileNavLayout';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +27,11 @@ export default memo(() => {
     agentSelectors.currentAgentConfig(s),
     agentSelectors.currentAgentMeta(s),
   ]);
+
+  const updateMetadata = useCallback(
+    (next: Parameters<typeof updateAgentMeta>[0]) => updateAgentMeta(next, { rethrow: true }),
+    [updateAgentMeta],
+  );
 
   const isLoading = false;
 
@@ -60,7 +65,7 @@ export default memo(() => {
         meta={meta}
         tab={tab}
         onConfigChange={updateAgentConfig}
-        onMetaChange={updateAgentMeta}
+        onMetaChange={updateMetadata}
       />
       <Footer />
     </MobileContentLayout>

@@ -16,13 +16,7 @@ import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -543,11 +537,17 @@ const AgentViewAllPage = memo(() => {
                 <EmptyMedia variant="icon">
                   <Search />
                 </EmptyMedia>
-                <EmptyTitle />
-                <EmptyDescription>
+                <EmptyTitle>
                   {keyword.trim() ? t('navPanel.searchResultEmpty') : t('agentViewAll.empty')}
-                </EmptyDescription>
+                </EmptyTitle>
               </EmptyHeader>
+              {keyword.trim() ? (
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => setKeyword('')}>
+                    {t('agentViewAll.clearSearch')}
+                  </Button>
+                </EmptyContent>
+              ) : null}
             </Empty>
           </div>
         ) : viewMode === 'card' ? (

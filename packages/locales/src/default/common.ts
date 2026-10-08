@@ -8,6 +8,7 @@ export default {
     'All registered users get {{credit}} free credits per month—no setup needed.',
   'alert.cloud.title': '{{name}} beta is live',
   'agentViewAll.empty': 'No agents yet',
+  'agentViewAll.clearSearch': 'Clear search',
   'agentViewAll.form.grouping': 'Grouping',
   'agentViewAll.form.ordering': 'Ordering',
   'agentLabel.create': 'New label',

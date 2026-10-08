@@ -1,21 +1,20 @@
 'use client';
 import { type OwnCredSummary } from '@orvilo/types';
-import { useMutation } from '@tanstack/react-query';
 import { Loader2, Minus, Plus } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Form from '@/components/GroupForm';
-import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 
-import { pairCompletenessRule, pairsToValues } from '../kvPairs';
+import { pairCompletenessRule } from '../kvPairs';
 import { type CredsApi } from '../useCredsApi';
+import { type KVFormValues, useEditKVForm } from './useEditKVForm';
 
 interface EditKVFormProps {
   cred: OwnCredSummary;
@@ -24,87 +23,21 @@ interface EditKVFormProps {
   onSuccess: () => void;
 }
 
-interface FormValues {
-  description?: string;
-  kvPairs: Array<{ key: string; value: string }>;
-  name: string;
-}
-
 const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }) => {
   const { t } = useTranslation('setting');
   const { allowed: canManageCredentials } = usePermission('manage_provider_key');
-  const [form] = Form.useForm<FormValues>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<unknown>();
-  const [attempt, setAttempt] = useState(0);
+  const [form] = Form.useForm<KVFormValues>();
+  const setValues = useCallback((values: KVFormValues) => form.setFieldsValue(values), [form]);
+  const { isLoading, loadError, ready, retryLoad, updateMutation } = useEditKVForm(
+    cred,
+    credsApi,
+    canManageCredentials,
+    setValues,
+    onSuccess,
+  );
 
-  // Fetch decrypted values on mount
-  useEffect(() => {
-    const fetchDecryptedValues = async () => {
-      if (!canManageCredentials) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const result = await credsApi.client.get.query({
-          decrypt: true,
-          id: cred.id,
-        });
-
-        // Convert values object to array of key-value pairs
-        const values = result?.data?.plaintext || {};
-        const kvPairs = Object.entries(values).map(([key, value]) => ({
-          key,
-          value: value as string,
-        }));
-
-        form.setFieldsValue({
-          description: cred.description,
-          kvPairs: kvPairs.length > 0 ? kvPairs : [{ key: '', value: '' }],
-          name: cred.name,
-        });
-      } catch (error) {
-        // Never fall back to an empty form: saving it would overwrite the stored
-        // secret with nothing. Block editing until the values load.
-        setLoadError(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDecryptedValues();
-  }, [attempt, canManageCredentials, cred.id, cred.name, cred.description, credsApi, form]);
-
-  const retryLoad = () => {
-    setLoadError(undefined);
-    setIsLoading(true);
-    setAttempt((count) => count + 1);
-  };
-
-  const updateMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      if (!canManageCredentials) return;
-
-      await credsApi.client.update.mutate({
-        description: values.description,
-        id: cred.id,
-        name: values.name,
-        values: pairsToValues(values.kvPairs),
-      });
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error && error.message ? error.message : t('creds.form.saveFailed'),
-      );
-    },
-    onSuccess: () => {
-      onSuccess();
-    },
-  });
-
-  const handleSubmit = (values: FormValues) => {
-    if (!canManageCredentials) return;
+  const handleSubmit = (values: KVFormValues) => {
+    if (!canManageCredentials || !ready) return;
 
     updateMutation.mutate(values);
   };
@@ -211,7 +144,7 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
           {t('creds.form.cancel')}
         </Button>
         <Button
-          disabled={updateMutation.isPending || !canManageCredentials}
+          disabled={updateMutation.isPending || !canManageCredentials || !ready}
           type="submit"
           variant="default"
         >

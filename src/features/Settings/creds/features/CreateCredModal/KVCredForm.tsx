@@ -1,16 +1,15 @@
 'use client';
-import { useMutation } from '@tanstack/react-query';
 import { Loader2, Minus, Plus } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form from '@/components/GroupForm';
-import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { pairCompletenessRule, pairsToValues } from '../kvPairs';
+import { useCredentialMutation } from '../useCredentialMutation';
 import { type CredsApi } from '../useCredsApi';
 
 interface KVCredFormProps {
@@ -32,8 +31,8 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
   const { t } = useTranslation('setting');
   const [form] = Form.useForm<FormValues>();
 
-  const createMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
+  const createMutation = useCredentialMutation(
+    async (values: FormValues) => {
       if (disabled) return;
 
       await credsApi.client.createKV.mutate({
@@ -44,15 +43,9 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
         values: pairsToValues(values.kvPairs),
       });
     },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error && error.message ? error.message : t('creds.form.createFailed'),
-      );
-    },
-    onSuccess: () => {
-      onSuccess();
-    },
-  });
+    onSuccess,
+    t('creds.form.createFailed'),
+  );
 
   const handleSubmit = (values: FormValues) => {
     if (disabled) return;

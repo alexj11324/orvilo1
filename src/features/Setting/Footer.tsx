@@ -43,7 +43,7 @@ const Footer = memo<PropsWithChildren>(() => {
       okText: t('footer.star.action'),
       onOk: () => {
         if (isOnServerSide) return;
-        window.open(GITHUB, '__blank');
+        window.open(GITHUB, '_blank', 'noopener,noreferrer');
       },
       title: t('footer.star.title'),
     });
@@ -64,7 +64,7 @@ const Footer = memo<PropsWithChildren>(() => {
       okText: t('footer.feedback.action'),
       onOk: () => {
         if (isOnServerSide) return;
-        window.open(GITHUB_ISSUES, '__blank');
+        window.open(GITHUB_ISSUES, '_blank', 'noopener,noreferrer');
       },
       title: t('footer.feedback.title'),
     });

@@ -178,7 +178,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           )}
           onClick={() => onScopeChange('all')}
         >
-          <div className={cn('text-[13px]', scope === 'all' ? 600 : 400)}>
+          <div className={cn('text-[13px]', scope === 'all' ? 'font-semibold' : 'font-normal')}>
             {t('heteroImport.allSessions')}
           </div>
           <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
@@ -251,7 +251,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 />
                 <Brand size={15} />
                 <div
-                  className={cn('text-[13px]', scope === source ? 600 : 500)}
+                  className={cn('text-[13px]', scope === source ? 'font-semibold' : 'font-medium')}
                   style={{ flex: 1 }}
                 >
                   {AGENT_LABEL[source]}

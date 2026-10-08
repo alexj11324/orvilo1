@@ -1,11 +1,12 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import { BoltIcon, Loader2Icon, RotateCwIcon } from 'lucide-react';
+import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
@@ -117,9 +118,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                       onClick?.(AsyncTaskStatus.Success);
                     }}
                   >
-                    {preparingEmbedding
-                      ? createElement(Loader2Icon, { size: 16 })
-                      : createElement(BoltIcon, { size: 16 })}
+                    {preparingEmbedding ? <Spinner /> : createElement(BoltIcon, { size: 16 })}
                     {chunkCount}
                     {
                       // if want to hide button

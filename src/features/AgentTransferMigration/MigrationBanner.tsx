@@ -1,10 +1,10 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2 } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { agentService } from '@/services/agent';
 import { useChatStore } from '@/store/chat';
@@ -76,7 +76,7 @@ export const TopicMigrationPlaceholder = memo<MigrationBannerProps>(
         className="flex flex-col items-center flex-1 gap-3 justify-center"
         style={{ padding: 24 }}
       >
-        <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
+        <Spinner className="size-5 text-muted-foreground" />
         <div className="text-muted-foreground font-medium">
           {t(
             data?.type === 'copy'
@@ -137,7 +137,7 @@ export const AgentMigrationBadge = memo<MigrationTarget>(({ agentId, groupId }) 
         render={
           <span>
             <div className={`flex items-center gap-1.5 ${chipStyles.chip}`}>
-              <Loader2 className="animate-spin" color={cssVar.colorWarning} size={12} />
+              <Spinner className="size-3 text-warning" />
               <span>
                 {t(
                   data.type === 'copy'

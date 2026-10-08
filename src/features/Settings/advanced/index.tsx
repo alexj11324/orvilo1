@@ -3,8 +3,7 @@
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { Loader2Icon } from 'lucide-react';
-import { createElement, memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
@@ -17,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
@@ -135,9 +135,7 @@ const Page = memo(() => {
           ]
         : []),
     ],
-    extra:
-      loading &&
-      createElement(Loader2Icon, { size: 16, style: { opacity: 0.5 }, className: 'animate-spin' }),
+    extra: loading && <Spinner className="opacity-50" />,
     title: t('tab.advanced.toolsAndDiagnostics.title'),
   };
 

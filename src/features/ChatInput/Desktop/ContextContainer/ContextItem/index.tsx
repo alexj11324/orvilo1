@@ -1,11 +1,12 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { CircleAlertIcon, CircleCheckIcon, Loader2Icon, RotateCwIcon } from 'lucide-react';
+import { CircleAlertIcon, CircleCheckIcon, RotateCwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
 import ActionIcon from '@/components/ActionIcon';
 import ClosableBadge from '@/components/ClosableBadge';
+import { Spinner } from '@/components/ui/spinner';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useFileStore } from '@/store/file';
 import { type UploadFileItem } from '@/types/files/upload';
@@ -132,9 +133,8 @@ const ContextItem = memo<FileItemProps>((props) => {
                   <CircleCheckIcon fill={'transparent'} height={12} size={12} width={12} />
                 </span>
               ) : indicator === 'loading' ? (
-                <span
-                  className="anticon animate-spin"
-                  role="img"
+                <Spinner
+                  className="size-3"
                   aria-label={t(
                     status === 'processing'
                       ? 'upload.preview.status.processing'
@@ -142,9 +142,7 @@ const ContextItem = memo<FileItemProps>((props) => {
                         ? 'upload.preview.status.pending'
                         : 'upload.preview.status.uploading',
                   )}
-                >
-                  <Loader2Icon fill={'transparent'} height={12} size={12} width={12} />
-                </span>
+                />
               ) : indicator === 'progress' ? (
                 <span
                   aria-label={t('upload.preview.status.uploading')}

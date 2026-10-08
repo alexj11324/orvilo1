@@ -13,6 +13,7 @@ import {
   useVerifyResults,
   useVerifyState,
 } from '@/features/Acceptance/hooks';
+import PortalBodyState from '@/features/Portal/components/PortalBodyState';
 import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, threadSelectors } from '@/store/chat/selectors';
@@ -103,7 +104,7 @@ const Body = () => {
   const { t } = useTranslation('verify');
   const operationId = useChatStore(chatPortalSelectors.verifyResultOperationId);
   const checkItemId = useChatStore(chatPortalSelectors.verifyResultCheckItemId);
-  const { data: state } = useVerifyState(operationId ?? null);
+  const { data: state, error, isLoading, mutate } = useVerifyState(operationId ?? null);
   const { data: results } = useVerifyResults(operationId ?? null);
 
   const item = (state?.verifyPlan ?? []).find((i) => i.id === checkItemId);
@@ -113,7 +114,18 @@ const Body = () => {
   // not only the judgment outcome.
   const { data: instructionDoc } = useVerifyInstruction(item?.documentId);
 
-  if (!item) return null;
+  if (!operationId) return null;
+  if (!item) {
+    return (
+      <PortalBodyState
+        error={state ? undefined : error}
+        isLoading={isLoading}
+        notFoundDesc={t('detail.notFound.desc')}
+        notFoundTitle={t('detail.notFound.title')}
+        onRetry={() => void mutate()}
+      />
+    );
+  }
 
   const ratio = typeof result?.confidence === 'number' ? result.confidence : undefined;
   const duration = formatDuration(result?.startedAt, result?.completedAt);

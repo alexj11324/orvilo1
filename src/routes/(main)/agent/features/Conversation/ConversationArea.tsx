@@ -2,11 +2,11 @@
 
 import { createStaticStyles, cssVar } from 'antd-style';
 import debug from 'debug';
-import { Loader2 } from 'lucide-react';
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessConversationAnalytics } from '@/business/client/hooks/useBusinessConversationAnalytics';
+import { Spinner } from '@/components/ui/spinner';
 import AgentHome from '@/features/AgentHome';
 import {
   TopicMigrationPlaceholder,
@@ -194,7 +194,7 @@ const Conversation = memo(() => {
               className="flex flex-col items-center flex-1 justify-center"
               role={'status'}
             >
-              <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
+              <Spinner className="size-5 text-muted-foreground" />
             </div>
           ) : (
             /* The first-agent gate lives at the (main) layout now — while no

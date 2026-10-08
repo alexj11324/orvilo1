@@ -1,6 +1,6 @@
 'use client';
 import { useMutation } from '@tanstack/react-query';
-import { Inbox, Loader2, X } from 'lucide-react';
+import { Inbox, X } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -168,10 +168,10 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
         </Button>
         <Button
           disabled={createMutation.isPending || !fileHashId || disabled}
+          loading={createMutation.isPending}
           type="submit"
           variant="default"
         >
-          {createMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.submit')}
         </Button>
       </div>

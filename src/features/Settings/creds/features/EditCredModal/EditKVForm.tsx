@@ -1,6 +1,6 @@
 'use client';
 import { type OwnCredSummary } from '@orvilo/types';
-import { Loader2, Minus, Plus } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { type FC, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -145,10 +145,10 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
         </Button>
         <Button
           disabled={updateMutation.isPending || !canManageCredentials || !ready}
+          loading={updateMutation.isPending}
           type="submit"
           variant="default"
         >
-          {updateMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.save')}
         </Button>
       </div>

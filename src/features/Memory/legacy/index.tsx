@@ -9,6 +9,8 @@ import NavHeader from '@/features/NavHeader';
 import FilterBar from '@/routes/(main)/memory/features/FilterBar';
 import GridCard from '@/routes/(main)/memory/features/GridView/GridCard';
 import HighlightedContent from '@/routes/(main)/memory/features/HighlightedContent';
+import Loading from '@/routes/(main)/memory/features/Loading';
+import MemoryEmpty from '@/routes/(main)/memory/features/MemoryEmpty';
 import { useUserMemoryStore } from '@/store/userMemory';
 import { createLegacyMemory, useLegacyMemoryPage } from '@/store/userMemory/useLegacyMemoryPage';
 import { getMemorySession, useMemorySession } from '@/store/userMemory/utils/session';
@@ -113,10 +115,11 @@ function MemoryCollection({ layer }: Props) {
         {feedback && <Text role={'alert'}>{feedback}</Text>}
         <AsyncBoundary
           data={data}
-          empty={<Text>{t('empty.search')}</Text>}
+          empty={<MemoryEmpty search={Boolean(q)} />}
           error={error}
           isEmpty={data?.items.length === 0}
           isLoading={isLoading}
+          loading={<Loading />}
           onRetry={() => void mutate()}
         >
           {data?.items.map((row) => {

@@ -18,6 +18,7 @@ import { useSearchParams } from 'react-router';
 import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { DropdownMenu } from '@/components/ItemsMenu';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import TablePagination from '@/components/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useTaskStore } from '@/store/task';
 
+import { AutomationRunsSkeleton } from './AutomationSkeleton';
 import RunStatusBadge from './RunStatusBadge';
 import {
   automationDetailPath,
@@ -246,16 +248,9 @@ const AutomationRunsPage = memo(() => {
           {error ? (
             <AsyncError error={error} onRetry={() => void mutate()} />
           ) : isLoading && runs.length === 0 ? (
-            <div className="flex flex-col p-6">
-              <div className="text-muted-foreground">{t('runs.title')}…</div>
-            </div>
+            <AutomationRunsSkeleton />
           ) : runs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-2">
-                <BotMessageSquare color={cssVar.colorTextQuaternary} size={32} />
-                <div className="text-muted-foreground">{t('run_history.no_matches')}</div>
-              </div>
-            </div>
+            <SimpleEmpty description={t('run_history.no_matches')} icon={BotMessageSquare} />
           ) : (
             <>
               <div className={styles.headerRow}>

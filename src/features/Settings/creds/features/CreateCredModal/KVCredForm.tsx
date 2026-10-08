@@ -1,5 +1,5 @@
 'use client';
-import { Loader2, Minus, Plus } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -151,8 +151,12 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
         <Button type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
-        <Button disabled={createMutation.isPending || disabled} type="submit" variant="default">
-          {createMutation.isPending && <Loader2 className="animate-spin" />}
+        <Button
+          disabled={createMutation.isPending || disabled}
+          loading={createMutation.isPending}
+          type="submit"
+          variant="default"
+        >
           {t('creds.form.submit')}
         </Button>
       </div>

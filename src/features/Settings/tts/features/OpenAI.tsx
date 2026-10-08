@@ -1,13 +1,13 @@
 'use client';
 
 import { type FormGroupItemType } from '@lobehub/ui';
-import { Form, Icon } from '@lobehub/ui';
+import { Form } from '@lobehub/ui';
 import { Select, Skeleton } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
-import { Loader2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { serviceModelFormStyles } from '@/features/ServiceModel/styles';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -47,7 +47,7 @@ const OpenAI = memo(() => {
         tooltip: reason,
       },
     ],
-    extra: loading && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />,
+    extra: loading && <Spinner className="opacity-50" />,
     title: t('settingTTS.openai.title'),
   };
 

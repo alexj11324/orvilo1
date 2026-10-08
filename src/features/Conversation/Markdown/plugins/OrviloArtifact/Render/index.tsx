@@ -1,9 +1,9 @@
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
-import { Loader2 } from 'lucide-react';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, messageStateSelectors } from '@/store/chat/selectors';
@@ -121,7 +121,7 @@ const Render = memo<ArtifactProps>(({ identifier, title, type, language, childre
               <div className="flex gap-0.5">
                 {!isArtifactTagClosed && (
                   <div>
-                    <Loader2 className="animate-spin" />
+                    <Spinner />
                   </div>
                 )}
                 {str?.length}

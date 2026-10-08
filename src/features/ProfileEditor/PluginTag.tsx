@@ -5,13 +5,14 @@ import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { AlertCircle, Loader2, Square, SquareCheckBig, SquareMinus, X } from 'lucide-react';
+import { AlertCircle, Square, SquareCheckBig, SquareMinus, X } from 'lucide-react';
 import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { Badge } from '@/components/reui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useDiscoverStore } from '@/store/discover';
@@ -56,21 +57,6 @@ const EMPTY_CONNECTORS: ReturnType<typeof connectorSelectors.connectorList> = []
 const emptyConnectorList = () => EMPTY_CONNECTORS;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  loadingIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-    animation: spin 1s linear infinite;
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  `,
   notInstalledTag: css`
     border-color: ${cssVar.colorWarningBorder};
     background: ${cssVar.colorWarningBg};
@@ -338,7 +324,7 @@ const PluginTag = memo<PluginTagProps>(
     const renderIcon = () => {
       // Show loading spinner when loading
       if (isLoading) {
-        return <Loader2 className={styles.loadingIcon} size={14} />;
+        return <Spinner className="size-3.5 shrink-0 text-muted-foreground" />;
       }
 
       // Show warning icon when not installed

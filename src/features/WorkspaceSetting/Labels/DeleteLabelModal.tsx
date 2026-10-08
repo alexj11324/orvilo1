@@ -1,6 +1,5 @@
 import { type AgentLabelListItem } from '@orvilo/types';
 import { t as translate } from 'i18next';
-import { Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -103,10 +102,10 @@ const DeleteLabelContent = memo<DeleteLabelContentProps>(({ label }) => {
         <Button
           aria-busy={archiving}
           disabled={loading || archiving}
+          loading={archiving}
           variant="outline"
           onClick={handleArchive}
         >
-          {archiving && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {t('workspaceSetting.labels.actions.archive')}
         </Button>
         <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
@@ -116,10 +115,10 @@ const DeleteLabelContent = memo<DeleteLabelContentProps>(({ label }) => {
           <Button
             aria-busy={loading}
             disabled={!armed || archiving || loading}
+            loading={loading}
             variant="destructive"
             onClick={handleDelete}
           >
-            {loading && <Loader2 aria-hidden className="size-4 animate-spin" />}
             {t('delete', { ns: 'common' })}
           </Button>
         </div>

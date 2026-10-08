@@ -1,7 +1,9 @@
 'use client';
+
 import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
@@ -17,6 +19,8 @@ import ProfileRow from './ProfileRow';
 const PasswordRow = () => {
   const { t } = useTranslation('auth');
   const hasPasswordAccount = useUserStore(authSelectors.hasPasswordAccount);
+  const error = useUserStore((state) => state.authProvidersError);
+  const retry = useUserStore((state) => state.refreshAuthProviders);
   const accountsUrl = useServerConfigStore(serverConfigSelectors.authAccountsUrl);
 
   return (
@@ -31,12 +35,20 @@ const PasswordRow = () => {
           variant="link"
           onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}
         >
-          {hasPasswordAccount ? t('profile.changePassword') : t('profile.setPassword')}{' '}
+          {error
+            ? t('profile.sso.manageOnPortal')
+            : hasPasswordAccount
+              ? t('profile.changePassword')
+              : t('profile.setPassword')}{' '}
           <ExternalLinkIcon className="shrink-0" size={12} style={{ verticalAlign: 'middle' }} />
         </Button>
       }
     >
-      <span>{hasPasswordAccount ? '••••••••' : '--'}</span>
+      {error ? (
+        <AsyncError error={error} variant="inline" onRetry={() => void retry()} />
+      ) : (
+        <span>{hasPasswordAccount ? '••••••••' : '--'}</span>
+      )}
     </ProfileRow>
   );
 };

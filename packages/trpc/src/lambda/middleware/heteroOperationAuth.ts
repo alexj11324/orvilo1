@@ -1,9 +1,10 @@
 import { TRPCError } from '@trpc/server';
 
-import { validateHeteroOperationClaims } from '../../utils/internalJwt';
+import {
+  isLegacyHeteroOperationClaims,
+  validateHeteroOperationClaims,
+} from '../../utils/internalJwt';
 import { trpc } from '../init';
-
-const STRICT_OPERATION_CLAIMS = ['aud', 'capabilities', 'iss', 'jti', 'operation_id'] as const;
 
 /**
  * Auth middleware for hetero-agent ingest/finish endpoints. Accepts two callers:
@@ -40,7 +41,7 @@ export const heteroOperationAuth = trpc.middleware(async (opts) => {
   // A partially populated strict contract must not fall back to the broader
   // ownership path. Only the purpose/sub-only shape issued by old pods qualifies.
   const isLegacyOperation =
-    isOperation && STRICT_OPERATION_CLAIMS.every((claim) => ctx.oidcAuth?.[claim] === undefined);
+    isOperation && isLegacyHeteroOperationClaims(ctx.oidcAuth as Record<string, unknown>);
   if (isOperation && !heteroOperation && !isLegacyOperation) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid heterogeneous operation token' });
   }

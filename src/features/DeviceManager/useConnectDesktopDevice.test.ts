@@ -29,7 +29,11 @@ vi.mock('react-i18next', async () => {
     useTranslation: () => ({
       t: (key: string, values?: Record<string, string>) =>
         key === 'devices.share.overwriteConfirmDesc'
-          ? translate(key, { name: values?.name ?? '' })
+          ? translate(key, {
+              current: values?.current ?? '',
+              name: values?.name ?? '',
+              next: values?.next ?? '',
+            })
           : key,
     }),
   };

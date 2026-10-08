@@ -1,0 +1,7 @@
+{
+  "after": "false",
+  "before": "true",
+  "chipOwnsClick": false,
+  "clipboard": "native-keyboard-sentinel",
+  "stage": "before"
+}

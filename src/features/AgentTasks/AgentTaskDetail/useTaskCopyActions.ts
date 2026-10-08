@@ -9,6 +9,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import { markdownLink, taskMarkdownDocument } from './taskMarkdown';
 
 /**
  * Clipboard actions for the active task. Shared by the rail's round quick
@@ -44,11 +45,10 @@ export const useTaskCopyActions = () => {
   }, [taskId, t]);
 
   // Carry the title into the copied link so a pasted URL says what the task is.
+  // The URL is app origin + route only; the title enters solely as a slug.
+  const taskPath = taskId ? taskDetailPath(taskId, taskAgentId ?? undefined, taskTitle) : '';
   const taskUrl = taskId
-    ? `${appOrigin}${buildWorkspaceAwarePath(
-        taskDetailPath(taskId, taskAgentId ?? undefined, taskTitle),
-        activeWorkspaceSlug,
-      )}`
+    ? `${appOrigin}${buildWorkspaceAwarePath(taskPath, activeWorkspaceSlug)}`
     : '';
   // An untitled task still needs link text, so it falls back to its readable id.
   const title = taskTitle || taskIdentifier || taskId || '';
@@ -70,18 +70,19 @@ export const useTaskCopyActions = () => {
   const copyTitleAsLink = useCallback(async () => {
     if (!taskId) return;
 
-    await navigator.clipboard.writeText(`[${title}](${taskUrl})`);
+    await navigator.clipboard.writeText(markdownLink(title, taskUrl));
     toast.success(t('taskList.contextMenu.copyLinkSuccess'));
   }, [taskId, title, taskUrl, t]);
 
-  // The whole issue as a pasteable document: heading, description, source link.
-  // An empty description drops out instead of leaving a blank block.
   const copyMarkdown = useCallback(async () => {
     if (!taskId) return;
 
-    const markdown = [`# ${taskIdentifier ?? taskId}: ${title}`, taskInstruction?.trim(), taskUrl]
-      .filter(Boolean)
-      .join('\n\n');
+    const markdown = taskMarkdownDocument({
+      identifier: taskIdentifier ?? taskId,
+      instruction: taskInstruction,
+      title,
+      url: taskUrl,
+    });
     await navigator.clipboard.writeText(markdown);
     toast.success(t('taskList.contextMenu.copyMarkdownSuccess'));
   }, [taskId, taskIdentifier, title, taskInstruction, taskUrl, t]);
@@ -104,5 +105,9 @@ export const useTaskCopyActions = () => {
     copyTitleAsLink,
     hasBranch: hasBranch && !!taskIdentifier,
     taskId,
+    /** Workspace-unaware route to this task — for in-app navigation. */
+    taskPath,
+    /** Absolute, workspace-aware URL — the value "copy link" writes. */
+    taskUrl,
   };
 };

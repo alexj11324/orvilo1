@@ -298,10 +298,17 @@ describe('TaskBoardCard', () => {
     expect(document.querySelector('[data-user-avatar="user-1"]')).not.toBeInTheDocument();
   });
 
-  it('lights the generating border while running', () => {
-    const { container } = render(<TaskBoardCard task={createTask({ status: 'running' })} />);
+  it.each([
+    ['in_progress', true],
+    ['in_review', true],
+    ['todo', false],
+    ['backlog', false],
+  ] as const)('gates the generating border by workflow category %s', (category, lit) => {
+    const { container } = render(
+      <TaskBoardCard task={createTask({ status: 'running', workflowCategory: category })} />,
+    );
 
-    expect(container.querySelector('[data-generating="true"]')).toBeInTheDocument();
+    expect(Boolean(container.querySelector('[data-generating="true"]'))).toBe(lit);
   });
 
   it('exposes the open-run affordance for a running task with a live topic', () => {

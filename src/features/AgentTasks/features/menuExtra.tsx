@@ -1,7 +1,6 @@
-import { cssVar } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 
-const renderCheck = () => <CheckIcon size={14} style={{ color: cssVar.colorTextSecondary }} />;
+const renderCheck = () => <CheckIcon className="text-muted-foreground" size={14} />;
 
 export const renderMenuCheck = (isCurrent: boolean) => (isCurrent ? renderCheck() : undefined);
 

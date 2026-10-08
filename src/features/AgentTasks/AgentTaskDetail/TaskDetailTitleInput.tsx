@@ -1,3 +1,4 @@
+import { cn } from 'cn';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +44,7 @@ const TaskDetailTitleInput = memo(() => {
 
   return (
     <Textarea
-      className={`${styles.titleInput} min-h-0`}
+      className={cn(styles.titleInput, 'min-h-0')}
       disabled={!canEditTask}
       placeholder={t('taskDetail.titlePlaceholder')}
       rows={1}

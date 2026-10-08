@@ -1,6 +1,5 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2Icon } from 'lucide-react';
+import { createStaticStyles } from 'antd-style';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,10 +9,12 @@ import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 
 import {
@@ -236,11 +237,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
       children ||
       (loading ? (
         <span className={styles.trigger}>
-          <Loader2Icon
-            className="animate-spin"
-            size={size}
-            style={{ color: cssVar.colorTextDescription }}
-          />
+          <Spinner className="text-muted-foreground" style={{ height: size, width: size }} />
         </span>
       ) : (
         <span className={styles.trigger}>
@@ -290,33 +287,35 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
               })}
             </div>
           )}
-          {filteredChoices.map((choice) => {
-            const pickable = Boolean(choice.workflowCategory || choice.state);
-            const isCurrent = taskStatusChoiceIsCurrent(
-              { workflowStateId, workflowStateRefId },
-              choice,
-              currentColumnKey,
-            );
-            const visual =
-              WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
-            const VisualIcon = visual.icon;
-            if (pickable) pickIndex += 1;
-            const label = choiceLabel(choice);
-            return (
-              <DropdownMenuItem
-                disabled={!pickable}
-                key={choice.state ? `ws:${choice.state.id}` : choice.column.key}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handlePick(choice);
-                }}
-              >
-                <VisualIcon color={visual.color} size={16} />
-                <span className="flex-1">{label}</span>
-                {pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined}
-              </DropdownMenuItem>
-            );
-          })}
+          <DropdownMenuGroup>
+            {filteredChoices.map((choice) => {
+              const pickable = Boolean(choice.workflowCategory || choice.state);
+              const isCurrent = taskStatusChoiceIsCurrent(
+                { workflowStateId, workflowStateRefId },
+                choice,
+                currentColumnKey,
+              );
+              const visual =
+                WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+              const VisualIcon = visual.icon;
+              if (pickable) pickIndex += 1;
+              const label = choiceLabel(choice);
+              return (
+                <DropdownMenuItem
+                  disabled={!pickable}
+                  key={choice.state ? `ws:${choice.state.id}` : choice.column.key}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handlePick(choice);
+                  }}
+                >
+                  <VisualIcon color={visual.color} size={16} />
+                  <span className="flex-1">{label}</span>
+                  {pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     );

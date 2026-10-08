@@ -1,0 +1,8 @@
+{
+  "name": "@orvilo/ui-preview",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cd ../.. && npx pnpm@12.4.1 exec vite build --config vite.preview.config.ts --mode ui-preview --outDir apps/ui-preview/dist"
+  }
+}

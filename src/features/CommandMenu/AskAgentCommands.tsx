@@ -4,6 +4,7 @@ import { Command } from 'cmdk';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelectors';
@@ -67,7 +68,7 @@ const AskAgentCommands = memo(() => {
           onMouseDown={(e) => e.preventDefault()}
           onSelect={() => handleAgentSelect(inboxAgentId, 'Orvilo AI', DEFAULT_INBOX_AVATAR)}
         >
-          <AssigneeAvatar agentId={inboxAgentId} size={18} />
+          <AgentRuntimeIcon size={18} type="orvilo" />
           <div className={styles.itemContent}>
             <div className={styles.itemLabel}>@Orvilo AI</div>
           </div>

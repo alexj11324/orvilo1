@@ -74,8 +74,10 @@ icon, and groups keep the group avatar.
 
 ## Not changed
 
-- Group member lists and the group mention popover read members from the group
-  session; their runtime type arrives with the Group configuration change.
+- Group surfaces that read members from the group session (group thread
+  header, the group `@` member menu and mention popover) keep the member
+  avatar, matching the source branch. Group member lists in Group settings are
+  owned by the Group configuration change.
 - The Agent avatar editor (`EditingPopover/AgentContent`) still edits the
   stored avatar field.
 - Marketplace Agent cards, the shared Acceptance viewer, the internal link

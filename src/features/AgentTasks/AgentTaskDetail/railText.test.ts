@@ -19,7 +19,6 @@ describe('issue rail type scale', () => {
     const source = readSource('taskDetailLayoutStyles.ts');
     expect(source).toContain('font-size: 13px');
     expect(source).toContain('font-weight: 400');
-    expect(source).toContain('width: 120px');
   });
 
   it.each([

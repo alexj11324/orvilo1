@@ -281,21 +281,27 @@ describe('TaskProperties', () => {
     },
   );
 
-  it('renders a Plane label beside each property value', () => {
+  it('renders value-only rows named by their field, without a label column', () => {
     render(<TaskProperties />);
 
-    expect(screen.getByText('taskDetail.property.state')).toBeTruthy();
+    for (const field of [
+      'taskDetail.property.state',
+      'taskDetail.executionStatus',
+      'taskDetail.assignee',
+      'taskDetail.property.priority',
+      'taskDetail.dueDate',
+      'taskDetail.labels.title',
+      'taskDetail.property.schedule',
+    ]) {
+      expect(screen.getByRole('group', { name: field })).toBeTruthy();
+      expect(screen.queryByText(field)).toBeNull();
+    }
+
     expect(screen.getByText('taskDetail.workflow.category.backlog')).toBeTruthy();
-    expect(screen.getByText('taskDetail.executionStatus')).toBeTruthy();
-    expect(screen.getByText('taskDetail.assignee')).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addAssignee')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.priority')).toBeTruthy();
     expect(screen.getByText('priority')).toBeTruthy();
-    expect(screen.getByText('taskDetail.dueDate')).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
-    expect(screen.getByText('taskDetail.labels.title')).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addLabels')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.schedule')).toBeTruthy();
     expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
   });
 });

@@ -1,13 +1,5 @@
 import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { format, parseISO } from 'date-fns';
-import {
-  CalendarIcon,
-  ClockIcon,
-  SignalIcon,
-  TagIcon,
-  UserRoundIcon,
-  UsersIcon,
-} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -48,20 +40,14 @@ const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
   4: { labelKey: 'priority.low' },
 };
 
-const PropertyRow = ({
-  children,
-  label,
-  mark,
-}: {
-  children: ReactNode;
-  label: string;
-  mark: ReactNode;
-}) => (
-  <div className={styles.propertyRow}>
-    <div className={styles.propertyLabel}>
-      <span className={styles.propertyMark}>{mark}</span>
-      <span className="truncate">{label}</span>
-    </div>
+/**
+ * One value-only property. The value controls carry their own glyph and
+ * placeholder ("Add assignee", "No priority"), so a second label column only
+ * repeated them; the field name stays on the group's accessible name and as a
+ * hover title.
+ */
+const PropertyRow = ({ children, label }: { children: ReactNode; label: string }) => (
+  <div aria-label={label} className={styles.propertyRow} role="group" title={label}>
     <div className={styles.propertyValue}>{children}</div>
   </div>
 );
@@ -138,10 +124,7 @@ const TaskProperties = memo(() => {
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
-        <PropertyRow
-          label={t('taskDetail.property.state')}
-          mark={<span className={styles.propertyStateMark} />}
-        >
+        <PropertyRow label={t('taskDetail.property.state')}>
           <IssueStatusPicker
             taskIdentifier={taskId}
             teamId={taskTeamId}
@@ -153,12 +136,12 @@ const TaskProperties = memo(() => {
           </IssueStatusPicker>
         </PropertyRow>
 
-        <PropertyRow label={t('taskDetail.executionStatus')} mark={<ClockIcon size={16} />}>
+        <PropertyRow label={t('taskDetail.executionStatus')}>
           <TaskExecutionBadge showLabel dispatchPhase={dispatchPhase} size={16} status={status} />
         </PropertyRow>
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
-          <PropertyRow label={t('taskDetail.assignee')} mark={<UsersIcon size={16} />}>
+          <PropertyRow label={t('taskDetail.assignee')}>
             <AssigneeMemberSelector
               currentUserId={assigneeUserId}
               disabled={status === 'running'}
@@ -182,7 +165,7 @@ const TaskProperties = memo(() => {
           </PropertyRow>
         )}
 
-        <PropertyRow label={t('taskDetail.property.priority')} mark={<SignalIcon size={16} />}>
+        <PropertyRow label={t('taskDetail.property.priority')}>
           <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
             <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
               <TaskPriorityTag
@@ -198,7 +181,7 @@ const TaskProperties = memo(() => {
           </TaskPriorityTag>
         </PropertyRow>
 
-        <PropertyRow label={t('taskDetail.dueDate')} mark={<CalendarIcon size={16} />}>
+        <PropertyRow label={t('taskDetail.dueDate')}>
           <div
             className="flex min-w-0 cursor-pointer items-center"
             onClick={() => openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })}
@@ -219,7 +202,7 @@ const TaskProperties = memo(() => {
           </div>
         </PropertyRow>
 
-        <PropertyRow label={t('taskDetail.labels.title')} mark={<TagIcon size={16} />}>
+        <PropertyRow label={t('taskDetail.labels.title')}>
           <TaskLabelSelector
             assignedLabels={labels}
             disabled={status === 'running'}
@@ -239,7 +222,7 @@ const TaskProperties = memo(() => {
 
         {(workflowCategory === 'in_review' || reviewerUserId) &&
           shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
-            <PropertyRow label={t('taskDetail.reviewer')} mark={<UserRoundIcon size={16} />}>
+            <PropertyRow label={t('taskDetail.reviewer')}>
               <AssigneeMemberSelector
                 currentUserId={reviewerUserId}
                 disabled={status === 'running'}
@@ -286,7 +269,7 @@ const TaskProperties = memo(() => {
             </PropertyRow>
           )}
 
-        <PropertyRow label={t('taskDetail.property.schedule')} mark={<ClockIcon size={16} />}>
+        <PropertyRow label={t('taskDetail.property.schedule')}>
           <TaskScheduleConfig>
             <div className="flex min-w-0 cursor-pointer items-center">
               <TaskTriggerTag

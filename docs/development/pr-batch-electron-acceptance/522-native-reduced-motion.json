@@ -1,0 +1,11 @@
+{
+  "ordinary": {
+    "transform": "matrix(1, 0, 0, 1, 0, -1)",
+    "transition": "0.18s, 0.18s, 0.18s"
+  },
+  "reduced": {
+    "transform": "none",
+    "transition": "0s"
+  },
+  "rendererRevision": "a34cdccfb plus unrelated 506 CSS fix"
+}

@@ -1,0 +1,7 @@
+{
+  "dialogRemainsOpen": true,
+  "draftRetained": true,
+  "flow": "API Key settings -> Create API Key -> type name -> click outside dialog",
+  "keyCreated": false,
+  "rendererRevision": "a34cdccfb plus unrelated 506 heading specificity fix"
+}

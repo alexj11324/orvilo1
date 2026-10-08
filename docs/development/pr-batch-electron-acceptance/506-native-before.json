@@ -1,0 +1,21 @@
+{
+  "headings": [
+    {
+      "level": "H1",
+      "size": 30.4,
+      "weight": "700"
+    },
+    {
+      "level": "H2",
+      "size": 25.6,
+      "weight": "700"
+    },
+    {
+      "level": "H3",
+      "size": 20.8,
+      "weight": "700"
+    }
+  ],
+  "rendererRevision": "bd8ba55c7",
+  "title": 20
+}

@@ -1,0 +1,11 @@
+{
+  "buttonHeight": 28,
+  "createDialogOpened": true,
+  "createdTask": {
+    "id": "task_xLpNHBzsuZVw",
+    "identifier": "SEC-2",
+    "team_id": "team_electron_private"
+  },
+  "harnessCorrection": "First database lookup used title instead of name after the successful UI creation; corrected read confirmed the existing task, without creating a second task",
+  "rendererRevision": "a34cdccfb plus unrelated 506 CSS fix"
+}

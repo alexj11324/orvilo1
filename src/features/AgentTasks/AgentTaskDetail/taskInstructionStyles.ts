@@ -6,27 +6,30 @@ import { createStaticStyles } from 'antd-style';
  * title above it. Inside an issue body every heading stays below the title.
  */
 export const taskInstructionStyles = createStaticStyles(({ css }) => ({
+  // Outrank the editor's heading rules regardless of stylesheet insertion order.
   content: css`
-    h1,
-    h2,
-    h3,
-    h4 {
-      margin-block: 16px 8px;
-      font-weight: 600;
-      line-height: 1.4;
-    }
+    && {
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin-block: 16px 8px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
 
-    h1 {
-      font-size: 18px;
-    }
+      h1 {
+        font-size: 18px;
+      }
 
-    h2 {
-      font-size: 16px;
-    }
+      h2 {
+        font-size: 16px;
+      }
 
-    h3,
-    h4 {
-      font-size: 15px;
+      h3,
+      h4 {
+        font-size: 15px;
+      }
     }
   `,
 }));

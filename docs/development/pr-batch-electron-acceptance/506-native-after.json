@@ -1,0 +1,23 @@
+{
+  "headingStylesSource": "0077dc670",
+  "headings": [
+    {
+      "level": "H1",
+      "size": 18,
+      "weight": "600"
+    },
+    {
+      "level": "H2",
+      "size": 16,
+      "weight": "600"
+    },
+    {
+      "level": "H3",
+      "size": 15,
+      "weight": "600"
+    }
+  ],
+  "rendererBase": "a34cdccfbd327895dca77717618cfe1716647c82",
+  "rendererRevision": "a34cdccfb + taskInstructionStyles specificity fix",
+  "title": 20
+}

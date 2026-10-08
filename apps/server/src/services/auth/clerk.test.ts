@@ -1,5 +1,10 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest';
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { UserItem } from '@/database/schemas';
+import type { OrviloDatabase } from '@/database/type';
 
 import { type ClerkApiUser, provisionClerkUser } from './clerk';
 
@@ -27,24 +32,69 @@ const clerkUser: ClerkApiUser = {
   primary_email_address_id: 'em_1',
 };
 
-const makeDb = ({ findResults = [] as any[] } = {}) => {
+type Profile = Partial<UserItem> & Pick<UserItem, 'id'>;
+const makeDb = ({
+  findResults = [] as any[],
+  profiles,
+  bindings = [],
+}: {
+  findResults?: any[];
+  profiles?: Profile[];
+  bindings?: { providerId: string; accountId: string; userId: string }[];
+} = {}) => {
   const findFirst = vi.fn();
   for (const row of findResults) findFirst.mockResolvedValueOnce(row);
   findFirst.mockResolvedValue(undefined);
 
   const insertValues = vi.fn();
-  const updateSet = vi.fn();
+  const updateSet = vi.fn().mockReturnValue({
+    returning: vi.fn(() => [{ id: 'updated' }]),
+    where: vi.fn(() => ({ returning: vi.fn(() => [{ id: 'updated' }]) })),
+  });
+  if (profiles) {
+    findFirst.mockImplementation(async ({ where }: { where: SQL }) => {
+      const query = new PgDialect().sqlToQuery(where);
+      return query.sql.includes('"users"."id"')
+        ? profiles.find((row) => row.id === query.params[0])
+        : profiles.find(
+            (row) => row.normalizedEmail === query.params[0] || row.email === query.params[1],
+          );
+    });
+    insertValues.mockImplementation((row: Profile) => ({
+      returning: async () => {
+        profiles.push({ ...row });
+        return [row];
+      },
+    }));
+    updateSet.mockImplementation((patch: Partial<UserItem>) => ({
+      where: (where: SQL) => ({
+        returning: async () => {
+          const profile = profiles.find(
+            (row) => row.id === new PgDialect().sqlToQuery(where).params[0],
+          );
+          if (!profile) return [];
+          Object.assign(profile, patch);
+          return [profile];
+        },
+      }),
+    }));
+  }
 
   return {
     db: {
       insert: vi.fn(() => ({ returning: vi.fn(() => []), values: insertValues })),
-      query: { users: { findFirst } },
-      update: vi.fn(() => ({
-        set: updateSet.mockReturnValue({
-          returning: vi.fn(() => [{ id: 'updated' }]),
-          where: vi.fn(() => ({ returning: vi.fn(() => [{ id: 'updated' }]) })),
-        }),
-      })),
+      query: {
+        users: { findFirst },
+        account: {
+          findMany: async ({ where }: { where: SQL }) => {
+            const { params } = new PgDialect().sqlToQuery(where);
+            return bindings.filter(
+              (row) => row.providerId === params[0] && row.accountId === params[1],
+            );
+          },
+        },
+      },
+      update: vi.fn(() => ({ set: updateSet })),
     },
     findFirst,
     insertValues,
@@ -53,6 +103,7 @@ const makeDb = ({ findResults = [] as any[] } = {}) => {
 };
 
 describe('provisionClerkUser', () => {
+  beforeEach(() => vi.clearAllMocks());
   it('creates the user keyed by the Clerk id when no row exists', async () => {
     const { db, insertValues } = makeDb();
     db.insert.mockReturnValue({
@@ -63,7 +114,7 @@ describe('provisionClerkUser', () => {
     await provisionClerkUser(db as any, clerkUser);
 
     expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ id: 'user_clerk_1' }));
-    expect(initUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'user_clerk_1' }));
+    expect(initUser).not.toHaveBeenCalled();
   });
 
   it('links a migrated legacy row matched by email instead of inserting', async () => {
@@ -77,7 +128,7 @@ describe('provisionClerkUser', () => {
     // id lookup misses, email lookup hits
     const { db, findFirst, updateSet } = makeDb({ findResults: [undefined, legacyRow] });
 
-    const user = await provisionClerkUser(db as any, clerkUser);
+    const { user } = await provisionClerkUser(db as any, clerkUser);
 
     expect(db.insert).not.toHaveBeenCalled();
     expect(initUser).not.toHaveBeenCalled();
@@ -103,5 +154,55 @@ describe('provisionClerkUser', () => {
     await provisionClerkUser(db as any, clerkUser);
 
     expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  const original: Profile = {
+    id: 'legacy-canonical-z',
+    email: 'old@fixture.test',
+    normalizedEmail: 'old@fixture.test',
+    emailVerified: true,
+    fullName: 'Existing',
+    clerkCreatedAt: new Date(0),
+  };
+  const mapped = { providerId: 'clerk', accountId: clerkUser.id, userId: original.id };
+  const changedUser: ClerkApiUser = {
+    ...clerkUser,
+    email_addresses: [
+      { id: 'em_1', email_address: 'changed@fixture.test', verification: { status: 'verified' } },
+    ],
+  };
+  it('keeps the trusted canonical identity when the verified Clerk primary email changes', async () => {
+    const profiles = [{ ...original }];
+    const { db, insertValues } = makeDb({ profiles, bindings: [mapped] });
+    const { user } = await provisionClerkUser(db as unknown as OrviloDatabase, changedUser);
+    expect(user.id).toBe(original.id);
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0]).toMatchObject({ id: original.id, email: 'changed@fixture.test' });
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(initUser).not.toHaveBeenCalled();
+  });
+  it('fails closed when a trusted mapping has no remaining canonical row', async () => {
+    const profiles: Profile[] = [];
+    const { db, insertValues } = makeDb({ profiles, bindings: [mapped] });
+    await expect(provisionClerkUser(db as unknown as OrviloDatabase, changedUser)).rejects.toThrow(
+      'Clerk account binding is unavailable',
+    );
+    expect(profiles).toEqual([]);
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(initUser).not.toHaveBeenCalled();
+  });
+  it('rejects conflicting trusted canonical mappings before writing profile fields', async () => {
+    const profiles = [{ ...original }];
+    const { db, insertValues, updateSet } = makeDb({
+      profiles,
+      bindings: [mapped, { ...mapped, userId: 'another-canonical-user' }],
+    });
+    await expect(provisionClerkUser(db as unknown as OrviloDatabase, changedUser)).rejects.toThrow(
+      'Clerk account binding conflict',
+    );
+    expect(profiles).toEqual([original]);
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(updateSet).not.toHaveBeenCalled();
+    expect(initUser).not.toHaveBeenCalled();
   });
 });

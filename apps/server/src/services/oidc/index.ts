@@ -2,6 +2,7 @@ import { getServerDB } from '@orvilo/database';
 import { oidcClients, users } from '@orvilo/database/schemas';
 import debug from 'debug';
 import { eq } from 'drizzle-orm';
+import { errors } from 'oidc-provider';
 
 import { defaultClients } from '@/libs/oidc-provider/config';
 import { createContextForInteractionDetails } from '@/libs/oidc-provider/http-adapter';
@@ -35,12 +36,22 @@ export class OIDCService {
 
   async getInteractionDetails(uid: string) {
     const { req, res } = await createContextForInteractionDetails(uid);
-    return this.provider.interactionDetails(req, res);
+    let details;
+    try {
+      details = await this.provider.interactionDetails(req, res);
+    } catch (error) {
+      if (error instanceof errors.SessionNotFound) {
+        throw new Error('interaction session not found', { cause: error });
+      }
+      throw error;
+    }
+    if (details.uid !== uid) throw new Error('interaction session not found');
+    return details;
   }
 
   async getInteractionResult(uid: string, result: any) {
     const { req, res } = await createContextForInteractionDetails(uid);
-    return this.provider.interactionResult(req, res, result);
+    return this.provider.interactionResult(req, res, result, { mergeWithLastSubmission: false });
   }
 
   async finishInteraction(uid: string, result: any) {
@@ -56,8 +67,8 @@ export class OIDCService {
       grant = await this.provider.Grant.find(existingGrantId);
       log('Found existing grantId: %s', existingGrantId);
       if (grant) {
-        const accountMismatch = grant.accountId && grant.accountId !== accountId;
-        const clientMismatch = grant.clientId && grant.clientId !== clientId;
+        const accountMismatch = grant.accountId !== accountId;
+        const clientMismatch = grant.clientId !== clientId;
 
         if (accountMismatch || clientMismatch) {
           log(
@@ -68,12 +79,6 @@ export class OIDCService {
             accountId,
             clientId,
           );
-          try {
-            await grant.destroy();
-            log('Destroyed mismatched grant: %s', existingGrantId);
-          } catch (error) {
-            log('Failed to destroy mismatched grant %s: %O', existingGrantId, error);
-          }
           grant = undefined;
         }
       } else {

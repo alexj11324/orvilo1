@@ -6,7 +6,7 @@ import urlJoin from 'url-join';
 
 import { UserModel } from '@/database/models/user';
 import { appEnv } from '@/envs/app';
-import { getJWKS } from '@/libs/oidc-provider/jwt';
+import { API_AUDIENCE, getJWKS } from '@/libs/oidc-provider/jwt';
 import { normalizeLocale } from '@/locales/resources';
 
 import { isOIDCUserBanned } from './access-control';
@@ -17,7 +17,7 @@ import { createInteractionPolicy } from './interaction-policy';
 
 const logProvider = debug('orvilo-oidc:provider');
 
-export const API_AUDIENCE = 'urn:orvilo:chat';
+export { API_AUDIENCE } from './jwt';
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 60 * MINUTE_SECONDS;

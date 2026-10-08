@@ -439,7 +439,7 @@ const ReviewsPage = memo(() => {
           <Tabs value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
             <TabsList>
               {tabs.map((item) => (
-                <TabsTrigger key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
+                <TabsTrigger key={item.key} value={item.key}>
                   {item.label}
                 </TabsTrigger>
               ))}

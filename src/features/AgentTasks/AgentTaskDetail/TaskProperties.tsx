@@ -1,6 +1,6 @@
 import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { format, parseISO } from 'date-fns';
-import { PlusIcon } from 'lucide-react';
+import { CalendarIcon, ClockIcon, PlusIcon, TagIcon, UserCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +27,7 @@ import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import TaskTriggerTag from '../features/TaskTriggerTag';
+import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
@@ -189,9 +190,12 @@ const TaskProperties = memo(() => {
                     <span className="truncate">{memberMeta?.title}</span>
                   </>
                 ) : (
-                  <span className={styles.propertyPlaceholder}>
-                    {t('taskDetail.property.addAssignee')}
-                  </span>
+                  <>
+                    <UnassignedAssigneeIcon kind="human" size={16} />
+                    <span className={styles.propertyPlaceholder}>
+                      {t('taskDetail.property.addAssignee')}
+                    </span>
+                  </>
                 )}
               </div>
             </AssigneeMemberSelector>
@@ -217,11 +221,14 @@ const TaskProperties = memo(() => {
         {optionalFields.dueDate && (
           <PropertyRow label={t('taskDetail.dueDate')}>
             <div
-              className="flex min-w-0 cursor-pointer items-center"
+              className="flex min-w-0 cursor-pointer items-center gap-1.5"
               onClick={() =>
                 openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })
               }
             >
+              {!dueDate && (
+                <CalendarIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
+              )}
               <span
                 className={
                   dueDateOverdue
@@ -246,13 +253,16 @@ const TaskProperties = memo(() => {
               disabled={status === 'running'}
               taskIdentifier={taskId}
             >
-              <div className="flex min-w-0 cursor-pointer items-center">
+              <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
                 {labels.length > 0 ? (
                   <LabelChips labels={labels} max={3} />
                 ) : (
-                  <span className={styles.propertyPlaceholder}>
-                    {t('taskDetail.property.addLabels')}
-                  </span>
+                  <>
+                    <TagIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
+                    <span className={styles.propertyPlaceholder}>
+                      {t('taskDetail.property.addLabels')}
+                    </span>
+                  </>
                 )}
               </div>
             </TaskLabelSelector>
@@ -295,9 +305,16 @@ const TaskProperties = memo(() => {
                             <span className="truncate">{reviewerMeta?.title}</span>
                           </>
                         ) : (
-                          <span className={styles.propertyPlaceholder}>
-                            {t('taskDetail.property.addReviewer')}
-                          </span>
+                          <>
+                            <UserCheckIcon
+                              aria-hidden
+                              className={styles.propertyPlaceholder}
+                              size={16}
+                            />
+                            <span className={styles.propertyPlaceholder}>
+                              {t('taskDetail.property.addReviewer')}
+                            </span>
+                          </>
                         )}
                       </div>
                     }
@@ -311,7 +328,10 @@ const TaskProperties = memo(() => {
         {optionalFields.schedule && (
           <PropertyRow label={t('taskDetail.property.schedule')}>
             <TaskScheduleConfig>
-              <div className="flex min-w-0 cursor-pointer items-center">
+              <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+                {!(schedulePattern || heartbeatInterval) && (
+                  <ClockIcon aria-hidden className={styles.propertyPlaceholder} size={16} />
+                )}
                 <TaskTriggerTag
                   automationMode={automationMode}
                   heartbeatInterval={heartbeatInterval}

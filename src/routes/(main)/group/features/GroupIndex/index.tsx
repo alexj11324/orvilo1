@@ -1,6 +1,6 @@
 'use client';
 
-import { MessagesSquareIcon, SparklesIcon } from 'lucide-react';
+import { MessagesSquareIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router';
@@ -8,13 +8,10 @@ import urlJoin from 'url-join';
 
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { Button } from '@/components/ui/button';
-import { useCreateMenuItems } from '@/features/HomeSidebar/hooks/useCreateMenuItems';
-import { openCreateAgentModal } from '@/features/HomeSidebar/hooks/useCreateModal';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
+import { openCreateGroupChatModal } from '@/features/CreateGroupChat';
+import { usePermission } from '@/hooks/usePermission';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
-import { useHomeStore } from '@/store/home';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -23,8 +20,7 @@ const ResolvingSkeleton = createSurfaceSkeleton('list', false);
 /**
  * `/group` — the top-level Groups destination. Resolves to the most recently
  * updated group's conversation; when the account has no groups it renders a
- * compact empty state whose primary action is purpose-free creation. The
- * describe-a-purpose flow stays reachable as a secondary affordance.
+ * compact empty state whose only action is purpose-free creation.
  */
 const GroupIndex = memo(() => {
   const { t } = useTranslation('chat');
@@ -33,9 +29,7 @@ const GroupIndex = memo(() => {
 
   const groups = useAgentGroupStore(agentGroupSelectors.getAllGroups);
   const groupsInit = useAgentGroupStore(agentGroupSelectors.isGroupsInitialized);
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const sendAsGroup = useHomeStore((s) => s.sendAsGroup);
-  const { createEmptyGroup, isLoading } = useCreateMenuItems();
+  const { allowed: canCreate } = usePermission('create_content');
 
   const targetGroupId = useMemo(() => {
     let latest: (typeof groups)[number] | undefined;
@@ -46,17 +40,6 @@ const GroupIndex = memo(() => {
     }
     return latest?.id;
   }, [groups]);
-
-  const openGenerateModal = () => {
-    openCreateAgentModal({
-      agentId: inboxAgentId,
-      type: 'group',
-      onCreateBlank: () => createEmptyGroup(),
-      onSubmit: async (prompt) => {
-        await sendAsGroup({ message: prompt });
-      },
-    });
-  };
 
   if (!groupsInit || targetGroupId) {
     return targetGroupId ? (
@@ -76,12 +59,8 @@ const GroupIndex = memo(() => {
         {t('group.emptyDescription')}
       </div>
       <div className="flex items-center gap-2" style={{ marginTop: 12 }}>
-        <Button disabled={isLoading} onClick={() => createEmptyGroup()}>
+        <Button disabled={!canCreate} onClick={() => openCreateGroupChatModal()}>
           {t('newGroupChat')}
-        </Button>
-        <Button variant="ghost" onClick={openGenerateModal}>
-          <SparklesIcon data-icon="inline-start" size={14} />
-          {t('newGroupChatFromDescription')}
         </Button>
       </div>
     </div>

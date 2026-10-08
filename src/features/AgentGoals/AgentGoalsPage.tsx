@@ -2,7 +2,7 @@
 
 import type { GoalStatus } from '@orvilo/const/goal';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { LayoutGridIcon, ListIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
+import { LayoutGridIcon, ListIcon, RefreshCwIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,13 +14,10 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 
-import { createGoalModal } from './CreateGoalModal';
 import { GoalCardItem } from './GoalCardItem';
 import GoalEmptyState from './GoalEmptyState';
-import type { GoalExampleSeed } from './goalExamples';
 import { GoalListItem } from './GoalListItem';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -75,7 +72,6 @@ interface AgentGoalsPageProps {
 
 const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
   const { t } = useTranslation('chat');
-  const navigate = useWorkspaceAwareNavigate();
   const scopeId = projectId ? `project:${projectId}` : agentId!;
   const useFetchGoals = useGoalStore((s) => s.useFetchGoals);
   const refreshGoals = useGoalStore((s) => s.refreshGoals);
@@ -100,23 +96,6 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
   }, [filter, goals]);
   const visibleGoalCount = filteredGoals.length;
   const GoalItem = viewMode === 'list' ? GoalListItem : GoalCardItem;
-  const openCreateGoal = (seed?: GoalExampleSeed) => {
-    createGoalModal({
-      agentId,
-      initialRequirement: seed?.requirement,
-      initialRoundBudget: seed?.roundBudget,
-      initialTitle: seed?.title,
-      projectId,
-      // Land the user inside the goal right away: the detail page polls while
-      // the goal is still planning, so the exploration graph grows in place
-      // instead of the modal blocking on it.
-      onCreated: (goal) => {
-        void refreshGoals(scopeId);
-        const ownerId = goal.agentId ?? agentId;
-        navigate(ownerId ? `/agent/${ownerId}/goal/${goal.goalId}` : `/goal/${goal.goalId}`);
-      },
-    });
-  };
 
   return (
     <div className="flex flex-col flex-1 h-full">
@@ -127,12 +106,6 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
           ) : (
             <div className="font-semibold">{t('goalList.title')}</div>
           )
-        }
-        right={
-          <Button size="sm" variant="secondary" onClick={() => openCreateGoal()}>
-            <PlusIcon data-icon="inline-start" />
-            {t('goalPage.create')}
-          </Button>
         }
       />
       <WideScreenContainer wrapperStyle={{ flex: 1, gap: 16, paddingBlock: 16, overflowY: 'auto' }}>
@@ -152,7 +125,7 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
             </div>
           </div>
         ) : goals.length === 0 ? (
-          <GoalEmptyState onCreate={openCreateGoal} />
+          <GoalEmptyState />
         ) : (
           <>
             <div className={`flex flex-col ${styles.overview}`}>

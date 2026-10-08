@@ -1,14 +1,9 @@
 'use client';
 
 import React, { memo } from 'react';
-import { useTranslation } from 'react-i18next';
-import urlJoin from 'url-join';
 
-import EmptyNavItem from '@/features/NavPanel/components/EmptyNavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceConversationFeed } from '@/hooks/useFetchChatTopics';
-import { usePermission } from '@/hooks/usePermission';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -20,12 +15,7 @@ import FlatMode from './FlatMode';
 import SearchResult from './SearchResult';
 
 const TopicListContent = memo(() => {
-  const { t } = useTranslation('topic');
-  const router = useQueryRoute();
-  const { allowed: canCreateTopic } = usePermission('create_content');
-  const topicLength = useChatStore((s) => topicSelectors.currentTopicLength(s));
-  const [agentId, isUndefinedTopics, isInSearchMode] = useChatStore((s) => [
-    s.activeAgentId,
+  const [isUndefinedTopics, isInSearchMode] = useChatStore((s) => [
     topicSelectors.isUndefinedTopics(s),
     topicSelectors.isInSearchMode(s),
   ]);
@@ -41,16 +31,6 @@ const TopicListContent = memo(() => {
 
   return (
     <>
-      {topicLength === 0 && (
-        <EmptyNavItem
-          disabled={!canCreateTopic}
-          title={t('actions.addNewTopic')}
-          onClick={() => {
-            if (!canCreateTopic) return;
-            router.push(urlJoin('/agent', agentId));
-          }}
-        />
-      )}
       {topicGroupMode === 'flat' ? (
         <FlatMode />
       ) : topicGroupMode === 'byProject' ? (

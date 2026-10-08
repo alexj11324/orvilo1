@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Body from './index';
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   navLayout: {
     bottomMenuItems: [] as { key: string; title: string; url: string }[],
     topNavItems: [
+      { key: 'tasks', title: 'Issues', url: '/tasks' },
       { key: 'inbox', title: 'Inbox', url: '/inbox' },
       { key: 'my-work', title: 'My issues', url: '/my-issues' },
       { key: 'reviews', title: 'Reviews', url: '/reviews' },
@@ -31,13 +33,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
-  default: ({ children }: { children: React.ReactNode }) => children,
+  default: ({ children }: { children: ReactNode }) => children,
 }));
 
 vi.mock('react-router', () => ({
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
-    <a href={to}>{children}</a>
-  ),
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
   useNavigate: () => vi.fn(),
 }));
 
@@ -53,7 +53,9 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) =
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
-  default: ({ title }: { title: string }) => <li>{title}</li>,
+  default: ({ title, render }: { title: string; render: ReactElement<{ to: string }> }) => (
+    <li>{<a href={render.props.to}>{title}</a>}</li>
+  ),
 }));
 
 vi.mock('@/hooks/useActiveTabKey', () => ({
@@ -130,7 +132,7 @@ beforeEach(() => {
     status: {
       hiddenSidebarSections: [],
       sidebarExpandedKeys: ['agent', 'workspace', 'favorites', 'teams'],
-      sidebarItems: ['recents', 'tasks', 'image'],
+      sidebarItems: ['home', 'create', 'reviews', 'recents', 'image'],
     },
     updateSystemStatus: mocks.updateSystemStatus,
   };
@@ -149,17 +151,10 @@ describe('Home sidebar body', () => {
     );
     const texts = children.map((child) => child.textContent);
 
-    // Core links first, in contract order — the stored legacy keys
-    // (recents/tasks/image) can neither reorder nor resurrect. Agent is a
-    // flat row now; the old agent accordion is retired.
-    expect(texts[0]).toBe('Inbox');
-    expect(texts[1]).toBe('My issues');
-    expect(texts[2]).toBe('Reviews');
-    expect(texts[3]).toBe('Agent');
-    expect(texts[4]).toBe('Drafts');
-    // The standalone quick-create row sits between the flat links and the
-    // first accordion, mirroring Linear's `+` slot.
-    expect(children[5]).toHaveAttribute('data-testid', 'sidebar-item-create');
+    expect(texts).toEqual(['Issues', 'Inbox', 'My issues', 'Agent', 'Drafts']);
+    expect(screen.queryByTestId('sidebar-item-create')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reviews')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Issues' })).toHaveAttribute('href', '/tasks');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
     // There is no personal mode — Your teams renders even while the

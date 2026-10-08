@@ -2,24 +2,14 @@
 
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import {
-  CalendarClockIcon,
-  CheckIcon,
-  ChevronRight,
-  PlusIcon,
-  TargetIcon,
-  TypeIcon,
-} from 'lucide-react';
+import { CalendarClockIcon, CheckIcon, ChevronRight, PlusIcon, TypeIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type ActionDropdownMenuItems } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import { ChatInputAction } from '@/features/ChatInput/ActionBar/components/ChatInputAction';
-import { insertGoalTag } from '@/features/ChatInput/InputEditor/ActionTag/goalTag';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useConversationStore } from '@/features/Conversation';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import { OFFSETS_IN_HOURS, resolveScheduleTime } from './scheduleTime';
 
@@ -41,15 +31,10 @@ const HeteroPlus = memo(() => {
   const { t: tEditor } = useTranslation('editor');
   const [open, setOpen] = useState(false);
 
-  const [editor, showTypoBar, setShowTypoBar] = useChatInputStore((s) => [
-    s.editor,
-    s.showTypoBar,
-    s.setShowTypoBar,
-  ]);
+  const [showTypoBar, setShowTypoBar] = useChatInputStore((s) => [s.showTypoBar, s.setShowTypoBar]);
 
   const scheduledSendAt = useConversationStore((s) => s.scheduledSendAt);
   const setScheduledSendAt = useConversationStore((s) => s.setScheduledSendAt);
-  const enableTopicAcceptance = useUserStore(labPreferSelectors.enableTopicAcceptance);
 
   const armSchedule = useCallback(
     (hours: number) => {
@@ -100,33 +85,8 @@ const HeteroPlus = memo(() => {
         onCheckedChange: (checked: boolean) => setShowTypoBar(checked),
         type: 'switch',
       },
-      // Goal creation shares the standard input's goal chip.
-      ...(enableTopicAcceptance
-        ? ([
-            { type: 'divider' },
-            {
-              icon: <TargetIcon size={16} />,
-              key: 'set-topic-goal',
-              // Same string as the chip it inserts — see the agent composer's Plus.
-              label: tEditor('slash.goal'),
-              onClick: () => {
-                setOpen(false);
-                insertGoalTag(editor, tEditor('slash.goal'));
-              },
-            },
-          ] as ActionDropdownMenuItems)
-        : []),
     ];
-  }, [
-    t,
-    tEditor,
-    showTypoBar,
-    setShowTypoBar,
-    armSchedule,
-    scheduledSendAt,
-    enableTopicAcceptance,
-    editor,
-  ]);
+  }, [t, tEditor, showTypoBar, setShowTypoBar, armSchedule, scheduledSendAt]);
 
   return (
     <ChatInputAction

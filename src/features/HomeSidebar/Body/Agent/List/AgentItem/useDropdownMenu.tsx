@@ -50,6 +50,8 @@ interface UseAgentDropdownMenuParams {
   anchor: HTMLElement | null;
   avatar?: string;
   backgroundColor?: string;
+  /** Creation actions are owned by the Agents page, never the sidebar. */
+  creationEnabled?: boolean;
   group: string | undefined;
   id: string;
   /** Labels currently applied to the agent (from the sidebar list payload). */
@@ -72,6 +74,7 @@ export const useAgentDropdownMenu = ({
   anchor,
   avatar,
   backgroundColor,
+  creationEnabled = false,
   group,
   id,
   labels,
@@ -201,7 +204,9 @@ export const useAgentDropdownMenu = ({
           },
           sfSymbol: 'macwindow.badge.plus',
         },
-        ...(canConfigure || canCreate || canEdit ? [{ type: 'divider' as const }] : []),
+        ...(canConfigure || (creationEnabled && canCreate) || canEdit
+          ? [{ type: 'divider' as const }]
+          : []),
         ...(canConfigure
           ? [
               {
@@ -220,7 +225,7 @@ export const useAgentDropdownMenu = ({
               },
             ]
           : []),
-        ...(canCreate
+        ...(creationEnabled && canCreate
           ? [
               {
                 icon: <LucideCopy size={16} />,
@@ -269,17 +274,21 @@ export const useAgentDropdownMenu = ({
                     },
                     sfSymbol: isDefault ? 'checkmark' : undefined,
                   },
-                  { type: 'divider' as const },
-                  {
-                    icon: <LucidePlus size={16} />,
-                    key: 'createGroup',
-                    label: t('sessionGroup.createGroup'),
-                    onClick: ({ domEvent }: any) => {
-                      domEvent.stopPropagation();
-                      openCreateGroupModal();
-                    },
-                    sfSymbol: 'folder.badge.plus',
-                  },
+                  ...(creationEnabled
+                    ? [
+                        { type: 'divider' as const },
+                        {
+                          icon: <LucidePlus size={16} />,
+                          key: 'createGroup',
+                          label: t('sessionGroup.createGroup'),
+                          onClick: ({ domEvent }: any) => {
+                            domEvent.stopPropagation();
+                            openCreateGroupModal();
+                          },
+                          sfSymbol: 'folder.badge.plus',
+                        },
+                      ]
+                    : []),
                 ],
                 icon: <FolderInputIcon size={16} />,
                 key: 'moveGroup',
@@ -537,6 +546,7 @@ export const useAgentDropdownMenu = ({
       activeWorkspaceId,
       anchor,
       canCreate,
+      creationEnabled,
       canConfigure,
       canEdit,
       canManage,

@@ -513,6 +513,8 @@
   "goalEmpty.judge.good": "「每周产出竞品汇总，覆盖 5 个指定产品，每条带原始链接」—— 有交付物、有边界、可判定。",
   "goalEmpty.lead": "写清楚你要什么结果、怎样才算做到，剩下的交给 Agent —— 它会自己一轮轮地做，每轮都拿你的标准核对，直到真正达成。",
   "goalEmpty.loop": "没通过就带着这一轮的结论进入下一轮继续，直到达成或用完轮次预算。轮次和花费随时可见，你可以中途暂停。",
+  "goalEmpty.recordsDescription": "Agent 创建的目标会显示在这里。",
+  "goalEmpty.recordsTitle": "暂无目标",
   "goalEmpty.step1.desc": "写下你要的结果，以及它会被怎么判定。越能被检查，Agent 越不会跑偏。",
   "goalEmpty.step1.title": "定下结果与验收标准",
   "goalEmpty.step2.desc": "每一轮是一次完整的 Agent 运行，产出、耗时和花费都挂在这个目标下。",

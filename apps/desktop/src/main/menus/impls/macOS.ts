@@ -133,25 +133,6 @@ export class MacOSMenu extends BaseMenuPlatform implements IMenuPlatform {
           },
           { type: 'separator' },
           {
-            accelerator: 'Alt+Command+A',
-            click: () => {
-              const mainWindow = this.app.browserManager.getMainWindow();
-              mainWindow.show();
-              mainWindow.broadcast('createNewAgent');
-            },
-            label: t('file.newAgent'),
-          },
-          {
-            accelerator: 'Alt+Command+G',
-            click: () => {
-              const mainWindow = this.app.browserManager.getMainWindow();
-              mainWindow.show();
-              mainWindow.broadcast('createNewAgentGroup');
-            },
-            label: t('file.newAgentGroup'),
-          },
-          { type: 'separator' },
-          {
             click: () => this.app.screenCaptureManager.startSession(),
             label: t('tray.openMiniToolbar'),
           },

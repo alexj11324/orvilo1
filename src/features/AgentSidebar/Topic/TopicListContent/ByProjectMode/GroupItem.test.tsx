@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Accordion } from '@/components/ui/accordion';
@@ -106,72 +106,19 @@ describe('Project topic group item', () => {
     activeWorkspaceSlugMock.value = 'orvilo';
   });
 
-  it('navigates to a new chat topic after committing the project directory', async () => {
-    commitAgentDefaultMock.mockResolvedValue(undefined);
-
+  it('keeps project conversations readable without a sidebar create action', () => {
     render(
       <Accordion multiple>
         <GroupItem
           expanded
-          group={{
-            children: [],
-            id: 'project:/Users/me/project',
-            title: 'project',
-          }}
+          group={{ children: [], id: 'project:/Users/me/project', title: 'project' }}
         />
       </Accordion>,
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopicInProject:project' }));
-
-    expect(commitAgentDefaultMock).toHaveBeenCalledWith('/Users/me/project');
-    await expect.poll(() => routerPushMock.mock.calls.length).toBe(1);
-    expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
-    expect(routerPushMock).toHaveBeenCalledWith('/agent/agent-1');
-  });
-
-  it('preserves the detected route prefix when adding a project topic without an active workspace slug', async () => {
-    activeWorkspaceSlugMock.value = null;
-    commitAgentDefaultMock.mockResolvedValue(undefined);
-
-    render(
-      <Accordion multiple>
-        <GroupItem
-          expanded
-          group={{
-            children: [],
-            id: 'project:/Users/me/project',
-            title: 'project',
-          }}
-        />
-      </Accordion>,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopicInProject:project' }));
-
-    await expect.poll(() => routerPushMock.mock.calls.length).toBe(1);
-    expect(routerPushMock).toHaveBeenCalledWith('/orvilo/agent/agent-1');
-  });
-
-  it('falls back to the pathname agent id when route params and store state are unavailable', () => {
-    routeParamsMock.aid = undefined;
-    agentStoreStateMock.activeAgentId = undefined;
-
-    render(
-      <Accordion multiple>
-        <GroupItem
-          expanded
-          group={{
-            children: [],
-            id: 'project:/Users/me/project',
-            title: 'project',
-          }}
-        />
-      </Accordion>,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopicInProject:project' }));
-
-    expect(commitAgentDefaultMock).toHaveBeenCalledWith('/Users/me/project');
+    expect(
+      screen.queryByRole('button', { name: 'actions.addNewTopicInProject:project' }),
+    ).not.toBeInTheDocument();
+    expect(commitAgentDefaultMock).not.toHaveBeenCalled();
+    expect(routerPushMock).not.toHaveBeenCalled();
   });
 });

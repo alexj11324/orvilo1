@@ -55,6 +55,8 @@ export const getTabPages = (scope: TabScope): TabPagesStorageData => {
       ? requestedActiveId
       : (tabs[0]?.id ?? null);
 
+    if (tabs.length !== storedTabs.length) saveTabPages(scope, tabs, activeTabId);
+
     return { activeTabId, tabs };
   } catch {
     return EMPTY;

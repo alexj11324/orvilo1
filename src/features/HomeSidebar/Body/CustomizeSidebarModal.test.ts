@@ -10,9 +10,9 @@ import { getVisibleSidebarSections } from './CustomizeSidebarModal';
 describe('CustomizeSidebarModal', () => {
   it('offers the fixed-IA sections in contract order', () => {
     expect(getVisibleSidebarSections(true).map((section) => section.id)).toEqual([
+      'tasks',
       'inbox',
       'my-work',
-      'reviews',
       'agent',
       'group',
       'workspace',
@@ -26,14 +26,15 @@ describe('CustomizeSidebarModal', () => {
       .filter((section) => section.alwaysVisible)
       .map((section) => section.id);
 
-    expect(pinned).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'group']);
+    expect(pinned).toEqual(['tasks', 'inbox', 'my-work', 'agent', 'group']);
   });
 
   it('never offers retired sidebar keys', () => {
     const retired = [
       'drafts',
       'home',
-      'tasks',
+      'reviews',
+      'create',
       'automations',
       'resource',
       'recents',

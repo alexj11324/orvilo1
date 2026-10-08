@@ -1,30 +1,17 @@
-import { AGENT_CHAT_URL } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { FolderClosedIcon, FolderOpenIcon, type LucideIcon, PlusIcon } from 'lucide-react';
-import { createElement, memo, useCallback, useMemo } from 'react';
+import { FolderClosedIcon, FolderOpenIcon, type LucideIcon } from 'lucide-react';
+import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import ActionIcon from '@/components/ActionIcon';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import RingLoadingIcon from '@/components/RingLoading';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import UnreadDot from '@/components/UnreadDot';
-import { isDesktop } from '@/const/version';
-import { useCommitWorkingDirectory } from '@/features/ChatInput/ControlBar/useCommitWorkingDirectory';
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
-import { useIsGatewayModeEnabled } from '@/helpers/gatewayMode';
-import { useActiveLocation } from '@/hooks/useActiveLocation';
-import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 
-import { buildPrefixedAgentRoutePath, parseAgentPathname } from '../../../utils/agentPathname';
 import { accordionStyles } from '../../accordionStyles';
 import TopicItem from '../../List/Item';
 import { type GroupItemComponentProps } from '../GroupedAccordion';
@@ -33,8 +20,6 @@ import {
   hasProjectTopicStatusCounts,
   type ProjectTopicStatusCounts,
 } from './statusCounts';
-
-const PROJECT_GROUP_PREFIX = 'project:';
 
 const styles = createStaticStyles(({ css }) => ({
   statusBadge: css`
@@ -63,24 +48,6 @@ const styles = createStaticStyles(({ css }) => ({
   statusBadgeWaiting: css`
     color: ${cssVar.colorInfo};
     background: color-mix(in srgb, ${cssVar.colorInfo} 14%, transparent);
-  `,
-  addTopicAction: css`
-    pointer-events: none;
-
-    overflow: hidden;
-    display: inline-flex;
-
-    width: 24px;
-
-    opacity: 0;
-
-    transition: opacity 150ms ${cssVar.motionEaseOut};
-
-    &:focus-within,
-    .accordion-header:hover & {
-      pointer-events: auto;
-      opacity: 1;
-    }
   `,
 }));
 
@@ -174,62 +141,7 @@ const CollapsedUnreadDot = memo<{ count: number }>(({ count }) => {
 CollapsedUnreadDot.displayName = 'CollapsedProjectUnreadDot';
 
 const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
-  const { t } = useTranslation('topic');
   const { id, title, children } = group;
-
-  const workingDirectory = useMemo(
-    () => (id.startsWith(PROJECT_GROUP_PREFIX) ? id.slice(PROJECT_GROUP_PREFIX.length) : undefined),
-    [id],
-  );
-
-  const agentId = useAgentStore((s) => s.activeAgentId);
-  const { aid: routeAgentId } = useActiveRouteParams<{ aid?: string }>();
-  const { pathname } = useActiveLocation();
-  const agentRoute = useMemo(() => parseAgentPathname(pathname), [pathname]);
-  const targetAgentId = routeAgentId ?? agentRoute?.agentId ?? agentId;
-  const currentAgentId = targetAgentId ?? agentId;
-  const router = useQueryRoute();
-  const activeWorkspaceSlug = useActiveWorkspaceSlug();
-  const agencyConfig = useAgentStore(agentByIdSelectors.getAgencyConfigById(currentAgentId ?? ''));
-  const isHeterogeneous = useAgentStore((s) =>
-    currentAgentId ? agentByIdSelectors.isAgentHeterogeneousById(currentAgentId)(s) : false,
-  );
-  const isWorkspaceAgent = useAgentStore((s) =>
-    currentAgentId ? agentByIdSelectors.isWorkspaceAgentById(currentAgentId)(s) : false,
-  );
-  const { commitAgentDefault } = useCommitWorkingDirectory(currentAgentId ?? '');
-
-  const handleAddTopic = useCallback(async () => {
-    if (!workingDirectory || !currentAgentId || !targetAgentId) return;
-    // Write the agent's per-device default so the new topic inherits this
-    // directory at creation time — the same high-precedence slot the picker
-    // uses, not the legacy per-agent fallback that gets shadowed by it.
-    await commitAgentDefault(workingDirectory);
-    useChatStore.getState().switchTopic(null, { skipRefreshMessage: true });
-    router.push(
-      buildPrefixedAgentRoutePath(AGENT_CHAT_URL(targetAgentId), agentRoute, activeWorkspaceSlug),
-    );
-  }, [
-    workingDirectory,
-    currentAgentId,
-    targetAgentId,
-    commitAgentDefault,
-    router,
-    agentRoute,
-    activeWorkspaceSlug,
-  ]);
-
-  // Web can add a topic in a directory too when the agent targets a bound
-  // device — the write goes to `workingDirByDevice`, no Electron dependency.
-  const deviceRoutingAvailable = useIsGatewayModeEnabled(currentAgentId);
-  const effectiveTarget = resolveExecutionTarget(agencyConfig, {
-    clientExecutionAvailable: isDesktop,
-    deviceRoutingAvailable,
-    isHetero: isHeterogeneous,
-    workspaceScoped: isWorkspaceAgent,
-  });
-  const isDeviceMode = effectiveTarget === 'device' && !!agencyConfig?.boundDeviceId;
-  const canAddTopic = (isDesktop || isDeviceMode) && !!workingDirectory;
 
   const statusCounts = useChatStore(
     (s) => getProjectTopicStatusCounts(children, operationSelectors.visiblyRunningTopicIds(s)),
@@ -241,32 +153,12 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
   const hasCollapsedUnread = !expanded && unreadCount > 0;
   const hasCollapsedIndicators = hasCollapsedStatus || hasCollapsedUnread;
   const ProjectFolderIcon = expanded ? FolderOpenIcon : FolderClosedIcon;
-  const action =
-    canAddTopic || hasCollapsedIndicators ? (
-      <div className="flex items-center gap-1">
-        {hasCollapsedStatus && <CollapsedStatusBadges counts={statusCounts} />}
-        {hasCollapsedUnread && <CollapsedUnreadDot count={unreadCount} />}
-        {canAddTopic && (
-          <span
-            className={cx(
-              'inline-flex',
-              hasCollapsedIndicators ? styles.addTopicAction : undefined,
-            )}
-          >
-            <ActionIcon
-              icon={PlusIcon}
-              size={'small'}
-              title={t('actions.addNewTopicInProject', { directory: title })}
-              tooltipProps={{ placement: 'right' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleAddTopic();
-              }}
-            />
-          </span>
-        )}
-      </div>
-    ) : undefined;
+  const action = hasCollapsedIndicators ? (
+    <div className="flex items-center gap-1">
+      {hasCollapsedStatus && <CollapsedStatusBadges counts={statusCounts} />}
+      {hasCollapsedUnread && <CollapsedUnreadDot count={unreadCount} />}
+    </div>
+  ) : undefined;
 
   return (
     <AccordionItem className={accordionStyles.item} value={id}>

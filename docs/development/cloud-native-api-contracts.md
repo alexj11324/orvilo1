@@ -19,6 +19,23 @@ execution-generation questions do not become obligations of the current run.
 Terminal but unacknowledged current-run questions remain durable obligations until
 producer acknowledgment, continuation, or current-run supersession.
 
+## Agent permission capabilities
+
+For Agents, `resourcePermission.getGeneralAccess` and `setGeneralAccess` return
+`canUseResource` from the existing `canPerformResourceAction({ action: 'use' })`
+decision, with the same caller, workspace, resource metadata and granted permissions.
+Management and execution are evaluated independently: `canManage` does not establish
+Use permission. The setter includes the current Use decision because the client
+replaces its cached permission state with that response after saving.
+
+The field is optional in the shared types and omitted for other resource kinds.
+This response projection does not change authorization policy, private-resource
+visibility, collaborator grants, creator privileges or role ceilings, and requires
+no migration. Native verification records field presence and the actual boolean at
+the deployed revision; an older response without the field leaves Use unknown.
+Member/Viewer, grant revocation and producer outcomes still require real authorized
+actor sessions and an approved workspace, Device and directory scope.
+
 ## Migration and verification
 
 The forward migration adds only `has_task_unresolved_input` with `CREATE OR REPLACE

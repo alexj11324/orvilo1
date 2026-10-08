@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, chatGroups, sessions, threads, topics } from '@orvilo/database/schemas';
+import {
+  agentOperations,
+  agents,
+  chatGroups,
+  sessions,
+  threads,
+  topics,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
@@ -119,9 +126,19 @@ describe('aiAgentRouter.interruptTask', () => {
       })
       .returning()) as any[];
     testThreadId = thread.id;
+    await serverDB.insert(agentOperations).values({
+      agentId: testAgentId,
+      chatGroupId: testGroupId,
+      id: 'op-interrupt-test',
+      status: 'running',
+      threadId: testThreadId,
+      topicId: testTopicId,
+      userId,
+    });
   });
 
   afterEach(async () => {
+    await serverDB.delete(agentOperations).where(eq(agentOperations.userId, userId));
     await cleanupTestUser(serverDB, userId);
     vi.clearAllMocks();
   });
@@ -130,6 +147,17 @@ describe('aiAgentRouter.interruptTask', () => {
     userId,
     jwtPayload: { userId },
   });
+
+  const insertOperation = async (id: string) => {
+    await serverDB.insert(agentOperations).values({
+      agentId: testAgentId,
+      chatGroupId: testGroupId,
+      id,
+      status: 'running',
+      topicId: testTopicId,
+      userId,
+    });
+  };
 
   describe('interrupt by threadId', () => {
     it('should interrupt task and update thread status to cancel', async () => {
@@ -194,6 +222,7 @@ describe('aiAgentRouter.interruptTask', () => {
     it('should interrupt task by operationId directly', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
+      await insertOperation('op-direct-interrupt');
       const result = await caller.interruptTask({
         operationId: 'op-direct-interrupt',
       });
@@ -207,6 +236,7 @@ describe('aiAgentRouter.interruptTask', () => {
     it('should use both threadId and operationId when both provided', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
+      await insertOperation('op-override');
       const result = await caller.interruptTask({
         threadId: testThreadId,
         operationId: 'op-override',
@@ -344,8 +374,9 @@ describe('aiAgentRouter.interruptTask', () => {
           })
           .where(eq(topics.id, testTopicId));
 
-        // Also point the thread's operationId at the same op so the router
-        // resolves it without needing a separate operation row.
+        await insertOperation('op-device-cancel');
+
+        // Keep the thread and durable operation bound to the same topic.
         await serverDB
           .update(threads)
           .set({ metadata: { operationId: 'op-device-cancel' } })
@@ -397,6 +428,7 @@ describe('aiAgentRouter.interruptTask', () => {
         .set({ metadata: { operationId: 'op-no-device' } })
         .where(eq(threads.id, testThreadId));
 
+      await insertOperation('op-no-device');
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       await caller.interruptTask({

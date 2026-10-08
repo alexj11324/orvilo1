@@ -31,12 +31,16 @@ describe('provider creation recovery', () => {
     const close = vi.fn();
     mocks.create.mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
     const { result } = renderHook(() => useCreateProvider(close));
-    await act(async () => result.current.onFinish({ id: 'custom' }));
+    await act(async () =>
+      result.current.onFinish({ id: 'custom', name: 'Custom', source: 'custom' }),
+    );
     expect(mocks.error).toHaveBeenCalledWith(message);
     expect(close).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
-    await act(async () => result.current.onFinish({ id: 'custom' }));
+    await act(async () =>
+      result.current.onFinish({ id: 'custom', name: 'Custom', source: 'custom' }),
+    );
     expect(close).toHaveBeenCalledOnce();
     expect(mocks.navigate).toHaveBeenCalledWith('/settings/provider/custom');
   });
@@ -48,7 +52,9 @@ describe('provider creation recovery', () => {
       },
     });
     const { result } = renderHook(() => useCreateProvider(vi.fn()));
-    await act(async () => result.current.onFinish({ id: 'custom' }));
+    await act(async () =>
+      result.current.onFinish({ id: 'custom', name: 'Custom', source: 'custom' }),
+    );
     expect(mocks.network).toHaveBeenCalledWith('RemoteServerOffline');
     expect(mocks.error).not.toHaveBeenCalled();
   });

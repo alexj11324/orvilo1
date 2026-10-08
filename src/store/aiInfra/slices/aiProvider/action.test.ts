@@ -12,7 +12,9 @@ describe('AiProviderAction', () => {
       vi.spyOn(aiProviderService, 'createAiProvider').mockRejectedValue(error);
       const refresh = vi.spyOn(useAiInfraStore.getState(), 'refreshAiProviderList');
       await expect(
-        useAiInfraStore.getState().createNewAiProvider({ id: 'custom', name: 'Custom' }),
+        useAiInfraStore
+          .getState()
+          .createNewAiProvider({ id: 'custom', name: 'Custom', source: 'custom' }),
       ).rejects.toBe(error);
       expect(refresh).not.toHaveBeenCalled();
     });
@@ -24,7 +26,9 @@ describe('AiProviderAction', () => {
       );
       vi.spyOn(console, 'error').mockImplementation(() => {});
       await expect(
-        useAiInfraStore.getState().createNewAiProvider({ id: 'custom', name: 'Custom' }),
+        useAiInfraStore
+          .getState()
+          .createNewAiProvider({ id: 'custom', name: 'Custom', source: 'custom' }),
       ).resolves.toBeUndefined();
     });
   });

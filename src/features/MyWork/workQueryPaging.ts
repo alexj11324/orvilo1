@@ -31,8 +31,9 @@ export interface WorkQueryGroupPage<T extends { id: string }> {
 export const workQueryLoadedTasks = <T extends { id: string }>(
   tasks: T[],
   groups: WorkQueryGroupPage<T>[] | undefined,
-  groupBy: WorkQueryGroupBy,
-): T[] => (groupBy === 'none' ? tasks : (groups?.flatMap((group) => group.tasks) ?? tasks));
+  groupBy: WorkQueryGroupBy | undefined,
+): T[] =>
+  !groupBy || groupBy === 'none' ? tasks : (groups?.flatMap((group) => group.tasks) ?? tasks);
 
 /**
  * Work-query responses are a discriminated union (flat task page, grouped task

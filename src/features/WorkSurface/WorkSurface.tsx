@@ -84,17 +84,21 @@ const styles = createStaticStyles(({ css }) => ({
     flex-direction: column;
 
     height: 100%;
+    min-width: 0;
     min-height: 0;
   `,
   scrollHost: css`
+    scrollbar-gutter: stable;
     overflow: auto;
     overscroll-behavior: contain;
     flex: 1;
+    min-width: 0;
     min-height: 0;
   `,
   split: css`
     display: flex;
     flex: 1;
+    min-width: 0;
     min-height: 0;
   `,
   splitDetail: css`
@@ -185,7 +189,7 @@ export interface WorkSurfaceCollectionProps {
 
 const WorkSurfaceCollection = memo<WorkSurfaceCollectionProps>(
   ({ children, className, columnHeader, style, toolbar }) => (
-    <div className="flex flex-1 flex-col" style={{ minHeight: 0 }}>
+    <div className="flex flex-1 flex-col" style={{ minHeight: 0, minWidth: 0 }}>
       {toolbar}
       <div className={styles.scrollHost}>
         <div className={cx(styles.collectionBody, className)} style={style}>
@@ -267,8 +271,8 @@ export interface WorkSurfaceReviewProps {
 
 const WorkSurfaceReview = memo<WorkSurfaceReviewProps>(
   ({ children, footer, nav, navLabel, navWidth }) => (
-    <div className="flex flex-1 flex-col" style={{ minHeight: 0 }}>
-      <div className="flex flex-1" style={{ minHeight: 0 }}>
+    <div className="flex flex-1 flex-col" style={{ minHeight: 0, minWidth: 0 }}>
+      <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
         {nav ? (
           <div
             aria-label={navLabel}

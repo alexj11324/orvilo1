@@ -1,0 +1,147 @@
+name: orvilo-qa-permission-20261008
+services:
+  app:
+    image: ${QA_IMAGE_REF:?Pinned candidate digest required}
+    container_name: orvilo-qa-permission-app
+    env_file: /run/orvilo-qa-permission/app.env
+    ports: ['127.0.0.1:13210:3210']
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      storage-init: { condition: service_completed_successfully }
+    restart: unless-stopped
+  worker:
+    image: ${QA_IMAGE_REF:?Pinned candidate digest required}
+    container_name: orvilo-qa-permission-worker
+    env_file: /run/orvilo-qa-permission/app.env
+    entrypoint: ['/bin/node', '/app/hatchet-worker/worker.mjs']
+    restart: unless-stopped
+  collaboration:
+    image: ${QA_IMAGE_REF:?Pinned candidate digest required}
+    container_name: orvilo-qa-permission-collaboration
+    env_file: /run/orvilo-qa-permission/collaboration.env
+    entrypoint: ['/bin/node', '/app/collaboration-gateway/index.cjs']
+    ports: ['127.0.0.1:13212:3012']
+    restart: unless-stopped
+  agent-gateway:
+    image: ${QA_GATEWAY_IMAGE_REF:?Pinned QA gateway digest required}
+    container_name: orvilo-qa-permission-agent-gateway
+    env_file: /run/orvilo-qa-permission/agent-gateway.env
+    entrypoint: ['/usr/local/bin/agent-gateway']
+    ports: ['127.0.0.1:13287:8787']
+    restart: unless-stopped
+  device-gateway:
+    image: ${QA_GATEWAY_IMAGE_REF:?Pinned QA gateway digest required}
+    container_name: orvilo-qa-permission-device-gateway
+    env_file: /run/orvilo-qa-permission/device-gateway.env
+    entrypoint: ['/usr/local/bin/device-gateway']
+    ports: ['127.0.0.1:13288:8787']
+    restart: unless-stopped
+  postgres:
+    image: paradedb/paradedb@sha256:8da5d202fe31875af32a49e802ce17cfbc146b0672306f4109809efee1e6f916
+    container_name: orvilo-qa-permission-postgres
+    environment:
+      POSTGRES_USER: qa_permission
+      POSTGRES_DB: qa_permission
+      POSTGRES_PASSWORD: ${QA_POSTGRES_PASSWORD:?Fresh QA password required}
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_search']
+    volumes: ['qa-postgres:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U qa_permission -d qa_permission']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+  redis:
+    image: redis@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+    container_name: orvilo-qa-permission-redis
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: ['qa-redis:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  storage:
+    image: rustfs/rustfs@sha256:97171b3d72cd47dc81000f92ea84de25608bfc35a94c965501afaeb5d99f6035
+    container_name: orvilo-qa-permission-storage
+    environment:
+      RUSTFS_ACCESS_KEY: ${QA_STORAGE_ACCESS_KEY:?}
+      RUSTFS_SECRET_KEY: ${QA_STORAGE_SECRET_KEY:?}
+      RUSTFS_CONSOLE_ENABLE: 'false'
+    command: ['/data']
+    volumes: ['qa-storage:/data']
+    ports: ['127.0.0.1:13251:9000']
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9000/health >/dev/null 2>&1']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  storage-init:
+    image: quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    container_name: orvilo-qa-permission-storage-init
+    depends_on:
+      storage: { condition: service_healthy }
+    environment:
+      QA_STORAGE_ACCESS_KEY: ${QA_STORAGE_ACCESS_KEY:?}
+      QA_STORAGE_SECRET_KEY: ${QA_STORAGE_SECRET_KEY:?}
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      - 'mc alias set qa http://storage:9000 "$${QA_STORAGE_ACCESS_KEY}" "$${QA_STORAGE_SECRET_KEY}" >/dev/null; mc mb qa/qa-permission-20261008 --ignore-existing >/dev/null'
+  mailpit:
+    image: axllent/mailpit@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    container_name: orvilo-qa-permission-mailpit
+    environment:
+      MP_SMTP_AUTH: ${QA_SMTP_USER:?}:${QA_SMTP_PASSWORD:?}
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+      MP_SMTP_ALLOWED_RECIPIENTS: '^qa-(owner|admin|member|viewer|nouse|foreign)-20261008-f4ed0718@qa-mail\.aspectlylabs\.com$$'
+    ports: ['127.0.0.1:13250:8025']
+    volumes: ['qa-mailpit:/data']
+    restart: unless-stopped
+  hatchet-postgres:
+    image: postgres@sha256:1d1095b0503145be79c79239372aefadfacf6b7c33c9245bbf99ce4b6b89c737
+    container_name: orvilo-qa-permission-hatchet-postgres
+    environment:
+      POSTGRES_USER: qa_hatchet
+      POSTGRES_DB: qa_hatchet
+      POSTGRES_PASSWORD: ${QA_HATCHET_POSTGRES_PASSWORD:?}
+    volumes: ['qa-hatchet-postgres:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U qa_hatchet -d qa_hatchet']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+  hatchet:
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite@sha256:35b48a83d648ea65f47ba3ecec627cec555d0fdb851038f495517413f62c62b6
+    container_name: orvilo-qa-permission-hatchet
+    depends_on:
+      hatchet-postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://qa_hatchet:${QA_HATCHET_POSTGRES_PASSWORD:?}@hatchet-postgres:5432/qa_hatchet?sslmode=disable
+      SERVER_AUTH_COOKIE_DOMAIN: hatchet
+      SERVER_AUTH_COOKIE_INSECURE: 't'
+      SERVER_GRPC_BIND_ADDRESS: 0.0.0.0
+      SERVER_GRPC_INSECURE: 't'
+      SERVER_GRPC_BROADCAST_ADDRESS: hatchet:7077
+      SERVER_GRPC_PORT: '7077'
+      SERVER_URL: http://hatchet:8888
+      SERVER_INTERNAL_CLIENT_INTERNAL_GRPC_BROADCAST_ADDRESS: localhost:7077
+      SERVER_AUTH_SET_EMAIL_VERIFIED: 't'
+      SERVER_DEFAULT_ADMIN_EMAIL: qa-hatchet@qa-mail.aspectlylabs.com
+      SERVER_DEFAULT_ADMIN_PASSWORD: ${QA_HATCHET_ADMIN_PASSWORD:?}
+    volumes: ['qa-hatchet-config:/config']
+    restart: unless-stopped
+
+networks:
+  default:
+    name: orvilo-qa-permission-20261008
+volumes:
+  qa-postgres: {}
+  qa-redis: {}
+  qa-storage: {}
+  qa-mailpit: {}
+  qa-hatchet-postgres: {}
+  qa-hatchet-config: {}

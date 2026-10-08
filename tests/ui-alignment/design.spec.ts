@@ -49,7 +49,7 @@ for (const width of [1280, 900]) {
         );
         await page
           .locator('[data-slot="popover-content"]')
-          .getByRole('button', { name: '里程碑', exact: true })
+          .getByRole('option', { name: '里程碑', exact: true })
           .click();
         await expect(
           page.getByText('发布验收与项目里程碑 — 长标签覆盖', { exact: true }),

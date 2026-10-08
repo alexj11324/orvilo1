@@ -51,5 +51,27 @@
     "status": "pass",
     "testRevision": "aad6d3b39",
     "limitation": "External API mutations followed by real store refresh; idle realtime delivery not verified."
+  },
+  {
+    "scenario": "PR507 native Issue selectors State, Agent, Execution, Assignee and Priority each measure 28px",
+    "status": "pass",
+    "rendererRevision": "04f108bbc135a35ba453f15cdb90d3eacbf34265"
+  },
+  {
+    "scenario": "PR526 breadcrumb separator is a direct ol sibling, with zero nested separators; PR532 breadcrumb and 28px header centers both y=69",
+    "status": "pass",
+    "rendererRevision": "04f108bbc135a35ba453f15cdb90d3eacbf34265"
+  },
+  {
+    "scenario": "PR527 project update draft survives native reload; restored contenteditable editor has 14px font",
+    "status": "pass",
+    "rendererRevision": "04f108bbc135a35ba453f15cdb90d3eacbf34265",
+    "limitation": "Posting, clearing and cross-user isolation were not exercised."
+  },
+  {
+    "scenario": "PR528 four visible native board cards each show one status SVG and zero separate execution badges",
+    "status": "pass",
+    "rendererRevision": "04f108bbc135a35ba453f15cdb90d3eacbf34265",
+    "measurements": "528-native-status-marks.json"
   }
 ]

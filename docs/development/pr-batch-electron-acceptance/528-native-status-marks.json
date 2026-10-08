@@ -1,0 +1,22 @@
+[
+  {
+    "identifier": "task:T-2:status",
+    "marks": 1,
+    "executionBadges": 0
+  },
+  {
+    "identifier": "task:T-4:status",
+    "marks": 1,
+    "executionBadges": 0
+  },
+  {
+    "identifier": "task:T-1:status",
+    "marks": 1,
+    "executionBadges": 0
+  },
+  {
+    "identifier": "task:T-3:status",
+    "marks": 1,
+    "executionBadges": 0
+  }
+]

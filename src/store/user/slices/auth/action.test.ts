@@ -35,6 +35,7 @@ afterEach(() => {
   // Reset store state
   useUserStore.setState({
     isLoadedAuthProviders: false,
+    authProvidersError: undefined,
     authProviders: [],
     hasPasswordAccount: false,
   });
@@ -225,7 +226,18 @@ describe('createAuthSlice', () => {
         await result.current.fetchAuthProviders();
       });
 
+      expect(result.current.isLoadedAuthProviders).toBe(false);
+      expect(result.current.authProvidersError).toBeInstanceOf(Error);
+      mockSessionApi.fetchAuthAccounts.mockResolvedValueOnce({
+        hasPasswordAccount: true,
+        providers: [],
+      });
+      await act(async () => {
+        await result.current.fetchAuthProviders();
+      });
       expect(result.current.isLoadedAuthProviders).toBe(true);
+      expect(result.current.authProvidersError).toBeUndefined();
+      expect(result.current.hasPasswordAccount).toBe(true);
       consoleSpy.mockRestore();
     });
   });

@@ -55,6 +55,7 @@ allowBuilds:
   workerd: true
 
 overrides:
+  '@codemirror/language': 6.12.4
   '@ant-design/icons': 6.3.2
   '@codemirror/language': 6.12.4
   '@react-pdf/image': 3.0.4

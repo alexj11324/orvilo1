@@ -1,10 +1,10 @@
 'use client';
 import { type OwnCredSummary } from '@orvilo/types';
-import { useMutation } from '@tanstack/react-query';
 import { Loader2, Minus, Plus } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 
+import { pairCompletenessRule } from '../kvPairs';
 import { type CredsApi } from '../useCredsApi';
+import { type KVFormValues, useEditKVForm } from './useEditKVForm';
 
 interface EditKVFormProps {
   cred: OwnCredSummary;
@@ -21,88 +23,21 @@ interface EditKVFormProps {
   onSuccess: () => void;
 }
 
-interface FormValues {
-  description?: string;
-  kvPairs: Array<{ key: string; value: string }>;
-  name: string;
-}
-
 const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }) => {
   const { t } = useTranslation('setting');
   const { allowed: canManageCredentials } = usePermission('manage_provider_key');
-  const [form] = Form.useForm<FormValues>();
-  const [isLoading, setIsLoading] = useState(true);
+  const [form] = Form.useForm<KVFormValues>();
+  const setValues = useCallback((values: KVFormValues) => form.setFieldsValue(values), [form]);
+  const { isLoading, loadError, ready, retryLoad, updateMutation } = useEditKVForm(
+    cred,
+    credsApi,
+    canManageCredentials,
+    setValues,
+    onSuccess,
+  );
 
-  // Fetch decrypted values on mount
-  useEffect(() => {
-    const fetchDecryptedValues = async () => {
-      if (!canManageCredentials) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const result = await credsApi.client.get.query({
-          decrypt: true,
-          id: cred.id,
-        });
-
-        // Convert values object to array of key-value pairs
-        const values = result?.data?.plaintext || {};
-        const kvPairs = Object.entries(values).map(([key, value]) => ({
-          key,
-          value: value as string,
-        }));
-
-        form.setFieldsValue({
-          description: cred.description,
-          kvPairs: kvPairs.length > 0 ? kvPairs : [{ key: '', value: '' }],
-          name: cred.name,
-        });
-      } catch {
-        // If decryption fails, just show empty values
-        form.setFieldsValue({
-          description: cred.description,
-          kvPairs: [{ key: '', value: '' }],
-          name: cred.name,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDecryptedValues();
-  }, [canManageCredentials, cred.id, cred.name, cred.description, credsApi, form]);
-
-  const updateMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      if (!canManageCredentials) return;
-
-      const kvPairs = values.kvPairs || [];
-      const valuesObj = kvPairs.reduce(
-        (acc, pair) => {
-          if (pair.key && pair.value) {
-            acc[pair.key] = pair.value;
-          }
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
-
-      await credsApi.client.update.mutate({
-        description: values.description,
-        id: cred.id,
-        name: values.name,
-        values: valuesObj,
-      });
-    },
-    onSuccess: () => {
-      onSuccess();
-    },
-  });
-
-  const handleSubmit = (values: FormValues) => {
-    if (!canManageCredentials) return;
+  const handleSubmit = (values: KVFormValues) => {
+    if (!canManageCredentials || !ready) return;
 
     updateMutation.mutate(values);
   };
@@ -112,6 +47,17 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
       <div className="flex flex-col items-center justify-center" style={{ padding: 48 }}>
         <Spinner />
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AsyncError
+        description={t('creds.form.loadFailed')}
+        error={loadError}
+        variant="block"
+        onRetry={retryLoad}
+      />
     );
   }
 
@@ -133,7 +79,9 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                 <div className="flex items-start gap-2" key={key}>
                   <Form.Item
                     {...restField}
+                    dependencies={[['kvPairs', name, 'value']]}
                     name={[name, 'key']}
+                    rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 1, marginBottom: 0 }}
                   >
                     <Input
@@ -143,7 +91,9 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                   </Form.Item>
                   <Form.Item
                     {...restField}
+                    dependencies={[['kvPairs', name, 'key']]}
                     name={[name, 'value']}
+                    rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
                     <Input
@@ -194,7 +144,7 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
           {t('creds.form.cancel')}
         </Button>
         <Button
-          disabled={updateMutation.isPending || !canManageCredentials}
+          disabled={updateMutation.isPending || !canManageCredentials || !ready}
           type="submit"
           variant="default"
         >

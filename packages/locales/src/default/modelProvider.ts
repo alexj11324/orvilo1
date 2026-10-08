@@ -102,6 +102,7 @@ export default {
   'createNewAiProvider.basicTitle': 'Basic Information',
   'createNewAiProvider.configTitle': 'Configuration Information',
   'createNewAiProvider.confirm': 'Create',
+  'createNewAiProvider.createFailed': 'Failed to create the provider. Please try again.',
   'createNewAiProvider.createSuccess': 'Creation successful',
   'createNewAiProvider.description.placeholder': 'Provider description (optional)',
   'createNewAiProvider.description.title': 'Provider Description',

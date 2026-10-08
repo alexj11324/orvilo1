@@ -79,7 +79,9 @@ const Content = memo(() => {
   const updateAgentMeta = async (meta: any) => {
     if (!canEdit) return;
     if (!agentId) return;
-    await useAgentStore.getState().optimisticUpdateAgentMeta(agentId, meta);
+    await useAgentStore
+      .getState()
+      .optimisticUpdateAgentMeta(agentId, meta, undefined, { rethrow: true });
   };
 
   const tabs: SettingsModalTabItem[] = useMemo(

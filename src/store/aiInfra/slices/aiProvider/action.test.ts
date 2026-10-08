@@ -1,8 +1,38 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { aiProviderService } from '@/services/aiProvider';
 import { useAiInfraStore } from '@/store/aiInfra';
 
 describe('AiProviderAction', () => {
+  describe('createNewAiProvider', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('propagates a failed write without refreshing', async () => {
+      const error = new Error('create failed');
+      vi.spyOn(aiProviderService, 'createAiProvider').mockRejectedValue(error);
+      const refresh = vi.spyOn(useAiInfraStore.getState(), 'refreshAiProviderList');
+      await expect(
+        useAiInfraStore
+          .getState()
+          .createNewAiProvider({ id: 'custom', name: 'Custom', source: 'custom' }),
+      ).rejects.toBe(error);
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('does not report a committed provider as uncreated when refresh fails', async () => {
+      vi.spyOn(aiProviderService, 'createAiProvider').mockResolvedValue({} as never);
+      vi.spyOn(useAiInfraStore.getState(), 'refreshAiProviderList').mockRejectedValue(
+        new Error('refresh failed'),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(
+        useAiInfraStore
+          .getState()
+          .createNewAiProvider({ id: 'custom', name: 'Custom', source: 'custom' }),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('ensureAiProviderRuntimeStateReady', () => {
     afterEach(() => {
       vi.restoreAllMocks();

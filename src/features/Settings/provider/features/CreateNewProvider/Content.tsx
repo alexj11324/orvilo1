@@ -1,20 +1,27 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { Button, Input, InputPassword, Select, Text, TextArea, toast, useModalContext } from '@lobehub/ui/base-ui';
+import {
+  Button,
+  Input,
+  InputPassword,
+  Select,
+  Text,
+  TextArea,
+  useModalContext,
+} from '@lobehub/ui/base-ui';
 import { Form } from 'antd';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProviderIcon } from '@/components/OrviloIcons';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra/store';
 import { type CreateAiProviderParams } from '@/types/aiProvider';
 
 import { KeyVaultsConfigKey, LLMProviderApiTokenKey, LLMProviderBaseUrlKey } from '../../const';
 import { CUSTOM_PROVIDER_SDK_OPTIONS } from '../customProviderSdkOptions';
-import { normalizeProviderSettings } from '../providerSettings';
+import { useCreateProvider } from './useCreateProvider';
 
 const SectionTitle = memo<{ children: React.ReactNode }>(({ children }) => (
   <Text fontSize={13} type={'secondary'} weight={500}>
@@ -25,34 +32,8 @@ const SectionTitle = memo<{ children: React.ReactNode }>(({ children }) => (
 const CreateNewProviderContent = memo(() => {
   const { t } = useTranslation('modelProvider');
   const [form] = Form.useForm<CreateAiProviderParams>();
-  const [loading, setLoading] = useState(false);
-  const createNewAiProvider = useAiInfraStore((s) => s.createNewAiProvider);
-
-  const navigate = useWorkspaceAwareNavigate();
   const { close } = useModalContext();
-
-  const onFinish = async (values: CreateAiProviderParams) => {
-    setLoading(true);
-
-    try {
-      const finalValues = {
-        ...values,
-        name: values.name || values.id,
-        settings: normalizeProviderSettings({
-          nextSettings: values.settings,
-        }) as CreateAiProviderParams['settings'],
-      };
-
-      await createNewAiProvider(finalValues);
-      setLoading(false);
-      navigate(`/settings/provider/${values.id}`);
-      toast.success(t('createNewAiProvider.createSuccess'));
-      close();
-    } catch (e) {
-      console.error(e);
-      setLoading(false);
-    }
-  };
+  const { loading, onFinish } = useCreateProvider(close);
 
   const itemStyle = { marginBottom: 0 };
 

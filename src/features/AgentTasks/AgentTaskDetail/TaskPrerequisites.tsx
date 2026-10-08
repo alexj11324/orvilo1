@@ -113,7 +113,13 @@ export const TaskBlockedNotice = () => {
   );
 };
 
-const TaskRelationFields = ({ taskId }: { taskId: string }) => {
+interface RelationFieldsProps {
+  /** Empty relation kinds stay hidden unless listed here. */
+  revealedKinds?: ReadonlySet<string>;
+  taskId: string;
+}
+
+const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const appOrigin = useAppOrigin();
@@ -245,6 +251,8 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
     <>
       {ISSUE_RELATION_KINDS.map((kind) => {
         const rows = grouped[kind];
+        // Empty groups stay out of the rail until added from "Add property".
+        if (rows.length === 0 && picker !== kind && !revealedKinds?.has(kind)) return null;
         const { Icon, className: markClass } = RELATION_MARKS[kind];
         return (
           <div
@@ -427,9 +435,11 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
   );
 };
 
-const TaskPrerequisites = () => {
+const TaskPrerequisites = ({ revealedKinds }: Pick<RelationFieldsProps, 'revealedKinds'>) => {
   const taskId = useTaskDetailTaskId();
-  return taskId ? <TaskRelationFields key={taskId} taskId={taskId} /> : null;
+  return taskId ? (
+    <TaskRelationFields key={taskId} revealedKinds={revealedKinds} taskId={taskId} />
+  ) : null;
 };
 
 export default TaskPrerequisites;

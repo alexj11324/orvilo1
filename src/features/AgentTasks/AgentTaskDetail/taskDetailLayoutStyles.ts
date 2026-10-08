@@ -76,7 +76,6 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   /**
    * Narrow: every property is a pill in one wrapping strip (the groups and
    * their list wrappers dissolve into it). Wide: the labeled rail column.
-   * `data-wide-only` rows (empty optional fields) only exist in the rail.
    */
   propertyGroups: css`
     display: flex;
@@ -162,7 +161,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       max-width: 100%;
     }
   `,
-  /** One value-only property; data-wide-only rows exist only in the rail. */
+  /** One value-only property. */
   propertyRow: css`
     display: flex;
     flex: none;
@@ -172,16 +171,8 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     min-width: 0;
     max-width: 100%;
 
-    &[data-wide-only='true'] {
-      display: none;
-    }
-
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
       width: 100%;
-
-      &[data-wide-only='true'] {
-        display: flex;
-      }
     }
   `,
   propertyValue: css`

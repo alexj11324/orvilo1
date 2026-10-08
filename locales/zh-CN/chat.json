@@ -1908,6 +1908,7 @@
   "taskDetail.priority.urgent": "紧急",
   "taskDetail.project": "项目",
   "taskDetail.properties": "属性",
+  "taskDetail.property.add": "添加属性",
   "taskDetail.property.addAssignee": "添加负责人",
   "taskDetail.property.addDueDate": "添加截止日期",
   "taskDetail.property.addLabels": "添加标签",

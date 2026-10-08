@@ -1911,6 +1911,7 @@
   "taskDetail.priority.urgent": "Urgent",
   "taskDetail.project": "Project",
   "taskDetail.properties": "Properties",
+  "taskDetail.property.add": "Add property",
   "taskDetail.property.addAssignee": "Add assignee",
   "taskDetail.property.addDueDate": "Add due date",
   "taskDetail.property.addLabels": "Add labels",

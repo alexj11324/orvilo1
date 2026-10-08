@@ -121,24 +121,30 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       display: block;
     }
   `,
-  /** A stacked row inside a rail section — same hit area as a property cell. */
+  /**
+   * A stacked row inside a rail section — same hit area as a property cell.
+   * Doubled class: the row is also drawn on the Button primitive, whose
+   * padding, radius and width utilities must not win.
+   */
   railRow: css`
-    width: fit-content;
-    max-width: 100%;
-    height: 28px;
-    padding-inline: 8px 10px;
-    border-radius: ${cssVar.borderRadius};
+    && {
+      width: fit-content;
+      max-width: 100%;
+      height: 28px;
+      padding-inline: 8px 10px;
+      border-radius: ${cssVar.borderRadius};
 
-    white-space: nowrap;
+      white-space: nowrap;
 
-    background: ${cssVar.colorFillTertiary};
+      background: ${cssVar.colorFillTertiary};
 
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      width: 100%;
+      @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+        width: 100%;
 
-      /* Same left edge as the value-only property rows above. */
-      padding-inline: 0;
-      background: transparent;
+        /* Same left edge as the value-only property rows above. */
+        padding-inline: 0;
+        background: transparent;
+      }
     }
   `,
   properties: css`
@@ -191,17 +197,20 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   /**
    * The due-date value as a Button. It keeps the value's own type and the
    * rail's left edge (the 6px hover inset is pulled back out); the Button
-   * contributes focus, keyboard and hover only.
+   * contributes focus, keyboard and hover only. Doubled class so these beat
+   * the Button's own size utilities.
    */
   propertyButton: css`
-    height: 28px;
-    margin-inline: -6px;
-    padding-inline: 6px;
-    border: 0;
+    && {
+      height: 28px;
+      margin-inline: -6px;
+      padding-inline: 6px;
+      border: 0;
 
-    font-size: inherit;
-    line-height: inherit;
-    letter-spacing: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      letter-spacing: inherit;
+    }
   `,
   /**
    * "Add property" keeps the Button's own ghost chrome. In the wide rail its

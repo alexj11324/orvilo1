@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
@@ -68,9 +68,9 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
             desc={t('taskDetail.notFound.desc')}
             title={t('taskDetail.notFound.title')}
             extra={
-              <Button nativeButton={false} render={<Link to={'/tasks'} />} variant="default">
+              <Link className={buttonVariants({ variant: 'default' })} to={'/tasks'}>
                 {t('taskDetail.notFound.backToTasks')}
-              </Button>
+              </Link>
             }
           />
         </div>

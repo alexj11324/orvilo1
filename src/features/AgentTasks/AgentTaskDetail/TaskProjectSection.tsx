@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,12 @@ import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
  * centred, bordered label layout.
  */
 const railRowButtonClass = cn('justify-start gap-2 border-0 font-normal', styles.railRow);
+
+/**
+ * Read-only rows navigate, so they stay real links (role and href intact) and
+ * only borrow the same Button look.
+ */
+const railRowLinkClass = cn(buttonVariants({ size: 'sm', variant: 'ghost' }), railRowButtonClass);
 
 /**
  * The rail's "Project" group — Linear files every issue under a project or a
@@ -186,16 +192,13 @@ const TaskProjectSection = memo(() => {
         </DropdownMenuContent>
       </DropdownMenu>
     ) : milestone && projectRef ? (
-      <Button
-        className={railRowButtonClass}
-        nativeButton={false}
-        render={<WorkspaceLink to={getProjectMilestoneIssuesPath(projectRef, milestone.id)} />}
-        size="sm"
+      <WorkspaceLink
+        className={railRowLinkClass}
         title={t('overview.milestoneSeeIssues', { ns: 'project' })}
-        variant="ghost"
+        to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
       >
         {milestoneValue}
-      </Button>
+      </WorkspaceLink>
     ) : (
       <div className={cn('flex items-center gap-2', styles.railRow)}>{milestoneValue}</div>
     );
@@ -231,7 +234,7 @@ const TaskProjectSection = memo(() => {
         <DropdownMenuTrigger
           render={
             <Button
-              className={cn(railRowButtonClass, 'min-w-0 flex-1')}
+              className={cn(railRowButtonClass, 'min-w-0 flex-1 shrink')}
               size="sm"
               title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
               variant="ghost"
@@ -274,16 +277,9 @@ const TaskProjectSection = memo(() => {
       ) : null}
     </div>
   ) : project && projectRef ? (
-    <Button
-      className={railRowButtonClass}
-      nativeButton={false}
-      render={<WorkspaceLink to={`/project/${projectRef}`} />}
-      size="sm"
-      title={project.name}
-      variant="ghost"
-    >
+    <WorkspaceLink className={railRowLinkClass} title={project.name} to={`/project/${projectRef}`}>
       {projectValue}
-    </Button>
+    </WorkspaceLink>
   ) : null;
 
   return (

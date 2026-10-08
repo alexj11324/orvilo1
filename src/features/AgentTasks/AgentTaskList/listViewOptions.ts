@@ -30,10 +30,7 @@ export interface TaskListViewOptions {
   subGroupBy: TaskGroupBy;
 }
 
-export const HIDDEN_WHEN_COMPLETED_STATUSES: ReadonlyArray<NonNullable<TaskGroupMeta['status']>> = [
-  'completed',
-  'canceled',
-];
+export const HIDDEN_WHEN_COMPLETED_STATUSES: ReadonlyArray<TaskStatus> = ['completed', 'canceled'];
 
 /**
  * Server-side counterpart of `hideCompleted`: the statuses a paginated list

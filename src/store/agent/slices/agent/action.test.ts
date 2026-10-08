@@ -381,6 +381,7 @@ describe('AgentSlice Actions', () => {
             {
               avatar: null,
               backgroundColor: null,
+              heterogeneousType: null,
               description: 'stale',
               id: 'agent-1',
               name: null,
@@ -625,6 +626,7 @@ describe('AgentSlice Actions', () => {
         {
           avatar: null,
           backgroundColor: null,
+          heterogeneousType: null,
           description: 'Helps with setup',
           heterogeneousType: 'orvilo',
           id: 'agent-1',
@@ -642,6 +644,7 @@ describe('AgentSlice Actions', () => {
           {
             avatar: null,
             backgroundColor: null,
+            heterogeneousType: null,
             description: 'Helps with setup',
             heterogeneousType: 'orvilo',
             id: 'agent-1',
@@ -735,6 +738,7 @@ describe('AgentSlice Actions', () => {
             {
               avatar: null,
               backgroundColor: null,
+              heterogeneousType: null,
               description: 'stale',
               id: 'agent-1',
               name: null,
@@ -1415,6 +1419,7 @@ describe('AgentSlice Actions', () => {
             {
               avatar: null,
               backgroundColor: null,
+              heterogeneousType: null,
               description: 'Old Desc',
               id: 'agent-1',
               name: null,

@@ -22,7 +22,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { genFontFamily, genFontFamilyCode } from '@/const/font';
 import { TaskAcceptanceHeader } from '@/features/AgentTasks/AgentTaskDetail/TaskAcceptanceHeader';
 import { taskDetailLayoutStyles as taskStyles } from '@/features/AgentTasks/AgentTaskDetail/taskDetailLayoutStyles';
-import TaskRailActions from '@/features/AgentTasks/AgentTaskDetail/TaskRailActions';
 import MCPDependenciesGuide from '@/features/MCP/MCPInstallProgress/MCPDependenciesGuide';
 import IssueFilterPopover from '@/features/Projects/Issues/IssueFilterPopover';
 import type { ProjectIssueFilter } from '@/features/Projects/Issues/issueFilters';
@@ -122,7 +121,6 @@ function Fixture() {
       </section>
       <section data-testid="task-feature">
         <h2>Task detail acceptance header — actual component with populated count</h2>
-        <TaskRailActions />
         <div className={taskStyles.description} data-testid="retained-task-description">
           Task description layout probe — 项目说明
         </div>

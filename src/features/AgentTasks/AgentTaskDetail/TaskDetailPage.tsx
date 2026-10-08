@@ -86,9 +86,9 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
             <>
               <Breadcrumb taskId={taskId} />
               {/* Reference: the star and overflow sit inline right after the
-                issue crumb; the copy buttons moved into the rail's round
-                action row (TaskRailActions), so the header's right side
-                keeps task execution and the agent-panel toggle. */}
+                issue crumb; the copy actions live in that overflow menu, so
+                the header's right side keeps task execution and the
+                agent-panel toggle. */}
               <WorkFavoriteButton
                 icon={'star'}
                 targetId={taskId}

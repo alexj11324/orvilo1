@@ -100,17 +100,6 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     }
   `,
   /**
-   * The rail's own quick actions — the round copy buttons Linear parks at the
-   * top-right of the issue body, above "Properties". Right-aligned so they sit
-   * on the column's outer edge in both layouts.
-   */
-  railActions: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-end;
-  `,
-  /**
    * One labeled rail group ("Properties", "Project"). The heading stays
    * visible at every width — Plane's properties block always titles itself.
    */

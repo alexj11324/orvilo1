@@ -1784,6 +1784,7 @@
   "taskDetail.activities.status.changed": "<actor/> changed the status from <from/> to <to/>",
   "taskDetail.activitiesEmpty": "No activity yet",
   "taskDetail.addSubtask": "Add sub-task",
+  "taskDetail.agent": "Agent",
   "taskDetail.artifactInaccessible": "Unavailable document — no access",
   "taskDetail.artifactMenu.delete": "Remove from task",
   "taskDetail.artifactMenu.deleteConfirm.content": "This artifact will no longer appear in this task workspace.",

@@ -33,6 +33,7 @@ import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
 import { ISSUE_RELATION_KINDS } from './relationGroups';
+import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskPrerequisites from './TaskPrerequisites';
@@ -166,6 +167,10 @@ const TaskProperties = memo(() => {
           >
             {statusValue}
           </IssueStatusPicker>
+        </PropertyRow>
+
+        <PropertyRow label={t('taskDetail.agent')}>
+          <TaskDetailAssignee />
         </PropertyRow>
 
         {optionalFields.execution && (

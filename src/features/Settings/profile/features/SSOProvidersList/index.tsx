@@ -3,6 +3,7 @@ import { type CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import AuthIcons from '@/components/AuthIcons';
 import { Button } from '@/components/ui/button';
 import { useServerConfigStore } from '@/store/serverConfig';
@@ -20,8 +21,12 @@ const providerNameStyle: CSSProperties = {
  */
 export const SSOProvidersList = memo(() => {
   const providers = useUserStore(authSelectors.authProviders);
+  const error = useUserStore((state) => state.authProvidersError);
+  const retry = useUserStore((state) => state.refreshAuthProviders);
   const accountsUrl = useServerConfigStore(serverConfigSelectors.authAccountsUrl);
   const { t } = useTranslation('auth');
+
+  if (error) return <AsyncError error={error} variant="inline" onRetry={() => void retry()} />;
 
   return (
     <div className="flex flex-col gap-2">

@@ -1,12 +1,10 @@
 import { type OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
-import { eq, or } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { createRemoteJWKSet, importSPKI, jwtVerify } from 'jose';
 
-import { type UserItem, users } from '@/database/schemas';
+import { account, type UserItem, users } from '@/database/schemas';
 import { authEnv } from '@/envs/auth';
-
-import { UserService } from '../user';
 
 const log = debug('orvilo-auth:clerk');
 
@@ -145,36 +143,45 @@ export const assertClerkUserUsable = (user: ClerkApiUser) => {
 };
 
 /**
- * Map the Clerk user onto the `users` row, creating it (and running the new-user
- * bootstrap) on first sign-in. Identity fields (id, email) track Clerk; display
+ * Map the Clerk user onto the `users` row, creating it on first sign-in. Identity fields (id, email) track Clerk; display
  * fields are only filled when empty so in-app edits survive.
  *
  * Accounts created before the Clerk switch carry a non-Clerk `users.id`, so the
  * lookup falls back to the (normalized) email and keeps that row's id — the row
  * is referenced by user data all over the schema, and re-keying it would orphan
- * it. Clerk's id never lands on the migrated row; every later sign-in re-takes
- * the email path.
+ * it. Verified exchanges persist the external Clerk identity in `accounts`;
+ * that binding takes priority so later email changes retain the canonical id.
  */
 export const provisionClerkUser = async (
   db: OrviloDatabase,
   clerkUser: ClerkApiUser,
-): Promise<UserItem> => {
+): Promise<{ created: boolean; user: UserItem }> => {
   const email = primaryEmail(clerkUser);
   const emailVerified = email?.verification?.status === 'verified';
   const fullName =
     [clerkUser.first_name, clerkUser.last_name].filter(Boolean).join(' ').trim() || null;
   const normalizedEmail = email?.email_address?.toLowerCase() ?? null;
 
+  const bindings = await db.query.account.findMany({
+    where: and(eq(account.providerId, 'clerk'), eq(account.accountId, clerkUser.id)),
+  });
+  const boundUserId = bindings[0]?.userId;
+  if (bindings.some((binding) => binding.userId !== boundUserId))
+    throw new ClerkAuthError('Clerk account binding conflict', 409);
   const existing =
-    (await db.query.users.findFirst({ where: eq(users.id, clerkUser.id) })) ??
-    (normalizedEmail || email?.email_address
-      ? await db.query.users.findFirst({
-          where: or(
-            normalizedEmail ? eq(users.normalizedEmail, normalizedEmail) : undefined,
-            email?.email_address ? eq(users.email, email.email_address) : undefined,
-          ),
-        })
-      : undefined);
+    boundUserId !== undefined
+      ? await db.query.users.findFirst({ where: eq(users.id, boundUserId) })
+      : ((await db.query.users.findFirst({ where: eq(users.id, clerkUser.id) })) ??
+        (normalizedEmail || email?.email_address
+          ? await db.query.users.findFirst({
+              where: or(
+                normalizedEmail ? eq(users.normalizedEmail, normalizedEmail) : undefined,
+                email?.email_address ? eq(users.email, email.email_address) : undefined,
+              ),
+            })
+          : undefined));
+  if (boundUserId !== undefined && !existing)
+    throw new ClerkAuthError('Clerk account binding is unavailable', 503);
   if (!existing) {
     const [created] = await db
       .insert(users)
@@ -191,17 +198,7 @@ export const provisionClerkUser = async (
       })
       .returning();
 
-    const userService = new UserService(db);
-    await userService.initUser({
-      createdAt: created.createdAt,
-      email: created.email,
-      firstName: clerkUser.first_name ?? null,
-      id: created.id,
-      lastName: clerkUser.last_name ?? null,
-      username: clerkUser.username ?? null,
-    });
-
-    return created;
+    return { created: true, user: created };
   }
 
   const patch: Partial<typeof existing> = {};
@@ -228,10 +225,10 @@ export const provisionClerkUser = async (
       .set(patch)
       .where(eq(users.id, existing.id))
       .returning();
-    return updated;
+    return { created: false, user: updated };
   }
 
-  return existing;
+  return { created: false, user: existing };
 };
 
 /** Fetch a Clerk user, rejecting banned/locked/email-less accounts. */

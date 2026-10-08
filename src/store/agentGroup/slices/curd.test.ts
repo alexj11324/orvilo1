@@ -158,6 +158,21 @@ describe('ChatGroupCurdSlice', () => {
   });
 
   describe('updateGroupConfig', () => {
+    it('keeps a committed config saved when revalidation fails', async () => {
+      vi.mocked(chatGroupService.updateGroup).mockResolvedValue({} as any);
+      const refresh = vi
+        .spyOn(useAgentGroupStore.getState(), 'refreshGroupDetail')
+        .mockRejectedValue(new Error('refresh failed'));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(
+        useAgentGroupStore.getState().updateGroupConfig({ openingMessage: 'Saved' }),
+      ).resolves.toBeUndefined();
+      expect(useAgentGroupStore.getState().groupMap['group-1'].config?.openingMessage).toBe(
+        'Saved',
+      );
+      refresh.mockRestore();
+    });
+
     it('should update group config with merged defaults', async () => {
       vi.mocked(chatGroupService.updateGroup).mockResolvedValue({} as any);
 
@@ -206,6 +221,18 @@ describe('ChatGroupCurdSlice', () => {
   });
 
   describe('updateGroupMeta', () => {
+    it('keeps committed metadata saved when revalidation fails', async () => {
+      vi.mocked(chatGroupService.updateGroup).mockResolvedValue({} as any);
+      vi.spyOn(useAgentGroupStore.getState(), 'refreshGroupDetail').mockRejectedValue(
+        new Error('refresh failed'),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(
+        useAgentGroupStore.getState().updateGroup('group-1', { title: 'Saved' }),
+      ).resolves.toBeUndefined();
+      expect(useAgentGroupStore.getState().groupMap['group-1'].title).toBe('Saved');
+    });
+
     it('should update group meta', async () => {
       vi.mocked(chatGroupService.updateGroup).mockResolvedValue({} as any);
 

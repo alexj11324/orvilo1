@@ -1,6 +1,8 @@
+import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { getServerDB } from '@/database/core/db-adaptor';
+import { account } from '@/database/schemas';
 import { fetchClerkUser, resolveAuthSessionFromHeaders } from '@/server/services/auth';
 
 const normalizeProvider = (provider: string) =>
@@ -20,20 +22,32 @@ export const GET = async (request: Request) => {
   }
 
   try {
-    const clerkUser = await fetchClerkUser(session.userId);
+    const bindings = await db.query.account.findMany({
+      columns: { accountId: true },
+      where: and(eq(account.userId, session.userId), eq(account.providerId, 'clerk')),
+    });
+    if (bindings.length === 0)
+      return NextResponse.json({ error: 'linked_accounts_unavailable' }, { status: 503 });
+    const clerkUsers = await Promise.all(
+      bindings.map(async ({ accountId }) => {
+        const user = await fetchClerkUser(accountId);
+        if (user.id !== accountId) throw new Error('Clerk user does not match account binding');
+        return user;
+      }),
+    );
 
     return NextResponse.json({
-      hasPasswordAccount: !!clerkUser.password_enabled,
-      providers: (clerkUser.external_accounts ?? []).map((account) => ({
-        email: account.email_address,
-        provider: normalizeProvider(account.provider ?? ''),
-        providerAccountId: account.provider_user_id ?? '',
-      })),
+      hasPasswordAccount: clerkUsers.some((user) => !!user.password_enabled),
+      providers: clerkUsers.flatMap((user) =>
+        (user.external_accounts ?? []).map((account) => ({
+          email: account.email_address,
+          provider: normalizeProvider(account.provider ?? ''),
+          providerAccountId: account.provider_user_id ?? '',
+        })),
+      ),
     });
   } catch (error) {
-    // Without CLERK_SECRET_KEY the linked-accounts surface is unavailable —
-    // degrade to an empty list instead of breaking the settings page.
     console.error('[auth/accounts] Clerk user fetch failed:', error);
-    return NextResponse.json({ hasPasswordAccount: false, providers: [] });
+    return NextResponse.json({ error: 'linked_accounts_unavailable' }, { status: 503 });
   }
 };

@@ -13,6 +13,7 @@ import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +33,6 @@ import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownM
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
-import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
@@ -51,6 +51,7 @@ import {
   normalizeAgentListViewOptions,
   resolveAgentViewMode,
 } from './listViewOptions';
+import { useAgentListView } from './useAgentListView';
 
 type SegmentValue = 'private' | 'workspace';
 type ViewMode = AgentListViewMode;
@@ -192,14 +193,10 @@ const AgentViewAllPage = memo(() => {
     [updateSystemStatus, viewOptions],
   );
 
-  // The sidebar usually owns these fetches, but this page must survive a
-  // direct deep link — SWR dedupes when both are mounted.
-  useFetchAgentList();
   useFetchAgentLabels();
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   useFetchWorkspaceUserPreference();
 
-  const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const pinnedAgents = useHomeStore(homeAgentListSelectors.pinnedAgents, isEqual);
   const agentGroups = useHomeStore(homeAgentListSelectors.agentGroups, isEqual);
   const ungroupedAgents = useHomeStore(homeAgentListSelectors.ungroupedAgents, isEqual);
@@ -445,6 +442,8 @@ const AgentViewAllPage = memo(() => {
     createOptions,
   ]);
 
+  const { errorProps, view: listView } = useAgentListView(filteredItems.length);
+
   return (
     <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
@@ -533,9 +532,11 @@ const AgentViewAllPage = memo(() => {
             )}
           </div>
         </div>
-        {!isInit ? (
+        {listView === 'loading' ? (
           <SkeletonList rows={8} />
-        ) : filteredItems.length === 0 ? (
+        ) : listView === 'error' ? (
+          <AsyncError {...errorProps} variant="page" />
+        ) : listView === 'empty' ? (
           <div className="flex items-center justify-center flex-1 p-10">
             <Empty>
               <EmptyHeader>

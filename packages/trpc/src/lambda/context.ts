@@ -319,7 +319,7 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
       if (oidcAuthToken) {
         // Validate the stateless JWT first, then check the current user state
         // so banned/deleted accounts cannot keep using an already-issued token.
-        const tokenInfo = await validateOIDCJWT(oidcAuthToken);
+        const tokenInfo = await validateOIDCJWT(oidcAuthToken, { allowHeteroOperation: true });
 
         const operationClaims =
           tokenInfo.tokenData.purpose === HETERO_OPERATION_JWT_PURPOSE

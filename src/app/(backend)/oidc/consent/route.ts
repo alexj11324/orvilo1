@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const consent = formData.get('consent') as string;
-    const uid = formData.get('uid') as string;
+    const uid = formData.get('uid');
+    if (typeof uid !== 'string' || !uid) {
+      return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+    }
 
     log('POST /oauth/consent - uid=%s, choice=%s', uid, consent);
 
@@ -51,19 +54,29 @@ export async function POST(request: NextRequest) {
       const { userId } = await getUserAuth();
       log('Obtained userId: %s', userId);
 
-      // Accepting either prompt requires an authenticated web session — a
-      // missing one must fail loudly instead of minting a session for nobody.
-      if (!userId) {
-        return NextResponse.json(
-          {
-            error: 'unauthorized',
-            error_description: 'A signed-in session is required to complete authorization',
-          },
-          { status: 401 },
-        );
-      }
-
-      if (details.prompt.name === 'login') {
+      // Recover through the normal sign-in page after validating the interaction cookie.
+      if (!userId && details.deviceCode) {
+        // The SDK has already put this DeviceCode in flight; finish it without issuing a grant.
+        result = {
+          error: 'access_denied',
+          error_description: 'The web session expired; restart device authorization',
+        };
+      } else if (!userId) {
+        const authorization = new URLSearchParams();
+        for (const [name, value] of Object.entries(details.params)) {
+          const values: unknown[] = Array.isArray(value) ? value : [value];
+          for (const parameter of values) {
+            if (typeof parameter !== 'string') {
+              return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+            }
+            authorization.append(name, parameter);
+          }
+        }
+        // A cross-account Clerk exchange may remove the old OIDC Session during sign-in.
+        const callbackUrl = `/oidc/auth?${authorization}`;
+        const query = new URLSearchParams({ callbackUrl });
+        return new NextResponse(null, { headers: { location: `/signin?${query}` }, status: 303 });
+      } else if (details.prompt.name === 'login' || details.session?.accountId !== userId) {
         result = {
           login: { accountId: userId, remember: true },
         };
@@ -74,7 +87,7 @@ export async function POST(request: NextRequest) {
         const clientId = details.params.client_id as string;
 
         // 2. Find or create Grant object
-        const grant = await oidcService.findOrCreateGrants(userId!, clientId, details.grantId);
+        const grant = await oidcService.findOrCreateGrants(userId, clientId, details.grantId);
 
         // 3. Add user-consented scopes and claims to Grant object
         //    This information is typically in details.prompt.details

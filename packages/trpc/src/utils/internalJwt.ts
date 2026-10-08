@@ -188,6 +188,15 @@ export const signOperationJwt = async (userId: string, operationId: string, work
     workspaceId,
   });
 
+/** Rolling-deploy bridge; a partial modern contract must never qualify. */
+export const isLegacyHeteroOperationClaims = (payload: Record<string, unknown>) =>
+  payload.purpose === HETERO_OPERATION_JWT_PURPOSE &&
+  typeof payload.sub === 'string' &&
+  payload.sub.length > 0 &&
+  ['aud', 'capabilities', 'iss', 'jti', 'operation_id'].every(
+    (claim) => payload[claim] === undefined,
+  );
+
 export const validateHeteroOperationClaims = (
   payload: Record<string, unknown>,
 ): HeteroOperationJwtClaims | null => {

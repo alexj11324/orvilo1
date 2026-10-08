@@ -65,7 +65,10 @@ export const account = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
   },
-  (table) => [index('account_userId_idx').on(table.userId)],
+  (table) => [
+    index('account_userId_idx').on(table.userId),
+    index('account_providerId_accountId_idx').on(table.providerId, table.accountId),
+  ],
 );
 
 export const verification = pgTable(

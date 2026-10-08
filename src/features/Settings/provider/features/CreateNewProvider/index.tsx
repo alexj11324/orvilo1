@@ -11,7 +11,7 @@ export const createCreateNewProviderModal = (): ModalInstance =>
   createModal({
     content: <CreateNewProviderContent />,
     footer: null,
-    maskClosable: true,
+    maskClosable: false,
     styles: {
       content: { paddingBlock: 16, paddingInline: 24 },
     },

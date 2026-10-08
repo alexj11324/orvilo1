@@ -186,13 +186,16 @@ const AutomationRunsPage = memo(() => {
                 onChange={(e) => setSearch(e.target.value)}
               />
               {search && (
-                <button
+                <Button
                   aria-label={t('run_history.search_placeholder')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
                   onClick={() => setSearch('')}
                 >
                   <XIcon size={12} />
-                </button>
+                </Button>
               )}
             </div>
             <DropdownMenu

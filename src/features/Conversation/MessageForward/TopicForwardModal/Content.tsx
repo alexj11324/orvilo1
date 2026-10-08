@@ -110,14 +110,16 @@ export const TopicForwardContent = ({
             onChange={(event) => setKeyword(event.target.value)}
           />
           {keyword && (
-            <button
-              aria-label={t('close', { ns: 'common' })}
-              className="-translate-y-1/2 absolute top-1/2 right-2 text-muted-foreground"
+            <Button
+              aria-label={t('clearSearch', { ns: 'common' })}
+              className="-translate-y-1/2 absolute top-1/2 right-1 text-muted-foreground"
+              size="icon-xs"
               type="button"
+              variant="ghost"
               onClick={() => setKeyword('')}
             >
               <XIcon className="size-4" />
-            </button>
+            </Button>
           )}
         </div>
         <div className={cn('flex flex-col gap-1', styles.list)}>

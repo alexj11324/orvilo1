@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { lambdaClient } from '@/libs/trpc/client';
 
 import { isPublicDocument } from './teamResourcePicker';
@@ -132,7 +133,7 @@ function LinkForm({
     <form className={styles.body} onSubmit={submit}>
       <div className={styles.field}>
         <label htmlFor="team-resource-url">{t('teams.resources.url')}</label>
-        <input
+        <Input
           autoFocus
           required
           id="team-resource-url"
@@ -145,7 +146,7 @@ function LinkForm({
       </div>
       <div className={styles.field}>
         <label htmlFor="team-resource-title">{t('teams.resources.titleOptional')}</label>
-        <input
+        <Input
           id="team-resource-title"
           maxLength={255}
           value={title}
@@ -205,7 +206,7 @@ function SectionForm({
     >
       <div className={styles.field}>
         <label htmlFor="team-resource-section-name">{t('teams.resources.sectionName')}</label>
-        <input
+        <Input
           autoFocus
           required
           id="team-resource-section-name"

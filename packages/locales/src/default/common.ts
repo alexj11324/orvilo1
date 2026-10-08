@@ -69,6 +69,7 @@ export default {
   'datePicker.clear': 'Clear date',
   'datePicker.next': 'Next',
   'datePicker.previous': 'Previous',
+  'clearSearch': 'Clear search',
   'viewExecutionDetails': 'View execution details',
   'cancel': 'Cancel',
   'changelog': 'Changelog',

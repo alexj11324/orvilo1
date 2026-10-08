@@ -1,5 +1,7 @@
+import { createServer } from 'node:http';
+
 import type { DataSyncConfig } from '@orvilo/electron-client-ipc';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
 
@@ -26,6 +28,7 @@ vi.mock('electron', () => ({
     decryptString: vi.fn((buffer: Buffer) => buffer.toString()),
     encryptString: vi.fn((str: string) => Buffer.from(str)),
     isEncryptionAvailable: vi.fn(() => true),
+    getSelectedStorageBackend: vi.fn(() => 'gnome_libsecret'),
   },
 }));
 
@@ -59,14 +62,143 @@ const mockApp = {
 describe('RemoteServerConfigCtr', () => {
   let controller: RemoteServerConfigCtr;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { safeStorage } = await import('electron');
+    vi.mocked(safeStorage.getSelectedStorageBackend).mockReturnValue('gnome_libsecret');
+    vi.mocked(safeStorage.decryptString).mockImplementation((buffer) => buffer.toString());
     ipcMainHandleMock.mockClear();
     mockStoreManager.get.mockReturnValue({
       active: false,
       storageMode: 'cloud',
     });
     controller = new RemoteServerConfigCtr(mockApp);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  describe('bounded logout requests', () => {
+    it('bounds actual loopback refresh JSON and revocation requests held by the server', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      let refreshStarted!: () => void;
+      const firstRequest = new Promise<void>((resolve) => {
+        refreshStarted = resolve;
+      });
+      const requests: string[] = [];
+      const server = createServer((request, response) => {
+        requests.push(request.url!);
+        if (request.url === '/oidc/token') {
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.write('{"access_token":'); // Keep the real body stream incomplete until abort.
+          refreshStarted();
+        }
+        // Revocation deliberately withholds response headers until the client aborts.
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') throw new Error('Expected loopback port');
+        mockStoreManager.get.mockImplementation((key) =>
+          key === 'dataSyncConfig'
+            ? {
+                active: true,
+                storageMode: 'selfHost',
+                remoteServerUrl: `http://127.0.0.1:${address.port}`,
+              }
+            : null,
+        );
+        await controller.saveTokens('access', 'refresh');
+        mockFetch.mockImplementation((url, options) => fetch(url, options));
+        const timeout = vi.spyOn(AbortSignal, 'timeout');
+        const started = Date.now();
+        const refresh = controller.refreshAccessToken();
+        await firstRequest;
+        await expect(controller.clearRemoteServerConfig()).rejects.toThrow(
+          'remote grant revocation failed',
+        );
+        expect((await refresh).success).toBe(false);
+        expect(Date.now() - started).toBeLessThan(25_000);
+        expect(requests).toEqual(['/oidc/token', '/oidc/token/revocation']);
+        expect(timeout).toHaveBeenNthCalledWith(1, 10_000);
+        expect(timeout).toHaveBeenNthCalledWith(2, 10_000);
+        expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+        expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+        expect(await controller.refreshAccessToken()).toEqual({
+          error: 'No refresh token available',
+          success: false,
+        });
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }, 30_000);
+
+    it.each(['headers', 'body', 'body-revoke-success'])(
+      'bounds an in-flight refresh stalled at %s then revocation before cleanup',
+      async (stall) => {
+        vi.useFakeTimers();
+        const { safeStorage } = await import('electron');
+        vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+        mockStoreManager.get.mockImplementation((key) =>
+          key === 'dataSyncConfig' ? { active: true, storageMode: 'cloud' } : null,
+        );
+        await controller.saveTokens('access', 'refresh');
+        const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((milliseconds) => {
+          const abort = new AbortController();
+          setTimeout(() => abort.abort(new DOMException('Deadline', 'TimeoutError')), milliseconds);
+          return abort.signal;
+        });
+        const aborted = vi.fn();
+        mockFetch.mockImplementation((_url, options) => {
+          const pending = () =>
+            new Promise((_resolve, reject) =>
+              options.signal?.addEventListener(
+                'abort',
+                () => {
+                  aborted();
+                  reject(options.signal.reason);
+                },
+                { once: true },
+              ),
+            );
+          if (stall === 'body-revoke-success' && mockFetch.mock.calls.length === 2)
+            return Promise.resolve({ ok: true });
+          return stall !== 'headers' && mockFetch.mock.calls.length === 1
+            ? Promise.resolve({ ok: true, json: pending })
+            : pending();
+        });
+        const refresh = controller.refreshAccessToken();
+        await vi.advanceTimersByTimeAsync(0);
+        let completed = false;
+        const logout = controller.clearRemoteServerConfig().catch((error) => {
+          completed = true;
+          return error;
+        });
+        const maximum = stall === 'body-revoke-success' ? 10_000 : 20_000;
+        await vi.advanceTimersByTimeAsync(maximum - 1);
+        expect(completed).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(completed).toBe(true);
+        expect(await logout).toBeInstanceOf(Error);
+        expect(await refresh).toEqual({
+          error: 'Exception occurred during token refresh',
+          success: false,
+        });
+        expect(timeout).toHaveBeenNthCalledWith(1, 10_000);
+        expect(timeout).toHaveBeenNthCalledWith(2, 10_000);
+        expect(aborted).toHaveBeenCalledTimes(stall === 'body-revoke-success' ? 1 : 2);
+        expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+        expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+        expect(await controller.refreshAccessToken()).toEqual({
+          error: 'No refresh token available',
+          success: false,
+        });
+      },
+    );
   });
 
   describe('getRemoteServerConfig', () => {
@@ -157,20 +289,110 @@ describe('RemoteServerConfigCtr', () => {
       );
     });
 
-    it('should save unencrypted tokens when encryption is not available', async () => {
+    it('keeps tokens only in memory when encryption is not available', async () => {
       const { safeStorage } = await import('electron');
       vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
 
       await controller.saveTokens('access-token', 'refresh-token', 3600);
 
       expect(safeStorage.encryptString).not.toHaveBeenCalled();
-      expect(mockStoreManager.set).toHaveBeenCalledWith(
-        'encryptedTokens',
-        expect.objectContaining({
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        }),
+      expect(mockStoreManager.set).not.toHaveBeenCalled();
+      expect(await controller.getAccessToken()).toBe('access-token');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      expect(await controller.getRefreshToken()).toBe('refresh-token');
+    });
+  });
+
+  describe('protected storage regressions', () => {
+    it('refuses persistence with the Linux basic_text backend', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      vi.mocked(safeStorage.getSelectedStorageBackend).mockReturnValue('basic_text');
+      expect(await controller.saveTokens('access', 'refresh')).toEqual({ persistent: false });
+      expect(mockStoreManager.set).not.toHaveBeenCalled();
+      expect(safeStorage.encryptString).not.toHaveBeenCalled();
+      expect(await controller.getRefreshToken()).toBe('refresh');
+    });
+    it('removes a consumed persisted refresh token when rotation becomes memory-only', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('old-access', 'old-refresh');
+      let stored = mockStoreManager.set.mock.calls.at(-1)?.[1];
+      mockStoreManager.delete.mockImplementation((key) => {
+        if (key === 'encryptedTokens') stored = undefined;
+      });
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      await controller.saveTokens('rotated-access', 'rotated-refresh');
+      expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+      expect(await controller.getRefreshToken()).toBe('rotated-refresh');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      mockStoreManager.get.mockImplementation((key) =>
+        key === 'encryptedTokens' ? stored : { active: false, storageMode: 'cloud' },
       );
+      const restarted = new RemoteServerConfigCtr(mockApp);
+      expect(await restarted.getRefreshToken()).toBeNull();
+      mockStoreManager.delete.mockReset();
+    });
+    it('never returns ciphertext as plaintext during a backend outage', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('access', 'refresh');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      expect(await controller.getAccessToken()).toBeNull();
+      expect(mockStoreManager.delete).not.toHaveBeenCalled();
+    });
+    it('preserves a raw legacy JWT when secure migration verification fails', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      const accessToken = 'header.payload.signature';
+      mockStoreManager.get.mockReturnValue({ accessToken, refreshToken: 'legacy-refresh' });
+      vi.mocked(safeStorage.decryptString).mockImplementation(() => 'wrong');
+      expect(await controller.getAccessToken()).toBe(accessToken);
+      expect(mockStoreManager.set).not.toHaveBeenCalled();
+      expect(mockStoreManager.delete).not.toHaveBeenCalled();
+    });
+    it('revokes refresh grant then clears tokens and disconnects locally', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('access', 'refresh');
+      mockFetch.mockResolvedValue({ ok: true });
+      await controller.clearRemoteServerConfig();
+      const [url, request] = mockFetch.mock.calls.at(-1)!;
+      expect(url).toBe('https://cloud.aspectlylabs.com/oidc/token/revocation');
+      expect(new URLSearchParams(request.body).get('token')).toBe('refresh');
+      expect(new URLSearchParams(request.body).get('token_type_hint')).toBe('refresh_token');
+      expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+    });
+    it.each(['unavailable', 'decrypt-failure'])(
+      'reports unknown remote revocation when protected refresh is unreadable: %s',
+      async (failure) => {
+        const { safeStorage } = await import('electron');
+        vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+        await controller.saveTokens('access', 'refresh');
+        if (failure === 'unavailable')
+          vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+        else
+          vi.mocked(safeStorage.decryptString).mockImplementation(() => {
+            throw new Error('locked');
+          });
+        await expect(controller.clearRemoteServerConfig()).rejects.toThrow(
+          'remote grant revocation failed',
+        );
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+        expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
+      },
+    );
+    it('reports revocation failure after clearing local credentials', async () => {
+      const { safeStorage } = await import('electron');
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      await controller.saveTokens('access', 'refresh');
+      mockFetch.mockRejectedValue(new Error('offline'));
+      await expect(controller.clearRemoteServerConfig()).rejects.toThrow(
+        'remote grant revocation failed',
+      );
+      expect(mockStoreManager.delete).toHaveBeenCalledWith('encryptedTokens');
+      expect(mockGatewayConnectionSrv.disconnect).toHaveBeenCalled();
     });
   });
 
@@ -561,7 +783,7 @@ describe('RemoteServerConfigCtr', () => {
       expect(result.error).toContain('Token refresh failed');
       expect(result.error).toContain(errorData.error);
       if (errorData.error_description) {
-        expect(result.error).toContain(errorData.error_description);
+        expect(result.error).not.toContain(errorData.error_description);
       }
       expect(controller.isNonRetryableError(result.error)).toBe(true);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -673,7 +895,8 @@ describe('RemoteServerConfigCtr', () => {
       const result = await controller.refreshAccessToken();
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Network error');
+      expect(result.error).toBe('Exception occurred during token refresh');
+      expect(result.error).not.toContain('Network error');
       expect(controller.isNonRetryableError(result.error)).toBe(false);
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });

@@ -1,6 +1,7 @@
 /**
  * @vitest-environment node
  */
+import debug from 'debug';
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -192,7 +193,28 @@ describe('OIDC consent POST recovery ownership', () => {
     expect(response?.headers.get('location')).toBeNull();
   });
 
-  it.each(['/oidc/consent/neighbor', '/oidc/auth'])('keeps %s session-protected', async (path) => {
+  it('passes native refresh revocation to its provider without a browser cookie', async () => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+    const request = new NextRequest('http://localhost:3010/oidc/token/revocation', {
+      method: 'POST',
+      body: new URLSearchParams({
+        client_id: 'orvilo-cli',
+        token: 'synthetic-owned-refresh',
+        token_type_hint: 'refresh_token',
+      }),
+    });
+    const response = await middleware(request);
+    expect(response?.headers.get('location')).toBeNull();
+    expect(response?.headers.get('x-middleware-next')).toBe('1');
+    expect((await request.formData()).get('token')).toBe('synthetic-owned-refresh');
+  });
+
+  it.each([
+    '/oidc/consent/neighbor',
+    '/oidc/auth',
+    '/oidc/token/revocation/neighbor',
+    '/oidc/token/revocations',
+  ])('keeps %s session-protected', async (path) => {
     vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
     const response = await middleware(new NextRequest(`http://localhost:3010${path}`));
     expect(new URL(response!.headers.get('location')!).pathname).toBe('/signin');
@@ -248,4 +270,39 @@ describe('device verification sign-in detour', () => {
     expect(response?.status).toBe(400);
     expect(response?.headers.get('location')).toBeNull();
   });
+});
+
+describe('enabled proxy auth request logging', () => {
+  it.each(['/oidc/auth', '/signin'])(
+    'does not log auth state/code or callback queries on %s',
+    async (path) => {
+      const previous = debug.disable();
+      debug.enable('middleware:*');
+      const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+      vi.stubEnv('MIDDLEWARE_REWRITE_THROUGH_LOCAL', '1');
+      vi.resetModules();
+      const sentinel = 'PROXY_AUTH_SECRET_SENTINEL';
+      const url = new URL(path, 'http://localhost:3010');
+      url.searchParams.set('state', sentinel);
+      url.searchParams.set('code', sentinel);
+      url.searchParams.set('callbackUrl', `/oidc/auth?state=${sentinel}`);
+      try {
+        const { defineConfig: defineLoggingConfig } = await import('./define-config');
+        const response = await defineLoggingConfig().middleware(new NextRequest(url));
+        expect(response?.status).toBe(200);
+        expect(output).toHaveBeenCalled();
+        expect(JSON.stringify(output.mock.calls)).not.toContain(sentinel);
+        if (path === '/oidc/auth') expect(response?.headers.get('x-middleware-next')).toBe('1');
+        else
+          expect(
+            new URL(response!.headers.get('x-middleware-rewrite')!).searchParams.get('callbackUrl'),
+          ).toContain(sentinel);
+      } finally {
+        output.mockRestore();
+        debug.enable(previous);
+        vi.unstubAllEnvs();
+        vi.resetModules();
+      }
+    },
+  );
 });

@@ -1469,6 +1469,13 @@
       "when": 1791463495834,
       "tag": "0207_account_identity_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 208,
+      "version": "7",
+      "when": 1791464065409,
+      "tag": "0208_auth_session_clerk_binding",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import path from 'node:path';
 
+import { MOCK_CLERK_SECRET_KEY } from './clerkFixture';
 import { createTestOidcJwks } from './oidcTestKey';
 
 let serverProcess: ChildProcess | null = null;
@@ -139,6 +140,8 @@ export async function startWebServer(options: WebServerOptions): Promise<void> {
 
       // Disable email verification for e2e
       AUTH_EMAIL_VERIFICATION: '0',
+      CLERK_API_URL: `http://localhost:${process.env.E2E_MOCK_LLM_PORT || '3406'}`,
+      CLERK_SECRET_KEY: MOCK_CLERK_SECRET_KEY,
 
       JWKS_KEY: process.env.JWKS_KEY || createTestOidcJwks(),
       KEY_VAULTS_SECRET: 'LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s=',

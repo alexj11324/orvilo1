@@ -13,7 +13,7 @@
     "man"
   ],
   "scripts": {
-    "build": "bun scripts/ensureWorkspaceLinks.ts && tsdown && bun scripts/stagePrimeRunner.ts",
+    "build": "bun scripts/ensureWorkspaceLinks.ts && tsdown && bun scripts/stageKeyring.ts && bun scripts/stagePrimeRunner.ts",
     "cli:link": "bun link",
     "cli:unlink": "bun unlink",
     "dev": "ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts",
@@ -25,6 +25,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@napi-rs/keyring": "^2.1.0",
     "ws": "^8.21.0"
   },
   "devDependencies": {

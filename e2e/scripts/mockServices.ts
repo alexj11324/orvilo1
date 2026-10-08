@@ -10,6 +10,8 @@
  *   AGENT_GATEWAY_SERVICE_TOKEN=e2e-mock-service-token
  *   DEEPSEEK_API_KEY=e2e-mock-key
  *   DEEPSEEK_PROXY_URL=http://localhost:<llmPort>/v1
+ *   CLERK_API_URL=http://localhost:<llmPort>
+ *   CLERK_SECRET_KEY=e2e-mock-clerk-secret
  *
  * Usage: bun e2e/scripts/mockServices.ts
  *

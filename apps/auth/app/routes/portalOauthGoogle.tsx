@@ -39,7 +39,7 @@ export default function PortalOauthGooglePage() {
     }
     if (clerk.session) {
       started.current = true;
-      window.location.replace(returnUrl);
+      window.location.replace(`/login?${new URLSearchParams({ return_url: returnUrl })}`);
       return;
     }
     const query = new URLSearchParams({ return_url: returnUrl }).toString();

@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { App } from '../../App';
 import { StaticFileServerManager } from '../StaticFileServerManager';
 
+const logs = vi.hoisted(() => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }));
+vi.mock('@/utils/logger', () => ({ createLogger: () => logs }));
+
 // Mock get-port-please
 vi.mock('get-port-please', () => ({
   getPort: vi.fn().mockResolvedValue(33250),
@@ -145,6 +148,26 @@ describe('StaticFileServerManager', () => {
       // Reset mock server behavior
       mockServer.listen.mockImplementation((_port, _host, cb) => cb());
       await manager.initialize();
+    });
+
+    it('keeps bearer/cookie/code/refresh/client-secret header values out of debug logs', async () => {
+      const req = {
+        headers: {
+          'authorization': 'Bearer sentinel-bearer',
+          'cookie': 'sentinel-cookie',
+          'oidc-auth': 'sentinel-refresh',
+          'x-code': 'sentinel-code',
+          'x-client-secret': 'sentinel-client-secret',
+        },
+        method: 'GET',
+        on: vi.fn(),
+        setTimeout: vi.fn(),
+        url: '/orvilo-desktop-file/test.png',
+      };
+      const res = { destroyed: false, end: vi.fn(), headersSent: false, writeHead: vi.fn() };
+      await mockServerHandler.current(req, res);
+      expect(JSON.stringify(logs.debug.mock.calls)).not.toContain('sentinel-');
+      expect(logs.debug).toHaveBeenCalled();
     });
 
     it('should handle OPTIONS request with CORS headers', async () => {

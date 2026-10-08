@@ -1,10 +1,7 @@
+import debug from 'debug';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DrizzleAdapter } from './adapter';
-
-vi.mock('debug', () => ({
-  default: () => vi.fn(),
-}));
 
 const createSelectDb = (rows: any[]) => {
   const chain = {
@@ -160,5 +157,50 @@ describe('OIDCAdapter (DrizzleAdapter)', () => {
       ).resolves.toBeUndefined();
       await flush();
     });
+  });
+});
+
+describe('refresh token replay persistence', () => {
+  it.each([30, 300])(
+    'returns consumed epoch seconds after %s seconds until expiry',
+    async (age) => {
+      const consumedAt = new Date(Date.now() - age * 1000);
+      const adapter = new DrizzleAdapter(
+        'RefreshToken',
+        createSelectDb([
+          {
+            consumedAt,
+            data: { grantId: 'grant-1', accountId: 'user-1' },
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+        ]) as any,
+      );
+      await expect(adapter.find('used-token')).resolves.toMatchObject({
+        consumed: Math.floor(consumedAt.getTime() / 1000),
+        grantId: 'grant-1',
+      });
+    },
+  );
+});
+
+describe('enabled adapter debug logging', () => {
+  it('does not log grant artifact IDs during family revocation', async () => {
+    const previous = debug.disable();
+    debug.enable('orvilo-oidc:adapter');
+    const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+    const tx = { delete: () => ({ where: async () => {} }) };
+    const db = {
+      transaction: async (callback: (transaction: typeof tx) => Promise<void>) => callback(tx),
+    };
+    try {
+      await new DrizzleAdapter('RefreshToken', db as any).revokeByGrantId(
+        'GRANT_SECRET_LOG_SENTINEL',
+      );
+      expect(output).toHaveBeenCalled();
+      expect(JSON.stringify(output.mock.calls)).not.toContain('GRANT_SECRET_LOG_SENTINEL');
+    } finally {
+      output.mockRestore();
+      debug.enable(previous);
+    }
   });
 });

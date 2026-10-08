@@ -1,5 +1,7 @@
 import { AgentRuntimeError } from '@orvilo/model-runtime';
 import { ChatErrorType } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
+import { errors } from 'jose';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { assertOIDCUserActive } from '@/libs/oidc-provider/access-control';
@@ -21,7 +23,7 @@ vi.mock('@orvilo/types', () => ({
   },
 }));
 
-vi.spyOn(console, 'error').mockImplementation(() => undefined);
+const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
 vi.mock('@/utils/errorResponse', () => ({
@@ -69,6 +71,28 @@ describe('checkAuth', () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+  });
+
+  it('does not log retained JOSE claims on unauthorized OIDC', async () => {
+    const cause = new errors.JWTClaimValidationFailed(
+      'invalid audience',
+      { privateClaim: 'WEBAPI_JOSE_LOG_SENTINEL' },
+      'aud',
+      'check_failed',
+    );
+    const error = new TRPCError({ code: 'UNAUTHORIZED', cause });
+    vi.mocked(validateOIDCJWT).mockRejectedValueOnce(error);
+    await checkAuth(mockHandler)(
+      new Request('https://example.com/webapi/chat/orvilo', { headers: { 'Oidc-Auth': 'token' } }),
+      mockOptions,
+    );
+    expect(createErrorResponse).toHaveBeenCalledWith(ChatErrorType.Unauthorized, {
+      error,
+      provider: 'mock',
+    });
+    expect(JSON.stringify([consoleErrorSpy.mock.calls, consoleInfoSpy.mock.calls])).not.toContain(
+      'WEBAPI_JOSE_LOG_SENTINEL',
+    );
   });
 
   it('should authenticate an active OIDC JWT and run the handler', async () => {

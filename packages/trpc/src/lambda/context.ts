@@ -2,6 +2,7 @@ import { type Context as OtContext } from '@orvilo/observability-otel/api';
 import { type ClientSecretPayload, type SpendOrigin } from '@orvilo/types';
 import type { ClientMetadata } from '@orvilo/utils/server';
 import { parseClientMetadata } from '@orvilo/utils/server';
+import { TRPCError } from '@trpc/server';
 import { parse } from 'cookie';
 import debug from 'debug';
 import { type NextRequest } from 'next/server';
@@ -368,12 +369,19 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
         });
       }
 
-      // If OIDC authentication fails, log error and continue with other authentication methods
-      if (oidcAuthToken) {
-        authFailure = describeOIDCAuthFailure(error);
-        log('OIDC authentication failed (%s), error: %O', authFailure, error);
-        console.error('OIDC authentication failed, trying other methods:', error);
+      if (!(error instanceof TRPCError && error.code === 'UNAUTHORIZED')) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          cause: error,
+          message: 'Authentication service unavailable',
+        });
       }
+      return createContextInner({
+        ...commonContext,
+        authFailure: describeOIDCAuthFailure(error),
+        traceContext,
+        userId: null,
+      });
     }
   }
 
@@ -399,6 +407,11 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
   } catch (e) {
     log('Cookie session authentication error: %O', e);
     console.error('session auth err', e);
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      cause: e,
+      message: 'Authentication service unavailable',
+    });
   }
 
   // Final return, userId may be undefined

@@ -96,7 +96,6 @@ export default class AuthCtr extends ControllerModule {
 
       // Generate state parameter to prevent CSRF attacks
       this.authRequestState = crypto.randomBytes(16).toString('hex');
-      logger.debug(`Generated state parameter: ${this.authRequestState}`);
 
       // Construct authorization URL with new redirect_uri
       const authUrl = new URL('/oidc/auth', remoteUrl);
@@ -117,7 +116,7 @@ export default class AuthCtr extends ControllerModule {
         state: this.authRequestState,
       });
 
-      logger.info(`Constructed authorization URL: ${authUrl.toString()}`);
+      logger.info('Authorization request prepared for orvilo-desktop');
 
       // Open authorization URL in the default browser
       await shell.openExternal(authUrl.toString());
@@ -237,9 +236,7 @@ export default class AuthCtr extends ControllerModule {
 
           // Validate state parameter
           if (result.state !== this.authRequestState) {
-            logger.error(
-              `Invalid state parameter: expected ${this.authRequestState}, received ${result.state}`,
-            );
+            logger.error('Authorization state validation failed');
             this.broadcastAuthorizationFailed('Invalid state parameter');
             return;
           }
@@ -365,7 +362,7 @@ export default class AuthCtr extends ControllerModule {
       url.searchParams.set('id', this.authRequestState);
       url.searchParams.set('client', 'desktop');
 
-      logger.debug(`Polling for credentials: ${url.toString()}`);
+      logger.debug('Polling for credentials');
 
       // Use Electron net.fetch to respect system CA store (self-signed/private CA certs)
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -499,7 +496,7 @@ export default class AuthCtr extends ControllerModule {
       if (!response.ok) {
         // Try parsing the error response
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = `Failed to get token: ${response.status} ${response.statusText} ${errorData.error_description || errorData.error || ''}`;
+        const errorMessage = `Failed to get token: ${response.status} ${response.statusText} ${typeof errorData.error === 'string' ? errorData.error : 'oidc_error'}`;
         logger.error(errorMessage);
         throw new Error(errorMessage);
       }
@@ -512,9 +509,7 @@ export default class AuthCtr extends ControllerModule {
       } catch {
         const status = response.status;
 
-        throw new Error(
-          `Parse JSON failed, please check your server, response status: ${status}, detail:\n\n ${await response.text()} `,
-        );
+        throw new Error(`Token response was not valid JSON, status: ${status}`);
       }
 
       logger.debug('Successfully received token exchange response');
@@ -546,7 +541,7 @@ export default class AuthCtr extends ControllerModule {
 
       return { success: true };
     } catch (error) {
-      logger.error('Exchanging authorization code failed:', error);
+      logger.error('Exchanging authorization code failed');
       return { error: error.message, success: false };
     }
   }
@@ -649,7 +644,6 @@ export default class AuthCtr extends ControllerModule {
       .replaceAll('+', '-')
       .replaceAll('/', '_')
       .replace(/=+$/, '');
-    logger.debug('Generated code verifier (partial): ' + verifier.slice(0, 10) + '...'); // Avoid logging full sensitive info
     return verifier;
   }
 

@@ -63,7 +63,7 @@ export const createNodeRequest = async (req: NextRequest): Promise<IncomingMessa
     url: providerPath + url.search,
   });
 
-  log('Node.js request created with method %s and path %s', nodeRequest.method, nodeRequest.url);
+  log('Node.js request created with method %s', nodeRequest.method);
   // Cast back to IncomingMessage for the function's return signature
   return nodeRequest as unknown as IncomingMessage;
 };
@@ -98,7 +98,6 @@ export const createNodeResponse = (resolvePromise: () => void): ResponseCollecto
     end: (chunk?: string | Buffer) => {
       log('NodeResponse.end called');
       if (chunk) {
-        log('NodeResponse.end chunk: %s', typeof chunk === 'string' ? chunk : '(Buffer)');
         // @ts-ignore
         state.responseBody += chunk;
       }
@@ -139,7 +138,7 @@ export const createNodeResponse = (resolvePromise: () => void): ResponseCollecto
 
     setHeader: (name: string, value: string | string[]) => {
       const lowerName = name.toLowerCase();
-      log('Setting header: %s = %s', lowerName, value);
+      log('Setting header: %s', lowerName);
       state.responseHeaders[lowerName] = value;
     },
 
@@ -262,7 +261,7 @@ export const createContextForInteractionDetails = async (
     ua: undefined,
     url: new URL(interactionUrl),
   } as unknown as NextRequest;
-  log('Mock NextRequest created for url: %s', mockNextRequest.url);
+  log('Mock NextRequest created');
 
   // 4. Use createNodeRequest to create a mock Node.js IncomingMessage
   // pathPrefix is set to '/' because our URL is already in the path format expected by the Provider: /interaction/:uid

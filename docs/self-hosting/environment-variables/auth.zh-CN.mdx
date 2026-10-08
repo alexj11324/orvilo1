@@ -30,15 +30,15 @@ Orvilo 将登录委托给由 Clerk 提供支持的账户门户。以下环境变
 #### `AUTH_COOKIE_PREFIX`
 
 - 类型：可选
-- 说明：迁移窗口内仍会读取的旧版 Better Auth Cookie 命名空间（`<prefix>.session_token`）。对新的 `orvilo_auth` Cookie 无影响。
+- 说明：旧版 Better Auth Cookie 命名空间（`<prefix>.session_token`），仅用于清理。旧版及尚未绑定 Clerk 的会话需重新登录，对新的 `orvilo_auth` Cookie 无影响。
 - 默认值：`better-auth`
 - 示例：`my-orvilo`
 
 #### `AUTH_SESSION_TTL_SECONDS`
 
 - 类型：可选
-- 说明：应用签发的会话（`auth_sessions` 行）有效期，单位秒。会话过半后活动会顺延过期时间。
-- 默认值：`2592000`（30 天）
+- 说明：应用签发的会话（`auth_sessions` 行）的闲置有效期，单位秒。闲置有效期过半后活动会顺延过期时间，但最晚为创建后 30 天。Cookie 使用该绝对期限，到期后需重新登录。
+- 默认值：`604800`（闲置 7 天，绝对上限 30 天）
 - 示例：`604800`
 
 #### `AUTH_DISABLE_EMAIL_PASSWORD`

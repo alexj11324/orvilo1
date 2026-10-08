@@ -2,6 +2,7 @@ const path = require('node:path');
 const { Pool } = require('pg');
 const { drizzle } = require('drizzle-orm/node-postgres');
 const migrator = require('drizzle-orm/node-postgres/migrator');
+const { backfillAuthSessionDigests } = require('./auth-session-digests.cjs');
 const { PGVECTOR_HINT } = require('./errorHint');
 
 if (!process.env.DATABASE_URL) {
@@ -18,6 +19,8 @@ const runMigrations = async () => {
     migrationsFolder: path.join(__dirname, './migrations'),
   });
 
+  const digests = await backfillAuthSessionDigests(client, true);
+  console.log('[Database] auth session digest backfill:', digests);
   console.log('✅ database migration pass.');
   console.log('-------------------------------------');
   process.exit(0);

@@ -44,11 +44,13 @@ const isPortFree = async (port: number): Promise<boolean> => {
   return true;
 };
 
-const findFreePort = async (startPort: number): Promise<number> => {
+const findFreePort = async (startPort: number, reserved: number[] = []): Promise<number> => {
   for (let port = startPort; port < startPort + MAX_PORT_SCAN_ATTEMPTS; port++) {
-    if (await isPortFree(port)) return port;
+    if (!reserved.includes(port) && (await isPortFree(port))) return port;
   }
-  throw new Error(`No free port found in range ${startPort}-${startPort + MAX_PORT_SCAN_ATTEMPTS - 1}`);
+  throw new Error(
+    `No free port found in range ${startPort}-${startPort + MAX_PORT_SCAN_ATTEMPTS - 1}`,
+  );
 };
 
 /**
@@ -83,6 +85,77 @@ const resolveVitePortEnv = async (): Promise<number> => {
   return port;
 };
 
+/** Normal full-stack development always uses one development Clerk instance. */
+const createLocalAuthEnv = (env: NodeJS.ProcessEnv, appPort: number, authPort: number) => {
+  const publisher = env.VITE_CLERK_PUBLISHABLE_KEY || '';
+  if (!/^pk_test_[A-Za-z0-9+/]+={0,2}$/.test(publisher)) {
+    throw new Error(
+      'Set VITE_CLERK_PUBLISHABLE_KEY to the existing Clerk development publishable key.',
+    );
+  }
+  let hostname = '';
+  try {
+    const metadata = atob(publisher.slice('pk_test_'.length));
+    if (/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\$$/i.test(metadata)) {
+      hostname = metadata.slice(0, -1);
+    }
+  } catch {
+    // Invalid base64 metadata is reported without exposing the key.
+  }
+  if (!hostname) {
+    throw new Error('VITE_CLERK_PUBLISHABLE_KEY must contain valid Clerk frontend API metadata.');
+  }
+  if (!/^sk_test_.+/.test(env.CLERK_SECRET_KEY || '')) {
+    throw new Error('Set CLERK_SECRET_KEY to the same Clerk development instance secret key.');
+  }
+  const issuer = new URL(`https://${hostname}`).origin;
+  if (env.CLERK_ISSUER) {
+    let matches = false;
+    try {
+      matches = new URL(env.CLERK_ISSUER).href === `${issuer}/`;
+    } catch {
+      // Report the variable, not a potentially sensitive configured URL.
+    }
+    if (!matches) {
+      throw new Error(
+        'Set CLERK_ISSUER to the HTTPS frontend API origin of VITE_CLERK_PUBLISHABLE_KEY.',
+      );
+    }
+  }
+  let productOrigin = `http://${NEXT_HOST}:${appPort}`;
+  try {
+    const explicitOrigin = new URL(env.APP_URL || '');
+    if (
+      explicitOrigin.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(explicitOrigin.hostname) &&
+      explicitOrigin.port === String(appPort) &&
+      env.APP_URL === explicitOrigin.origin
+    ) {
+      productOrigin = explicitOrigin.origin;
+    }
+  } catch {
+    // Missing or production APP_URL values keep the local development default.
+  }
+  const portalUrl = new URL(productOrigin);
+  portalUrl.port = String(authPort);
+  const portalOrigin = portalUrl.origin;
+  return {
+    ...env,
+    APP_URL: productOrigin,
+    AUTH_ACCOUNTS_URL: portalOrigin,
+    AUTH_API_PROXY: productOrigin,
+    AUTH_COOKIE_DOMAIN: '',
+    AUTH_SPA_PORT_RR: String(authPort),
+    CLERK_AUTHORIZED_PARTIES: portalOrigin,
+    CLERK_ISSUER: issuer,
+    // A parent PEM may belong to production; use the selected development issuer's JWKS.
+    CLERK_JWT_KEY: '',
+    INTERNAL_APP_URL: productOrigin,
+    VITE_CLERK_PROXY_URL: '',
+    VITE_PORTAL_PRODUCT_ORIGIN: productOrigin,
+  };
+};
+
 const NEXT_READY_TIMEOUT_MS = 180_000;
 const NEXT_READY_RETRY_MS = 400;
 const FORCE_KILL_TIMEOUT_MS = 5_000;
@@ -90,11 +163,14 @@ const FORCE_KILL_TIMEOUT_MS = 5_000;
 const packageScriptCommand = 'bun';
 
 let nextPort = 3010;
+let nextHost = NEXT_HOST;
 let nextRootUrl = `http://${NEXT_HOST}:${nextPort}/`;
 let nextProcess: ChildProcess | undefined;
 let viteProcess: ChildProcess | undefined;
+let authProcess: ChildProcess | undefined;
 let nextHandle: DevProcessHandle | undefined;
 let viteHandle: DevProcessHandle | undefined;
+let authHandle: DevProcessHandle | undefined;
 let forceKillTimer: ReturnType<typeof setTimeout> | undefined;
 let shuttingDown = false;
 
@@ -115,10 +191,10 @@ const createPackageScriptProcessConfig = ({
   },
 });
 
-const runPackageScript = (scriptName: string) => {
+const runPackageScript = (scriptName: string, env: NodeJS.ProcessEnv) => {
   const { args, command, options } = createPackageScriptProcessConfig({ isWindows, scriptName });
 
-  return spawn(command, args, options);
+  return spawn(command, args, { ...options, env });
 };
 
 const loadEnv = () => {
@@ -201,12 +277,12 @@ const waitForNextReady = async () => {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < NEXT_READY_TIMEOUT_MS) {
-    if (await isPortOpen(NEXT_HOST, nextPort)) return;
+    if (await isPortOpen(nextHost, nextPort)) return;
     await wait(NEXT_READY_RETRY_MS);
   }
 
   throw new Error(
-    `Next server was not ready within ${NEXT_READY_TIMEOUT_MS / 1000}s on ${NEXT_HOST}:${nextPort}`,
+    `Next server was not ready within ${NEXT_READY_TIMEOUT_MS / 1000}s on ${nextHost}:${nextPort}`,
   );
 };
 
@@ -235,11 +311,13 @@ const runNextBackgroundTasks = () => {
 };
 
 const terminateChildren = () => {
+  sendSignalToDevProcess(authHandle, 'SIGTERM');
   sendSignalToDevProcess(viteHandle, 'SIGTERM');
   sendSignalToDevProcess(nextHandle, 'SIGTERM');
 };
 
 const forceKillChildren = () => {
+  sendSignalToDevProcess(authHandle, 'SIGKILL');
   sendSignalToDevProcess(viteHandle, 'SIGKILL');
   sendSignalToDevProcess(nextHandle, 'SIGKILL');
 };
@@ -255,7 +333,8 @@ const hasChildSettled = (child?: ChildProcess) =>
 
 const clearForceKillTimerWhenChildrenSettle = () => {
   if (!shuttingDown) return;
-  if (hasChildSettled(nextProcess) && hasChildSettled(viteProcess)) clearForceKillTimer();
+  if (hasChildSettled(nextProcess) && hasChildSettled(viteProcess) && hasChildSettled(authProcess))
+    clearForceKillTimer();
 };
 
 const shutdownAll = (signal: NodeJS.Signals) => {
@@ -275,7 +354,7 @@ const shutdownAll = (signal: NodeJS.Signals) => {
   }, FORCE_KILL_TIMEOUT_MS);
 };
 
-const watchChildExit = (child: ChildProcess, name: 'next' | 'vite') => {
+const watchChildExit = (child: ChildProcess, name: 'next' | 'vite' | 'auth') => {
   child.once('exit', (code, signal) => {
     if (shuttingDown) {
       clearForceKillTimerWhenChildrenSettle();
@@ -293,9 +372,14 @@ const main = async () => {
   loadEnv();
   nextPort = await resolveNextPort();
   process.env.PORT = String(nextPort);
-  nextRootUrl = `http://${NEXT_HOST}:${nextPort}/`;
   const vitePort = await resolveVitePortEnv();
-  console.log(`🔌 dev ports — next: ${nextPort}, vite: ${vitePort}`);
+  const authPort =
+    Number(process.env.AUTH_SPA_PORT_RR) || (await findFreePort(3018, [nextPort, vitePort]));
+  const childEnv = createLocalAuthEnv(process.env, nextPort, authPort);
+  nextRootUrl = `${childEnv.APP_URL}/`;
+  nextHost = new URL(childEnv.APP_URL).hostname.replaceAll(/^\[|\]$/g, '');
+  console.log(`🔌 dev ports — next: ${nextPort}, vite: ${vitePort}, auth: ${authPort}`);
+  console.log(`🔑 Local accounts portal: ${childEnv.AUTH_ACCOUNTS_URL}`);
 
   const forwardedSignals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
   for (const sig of forwardedSignals) {
@@ -318,21 +402,35 @@ const main = async () => {
 
   nextProcess = spawn('bunx', ['next', 'dev', '-p', String(nextPort)], {
     detached: !isWindows,
-    env: process.env,
+    env: childEnv,
     stdio: 'inherit',
     shell: isWindows,
   });
   nextHandle = createDevProcessHandle({ isWindows, pid: nextProcess.pid });
   watchChildExit(nextProcess, 'next');
 
-  viteProcess = runPackageScript('dev:spa');
+  viteProcess = runPackageScript('dev:spa', childEnv);
   viteHandle = createDevProcessHandle({ isWindows, pid: viteProcess.pid });
   watchChildExit(viteProcess, 'vite');
+
+  authProcess = spawn(
+    'pnpm',
+    ['--filter', '@orvilo/auth', 'dev', ...(nextHost === NEXT_HOST ? [] : ['--host', nextHost])],
+    {
+      detached: !isWindows,
+      env: childEnv,
+      stdio: 'inherit',
+      shell: isWindows,
+    },
+  );
+  authHandle = createDevProcessHandle({ isWindows, pid: authProcess.pid });
+  watchChildExit(authProcess, 'auth');
   runNextBackgroundTasks();
 
   await Promise.race([
     new Promise((resolve) => nextProcess?.once('exit', resolve)),
     new Promise((resolve) => viteProcess?.once('exit', resolve)),
+    new Promise((resolve) => authProcess?.once('exit', resolve)),
   ]);
 };
 
@@ -342,6 +440,8 @@ const isMainModule = () => {
 };
 
 export const __testing = {
+  createLocalAuthEnv,
+  main,
   createPackageScriptProcessConfig,
   createDevProcessHandle,
   findFreePort,

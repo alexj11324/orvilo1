@@ -60,7 +60,7 @@ export const getAuthConfig = () => {
       AUTH_DISABLE_EMAIL_PASSWORD: z.boolean().optional().default(false),
       AUTH_EMAIL_VERIFICATION: z.boolean().optional().default(false),
       AUTH_ENABLE_MAGIC_LINK: z.boolean().optional().default(false),
-      AUTH_SESSION_TTL_SECONDS: z.number().optional(),
+      AUTH_SESSION_TTL_SECONDS: z.number().int().positive().max(2592000).optional(),
 
       CLERK_API_URL: z.string().optional(),
       CLERK_AUTHORIZED_PARTIES: z.string().optional(),
@@ -88,7 +88,7 @@ export const getAuthConfig = () => {
       AUTH_EMAIL_VERIFICATION: process.env.AUTH_EMAIL_VERIFICATION === '1',
       AUTH_ENABLE_MAGIC_LINK: process.env.AUTH_ENABLE_MAGIC_LINK === '1',
       AUTH_SESSION_TTL_SECONDS: process.env.AUTH_SESSION_TTL_SECONDS
-        ? Number.parseInt(process.env.AUTH_SESSION_TTL_SECONDS, 10)
+        ? Number(process.env.AUTH_SESSION_TTL_SECONDS)
         : undefined,
 
       CLERK_API_URL: process.env.CLERK_API_URL,

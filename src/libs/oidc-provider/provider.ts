@@ -25,7 +25,7 @@ const DAY_SECONDS = 24 * HOUR_SECONDS;
 
 // Keep all artifact TTLs explicit; oidc-provider validates its default TTL functions at runtime.
 export const oidcArtifactTTL = {
-  AccessToken: 7 * DAY_SECONDS,
+  AccessToken: 15 * MINUTE_SECONDS,
   AuthorizationCode: 10 * MINUTE_SECONDS,
   BackchannelAuthenticationRequest: 10 * MINUTE_SECONDS,
   ClientCredentials: 10 * MINUTE_SECONDS,
@@ -230,7 +230,6 @@ export const createOIDCProvider = async (db: OrviloDatabase): Promise<Provider> 
               claims.email_verified = !!user.emailVerifiedAt;
             }
 
-            logProvider('Returning claims: %O', claims);
             return claims;
           },
         };
@@ -247,7 +246,6 @@ export const createOIDCProvider = async (db: OrviloDatabase): Promise<Provider> 
       url(ctx, interaction) {
         // ---> Add logs <---
         logProvider('interactions.url function called');
-        logProvider('Interaction details: %O', interaction);
 
         // Read the ui_locales parameter from the OIDC request (space-separated language priorities)
         // https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
@@ -269,6 +267,14 @@ export const createOIDCProvider = async (db: OrviloDatabase): Promise<Provider> 
         logProvider('Generated interaction URL: %s', interactionUrl);
         // ---> End of added logs <---
         return interactionUrl;
+      },
+    },
+
+    formats: {
+      customizers: {
+        jwt(_ctx, token, jwt) {
+          if ('grantId' in token && token.grantId) jwt.payload.grantId = token.grantId;
+        },
       },
     },
 
@@ -305,6 +311,7 @@ export const createOIDCProvider = async (db: OrviloDatabase): Promise<Provider> 
       code_verification: '/oidc/device',
       device_authorization: '/oidc/device/auth',
       end_session: '/oidc/session/end',
+      revocation: '/oidc/token/revocation',
       token: '/oidc/token',
     },
     // 3. Scopes definition

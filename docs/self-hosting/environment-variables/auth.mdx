@@ -32,15 +32,15 @@ Orvilo delegates sign-in to a Clerk-powered accounts portal. The variables below
 #### `AUTH_COOKIE_PREFIX`
 
 - Type: Optional
-- Description: Namespace of the legacy Better Auth cookie (`<prefix>.session_token`) that is still read during the migration window. Has no effect on the new `orvilo_auth` cookie.
+- Description: Namespace of the legacy Better Auth cookie (`<prefix>.session_token`), retained for cleanup only. Legacy and unbound sessions require signing in again. Has no effect on the new `orvilo_auth` cookie.
 - Default: `better-auth`
 - Example: `my-orvilo`
 
 #### `AUTH_SESSION_TTL_SECONDS`
 
 - Type: Optional
-- Description: Lifetime of the app-issued session (`auth_sessions` rows) in seconds. Past half the TTL, activity refreshes the expiry.
-- Default: `2592000` (30 days)
+- Description: Idle lifetime of the app-issued session (`auth_sessions` rows) in seconds. Activity after half the idle TTL refreshes expiry, capped at 30 days from creation. The cookie uses the absolute deadline; signing in again is required after that deadline.
+- Default: `604800` (7 days idle; 30 days absolute)
 - Example: `604800`
 
 #### `AUTH_DISABLE_EMAIL_PASSWORD`

@@ -1,3 +1,4 @@
+import debug from 'debug';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createContextForInteractionDetails } from '@/libs/oidc-provider/http-adapter';
@@ -75,6 +76,38 @@ describe('OIDCService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+
+  it.each(['matching', 'missing', 'mismatched'])(
+    'does not log existing grant correlation values when %s',
+    async (kind) => {
+      const previous = debug.disable();
+      debug.enable('orvilo-oidc:service');
+      const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+      const provider = createMockProvider();
+      provider.Grant.find.mockResolvedValue(
+        kind === 'missing'
+          ? undefined
+          : {
+              accountId: kind === 'mismatched' ? 'another-account' : 'account-1',
+              clientId: 'client-1',
+            },
+      );
+      try {
+        const service = new OIDCService(provider as any);
+        const grant = await service.findOrCreateGrants(
+          'account-1',
+          'client-1',
+          'SERVICE_GRANT_LOG_SENTINEL',
+        );
+        expect(grant.accountId).toBe('account-1');
+        expect(output).toHaveBeenCalled();
+        expect(JSON.stringify(output.mock.calls)).not.toContain('SERVICE_GRANT_LOG_SENTINEL');
+      } finally {
+        output.mockRestore();
+        debug.enable(previous);
+      }
+    },
+  );
 
   it('initialize should resolve provider and return a working service', async () => {
     const provider = createMockProvider();

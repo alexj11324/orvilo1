@@ -2489,6 +2489,7 @@ export default {
   'taskList.form.showCompleted': 'Show completed & canceled',
   'taskList.form.showSubTasks': 'Show sub-tasks',
   'taskList.form.subGrouping': 'Sub-grouping',
+  'taskList.hiddenCompleted.boardNotice': 'Completed tasks are hidden by display options.',
   'taskList.hiddenCompleted.count_one': '{{count}} task',
   'taskList.hiddenCompleted.count_other': '{{count}} tasks',
   'taskList.hiddenCompleted.show': 'Show',

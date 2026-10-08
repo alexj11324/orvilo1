@@ -1,0 +1,20 @@
+{
+  "actualWindowResizeViaNativeIpc": true,
+  "after": {
+    "viewport": 1400,
+    "pane": 1140,
+    "root": 1140,
+    "body": 1140,
+    "gutter": "16px"
+  },
+  "before": {
+    "viewport": 1400,
+    "pane": 1140,
+    "root": 1140,
+    "body": 1140,
+    "gutter": "16px"
+  },
+  "independentOfChatWideScreen": true,
+  "pageErrors": [],
+  "rendererRevision": "12d98be6d"
+}

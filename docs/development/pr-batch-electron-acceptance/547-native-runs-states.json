@@ -1,0 +1,8 @@
+{
+  "finalEmpty": "No matching runs",
+  "hits": 2,
+  "rendererRevision": "12d98be6d",
+  "retryVisible": true,
+  "skeletonCells": 41,
+  "transportFixture": "Temporary wrapper around the actual renderer fetch, delaying only task.automationRuns and injecting one procedure HTTP 500; other operations and the successful Reload use the real backend"
+}

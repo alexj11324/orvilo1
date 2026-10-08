@@ -2362,6 +2362,7 @@ export default {
   'taskList.form.subGrouping': 'Sub-grouping',
   'taskList.hiddenCompleted.count_one': '{{count}} task',
   'taskList.hiddenCompleted.count_other': '{{count}} tasks',
+  'taskList.hiddenCompleted.boardNotice': 'Completed tasks are hidden by display options.',
   'taskList.hiddenCompleted.show': 'Show',
   'taskList.hiddenCompleted.suffix': 'hidden by display options',
   'taskList.groupBy.assignee': 'Agent',

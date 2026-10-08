@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
@@ -218,6 +219,8 @@ interface KanbanBoardProps {
    * to agents (active execution grant) — My Work's Delegated tab.
    */
   myTaskScope?: 'assigned' | 'created' | 'delegated';
+  /** Clears `hideCompleted`; without it the board explains the hiding but cannot undo it. */
+  onShowHiddenCompleted?: () => void;
   onViewAll?: () => void;
   options: TaskListViewOptions;
   /** `null` narrows to tasks with no project — My Work's "No project" chip. */
@@ -232,6 +235,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     emptyDescription,
     external,
     myTaskScope,
+    onShowHiddenCompleted,
     onViewAll,
     options,
     projectId,
@@ -1038,7 +1042,19 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       loading={skeletonBoard}
       onRetry={() => mutate()}
     >
-      {board}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {options.hideCompleted ? (
+          <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
+            <span>{t('taskList.hiddenCompleted.boardNotice')}</span>
+            {onShowHiddenCompleted ? (
+              <Button size="xs" variant="ghost" onClick={onShowHiddenCompleted}>
+                {t('taskList.hiddenCompleted.show')}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+        {board}
+      </div>
     </AsyncBoundary>
   );
 });

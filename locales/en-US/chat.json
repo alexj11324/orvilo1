@@ -2167,6 +2167,7 @@
   "taskList.groupBy.priority": "Priority",
   "taskList.groupBy.schedule": "Schedule",
   "taskList.groupBy.status": "Status",
+  "taskList.hiddenCompleted.boardNotice": "Completed tasks are hidden by display options.",
   "taskList.hiddenCompleted.count_one": "{{count}} task",
   "taskList.hiddenCompleted.count_other": "{{count}} tasks",
   "taskList.hiddenCompleted.show": "Show",

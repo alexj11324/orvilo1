@@ -101,12 +101,28 @@ describe('validateOIDCJWT', () => {
     await expect(validateOIDCJWT(token, { allowHeteroOperation: true })).resolves.toMatchObject({
       userId: 'user-123',
     });
-    await expect(
-      validateOIDCJWT(
-        await sign({ sub: 'user-123', purpose: 'hetero-operation', iat: now, exp: now + 300 }),
-        { allowHeteroOperation: true },
-      ),
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    const legacy = await sign({
+      sub: 'user-123',
+      purpose: 'hetero-operation',
+      iat: now,
+      exp: now + 300,
+    });
+    await expect(validateOIDCJWT(legacy)).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    await expect(validateOIDCJWT(legacy, { allowHeteroOperation: true })).resolves.toMatchObject({
+      userId: 'user-123',
+    });
+    for (const claim of ['aud', 'capabilities', 'iss', 'jti', 'operation_id']) {
+      const partial = await sign({
+        sub: 'user-123',
+        purpose: 'hetero-operation',
+        iat: now,
+        exp: now + 300,
+        [claim]: 'partial',
+      });
+      await expect(validateOIDCJWT(partial, { allowHeteroOperation: true })).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
+    }
     await expect(
       validateOIDCJWT(await sign({ ...accessClaims, purpose: 'hetero-operation' }), {
         allowHeteroOperation: true,

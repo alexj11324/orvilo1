@@ -114,7 +114,7 @@ describe('provisionClerkUser', () => {
     await provisionClerkUser(db as any, clerkUser);
 
     expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ id: 'user_clerk_1' }));
-    expect(initUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'user_clerk_1' }));
+    expect(initUser).not.toHaveBeenCalled();
   });
 
   it('links a migrated legacy row matched by email instead of inserting', async () => {
@@ -128,7 +128,7 @@ describe('provisionClerkUser', () => {
     // id lookup misses, email lookup hits
     const { db, findFirst, updateSet } = makeDb({ findResults: [undefined, legacyRow] });
 
-    const user = await provisionClerkUser(db as any, clerkUser);
+    const { user } = await provisionClerkUser(db as any, clerkUser);
 
     expect(db.insert).not.toHaveBeenCalled();
     expect(initUser).not.toHaveBeenCalled();
@@ -174,7 +174,7 @@ describe('provisionClerkUser', () => {
   it('keeps the trusted canonical identity when the verified Clerk primary email changes', async () => {
     const profiles = [{ ...original }];
     const { db, insertValues } = makeDb({ profiles, bindings: [mapped] });
-    const user = await provisionClerkUser(db as unknown as OrviloDatabase, changedUser);
+    const { user } = await provisionClerkUser(db as unknown as OrviloDatabase, changedUser);
     expect(user.id).toBe(original.id);
     expect(profiles).toHaveLength(1);
     expect(profiles[0]).toMatchObject({ id: original.id, email: 'changed@fixture.test' });

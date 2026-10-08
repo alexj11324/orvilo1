@@ -214,7 +214,7 @@ const ProjectWorkspace = memo(() => {
                 <DropdownMenu items={statusItems}>
                   <Button
                     aria-label={t('properties.status')}
-                    className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+                    className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-[3px] text-[13px] font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
                     disabled={updatingStatus || lifecycleLocked}
                     variant="ghost"
                   >
@@ -234,7 +234,7 @@ const ProjectWorkspace = memo(() => {
                 {teams.map((team) => (
                   <WorkspaceLink
                     // Same hover surface as the ghost-button property controls beside it.
-                    className="inline-flex h-7 items-center gap-2 rounded-full px-1.5 text-[13px] font-medium text-foreground no-underline outline-none hover:bg-muted hover:text-foreground hover:no-underline focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-muted/50"
+                    className="inline-flex h-7 items-center gap-2 rounded-full px-1.5 text-[13px] font-medium text-foreground no-underline outline-none hover:bg-accent hover:text-foreground hover:no-underline focus-visible:ring-3 focus-visible:ring-ring/50"
                     key={team.id}
                     to={`/teams/${team.id}`}
                   >

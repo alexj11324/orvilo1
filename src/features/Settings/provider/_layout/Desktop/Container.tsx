@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type FC, type PropsWithChildren, useLayoutEffect, useRef } from 'react';
 import { useLocation } from 'react-router';
 
@@ -21,7 +20,7 @@ const Container: FC<PropsWithChildren> = ({ children }) => {
   }, [pathname]);
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex h-full w-full min-w-0 flex-col">
       <NavHeader />
       <SettingContainer
         maxWidth={1024}
@@ -34,7 +33,7 @@ const Container: FC<PropsWithChildren> = ({ children }) => {
       >
         {children}
       </SettingContainer>
-    </Flexbox>
+    </div>
   );
 };
 export default Container;

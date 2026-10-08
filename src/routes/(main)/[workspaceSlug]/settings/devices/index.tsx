@@ -1,7 +1,7 @@
 'use client';
 
 import type { DeviceVisibility } from '@orvilo/types';
-import { LockIcon, RefreshCwIcon, TerminalIcon, UsersIcon } from 'lucide-react';
+import { LockIcon, MonitorDownIcon, RefreshCwIcon, UsersIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +19,11 @@ import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/Dev
 const WorkspaceDevicesSetting = memo(() => {
   const { t } = useTranslation('setting');
   const [open, setOpen] = useState(false);
+  const [connectTab, setConnectTab] = useState<'cli' | 'desktop'>('desktop');
+  const openConnect = (tab: 'cli' | 'desktop' = 'desktop') => {
+    setConnectTab(tab);
+    setOpen(true);
+  };
   const [visibility, setVisibility] = useState<DeviceVisibility>('public');
 
   // The connect + refresh actions sit beside the tabs (same header pattern as
@@ -29,7 +34,7 @@ const WorkspaceDevicesSetting = memo(() => {
   return (
     <>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4 justify-between">
+        <div className="flex flex-wrap items-center gap-4 justify-between">
           <Tabs value={visibility} onValueChange={(key) => setVisibility(key as DeviceVisibility)}>
             <TabsList>
               <TabsTrigger value="public">
@@ -52,9 +57,9 @@ const WorkspaceDevicesSetting = memo(() => {
             >
               <RefreshCwIcon />
             </Button>
-            <Button onClick={() => setOpen(true)}>
-              <TerminalIcon data-icon="inline-start" />
-              {t('devices.empty.methodCli.title')}
+            <Button onClick={() => openConnect()}>
+              <MonitorDownIcon data-icon="inline-start" />
+              {t('devices.connectWizard.button')}
             </Button>
           </div>
         </div>
@@ -63,11 +68,12 @@ const WorkspaceDevicesSetting = memo(() => {
           key={visibility}
           scope={'workspace'}
           visibility={visibility}
-          onConnect={() => setOpen(true)}
+          onConnect={openConnect}
         />
       </div>
 
       <DeviceConnectModal
+        initialTab={connectTab}
         open={open}
         scope={'workspace'}
         visibility={visibility}

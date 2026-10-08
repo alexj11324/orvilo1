@@ -327,7 +327,11 @@ export class AiProviderActionImpl {
 
   createNewAiProvider = async (params: CreateAiProviderParams): Promise<void> => {
     await aiProviderService.createAiProvider({ ...params, source: AiProviderSourceEnum.Custom });
-    await this.#get().refreshAiProviderList();
+    try {
+      await this.#get().refreshAiProviderList();
+    } catch (error) {
+      console.error('[AiProvider] Created provider, but failed to refresh:', error);
+    }
   };
 
   deleteAiProvider = async (id: string): Promise<void> => {

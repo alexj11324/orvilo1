@@ -2,6 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -116,6 +117,37 @@ describe('TaskProperties', () => {
     cleanup();
   });
 
+  it.each(['{Enter}', ' '])(
+    'opens the detail status trigger once with %s and commits a workflow pick',
+    async (key) => {
+      const user = userEvent.setup();
+      const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        render(<TaskProperties />);
+        const trigger = screen.getByRole('button', {
+          name: 'taskDetail.workflow.category.backlog',
+        });
+        const click = vi.fn();
+        trigger.addEventListener('click', click);
+        trigger.focus();
+        await user.keyboard(key);
+        expect(await screen.findByRole('menu')).toBeVisible();
+        expect(screen.getAllByRole('menu')).toHaveLength(1);
+        expect(trigger).toHaveAttribute('aria-expanded', 'true');
+        expect(click).toHaveBeenCalledOnce();
+        expect(errorLog).not.toHaveBeenCalled();
+        await user.click(screen.getByRole('menuitem', { name: /taskList.kanban.todo/ }));
+        await waitFor(() => expect(mocks.moveWorkflow).toHaveBeenCalledOnce());
+        expect(mocks.moveWorkflow).toHaveBeenCalledWith({
+          taskIdentifier: 'T-1',
+          target: { category: 'todo', workflowStateRefId: undefined },
+        });
+      } finally {
+        errorLog.mockRestore();
+      }
+    },
+  );
+
   // The status chip is the menu's trigger element — a wrapper that swallows
   // the props the menu clones on (e.g. a title-less Tooltip) leaves a dead
   // chip. Clicking it must open the Issue-status menu.
@@ -130,7 +162,11 @@ describe('TaskProperties', () => {
 
     // The seven workflow categories — execution run states (running,
     // paused, …) are never a status pick anymore.
-    const columnLabels = screen.getAllByText(/^taskList\.kanban\./).map((node) => node.textContent);
+    const statusRows = screen.getAllByText(/^taskList\.kanban\./);
+    for (const row of statusRows) {
+      expect(row.parentElement?.querySelector('[data-workflow-icon]')).toBeTruthy();
+    }
+    const columnLabels = statusRows.map((node) => node.textContent);
     expect(columnLabels).toEqual([
       'taskList.kanban.triage',
       'taskList.kanban.backlog',
@@ -157,6 +193,34 @@ describe('TaskProperties', () => {
         target: { category: 'in_progress', workflowStateRefId: undefined },
       });
     });
+  });
+
+  it('lets a pending-review issue move back to todo through the workflow command', async () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.workflowCategory = 'in_review';
+    detail.status = 'paused';
+    try {
+      const { container } = render(<TaskProperties />);
+      expect(
+        container.querySelector(
+          '[data-task-workflow-state="in_review"] [data-workflow-icon="in_review"]',
+        ),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByText('taskDetail.workflow.category.in_review'));
+      await waitFor(() => expect(screen.getByText('taskList.kanban.todo')).toBeTruthy());
+      fireEvent.click(screen.getByText('taskList.kanban.todo'));
+      await waitFor(() =>
+        expect(mocks.moveWorkflow).toHaveBeenCalledWith({
+          taskIdentifier: 'T-1',
+          target: { category: 'todo', workflowStateRefId: undefined },
+        }),
+      );
+    } finally {
+      delete detail.workflowCategory;
+      detail.status = 'backlog';
+    }
   });
 
   it('opens the status menu from a workflow-linked status chip', async () => {

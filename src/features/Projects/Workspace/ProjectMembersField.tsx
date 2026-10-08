@@ -6,15 +6,16 @@ import { useTranslation } from 'react-i18next';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import AvatarGroup from '@/components/Avatar/AvatarGroup';
+import { Button } from '@/components/ui/button';
 import {
   Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxChipsInput,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxTrigger,
 } from '@/components/ui/combobox';
 import {
   type useProjectMembersQuery,
@@ -183,24 +184,41 @@ export function ProjectMembersField({
         }}
       >
         <>
-          <ComboboxChips className="min-w-0 max-w-full">
-            <UsersIcon aria-hidden size={16} />
-            {members
-              .map((member) => member.userId)
-              .map((value) => (
-                <ComboboxChip key={value}>
-                  {memberPickerOptions.find((option) => option.value === value)?.label ??
-                    String(value)}
-                </ComboboxChip>
-              ))}
-            <ComboboxChipsInput
-              aria-label={t('properties.members')}
-              disabled={!canEdit || mutating || query.isLoading || roster.isLoading}
-              id={id}
-              placeholder={t('properties.membersEmpty')}
-            />
-          </ComboboxChips>
+          <ComboboxTrigger
+            aria-label={t('properties.members')}
+            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+            id={id}
+            render={<Button variant="ghost" />}
+          >
+            {members.length ? (
+              <AvatarGroup
+                max={3}
+                size={18}
+                items={members.map((member) => ({
+                  key: member.userId,
+                  avatar: member.user?.avatar ?? undefined,
+                  title: member.user?.fullName || member.user?.username || member.userId,
+                }))}
+              />
+            ) : (
+              <UsersIcon aria-hidden size={16} />
+            )}
+            <span className="truncate">
+              {members.length
+                ? members
+                    .map(
+                      (member) => member.user?.fullName || member.user?.username || member.userId,
+                    )
+                    .join(', ')
+                : t('properties.membersEmpty')}
+            </span>
+          </ComboboxTrigger>
           <ComboboxContent className="min-w-56">
+            <ComboboxInput
+              aria-label={t('properties.membersEmpty')}
+              placeholder={t('properties.membersEmpty')}
+              showTrigger={false}
+            />
             <ComboboxEmpty>{t('properties.membersEmpty')}</ComboboxEmpty>
             <ComboboxList>
               {(value: (typeof memberPickerOptions)[number]['value']) => {

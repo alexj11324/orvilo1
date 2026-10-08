@@ -293,7 +293,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
                 )}
                 {hits.map((hit) => (
                   <button
-                    className="flex h-9 w-full items-center gap-3 px-2 text-left hover:bg-muted"
+                    className="flex h-9 w-full items-center gap-3 px-2 text-left hover:bg-accent"
                     disabled={pending}
                     key={hit.id}
                     type="button"
@@ -326,7 +326,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
                   const canUnlink = Boolean(edge.relationId || edge.id);
                   return (
                     <div
-                      className="group flex min-h-8 items-center gap-1 hover:bg-muted/70"
+                      className="group flex min-h-8 items-center gap-1 hover:bg-accent"
                       key={edge.relationId ?? `${kind}:${edge.dependsOn}:${index}`}
                     >
                       <button

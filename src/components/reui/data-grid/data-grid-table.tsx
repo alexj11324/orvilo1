@@ -571,7 +571,7 @@ function DataGridTableAddRow() {
     <tr
       data-slot="data-grid-table-add-row"
       className={cn(
-        'hover:bg-muted/40 [thead+tbody_&:first-child]:border-t',
+        'hover:bg-accent [thead+tbody_&:first-child]:border-t',
         props.tableClassNames?.rowCreate,
       )}
     >
@@ -1346,13 +1346,13 @@ function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
   return (
     <tr
       className={cn(
-        'hover:bg-muted/40 data-[state=selected]:bg-muted/50',
+        'hover:bg-accent data-[state=selected]:bg-muted/50',
         props.onRowClick && 'cursor-pointer',
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&
           'border-border border-b [&:not(:last-child)>td]:border-b',
         props.tableLayout?.cellBorder && '*:last:border-e-0',
-        props.tableLayout?.stripped && 'odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent',
+        props.tableLayout?.stripped && 'odd:bg-muted/90 odd:hover:bg-accent hover:bg-transparent',
         props.tableClassNames?.bodyRow,
       )}
     >
@@ -1444,7 +1444,7 @@ function DataGridTableBodyRow<TData extends object>({
       // 1-based after the header row; row.index is the position in the data,
       // so the announced index stays absolute across pagination.
       className={cn(
-        'hover:bg-muted/40 data-[state=selected]:bg-muted/50',
+        'hover:bg-accent data-[state=selected]:bg-muted/50',
         /* With the pin affordance on, pinned cells hide scrolled content
            behind an OPAQUE background, which also hides the row's translucent
            hover and selected tints; they get the same tints premixed over the
@@ -1473,9 +1473,9 @@ function DataGridTableBodyRow<TData extends object>({
         // parity flips as spacer rows resize while scrolling).
         props.tableLayout?.stripped &&
           (typeof dataIndex === 'number'
-            ? cn('hover:bg-transparent', dataIndex % 2 === 0 && 'bg-muted/90 hover:bg-muted')
-            : 'odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent'),
-        props.tableLayout?.rowsPinnable && isRowPinned && 'bg-muted/30 hover:bg-muted/50',
+            ? cn('hover:bg-transparent', dataIndex % 2 === 0 && 'bg-muted/90 hover:bg-accent')
+            : 'odd:bg-muted/90 odd:hover:bg-accent hover:bg-transparent'),
+        props.tableLayout?.rowsPinnable && isRowPinned && 'bg-muted/30 hover:bg-accent',
         pinnedBoundary === 'top' &&
           '[&>td]:shadow-[0_2px_0_rgba(0,0,0,0.03)] dark:[&>td]:shadow-[0_2px_0_rgba(255,255,255,0.06)]',
         // A bottom-pinned row borders scrolled content along its TOP edge,

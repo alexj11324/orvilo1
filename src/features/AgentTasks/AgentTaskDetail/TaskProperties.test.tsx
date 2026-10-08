@@ -218,7 +218,7 @@ describe('TaskProperties', () => {
   );
 
   it('renders value-only rows named by their field, without a label column', () => {
-    render(<TaskProperties />);
+    const { container } = render(<TaskProperties />);
 
     for (const field of [
       'taskDetail.property.state',
@@ -226,12 +226,15 @@ describe('TaskProperties', () => {
       'taskDetail.assignee',
       'taskDetail.property.priority',
       'taskDetail.dueDate',
-      'taskDetail.labels.title',
       'taskDetail.property.schedule',
     ]) {
       expect(screen.getByRole('group', { name: field })).toBeTruthy();
       expect(screen.queryByText(field)).toBeNull();
     }
+
+    // An empty Labels row is wide-rail-only: present, but hidden in the narrow strip.
+    const labels = container.querySelector('[role=group][aria-label="taskDetail.labels.title"]');
+    expect(labels?.getAttribute('data-wide-only')).toBe('true');
 
     expect(screen.getByText('taskDetail.workflow.category.backlog')).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addAssignee')).toBeTruthy();

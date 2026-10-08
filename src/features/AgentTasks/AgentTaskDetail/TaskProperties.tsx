@@ -46,8 +46,23 @@ const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
  * repeated them; the field name stays on the group's accessible name and as a
  * hover title.
  */
-const PropertyRow = ({ children, label }: { children: ReactNode; label: string }) => (
-  <div aria-label={label} className={styles.propertyRow} role="group" title={label}>
+const PropertyRow = ({
+  children,
+  label,
+  wideOnly,
+}: {
+  children: ReactNode;
+  label: string;
+  /** Empty optional field: only the wide rail shows it, the narrow strip skips it. */
+  wideOnly?: boolean;
+}) => (
+  <div
+    aria-label={label}
+    className={styles.propertyRow}
+    data-wide-only={wideOnly || undefined}
+    role="group"
+    title={label}
+  >
     <div className={styles.propertyValue}>{children}</div>
   </div>
 );
@@ -202,7 +217,7 @@ const TaskProperties = memo(() => {
           </div>
         </PropertyRow>
 
-        <PropertyRow label={t('taskDetail.labels.title')}>
+        <PropertyRow label={t('taskDetail.labels.title')} wideOnly={labels.length === 0}>
           <TaskLabelSelector
             assignedLabels={labels}
             disabled={status === 'running'}

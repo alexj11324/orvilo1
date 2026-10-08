@@ -39,13 +39,15 @@ const TaskDetailSections = memo(() => {
               <TaskDetailAssignee />
             </div>
           </div>
-          <div className={styles.description}>
-            <TaskInstruction />
-          </div>
           <div data-task-detail-side className={styles.side}>
             <TaskRailActions />
-            <TaskProperties />
-            <TaskProjectSection />
+            <div className={styles.propertyGroups}>
+              <TaskProperties />
+              <TaskProjectSection />
+            </div>
+          </div>
+          <div className={styles.description}>
+            <TaskInstruction />
           </div>
           <div className={`flex flex-col gap-6 ${styles.body}`}>
             <TaskBlockedNotice />

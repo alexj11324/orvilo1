@@ -32,7 +32,6 @@ import {
   type IssueRelationKind,
   relationKindOf,
 } from './relationGroups';
-import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set([
@@ -248,11 +247,16 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
         const rows = grouped[kind];
         const { Icon, className: markClass } = RELATION_MARKS[kind];
         return (
-          <div className="flex flex-col gap-0.5" data-relation-kind={kind} key={kind}>
-            <div className={styles.propertyLabel} style={{ width: 'auto' }}>
-              <span className={styles.propertyMark}>
-                <Icon className={markClass} size={16} />
-              </span>
+          <div
+            className={`flex flex-col gap-0.5 ${rows.length === 0 ? 'flex-none' : 'w-full'}`}
+            data-relation-kind={kind}
+            key={kind}
+          >
+            <div
+              className="flex h-7 items-center gap-2 whitespace-nowrap text-muted-foreground"
+              style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
+            >
+              <Icon className={markClass} size={16} />
               <span className="truncate">{t(`taskDetail.relations.${kind}`)}</span>
               <span className="flex-1" />
               {allowed && (

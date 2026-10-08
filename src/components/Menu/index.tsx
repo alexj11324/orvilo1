@@ -119,7 +119,7 @@ const renderItems = (
         className={cx(
           styles.item,
           selected && styles.selected,
-          item.danger && 'text-destructive',
+          item.danger && 'text-destructive-text',
           item.disabled && 'opacity-50 pointer-events-none',
           props.compact ? 'min-h-8 py-1' : undefined,
         )}

@@ -259,8 +259,8 @@ const LINE_DIFF_CLASS = [
   '[[data-code-line-numbers]_&]:data-[diff]:after:-left-(--code-block-gutter-gap)',
   '[[data-code-line-numbers]_&]:data-[diff]:after:w-(--code-block-gutter-gap)',
   'data-[diff]:after:select-none',
-  'data-[diff=add]:after:text-success',
-  'data-[diff=remove]:after:text-destructive',
+  'data-[diff=add]:after:text-success-text',
+  'data-[diff=remove]:after:text-destructive-text',
   "data-[diff=add]:after:content-['+']",
   "data-[diff=remove]:after:content-['-']",
 ].join(' ');
@@ -273,10 +273,10 @@ const LINE_STATE_CLASS = [
   'data-[level=error]:bg-(--code-block-error-bg)',
   'data-[level=warning]:bg-(--code-block-warning-bg)',
   'data-[level=info]:bg-(--code-block-info-bg)',
-  'data-[selected]:bg-accent',
+  'data-[selected]:bg-selected',
   /* Arrow navigation needs a visible position (WCAG 2.4.7); gated on the
      selectable listbox so plain blocks stay inert on hover. */
-  '[[data-selectable]_&]:data-[active]:bg-muted/40',
+  '[[data-selectable]_&]:data-[active]:bg-accent',
 ].join(' ');
 
 /**

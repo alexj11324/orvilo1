@@ -76,16 +76,20 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --primary-foreground: ${readableColor(theme.colorPrimary)};
       --primary-hover: ${theme.colorPrimaryHover};
       --primary-hover-foreground: ${readableColor(theme.colorPrimaryHover)};
-      --secondary: ${theme.colorBgContainerSecondary};
+
+      /* Neutral fills are translucent washes so they read on every surface.
+         --muted, --secondary and --accent share the hover wash; --selected sits
+         one step above it. See docs/development/semantic-token-roles.md. */
+      --secondary: ${theme.colorFillTertiary};
       --secondary-foreground: ${theme.colorText};
-      --muted: ${theme.colorBgContainerSecondary};
+      --muted: ${theme.colorFillTertiary};
       --muted-foreground: ${theme.colorTextSecondary};
       --accent: ${theme.colorFillTertiary};
       --accent-foreground: ${theme.colorText};
       --selected: ${theme.colorFillSecondary};
       --border: ${theme.colorBorder};
       --input: ${mix(0.5, theme.colorBorder, theme.colorText)};
-      --ring: ${readableColor(surface)};
+      --ring: ${theme.colorText};
       --font-sans: ${theme.fontFamily};
       --font-mono: ${theme.fontFamilyCode};
       --shadow-popover: ${theme.boxShadowSecondary};
@@ -100,7 +104,7 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --sidebar-accent: ${theme.colorFillTertiary};
       --sidebar-accent-foreground: ${theme.colorText};
       --sidebar-border: ${theme.colorBorderSecondary};
-      --sidebar-ring: ${readableColor(surface)};
+      --sidebar-ring: ${theme.colorText};
       --sidebar-muted: ${theme.colorTextSecondary};
       --sidebar-group: ${theme.colorTextSecondary};
       --orvilo-motion-fast: ${theme.motionDurationFast};

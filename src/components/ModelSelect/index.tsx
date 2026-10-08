@@ -88,7 +88,9 @@ interface FeatureTagItemProps {
 const featureTagVariants: Record<FeatureTagItemProps['color'], BadgeProps['variant']> = {
   gold: 'warning',
   info: 'info',
-  magenta: 'focus',
+  // The badge has no magenta role; the former `focus` variant read an undefined
+  // token and painted nothing.
+  magenta: 'secondary',
   success: 'success',
 };
 

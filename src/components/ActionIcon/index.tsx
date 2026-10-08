@@ -243,8 +243,9 @@ const ActionIcon = memo<ActionIconProps>(
         variant={VARIANT_MAP[variant]}
         className={cn(
           'text-muted-foreground hover:text-foreground active:text-foreground',
-          danger && 'text-muted-foreground hover:text-destructive active:text-destructive',
-          active && 'bg-muted text-foreground',
+          danger &&
+            'text-muted-foreground hover:text-destructive-text active:text-destructive-text',
+          active && 'bg-selected text-foreground hover:bg-selected',
           classNames?.root,
           className,
         )}

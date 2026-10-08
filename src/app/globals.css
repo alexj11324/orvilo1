@@ -10,6 +10,8 @@
     --font-sans: var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
             'Helvetica Neue', Arial, 'Noto Sans', sans-serif);
     --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-group: var(--sidebar-group);
+    --color-sidebar-muted: var(--sidebar-muted);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-accent: var(--sidebar-accent);
@@ -29,6 +31,7 @@
     --color-success: var(--success);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
+    --color-selected: var(--selected);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -83,15 +86,15 @@
     --popover: var(--ant-color-bg-elevated, #ffffff);
     --popover-foreground: var(--foreground);
     --primary-foreground: var(--primary-on-fill);
-    --secondary: var(--ant-color-bg-container-secondary, #fbfbfb);
+    --secondary: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --secondary-foreground: var(--foreground);
-    --muted: var(--ant-color-bg-container-secondary, #fbfbfb);
+    --muted: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --muted-foreground: var(--ant-color-text-secondary, #666666);
     --accent: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --accent-foreground: var(--foreground);
     --border: var(--ant-color-border, #e3e3e3);
     --input: color-mix(in srgb, var(--border), var(--foreground));
-    --ring: var(--ant-color-text-secondary, #666666);
+    --ring: var(--foreground);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -108,8 +111,8 @@
     --success-foreground: var(--success-text);
     --info-foreground: var(--info-text);
     --warning-foreground: var(--warning-text);
-    --invert: var(--color-zinc-900);
-    --invert-foreground: var(--color-zinc-50);
+    --invert: var(--foreground);
+    --invert-foreground: var(--card);
     --primary: var(--ant-color-primary, #222222);
     --primary-on-fill: #ffffff;
     --primary-subtle: color-mix(in srgb, var(--primary) 10%, var(--card));
@@ -130,7 +133,7 @@
     --destructive-on-fill: #080808;
     --destructive-subtle: color-mix(in srgb, var(--destructive) 10%, var(--card));
     --destructive-text: #080808;
-    --primary-hover: var(--ant-color-primary-hover, var(--primary));
+    --primary-hover: var(--ant-color-primary-hover, color-mix(in srgb, var(--primary) 90%, var(--card)));
     --primary-hover-foreground: var(--primary-foreground);
     --shadow-popover: var(--ant-box-shadow-secondary, 0 8px 16px -4px rgba(0,0,0,.2));
     --shadow-dialog: var(--ant-box-shadow, 0 20px 20px -8px rgba(0,0,0,.24));
@@ -143,33 +146,35 @@
     --sidebar-group: var(--muted-foreground);
     --sidebar-border: var(--ant-color-border-secondary, var(--border));
     --sidebar-ring: var(--ring);
-    --selected: var(--ant-color-fill-secondary, var(--muted));
+    --selected: var(--ant-color-fill-secondary, rgba(0,0,0,.06));
 }
 
 .dark,
 [data-theme='dark'] {
     --background: var(--ant-color-bg-layout, #000000);
-    --foreground: var(--ant-color-text, #f7f7f7);
+    --foreground: var(--ant-color-text, #ffffff);
     --card: var(--ant-color-bg-container, #0d0d0d);
     --card-foreground: var(--foreground);
     --popover: var(--ant-color-bg-elevated, #1a1a1a);
     --popover-foreground: var(--foreground);
     --primary-foreground: var(--primary-on-fill);
-    --secondary: var(--ant-color-bg-container-secondary, #070707);
+    --secondary: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --secondary-foreground: var(--foreground);
-    --muted: var(--ant-color-bg-container-secondary, #070707);
+    --muted: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --muted-foreground: var(--ant-color-text-secondary, #aaaaaa);
     --accent: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --accent-foreground: var(--foreground);
     --border: var(--ant-color-border, #202020);
     --input: color-mix(in srgb, var(--border), var(--foreground));
-    --ring: var(--ant-color-text-secondary, #aaaaaa);
+    --ring: var(--foreground);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --sidebar: var(--ant-color-bg-layout, #000000);
+    --invert: var(--foreground);
+    --invert-foreground: var(--card);
     --primary: var(--ant-color-primary, #eeeeee);
     --primary-on-fill: #080808;
     --primary-subtle: color-mix(in srgb, var(--primary) 10%, var(--card));
@@ -190,7 +195,7 @@
     --destructive-on-fill: #080808;
     --destructive-subtle: color-mix(in srgb, var(--destructive) 10%, var(--card));
     --destructive-text: #ffffff;
-    --primary-hover: var(--ant-color-primary-hover, var(--primary));
+    --primary-hover: var(--ant-color-primary-hover, color-mix(in srgb, var(--primary) 90%, var(--card)));
     --primary-hover-foreground: var(--primary-foreground);
     --shadow-popover: var(--ant-box-shadow-secondary, 0 8px 16px -4px rgba(0,0,0,.2));
     --shadow-dialog: none;
@@ -203,7 +208,7 @@
     --sidebar-group: var(--muted-foreground);
     --sidebar-border: var(--ant-color-border-secondary, var(--border));
     --sidebar-ring: var(--ring);
-    --selected: var(--ant-color-fill-secondary, var(--muted));
+    --selected: var(--ant-color-fill-secondary, rgba(255,255,255,.1));
 }
 
 /* ReUI menu utilities shipped by the base-nova registry components.
@@ -213,6 +218,18 @@
     background-color: color-mix(in oklab, var(--popover) 80%, transparent);
     backdrop-filter: blur(12px) saturate(1.5);
     -webkit-backdrop-filter: blur(12px) saturate(1.5);
+}
+
+/* --muted, --secondary, --accent and --selected are translucent washes. A sticky
+   cell that must hide the content scrolling under it paints the wash as an
+   image over an opaque base colour: `bg-background wash-muted`. The name has no
+   `bg-` prefix so tailwind-merge keeps it beside the base colour. */
+@utility wash-* {
+    background-image: linear-gradient(--value(--color-*), --value(--color-*));
+    background-image: linear-gradient(
+        color-mix(in oklab, --value(--color-*) calc(--modifier(integer) * 1%), transparent),
+        color-mix(in oklab, --value(--color-*) calc(--modifier(integer) * 1%), transparent)
+    );
 }
 
 @layer base {

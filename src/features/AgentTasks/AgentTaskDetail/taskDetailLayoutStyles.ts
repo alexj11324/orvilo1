@@ -135,6 +135,9 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
       width: 100%;
+
+      /* Same left edge as the value-only property rows above. */
+      padding-inline: 0;
       background: transparent;
     }
   `,

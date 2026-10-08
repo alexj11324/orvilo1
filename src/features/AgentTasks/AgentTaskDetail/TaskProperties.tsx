@@ -359,7 +359,7 @@ const TaskProperties = memo(() => {
               render={
                 <Button
                   aria-label={t('taskDetail.property.add')}
-                  className="w-fit text-muted-foreground"
+                  className="h-7 w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
                   size="sm"
                   variant="ghost"
                 >

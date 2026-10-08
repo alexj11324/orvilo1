@@ -107,7 +107,7 @@ const SearchBar = memo<SearchBarProps>(
           <Spinner className="absolute right-2 text-muted-foreground size-3" />
         ) : inputValue ? (
           <Button
-            aria-label={t('clearSearch')}
+            aria-label={t('clearSearch', { defaultValue: 'Clear search' })}
             className="absolute right-1 text-muted-foreground"
             size="icon-xs"
             type="button"

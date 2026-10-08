@@ -197,7 +197,7 @@ const Select = <Value extends string | number = string>({
         {showSearch && (
           <div className="px-1 pb-1">
             <Input
-              aria-label={t('search')}
+              aria-label={t('search', { defaultValue: 'Search' })}
               className="h-7 px-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}

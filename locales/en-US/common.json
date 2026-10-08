@@ -6,6 +6,7 @@
   "agentLabel.manage": "Manage labels",
   "agentLabel.menuTitle": "Labels",
   "agentViewAll.clearSearch": "Clear search",
+  "agentViewAll.createAgent": "Create agent",
   "agentViewAll.empty": "No agents yet",
   "agentViewAll.form.grouping": "Grouping",
   "agentViewAll.form.ordering": "Ordering",

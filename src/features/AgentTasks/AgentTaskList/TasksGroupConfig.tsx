@@ -344,6 +344,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               icon={Settings2Icon}
               size={DESKTOP_HEADER_ICON_SMALL_SIZE}
               style={{ borderRadius: 9999 }}
+              title={t('taskList.displayOptions')}
             />
           }
         />

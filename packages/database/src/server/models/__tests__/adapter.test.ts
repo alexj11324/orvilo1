@@ -361,7 +361,7 @@ describe('DrizzleAdapter', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should allow RefreshToken reuse within grace period', async () => {
+    it('should expose persisted consumed epoch for unexpired RefreshToken within 180 seconds', async () => {
       const adapter = new DrizzleAdapter('RefreshToken', serverDB);
       const payload = {
         accountId: testUserId,
@@ -373,13 +373,20 @@ describe('DrizzleAdapter', () => {
       // Consume the record
       await adapter.consume(testId);
 
-      // Within grace period (180 seconds), should still find the record
+      const stored = await serverDB.query.oidcRefreshTokens.findFirst({
+        where: eq(oidcRefreshTokens.id, testId),
+      });
+      if (!stored?.consumedAt) throw new Error('Refresh token consumption was not persisted');
+
+      // The SDK must detect replay immediately instead of treating the token as unused.
       const result = await adapter.find(testId);
-      expect(result).toBeDefined();
-      expect(result).toEqual(payload);
+      expect(result).toEqual({
+        ...payload,
+        consumed: Math.floor(stored.consumedAt.getTime() / 1000),
+      });
     });
 
-    it('should reject RefreshToken reuse after grace period expires', async () => {
+    it('should expose consumed epoch beyond 180 seconds until RefreshToken expiry', async () => {
       const adapter = new DrizzleAdapter('RefreshToken', serverDB);
       const payload = {
         accountId: testUserId,
@@ -388,17 +395,18 @@ describe('DrizzleAdapter', () => {
       };
       await adapter.upsert(testId, payload, 3600);
 
-      // Directly update consumedAt to a past time (beyond grace period)
-      // Grace period is 180 seconds, set to 200 seconds ago
+      // An old consumed token must remain visible for SDK family revocation until expiry.
       const pastConsumedAt = new Date(Date.now() - 200 * 1000);
       await serverDB
         .update(oidcRefreshTokens)
         .set({ consumedAt: pastConsumedAt })
         .where(eq(oidcRefreshTokens.id, testId));
 
-      // Grace period expired, should return undefined
       const result = await adapter.find(testId);
-      expect(result).toBeUndefined();
+      expect(result).toEqual({
+        ...payload,
+        consumed: Math.floor(pastConsumedAt.getTime() / 1000),
+      });
     });
   });
 

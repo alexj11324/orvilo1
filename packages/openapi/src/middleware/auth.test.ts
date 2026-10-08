@@ -1,6 +1,9 @@
 import { API_KEY_PREFIX } from '@orvilo/utils/apiKey';
+import { TRPCError } from '@trpc/server';
+import debug from 'debug';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { errors } from 'jose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requireAuth, userAuthMiddleware } from './auth';
@@ -246,5 +249,51 @@ describe('OpenAPI auth middleware', () => {
       ).status,
     ).toBe(401);
     expect(mockApiKeyFindByKey).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('OIDC grant infrastructure boundary', () => {
+  beforeEach(() => {
+    mockAuthEnv.ENABLE_OIDC = true;
+    mockValidateApiKeyFormat.mockReturnValue(false);
+    mockValidateOIDCJWT.mockReset();
+    mockExtractBearerToken.mockReset();
+  });
+  it.each(['aud', 'iss', 'exp'])(
+    'does not log retained JOSE claims for invalid %s',
+    async (claim) => {
+      const previous = debug.disable();
+      debug.enable('orvilo-hono:auth-middleware');
+      const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+      const payload = { privateClaim: 'OPENAPI_JOSE_LOG_SENTINEL' };
+      const cause =
+        claim === 'exp'
+          ? new errors.JWTExpired('expired', payload, claim, 'check_failed')
+          : new errors.JWTClaimValidationFailed('invalid claim', payload, claim, 'check_failed');
+      const error = new TRPCError({ code: 'UNAUTHORIZED', cause });
+      mockExtractBearerToken.mockReturnValue('oidc-token');
+      mockValidateOIDCJWT.mockRejectedValueOnce(error);
+      try {
+        const response = await createApp().request('/protected', {
+          headers: { Authorization: 'Bearer oidc-token' },
+        });
+        expect(response.status).toBe(401);
+        expect(error.cause).toBe(cause);
+        expect(output).toHaveBeenCalled();
+        expect(JSON.stringify(output.mock.calls)).not.toContain('OPENAPI_JO');
+      } finally {
+        output.mockRestore();
+        debug.enable(previous);
+      }
+    },
+  );
+
+  it('returns 503 on database failure without asking for reauthentication', async () => {
+    mockExtractBearerToken.mockReturnValue('oidc-token');
+    mockValidateOIDCJWT.mockRejectedValueOnce(new Error('database unavailable'));
+    const response = await createApp().request('/protected', {
+      headers: { Authorization: 'Bearer oidc-token' },
+    });
+    expect(response.status).toBe(503);
   });
 });

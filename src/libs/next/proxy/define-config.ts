@@ -70,7 +70,7 @@ export function defineConfig() {
 
   const defaultMiddleware = (request: NextRequest) => {
     const url = new URL(request.url);
-    logDefault('Processing request: %s %s', request.method, request.url);
+    logDefault('Processing request: %s %s', request.method, url.pathname);
 
     // skip all api requests
     if (backendApiEndpoints.some((path) => url.pathname.startsWith(path))) {
@@ -120,7 +120,7 @@ export function defineConfig() {
     if (appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL) {
       logDefault('Local container rewrite enabled: %O', {
         host: '127.0.0.1',
-        original: url.toString(),
+        original: url.pathname,
         port: process.env.PORT || '3210',
         protocol: 'http',
       });
@@ -211,7 +211,7 @@ export function defineConfig() {
 
     url.pathname = nextPathname;
 
-    logDefault('nextURL after rewrite: %s', url.toString());
+    logDefault('Path after rewrite: %s', url.pathname);
     // build rewrite response first
     const rewrite = NextResponse.rewrite(url, { status: 200 });
 
@@ -260,6 +260,8 @@ export function defineConfig() {
     '/oidc/handoff',
     '/oidc/device/auth',
     '/oidc/token',
+    // Public OAuth clients authenticate revocation with their refresh token, not a web cookie.
+    '/oidc/token/revocation',
     // Interaction details for the consent/login page — must be reachable
     // before the user has a session, so it cannot be session-gated.
     '/oidc/interaction/(.*)',
@@ -276,14 +278,18 @@ export function defineConfig() {
   ]);
 
   const sessionAuthMiddleware = async (req: NextRequest) => {
-    logSession('Session middleware processing request: %s %s', req.method, req.url);
+    logSession('Session middleware processing request: %s %s', req.method, req.nextUrl.pathname);
 
     const response = defaultMiddleware(req);
 
     // when enable auth protection, only public route is not protected, others are all protected
     const isProtected = !isPublicRoute(req);
 
-    logSession('Route protection status: %s, %s', req.url, isProtected ? 'protected' : 'public');
+    logSession(
+      'Route protection status: %s, %s',
+      req.nextUrl.pathname,
+      isProtected ? 'protected' : 'public',
+    );
 
     // Skip session lookup for public routes to reduce latency
     if (!isProtected) return response;

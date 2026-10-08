@@ -33,8 +33,12 @@ export const resolveAccountsReturnUrl = (
 
   try {
     const url = new URL(value);
+    const localDevelopment =
+      import.meta.env.DEV &&
+      url.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
     if (
-      url.protocol === 'https:' &&
+      (url.protocol === 'https:' || localDevelopment) &&
       url.origin === productOrigin &&
       !url.username &&
       !url.password

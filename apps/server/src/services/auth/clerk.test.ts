@@ -1,12 +1,18 @@
 // @vitest-environment node
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { UserItem } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { authEnv } from '@/envs/auth';
 
-import { type ClerkApiUser, provisionClerkUser } from './clerk';
+import {
+  assertClerkSessionActive,
+  type ClerkApiUser,
+  ClerkAuthError,
+  provisionClerkUser,
+} from './clerk';
 
 const initUser = vi.hoisted(() => vi.fn());
 
@@ -205,4 +211,48 @@ describe('provisionClerkUser', () => {
     expect(updateSet).not.toHaveBeenCalled();
     expect(initUser).not.toHaveBeenCalled();
   });
+});
+
+describe('Clerk upstream session authorization', () => {
+  const claims = { sessionId: 'sid-fixture', userId: 'user-fixture' };
+  beforeEach(() => {
+    vi.spyOn(authEnv, 'CLERK_SECRET_KEY', 'get').mockReturnValue('fixture-secret');
+  });
+  afterEach(() => vi.restoreAllMocks());
+  it.each([
+    { id: 'foreign', user_id: claims.userId, status: 'active' },
+    { id: claims.sessionId, user_id: 'foreign', status: 'active' },
+    { id: claims.sessionId, user_id: claims.userId, status: 'revoked' },
+    { id: claims.sessionId, user_id: claims.userId, status: 'active', actor: {} },
+    {
+      id: claims.sessionId,
+      user_id: claims.userId,
+      status: 'active',
+      expire_at: Date.now() - 1000,
+    },
+  ])('rejects mismatched, revoked, impersonated or expired upstream sessions', async (body) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(body));
+    await expect(assertClerkSessionActive(claims)).rejects.toMatchObject({ status: 401 });
+  });
+  it('classifies missing SID as invalid authentication', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+    await expect(assertClerkSessionActive(claims)).rejects.toMatchObject({ status: 401 });
+  });
+  it.each(['network', 'server', 'malformed'])(
+    'classifies %s failure as infrastructure',
+    async (failure) => {
+      const fetch = vi.spyOn(globalThis, 'fetch');
+      if (failure === 'network') fetch.mockRejectedValue(new Error('network unavailable'));
+      else
+        fetch.mockResolvedValue(
+          new Response(failure === 'malformed' ? 'broken' : null, {
+            status: failure === 'server' ? 503 : 200,
+          }),
+        );
+      await expect(assertClerkSessionActive(claims)).rejects.toMatchObject({
+        status: 503,
+        name: ClerkAuthError.name,
+      });
+    },
+  );
 });

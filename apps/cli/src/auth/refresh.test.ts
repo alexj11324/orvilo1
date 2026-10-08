@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { loadSettings } from '../settings';
+import { resolveServerUrl } from '../settings';
 import type { StoredCredentials } from './credentials';
 import { loadCredentials, saveCredentials } from './credentials';
 import { getValidToken } from './refresh';
@@ -10,7 +10,7 @@ vi.mock('./credentials', () => ({
   saveCredentials: vi.fn(),
 }));
 vi.mock('../settings', () => ({
-  loadSettings: vi.fn().mockReturnValue({ serverUrl: 'https://orvilo.aspectlylabs.com' }),
+  resolveServerUrl: vi.fn().mockReturnValue('https://orvilo.aspectlylabs.com'),
 }));
 
 describe('getValidToken', () => {
@@ -196,7 +196,7 @@ describe('getValidToken', () => {
       refreshToken: 'my-refresh-token',
     };
     vi.mocked(loadCredentials).mockReturnValue(creds);
-    vi.mocked(loadSettings).mockReturnValueOnce({ serverUrl: 'https://my-server.com' });
+    vi.mocked(resolveServerUrl).mockReturnValueOnce('https://my-server.com');
 
     vi.mocked(fetch).mockResolvedValue({
       json: vi.fn().mockResolvedValue({

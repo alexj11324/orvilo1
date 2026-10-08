@@ -336,9 +336,7 @@ export class BackendProxyProtocolManager {
       responseHeaders.set('Access-Control-Allow-Credentials', 'true');
     }
 
-    if (isDev) {
-      responseHeaders.set('x-dev-oidc-auth', token);
-    }
+    responseHeaders.delete('x-dev-oidc-auth');
 
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', '*');

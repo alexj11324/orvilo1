@@ -159,7 +159,6 @@ export class StaticFileServerManager {
       const url = new URL(req.url, `http://127.0.0.1:${this.serverPort}`);
       logger.debug(`Processing HTTP file request: ${req.url}`);
       logger.debug(`Request method: ${req.method}`);
-      logger.debug(`Request headers: ${JSON.stringify(req.headers)}`);
 
       // Extract file path: extract the relative path from /desktop-file/path/to/file.png
       let filePath = decodeURIComponent(url.pathname.slice(1)); // Remove the leading /

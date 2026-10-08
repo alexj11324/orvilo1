@@ -130,7 +130,9 @@ describe('exchangeClerkSession trusted external identity binding', () => {
   const mint = () =>
     mocks.mintSession.mockResolvedValue({
       expiresAt: new Date(Date.now() + 60_000),
-      token: 'web-session-fixture',
+      bearerToken: 'web-session-fixture',
+      createdAt: new Date(),
+      token: 'sha256:fixture',
       userId: canonicalId,
     } as Awaited<ReturnType<AuthSessionModel['create']>>);
 
@@ -143,7 +145,9 @@ describe('exchangeClerkSession trusted external identity binding', () => {
         expect(bindings).toEqual([binding(localId)]);
         return {
           expiresAt: new Date(Date.now() + 60_000),
-          token: 'web-session-fixture',
+          bearerToken: 'web-session-fixture',
+          createdAt: new Date(),
+          token: 'sha256:fixture',
           userId,
         } as Awaited<ReturnType<AuthSessionModel['create']>>;
       });
@@ -151,7 +155,17 @@ describe('exchangeClerkSession trusted external identity binding', () => {
       const result = await exchangeClerkSession(db, { sessionToken: 'verified-token-fixture' });
 
       expect(result.user.id).toBe(localId);
-      expect(create).toHaveBeenCalledWith(expect.objectContaining({ userId: localId }));
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: localId,
+          clerkSessionId: 'clerk-session',
+          clerkUserId: externalId,
+        }),
+      );
+      expect(result.cookie.value).toMatch(/^[\w-]{64}$/);
+      expect(result.cookie.options.expires!.getTime()).toBeGreaterThan(
+        Date.now() + 29 * 24 * 60 * 60 * 1000,
+      );
       expect(mocks.fetchClerkUser).toHaveBeenCalledExactlyOnceWith(externalId);
     },
   );

@@ -1,5 +1,8 @@
 import { AUTH_FAILURE_HEADER } from '@orvilo/desktop-bridge';
 import { API_KEY_PREFIX } from '@orvilo/utils/apiKey';
+import { TRPCError } from '@trpc/server';
+import debug from 'debug';
+import { errors } from 'jose';
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -468,7 +471,7 @@ describe('createLambdaContext', () => {
       code: 'ERR_JWT_EXPIRED',
     });
     mockValidateOIDCJWT.mockRejectedValueOnce(
-      Object.assign(new Error('JWT token validation failed'), { cause }),
+      new TRPCError({ code: 'UNAUTHORIZED', cause, message: 'JWT token validation failed' }),
     );
     mockGetSession.mockResolvedValueOnce(null);
 
@@ -478,12 +481,14 @@ describe('createLambdaContext', () => {
 
     const context = await createLambdaContext(request);
 
-    expect(context.userId).toBeUndefined();
+    expect(context.userId).toBeNull();
     expect(context.resHeaders?.get(AUTH_FAILURE_HEADER)).toBe('jwt_expired');
   });
 
-  it('does not record a failure when the session fallback authenticates the user', async () => {
-    mockValidateOIDCJWT.mockRejectedValueOnce(new Error('JWT token validation failed'));
+  it('rejects a revoked OIDC grant without cookie fallback', async () => {
+    mockValidateOIDCJWT.mockRejectedValueOnce(
+      new TRPCError({ code: 'UNAUTHORIZED', message: 'OIDC grant is no longer active' }),
+    );
 
     const request = new NextRequest('https://example.com/trpc/lambda', {
       headers: { 'Oidc-Auth': 'stale-token' },
@@ -491,8 +496,8 @@ describe('createLambdaContext', () => {
 
     const context = await createLambdaContext(request);
 
-    expect(context.userId).toBe('session-user');
-    expect(context.resHeaders?.get(AUTH_FAILURE_HEADER)).toBeNull();
+    expect(context.userId).toBeNull();
+    expect(mockGetSession).not.toHaveBeenCalled();
   });
 
   it('records user_inactive for a banned OIDC user', async () => {
@@ -515,5 +520,57 @@ describe('createLambdaContext', () => {
 
     expect(context.userId).toBeUndefined();
     expect(context.resHeaders?.get(AUTH_FAILURE_HEADER)).toBe('no_token');
+  });
+});
+
+describe('authentication infrastructure failures', () => {
+  beforeEach(() => {
+    mockGetSession.mockReset();
+    mockValidateOIDCJWT.mockReset();
+    mockIsOIDCUserInactiveError.mockReset();
+  });
+  it('does not log the retained JOSE payload while classifying unauthorized OIDC', async () => {
+    const previous = debug.disable();
+    debug.enable('orvilo-trpc:lambda:context');
+    const output = vi.spyOn(debug, 'log').mockImplementation(() => {});
+    const consoleOutput = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cause = new errors.JWTClaimValidationFailed(
+      'invalid audience',
+      { privateClaim: 'TRPC_JOSE_LOG_SENTINEL' },
+      'aud',
+      'check_failed',
+    );
+    mockValidateOIDCJWT.mockRejectedValueOnce(new TRPCError({ code: 'UNAUTHORIZED', cause }));
+    try {
+      const context = await createLambdaContext(
+        new NextRequest('https://example.com/trpc/lambda', { headers: { 'Oidc-Auth': 'token' } }),
+      );
+      expect(context.userId).toBeNull();
+      expect(context.resHeaders?.get(AUTH_FAILURE_HEADER)).toBe('jwt_claims');
+      expect(JSON.stringify([output.mock.calls, consoleOutput.mock.calls])).not.toContain(
+        'TRPC_JOSE_LOG_SENTINEL',
+      );
+    } finally {
+      output.mockRestore();
+      consoleOutput.mockRestore();
+      debug.enable(previous);
+    }
+  });
+
+  it('does not flatten grant database failure to anonymous or cookie fallback', async () => {
+    const outage = new Error('database unavailable');
+    mockValidateOIDCJWT.mockRejectedValueOnce(outage);
+    await expect(
+      createLambdaContext(
+        new NextRequest('https://example.com/trpc/lambda', { headers: { 'Oidc-Auth': 'token' } }),
+      ),
+    ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR', cause: outage });
+  });
+  it('does not flatten cookie session infrastructure failure to anonymous', async () => {
+    const outage = new Error('Clerk unavailable');
+    mockGetSession.mockRejectedValueOnce(outage);
+    await expect(
+      createLambdaContext(new NextRequest('https://example.com/trpc/lambda')),
+    ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR', cause: outage });
   });
 });

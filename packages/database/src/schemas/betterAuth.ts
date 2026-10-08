@@ -27,6 +27,9 @@ import { users } from './user';
 export const session = pgTable(
   'auth_sessions',
   {
+    /** Verified upstream SID/sub from the Clerk exchange; legacy sessions remain unbound. */
+    clerkSessionId: text('clerk_session_id'),
+    clerkUserId: text('clerk_user_id'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     expiresAt: timestamp('expires_at').notNull(),
     id: text('id').primaryKey(),

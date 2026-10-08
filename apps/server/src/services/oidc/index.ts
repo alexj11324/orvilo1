@@ -65,24 +65,21 @@ export class OIDCService {
     if (existingGrantId) {
       // If a previous interaction step already associated a Grant
       grant = await this.provider.Grant.find(existingGrantId);
-      log('Found existing grantId: %s', existingGrantId);
+      log('Existing grant lookup completed');
       if (grant) {
         const accountMismatch = grant.accountId !== accountId;
         const clientMismatch = grant.clientId !== clientId;
 
         if (accountMismatch || clientMismatch) {
           log(
-            'Discarding stale grant %s due to mismatch (stored account=%s, client=%s; expected account=%s, client=%s)',
-            existingGrantId,
-            grant.accountId,
-            grant.clientId,
-            accountId,
-            clientId,
+            'Discarding stale grant due to mismatch (account=%s, client=%s)',
+            accountMismatch,
+            clientMismatch,
           );
           grant = undefined;
         }
       } else {
-        log('Existing grantId %s not found in storage, will create a new grant', existingGrantId);
+        log('Existing grant not found in storage; creating a new grant');
       }
     }
 
@@ -92,7 +89,7 @@ export class OIDCService {
         accountId,
         clientId,
       });
-      log('Created new Grant for account %s and client %s', accountId, clientId);
+      log('Created new grant for client %s', clientId);
     }
 
     return grant;

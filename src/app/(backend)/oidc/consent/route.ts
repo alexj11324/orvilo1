@@ -8,7 +8,7 @@ import { OIDCService } from '@/server/services/oidc';
 const log = debug('orvilo-oidc:consent');
 
 export async function POST(request: NextRequest) {
-  log('Received POST request for /oidc/consent, URL: %s', request.url);
+  log('Received POST request for /oidc/consent');
   try {
     const formData = await request.formData();
     const consent = formData.get('consent') as string;
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
     }
 
-    log('POST /oauth/consent - uid=%s, choice=%s', uid, consent);
+    log('POST /oauth/consent - choice=%s', consent);
 
     const oidcService = await OIDCService.initialize();
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       log(
         'Error: Interaction details not found - %s',
-        error instanceof Error ? error.message : 'unknown error',
+        error instanceof Error ? error.name : 'unknown error',
       );
       if (error instanceof Error && error.message.includes('interaction session not found')) {
         return NextResponse.json(
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (consent === 'accept') {
       log(`User accepted the request, Handling 'login' prompt`);
       const { userId } = await getUserAuth();
-      log('Obtained userId: %s', userId);
+      log('Authenticated web identity available: %s', Boolean(userId));
 
       // Recover through the normal sign-in page after validating the interaction cookie.
       if (!userId && details.deviceCode) {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
         // 4. Save Grant object to get its jti (grantId)
         const newGrantId = await grant.save();
-        log('Saved grant with ID: %s', newGrantId);
+        log('Saved consent grant');
 
         // 5. Prepare result containing grantId
         result = { consent: { grantId: newGrantId } };
@@ -134,10 +134,10 @@ export async function POST(request: NextRequest) {
       log('User %s the authorization', consent);
     }
 
-    log('Interaction Result: %O', result);
+    log('Interaction result prepared');
 
     const internalRedirectUrlString = await oidcService.getInteractionResult(uid, result);
-    log('OIDC Provider internal redirect URL string: %s', internalRedirectUrlString);
+    log('OIDC Provider resume URL prepared');
 
     // The gateway rewrites Host on the way to the origin, so the server cannot tell which
     // public origin the browser is on. A relative Location keeps it on the origin that holds
@@ -145,10 +145,10 @@ export async function POST(request: NextRequest) {
     const { pathname, search, hash } = new URL(internalRedirectUrlString);
     const location = `${pathname}${search}${hash}`;
 
-    log('Redirecting to: %s', location);
+    log('Redirecting to resume authorization');
     return new NextResponse(null, { headers: { location }, status: 303 });
   } catch (error) {
-    console.error('Error processing consent:', error);
+    console.error('Error processing consent:', error instanceof Error ? error.name : 'unknown');
     return NextResponse.json(
       {
         error: 'server_error',

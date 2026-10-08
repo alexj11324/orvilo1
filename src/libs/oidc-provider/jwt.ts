@@ -2,12 +2,15 @@ import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import urlJoin from 'url-join';
 
+import { getServerDB } from '@/database/core/db-adaptor';
 import { appEnv } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
 import {
   isLegacyHeteroOperationClaims,
   validateHeteroOperationClaims,
 } from '@/libs/trpc/utils/internalJwt';
+
+import { assertOIDCGrantActive } from './access-control';
 
 export const API_AUDIENCE = 'urn:orvilo:chat';
 
@@ -121,80 +124,97 @@ export const validateOIDCJWT = async (
   // while the real problem is server-side.
   const publicKey = await getVerificationKey();
 
-  try {
-    const { decodeJwt, jwtVerify } = await import('jose');
-    // Select the contract before verification; only the verified claims below
-    // can authorize a token. Unknown purposes never use an internal fallback.
-    const purpose = decodeJwt(token).purpose;
-    const { payload, protectedHeader } = await jwtVerify(token, publicKey, {
-      algorithms: ['RS256'],
-      requiredClaims: ['sub', 'iat', 'exp'],
-      ...(purpose === undefined
-        ? {
-            audience: API_AUDIENCE,
-            issuer: urlJoin(appEnv.APP_URL!, '/oidc'),
-            requiredClaims: ['sub', 'iat', 'exp', 'jti', 'client_id'],
-            typ: 'at+jwt',
-          }
-        : {}),
-    });
+  const validate = async () => {
+    try {
+      const { decodeJwt, jwtVerify } = await import('jose');
+      // Select the contract before verification; only the verified claims below
+      // can authorize a token. Unknown purposes never use an internal fallback.
+      const purpose = decodeJwt(token).purpose;
+      const { payload, protectedHeader } = await jwtVerify(token, publicKey, {
+        algorithms: ['RS256'],
+        requiredClaims: ['sub', 'iat', 'exp'],
+        ...(purpose === undefined
+          ? {
+              audience: API_AUDIENCE,
+              issuer: urlJoin(appEnv.APP_URL!, '/oidc'),
+              requiredClaims: ['sub', 'iat', 'exp', 'jti', 'client_id', 'grantId'],
+              typ: 'at+jwt',
+            }
+          : {}),
+      });
 
-    if (
-      (purpose === undefined && (typeof payload.client_id !== 'string' || !payload.client_id)) ||
-      (purpose === 'cli-sandbox' &&
-        (payload.iss !== undefined ||
-          payload.aud !== undefined ||
-          payload.client_id !== undefined ||
-          protectedHeader.typ !== undefined)) ||
-      (purpose === 'hetero-operation' &&
-        (!allowHeteroOperation ||
-          (!validateHeteroOperationClaims(payload) && !isLegacyHeteroOperationClaims(payload)))) ||
-      (purpose !== undefined && purpose !== 'cli-sandbox' && purpose !== 'hetero-operation')
-    ) {
-      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API access token contract' });
-    }
+      if (
+        (purpose === undefined &&
+          (typeof payload.client_id !== 'string' ||
+            !payload.client_id ||
+            typeof payload.grantId !== 'string' ||
+            !payload.grantId)) ||
+        (purpose === 'cli-sandbox' &&
+          (payload.iss !== undefined ||
+            payload.aud !== undefined ||
+            payload.client_id !== undefined ||
+            protectedHeader.typ !== undefined)) ||
+        (purpose === 'hetero-operation' &&
+          (!allowHeteroOperation ||
+            (!validateHeteroOperationClaims(payload) &&
+              !isLegacyHeteroOperationClaims(payload)))) ||
+        (purpose !== undefined && purpose !== 'cli-sandbox' && purpose !== 'hetero-operation')
+      ) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API access token contract' });
+      }
 
-    log('JWT validation successful, payload: %O', payload);
+      log('JWT validation successful');
 
-    const userId = payload.sub;
-    const clientId = payload.client_id;
-    const aud = payload.aud;
+      const userId = payload.sub;
+      const clientId = payload.client_id;
+      const aud = payload.aud;
 
-    if (typeof userId !== 'string' || !userId) {
+      if (typeof userId !== 'string' || !userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'JWT token is missing user ID (sub)',
+        });
+      }
+
+      return {
+        clientId,
+        payload,
+        tokenData: {
+          aud,
+          client_id: clientId,
+          exp: payload.exp,
+          iat: payload.iat,
+          jti: payload.jti,
+          purpose: payload.purpose as string | undefined,
+          scope: payload.scope,
+          sub: userId,
+        },
+        userId,
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      log('JWT validation failed (%s)', error instanceof Error ? error.name : 'unknown');
+
+      // Preserve the original jose error via `cause` so upstream middleware
+      // can still inspect specific codes like `ERR_JWT_EXPIRED`.
       throw new TRPCError({
+        cause: error,
         code: 'UNAUTHORIZED',
-        message: 'JWT token is missing user ID (sub)',
+        message: `JWT token validation failed: ${(error as Error).message}`,
       });
     }
-
-    return {
-      clientId,
-      payload,
-      tokenData: {
-        aud,
-        client_id: clientId,
-        exp: payload.exp,
-        iat: payload.iat,
-        jti: payload.jti,
-        purpose: payload.purpose as string | undefined,
-        scope: payload.scope,
-        sub: userId,
-      },
-      userId,
-    };
-  } catch (error) {
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    log('JWT validation failed: %O', error);
-
-    // Preserve the original jose error via `cause` so upstream middleware
-    // can still inspect specific codes like `ERR_JWT_EXPIRED`.
-    throw new TRPCError({
-      cause: error,
-      code: 'UNAUTHORIZED',
-      message: `JWT token validation failed: ${(error as Error).message}`,
+  };
+  const result = await validate();
+  // Keep database failures outside the JOSE error wrapper: callers must report an outage.
+  if (result.payload.purpose === undefined) {
+    await assertOIDCGrantActive(await getServerDB(), {
+      clientId: result.clientId as string,
+      grantId: result.payload.grantId as string,
+      userId: result.userId,
     });
   }
+  return result;
 };

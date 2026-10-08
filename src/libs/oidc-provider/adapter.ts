@@ -10,24 +10,11 @@ import {
   oidcSessions,
 } from '@orvilo/database/schemas';
 import debug from 'debug';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
+import { errors } from 'oidc-provider';
 
 // Create adapter logging namespace
 const log = debug('orvilo-oidc:adapter');
-
-/**
- * Grace period for consumed RefreshToken (in seconds)
- *
- * When rotateRefreshToken is enabled, the old refresh token is consumed
- * when a new one is issued. However, if the client fails to receive/save
- * the new token (network issues, crashes), the old token becomes unusable.
- *
- * This grace period allows the consumed refresh token to be reused within
- * a short window, giving clients a chance to retry the refresh operation.
- *
- * Default: 180 seconds (3 minutes)
- */
-const REFRESH_TOKEN_GRACE_PERIOD_SECONDS = 180;
 
 class OIDCAdapter {
   private db: OrviloDatabase;
@@ -98,9 +85,6 @@ class OIDCAdapter {
    * Create or update model instance
    */
   async upsert(id: string, payload: any, expiresIn: number): Promise<void> {
-    log('[%s] upsert called - id: %s, expiresIn: %d', this.name, id, `${expiresIn}s`);
-    log('[%s] payload: %O', this.name, payload);
-
     const table = this.getTable();
     if (!table) {
       log('[%s] upsert - No table for model, returning early', this.name);
@@ -153,9 +137,8 @@ class OIDCAdapter {
             } as any,
             target: (table as any).id,
           });
-        log('[Client] Successfully upserted client: %s', id);
       } catch (error) {
-        log('[Client] ERROR upserting client: %O', error);
+        console.error('[OIDC Adapter] Client upsert failed');
         throw error;
       }
       return;
@@ -174,7 +157,6 @@ class OIDCAdapter {
     // Add specific fields
     if (payload.accountId) {
       record.userId = payload.accountId;
-      log('[%s] Setting userId: %s', this.name, payload.accountId);
     } else {
       try {
         const { getUserAuth } = await import('@orvilo/utils/server');
@@ -192,29 +174,24 @@ class OIDCAdapter {
             record.userId = userId;
             log('[%s] Setting userId from auth context: %s', this.name, userId);
           }
-        } catch (authError) {
-          log('[%s] Error getting userId from auth context: %O', this.name, authError);
+        } catch {
           // If getting userId fails, continue processing without throwing error
         }
-      } catch (importError) {
-        log('[%s] Error importing auth module: %O', this.name, importError);
+      } catch {
         // If importing module fails, continue processing without throwing error
       }
     }
 
     if (payload.clientId) {
       record.clientId = payload.clientId;
-      log('[%s] Setting clientId: %s', this.name, payload.clientId);
     }
 
     if (payload.grantId) {
       record.grantId = payload.grantId;
-      log('[%s] Setting grantId: %s', this.name, payload.grantId);
     }
 
     if (this.name === 'DeviceCode' && payload.userCode) {
       record.userCode = payload.userCode;
-      log('[DeviceCode] Setting userCode: %s', payload.userCode);
     }
 
     try {
@@ -236,14 +213,12 @@ class OIDCAdapter {
           } as any,
           target: (table as any).id,
         });
-      log('[%s] Successfully upserted record: %s', this.name, id);
 
       if (this.name === 'AccessToken' || this.name === 'DeviceCode') {
         this.stampClientLastUsed(payload.clientId);
       }
     } catch (error) {
-      log('[%s] ERROR upserting record: %O', this.name, error);
-      console.error(`[OIDC Adapter] Error upserting ${this.name}:`, error);
+      console.error(`[OIDC Adapter] Error upserting ${this.name}:`);
       throw error;
     }
   }
@@ -257,8 +232,8 @@ class OIDCAdapter {
       .update(oidcClients)
       .set({ lastUsedAt: new Date() })
       .where(eq(oidcClients.id, clientId))
-      .then(undefined, (error: unknown) => {
-        log('[%s] Failed to stamp last_used_at for client %s: %O', this.name, clientId, error);
+      .then(undefined, () => {
+        console.error('[OIDC Adapter] Client usage stamp failed');
       });
   }
 
@@ -266,8 +241,6 @@ class OIDCAdapter {
    * Find model instance
    */
   async find(id: string): Promise<any> {
-    log('[%s] find called - id: %s', this.name, id);
-
     const table = this.getTable();
     if (!table) {
       log('[%s] find - No table for model, returning undefined', this.name);
@@ -282,10 +255,7 @@ class OIDCAdapter {
         .where(eq((table as any).id, id))
         .limit(1);
 
-      log('[%s] Find query results: %O', this.name, result);
-
       if (!result || result.length === 0) {
-        log('[%s] No record found for id: %s', this.name, id);
         return undefined;
       }
 
@@ -294,7 +264,6 @@ class OIDCAdapter {
       // Special handling for client model
       if (this.name === 'Client') {
         if (model.enabled === false) {
-          log('[Client] Client %s is disabled, treating as not found', id);
           return undefined;
         }
         log('[Client] Converting client record to expected format');
@@ -329,48 +298,21 @@ class OIDCAdapter {
         return undefined;
       }
 
-      // If record has been consumed, check if within grace period
       if (model.consumedAt) {
-        // For RefreshToken, allow reuse within grace period
+        // The SDK must see consumed refresh tokens to detect replay and revoke their grant.
         if (this.name === 'RefreshToken') {
-          const consumedAt = new Date(model.consumedAt);
-          const gracePeriodEnd = new Date(
-            consumedAt.getTime() + REFRESH_TOKEN_GRACE_PERIOD_SECONDS * 1000,
-          );
-          const now = new Date();
-
-          if (now <= gracePeriodEnd) {
-            // Within grace period, allow reuse for retry scenarios
-            log(
-              '[RefreshToken] Token consumed at %s but within grace period (ends %s), allowing reuse',
-              consumedAt.toISOString(),
-              gracePeriodEnd.toISOString(),
-            );
-            return model.data;
-          }
-
-          log(
-            '[RefreshToken] Token consumed at %s, grace period expired at %s, returning undefined',
-            consumedAt.toISOString(),
-            gracePeriodEnd.toISOString(),
-          );
-          return undefined;
+          return {
+            ...model.data,
+            consumed: Math.floor(new Date(model.consumedAt).getTime() / 1000),
+          };
         }
-
-        // For other token types, consumed means invalid
-        log(
-          '[%s] Record already consumed (consumedAt: %s), returning undefined',
-          this.name,
-          model.consumedAt,
-        );
         return undefined;
       }
 
       log('[%s] Successfully found and returning record data', this.name);
       return model.data;
-    } catch (error) {
-      log('[%s] ERROR finding record: %O', this.name, error);
-      console.error(`[OIDC Adapter] Error finding ${this.name}:`, error);
+    } catch {
+      console.error(`[OIDC Adapter] Error finding ${this.name}:`);
       return undefined;
     }
   }
@@ -379,8 +321,6 @@ class OIDCAdapter {
    * Find model instance by userCode (only for device flow)
    */
   async findByUserCode(userCode: string): Promise<any> {
-    log('[DeviceCode] findByUserCode called - userCode: %s', userCode);
-
     if (this.name !== 'DeviceCode') {
       const error = 'findByUserCode can only be used for DeviceCode model';
       log('ERROR: %s', error);
@@ -388,17 +328,13 @@ class OIDCAdapter {
     }
 
     try {
-      log('[DeviceCode] Executing findByUserCode DB query');
       const result = await this.db
         .select()
         .from(oidcDeviceCodes)
         .where(eq(oidcDeviceCodes.userCode, userCode))
         .limit(1);
 
-      log('[DeviceCode] findByUserCode query results: %O', result);
-
       if (!result || result.length === 0) {
-        log('[DeviceCode] No record found for userCode: %s', userCode);
         return undefined;
       }
 
@@ -418,11 +354,9 @@ class OIDCAdapter {
         return undefined;
       }
 
-      log('[DeviceCode] Successfully found and returning record data by userCode');
       return model.data;
-    } catch (error) {
-      log('[DeviceCode] ERROR finding record by userCode: %O', error);
-      console.error('[OIDC Adapter] Error finding DeviceCode by userCode:', error);
+    } catch {
+      console.error('[OIDC Adapter] Error finding DeviceCode by userCode:');
       return undefined;
     }
   }
@@ -431,33 +365,27 @@ class OIDCAdapter {
    * Find interaction instance by uid
    */
   async findByUid(uid: string): Promise<any> {
-    log('[Interaction] findByUid called - uid: %s', uid);
     const table = this.getTable();
     if (this.name === 'Session') {
       try {
         const jsonbUidEq = sql`${(table as any).data}->>'uid' = ${uid}`;
         // @ts-ignore
         const results = await this.db.select().from(table).where(jsonbUidEq).limit(1);
-        log('[Session] Find by data.uid query results: %O', results);
 
         if (!results || results.length === 0) {
-          log('[Session] No record found by data.uid: %s', uid);
           return undefined;
         }
 
         const model = results[0] as any;
         // Check expiration
         if (model.expiresAt && model.expiresAt < new Date()) {
-          log('[Session] Record found by data.uid but expired: %s', uid);
           await this.destroy(model.id); // Still use primary key id for deletion
           return undefined;
         }
 
-        log('[Session] Successfully found by data.uid and returning record data for uid %s', uid);
         return model.data;
-      } catch (error) {
-        log('[Session] ERROR during findSessionByUid operation for %s: %O', uid, error);
-        console.error(`[OIDC Adapter] Error finding Session by uid:`, error);
+      } catch {
+        console.error(`[OIDC Adapter] Error finding Session by uid:`);
       }
     }
     // Reuse find method implementation
@@ -491,17 +419,14 @@ class OIDCAdapter {
         .where(eq((table as any).userId, userId))
         .limit(1);
 
-      log('[%s] findSessionByUserId query results: %O', this.name, result);
-
       if (!result || result.length === 0) {
         log('[%s] No session found for userId: %s', this.name, userId);
         return undefined;
       }
 
       return (result[0] as { data: any }).data;
-    } catch (error) {
-      log('[%s] ERROR finding session by userId: %O', this.name, error);
-      console.error(`[OIDC Adapter] Error finding session by userId:`, error);
+    } catch {
+      console.error(`[OIDC Adapter] Error finding session by userId:`);
       return undefined;
     }
   }
@@ -510,8 +435,6 @@ class OIDCAdapter {
    * Destroy model instance
    */
   async destroy(id: string): Promise<void> {
-    log('[%s] destroy called - id: %s', this.name, id);
-
     const table = this.getTable();
     if (!table) {
       log('[%s] destroy - No table for model, returning early', this.name);
@@ -521,10 +444,8 @@ class OIDCAdapter {
     try {
       log('[%s] Executing destroy DB operation', this.name);
       await this.db.delete(table).where(eq((table as any).id, id));
-      log('[%s] Successfully destroyed record: %s', this.name, id);
     } catch (error) {
-      log('[%s] ERROR destroying record: %O', this.name, error);
-      console.error(`[OIDC Adapter] Error destroying ${this.name}:`, error);
+      console.error(`[OIDC Adapter] Error destroying ${this.name}:`);
       throw error;
     }
   }
@@ -533,11 +454,30 @@ class OIDCAdapter {
    * Mark model instance as consumed
    */
   async consume(id: string): Promise<void> {
-    log('[%s] consume called - id: %s', this.name, id);
-
     const table = this.getTable();
     if (!table) {
       log('[%s] consume - No table for model, returning early', this.name);
+      return;
+    }
+
+    if (this.name === 'RefreshToken') {
+      const [consumed] = await this.db
+        .update(oidcRefreshTokens)
+        .set({ consumedAt: new Date() })
+        .where(and(eq(oidcRefreshTokens.id, id), isNull(oidcRefreshTokens.consumedAt)))
+        .returning({ id: oidcRefreshTokens.id });
+      if (!consumed) {
+        const [token] = await this.db
+          .select({ grantId: oidcRefreshTokens.grantId })
+          .from(oidcRefreshTokens)
+          .where(eq(oidcRefreshTokens.id, id))
+          .limit(1);
+        if (token?.grantId) {
+          await this.db.delete(oidcGrants).where(eq(oidcGrants.id, token.grantId));
+          await this.revokeByGrantId(token.grantId);
+        }
+        throw new errors.InvalidGrant('refresh token already used');
+      }
       return;
     }
 
@@ -548,10 +488,8 @@ class OIDCAdapter {
         // @ts-ignore
         .set({ consumedAt: new Date() })
         .where(eq((table as any).id, id));
-      log('[%s] Successfully consumed record: %s', this.name, id);
     } catch (error) {
-      log('[%s] ERROR consuming record: %O', this.name, error);
-      console.error(`[OIDC Adapter] Error consuming ${this.name}:`, error);
+      console.error(`[OIDC Adapter] Error consuming ${this.name}:`);
       throw error;
     }
   }
@@ -560,7 +498,7 @@ class OIDCAdapter {
    * Revoke all related model instances by grantId
    */
   async revokeByGrantId(grantId: string): Promise<void> {
-    log('[%s] revokeByGrantId called - grantId: %s', this.name, grantId);
+    log('[%s] revokeByGrantId called', this.name);
 
     // Grants themselves don't need to be revoked by grantId
     if (this.name === 'Grant') {
@@ -586,20 +524,15 @@ class OIDCAdapter {
 
         for (const table of tables) {
           if ('grantId' in table) {
-            log('[%s] Revoking %s records by grantId: %s', this.name, grantId);
+            log('[%s] Revoking token family records', this.name);
             await tx.delete(table).where(eq((table as any).grantId, grantId));
           }
         }
       });
 
-      log(
-        '[%s] Successfully completed transaction for revoking all records by grantId: %s',
-        this.name,
-        grantId,
-      );
+      log('[%s] Successfully completed token family revocation', this.name);
     } catch (error) {
-      log('[%s] ERROR in revokeByGrantId transaction: %O', this.name, error);
-      console.error(`[OIDC Adapter] Error in revokeByGrantId transaction:`, error);
+      console.error(`[OIDC Adapter] Error in revokeByGrantId transaction:`);
       throw error;
     }
   }

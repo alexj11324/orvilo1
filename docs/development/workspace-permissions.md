@@ -1,5 +1,14 @@
 # Workspace permissions
 
+Cron-triggered result-output sweeps can arrive from Hatchet with a null payload.
+The worker normalizes that absent payload to an unscoped sweep while preserving
+explicit user/workspace scopes on manual dispatches.
+
+The OSS UI resolves its action ceiling from the shared workspace role matrix.
+Missing/loading membership, unknown actions and failed membership refreshes deny
+workspace writes; personal mode keeps its existing behavior. Row ownership and
+explicit Agent Use remain separate server/resource checks.
+
 The approved policy separates ordinary workspace collaboration, Project governance, Agent execution and Device access. The server is the authority; UI capabilities describe permitted actions and default to disabled while loading or after a failed permission request.
 
 This document describes the permission candidate prepared on baseline `f81bd916e59a6256651ac4301962b8afb7b6e9fd`. It does not claim that the cloud deployment or Electron runtime has adopted it. The capability table, boundary rules, source map and rollout gates below state the approved policy and its acceptance requirements.

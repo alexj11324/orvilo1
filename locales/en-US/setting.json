@@ -707,6 +707,7 @@
   "orchestrator.workspaceScope": "Applies to your new groups and projects in this Workspace.",
   "permission.accessTag.useOnlyTip": "Your member permission here is \"Can use\" — you can view and use it, but not edit. Ask the creator or a workspace owner for edit access.",
   "permission.accessTag.viewOnlyTip": "Your member permission here is \"Can view\" — you can view it, but not use or edit. Ask the creator or a workspace owner for more access.",
+  "permission.actionDenied": "You do not have permission to perform this action.",
   "permission.collaborators.add": "Add",
   "permission.collaborators.addModal.confirm": "Add",
   "permission.collaborators.addModal.confirmCount_one": "Add {{count}} member",

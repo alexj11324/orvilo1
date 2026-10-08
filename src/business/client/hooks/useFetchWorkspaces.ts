@@ -13,8 +13,8 @@ export const WORKSPACE_LIST_KEY = 'teammates:workspaces';
  * surfaces that owe the user loading / error / retry states; `useWorkspaces`
  * stays the array-shaped convenience read for existing callers.
  */
-export const useFetchWorkspaces = () =>
-  useClientDataSWR(WORKSPACE_LIST_KEY, async (): Promise<WorkspaceListItem[]> => {
+export const useFetchWorkspaces = (enabled = true) =>
+  useClientDataSWR(enabled ? WORKSPACE_LIST_KEY : null, async (): Promise<WorkspaceListItem[]> => {
     const workspaces = await lambdaClient.workspace.list.query();
     return workspaces as WorkspaceListItem[];
   });

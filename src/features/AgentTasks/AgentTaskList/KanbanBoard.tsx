@@ -38,6 +38,7 @@ import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initi
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { boardKeyboardCodes } from './boardKeyboard';
 import {
   boardCellKey,
   buildKanbanColumnMap,
@@ -545,7 +546,10 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: boardKeyboardCodes,
+    }),
   );
 
   const handleDragStart = useCallback(

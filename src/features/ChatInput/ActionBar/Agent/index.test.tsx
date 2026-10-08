@@ -122,6 +122,13 @@ vi.mock('@/hooks/useEffectiveAgencyConfig', () => ({
   useEffectiveAgencyConfig: () => mocks.effectiveConfig,
 }));
 vi.mock('@/features/DeviceManager/useDeviceList', () => ({
+  // This row supplies no Agent ID, so the runtime query remains disabled.
+  useAgentDeviceCandidates: () => ({
+    data: undefined,
+    error: undefined,
+    isLoading: false,
+    mutate: vi.fn(),
+  }),
   useDeviceList: () => ({ data: mocks.devices }),
 }));
 vi.mock('@/store/providerBinding', () => ({

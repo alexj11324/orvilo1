@@ -255,6 +255,8 @@ export function defineConfig() {
     // verifier, so the provider can redirect here before a browser session is
     // re-established.
     '/oauth/linear/callback',
+    // The handler validates the interaction cookie before recovering an expired web session.
+    '/oidc/consent',
     '/oidc/handoff',
     '/oidc/device/auth',
     '/oidc/token',
@@ -302,7 +304,22 @@ export function defineConfig() {
       if (isProtected) {
         logSession('Request a protected route, redirecting to sign-in page');
 
-        const callbackUrl = `${appEnv.APP_URL}${req.nextUrl.pathname}${req.nextUrl.search}`;
+        let callbackUrl = `${appEnv.APP_URL}${req.nextUrl.pathname}${req.nextUrl.search}`;
+        if (req.method === 'POST' && req.nextUrl.pathname === '/oidc/device') {
+          let userCode;
+          try {
+            userCode = (await req.clone().formData()).get('user_code');
+          } catch (error) {
+            console.error('Invalid device verification form:', error);
+            return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+          }
+          if (typeof userCode !== 'string' || !userCode.trim()) {
+            return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+          }
+          const verificationUrl = new URL('/oidc/device', appEnv.APP_URL);
+          verificationUrl.searchParams.set('user_code', userCode);
+          callbackUrl = verificationUrl.href;
+        }
         const signInUrl = new URL('/signin', appEnv.APP_URL);
         signInUrl.searchParams.set('callbackUrl', callbackUrl);
         const hl = req.nextUrl.searchParams.get('hl');

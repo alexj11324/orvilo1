@@ -144,6 +144,8 @@ export interface TaskDispatchSettlementGrant {
   workspaceId?: string | null;
 }
 
+export * from './resources';
+
 export interface TaskExecutionEnvironmentSnapshot {
   branch?: string;
   deviceId?: string;

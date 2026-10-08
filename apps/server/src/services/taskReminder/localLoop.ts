@@ -1,3 +1,4 @@
+import { runTaskIssueRecurrenceSweep } from '../taskIssueRecurrence/sweep';
 import { runTaskReminderSweep } from './sweep';
 
 const SWEEP_INTERVAL_MS = 60_000;
@@ -24,7 +25,7 @@ export const startTaskReminderLocalLoop = (): void => {
 
   const tick = async () => {
     try {
-      await runTaskReminderSweep();
+      await Promise.all([runTaskReminderSweep(), runTaskIssueRecurrenceSweep()]);
     } catch (error) {
       console.error('[task-reminder-loop] sweep failed:', error);
     }

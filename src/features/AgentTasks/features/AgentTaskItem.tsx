@@ -17,6 +17,7 @@ import {
   type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
+import { inboxRowSelectKeyDown } from '@/features/WorkInbox/inboxRowKeyboard';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
@@ -388,6 +389,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
+        role="button"
+        tabIndex={0}
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -397,6 +400,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           paddingInline: `${insetStart}px 12px`,
         }}
         onClick={handleClick}
+        onKeyDown={(event) => inboxRowSelectKeyDown(event, handleClick)}
       >
         <div className="flex items-center justify-between gap-1">
           {titleRow}

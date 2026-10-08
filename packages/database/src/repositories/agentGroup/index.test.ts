@@ -1453,8 +1453,10 @@ describe('AgentGroupRepository', () => {
       expect(result).not.toBeNull();
 
       // Verify new supervisor has same config
+      const supervisorAgentId = result?.supervisorAgentId;
+      if (!supervisorAgentId) throw new Error('Duplicated supervisor missing');
       const newSupervisor = await serverDB.query.agents.findFirst({
-        where: (a, { eq }) => eq(a.id, result!.supervisorAgentId),
+        where: (a, { eq }) => eq(a.id, supervisorAgentId),
       });
 
       expect(newSupervisor).toEqual(

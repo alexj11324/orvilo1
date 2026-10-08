@@ -1,3 +1,5 @@
+import type { IEditor } from '@lobehub/editor';
+import * as editorReact from '@lobehub/editor/react';
 import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,6 +8,7 @@ import type { ReactNode } from 'react';
 import { act, useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getDraft, saveDraft } from '@/features/ChatInput/draftStorage';
 import { projectService } from '@/services/project';
 import type { ProjectDetail, ProjectListItem } from '@/store/project';
 
@@ -15,6 +18,7 @@ import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePane
 import ProjectTabsBar from '../Layout/TabsBar';
 import ProjectListPage from '../List';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
+import { projectUpdateDraftKey } from '../Updates/projectUpdateDraft';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
@@ -283,7 +287,9 @@ vi.mock('@/components/Avatar', () => ({
 vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => null }));
 vi.mock('@/features/AgentTasks/features/AssigneeUserAvatar', () => ({ default: () => null }));
 vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
-vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
+vi.mock('@/services/project', () => ({
+  projectService: { updateStatus: vi.fn(), createUpdate: vi.fn() },
+}));
 vi.mock('@/store/project', () => ({
   useCurrentProjectList: () => mocks.projectList,
   useCurrentProjectDetail: () => {
@@ -423,6 +429,10 @@ it('exposes project sections as destination links with one current page, not tab
 });
 
 beforeEach(() => {
+  window.localStorage.clear();
+  vi.mocked(projectService.createUpdate)
+    .mockReset()
+    .mockResolvedValue({ id: 'new-update' } as never);
   mocks.canManageMembers = false;
   mocks.canInvite = false;
   mocks.openInvite.mockClear();
@@ -659,6 +669,115 @@ describe('project update composer controls', () => {
     expect(screen.getByText('Launch ready').tagName).toBe('STRONG');
     expect(screen.queryByText('**Launch ready**')).not.toBeInTheDocument();
   });
+  // The composer scopes drafts by user, workspace, project and target; the mocks
+  // above sign in `user_1` in workspace `ws_1`.
+  const newDraftKey = (projectId: string) =>
+    projectUpdateDraftKey({ projectId, userId: 'user_1', workspaceId: 'ws_1' })!;
+
+  it('restores a draft and keeps it when changing modes and remounting', async () => {
+    saveDraft(newDraftKey('draft-project'), {
+      body: 'Project draft',
+      mode: 'comment',
+      health: 'onTrack',
+    });
+    const view = render(
+      <ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="draft-project" />,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveTextContent(
+        'Project draft',
+      ),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /updateModeUpdate|Update/ }));
+    expect(screen.getByRole('textbox', { name: 'overview.updateEditor' })).toHaveTextContent(
+      'Project draft',
+    );
+    view.unmount();
+    render(<ProjectUpdateComposer defaultExpanded projectId="draft-project" />);
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'overview.updateEditor' })).toHaveTextContent(
+        'Project draft',
+      ),
+    );
+  });
+
+  it('keeps a failed post for retry and clears the saved draft only after success', async () => {
+    const draftKey = newDraftKey('retry-project');
+    saveDraft(draftKey, { body: 'Retry this comment', mode: 'comment' });
+    vi.mocked(projectService.createUpdate).mockRejectedValueOnce(new Error('Offline'));
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      render(<ProjectUpdateComposer defaultExpanded projectId="retry-project" />);
+      const editor = await screen.findByRole('textbox', { name: 'overview.commentEditor' });
+      await waitFor(() => expect(editor).toHaveTextContent('Retry this comment'));
+      await userEvent.click(screen.getByRole('button', { name: 'overview.postComment' }));
+      await waitFor(() => expect(mocks.toastError).toHaveBeenCalled());
+      expect(editor).toHaveTextContent('Retry this comment');
+      expect(getDraft(draftKey)?.body).toContain('Retry this comment');
+      await userEvent.click(screen.getByRole('button', { name: 'overview.postComment' }));
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'overview.commentEditor' }).textContent).toBe(
+          '',
+        ),
+      );
+      expect(getDraft(draftKey)).toBeUndefined();
+      expect(projectService.createUpdate).toHaveBeenLastCalledWith('retry-project', {
+        body: 'Retry this comment',
+        kind: 'comment',
+        health: undefined,
+      });
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
+
+  it('does not restore a posted draft after a pending old editor change and reload', async () => {
+    const draftKey = newDraftKey('sent-project');
+    saveDraft(draftKey, { body: 'Already posted comment', mode: 'comment' });
+    const originalUseEditor = editorReact.useEditor;
+    const editors = new Set<IEditor>();
+    const editorSpy = vi.spyOn(editorReact, 'useEditor').mockImplementation((...args) => {
+      const editor = originalUseEditor(...args);
+      editors.add(editor);
+      return editor;
+    });
+    try {
+      const view = render(<ProjectUpdateComposer defaultExpanded projectId="sent-project" />);
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveTextContent(
+          'Already posted comment',
+        ),
+      );
+      const oldEditor = [...editors][0];
+      vi.useFakeTimers();
+      await act(async () => {
+        oldEditor.setDocument('markdown', 'Already posted comment');
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'overview.postComment' }));
+      });
+      expect(getDraft(draftKey)).toBeUndefined();
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+      expect(getDraft(draftKey)).toBeUndefined();
+      view.unmount();
+      vi.useRealTimers();
+      render(
+        <ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="sent-project" />,
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'overview.commentEditor' }).textContent).toBe(
+          '',
+        ),
+      );
+      expect(projectService.createUpdate).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+      editorSpy.mockRestore();
+    }
+  });
+
   it('starts in comment mode when Activity is opened without an update intent', () => {
     render(<ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="prj_1" />);
     expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveAttribute(

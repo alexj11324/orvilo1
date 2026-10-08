@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
     topNavItems: [
       { key: 'inbox', title: 'Inbox', url: '/inbox' },
       { key: 'my-work', title: 'My issues', url: '/my-issues' },
+      { key: 'tasks', title: 'Issues', url: '/tasks' },
       { key: 'reviews', title: 'Reviews', url: '/reviews' },
       { key: 'agent', title: 'Agent', url: '/agents' },
       { key: 'drafts', title: 'Drafts', url: '/drafts' },
@@ -130,7 +131,7 @@ beforeEach(() => {
     status: {
       hiddenSidebarSections: [],
       sidebarExpandedKeys: ['agent', 'workspace', 'favorites', 'teams'],
-      sidebarItems: ['recents', 'tasks', 'image'],
+      sidebarItems: ['recents', 'inbox', 'image'],
     },
     updateSystemStatus: mocks.updateSystemStatus,
   };
@@ -150,16 +151,18 @@ describe('Home sidebar body', () => {
     const texts = children.map((child) => child.textContent);
 
     // Core links first, in contract order — the stored legacy keys
-    // (recents/tasks/image) can neither reorder nor resurrect. Agent is a
-    // flat row now; the old agent accordion is retired.
+    // (recents/image) can neither reorder nor resurrect, and the stored list
+    // predates the Issues row yet still gets it. Agent is a flat row now; the
+    // old agent accordion is retired.
     expect(texts[0]).toBe('Inbox');
     expect(texts[1]).toBe('My issues');
-    expect(texts[2]).toBe('Reviews');
-    expect(texts[3]).toBe('Agent');
-    expect(texts[4]).toBe('Drafts');
+    expect(texts[2]).toBe('Issues');
+    expect(texts[3]).toBe('Reviews');
+    expect(texts[4]).toBe('Agent');
+    expect(texts[5]).toBe('Drafts');
     // The standalone quick-create row sits between the flat links and the
     // first accordion, mirroring Linear's `+` slot.
-    expect(children[5]).toHaveAttribute('data-testid', 'sidebar-item-create');
+    expect(children[6]).toHaveAttribute('data-testid', 'sidebar-item-create');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
     // There is no personal mode — Your teams renders even while the
@@ -180,7 +183,7 @@ describe('Home sidebar body', () => {
   });
 
   it('hides an optional section via hiddenSidebarSections but never a core link', () => {
-    mocks.globalState.status.hiddenSidebarSections = ['workspace', 'favorites', 'inbox'];
+    mocks.globalState.status.hiddenSidebarSections = ['workspace', 'favorites', 'inbox', 'tasks'];
 
     render(<Body />);
 
@@ -191,6 +194,9 @@ describe('Home sidebar body', () => {
       screen.getByTestId('sidebar-body').querySelector('[data-sidebar=menu]')!.children,
     ).map((child) => child.textContent);
     expect(texts).toContain('Inbox');
+    // A `tasks` hide left over from the pre-convergence sidebar is stale: the
+    // Issues row is core too.
+    expect(texts).toContain('Issues');
   });
 
   it('passes persisted expansion to sections', () => {

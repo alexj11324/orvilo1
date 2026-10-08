@@ -15,6 +15,7 @@ export const SIDEBAR_SCHEMA_VERSION = 2;
 export const FIXED_PRIMARY_KEYS = [
   'inbox',
   'my-work',
+  'tasks',
   'reviews',
   'agent',
   'group',
@@ -27,13 +28,12 @@ export const FIXED_PRIMARY_KEYS = [
 
 /**
  * Legacy primary keys a stored preference must never surface at the top
- * level again. Retiring the sidebar key does NOT retire the route — /tasks,
+ * level again. Retiring the sidebar key does NOT retire the route —
  * /automations, /resource and /projects all stay reachable through Workspace
  * → More, Team pages, search and existing deep links.
  */
 export const LEGACY_PRIMARY_KEYS = new Set([
   'home',
-  'tasks',
   'automations',
   'resource',
   'recents',

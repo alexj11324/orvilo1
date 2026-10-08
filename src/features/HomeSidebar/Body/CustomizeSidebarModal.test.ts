@@ -12,6 +12,7 @@ describe('CustomizeSidebarModal', () => {
     expect(getVisibleSidebarSections(true).map((section) => section.id)).toEqual([
       'inbox',
       'my-work',
+      'tasks',
       'reviews',
       'agent',
       'group',
@@ -26,14 +27,13 @@ describe('CustomizeSidebarModal', () => {
       .filter((section) => section.alwaysVisible)
       .map((section) => section.id);
 
-    expect(pinned).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'group']);
+    expect(pinned).toEqual(['inbox', 'my-work', 'tasks', 'reviews', 'agent', 'group']);
   });
 
   it('never offers retired sidebar keys', () => {
     const retired = [
       'drafts',
       'home',
-      'tasks',
       'automations',
       'resource',
       'recents',

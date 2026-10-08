@@ -9,6 +9,7 @@ import {
   EyeOff,
   GitPullRequestIcon,
   Inbox,
+  ListTodoIcon,
   MessagesSquare,
   PinIcon,
   RotateCcw,
@@ -47,6 +48,7 @@ interface SidebarSectionConfig {
 const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   { alwaysVisible: true, icon: Inbox, id: 'inbox', labelKey: 'tab.inbox' },
   { alwaysVisible: true, icon: SquareUser, id: 'my-work', labelKey: 'tab.myWork' },
+  { alwaysVisible: true, icon: ListTodoIcon, id: 'tasks', labelKey: 'tab.issues' },
   { alwaysVisible: true, icon: GitPullRequestIcon, id: 'reviews', labelKey: 'tab.reviews' },
   { alwaysVisible: true, icon: BotIcon, id: 'agent', labelKey: 'navPanel.agent' },
   { alwaysVisible: true, icon: MessagesSquare, id: 'group', labelKey: 'navPanel.groups' },

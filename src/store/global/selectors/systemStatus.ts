@@ -201,15 +201,18 @@ export const SIDEBAR_SPACER_ID = '__spacer__';
 
 /**
  * The fixed primary IA (Linear convergence): `sidebarItems` is contract-owned.
- * Core links (inbox / my-work / reviews) come first, then the optional
+ * Core links (inbox / my-work / issues / reviews) come first, then the optional
  * accordion sections (agent / workspace / favorites / teams), then the spacer
  * sentinel. Stored and workspace-synced preferences can only hide optional
  * sections via `hiddenSidebarSections` — they can never reorder the core
- * structure, so the selector returns this constant as-is.
+ * structure, so the selector returns this constant as-is. Because the read
+ * path never consults the stored order, an entry added here (the workspace
+ * Issues row, key `tasks`) reaches accounts with a persisted list too.
  */
 export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'inbox',
   'my-work',
+  'tasks',
   'reviews',
   'agent',
   'group',
@@ -241,10 +244,9 @@ export const RETIRED_SIDEBAR_KEYS = new Set([
   'page',
   'pages',
   // Linear IA convergence: retired from the PRIMARY sidebar. Routes stay
-  // reachable (/tasks, /automations, /resource, /projects) via Workspace → More,
+  // reachable (/automations, /resource, /projects) via Workspace → More,
   // team pages, search and existing deep links — the keys just cannot resurface.
   'home',
-  'tasks',
   'automations',
   'resource',
   'recents',

@@ -3,6 +3,7 @@ import {
   BotIcon,
   GitPullRequestIcon,
   InboxIcon,
+  ListTodoIcon,
   MessagesSquareIcon,
   SquareUserIcon,
 } from 'lucide-react';
@@ -43,7 +44,7 @@ export const useNavLayout = (): NavLayout => {
 
   // Fixed primary IA (see features/Navigation/sidebarContract): the header
   // carries the workspace switcher + search/new-issue icons; the body renders
-  // inbox/my-work/reviews/agent as core links (Agent is a flat row to /agent —
+  // inbox/my-work/issues/reviews/agent as core links (Agent is a flat row to /agent —
   // the workspace conversation; the /agents management directory stays a
   // secondary destination under Workspace → More) and the accordion sections
   // favorites, teams) separately. Retired surfaces keep their routes for deep
@@ -62,6 +63,12 @@ export const useNavLayout = (): NavLayout => {
           key: SidebarTabKey.MyWork,
           title: t('tab.myWork'),
           url: '/my-issues',
+        },
+        {
+          icon: ListTodoIcon,
+          key: SidebarTabKey.Tasks,
+          title: t('tab.issues'),
+          url: '/tasks',
         },
         {
           icon: GitPullRequestIcon,

@@ -22,7 +22,6 @@ const RETIRED_SIDEBAR_KEYS = [
   'memory',
   'pages',
   'home',
-  'tasks',
   'automations',
   'resource',
   'recents',
@@ -42,16 +41,18 @@ describe('useNavLayout', () => {
     expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps the fixed primary entries: inbox, my work, reviews, agent, groups', async () => {
+  it('keeps the fixed primary entries: inbox, my work, issues, reviews, agent, groups', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
     const keys = result.current.topNavItems.map((item) => item.key);
 
-    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'group']);
+    expect(keys).toEqual(['inbox', 'my-work', 'tasks', 'reviews', 'agent', 'group']);
     expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
     expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
       '/my-issues',
     );
+    // Workspace-wide Issues sits right after My issues and opens `/tasks`.
+    expect(result.current.topNavItems.find((item) => item.key === 'tasks')?.url).toBe('/tasks');
     expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe('/reviews');
     // Agent lands on the workspace session (builtin inbox agent), not the
     // agents view-all list — `/agent` alone has no index and redirects away.

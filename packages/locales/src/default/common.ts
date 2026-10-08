@@ -654,6 +654,7 @@ export default {
   'tab.generation': 'Generation',
   'tab.home': 'Home',
   'tab.inbox': 'Inbox',
+  'tab.issues': 'Issues',
   'tab.favorites': 'Favorites',
   'tab.knowledgeBase': 'Library',
   'tab.me': 'Me',

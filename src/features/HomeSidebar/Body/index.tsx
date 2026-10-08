@@ -47,7 +47,15 @@ const SECTION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, Gr
 
 /** Core entries can never be hidden — the fixed IA keeps them always mounted.
  * `create` is the standalone quick-create row (Linear's `+`). */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'group', 'create']);
+const CORE_KEYS = new Set<string>([
+  'inbox',
+  'my-work',
+  'tasks',
+  'reviews',
+  'agent',
+  'group',
+  'create',
+]);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */

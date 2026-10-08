@@ -222,7 +222,6 @@ describe('systemStatusSelectors', () => {
         'agent',
         'recents',
         'pages',
-        'tasks',
         'image',
         'community',
         'resource',
@@ -244,11 +243,30 @@ describe('systemStatusSelectors', () => {
     it('returns the canonical order for a workspace overlay too', () => {
       const s: GlobalState = merge(initialState, {
         status: {
-          sidebarItems: ['tasks'],
+          sidebarItems: ['inbox'],
           workspace: { sidebarItems: ['automations', 'image', 'recents', 'agent', 'memory'] },
         },
       });
       expect(systemStatusSelectors.sidebarItems('ws-1')(s)).toEqual(DEFAULT_SIDEBAR_ITEMS);
+    });
+
+    it('adds the Issues entry after My issues for a list persisted before it existed', () => {
+      const persisted = ['inbox', 'my-work', 'reviews', 'agent', 'group', 'workspace'];
+      const s: GlobalState = merge(initialState, {
+        status: {
+          hiddenSidebarSections: ['favorites'],
+          sidebarItems: persisted,
+          workspace: { hiddenSidebarSections: ['teams'], sidebarItems: persisted },
+        },
+      });
+
+      for (const workspaceId of [null, 'ws-1']) {
+        const items = systemStatusSelectors.sidebarItems(workspaceId)(s);
+        expect(items.indexOf('tasks')).toBe(items.indexOf('my-work') + 1);
+      }
+      // Merging in the new default leaves the user's own hides alone.
+      expect(systemStatusSelectors.hiddenSidebarSections(null)(s)).toEqual(['favorites']);
+      expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(s)).toEqual(['teams']);
     });
   });
 
@@ -262,7 +280,6 @@ describe('systemStatusSelectors', () => {
       'page',
       'pages',
       'home',
-      'tasks',
       'automations',
       'resource',
       'recents',

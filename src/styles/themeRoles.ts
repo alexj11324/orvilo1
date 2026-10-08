@@ -89,7 +89,10 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --font-sans: ${theme.fontFamily};
       --font-mono: ${theme.fontFamilyCode};
       --shadow-popover: ${theme.boxShadowSecondary};
-      --shadow-dialog: ${theme.boxShadow};
+
+      /* Dark dialogs sit on a scrim with a 1px ring; the engine's heavy black
+         shadow only reads as a smudge under them. */
+      --shadow-dialog: ${theme.isDarkMode ? 'none' : theme.boxShadow};
       --sidebar: ${theme.colorBgLayout};
       --sidebar-foreground: ${theme.colorText};
       --sidebar-primary: ${theme.colorPrimary};

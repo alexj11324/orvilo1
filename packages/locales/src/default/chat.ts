@@ -3344,6 +3344,8 @@ export default {
   'createAgent.visibility.personal': 'Visible only to you in your personal space.',
   'createAgent.categoryPreserved': 'Created in the selected category. Its visibility is preserved.',
   'group.settings.saved': 'Group settings saved',
+  'group.settings.coordinatorIncomplete':
+    'Coordinator settings are incomplete, so nothing was saved. Finish them on the Coordinator tab.',
   'group.create.scopeAndCategory': 'Visibility and category',
   'group.create.visibility': 'Visibility',
   'group.create.privateScope': 'Only me',

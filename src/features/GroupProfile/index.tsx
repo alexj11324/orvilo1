@@ -28,6 +28,7 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useGroupProfileStore } from '@/store/groupProfile';
 
 import { CoordinatorSummary } from './CoordinatorSummary';
+import { isCoordinatorDirty, isOpeningDirty } from './groupSettingsDirty';
 import { useGroupSettingsDraft } from './useGroupSettingsDraft';
 
 const GroupSettings = ({ groupId }: { groupId: string }) => {
@@ -68,12 +69,36 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
   const invalidateOrchestrator = useCallback(() => setOrchestratorReady(false), []);
   const members = group?.agents.filter((agent) => !agent.isSupervisor) ?? [];
 
+  const coordinatorDirty = isCoordinatorDirty({
+    coordinator,
+    prompt,
+    runtime,
+    selectedOrchestratorId,
+  });
+  const openingDirty = isOpeningDirty({
+    opening,
+    openingMessage: group?.config?.openingMessage,
+    openingQuestions: group?.config?.openingQuestions,
+    questions,
+  });
+  // Both drafts live in this component, so Save persists every tab with edits,
+  // not only the visible one: otherwise edits on a tab you left would stay
+  // unsaved behind a "saved" toast.
+  const saveCoordinator = tab === 'coordinator' || coordinatorDirty;
+  const saveOpening = tab === 'opening' || openingDirty;
+
   const save = async () => {
-    if (!group || pending || (tab === 'coordinator' && !validCoordinator)) return;
+    if (!group || pending) return;
+    if (saveCoordinator && !validCoordinator) {
+      // On the coordinator tab the button is already disabled; from another tab
+      // say why the pending coordinator edits block the save.
+      if (tab !== 'coordinator') setError(new Error(t('group.settings.coordinatorIncomplete')));
+      return;
+    }
     setPending(true);
     setError(undefined);
     try {
-      if (tab === 'coordinator' && coordinator && runtime && validCoordinator) {
+      if (saveCoordinator && coordinator && runtime && validCoordinator) {
         await agentService.updateAgentConfig(
           coordinator.id,
           {
@@ -97,7 +122,8 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
           pendingWorkingDirectorySource.current = undefined;
         }
         await useAgentGroupStore.getState().refreshGroupDetail(groupId);
-      } else if (tab === 'opening') {
+      }
+      if (saveOpening) {
         await useAgentGroupStore.getState().updateGroup(groupId, {
           config: {
             ...group.config,

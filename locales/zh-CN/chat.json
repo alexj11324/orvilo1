@@ -850,6 +850,7 @@
   "group.settings.addMembers": "添加 Agent",
   "group.settings.back": "返回对话",
   "group.settings.coordinationInstructions": "协调指令",
+  "group.settings.coordinatorIncomplete": "协调者设置尚未完成，未保存任何内容。请先在「协调者」标签页完成设置。",
   "group.settings.coordinatorName": "协调 Agent",
   "group.settings.deleteOwned": "删除 Agent",
   "group.settings.deleteOwnedDescription": "将删除群聊专属 Agent 及其相关数据，无法撤销。",

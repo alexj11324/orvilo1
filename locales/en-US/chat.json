@@ -850,6 +850,7 @@
   "group.settings.addMembers": "Add Agents",
   "group.settings.back": "Back to conversation",
   "group.settings.coordinationInstructions": "Coordination instructions",
+  "group.settings.coordinatorIncomplete": "Coordinator settings are incomplete, so nothing was saved. Finish them on the Coordinator tab.",
   "group.settings.coordinatorName": "Orchestrator",
   "group.settings.deleteOwned": "Delete Agent",
   "group.settings.deleteOwnedDescription": "This deletes the group-owned Agent and its related data. This cannot be undone.",

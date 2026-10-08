@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
+import { shouldOpenCardOnKey } from './boardKeyboard';
 import {
   COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
@@ -57,6 +58,18 @@ const SortableTaskCard = memo<{
       }}
       {...listeners}
       {...attributes}
+      onKeyDown={(event) => {
+        listeners?.onKeyDown?.(event);
+        if (
+          shouldOpenCardOnKey({
+            isDragging,
+            key: event.key,
+            targetIsCard: event.target === event.currentTarget,
+          })
+        ) {
+          event.currentTarget.querySelector<HTMLElement>('[data-task-board-card]')?.click();
+        }
+      }}
     >
       <TaskBoardCard
         hiddenProperties={hiddenProperties}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { inboxDeepLinkTerminal, resolveInboxDeepLink } from './inboxDeepLink';
+import { inboxDeepLinkTerminal, inboxItemPath, resolveInboxDeepLink } from './inboxDeepLink';
 
 const trpcError = (code: string, httpStatus: number) => ({
   data: { code, httpStatus },
@@ -87,5 +87,21 @@ describe('resolveInboxDeepLink', () => {
 
   it('waits on an armed-but-unsettled lookup instead of dropping it', () => {
     expect(resolveInboxDeepLink(base)).toBe('loading');
+  });
+});
+
+describe('inboxItemPath', () => {
+  it('addresses one notification and opens the detail surface on narrow layouts', () => {
+    const url = new URL(inboxItemPath('0b6f3c1e-1111-4222-8333-944455556666'), 'http://x');
+
+    expect(url.pathname).toBe('/inbox');
+    expect(url.searchParams.get('item')).toBe('0b6f3c1e-1111-4222-8333-944455556666');
+    expect(url.searchParams.get('detail')).toBe('1');
+  });
+
+  it('escapes ids so they survive the round trip', () => {
+    const url = new URL(inboxItemPath('a&b=c'), 'http://x');
+
+    expect(url.searchParams.get('item')).toBe('a&b=c');
   });
 });

@@ -13,6 +13,13 @@ export const inboxDeepLinkTerminal = (error: unknown): boolean => {
   return status === 400 || status === 404 || code === 'BAD_REQUEST' || code === 'NOT_FOUND';
 };
 
+/**
+ * Path that opens the inbox on one notification. `detail=1` makes the narrow
+ * (mobile) layout land on the detail surface; the split layout ignores it.
+ */
+export const inboxItemPath = (notificationId: string): string =>
+  `/inbox?item=${encodeURIComponent(notificationId)}&detail=1`;
+
 export type InboxDeepLinkStatus = 'dead' | 'failed' | 'listed' | 'loading' | 'none' | 'resolved';
 
 /**

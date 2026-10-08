@@ -15,6 +15,7 @@ import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import AsyncError from '@/components/AsyncError';
 import { toast } from '@/components/toast';
 import {
   DropdownMenu,
@@ -60,7 +61,9 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { teamAccordionKey, useTeamSubNav } from '../hooks/useTeamSubNav';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
+import TeamListSkeleton from './TeamListSkeleton';
 import { buildTeamMenuEntries } from './teamMenu';
+import { resolveTeamsListView } from './teamsListView';
 import { useWorkFavoriteToggle } from './useWorkFavoriteToggle';
 
 /** Linear's per-team sub-navigation. Every entry lands on a real surface of
@@ -237,7 +240,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
 
   const userId = useUserStore(userProfileSelectors.userId);
 
-  const { data } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     activeWorkspaceId && userId ? ['sidebar-teams', userId, activeWorkspaceId] : null,
     () => lambdaClient.team.teams.query(),
     {
@@ -247,6 +250,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
   // "Your teams" lists JOINED teams only — readable-but-unjoined public
   // teams stay discoverable on /teams (the directory surface), not here.
   const teams = useMemo(() => (data?.data ?? []).filter((team) => team.joined === true), [data]);
+  const view = resolveTeamsListView({ error, isLoading, teamCount: teams.length });
   const teamKeys = useMemo(() => teams.map((team) => teamAccordionKey(team.id)), [teams]);
   const { expandedTeamKeys, setExpandedTeamKeys } = useTeamSubNav(teamKeys);
 
@@ -343,7 +347,18 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
                 />
               );
             })}
-            {teams.length === 0 && (
+            {view === 'loading' && <TeamListSkeleton collapsed={sidebarState === 'collapsed'} />}
+            {view === 'error' && (
+              <SidebarMenuItem>
+                <AsyncError
+                  error={error}
+                  retrying={isValidating}
+                  variant="inline"
+                  onRetry={() => void mutate()}
+                />
+              </SidebarMenuItem>
+            )}
+            {(view === 'fallback' || view === 'error') && (
               <SidebarNavItem
                 active={tab === 'teams'}
                 icon={Layers}

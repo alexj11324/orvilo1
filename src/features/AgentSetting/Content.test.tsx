@@ -2,12 +2,14 @@ import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import MobileSettings from '@/routes/(mobile)/chat/settings';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { useUserStore } from '@/store/user';
 
 import Content from './Content';
 
 const mocks = vi.hoisted(() => ({
+  onMetaChange: undefined as undefined | ((meta: object) => Promise<void>),
   agentState: {
     activeAgentId: 'inbox-agent',
     config: {},
@@ -16,6 +18,7 @@ const mocks = vi.hoisted(() => ({
     meta: {},
     optimisticUpdateAgentConfig: vi.fn(),
     optimisticUpdateAgentMeta: vi.fn(),
+    updateAgentMeta: vi.fn(),
   },
   serverState: {
     featureFlags: {
@@ -25,9 +28,16 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/features/AgentSetting', () => ({
-  AgentSettings: ({ tab }: { tab: ChatSettingsTabs }) => (
-    <div data-tab={tab} data-testid="agent-settings-content" />
-  ),
+  AgentSettings: ({
+    tab,
+    onMetaChange,
+  }: {
+    tab: ChatSettingsTabs;
+    onMetaChange: (meta: object) => Promise<void>;
+  }) => {
+    mocks.onMetaChange = onMetaChange;
+    return <div data-tab={tab} data-testid="agent-settings-content" />;
+  },
   SettingsModalLayout: ({
     activeTab,
     tabs = [],
@@ -45,6 +55,23 @@ vi.mock('@/features/AgentSetting', () => ({
       {children}
     </div>
   ),
+}));
+
+vi.mock('@/features/AgentSetting/AgentSettings', () => ({
+  default: ({ onMetaChange }: { onMetaChange: (meta: object) => Promise<void> }) => {
+    mocks.onMetaChange = onMetaChange;
+    return null;
+  },
+}));
+vi.mock('@/features/AgentSetting/AgentCategory/useCategory', () => ({ useCategory: () => [] }));
+vi.mock('@/routes/(mobile)/chat/settings/_layout/Header', () => ({ default: () => null }));
+vi.mock('@/features/Setting/Footer', () => ({ default: () => null }));
+vi.mock('@/components/server/MobileNavLayout', () => ({
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/store/session', () => ({
+  useSessionStore: (selector: (state: object) => unknown) => selector({ activeId: 'inbox-agent' }),
 }));
 
 vi.mock('@/store/agent', () => {
@@ -129,4 +156,34 @@ describe('AgentSettings Content', () => {
     const layout = screen.getByTestId('layout');
     expect(layout).toHaveAttribute('data-tabs', ChatSettingsTabs.Opening);
   });
+});
+
+it('propagates metadata persistence failure from the production callback', async () => {
+  const failure = new Error('write rejected');
+  mocks.agentState.optimisticUpdateAgentMeta.mockImplementation(
+    async (_id, _meta, _extra, options) => {
+      if (options?.rethrow) throw failure;
+    },
+  );
+  render(<Content />);
+  await expect(mocks.onMetaChange!({ title: 'new title' })).rejects.toBe(failure);
+  expect(mocks.agentState.optimisticUpdateAgentMeta).toHaveBeenCalledWith(
+    'inbox-agent',
+    { title: 'new title' },
+    undefined,
+    { rethrow: true },
+  );
+});
+
+it('propagates metadata persistence failure from the mobile callback', async () => {
+  const failure = new Error('mobile write rejected');
+  mocks.agentState.updateAgentMeta.mockImplementation(async (_meta, options) => {
+    if (options?.rethrow) throw failure;
+  });
+  render(<MobileSettings />);
+  await expect(mocks.onMetaChange!({ title: 'mobile title' })).rejects.toBe(failure);
+  expect(mocks.agentState.updateAgentMeta).toHaveBeenCalledWith(
+    { title: 'mobile title' },
+    { rethrow: true },
+  );
 });

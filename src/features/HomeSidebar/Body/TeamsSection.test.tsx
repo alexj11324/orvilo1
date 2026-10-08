@@ -1,18 +1,26 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 import TeamsSection from './TeamsSection';
 
-vi.mock('swr', () => ({
-  default: () => ({
+const swr = vi.hoisted(() => ({
+  state: {
     data: {
       data: [{ id: 'team-1', joined: true, key: 'ORV', name: 'orvilo' }],
     },
-  }),
+    error: undefined as unknown,
+    isLoading: false,
+    isValidating: false,
+    mutate: vi.fn(),
+  },
+}));
+
+vi.mock('swr', () => ({
+  default: () => swr.state,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -88,6 +96,48 @@ vi.mock('../hooks/useTeamSubNav', () => ({
 }));
 
 describe('TeamsSection', () => {
+  beforeEach(() => {
+    swr.state.data = { data: [{ id: 'team-1', joined: true, key: 'ORV', name: 'orvilo' }] };
+    swr.state.error = undefined;
+    swr.state.isLoading = false;
+    swr.state.isValidating = false;
+    swr.state.mutate.mockClear();
+  });
+
+  const renderSection = () =>
+    render(
+      <MemoryRouter>
+        <SidebarProvider>
+          <TeamsSection itemKey="teams" />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+  it('offers sign-in instead of retry for an expired session', () => {
+    swr.state.data = { data: [] };
+    swr.state.error = { status: 401 };
+    renderSection();
+    expect(screen.getByRole('button', { name: 'asyncState.signIn' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'error.retry' })).not.toBeInTheDocument();
+  });
+
+  it('disables retry while the failed request is revalidating', () => {
+    swr.state.data = { data: [] };
+    swr.state.error = new Error('network');
+    swr.state.isValidating = true;
+    renderSection();
+    expect(screen.getByRole('button', { name: /error.retry/ })).toBeDisabled();
+  });
+
+  it('retries a transient failure and keeps the directory reachable', () => {
+    swr.state.data = { data: [] };
+    swr.state.error = new Error('network');
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: 'error.retry' }));
+    expect(swr.state.mutate).toHaveBeenCalledOnce();
+    expect(screen.getByText('tab.teams')).toBeInTheDocument();
+  });
+
   it('toggles the team by its name and leaves Home as navigation', () => {
     render(
       <MemoryRouter initialEntries={['/inbox']}>

@@ -80,7 +80,7 @@ const ConfiguredOrchestratorSelector = ({
         >
           {data?.map(({ agent, runtime, status }) => (
             <div className="flex items-center gap-2" key={agent.id}>
-              <Label className="min-w-0 flex-1 cursor-pointer gap-3 rounded-md p-3 leading-normal font-normal hover:bg-muted has-data-checked:bg-secondary has-data-disabled:cursor-not-allowed has-data-disabled:opacity-50">
+              <Label className="min-w-0 flex-1 cursor-pointer gap-3 rounded-md p-3 leading-normal font-normal hover:bg-accent has-data-checked:bg-selected has-data-disabled:cursor-not-allowed has-data-disabled:opacity-50">
                 <RadioGroupItem disabled={disabled || status !== 'ready'} value={agent.id} />
                 <AgentRuntimeIcon
                   size={24}

@@ -14,6 +14,7 @@ import Avatar from '@/components/Avatar';
 import { useConversationStore } from '@/features/Conversation/store';
 import type { ComposerTarget } from '@/features/Conversation/types';
 import { useFileStore } from '@/store/file';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { usePageAgentPanelControl } from '../RightPanel/OverrideContext';
 import { usePageEditorStore } from '../store';
@@ -50,8 +51,12 @@ export const useAskCopilotItem = (
       {
         children: (
           <div
-            className={cn('flex items-center gap-2 py-1.5 px-3', styles.askCopilot)}
+            {...clickableProps()}
             style={{ cursor: 'pointer' }}
+            className={cn(
+              cn('flex items-center gap-2 py-1.5 px-3', styles.askCopilot),
+              CLICKABLE_FOCUS_RING,
+            )}
             onClick={() => {
               const xml = (editor.getSelectionDocument?.('litexml') as string) || '';
               const plainText = (editor.getSelectionDocument?.('text') as string) || '';

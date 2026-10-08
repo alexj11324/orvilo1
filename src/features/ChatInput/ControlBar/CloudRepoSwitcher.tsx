@@ -2,6 +2,7 @@
 
 import { Github } from '@lobehub/icons';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckIcon, ChevronDownIcon, SquircleDashed } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +14,7 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { getPendingTopicRepos, setPendingTopicRepos } from '@/store/chat/pendingTopicRepos';
 import { topicSelectors } from '@/store/chat/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 
@@ -212,8 +214,12 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
           const isChecked = displayRepos.includes(repo);
           return (
             <div
-              className={cx('flex flex-row items-center gap-2', styles.repoItem)}
+              {...clickableProps()}
               key={repo}
+              className={cn(
+                cx('flex flex-row items-center gap-2', styles.repoItem),
+                CLICKABLE_FOCUS_RING,
+              )}
               onClick={() => toggleRepo(repo)}
             >
               <div

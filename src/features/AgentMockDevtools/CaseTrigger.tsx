@@ -6,6 +6,7 @@ import { isValidElement, memo, type ReactNode, useMemo, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useMockCases } from './hooks/useMockCases';
 import { useAgentMockStore } from './store/agentMockStore';
@@ -175,8 +176,12 @@ const CasePanel = memo<CasePanelProps>(({ onClose, selectedCaseId, setSelectedCa
                 const tools = countTools(c);
                 return (
                   <div
-                    className={`${styles.item} ${active ? styles.itemActive : ''}`}
+                    {...clickableProps()}
                     key={c.id}
+                    className={cn(
+                      `${styles.item} ${active ? styles.itemActive : ''}`,
+                      CLICKABLE_FOCUS_RING,
+                    )}
                     onClick={() => handlePick(c.id)}
                   >
                     <span className={styles.itemName}>{c.name}</span>

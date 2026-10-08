@@ -2,12 +2,14 @@
 
 import { type ElectronAppState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Bell, Check, FolderOpen, Mic, MonitorCog, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 type PermissionMeta = {
@@ -179,7 +181,8 @@ const OsPermissionsPanel = memo(() => {
     >
       {permissions.map((permission) => (
         <div
-          className="flex items-center cursor-pointer gap-4"
+          {...clickableProps()}
+          className={cn('flex items-center cursor-pointer gap-4', CLICKABLE_FOCUS_RING)}
           key={permission.id}
           style={{
             paddingBlock: 8,

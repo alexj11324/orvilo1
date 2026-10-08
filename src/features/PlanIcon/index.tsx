@@ -1,11 +1,13 @@
 import { Plans } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Atom, Box, CircleSlash, Sparkle, Zap } from 'lucide-react';
 import { type CSSProperties, type MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 export const themes = {
   [Plans.Free]: {
@@ -114,8 +116,12 @@ const PlanIcon = memo<PlanIconProps>(
 
     const iconContent = (
       <div
-        className={cx(styles.icon, 'flex flex-col items-center justify-center')}
+        {...clickableProps()}
         style={{ height: size, width: size, ...iconStyle }}
+        className={cn(
+          cx(styles.icon, 'flex flex-col items-center justify-center'),
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={onClick}
       >
         <IconComponent color={mono ? undefined : theme.color} size={glyphSize} />

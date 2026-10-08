@@ -1,11 +1,13 @@
 'use client';
 
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { RefreshCw } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import Item from './Item';
 import { type SuggestMode } from './useRandomQuestions';
@@ -43,7 +45,8 @@ const List = memo<ListProps>(({ mode, count = 3, disabled }) => {
         })}
       </div>
       <div
-        className="flex items-center gap-1"
+        {...clickableProps()}
+        className={cn('flex items-center gap-1', CLICKABLE_FOCUS_RING)}
         style={{
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.65 : undefined,

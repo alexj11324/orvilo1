@@ -1,12 +1,14 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { PencilIcon, X } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
 
 import Avatar from '@/components/Avatar';
 import { Spinner } from '@/components/ui/spinner';
 import { Upload } from '@/components/Upload';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
 
@@ -123,7 +125,8 @@ const AvatarUpload = memo<AvatarUploadProps>(
             </div>
             {allowDelete && (
               <div
-                className={`${styles.delete} avatar-delete-badge`}
+                {...clickableProps()}
+                className={cn(`${styles.delete} avatar-delete-badge`, CLICKABLE_FOCUS_RING)}
                 onClick={(event) => {
                   event.stopPropagation();
                   onDelete?.();

@@ -1,6 +1,7 @@
 import { type ModelPerformance, type ModelUsage } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { BadgeCent, CoinsIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { formatNumber, formatShortenNumber } from '@/utils/format';
 
 import AnimatedNumber from './AnimatedNumber';
@@ -224,7 +226,8 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
         openOnHover
         render={
           <div
-            className="flex items-center justify-center gap-0.5"
+            {...clickableProps()}
+            className={cn('flex items-center justify-center gap-0.5', CLICKABLE_FOCUS_RING)}
             style={{ cursor: 'pointer' }}
             onClick={(e) => {
               // Prevent Popover from closing and toggle the format

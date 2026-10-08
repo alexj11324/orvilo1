@@ -1,5 +1,6 @@
 import { FileTypeIcon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +15,7 @@ import { getResourceSourceFilter } from '@/features/ResourceManager/store/select
 import { usePermission } from '@/hooks/usePermission';
 import { useFileStore } from '@/store/file';
 import { ResourceSourceFilter } from '@/types/files';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const ICON_SIZE = 80;
 
@@ -124,7 +126,8 @@ const EmptyPlaceholder = () => {
       <div className="flex flex-row gap-3">
         {!libraryId && (
           <div
-            className={cx('flex flex-col p-4', styles.card)}
+            {...clickableProps()}
+            className={cn(cx('flex flex-col p-4', styles.card), CLICKABLE_FOCUS_RING)}
             onClick={() => {
               open();
             }}
@@ -227,7 +230,12 @@ const DirectoryUpload = memo<{
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <span style={{ display: 'inline-block' }} onClick={() => inputRef.current?.click()}>
+    <span
+      {...clickableProps()}
+      className={CLICKABLE_FOCUS_RING}
+      style={{ display: 'inline-block' }}
+      onClick={() => inputRef.current?.click()}
+    >
       <input
         multiple
         aria-hidden="true"

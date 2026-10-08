@@ -1,5 +1,6 @@
 import type { TaskListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -36,6 +37,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { usePermission } from '@/hooks/usePermission';
 import { useMcpEventsStore } from '@/store/mcpEvents';
 import { useTaskStore } from '@/store/task';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import AssigneeUserAvatar from '../AgentTasks/features/AssigneeUserAvatar';
 import { useUserDisplayMeta } from '../AgentTasks/shared/useUserDisplayMeta';
@@ -162,7 +164,9 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
         />
       </div>
       <div className={styles.titleCell}>
-        <span className={styles.titleText}>{task.name || task.identifier}</span>
+        <span {...clickableProps()} className={cn(styles.titleText, CLICKABLE_FOCUS_RING)}>
+          {task.name || task.identifier}
+        </span>
       </div>
       <CreatedByCell userId={task.createdByUserId} />
       {eventStateUnavailable ? (

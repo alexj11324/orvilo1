@@ -1,4 +1,5 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { isEqual } from 'es-toolkit';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +15,7 @@ import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { isExplorerItemSelected } from '@/features/ResourceManager/store/selectors';
 import { fileManagerSelectors, getChunkTargetId, useFileStore } from '@/store/file';
 import type { FileListItem as FileListItemType } from '@/types/files';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { formatSize } from '@/utils/format';
 
 import { useFileItemClick } from '../../hooks/useFileItemClick';
@@ -278,20 +280,24 @@ const FileListItem = ({
   return (
     <ContextMenuTrigger items={menuItems}>
       <div
+        {...clickableProps()}
         data-drop-target-id={id}
         data-is-folder={String(isFolder)}
         data-row-index={index}
         draggable={!!resourceManagerState.libraryId}
-        className={cx(
-          'flex flex-row items-center h-[48px] px-2',
+        className={cn(
           cx(
-            styles.container,
-            'file-list-item-group',
-            index % 2 === 0 && styles.evenRow,
-            isSelected && styles.selected,
-            isDragging && styles.dragging,
-            isOver && styles.dragOver,
+            'flex flex-row items-center h-[48px] px-2',
+            cx(
+              styles.container,
+              'file-list-item-group',
+              index % 2 === 0 && styles.evenRow,
+              isSelected && styles.selected,
+              isDragging && styles.dragging,
+              isOver && styles.dragOver,
+            ),
           ),
+          CLICKABLE_FOCUS_RING,
         )}
         style={{
           borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
@@ -306,7 +312,7 @@ const FileListItem = ({
         onDrop={handleDrop}
       >
         <div
-          className="flex flex-col items-center justify-center h-[40px]"
+          className={'flex flex-col items-center justify-center h-[40px]'}
           style={{ cursor: selectable ? 'pointer' : 'not-allowed', paddingInline: 4 }}
           title={selectable ? undefined : t('FileManager.selection.onlyOwn')}
           onClick={handleCheckboxClick}

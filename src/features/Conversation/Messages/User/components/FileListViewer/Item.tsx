@@ -1,4 +1,5 @@
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { FileLock2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import FileIcon from '@/components/FileIcon';
 import { useChatStore } from '@/store/chat';
 import { type ChatFileItem } from '@/types/index';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { formatSize } from '@/utils/format';
 
 /**
@@ -41,7 +43,8 @@ const FileItem = memo<ChatFileItem>(({ id, fileType, size, name, inaccessible })
 
   return (
     <div
-      className="flex items-center gap-3 py-2"
+      {...clickableProps()}
+      className={cn('flex items-center gap-3 py-2', CLICKABLE_FOCUS_RING)}
       key={id}
       style={{
         cursor: 'pointer',

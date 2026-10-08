@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   banner: css`
@@ -122,10 +123,14 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
               <div
+                {...clickableProps()}
                 className={cn(
-                  'truncate',
-                  'block',
-                  `${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`,
+                  cn(
+                    'truncate',
+                    'block',
+                    `${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`,
+                  ),
+                  CLICKABLE_FOCUS_RING,
                 )}
                 onClick={onHeaderClick}
               >

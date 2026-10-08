@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSingleton } from '@/hooks/useSingleton';
 import { useAnalytics } from '@/libs/analytics/client';
 import type { GlobalBillboard, GlobalBillboardItem } from '@/types/serverConfig';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { resolveBillboardAction, runBillboardAction } from './actions';
 import { resolveBillboardItem } from './locale';
@@ -395,8 +396,14 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
             <div className={cn('flex gap-1.5 justify-center', styles.dots)}>
               {set.items.map((item, idx) => (
                 <div
-                  className={`${styles.dot} ${current === idx ? styles.dotActive : ''}`}
+                  {...clickableProps()}
+                  aria-current={current === idx || undefined}
+                  aria-label={`${idx + 1} / ${set.items.length}`}
                   key={item.id}
+                  className={cn(
+                    `${styles.dot} ${current === idx ? styles.dotActive : ''}`,
+                    CLICKABLE_FOCUS_RING,
+                  )}
                   onClick={() => carouselApi?.scrollTo(idx)}
                 />
               ))}

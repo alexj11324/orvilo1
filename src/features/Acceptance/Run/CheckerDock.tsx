@@ -1,5 +1,6 @@
 import type { VerifyCheckItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useThemeMode } from 'antd-style';
+import { cn } from 'cn';
 import {
   Check,
   CheckCircle2,
@@ -25,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import type { VerifyCheckResultItem } from '@/database/schemas/verify';
 import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useVerifyResults, useVerifyState } from '../hooks';
 import { countResults, phaseFromStatus } from '../utils';
@@ -210,7 +212,8 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
     const evidence = result?.toulmin?.reasoning || result?.suggestion;
     return (
       <div
-        className={cx(styles.checkRow, styles.clickable)}
+        {...clickableProps()}
+        className={cn(cx(styles.checkRow, styles.clickable), CLICKABLE_FOCUS_RING)}
         key={item.id}
         onClick={() => openVerifyResult(operationId, item.id)}
       >
@@ -346,7 +349,11 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
 
   return (
     <div className={styles.dock}>
-      <div className={styles.head} onClick={() => setExpanded((v) => !v)}>
+      <div
+        {...clickableProps()}
+        className={cn(styles.head, CLICKABLE_FOCUS_RING)}
+        onClick={() => setExpanded((v) => !v)}
+      >
         <div className="flex items-center gap-2.5" style={{ minWidth: 0 }}>
           {createElement(headIcon, { size: 18 })}
           <div className="flex flex-col" style={{ minWidth: 0 }}>

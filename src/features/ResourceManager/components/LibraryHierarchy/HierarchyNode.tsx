@@ -2,6 +2,7 @@
 
 import { DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, FileText, FolderIcon, FolderOpenIcon, LockIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
 import React, {
@@ -34,6 +35,7 @@ import { showContextMenu } from '@/libs/contextMenu';
 import { type NativeContextMenuItem } from '@/libs/contextMenu/types';
 import type { TreeItem } from '@/store/tree';
 import { useTreeStore } from '@/store/tree';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useFileItemClick } from '../Explorer/hooks/useFileItemClick';
 import { useFileItemDropdown } from '../Explorer/ItemDropdown/useFileItemDropdown';
@@ -299,15 +301,19 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
       return (
         <div className="flex flex-col gap-0.5">
           <div
+            {...clickableProps()}
             data-drop-target-id={item.id}
             data-is-folder={String(item.isFolder)}
             draggable={!flat}
-            className={cx(
-              'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-lg px-1',
-              isActive && 'bg-secondary',
-              styles.treeItem,
-              isOver && styles.fileItemDragOver,
-              isDragging && styles.dragging,
+            className={cn(
+              cx(
+                'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-lg px-1',
+                isActive && 'bg-secondary',
+                styles.treeItem,
+                isOver && styles.fileItemDragOver,
+                isDragging && styles.dragging,
+              ),
+              CLICKABLE_FOCUS_RING,
             )}
             style={{
               paddingInlineStart: level * 12 + 4,
@@ -403,14 +409,18 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
     return (
       <div className="flex flex-col gap-0.5">
         <div
+          {...clickableProps()}
           data-drop-target-id={item.id}
           data-is-folder={false}
           draggable={!flat}
-          className={cx(
-            'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-lg px-1',
-            isActive && 'bg-secondary',
-            styles.treeItem,
-            isDragging && styles.dragging,
+          className={cn(
+            cx(
+              'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-lg px-1',
+              isActive && 'bg-secondary',
+              styles.treeItem,
+              isDragging && styles.dragging,
+            ),
+            CLICKABLE_FOCUS_RING,
           )}
           style={{
             paddingInlineStart: level * 12 + 4,

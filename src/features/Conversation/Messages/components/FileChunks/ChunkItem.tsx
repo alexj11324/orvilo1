@@ -7,6 +7,7 @@ import FileIcon from '@/components/FileIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { styles } from './style';
 
@@ -21,10 +22,14 @@ const ChunkItem = memo<ChunkItemProps>(({ id, fileId, similarity, text, filename
 
   return (
     <div
+      {...clickableProps()}
       key={id}
       className={cn(
-        'flex items-center gap-1',
-        cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+        cn(
+          'flex items-center gap-1',
+          cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+        ),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={(e) => {
         e.stopPropagation();

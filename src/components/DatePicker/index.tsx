@@ -3,10 +3,20 @@
 import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import { CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { type CSSProperties, memo, type ReactNode, useMemo, useState } from 'react';
+import {
+  type CSSProperties,
+  memo,
+  type ReactNode,
+  type SyntheticEvent,
+  useMemo,
+  useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 type PickerMode = 'date' | 'day' | 'month' | 'quarter' | 'halfYear' | 'year';
 
@@ -37,11 +47,8 @@ export interface DatePickerProps {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const cellButton = (selected: boolean) =>
-  cn(
-    'h-8 w-full rounded-lg text-sm transition-colors hover:bg-accent',
-    selected && 'bg-primary text-primary-foreground hover:bg-primary',
-  );
+const cellButtonClass = 'w-full rounded-lg hover:bg-accent';
+const cellVariant = (selected: boolean) => (selected ? 'default' : 'ghost');
 
 const PeriodGrid = ({
   disabledBefore,
@@ -56,28 +63,31 @@ const PeriodGrid = ({
   viewYear: number;
   value?: Dayjs | null;
 }) => {
+  const { t } = useTranslation('common');
   const [year, setYear] = useState(viewYear);
   const header = (
     <div className="flex items-center justify-between px-1 pb-1">
-      <button
-        aria-label="Previous"
-        className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+      <Button
+        aria-label={t('datePicker.previous')}
+        size="icon-sm"
         type="button"
+        variant="ghost"
         onClick={() => setYear((y) => y - (picker === 'year' ? 12 : 1))}
       >
         <ChevronLeft size={14} />
-      </button>
+      </Button>
       <span className="text-sm font-medium">
         {picker === 'year' ? `${year - 5} - ${year + 6}` : year}
       </span>
-      <button
-        aria-label="Next"
-        className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+      <Button
+        aria-label={t('datePicker.next')}
+        size="icon-sm"
         type="button"
+        variant="ghost"
         onClick={() => setYear((y) => y + (picker === 'year' ? 12 : 1))}
       >
         <ChevronRight size={14} />
-      </button>
+      </Button>
     </div>
   );
 
@@ -87,15 +97,16 @@ const PeriodGrid = ({
         {header}
         <div className="grid grid-cols-3 gap-1">
           {Array.from({ length: 12 }, (_, i) => year - 5 + i).map((y) => (
-            <button
-              className={cellButton(value?.year() === y)}
+            <Button
+              className={cellButtonClass}
               disabled={disabledBefore ? y < disabledBefore.year() : false}
               key={y}
               type="button"
+              variant={cellVariant(value?.year() === y)}
               onClick={() => onPick(dayjs().year(y).startOf('year'))}
             >
               {y}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -115,15 +126,16 @@ const PeriodGrid = ({
               .startOf('month');
             const selected = value?.year() === year && value?.month() === i * step;
             return (
-              <button
-                className={cellButton(selected)}
+              <Button
+                className={cellButtonClass}
                 disabled={disabledBefore ? date.isBefore(disabledBefore) : false}
                 key={i}
                 type="button"
+                variant={cellVariant(selected)}
                 onClick={() => onPick(date)}
               >
                 {picker === 'quarter' ? `Q${i + 1}` : `H${i + 1}`}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -139,15 +151,16 @@ const PeriodGrid = ({
           const date = dayjs().year(year).month(i).startOf('month');
           const selected = value?.year() === year && value?.month() === i;
           return (
-            <button
-              className={cellButton(selected)}
+            <Button
+              className={cellButtonClass}
               disabled={disabledBefore ? date.isBefore(disabledBefore) : false}
               key={label}
               type="button"
+              variant={cellVariant(selected)}
               onClick={() => onPick(date)}
             >
               {label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -178,6 +191,7 @@ const DatePicker = memo<DatePickerProps>(
     suffixIcon,
     value,
   }) => {
+    const { t } = useTranslation('common');
     const [innerOpen, setInnerOpen] = useState(false);
     const [innerValue, setInnerValue] = useState<Dayjs | null>(defaultValue ?? null);
     const open = openProp ?? innerOpen;
@@ -200,6 +214,12 @@ const DatePicker = memo<DatePickerProps>(
       setInnerValue(date);
       onChange?.(date);
       setOpen?.(false);
+    };
+
+    const clearValue = (e: SyntheticEvent) => {
+      e.stopPropagation();
+      setInnerValue(null);
+      onChange?.(null);
     };
 
     const isDayPicker = picker === 'date' || picker === 'day';
@@ -230,13 +250,14 @@ const DatePicker = memo<DatePickerProps>(
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <button
+            <Button
               aria-label={ariaLabel}
               disabled={disabled}
               style={style}
               type="button"
+              variant="outline"
               className={cn(
-                'flex h-8 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent px-2.5 text-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50',
+                'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
                 size === 'small' && 'h-7 text-[13px]',
                 className,
               )}
@@ -249,12 +270,19 @@ const DatePicker = memo<DatePickerProps>(
           </span>
           {allowClear && currentValue ? (
             <span
-              aria-hidden
-              className="flex items-center text-muted-foreground hover:text-foreground"
-              onClick={(e) => {
+              {...clickableProps()}
+              aria-label={t('datePicker.clear')}
+              className={cn(
+                'flex items-center rounded-sm text-muted-foreground hover:text-foreground',
+                CLICKABLE_FOCUS_RING,
+              )}
+              onClick={clearValue}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                // The span sits inside the trigger button: keep Enter/Space from opening the popover.
+                e.preventDefault();
                 e.stopPropagation();
-                setInnerValue(null);
-                onChange?.(null);
+                clearValue(e);
               }}
             >
               <X size={13} />

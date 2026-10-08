@@ -1,3 +1,4 @@
+import { cn } from 'cn';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -11,6 +12,7 @@ import { agentSelectors } from '@/store/agent/selectors';
 import { useToolStore } from '@/store/tool';
 import { orviloSkillStoreSelectors } from '@/store/tool/selectors';
 import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SKILL_ICON_GAP } from './constants';
 
@@ -254,7 +256,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
       if (!server) {
         return (
           <div
-            className="flex flex-row items-center gap-1"
+            {...clickableProps()}
+            className={cn('flex flex-row items-center gap-1', CLICKABLE_FOCUS_RING)}
             style={{ cursor: canCreate && canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
             onClick={(e) => {
               e.stopPropagation();
@@ -300,7 +303,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
           }
           return (
             <div
-              className="flex flex-row items-center gap-1"
+              {...clickableProps()}
+              className={cn('flex flex-row items-center gap-1', CLICKABLE_FOCUS_RING)}
               style={{ cursor: canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
               onClick={async (e) => {
                 e.stopPropagation();
@@ -331,7 +335,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
         case OrviloSkillStatus.NOT_CONNECTED: {
           return (
             <div
-              className="flex flex-row items-center gap-1"
+              {...clickableProps()}
+              className={cn('flex flex-row items-center gap-1', CLICKABLE_FOCUS_RING)}
               style={{ cursor: canCreate && canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -366,7 +371,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
 
     return (
       <div
-        className="flex flex-row items-center gap-6 justify-between"
+        {...clickableProps()}
+        className={cn('flex flex-row items-center gap-6 justify-between', CLICKABLE_FOCUS_RING)}
         onClick={(e) => {
           e.stopPropagation();
           if (canEdit && server?.status === OrviloSkillStatus.CONNECTED) {

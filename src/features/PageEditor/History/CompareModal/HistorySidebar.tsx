@@ -12,6 +12,7 @@ import type {
   DocumentHistoryListItem,
   DocumentHistorySaveSource,
 } from '@/server/routers/lambda/_schema/documentHistory';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { formatHistoryRowTime } from '../formatHistoryDate';
 
@@ -187,10 +188,14 @@ const HistorySidebarRow = memo<HistorySidebarRowProps>(
           )}
         />
         <div
-          className={cx(
-            styles.item,
-            item.isCurrent && styles.itemCurrent,
-            !item.isCurrent && isSelected && styles.itemSelected,
+          {...clickableProps()}
+          className={cn(
+            cx(
+              styles.item,
+              item.isCurrent && styles.itemCurrent,
+              !item.isCurrent && isSelected && styles.itemSelected,
+            ),
+            CLICKABLE_FOCUS_RING,
           )}
           onClick={() => {
             if (disabled) return;

@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { hasRenderableEvidence, readVisualizationManifest } from '../../Report/visualization';
 import { VisualizationDeltaBadge, VisualizationRenderer } from '../../Report/VisualizationRenderer';
@@ -407,7 +408,7 @@ export const AcceptanceCheckRow = memo<{
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <span>
+                  <span {...clickableProps()} className={CLICKABLE_FOCUS_RING}>
                     <span
                       className={cx(styles.seqChip, styles.seqChipClickable)}
                       onClick={(event) => {
@@ -561,7 +562,7 @@ export const AcceptanceCheckRow = memo<{
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span>
+                      <span {...clickableProps()} className={CLICKABLE_FOCUS_RING}>
                         <span
                           className={cx(styles.chip, styles.chipClickable)}
                           onClick={(event) => {
@@ -594,7 +595,7 @@ export const AcceptanceCheckRow = memo<{
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span>
+                      <span {...clickableProps()} className={CLICKABLE_FOCUS_RING}>
                         <span
                           className={cx(styles.chip, styles.chipClickable)}
                           onClick={(event) => {
@@ -874,7 +875,8 @@ export const AcceptanceCheckRow = memo<{
             )}
             {hasHistory && (
               <span
-                className={styles.historyToggle}
+                {...clickableProps()}
+                className={cn(styles.historyToggle, CLICKABLE_FOCUS_RING)}
                 onClick={() => setHistoryOpen((open) => !open)}
               >
                 <ChevronRight

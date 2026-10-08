@@ -2,8 +2,11 @@
 
 import type { MemoryDumpNode, MemoryDumpProcess } from '@orvilo/electron-client-ipc';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment, memo, useState } from 'react';
+
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { formatCompactSize } from '../memoryFormat';
 import { styles } from './styles';
@@ -33,7 +36,11 @@ const NodeRow = memo<{
   return (
     <Fragment>
       <div
-        className={cx(styles.row, styles.mono, hasChildren && styles.rowClickable)}
+        {...clickableProps(hasChildren)}
+        className={cn(
+          cx(styles.row, styles.mono, hasChildren && styles.rowClickable),
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={hasChildren ? () => toggle(path) : undefined}
       >
         <span

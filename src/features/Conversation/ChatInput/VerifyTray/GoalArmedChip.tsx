@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { TargetIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useConversationStore } from '../../store';
 import { useGoalArmStore } from './goalArmStore';
@@ -96,7 +98,11 @@ const GoalArmedChip = memo(() => {
         <TooltipTrigger
           render={
             <span style={{ display: 'inline-flex' }}>
-              <div className={styles.chip} onClick={() => disarm(agentId)}>
+              <div
+                {...clickableProps()}
+                className={cn(styles.chip, CLICKABLE_FOCUS_RING)}
+                onClick={() => disarm(agentId)}
+              >
                 <span className={styles.iconSlot}>
                   <TargetIcon className={cx('goal-armed-target', styles.iconTarget)} size={14} />
                   <XIcon className={cx('goal-armed-close', styles.iconClose)} size={14} />

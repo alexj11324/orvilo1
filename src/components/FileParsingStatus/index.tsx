@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import EmbeddingStatus from './EmbeddingStatus';
 
@@ -76,6 +77,8 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
               <Badge className={className} variant="destructive">
                 {t('FileParsingStatus.chunks.status.error')}{' '}
                 <span
+                  {...clickableProps()}
+                  className={CLICKABLE_FOCUS_RING}
                   style={{ cursor: 'pointer' }}
                   title={t('retry', { ns: 'common' })}
                   onClick={() => {

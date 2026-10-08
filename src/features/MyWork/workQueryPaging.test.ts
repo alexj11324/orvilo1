@@ -1,6 +1,31 @@
 import { describe, expect, it } from 'vitest';
 
-import { mergeWorkQueryGroups, mergeWorkQueryPage, workQueryHasMore } from './workQueryPaging';
+import {
+  mergeWorkQueryGroups,
+  mergeWorkQueryPage,
+  workQueryHasMore,
+  workQueryLoadedTasks,
+} from './workQueryPaging';
+
+describe('workQueryLoadedTasks', () => {
+  it('keeps populated flat results when callers normalize absent groups to an empty array', () => {
+    const tasks = [{ id: 'issue-1' }];
+    expect(workQueryLoadedTasks(tasks, [], 'none')).toEqual(tasks);
+  });
+
+  it('keeps flat results when grouping is omitted', () => {
+    const tasks = [{ id: 'issue-1' }];
+    expect(workQueryLoadedTasks(tasks, [], undefined)).toEqual(tasks);
+  });
+
+  it('uses grouped results and keeps an empty grouped result empty', () => {
+    const tasks = [{ id: 'flat-issue' }];
+    const groups = [{ hasMore: false, key: 'todo', tasks: [{ id: 'grouped-issue' }], total: 1 }];
+    expect(workQueryLoadedTasks(tasks, groups, 'status')).toEqual([{ id: 'grouped-issue' }]);
+    expect(workQueryLoadedTasks(tasks, [], 'status')).toEqual([]);
+    expect(workQueryLoadedTasks(tasks, undefined, 'status')).toEqual(tasks);
+  });
+});
 
 describe('mergeWorkQueryPage', () => {
   it('appends unseen ids and ignores duplicates', () => {

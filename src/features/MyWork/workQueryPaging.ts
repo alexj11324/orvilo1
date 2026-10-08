@@ -1,4 +1,4 @@
-import type { TaskListItem, TaskStatus } from '@orvilo/types';
+import type { TaskListItem, TaskStatus, WorkQueryGroupBy } from '@orvilo/types';
 
 /**
  * A task row inside a work-query result. The server selects full `tasks` rows,
@@ -27,6 +27,13 @@ export interface WorkQueryGroupPage<T extends { id: string }> {
   tasks: T[];
   total: number;
 }
+
+export const workQueryLoadedTasks = <T extends { id: string }>(
+  tasks: T[],
+  groups: WorkQueryGroupPage<T>[] | undefined,
+  groupBy: WorkQueryGroupBy | undefined,
+): T[] =>
+  !groupBy || groupBy === 'none' ? tasks : (groups?.flatMap((group) => group.tasks) ?? tasks);
 
 /**
  * Work-query responses are a discriminated union (flat task page, grouped task

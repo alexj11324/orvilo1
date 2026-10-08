@@ -909,7 +909,7 @@ describe('AgentModel.transferAgentOwnership', () => {
   });
 
   it('refuses handover of an agent with an OWNED group membership', async () => {
-    const agent = await createOwnerAgent({ title: 'Supervisor' });
+    const agent = await createOwnerAgent({ title: 'Supervisor', virtual: true });
     await serverDB
       .insert(chatGroups)
       .values([{ id: 'own-group', title: 'G', userId: ownerId, workspaceId: wsId }]);
@@ -926,6 +926,43 @@ describe('AgentModel.transferAgentOwnership', () => {
     await expect(
       handover({ agentId: agent.id, fromUserId: ownerId, toUserId: recipientId }),
     ).rejects.toThrow('AGENT_OWNED_BY_GROUP');
+  });
+
+  it('hands over a shared non-virtual group supervisor independently', async () => {
+    const agent = await createOwnerAgent({
+      title: 'Shared coordinator',
+      virtual: false,
+      visibility: 'public',
+    });
+    await serverDB.insert(chatGroups).values({
+      id: 'shared-group',
+      title: 'Shared group',
+      userId: ownerId,
+      workspaceId: wsId,
+    });
+    await serverDB.insert(chatGroupsAgents).values({
+      agentId: agent.id,
+      chatGroupId: 'shared-group',
+      role: 'supervisor',
+      userId: ownerId,
+      workspaceId: wsId,
+    });
+
+    await handover({ agentId: agent.id, fromUserId: ownerId, toUserId: recipientId });
+
+    const [updatedAgent] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+    const [group] = await serverDB
+      .select()
+      .from(chatGroups)
+      .where(eq(chatGroups.id, 'shared-group'));
+    const [membership] = await serverDB
+      .select()
+      .from(chatGroupsAgents)
+      .where(eq(chatGroupsAgents.chatGroupId, group.id));
+    expect(updatedAgent.userId).toBe(recipientId);
+    expect(group.userId).toBe(ownerId);
+    expect(membership.agentId).toBe(agent.id);
+    expect(membership.role).toBe('supervisor');
   });
 
   it('re-homes the previous owner’s cron jobs and bot providers, not teammates’', async () => {

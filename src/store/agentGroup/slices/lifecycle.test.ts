@@ -75,14 +75,21 @@ describe('ChatGroupLifecycleSlice', () => {
 
       let groupId: string = '';
       await act(async () => {
-        groupId = await result.current.createGroup({ title: 'Test Group' });
+        groupId = await result.current.createGroup({
+          title: 'Test Group',
+          coordinatorAgentId: 'agent-1',
+        });
       });
 
       expect(groupId).toBe('new-group-id');
-      expect(chatGroupService.createGroup).toHaveBeenCalledWith({ title: 'Test Group' });
+      expect(chatGroupService.createGroup).toHaveBeenCalledWith({
+        title: 'Test Group',
+        coordinatorAgentId: 'agent-1',
+        agentIds: [],
+      });
     });
 
-    it('should add agents to group if provided', async () => {
+    it('atomically creates the Group with selected member IDs', async () => {
       const mockGroup = {
         id: 'new-group-id',
         title: 'Test Group',
@@ -104,13 +111,19 @@ describe('ChatGroupLifecycleSlice', () => {
       const { result } = renderHook(() => useAgentGroupStore());
 
       await act(async () => {
-        await result.current.createGroup({ title: 'Test Group' }, ['agent-1', 'agent-2']);
+        await result.current.createGroup({ title: 'Test Group', coordinatorAgentId: 'agent-1' }, [
+          'agent-1',
+          'agent-2',
+        ]);
       });
 
-      expect(chatGroupService.addAgentsToGroup).toHaveBeenCalledWith('new-group-id', [
-        'agent-1',
-        'agent-2',
-      ]);
+      expect(chatGroupService.addAgentsToGroup).not.toHaveBeenCalled();
+      expect(chatGroupService.createGroup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentIds: ['agent-1', 'agent-2'],
+          coordinatorAgentId: 'agent-1',
+        }),
+      );
     });
 
     it('should fetch group detail and store supervisorAgentId for tools injection', async () => {
@@ -135,7 +148,7 @@ describe('ChatGroupLifecycleSlice', () => {
       const { result } = renderHook(() => useAgentGroupStore());
 
       await act(async () => {
-        await result.current.createGroup({ title: 'Test Group' });
+        await result.current.createGroup({ title: 'Test Group', coordinatorAgentId: 'agent-1' });
       });
 
       // Verify getGroupDetail was called to fetch full group info
@@ -175,7 +188,11 @@ describe('ChatGroupLifecycleSlice', () => {
       const { result } = renderHook(() => useAgentGroupStore());
 
       await act(async () => {
-        await result.current.createGroup({ title: 'Test Group' }, [], true);
+        await result.current.createGroup(
+          { title: 'Test Group', coordinatorAgentId: 'agent-1' },
+          [],
+          true,
+        );
       });
 
       expect(mockSwitchToGroup).not.toHaveBeenCalled();

@@ -1,10 +1,11 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import type { AgentGroupDetail, AgentGroupMember, CreateAgentConfig } from '@orvilo/types';
+import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
+import type { AgentGroupDetail, AgentGroupMember } from '@orvilo/types';
 import { cleanObject } from '@orvilo/utils';
+import { resolveAgentRuntimeType } from '@orvilo/utils/agentRuntimeIdentity';
 import { TRPCError } from '@trpc/server';
 import { and, asc, count, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 
-import { AgentModel } from '../../models/agent';
 import {
   AGENT_COPY_IN_PROGRESS,
   AgentCopyJobModel,
@@ -76,23 +77,6 @@ interface CopyAgentGroupToWorkspaceOptions {
    */
   targetVisibility?: 'private' | 'public';
 }
-
-export interface SupervisorAgentConfig extends Pick<
-  CreateAgentConfig,
-  | 'agencyConfig'
-  | 'avatar'
-  | 'backgroundColor'
-  | 'chatConfig'
-  | 'description'
-  | 'model'
-  | 'params'
-  | 'plugins'
-  | 'provider'
-  | 'systemRole'
-  | 'tags'
-  | 'title'
-  | 'visibility'
-> {}
 
 /**
  * Result of checking agents before removal
@@ -343,15 +327,11 @@ export class AgentGroupRepository {
 
   /**
    * Find a chat group by ID with its associated agents.
-   * If no supervisor exists, a virtual supervisor agent is automatically created.
+   * Missing or inaccessible coordinators remain unset for explicit member selection.
    * @param groupId - The chat group ID
    * @returns AgentGroupDetail with group info, agents array, and supervisor agent ID
    */
-  async findByIdWithAgents(
-    groupId: string,
-    selectedRuntime?: Awaited<ReturnType<AgentModel['getOrchestratorRuntimeForCreation']>>,
-    allowDefaultRuntime = true,
-  ): Promise<AgentGroupDetail | null> {
+  async findByIdWithAgents(groupId: string): Promise<AgentGroupDetail | null> {
     // 1. Find the group
     const group = await this.db.query.chatGroups.findFirst({
       where: and(eq(chatGroups.id, groupId), this.groupOwnership()),
@@ -359,12 +339,7 @@ export class AgentGroupRepository {
 
     if (!group) return null;
 
-    // 2. Find all agents associated with this group (including role info). The
-    // roster is fetched raw (no visibility filter) with a per-row `visible`
-    // flag: supervisor existence must be judged on the raw rows — otherwise a
-    // viewer who can't see the supervisor would auto-create a duplicate one
-    // below — while a member agent switched back to private must not leak its
-    // config to other members, so only visible rows are returned.
+    // Membership never grants access to a shared Agent's private configuration.
     const groupAgentsWithDetails = await this.db
       .select({
         agent: agents,
@@ -388,70 +363,16 @@ export class AgentGroupRepository {
 
     for (const row of groupAgentsWithDetails) {
       const isSupervisor = row.role === 'supervisor';
-      if (isSupervisor) {
-        supervisorAgentId = row.agent.id;
-      }
-      // The supervisor is a group-owned synthetic agent: anyone who can read
-      // the group needs it to run group chat, and `publishToWorkspace` keeps
-      // its visibility in sync with the group. Skipping an out-of-sync legacy
-      // row would strand `supervisorAgentId` without a matching agent entry.
-      if (!row.visible && !isSupervisor) continue;
+      if (isSupervisor && row.visible) supervisorAgentId = row.agent.id;
+      if (!row.visible) continue;
       agentItems.push(
         cleanObject({
           ...row.agent,
+          heterogeneousType: row.agent.agencyConfig?.heterogeneousProvider
+            ? resolveAgentRuntimeType(row.agent)
+            : undefined,
           isSupervisor,
-          // Inject builtin agent slug for supervisor
-          slug: isSupervisor ? BUILTIN_AGENT_SLUGS.groupSupervisor : row.agent.slug,
-        }) as AgentGroupMember,
-      );
-    }
-
-    // 4. If no supervisor exists, create a virtual supervisor agent
-    if (!supervisorAgentId) {
-      if (!selectedRuntime && !allowDefaultRuntime)
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'ORCHESTRATOR_SETUP_REQUIRED',
-        });
-      const runtime =
-        selectedRuntime ??
-        (await new AgentModel(
-          this.db,
-          this.userId,
-          this.workspaceId,
-        ).getOrchestratorRuntimeForCreation({ visibility: group.visibility }));
-      // Create supervisor agent (virtual agent)
-      const [supervisorAgent] = await this.db
-        .insert(agents)
-        .values({
-          ...runtime,
-          visibility: group.visibility,
-          title: 'Supervisor',
-          userId: this.userId,
-          virtual: true,
-          workspaceId: this.workspaceId ?? null,
-        })
-        .returning();
-
-      // Add supervisor agent to group with role 'supervisor'
-      await this.db.insert(chatGroupsAgents).values({
-        agentId: supervisorAgent.id,
-        chatGroupId: group.id,
-        order: -1, // Supervisor always first (negative order)
-        role: GROUP_SUPERVISOR_ROLE,
-        userId: this.userId,
-        workspaceId: this.workspaceId ?? null,
-      });
-
-      supervisorAgentId = supervisorAgent.id;
-
-      // Insert at the beginning of agents array
-      agentItems.unshift(
-        cleanObject({
-          ...supervisorAgent,
-          isSupervisor: true,
-          // Inject builtin agent slug for supervisor
-          slug: BUILTIN_AGENT_SLUGS.groupSupervisor,
+          slug: row.agent.slug,
         }) as AgentGroupMember,
       );
     }
@@ -463,15 +384,6 @@ export class AgentGroupRepository {
     } as AgentGroupDetail;
   }
 
-  /**
-   * Create a chat group with a supervisor agent and optional member agents.
-   * The supervisor agent is automatically created as a virtual agent with role 'supervisor'.
-   *
-   * @param groupParams - Parameters for creating the chat group
-   * @param agentMembers - Array of existing agent IDs to add as members (optional)
-   * @param supervisorConfig - Optional configuration for the supervisor agent
-   * @returns Created group, agents, and supervisor agent ID
-   */
   /**
    * Resolve a folder the caller may put a group in, returning its visibility.
    * Mirrors `AgentModel.getAssignableSessionGroupVisibility` — the foreign key
@@ -505,142 +417,75 @@ export class AgentGroupRepository {
   async createGroupWithSupervisor(
     groupParams: Omit<NewChatGroup, 'userId'>,
     agentMembers: string[] = [],
-    supervisorConfig?: SupervisorAgentConfig,
-    selectedRuntime?: Awaited<ReturnType<AgentModel['getOrchestratorRuntimeForCreation']>>,
+    supervisorAgentId?: string,
   ): Promise<CreateGroupWithSupervisorResult> {
-    // Creating inside a Category has to land in that Category. The sidebar
-    // resolves a public group's folder only against public folders (and a
-    // private group's only against private ones), so a default-public group
-    // created in a private Category renders in Ungrouped — for its creator as
-    // well. The folder therefore decides the new group's visibility, and an
-    // explicit value that contradicts it is refused rather than overridden.
-    // Same rule and same reasoning as agent creation.
+    const memberIds = [...new Set(agentMembers)];
+    if (!supervisorAgentId || !memberIds.includes(supervisorAgentId))
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Coordinator must be an existing selected member',
+      });
     const folderVisibility = groupParams.groupId
       ? await this.getAssignableFolderVisibility(groupParams.groupId)
       : undefined;
-
     if (folderVisibility && groupParams.visibility && groupParams.visibility !== folderVisibility)
-      throw new Error(
-        `A ${groupParams.visibility} chat group cannot be created in a ${folderVisibility} folder`,
-      );
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Group visibility must match its category',
+      });
+    const visibility = groupParams.visibility ?? folderVisibility ?? 'public';
 
-    // Mirror the group's visibility onto the synthetic supervisor agent so
-    // workspace members don't see a stray supervisor when the parent group is
-    // private. Defaults to 'public' to match the column default.
-    const groupVisibility = groupParams.visibility ?? folderVisibility ?? 'public';
-
-    const sourceAgentId = supervisorConfig?.params?.orchestratorSourceAgentId;
-    const runtime =
-      selectedRuntime ??
-      (typeof sourceAgentId === 'string' && sourceAgentId
-        ? {
-            ...(await new AgentModel(
-              this.db,
-              this.userId,
-              this.workspaceId,
-            ).inheritRuntimeForCreation(sourceAgentId, {
-              purpose: 'orchestrator',
-              visibility: groupVisibility,
-            })),
-            params: { orchestratorSourceAgentId: sourceAgentId },
-          }
-        : supervisorConfig?.agencyConfig
-          ? {
-              agencyConfig: await assertAgentRuntimeCreation(
-                this.db,
-                { userId: this.userId, workspaceId: this.workspaceId },
-                { ...supervisorConfig, visibility: groupVisibility },
-                { purpose: 'orchestrator' },
-              ),
-              model: supervisorConfig.model,
-              provider: supervisorConfig.provider,
-              params: supervisorConfig.params,
-            }
-          : await new AgentModel(
-              this.db,
-              this.userId,
-              this.workspaceId,
-            ).getOrchestratorRuntimeForCreation({
-              visibility: groupVisibility,
-              model: supervisorConfig?.model ?? undefined,
-              provider: supervisorConfig?.provider ?? undefined,
-            }));
-
-    await assertAgentRuntimeCreation(
-      this.db,
-      { userId: this.userId, workspaceId: this.workspaceId },
-      { ...runtime, visibility: groupVisibility },
-      { purpose: 'orchestrator' },
-    );
-
-    // 1. Create supervisor agent (virtual agent)
-    const [supervisorAgent] = await this.db
-      .insert(agents)
-      .values({
-        avatar: supervisorConfig?.avatar,
-        backgroundColor: supervisorConfig?.backgroundColor,
-        chatConfig: supervisorConfig?.chatConfig,
-        description: supervisorConfig?.description,
-        ...runtime,
-        params: { ...supervisorConfig?.params, ...runtime.params },
-        // The `plugins` column is still typed `string[]` at the schema layer
-        // (widening deferred to the tri-state rollout's final phase) but
-        // legitimately holds mixed AgentPluginEntry[] at runtime — JSONB has
-        // no schema enforcement.
-        plugins: supervisorConfig?.plugins as unknown as string[] | undefined,
-        systemRole: supervisorConfig?.systemRole,
-        tags: supervisorConfig?.tags,
-        title: supervisorConfig?.title ?? 'Supervisor',
-        userId: this.userId,
-        virtual: true,
-        visibility: groupVisibility,
-        workspaceId: this.workspaceId ?? null,
-      })
-      .returning();
-
-    // 2. Create the group
-    const [group] = await this.db
-      .insert(chatGroups)
-      .values({
-        ...groupParams,
-        userId: this.userId,
-        visibility: groupVisibility,
-        workspaceId: this.workspaceId ?? null,
-      })
-      .returning();
-
-    // 3. Add supervisor agent to group with role 'supervisor'
-    const supervisorGroupAgent: NewChatGroupAgent = {
-      agentId: supervisorAgent.id,
-      chatGroupId: group.id,
-      order: -1, // Supervisor always first (negative order)
-      role: GROUP_SUPERVISOR_ROLE,
-      userId: this.userId,
-      workspaceId: this.workspaceId ?? null,
-    };
-
-    // 4. Add member agents to group with role 'participant'
-    const memberGroupAgents: NewChatGroupAgent[] = agentMembers.map((agentId, index) => ({
-      agentId,
-      chatGroupId: group.id,
-      order: index,
-      role: 'participant',
-      userId: this.userId,
-      workspaceId: this.workspaceId ?? null,
-    }));
-
-    // 5. Insert all group-agent relationships
-    const allGroupAgents = [supervisorGroupAgent, ...memberGroupAgents];
-    const insertedAgents = await this.db
-      .insert(chatGroupsAgents)
-      .values(allGroupAgents)
-      .returning();
-
-    return {
-      agents: insertedAgents,
-      group,
-      supervisorAgentId: supervisorAgent.id,
-    };
+    return this.db.transaction(async (tx) => {
+      const members = await tx
+        .select()
+        .from(agents)
+        .where(and(inArray(agents.id, memberIds), this.agentOwnership()))
+        .orderBy(agents.id)
+        .for('update');
+      if (
+        members.length !== memberIds.length ||
+        members.some(
+          (agent) =>
+            agent.virtual ||
+            (this.workspaceId &&
+              visibility === 'public' &&
+              (agent.visibility === 'private' || agent.workspaceId !== this.workspaceId)),
+        )
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Group members are unavailable in this scope',
+        });
+      const coordinator = members.find((member) => member.id === supervisorAgentId);
+      if (!canRunGroupSupervisorRuntime(coordinator?.agencyConfig?.heterogeneousProvider))
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'ORCHESTRATOR_RUNTIME_UNSUPPORTED',
+        });
+      const [group] = await tx
+        .insert(chatGroups)
+        .values({
+          ...groupParams,
+          userId: this.userId,
+          workspaceId: this.workspaceId ?? null,
+          visibility,
+        })
+        .returning();
+      const groupAgents = await tx
+        .insert(chatGroupsAgents)
+        .values(
+          memberIds.map((agentId, order) => ({
+            agentId,
+            chatGroupId: group.id,
+            userId: this.userId,
+            workspaceId: this.workspaceId ?? null,
+            order,
+            role: agentId === supervisorAgentId ? GROUP_SUPERVISOR_ROLE : 'participant',
+          })),
+        )
+        .returning();
+      return { agents: groupAgents, group, supervisorAgentId };
+    });
   }
 
   /**
@@ -807,8 +652,7 @@ export class AgentGroupRepository {
   /**
    * Duplicate a chat group with all its members.
    * - Creates a new group with the same config
-   * - Creates a new supervisor agent
-   * - For virtual member agents: creates new copies
+   * - For actual legacy owned members: creates new copies
    * - For non-virtual member agents: adds relationship only (references same agents)
    *
    * @param groupId - The chat group ID to duplicate
@@ -818,195 +662,70 @@ export class AgentGroupRepository {
   async duplicate(
     groupId: string,
     newTitle?: string,
-  ): Promise<{ groupId: string; supervisorAgentId: string } | null> {
-    // 1. Get the source group
-    const sourceGroup = await this.db.query.chatGroups.findFirst({
-      where: and(eq(chatGroups.id, groupId), this.groupOwnership()),
-    });
-
-    if (!sourceGroup) return null;
-
-    // 2. Get all agents in the group with their details
-    const groupAgentsWithDetails = await this.db
-      .select({
-        agent: agents,
-        enabled: chatGroupsAgents.enabled,
-        order: chatGroupsAgents.order,
-        role: chatGroupsAgents.role,
-      })
-      .from(chatGroupsAgents)
-      .innerJoin(agents, eq(chatGroupsAgents.agentId, agents.id))
-      .where(eq(chatGroupsAgents.chatGroupId, groupId))
-      .orderBy(chatGroupsAgents.order, chatGroupsAgents.createdAt, chatGroupsAgents.agentId);
-
-    // 3. Separate supervisor, owned members, and referenced members. This is
-    //    the same three-way split every other path now shares: an owned member
-    //    has no life outside its group, so the copy needs its own; a referenced
-    //    member is a standalone agent both groups can point at.
-    let sourceSupervisor: (typeof groupAgentsWithDetails)[number] | undefined;
-    const virtualMembers: (typeof groupAgentsWithDetails)[number][] = [];
-    const nonVirtualMembers: (typeof groupAgentsWithDetails)[number][] = [];
-
-    for (const row of groupAgentsWithDetails) {
-      if (row.role === GROUP_SUPERVISOR_ROLE) {
-        sourceSupervisor = row;
-      } else if (
-        resolveGroupMembershipType({
-          role: row.role,
-          slug: row.agent.slug,
-          virtual: row.agent.virtual,
-        }) === 'owned'
-      ) {
-        virtualMembers.push(row);
-      } else {
-        nonVirtualMembers.push(row);
-      }
-    }
-
-    // Use transaction to ensure atomicity
-    return this.db.transaction(async (trx) => {
-      for (const source of [
-        sourceSupervisor?.agent,
-        ...virtualMembers.map((member) => member.agent),
-      ]) {
-        await assertAgentRuntimeCreation(
-          trx,
-          { userId: this.userId, workspaceId: this.workspaceId },
-          {
-            agencyConfig: source?.agencyConfig,
-            model: source?.model,
-            provider: source?.provider,
-            visibility: sourceGroup.visibility,
-          },
-        );
-      }
-      // 4. Create the new group
-      const [newGroup] = await trx
+  ): Promise<{ groupId: string; supervisorAgentId?: string } | null> {
+    return this.db.transaction(async (tx) => {
+      const [sourceGroup] = await tx
+        .select()
+        .from(chatGroups)
+        .where(and(eq(chatGroups.id, groupId), this.groupOwnership()))
+        .for('update');
+      if (!sourceGroup) return null;
+      const members = await tx
+        .select({
+          agent: agents,
+          enabled: chatGroupsAgents.enabled,
+          order: chatGroupsAgents.order,
+          role: chatGroupsAgents.role,
+        })
+        .from(chatGroupsAgents)
+        .innerJoin(agents, eq(chatGroupsAgents.agentId, agents.id))
+        .where(eq(chatGroupsAgents.chatGroupId, groupId))
+        .orderBy(chatGroupsAgents.order, chatGroupsAgents.agentId);
+      const { id: _id, ...source } = sourceGroup;
+      const [group] = await tx
         .insert(chatGroups)
         .values({
-          avatar: sourceGroup.avatar,
-          backgroundColor: sourceGroup.backgroundColor,
-          config: sourceGroup.config,
-          content: sourceGroup.content,
-          description: sourceGroup.description,
-          editorData: sourceGroup.editorData,
-          // Sidebar folder placement is shared state, so the copy lands next to
-          // its source (matching AgentModel.duplicate's `sessionGroupId`).
-          groupId: sourceGroup.groupId,
-          // Visibility travels with the folder, and must: the column defaults
-          // to `public`, so duplicating a private group would otherwise publish
-          // the copy to the workspace *and* strand it — the sidebar resolves a
-          // public item's folder only against public folders, so the copy would
-          // land in Ungrouped rather than beside its source.
-          visibility: sourceGroup.visibility,
-          pinned: sourceGroup.pinned,
-          title: newTitle || (sourceGroup.title ? `${sourceGroup.title} (Copy)` : 'Copy'),
-          userId: this.userId,
+          ...source,
           workspaceId: this.workspaceId ?? null,
+          title: newTitle ?? (sourceGroup.title ? `${sourceGroup.title} (Copy)` : 'Copy'),
+          userId: this.userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })
         .returning();
-
-      // 5. Create new supervisor agent
-      const supervisorAgent = sourceSupervisor?.agent;
-      const [newSupervisor] = await trx
-        .insert(agents)
-        .values({
-          agencyConfig: supervisorAgent?.agencyConfig,
-          avatar: supervisorAgent?.avatar,
-          backgroundColor: supervisorAgent?.backgroundColor,
-          description: supervisorAgent?.description,
-          model: supervisorAgent?.model,
-          params: supervisorAgent?.params,
-          provider: supervisorAgent?.provider,
-          systemRole: supervisorAgent?.systemRole,
-          tags: supervisorAgent?.tags,
-          title: supervisorAgent?.title || 'Supervisor',
-          userId: this.userId,
-          virtual: true,
-          // Synthetic agents stay in lockstep with their group, the same way
-          // creation and `setVisibility` keep them. Left to the column default
-          // they would be workspace-visible while the group stays private.
-          visibility: sourceGroup.visibility,
-          workspaceId: this.workspaceId ?? null,
-        })
-        .returning();
-
-      // 6. Create copies of virtual member agents using include mode
-      const newVirtualAgentMap = new Map<string, string>(); // oldId -> newId
-      if (virtualMembers.length > 0) {
-        const virtualAgentConfigs = virtualMembers.map((member) => ({
-          agencyConfig: member.agent.agencyConfig,
-          // Metadata
-          avatar: member.agent.avatar,
-          backgroundColor: member.agent.backgroundColor,
-          // Config
-          chatConfig: member.agent.chatConfig,
-          description: member.agent.description,
-          fewShots: member.agent.fewShots,
-
-          model: member.agent.model,
-          openingMessage: member.agent.openingMessage,
-          openingQuestions: member.agent.openingQuestions,
-          params: member.agent.params,
-          plugins: member.agent.plugins,
-          provider: member.agent.provider,
-          systemRole: member.agent.systemRole,
-          tags: member.agent.tags,
-          title: member.agent.title,
-          tts: member.agent.tts,
-          // User & virtual flag
-          userId: this.userId,
-          virtual: true,
-          visibility: sourceGroup.visibility,
-          workspaceId: this.workspaceId ?? null,
-        }));
-
-        const newVirtualAgents = await trx.insert(agents).values(virtualAgentConfigs).returning();
-
-        // Map old agent IDs to new agent IDs
-        for (const [i, virtualMember] of virtualMembers.entries()) {
-          newVirtualAgentMap.set(virtualMember.agent.id, newVirtualAgents[i].id);
+      const links: NewChatGroupAgent[] = [];
+      for (const member of members) {
+        let agentId = member.agent.id;
+        if (resolveGroupMembershipType({ ...member.agent, role: member.role }) === 'owned') {
+          const config = this.buildCopiedAgent(
+            member.agent,
+            this.workspaceId ?? null,
+            this.userId,
+            'Agent',
+            sourceGroup.visibility,
+          );
+          await assertAgentRuntimeCreation(
+            tx,
+            { userId: this.userId, workspaceId: this.workspaceId },
+            config,
+          );
+          const [copy] = await tx.insert(agents).values(config).returning();
+          agentId = copy.id;
         }
+        links.push({
+          agentId,
+          chatGroupId: group.id,
+          enabled: member.enabled,
+          order: member.order,
+          role: member.role,
+          userId: this.userId,
+          workspaceId: this.workspaceId ?? null,
+        });
       }
-
-      // 7. Create group-agent relationships
-      const groupAgentValues: NewChatGroupAgent[] = [
-        // Supervisor
-        {
-          agentId: newSupervisor.id,
-          chatGroupId: newGroup.id,
-          order: -1,
-          role: GROUP_SUPERVISOR_ROLE,
-          userId: this.userId,
-          workspaceId: this.workspaceId ?? null,
-        },
-        // Owned members (using new copied agents)
-        ...virtualMembers.map((member) => ({
-          agentId: newVirtualAgentMap.get(member.agent.id)!,
-          chatGroupId: newGroup.id,
-          enabled: member.enabled,
-          order: member.order,
-          role: member.role || 'participant',
-          userId: this.userId,
-          workspaceId: this.workspaceId ?? null,
-        })),
-        // Referenced members (pointing at the same agents - only add relationship)
-        ...nonVirtualMembers.map((member) => ({
-          agentId: member.agent.id,
-          chatGroupId: newGroup.id,
-          enabled: member.enabled,
-          order: member.order,
-          role: member.role || 'participant',
-          userId: this.userId,
-          workspaceId: this.workspaceId ?? null,
-        })),
-      ];
-
-      await trx.insert(chatGroupsAgents).values(groupAgentValues);
-
+      if (links.length) await tx.insert(chatGroupsAgents).values(links);
       return {
-        groupId: newGroup.id,
-        supervisorAgentId: newSupervisor.id,
+        groupId: group.id,
+        supervisorAgentId: links.find((link) => link.role === GROUP_SUPERVISOR_ROLE)?.agentId,
       };
     });
   }
@@ -1540,7 +1259,7 @@ export class AgentGroupRepository {
     targetWorkspaceId: string | null,
     targetUserId: string,
     optionsOrNewTitle?: CopyAgentGroupToWorkspaceOptions | string,
-  ): Promise<{ copyJobId: string | null; groupId: string; supervisorAgentId: string } | null> {
+  ): Promise<{ copyJobId: string | null; groupId: string; supervisorAgentId?: string } | null> {
     const options =
       typeof optionsOrNewTitle === 'string'
         ? { newTitle: optionsOrNewTitle }
@@ -1564,7 +1283,7 @@ export class AgentGroupRepository {
       .orderBy(chatGroupsAgents.order, chatGroupsAgents.createdAt, chatGroupsAgents.agentId);
 
     const sourceSupervisor = groupAgentsWithDetails.find((row) => row.role === 'supervisor');
-    const sourceMembers = groupAgentsWithDetails.filter((row) => row.role !== 'supervisor');
+    const sourceMembers = groupAgentsWithDetails;
 
     // Same guard, same reason as `transferToWorkspace`: a copy duplicates each
     // member through `buildCopiedAgent`, systemRole and config included, into a
@@ -1657,12 +1376,9 @@ export class AgentGroupRepository {
         for (const agent of visibleMembers) lockedReferencedSourceAgents.set(agent.id, agent);
       }
 
-      for (const source of [
-        sourceSupervisor?.agent,
-        ...sourceMembers.map(
-          (member) => lockedReferencedSourceAgents.get(member.agent.id) ?? member.agent,
-        ),
-      ]) {
+      for (const source of sourceMembers.map(
+        (member) => lockedReferencedSourceAgents.get(member.agent.id) ?? member.agent,
+      )) {
         await assertAgentRuntimeCreation(
           trx,
           { userId: targetUserId, workspaceId: targetWorkspaceId ?? undefined },
@@ -1685,19 +1401,6 @@ export class AgentGroupRepository {
           ...(targetVisibility ? { visibility: targetVisibility } : {}),
           workspaceId: targetWorkspaceId,
         })
-        .returning();
-
-      const [newSupervisor] = await trx
-        .insert(agents)
-        .values(
-          this.buildCopiedAgent(
-            sourceSupervisor?.agent,
-            targetWorkspaceId,
-            targetUserId,
-            'Supervisor',
-            targetVisibility,
-          ),
-        )
         .returning();
 
       const memberAgentIdMap = new Map<string, string>();
@@ -1726,14 +1429,6 @@ export class AgentGroupRepository {
       }
 
       const groupAgentValues: NewChatGroupAgent[] = [
-        {
-          agentId: newSupervisor.id,
-          chatGroupId: newGroup.id,
-          order: -1,
-          role: GROUP_SUPERVISOR_ROLE,
-          userId: targetUserId,
-          workspaceId: targetWorkspaceId,
-        },
         // A copy duplicates EVERY member into the target scope, and the copies
         // keep the source's `virtual` flag (`buildCopiedAgent`), so each copy
         // resolves to the same membership its source had — the copy's
@@ -1753,7 +1448,8 @@ export class AgentGroupRepository {
 
       const agentIdMap = new Map<string, string>();
       if (sourceSupervisor?.agent.id) {
-        agentIdMap.set(sourceSupervisor.agent.id, newSupervisor.id);
+        const copiedCoordinatorId = memberAgentIdMap.get(sourceSupervisor.agent.id);
+        if (copiedCoordinatorId) agentIdMap.set(sourceSupervisor.agent.id, copiedCoordinatorId);
       }
       for (const [sourceAgentId, newAgentId] of memberAgentIdMap) {
         agentIdMap.set(sourceAgentId, newAgentId);
@@ -1773,7 +1469,9 @@ export class AgentGroupRepository {
       return {
         copyJobId,
         groupId: newGroup.id,
-        supervisorAgentId: newSupervisor.id,
+        supervisorAgentId: sourceSupervisor
+          ? memberAgentIdMap.get(sourceSupervisor.agent.id)
+          : undefined,
       };
     });
   }

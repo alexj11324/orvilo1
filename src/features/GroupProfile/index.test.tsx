@@ -1,28 +1,36 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
-import { CoordinatorSummary } from './CoordinatorSummary';
 import { GroupProfile } from './index';
 
-const sourceB = vi.hoisted(() =>
-  Object.freeze({
-    id: 'source-b',
-    title: 'Original source B',
-    model: 'codex-model-b',
-    agencyConfig: Object.freeze({
-      executionTarget: 'local' as const,
-      heterogeneousProvider: Object.freeze({ type: 'codex' as const, model: 'codex-model-b' }),
-    }),
-  }),
-);
-const api = vi.hoisted(() => ({
-  update: vi.fn().mockResolvedValue(undefined),
-  refresh: vi
-    .fn()
-    .mockRejectedValueOnce(new Error('detail refresh failed'))
-    .mockResolvedValue(undefined),
-  copyDirectory: vi.fn().mockResolvedValue(undefined),
+const mocks = vi.hoisted(() => ({
+  update: vi.fn(),
+  refresh: vi.fn(),
+  updateGroup: vi.fn(),
+  group: {
+    id: 'group-one',
+    title: 'Group',
+    content: 'Existing description',
+    supervisorAgentId: 'member-a',
+    visibility: 'private',
+    agents: [
+      {
+        id: 'member-a',
+        name: 'Coordinator',
+        heterogeneousType: 'codex',
+        isSupervisor: true,
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      },
+      {
+        id: 'member-b',
+        name: 'Researcher',
+        heterogeneousType: 'opencode',
+        isSupervisor: false,
+        agencyConfig: { heterogeneousProvider: { type: 'opencode' } },
+      },
+    ],
+  },
 }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('react-router', () => ({ useParams: () => ({ gid: 'group-one' }) }));
@@ -32,136 +40,98 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 vi.mock('@/features/ResourcePermission/ResourceConfigAccessGate', () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
+vi.mock('@/components/AgentRuntimeIcon', () => ({
+  default: ({ type }: { type?: string }) => <span aria-label={type} />,
+}));
 vi.mock('@/components/Skeleton/Profile', () => ({ default: () => null }));
 vi.mock('@/components/Modal', () => ({ confirmModal: vi.fn() }));
-vi.mock('@/components/toast', () => ({ toast: { success: vi.fn() } }));
-vi.mock('@/components/AsyncError', () => ({
-  default: ({ error, onRetry }: { error: Error; onRetry: () => void }) => (
-    <div role="alert">
-      {error.message}
-      <button onClick={onRetry}>Retry save</button>
-    </div>
-  ),
-}));
 vi.mock('@/routes/(main)/group/profile/StoreSync', () => ({ default: () => null }));
-vi.mock('@/routes/(main)/group/profile/features/GroupProfile', () => ({ default: () => null }));
-vi.mock('@/routes/(main)/group/profile/features/MemberProfile', () => ({ default: () => null }));
+vi.mock('@/business/client/hooks/useHasActiveWorkspace', () => ({
+  useHasActiveWorkspace: () => false,
+}));
+vi.mock('@/business/client/hooks/useAgentGroupTransferMenuItem', () => ({
+  useAgentGroupTransferMenuItem: () => [],
+}));
+vi.mock('@/business/client/hooks/useAgentGroupTransferToMemberMenuItem', () => ({
+  useAgentGroupTransferToMemberMenuItem: () => null,
+}));
+vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
+  useResourceAccess: () => ({ canEditResource: true }),
+}));
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/features/EditLock', () => ({
+  EditingIndicator: () => null,
+  useEditLock: () => ({ lockedByOther: false, pending: false, health: 'healthy' }),
+}));
+vi.mock('@/store/groupProfile', () => ({
+  useGroupProfileStore: (select: (state: unknown) => unknown) =>
+    select({ agentBuilderContentUpdate: null, setAgentBuilderContent: vi.fn() }),
+}));
 vi.mock('@/routes/(main)/group/_layout/Sidebar/AddGroupMemberModal', () => ({
   default: () => null,
 }));
-vi.mock('@/store/groupProfile', () => ({ useGroupProfileStore: { setState: vi.fn() } }));
-vi.mock('@/services/agent', () => ({ agentService: { updateAgentConfig: api.update } }));
-vi.mock('@/features/Orchestrator/copyWorkingDirectory', () => ({
-  copyOrchestratorWorkingDirectory: api.copyDirectory,
+vi.mock('@/services/chatGroup', () => ({ chatGroupService: { updateAgentInGroup: mocks.update } }));
+vi.mock('@/store/agentGroup/selectors', () => ({
+  agentGroupSelectors: { getGroupById: () => () => mocks.group },
 }));
-vi.mock('swr', () => ({ default: () => ({ data: [], isLoading: false }) }));
-vi.mock('@/services/device', () => ({ deviceService: { listDevices: vi.fn() } }));
-vi.mock('@/features/CreateAgent/agentOptions', () => ({
-  modelDisplayLabel: ({ id }: { id: string }) => id,
-}));
-vi.mock('@/features/Orchestrator/ConfiguredOrchestratorSelector', () => ({
-  default: ({
-    value,
-    onSelect,
-  }: {
-    value?: string;
-    onSelect: (id: string, runtime: typeof sourceB, explicit: boolean) => void;
-  }) => (
-    <div>
-      <output aria-label="Selected source">{value}</output>
-      <button onClick={() => onSelect(sourceB.id, sourceB, true)}>Choose source B</button>
-    </div>
+vi.mock('@/store/agentGroup', () => ({
+  useAgentGroupStore: Object.assign(
+    (select: (state: unknown) => unknown) => select({ updateGroup: mocks.updateGroup }),
+    {
+      getState: () => ({ refreshGroupDetail: mocks.refresh }),
+    },
   ),
 }));
-vi.mock('@/store/agentGroup/selectors', () => ({
-  agentGroupSelectors: {
-    getGroupById: (id: string) => (state: { groups: Record<string, unknown> }) => state.groups[id],
-  },
-}));
-vi.mock('@/store/agentGroup', () => {
-  // The update commits remotely, but the rejected refresh leaves the old A snapshot here.
-  const state = {
-    groups: {
-      'group-one': {
-        id: 'group-one',
-        title: 'Group',
-        visibility: 'private',
-        workspaceId: 'workspace-one',
-        agents: [
-          {
-            id: 'owned-coordinator',
-            isSupervisor: true,
-            model: 'old-model-a',
-            params: { orchestratorSourceAgentId: 'source-a' },
-            systemRole: 'Old instructions',
-            agencyConfig: { executionTarget: 'local', heterogeneousProvider: { type: 'codex' } },
-          },
-        ],
-      },
-    },
-    refreshGroupDetail: api.refresh,
-  };
-  return {
-    useAgentGroupStore: Object.assign((select: (value: typeof state) => unknown) => select(state), {
-      getState: () => state,
-    }),
-  };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.update.mockResolvedValue(undefined);
+  mocks.refresh.mockResolvedValue(undefined);
 });
 
-it('retains source B after a failed refresh and retries prompt saving without copying its directory again', async () => {
-  const originalSource = JSON.stringify(sourceB);
-  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+it('shows all members with an inline coordinator badge and selects the same existing member ID', async () => {
+  render(<GroupProfile />);
+  expect(screen.getByRole('button', { name: 'Coordinator' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Researcher' })).toBeTruthy();
+  expect(screen.getByLabelText('codex')).toBeTruthy();
+  expect(screen.getByLabelText('opencode')).toBeTruthy();
+  expect(screen.getByText('group.settings.coordinatorName')).toBeTruthy();
+  expect(screen.queryByRole('tab')).toBeNull();
+  expect(screen.queryByText('group.settings.model')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'group.settings.setCoordinator' }));
+  await waitFor(() =>
+    expect(mocks.update).toHaveBeenCalledWith('group-one', 'member-b', { role: 'supervisor' }),
+  );
+  expect(mocks.refresh).toHaveBeenCalledWith('group-one');
+});
+
+it('shows an explicit repair instruction when the Group has no coordinator', () => {
+  const previous = mocks.group.supervisorAgentId;
+  mocks.group.supervisorAgentId = '';
   try {
     render(<GroupProfile />);
-    fireEvent.click(screen.getByRole('tab', { name: 'group.settings.tabs.coordinator' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Choose source B' }));
-    fireEvent.click(screen.getByRole('button', { name: 'save' }));
-    await waitFor(() =>
-      expect(screen.getByRole('alert').textContent).toContain('detail refresh failed'),
-    );
-    expect(screen.getByLabelText('Selected source').textContent).toBe('source-b');
-    expect(api.copyDirectory).toHaveBeenCalledOnce();
-    expect(api.copyDirectory).toHaveBeenCalledWith('source-b', 'owned-coordinator');
-
-    fireEvent.change(screen.getByLabelText('group.settings.coordinationInstructions'), {
-      target: { value: 'Updated instructions only' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Retry save' }));
-    await waitFor(() => expect(api.refresh).toHaveBeenCalledTimes(2));
-    expect(api.update).toHaveBeenCalledTimes(2);
-    expect(api.update).toHaveBeenLastCalledWith(
-      'owned-coordinator',
-      expect.objectContaining({
-        params: { orchestratorSourceAgentId: 'source-b' },
-        systemRole: 'Updated instructions only',
-        model: 'codex-model-b',
-      }),
-      undefined,
-      true,
-    );
-    expect(api.update.mock.calls.every(([id]) => id === 'owned-coordinator')).toBe(true);
-    expect(api.copyDirectory).toHaveBeenCalledOnce();
-    expect(JSON.stringify(sourceB)).toBe(originalSource);
+    expect(screen.getByRole('status').textContent).toBe('group.settings.chooseCoordinator');
   } finally {
-    consoleError.mockRestore();
+    mocks.group.supervisorAgentId = previous;
   }
 });
 
-it('shows the selected Agent and actual OpenCode engine in the shared summary', () => {
-  render(
-    <CoordinatorSummary
-      config={{
-        title: 'Journey Agent',
-        model: 'stale-api-model',
-        agencyConfig: {
-          executionTarget: 'local',
-          heterogeneousProvider: { type: 'opencode', model: 'mimo-v2-pro' },
-        },
-      }}
-    />,
+it('mounts only Description settings and persists content without rewriting title or visibility', async () => {
+  render(<GroupProfile />);
+  expect(screen.queryByRole('textbox', { name: 'group.create.name' })).toBeNull();
+  expect(screen.queryByRole('combobox')).toBeNull();
+  expect(screen.getAllByRole('textbox')).toHaveLength(1);
+  expect(document.querySelector('form [aria-haspopup]')).toBeNull();
+  const description = screen.getByRole('textbox', { name: 'group.settings.description' });
+  expect(description).toHaveValue('Existing description');
+  fireEvent.change(description, { target: { value: 'Edited description' } });
+  fireEvent.click(screen.getByRole('button', { name: 'save' }));
+  await waitFor(() =>
+    expect(mocks.updateGroup).toHaveBeenCalledExactlyOnceWith('group-one', {
+      content: 'Edited description',
+      editorData: {},
+    }),
   );
-  expect(screen.getByRole('heading', { name: 'Journey Agent' })).toBeTruthy();
-  expect(screen.getByText('group.settings.engine: OpenCode')).toBeTruthy();
-  expect(screen.getByText('group.settings.model: mimo-v2-pro')).toBeTruthy();
-  expect(screen.queryByText(/Prime|stale-api-model/)).toBeNull();
+  expect(mocks.group.title).toBe('Group');
+  expect(mocks.group.visibility).toBe('private');
 });

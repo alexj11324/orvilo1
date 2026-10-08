@@ -1,6 +1,6 @@
 'use client';
 
-import { type AgentGroupMember } from '@orvilo/types';
+import { agentDisplayName, type AgentGroupMember } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
@@ -41,7 +41,7 @@ const SortMembersModal = memo<SortMembersModalProps>(({ groupId, open, onCancel 
   const { t } = useTranslation('chat');
   const { allowed: canEdit } = usePermission('edit_own_content');
 
-  const members = useAgentGroupStore(agentGroupSelectors.getGroupMembers(groupId), isEqual);
+  const members = useAgentGroupStore(agentGroupSelectors.getGroupAgents(groupId), isEqual);
   const reorderGroupMembers = useAgentGroupStore((s) => s.reorderGroupMembers);
 
   // Local (optimistic) order so the list doesn't snap back while the reorder
@@ -84,11 +84,10 @@ const SortMembersModal = memo<SortMembersModalProps>(({ groupId, open, onCancel 
               value={item.id}
             >
               <MemberItem
-                avatar={item.avatar || undefined}
-                background={item.backgroundColor ?? undefined}
                 disabled={!canEdit}
-                isExternal={!item.virtual}
-                title={item.title || t('defaultSession', { ns: 'common' })}
+                isCoordinator={item.isSupervisor}
+                runtimeType={item.heterogeneousType}
+                title={agentDisplayName(item, t('defaultSession', { ns: 'common' }))}
               />
             </SortableItem>
           ))}

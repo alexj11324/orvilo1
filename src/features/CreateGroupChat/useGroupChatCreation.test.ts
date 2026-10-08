@@ -28,13 +28,18 @@ describe('group chat creation checkpoint', () => {
     mocks.refreshHome.mockResolvedValue(undefined);
   });
 
-  it('finishes the same group and scope after participant setup fails', async () => {
-    mocks.add.mockRejectedValueOnce(new Error('network'));
+  it('finishes refreshing the same atomically created Group after a read fails', async () => {
+    mocks.refresh.mockRejectedValueOnce(new Error('network'));
     const { result } = renderHook(() => useGroupChatCreation());
     let id: string | undefined;
     await act(async () => {
       id = await result.current.create(
-        { title: 'Team', content: 'Instructions', visibility: 'private' },
+        {
+          coordinatorAgentId: 'participant',
+          title: 'Team',
+          content: 'Instructions',
+          visibility: 'private',
+        },
         ['participant'],
       );
     });
@@ -43,13 +48,25 @@ describe('group chat creation checkpoint', () => {
     expect(result.current.error).toBeInstanceOf(Error);
     await act(async () => {
       id = await result.current.create(
-        { title: 'Team', content: 'Instructions', visibility: 'public' },
+        {
+          coordinatorAgentId: 'participant',
+          title: 'Team',
+          content: 'Instructions',
+          visibility: 'public',
+        },
         ['participant'],
       );
     });
     expect(id).toBe('created');
     expect(mocks.create).toHaveBeenCalledTimes(1);
-    expect(mocks.add).toHaveBeenLastCalledWith('created', ['participant']);
+    expect(mocks.add).not.toHaveBeenCalled();
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentIds: ['participant'],
+        coordinatorAgentId: 'participant',
+        visibility: 'private',
+      }),
+    );
     expect(result.current.error).toBeUndefined();
     expect(result.current.pending).toBe(false);
   });
@@ -63,8 +80,10 @@ describe('group chat creation checkpoint', () => {
     );
     const { result } = renderHook(() => useGroupChatCreation());
     await act(async () => {
-      const first = result.current.create({ title: 'Team' }, []);
-      expect(await result.current.create({ title: 'Team' }, [])).toBeUndefined();
+      const first = result.current.create({ coordinatorAgentId: 'participant', title: 'Team' }, []);
+      expect(
+        await result.current.create({ coordinatorAgentId: 'participant', title: 'Team' }, []),
+      ).toBeUndefined();
       resolve({ group: { id: 'created' } });
       expect(await first).toBe('created');
     });

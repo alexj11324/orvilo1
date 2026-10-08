@@ -3320,6 +3320,11 @@ export default {
   'group.create.detectingDevice': 'Detecting device…',
   'group.create.coordinatorDescription':
     'This Agent coordinates work using its configured engine, model, and execution location.',
+  'group.settings.groupsTitle': 'Groups',
+  'group.settings.coordinatorUnavailable': 'This Agent cannot coordinate a Group.',
+  'group.settings.description': 'Description',
+  'group.settings.chooseCoordinator': 'Choose a member to coordinate this group.',
+  'group.settings.setCoordinator': 'Set coordinator',
   'group.settings.coordinatorName': 'Orchestrator',
   'group.settings.desktop': 'Desktop',
   'group.settings.thisDevice': 'This device',

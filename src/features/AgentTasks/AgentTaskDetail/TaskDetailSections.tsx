@@ -9,7 +9,9 @@ import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
+import { TaskDuplicateRelation } from './TaskDuplicateRelation';
 import TaskInstruction from './TaskInstruction';
+import TaskIssueResources from './TaskIssueResources';
 import TaskParentBar from './TaskParentBar';
 import { TaskBlockedNotice } from './TaskPrerequisites';
 import TaskProjectSection from './TaskProjectSection';
@@ -35,6 +37,7 @@ const TaskDetailSections = memo(() => {
                 "Sub-issue of" parent bar, then the run/assignee controls. */}
             <TaskDetailTitleInput />
             <TaskParentBar />
+            <TaskDuplicateRelation />
             <div className="flex items-center gap-2 flex-wrap" style={{ maxWidth: '100%' }}>
               <TaskDetailAssignee />
             </div>
@@ -51,6 +54,7 @@ const TaskDetailSections = memo(() => {
             <TaskBlockedNotice />
             <TaskSubtasks />
             <TaskArtifacts />
+            <TaskIssueResources />
             <TaskActivities />
           </div>
         </div>

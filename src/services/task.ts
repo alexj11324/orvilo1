@@ -144,6 +144,12 @@ class TaskService {
     workflowCategory?: TaskWorkflowCategory;
   }) => lambdaClient.task.create.mutate(params);
 
+  moveToTeam = async (params: {
+    expectedDomainRevision: number;
+    taskId: string;
+    teamId: string | null;
+  }) => lambdaClient.team.moveTaskToTeam.mutate(params);
+
   updateVisibility = async (id: string, visibility: 'private' | 'public') =>
     lambdaClient.task.updateVisibility.mutate({ id, visibility });
 
@@ -170,6 +176,7 @@ class TaskService {
       config?: Record<string, unknown>;
       context?: Record<string, unknown>;
       description?: string;
+      dueDate?: string | null;
       editorData?: unknown;
       /**
        * Optimistic-concurrency CAS — REQUIRED by the server whenever

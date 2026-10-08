@@ -1365,6 +1365,8 @@ export interface TaskDetailData {
   domainRevision?: number;
   /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
   dueDate?: string | null;
+  /** Direct canonical issue summary; unreadable targets expose no ID or title. */
+  duplicateOf?: { identifier?: string; name?: string | null; unavailable?: boolean };
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;

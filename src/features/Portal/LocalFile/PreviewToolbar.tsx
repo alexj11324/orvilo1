@@ -1,7 +1,9 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { Loader2Icon, type LucideIcon } from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 import type { MouseEventHandler, ReactNode } from 'react';
 import { createElement, memo } from 'react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 import PathBreadcrumb from './PathBreadcrumb';
@@ -125,13 +127,12 @@ export const ToolbarActionButton = memo<ToolbarActionButtonProps>(
         type={'button'}
         onClick={onClick}
       >
-        <span className={cx('anticon', loading && 'animate-spin')} role="img">
-          {createElement(loading ? Loader2Icon : icon, {
-            size: 14,
-            width: 14,
-            height: 14,
-            fill: 'transparent',
-          })}
+        <span className="anticon" role="img">
+          {loading ? (
+            <Spinner className="size-3.5" />
+          ) : (
+            createElement(icon, { size: 14, width: 14, height: 14, fill: 'transparent' })
+          )}
         </span>
         {label && <span className={styles.actionLabel}>{label}</span>}
       </button>

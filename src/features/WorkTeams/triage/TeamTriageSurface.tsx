@@ -5,6 +5,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -103,22 +104,18 @@ const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
         {state === 'error' ? (
           <AsyncError error={error} onRetry={onRetry} />
         ) : state === 'loading' ? (
-          <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+          <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-0.5">
             {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton className="h-10 w-full" key={index} />
+              <Skeleton className="h-11 w-full" key={index} />
             ))}
           </div>
         ) : state === 'empty' ? (
-          <div className="flex flex-col items-center justify-center gap-3 flex-1 p-12">
-            <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-              <ListChecksIcon aria-hidden className="size-8" />
-              <p>{t('teams.triageEmpty')}</p>
-            </div>
+          <SimpleEmpty description={t('teams.triageEmpty')} icon={ListChecksIcon}>
             <Button variant="outline" onClick={openComposer}>
               <PlusIcon aria-hidden className="size-4" />
               {t('teams.triageCreate')}
             </Button>
-          </div>
+          </SimpleEmpty>
         ) : (
           <div className="flex flex-col" style={{ gap: 2 }}>
             {tasks.map((task) => (

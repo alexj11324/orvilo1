@@ -1,7 +1,9 @@
 import { SiReact } from '@icons-pack/react-simple-icons';
 import { cssVar } from 'antd-style';
-import { CodeXml, GlobeIcon, ImageIcon, Loader2, OrigamiIcon } from 'lucide-react';
+import { CodeXml, GlobeIcon, ImageIcon, OrigamiIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 interface ArtifactProps {
   type: string;
@@ -10,9 +12,7 @@ interface ArtifactProps {
 const SIZE = 28;
 const ArtifactIcon = memo<ArtifactProps>(({ type }) => {
   if (!type)
-    return (
-      <Loader2 className="animate-spin" size={SIZE} style={{ color: cssVar.colorTextSecondary }} />
-    );
+    return <Spinner className="text-muted-foreground" style={{ height: SIZE, width: SIZE }} />;
 
   switch (type) {
     case 'application/orvilo.artifacts.code': {

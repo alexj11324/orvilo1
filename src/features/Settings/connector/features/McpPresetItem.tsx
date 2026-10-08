@@ -2,7 +2,7 @@
 
 import { isDesktop, matchMcpPresetByConnector, type McpPresetConnector } from '@orvilo/const';
 import { cssVar } from 'antd-style';
-import { CircleCheck, Loader2, SquareArrowOutUpRight } from 'lucide-react';
+import { CircleCheck, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -186,6 +186,7 @@ const McpPresetItem = memo<McpPresetItemProps>(
             render={
               <span className="inline-flex min-w-0">
                 <Button
+                  loading={isConnecting || connecting}
                   size="sm"
                   variant="ghost"
                   disabled={
@@ -196,9 +197,7 @@ const McpPresetItem = memo<McpPresetItemProps>(
                   }
                   onClick={handleConnect}
                 >
-                  {createElement(isConnecting || connecting ? Loader2 : SquareArrowOutUpRight, {
-                    className: isConnecting || connecting ? 'animate-spin' : undefined,
-                  })}
+                  {!(isConnecting || connecting) && createElement(SquareArrowOutUpRight)}
                   {timedOut
                     ? t('tools.mcpPreset.checkStatus', 'Check status')
                     : tokenSetup

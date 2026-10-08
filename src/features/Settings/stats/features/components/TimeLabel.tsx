@@ -1,7 +1,8 @@
 import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
 import { createElement, memo } from 'react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 const TimeLabel = memo<{
   date?: string;
@@ -22,11 +23,7 @@ const TimeLabel = memo<{
     >
       {createElement(icon, {})}
       {title ? `${title}: ` : null}
-      {date ? (
-        <span style={{ fontWeight: 'bold' }}>{date}</span>
-      ) : (
-        createElement(Loader2, { className: 'animate-spin' })
-      )}
+      {date ? <span style={{ fontWeight: 'bold' }}>{date}</span> : <Spinner />}
     </div>
   );
 });

@@ -2,12 +2,13 @@
 
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
 import { cssVar } from 'antd-style';
-import { Loader2, SearchIcon, X } from 'lucide-react';
+import { SearchIcon, X } from 'lucide-react';
 import { type ChangeEvent, memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
+import { Spinner } from '@/components/ui/spinner';
 import { useSearchTopics } from '@/features/MobileHome/TopicListContent/useMobileTopics';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
@@ -75,9 +76,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
         onChange={handleChange}
       />
       <div className="absolute right-3 flex items-center gap-2">
-        {loading && (
-          <Loader2 className="animate-spin" size={14} style={{ color: cssVar.colorTextTertiary }} />
-        )}
+        {loading && <Spinner className="size-3.5 text-muted-foreground" />}
         {!mobile && !keywords && hotkey && (
           <Kbd className="pointer-events-none">{hotkey.toUpperCase()}</Kbd>
         )}

@@ -241,9 +241,13 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
           <div className={styles.memberGroup}>
             <div className={styles.railTitle}>{t('teams.members')}</div>
             {membersLoading ? (
-              <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
-                {Array.from({ length: 1 }, (_, index) => (
-                  <Skeleton className="h-10 w-full" key={index} />
+              <div
+                aria-busy
+                aria-label={t('teams.loading')}
+                className="flex flex-row items-center gap-1"
+              >
+                {Array.from({ length: 3 }, (_, index) => (
+                  <Skeleton className="size-[26px] rounded-full" key={index} />
                 ))}
               </div>
             ) : membersError ? (

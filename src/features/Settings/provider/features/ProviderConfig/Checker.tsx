@@ -1,18 +1,18 @@
 'use client';
 
 import { CheckCircleFilled } from '@ant-design/icons';
-import { Flexbox, Highlighter, Icon } from '@lobehub/ui';
+import { Flexbox, Highlighter } from '@lobehub/ui';
 import { Alert, Button, Select } from '@lobehub/ui/base-ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { TraceNameMap } from '@orvilo/types';
 import { isRecord, pickTrimmedString } from '@orvilo/utils/object';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { Loader2Icon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
 import { chatService } from '@/services/chat';
@@ -186,7 +186,7 @@ const Checker = memo<ConnectionCheckerProps>(
             listItemHeight={36}
             options={sortedModels.map((id) => ({ label: id, value: id }))}
             popupClassName={cx(styles.popup)}
-            suffixIcon={isProviderConfigUpdating && <Icon spin icon={Loader2Icon} />}
+            suffixIcon={isProviderConfigUpdating && <Spinner />}
             value={checkModel}
             optionRender={({ value }) => {
               return (

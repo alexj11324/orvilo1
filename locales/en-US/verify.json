@@ -509,6 +509,8 @@
   "detail.methodLlm": "LLM",
   "detail.methodProgram": "Program",
   "detail.model": "Model",
+  "detail.notFound.desc": "This check item may have been removed or is no longer accessible.",
+  "detail.notFound.title": "Check item not found",
   "detail.openTrace": "View agent trace",
   "detail.pending": "This check has not run yet.",
   "detail.reasoning": "Reasoning",

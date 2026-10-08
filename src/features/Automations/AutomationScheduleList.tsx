@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { DropdownMenu } from '@/components/ItemsMenu';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import TablePagination from '@/components/TablePagination';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ import { useTaskStore } from '@/store/task';
 
 import AssigneeUserAvatar from '../AgentTasks/features/AssigneeUserAvatar';
 import { useUserDisplayMeta } from '../AgentTasks/shared/useUserDisplayMeta';
+import { AutomationScheduleSkeleton } from './AutomationSkeleton';
 import AutomationStatusBadge from './AutomationStatusBadge';
 import {
   automationDetailPath,
@@ -350,9 +352,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
         {error ? (
           <AsyncError error={error} onRetry={() => void onRefetch()} />
         ) : isLoading ? (
-          <div className="flex flex-col p-6">
-            <div className="text-muted-foreground">{t('page.loading')}</div>
-          </div>
+          <AutomationScheduleSkeleton />
         ) : isEmptyUnfiltered ? (
           emptyContent
         ) : (
@@ -409,9 +409,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
               <span />
             </div>
             {visibleTasks.length === 0 ? (
-              <div className="flex flex-col items-center py-12">
-                <div className="text-muted-foreground">{t('page.no_matches')}</div>
-              </div>
+              <SimpleEmpty description={t('page.no_matches')} />
             ) : (
               visibleTasks.map((task) => (
                 <AutomationRow

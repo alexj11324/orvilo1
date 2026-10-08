@@ -2,7 +2,7 @@
 
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { CheckCircle2, Copy, Loader2 } from 'lucide-react';
+import { CheckCircle2, Copy } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -186,11 +186,11 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         <Button
           className="w-full"
           disabled={loading || scopeMissing || customDateMissing}
+          loading={loading}
           size="lg"
           type={'submit'}
           variant="default"
         >
-          {loading && <Loader2 className="animate-spin" />}
           {t('apikey.form.submit')}
         </Button>
       </div>

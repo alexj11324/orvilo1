@@ -1,11 +1,11 @@
 'use client';
-import { Loader2Icon } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -95,7 +95,7 @@ const UsernameRow = () => {
       label={t('profile.username')}
     >
       <div className="flex items-center gap-2">
-        {saving && <Loader2Icon className="animate-spin" size={16} style={{ opacity: 0.5 }} />}
+        {saving && <Spinner className="opacity-50" />}
         {error && (
           <span className="text-sm text-destructive" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
             {error}

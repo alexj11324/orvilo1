@@ -876,7 +876,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       return (
         <div aria-busy aria-label={loadingLabel} className="flex flex-col gap-2" role="status">
           {Array.from({ length: 8 }, (_, index) => (
-            <Skeleton className="h-10 w-full" key={index} />
+            <Skeleton className="h-11 w-full" key={index} />
           ))}
         </div>
       );

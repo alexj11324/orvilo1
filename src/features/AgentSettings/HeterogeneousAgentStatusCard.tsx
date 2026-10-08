@@ -14,7 +14,7 @@ import type {
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
-import { Copy, Loader2Icon, PencilLine, RefreshCw, XCircle } from 'lucide-react';
+import { Copy, PencilLine, RefreshCw, XCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,6 +25,7 @@ import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
@@ -584,7 +585,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       if (detecting) {
         return (
           <div className="flex items-center gap-2">
-            <Loader2Icon className="animate-spin" size={16} style={{ opacity: 0.6 }} />
+            <Spinner className="opacity-60" />
             <div className={styles.metaText}>
               {t('heterogeneousStatus.detecting', { name: displayName })}
             </div>

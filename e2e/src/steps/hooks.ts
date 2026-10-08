@@ -6,8 +6,9 @@ import {
   bindTestUserExecutionDevice,
   ensureTestUserPrimeAgent,
 } from '../support/bindExecutionDevice';
+import { assertLocalClerkFixture } from '../support/clerkFixture';
 import { seedOrviloProviderBinding } from '../support/seedOrviloProviderBinding';
-import { createTestSession, seedTestUser } from '../support/seedTestUser';
+import { createTestSession, seedTestUser, TEST_USER } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
 
@@ -76,6 +77,13 @@ BeforeAll({ timeout: 600_000 }, async function () {
   // `orvilo_auth` session row directly and installs the cookie on each context.
   console.log('🔐 Creating a test session in the database...');
   const sessionToken = await createTestSession();
+
+  await assertLocalClerkFixture({
+    baseUrl: process.env.BASE_URL,
+    port: llmPort,
+    sessionToken,
+    userId: TEST_USER.id,
+  });
 
   if (sessionToken) {
     sessionCookies = [

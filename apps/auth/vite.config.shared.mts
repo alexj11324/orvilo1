@@ -197,10 +197,10 @@ export const createAuthRrConfig = ({
       client: { define },
       ssr: {
         define: prerenderDefine,
-        // The prerender pass runs the built server bundle through plain Node,
-        // which rejects the extensionless directory imports some published `es/`
-        // bundles still ship — bundle every dependency instead of externalizing.
-        resolve: { noExternal: command === 'build' ? true : [] },
+        // Dev SSR and prerender evaluate dependencies through Node, which rejects
+        // legacy directory and JSON imports. Keep both on Vite's transform path.
+        resolve: { noExternal: true },
+        optimizeDeps: command === 'serve' ? { noDiscovery: false } : undefined,
       },
     },
     plugins: [
@@ -226,6 +226,8 @@ export const createAuthRrConfig = ({
       tsconfigPaths: !resolvePlugins,
     },
     server: {
+      host: 'localhost',
+      strictPort: true,
       fs: {
         allow: [repoRoot],
       },

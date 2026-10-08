@@ -16,6 +16,7 @@
  */
 import * as http from 'node:http';
 
+import { clerkFixtureForSession, MOCK_CLERK_SECRET_KEY } from '../../support/clerkFixture';
 import {
   DEFAULT_MOCK_LLM_CONFIG,
   MOCK_LLM_PORT,
@@ -168,6 +169,19 @@ export const createMockLLMServer = (): http.Server =>
     if (req.method === 'GET' && path === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
+      return;
+    }
+
+    // Test harness only: production still performs the same Backend API verification.
+    if (req.method === 'GET' && path.startsWith('/v1/sessions/')) {
+      if (req.headers.authorization !== `Bearer ${MOCK_CLERK_SECRET_KEY}`) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end('{}');
+        return;
+      }
+      const session = clerkFixtureForSession(path.slice('/v1/sessions/'.length));
+      res.writeHead(session ? 200 : 404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(session ?? {}));
       return;
     }
 

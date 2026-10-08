@@ -1,7 +1,7 @@
 /**
- * migrateServerDB — apply all pending Drizzle migrations to the server database.
+ * migrateServerDB — apply schema migrations, then hash legacy auth session bearers.
  *
- * Purpose: bootstrap/update a Postgres database to the current schema. Safe to
+ * Purpose: bootstrap/update the schema and session digest storage before serving. Safe to
  *   re-run — Drizzle's migrator only applies migrations newer than the last
  *   recorded journal entry, so this is intentionally run in CI/bootstrap with
  *   no additional guard (see scripts/README.md → Guard rails).
@@ -19,11 +19,14 @@
  */
 import path from 'node:path';
 
+import type { Pool as NeonPool } from '@neondatabase/serverless';
 import * as dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import { migrate as neonMigrate } from 'drizzle-orm/neon-serverless/migrator';
 import { migrate as nodeMigrate } from 'drizzle-orm/node-postgres/migrator';
+import type pg from 'pg';
 
+import { backfillAuthSessionDigests } from './backfillAuthSessionDigests';
 // @ts-ignore tsgo handle esm import cjs and compatibility issues
 import { DB_FAIL_INIT_HINT, DUPLICATE_EMAIL_HINT, PGVECTOR_HINT } from './errorHint';
 import { runWithLockRetry } from './retry';
@@ -33,10 +36,14 @@ import { runWithLockRetry } from './retry';
 // 2. .env.[env] (medium priority, overrides .env)
 // 3. .env.[env].local (highest priority, overrides previous)
 // Use dotenv-expand to support ${var} variable expansion
+const selectedDatabaseUrl = process.env.DATABASE_URL;
 const env = process.env.NODE_ENV || 'development';
 dotenvExpand.expand(dotenv.config()); // Load .env
 dotenvExpand.expand(dotenv.config({ override: true, path: `.env.${env}` })); // Load .env.[env] and override
 dotenvExpand.expand(dotenv.config({ override: true, path: `.env.${env}.local` })); // Load .env.[env].local and override
+
+// Keep an explicitly selected target authoritative over local env fallback files.
+if (selectedDatabaseUrl) process.env.DATABASE_URL = selectedDatabaseUrl;
 
 const migrationsFolder = path.join(__dirname, '../../packages/database/migrations');
 
@@ -51,6 +58,10 @@ const runMigrations = async () => {
       await neonMigrate(serverDB, { migrationsFolder });
     }
   });
+
+  const pool = (serverDB as typeof serverDB & { $client: pg.Pool | NeonPool }).$client;
+  const digests = await backfillAuthSessionDigests(pool, true);
+  console.log('[Database] auth session digest backfill:', digests);
 
   console.log('✅ database migration pass. use: %s ms', Date.now() - time);
 

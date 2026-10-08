@@ -155,10 +155,67 @@ describe('login command', () => {
         accessToken: 'new-token',
         refreshToken: 'refresh-tok',
       }),
+      expect.any(String),
     );
     expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://orvilo.aspectlylabs.com' });
     expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Login successful'));
   });
+
+  it('stores a fresh login in the selected server namespace before settings change', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(deviceAuthResponse())
+      .mockResolvedValueOnce(tokenSuccessResponse());
+    const program = createProgram();
+    const login = program.parseAsync([
+      'node',
+      'test',
+      'login',
+      '--server',
+      'https://fresh-custom.test',
+    ]);
+    await vi.advanceTimersByTimeAsync(6000);
+    await login;
+    expect(saveCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: 'new-token' }),
+      'https://fresh-custom.test',
+    );
+    expect(saveSettings).toHaveBeenCalledWith({ serverUrl: 'https://fresh-custom.test' });
+  });
+
+  it.each(['credentials', 'settings'])(
+    'stops after token issuance when %s persistence fails',
+    async (failure) => {
+      vi.clearAllMocks();
+      vi.mocked(fetch)
+        .mockResolvedValueOnce({ ...deviceAuthResponse(), status: 200 })
+        .mockResolvedValueOnce({ ...tokenSuccessResponse(), status: 200 })
+        .mockResolvedValueOnce(tokenErrorResponse('invalid_grant'));
+      if (failure === 'credentials')
+        vi.mocked(saveCredentials).mockImplementationOnce(() => {
+          throw new Error('Protected credential storage unavailable');
+        });
+      else
+        vi.mocked(saveSettings).mockImplementationOnce(() => {
+          throw new Error('Settings storage unavailable');
+        });
+      await runLoginAndAdvanceTimers(createProgram());
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(saveCredentials).toHaveBeenCalledOnce();
+      if (failure === 'credentials') expect(saveSettings).not.toHaveBeenCalled();
+      else expect(saveSettings).toHaveBeenCalledOnce();
+      expect(log.error).toHaveBeenCalledWith(expect.stringContaining('Could not persist login'));
+      expect(log.error).toHaveBeenCalledWith(
+        expect.stringContaining(
+          failure === 'credentials'
+            ? 'Protected credential storage unavailable'
+            : 'Settings storage unavailable',
+        ),
+      );
+      expect(log.error).not.toHaveBeenCalledWith(expect.stringContaining('invalid_grant'));
+      expect(log.info).not.toHaveBeenCalledWith(expect.stringContaining('Login successful'));
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    },
+  );
 
   it('should use environment api key without storing credentials', async () => {
     process.env.ORVILO_CLI_API_KEY = 'sk-ov-env-test';
@@ -340,7 +397,10 @@ describe('login command', () => {
     const program = createProgram();
     await runLoginAndAdvanceTimers(program);
 
-    expect(saveCredentials).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: undefined }));
+    expect(saveCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({ expiresAt: undefined }),
+      expect.any(String),
+    );
   });
 
   it('should use default interval when not provided', async () => {

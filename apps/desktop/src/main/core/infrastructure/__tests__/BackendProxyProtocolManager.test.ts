@@ -61,7 +61,7 @@ describe('BackendProxyProtocolManager', () => {
 
     const fetchMock = vi.fn<FetchMock>(async () => {
       return new Response('ok', {
-        headers: { 'Content-Type': 'text/plain' },
+        headers: { 'Content-Type': 'text/plain', 'x-dev-oidc-auth': 'sentinel-bearer' },
         status: 200,
         statusText: 'OK',
       });
@@ -96,6 +96,7 @@ describe('BackendProxyProtocolManager', () => {
     expect(headers.get('User-Agent')).toBe('Orvilo Desktop/1.2.3');
     expect(headers.get('X-Test')).toBe('1');
 
+    expect(response!.headers.get('x-dev-oidc-auth')).toBeNull();
     expect(response!.status).toBe(200);
     expect(response!.headers.get('X-Src-Url')).toBe(
       'https://remote.example.com/trpc/hello?batch=1',

@@ -8,6 +8,7 @@ import {
   oidcSessions,
   users,
 } from '@orvilo/database/schemas';
+import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 export const OIDC_USER_INACTIVE_ERROR_MESSAGE = 'OIDC user is no longer active';
@@ -48,9 +49,8 @@ type OIDCUserArtifactTable = (typeof OIDC_USER_ARTIFACT_TABLES)[number];
 /**
  * Revokes database-backed OIDC artifacts for a user.
  *
- * JWT access tokens are stateless and remain valid until runtime user-status
- * checks reject them, but deleting these rows prevents refresh/session flows
- * from minting replacement tokens after the account is disabled.
+ * Deleting grants invalidates JWT API access immediately; deleting the other
+ * artifacts also prevents refresh/session flows from minting replacement tokens.
  */
 export const revokeOIDCArtifactsByUserId = async (db: OrviloDatabase, userId: string) => {
   await db.transaction(async (tx) => {
@@ -73,5 +73,30 @@ export const assertOIDCUserActive = async (db: OrviloDatabase, userId: string) =
 
   if (!user || isOIDCUserBanned(user)) {
     throw new OIDCUserInactiveError();
+  }
+};
+
+/** JWTs are authorized by their current provider grant, never by an access-token row. */
+export const assertOIDCGrantActive = async (
+  db: OrviloDatabase,
+  { grantId, userId, clientId }: { grantId: string; userId: string; clientId: string },
+) => {
+  const [grant] = await db
+    .select({
+      id: oidcGrants.id,
+      userId: oidcGrants.userId,
+      clientId: oidcGrants.clientId,
+      expiresAt: oidcGrants.expiresAt,
+    })
+    .from(oidcGrants)
+    .where(eq(oidcGrants.id, grantId))
+    .limit(1);
+  if (
+    !grant ||
+    grant.userId !== userId ||
+    grant.clientId !== clientId ||
+    grant.expiresAt <= new Date()
+  ) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'OIDC grant is no longer active' });
   }
 };

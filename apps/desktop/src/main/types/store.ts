@@ -21,6 +21,7 @@ export interface ElectronMainStore {
    */
   desktopOnboardingCompleted?: boolean;
   encryptedTokens: {
+    encoding?: 'safeStorage';
     accessToken?: string;
     expiresAt?: number;
     lastRefreshAt?: number;

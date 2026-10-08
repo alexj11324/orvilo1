@@ -178,7 +178,10 @@ const InboxListRow = memo((props: InboxListRowProps) => {
       {card.read ? null : <span aria-hidden className={styles.unreadDot} />}
       <span className={styles.avatarDisc}>
         {card.agent ? (
-          <AssigneeAvatar agentId={card.agent.id} size={32} />
+          <AssigneeAvatar
+            agentId={card.agent.id}
+            size={32 /* linear-token-override: match the human actor avatar in this shared slot. */}
+          />
         ) : card.actor ? (
           <Avatar
             avatar={card.actor.avatar}

@@ -5,10 +5,12 @@ import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form from '@/components/GroupForm';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
+import { pairCompletenessRule, pairsToValues } from '../kvPairs';
 import { type CredsApi } from '../useCredsApi';
 
 interface KVCredFormProps {
@@ -34,24 +36,18 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
     mutationFn: async (values: FormValues) => {
       if (disabled) return;
 
-      const kvPairs = values.kvPairs || [];
-      const valuesObj = kvPairs.reduce(
-        (acc, pair) => {
-          if (pair.key && pair.value) {
-            acc[pair.key] = pair.value;
-          }
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
-
       await credsApi.client.createKV.mutate({
         description: values.description,
         key: values.key,
         name: values.name,
         type,
-        values: valuesObj,
+        values: pairsToValues(values.kvPairs),
       });
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error && error.message ? error.message : t('creds.form.createFailed'),
+      );
     },
     onSuccess: () => {
       onSuccess();
@@ -98,7 +94,9 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
                 <div className="flex items-start gap-2" key={key}>
                   <Form.Item
                     {...restField}
+                    dependencies={[['kvPairs', name, 'value']]}
                     name={[name, 'key']}
+                    rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 1, marginBottom: 0 }}
                   >
                     <Input
@@ -108,7 +106,9 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
                   </Form.Item>
                   <Form.Item
                     {...restField}
+                    dependencies={[['kvPairs', name, 'key']]}
                     name={[name, 'value']}
+                    rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
                     <Input

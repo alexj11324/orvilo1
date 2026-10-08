@@ -5,13 +5,16 @@ import { Loader2, Minus, Plus } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import Form from '@/components/GroupForm';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 
+import { pairCompletenessRule, pairsToValues } from '../kvPairs';
 import { type CredsApi } from '../useCredsApi';
 
 interface EditKVFormProps {
@@ -32,6 +35,8 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
   const { allowed: canManageCredentials } = usePermission('manage_provider_key');
   const [form] = Form.useForm<FormValues>();
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>();
+  const [attempt, setAttempt] = useState(0);
 
   // Fetch decrypted values on mount
   useEffect(() => {
@@ -59,42 +64,39 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
           kvPairs: kvPairs.length > 0 ? kvPairs : [{ key: '', value: '' }],
           name: cred.name,
         });
-      } catch {
-        // If decryption fails, just show empty values
-        form.setFieldsValue({
-          description: cred.description,
-          kvPairs: [{ key: '', value: '' }],
-          name: cred.name,
-        });
+      } catch (error) {
+        // Never fall back to an empty form: saving it would overwrite the stored
+        // secret with nothing. Block editing until the values load.
+        setLoadError(error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDecryptedValues();
-  }, [canManageCredentials, cred.id, cred.name, cred.description, credsApi, form]);
+  }, [attempt, canManageCredentials, cred.id, cred.name, cred.description, credsApi, form]);
+
+  const retryLoad = () => {
+    setLoadError(undefined);
+    setIsLoading(true);
+    setAttempt((count) => count + 1);
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (!canManageCredentials) return;
 
-      const kvPairs = values.kvPairs || [];
-      const valuesObj = kvPairs.reduce(
-        (acc, pair) => {
-          if (pair.key && pair.value) {
-            acc[pair.key] = pair.value;
-          }
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
-
       await credsApi.client.update.mutate({
         description: values.description,
         id: cred.id,
         name: values.name,
-        values: valuesObj,
+        values: pairsToValues(values.kvPairs),
       });
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error && error.message ? error.message : t('creds.form.saveFailed'),
+      );
     },
     onSuccess: () => {
       onSuccess();
@@ -112,6 +114,17 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
       <div className="flex flex-col items-center justify-center" style={{ padding: 48 }}>
         <Spinner />
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AsyncError
+        description={t('creds.form.loadFailed')}
+        error={loadError}
+        variant="block"
+        onRetry={retryLoad}
+      />
     );
   }
 
@@ -133,7 +146,9 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                 <div className="flex items-start gap-2" key={key}>
                   <Form.Item
                     {...restField}
+                    dependencies={[['kvPairs', name, 'value']]}
                     name={[name, 'key']}
+                    rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 1, marginBottom: 0 }}
                   >
                     <Input
@@ -143,7 +158,9 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                   </Form.Item>
                   <Form.Item
                     {...restField}
+                    dependencies={[['kvPairs', name, 'key']]}
                     name={[name, 'value']}
+                    rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
                     <Input

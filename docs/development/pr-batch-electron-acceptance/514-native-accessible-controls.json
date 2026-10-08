@@ -1,0 +1,7 @@
+{
+  "createAgentAccessible": true,
+  "displayOptionsAccessible": true,
+  "harnessCorrection": "Display options is a dialog Popover, not a menu role",
+  "optionsPopoverOpens": true,
+  "rendererRevision": "557d418a7"
+}

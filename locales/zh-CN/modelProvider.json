@@ -92,6 +92,7 @@
   "createNewAiProvider.basicTitle": "基本信息",
   "createNewAiProvider.configTitle": "配置信息",
   "createNewAiProvider.confirm": "新建",
+  "createNewAiProvider.createFailed": "创建服务商失败，请重试。",
   "createNewAiProvider.createSuccess": "新建成功",
   "createNewAiProvider.description.placeholder": "服务商简介（选填）",
   "createNewAiProvider.description.title": "服务商简介",

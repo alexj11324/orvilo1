@@ -1,6 +1,7 @@
 'use client';
 
 import { BellIcon, CheckCheckIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -21,6 +22,7 @@ import {
 import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useInboxUnreadCount } from '@/features/HomeSidebar/Header/components/useInboxUnreadCount';
+import { inboxItemPath } from '@/features/WorkInbox/inboxDeepLink';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
@@ -28,8 +30,14 @@ import { notificationService } from '@/services/notification';
 
 type NotificationRow = Awaited<ReturnType<typeof notificationService.list>>[number];
 
-function NotificationItem({ notification }: { notification: NotificationRow }) {
-  const { title, content, createdAt, isRead } = notification;
+function NotificationItem({
+  notification,
+  onOpen,
+}: {
+  notification: NotificationRow;
+  onOpen: (id: string) => void;
+}) {
+  const { id, title, content, createdAt, isRead } = notification;
   return (
     <div className="relative">
       {!isRead && (
@@ -38,7 +46,12 @@ function NotificationItem({ notification }: { notification: NotificationRow }) {
           className="bg-primary ring-background pointer-events-none absolute top-3 right-3 z-10 size-1.5 rounded-full ring-1"
         />
       )}
-      <div className="flex w-full items-start gap-2 px-3 py-2 text-left">
+      <Button
+        className="h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2 text-left font-normal whitespace-normal"
+        type="button"
+        variant="ghost"
+        onClick={() => onOpen(id)}
+      >
         <div className="shrink-0">
           <div className="text-info flex size-6 items-center justify-center [&_svg]:size-4">
             <BellIcon aria-hidden="true" />
@@ -57,12 +70,12 @@ function NotificationItem({ notification }: { notification: NotificationRow }) {
             </p>
           </div>
         </div>
-      </div>
+      </Button>
     </div>
   );
 }
 
-function NotificationsPanel() {
+function NotificationsPanel({ onNavigate }: { onNavigate: () => void }) {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const { enabled, unreadCount } = useInboxUnreadCount();
@@ -73,6 +86,11 @@ function NotificationsPanel() {
     error,
     isLoading,
   } = useClientDataSWR(enabled ? key : null, () => notificationService.list({ limit: 5 }));
+
+  const go = (path: string) => {
+    onNavigate();
+    navigate(path);
+  };
 
   const markAllRead = async () => {
     try {
@@ -121,7 +139,10 @@ function NotificationsPanel() {
           ) : notifications?.length ? (
             notifications.map((notification, index) => (
               <div key={notification.id}>
-                <NotificationItem notification={notification} />
+                <NotificationItem
+                  notification={notification}
+                  onOpen={(id) => go(inboxItemPath(id))}
+                />
                 {index < notifications.length - 1 && <Separator className="opacity-60" />}
               </div>
             ))
@@ -133,12 +154,7 @@ function NotificationsPanel() {
         </ScrollArea>
       </div>
       <div className="border-border/60 border-t px-2 py-1">
-        <Button
-          className="w-full text-xs"
-          size="sm"
-          variant="ghost"
-          onClick={() => navigate('/inbox')}
-        >
+        <Button className="w-full text-xs" size="sm" variant="ghost" onClick={() => go('/inbox')}>
           {t('reuiShell9.viewAllNotifications')}
         </Button>
       </div>
@@ -149,7 +165,9 @@ function NotificationsPanel() {
 export function NotificationsPopover() {
   const { t } = useTranslation('common');
   const { isMobile } = useSidebar();
-  const { unreadCount } = useInboxUnreadCount();
+  const { enabled, unreadCount } = useInboxUnreadCount();
+  const [open, setOpen] = useState(false);
+  const closePanel = () => setOpen(false);
   const trigger = (
     <Button
       aria-label={t('reuiShell9.notifications')}
@@ -170,9 +188,13 @@ export function NotificationsPopover() {
     </>
   );
 
+  // Without business features (or a session) the feed is never fetched; a bell
+  // that opens a permanent "No notifications" would be a dead control.
+  if (!enabled) return null;
+
   if (isMobile) {
     return (
-      <Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger aria-label={t('reuiShell9.notifications')} render={trigger}>
           {triggerContent}
         </SheetTrigger>
@@ -185,7 +207,7 @@ export function NotificationsPopover() {
             <SheetDescription>{t('reuiShell9.notificationsDescription')}</SheetDescription>
           </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col">
-            <NotificationsPanel />
+            <NotificationsPanel onNavigate={closePanel} />
           </div>
         </SheetContent>
       </Sheet>
@@ -193,12 +215,12 @@ export function NotificationsPopover() {
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger aria-label={t('reuiShell9.notifications')} render={trigger}>
         {triggerContent}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-92 gap-0 p-0" side="bottom" sideOffset={8}>
-        <NotificationsPanel />
+        <NotificationsPanel onNavigate={closePanel} />
       </PopoverContent>
     </Popover>
   );

@@ -1072,6 +1072,8 @@ export interface NewTask {
   deletedAt?: Date | null;
   description?: string | null;
   domainRevision?: number;
+  /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` clears it. */
+  dueDate?: string | null;
   duplicateOfTaskId?: string | null;
   editorData?: unknown;
   error?: string | null;

@@ -45,5 +45,11 @@
     "scenario": "PR530 Make a copy creates T-4, navigates to its real detail and persists title/route across reload",
     "status": "pass",
     "harnessCorrection": "Initial wait assumed Copy of prefix; actual localized title uses (copy) suffix. Corrected expectation verified current detail and reload."
+  },
+  {
+    "scenario": "Existing prerequisite scenario in actual Electron: empty relation sections, blockers, all-completed readiness, reopening and native menu removal",
+    "status": "pass",
+    "testRevision": "aad6d3b39",
+    "limitation": "External API mutations followed by real store refresh; idle realtime delivery not verified."
   }
 ]

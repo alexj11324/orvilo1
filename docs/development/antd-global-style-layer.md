@@ -57,8 +57,8 @@ winning over lobehub's `body { min-height: 100vh }`. Layering them would flip th
   Alert margin, Table, Menu, Slider).
 - Tailwind classes on antd-rendered elements now win (intended). 21 files import from `antd`
   directly (4 pass utility classes); about 300 import `@lobehub/ui`, some of which wrap antd.
-- `baseReset.ts` is a copy of lobehub 5.51.1 `global.mjs` (the version installed when this was
-  written; `package.json` pins 5.56.0). Diff it against 5.56.0 when upgrading.
+- `baseReset.ts` is a copy of lobehub 5.56.0 `ThemeProvider/GlobalStyle/global.mjs`, identical
+  except for the layered `*` rule. Diff it again when upgrading `@lobehub/ui`.
 - Not done: `apps/auth|share|workbench` have their own cssinjs cache in `entry.server.tsx`; enabling
   `layer` there needs matching SSR extraction. Follow-up.
 - Not visually verified: needs an Electron run (sidebar, Form pages, auth pages).

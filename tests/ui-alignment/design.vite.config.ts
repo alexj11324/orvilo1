@@ -15,6 +15,10 @@ export default defineConfig({
     tsconfigPaths: true,
     alias: [
       {
+        find: /^@orvilo\/heterogeneous-agents$/,
+        replacement: repository + '/packages/heterogeneous-agents/src/config.ts',
+      },
+      {
         find: /^.*useTaskCopyActions$/,
         replacement: repository + '/tests/ui-alignment/designData.ts',
       },

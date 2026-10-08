@@ -34,7 +34,6 @@ import {
   useCanModerateProjectUpdate,
   useProjectUpdates,
 } from '../Updates';
-import OrchestrationPolicyCard from './OrchestrationPolicyCard';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectMembersField } from './ProjectMembersField';
@@ -377,7 +376,6 @@ const ProjectWorkspace = memo(() => {
               onSaved={() => void mutate()}
             />
           </div>
-          <OrchestrationPolicyCard detail={detail} projectId={project.id} />
           <ProjectDashboard detail={detail} projectId={project.id} />
         </div>
       </div>

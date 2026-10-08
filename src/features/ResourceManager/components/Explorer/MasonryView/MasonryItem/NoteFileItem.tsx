@@ -160,7 +160,7 @@ const NoteFileItem = memo<NoteFileItemProps>(
                 }}
               >
                 <Button
-                  aria-label={t('FileManager.actions.chunkingTooltip')}
+                  aria-label={t('components:FileManager.actions.chunkingTooltip')}
                   loading={isCreatingFileParseTask}
                   size="sm"
                   variant="ghost"

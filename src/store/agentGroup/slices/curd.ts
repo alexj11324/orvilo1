@@ -30,6 +30,14 @@ export class ChatGroupCurdAction {
     this.#get = get;
   }
 
+  async #refreshAfterWrite(id: string) {
+    try {
+      await this.#get().refreshGroupDetail(id);
+    } catch (error) {
+      console.error('[AgentGroup] Saved group, but failed to refresh:', error);
+    }
+  }
+
   /**
    * Append content chunk to streaming system prompt
    */
@@ -84,7 +92,7 @@ export class ChatGroupCurdAction {
   updateGroup = async (id: string, value: Partial<ChatGroupItem>) => {
     await chatGroupService.updateGroup(id, value);
     this.#get().internal_dispatchChatGroup({ payload: { id, value }, type: 'updateGroup' });
-    await this.#get().refreshGroupDetail(id);
+    await this.#refreshAfterWrite(id);
   };
 
   updateGroupConfig = async (config: Partial<OrviloGroupConfig>) => {
@@ -111,7 +119,7 @@ export class ChatGroupCurdAction {
     });
 
     // Refresh groups to ensure consistency
-    await this.#get().refreshGroupDetail(group.id);
+    await this.#refreshAfterWrite(group.id);
   };
 
   updateGroupMeta = async (meta: Partial<ChatGroupItem>) => {
@@ -130,6 +138,6 @@ export class ChatGroupCurdAction {
     await chatGroupService.updateGroup(id, meta);
     // Keep local store in sync immediately
     this.#get().internal_dispatchChatGroup({ payload: { id, value: meta }, type: 'updateGroup' });
-    await this.#get().refreshGroupDetail(id);
+    await this.#refreshAfterWrite(id);
   };
 }

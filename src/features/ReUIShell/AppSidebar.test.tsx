@@ -11,7 +11,11 @@ import SearchSection from '@/features/SettingsSearch/SearchSection';
 import { AppSidebar } from './AppSidebar';
 import { NavMain } from './NavMain';
 import { NavWorkspace } from './NavWorkspace';
+import { NotificationsPopover } from './NotificationsPopover';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+
+// JSDOM does not implement the browser animation API used by ScrollArea.
+Object.defineProperty(Element.prototype, 'getAnimations', { configurable: true, value: () => [] });
 
 const platform = vi.hoisted(() => ({ desktop: false }));
 const globalState = vi.hoisted(() => ({
@@ -58,7 +62,16 @@ vi.mock('@/features/NavPanel/components/SideBarSkeleton', () => ({
   NAV_SKELETON_SHAPES: {},
   NavSideBarSkeleton: () => <div>Panel loading</div>,
 }));
-vi.mock('./NotificationsPopover', () => ({ NotificationsPopover: () => null }));
+const notifications = vi.hoisted(() => ({ enabled: false, unreadCount: 1 }));
+vi.mock('@/features/HomeSidebar/Header/components/useInboxUnreadCount', () => ({
+  useInboxUnreadCount: () => notifications,
+}));
+vi.mock('@/libs/swr', async (original) => ({
+  ...(await original<object>()),
+  useClientDataSWR: () => ({
+    data: [{ id: 'notice&1', title: 'Test notification', createdAt: new Date(0), isRead: false }],
+  }),
+}));
 vi.mock('./Logo', () => ({ Logo: () => null }));
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => workspace.items }));
 vi.mock('@/business/client/hooks/useActiveWorkspace', () => ({
@@ -102,6 +115,7 @@ vi.mock('@/components/ui/dropdown-menu', () => {
   };
 });
 beforeEach(() => {
+  notifications.enabled = false;
   route.key = 'home';
   clearNavPanelRegistry();
   platform.desktop = false;
@@ -111,6 +125,33 @@ beforeEach(() => {
   globalState.leftPanelDrawerOpen = false;
   workspace.items = [{ id: 'w1', name: 'Team', slug: 'team' }];
   vi.clearAllMocks();
+});
+
+describe('NotificationsPopover interactions', () => {
+  it('hides the bell when the feed is disabled', () => {
+    render(
+      <SidebarProvider>
+        <NotificationsPopover />
+      </SidebarProvider>,
+    );
+    expect(
+      screen.queryByRole('button', { name: 'reuiShell9.notifications' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens the selected inbox item and closes the popover', async () => {
+    notifications.enabled = true;
+    const user = userEvent.setup();
+    render(
+      <SidebarProvider>
+        <NotificationsPopover />
+      </SidebarProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'reuiShell9.notifications' }));
+    await user.click(await screen.findByRole('button', { name: /Test notification/ }));
+    expect(workspace.navigate).toHaveBeenCalledWith('/inbox?item=notice%261&detail=1');
+    await waitFor(() => expect(screen.queryByText('Test notification')).not.toBeInTheDocument());
+  });
 });
 
 function DrawerControl() {

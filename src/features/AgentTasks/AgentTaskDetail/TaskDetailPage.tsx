@@ -6,7 +6,6 @@ import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { buttonVariants } from '@/components/ui/button';
-import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
@@ -86,15 +85,10 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
             <>
               <Breadcrumb taskId={taskId} />
               {/* Reference: the star and overflow sit inline right after the
-                issue crumb; the copy actions live in that overflow menu, so
-                the header's right side keeps task execution and the
-                agent-panel toggle. */}
-              <WorkFavoriteButton
-                icon={'star'}
-                targetId={taskId}
-                targetType="task"
-                variant="icon"
-              />
+                issue crumb — both rendered by TaskDetailHeaderActions so they
+                share one favourite identity. The copy buttons live in the
+                rail's round action row (TaskRailActions), so the header's
+                right side keeps task execution and the agent-panel toggle. */}
               <TaskDetailHeaderActions />
               {saveStatus === 'saving' || saveStatus === 'failed' ? (
                 <AutoSaveHint saveStatus={saveStatus} />

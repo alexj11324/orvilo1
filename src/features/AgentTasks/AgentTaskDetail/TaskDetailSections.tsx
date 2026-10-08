@@ -9,7 +9,9 @@ import TaskArtifacts from './TaskArtifacts';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
+import { TaskDuplicateRelation } from './TaskDuplicateRelation';
 import TaskInstruction from './TaskInstruction';
+import TaskIssueResources from './TaskIssueResources';
 import TaskParentBar from './TaskParentBar';
 import { TaskBlockedNotice } from './TaskPrerequisites';
 import TaskProjectSection from './TaskProjectSection';
@@ -34,6 +36,7 @@ const TaskDetailSections = memo(() => {
                 "Sub-issue of" parent bar; assignee lives in the properties. */}
             <TaskDetailTitleInput />
             <TaskParentBar />
+            <TaskDuplicateRelation />
           </div>
           <div data-task-detail-side className={styles.side}>
             <div className={styles.propertyGroups}>
@@ -48,6 +51,7 @@ const TaskDetailSections = memo(() => {
             <TaskBlockedNotice />
             <TaskSubtasks />
             <TaskArtifacts />
+            <TaskIssueResources />
             <TaskActivities />
           </div>
         </div>

@@ -13,6 +13,12 @@ describe('resolveOnboardingErrorCopy', () => {
     },
   );
 
+  it('reads a failed skip as a failed finish', () => {
+    expect(resolveOnboardingErrorCopy('skip', new Error('boom'))?.titleKey).toBe(
+      'setup.error.finish.title',
+    );
+  });
+
   it('keeps the shared sign-in and permission copy for auth failures', () => {
     expect(resolveOnboardingErrorCopy('workspace', { data: { httpStatus: 401 } })).toBeUndefined();
     expect(resolveOnboardingErrorCopy('agent', { data: { code: 'FORBIDDEN' } })).toBeUndefined();

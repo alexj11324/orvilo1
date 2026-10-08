@@ -352,6 +352,12 @@ export default {
   'setup.account': 'Account settings',
   'setup.provider': 'Provider settings',
   'setup.devices': 'Device settings',
+  'setup.accountMenu': 'Account menu for {{name}}',
+  'setup.wrongEmail': 'Wrong email? Sign out',
+  'setup.skip': 'Skip for now',
+  'setup.workspace.continueWith': 'Continue with {{name}}',
+  'setup.workspace.resumeDescription':
+    'You already created this workspace. Continue to set up your first Agent.',
   'setup.error.workspace.title': 'Couldn’t create your workspace',
   'setup.error.workspace.description':
     'Check the name and URL, then try again. If the URL is already taken, choose another one.',

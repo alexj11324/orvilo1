@@ -29,11 +29,12 @@ import {
   stashOnboardingCallbackUrl,
 } from '@/utils/onboardingRedirect';
 
+import AccountMenu from './AccountMenu';
 import DesktopAuthGate from './DesktopAuthGate';
 import { type OnboardingAction, resolveOnboardingErrorCopy } from './errorCopy';
 import { finishOnboardingAndNavigate, repairDesktopOnboardingMarkers } from './finishOnboarding';
 import { useOnboardingUserStateReady } from './useOnboardingUserStateReady';
-import { resolveOnboardingWorkspace } from './workspaceResolution';
+import { findOnboardingWorkspace, resolveOnboardingWorkspace } from './workspaceResolution';
 
 const SETUP_STEPS = [
   'setup.stepName.workspace',
@@ -54,6 +55,15 @@ function OnboardingSetup() {
     onWorkspaceSlugChange,
   } = useWorkspaceSlug(setup?.workspaceName, setup?.workspaceSlug);
   const [workspace, setWorkspace] = useState<{ id: string; slug: string }>();
+  // A workspace this account already created: the first step offers to continue with it
+  // instead of asking for another one. `checkingSaved` holds the form back until the
+  // checkpointed id is confirmed to exist.
+  const [savedWorkspace, setSavedWorkspace] = useState<{
+    id: string;
+    name: string;
+    slug: string;
+  }>();
+  const [checkingSaved, setCheckingSaved] = useState(!!setup?.workspaceId);
   const createdWorkspaceRef = useRef<{ id: string; slug: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
@@ -74,6 +84,20 @@ function OnboardingSetup() {
       },
     });
   };
+
+  useEffect(() => {
+    const persistedId = useUserStore.getState().onboarding?.setup?.workspaceId;
+    if (!persistedId) return;
+    let active = true;
+    void findOnboardingWorkspace(persistedId).then((found) => {
+      if (!active) return;
+      setSavedWorkspace(found);
+      setCheckingSaved(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   /**
    * Run one setup action with a busy state and a failure that names the action and can
@@ -111,7 +135,28 @@ function OnboardingSetup() {
       );
       createdWorkspaceRef.current = resolved;
       await saveWorkspace(resolved);
+      setSavedWorkspace({ ...resolved, name: workspaceName.trim() });
       setWorkspace(resolved);
+    });
+  };
+
+  const goBack = () => {
+    if (busy) return;
+    setFailure(undefined);
+    if (agentVerified) setAgentVerified(false);
+    else setWorkspace(undefined);
+  };
+
+  // Optional steps never block: leaving them finishes onboarding with what is already saved.
+  const skip = async () => {
+    await runAction('skip', async () => {
+      const state = useUserStore.getState();
+      await finishOnboardingAndNavigate(
+        state.finishOnboarding,
+        navigate,
+        undefined,
+        agentVerified ? firstAgentId : undefined,
+      );
     });
   };
 
@@ -185,6 +230,7 @@ function OnboardingSetup() {
     ? {
         agent: firstAgentId ? () => void completeAgent(firstAgentId) : undefined,
         finish: () => void finish(),
+        skip: () => void skip(),
         selection: orchestratorAgentId
           ? () => void selectOrchestrator(orchestratorAgentId)
           : undefined,
@@ -194,7 +240,12 @@ function OnboardingSetup() {
 
   return (
     <main className="orvilo-entry-surface bg-background text-foreground flex min-h-[var(--onboarding-viewport-height,100svh)] w-full flex-col">
-      <OnboardingHeader canGoBack={false} onBack={() => {}} />
+      <OnboardingHeader
+        backDisabled={busy}
+        canGoBack={stepIndex > 0}
+        trailing={<AccountMenu />}
+        onBack={goBack}
+      />
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-10">
         <ol
           aria-label={t('setup.steps')}
@@ -226,7 +277,9 @@ function OnboardingSetup() {
                 ? 'setup.orchestrator.description'
                 : workspace
                   ? 'setup.agent.description'
-                  : 'setup.workspace.description',
+                  : savedWorkspace
+                    ? 'setup.workspace.resumeDescription'
+                    : 'setup.workspace.description',
             )}
           </p>
         </div>
@@ -241,7 +294,23 @@ function OnboardingSetup() {
             />
           </div>
         )}
-        {!workspace ? (
+        {!workspace && checkingSaved ? (
+          <div className="flex justify-center">
+            <Spinner />
+          </div>
+        ) : !workspace && savedWorkspace ? (
+          <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
+            <Button
+              size="lg"
+              onClick={() => {
+                createdWorkspaceRef.current = savedWorkspace;
+                setWorkspace(savedWorkspace);
+              }}
+            >
+              {t('setup.workspace.continueWith', { name: savedWorkspace.name })}
+            </Button>
+          </div>
+        ) : !workspace ? (
           <form
             className="mx-auto flex w-full max-w-sm flex-col gap-5"
             onSubmit={continueWorkspace}
@@ -343,6 +412,11 @@ function OnboardingSetup() {
               {t('setup.devices')}
             </Button>
           </div>
+        )}
+        {workspace && (
+          <Button disabled={busy} variant="ghost" onClick={() => void skip()}>
+            {t('setup.skip')}
+          </Button>
         )}
         {workspace && (
           <Button disabled={busy} variant="ghost" onClick={() => navigate('/settings/profile')}>

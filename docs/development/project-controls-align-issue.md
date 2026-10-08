@@ -5,7 +5,7 @@ Project property controls and status glyphs now share the Issue surfaces' contro
 ## Property controls
 
 - Labels, lead and members open from a ghost `ComboboxTrigger` pill (28px high, 13px medium text) with the search input inside the popup, replacing the inline chip inputs. Members show an `AvatarGroup` (up to three) followed by the names; lead shows the selected member's avatar.
-- Priority reuses `TaskPriorityTag`, so Project and Issue priority share one menu. The trigger is a ghost `Button` whose accessible name is `properties.priority`; it is a `button`, no longer a `combobox`.
+- Priority reuses `TaskPriorityTag`, so Project and Issue priority share one menu; the picked number is narrowed with `resolvePriorityLevel` before saving. The trigger is a ghost `Button` whose accessible name is `properties.priority`; it is a `button`, no longer a `combobox`.
 - The status trigger in the Overview header and in the Properties rail is a ghost `Button` with the same pill shape. The rail no longer wraps the status in an outline `Badge` with a chevron.
 - `ProjectUpdateComposer` on the Overview is keyed by project id, so switching projects remounts the composer instead of carrying its state across.
 
@@ -19,12 +19,16 @@ Project property controls and status glyphs now share the Issue surfaces' contro
 
 `TaskPriorityTag` takes a `nativeButton` prop (default `false`, matching its span icon trigger). Callers that pass a real `<button>` child, as the Project priority field does, set it so Base UI does not add a second button role or double-handle Enter and Space. `IssueStatusPicker` passes `nativeButton={false}` because its trigger node is not a native button.
 
-## Not included
+## Landed elsewhere
 
-- `OrchestrationPolicyCard` stays mounted on the Overview. The source commit deleted it together with the project orchestration policy; that removal is out of scope here.
-- Server, database, store and service changes of the source commit.
-- Activity and Updates changes (`ProjectActivityPage`, `Updates/*`) and their draft-related tests, which belong to a separate change.
+- The removal of `OrchestrationPolicyCard` and of the project orchestration policy API, model, service and store members is PR #542 (`refactor/retire-project-orchestration-policy`). This change does not touch the card, so the two merge independently.
+- Activity and Updates changes (`ProjectActivityPage`, `Updates/*`) and their draft tests are PR #527 (`fix/project-update-draft-and-typography`).
+
+## Kept differences from the source commit
+
+- The property pills use `hover:bg-accent` instead of the source's `hover:bg-muted`, following the repository-wide accent hover wash.
+- The team chip in the Overview header keeps its `antd-style` class (`teamChip`). `--accent` resolves to the same fill token (`colorFillTertiary`) the class uses on hover, so the chip and the ghost pills beside it share one hover surface without utility-class overrides of the anchor color.
 
 ## Verification
 
-`bun run check` on the changed files: lint clean, related tests passed. `src/features/Projects`, `src/features/AgentTasks/features` and `TaskProperties.test.tsx` were also run directly with Vitest: 35 files, 385 tests passed. `TaskPriorityTag.test.tsx` covers opening a native button trigger once with Enter and with Space. Native Electron visual acceptance has not been captured for this revision.
+`bun run check` on the changed files: lint clean, related tests passed. `src/features/Projects`, `src/features/AgentTasks/features` and `TaskProperties.test.tsx` were also run directly with Vitest: 35 files, 385 tests passed. `TaskPriorityTag.test.tsx` covers opening a native button trigger once with Enter and with Space. `TaskProperties.test.tsx` covers opening the Issue detail status trigger once from the keyboard, the workflow glyph on every status row, and moving a pending-review Issue back to Todo. Native Electron visual acceptance has not been captured for this revision.

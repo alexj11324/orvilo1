@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import DatePicker from '@/components/DatePicker';
-import { PriorityIcon } from '@/components/PriorityIcon';
+import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -365,7 +365,7 @@ export function ProjectPriorityField({
       nativeButton
       disableDropdown={saving}
       priority={priority}
-      onChange={(value) => void save({ priority: value })}
+      onChange={(value) => void save({ priority: resolvePriorityLevel(value) })}
     >
       <Button
         aria-label={t('properties.priority')}

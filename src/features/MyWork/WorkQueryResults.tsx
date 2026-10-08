@@ -154,6 +154,8 @@ interface WorkQueryResultsProps {
   createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
+  /** Filters narrowed the set to nothing: say so instead of "nothing here yet". */
+  filtered?: boolean;
   /**
    * Nest children under parents already in the set. On My Work this is the
    * flat list and the attention groups. `nestInGroups` also nests inside a
@@ -220,6 +222,7 @@ interface WorkQueryResultsProps {
     gesture: BulkSelectGesture,
     orderedRowIds: string[],
   ) => void;
+  onClearFilters?: () => void;
   onCollapsedColumnsChange?: (keys: string[]) => void;
   onCollapsedGroupsChange?: (keys: string[]) => void;
   /**
@@ -751,7 +754,9 @@ const WORK_QUERY_BOARD_OPTIONS = {
 
 const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
-    emptyLabel,
+    emptyLabel: baseEmptyLabel,
+    filtered,
+    onClearFilters,
     collapsedColumns,
     collapsedGroups,
     axisKeyRank,
@@ -800,6 +805,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     total,
   }) => {
     const { t } = useTranslation(['common', 'chat']);
+    const emptyLabel = filtered ? t('myWork.emptyFiltered') : baseEmptyLabel;
     const boardGroupBy =
       groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
         ? groupBy
@@ -966,10 +972,15 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 />
               ))}
             </div>
-          ) : tasks.length === 0 ? (
+          ) : allTasks.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
               <ListTodoIcon aria-hidden className="size-8" />
               <p>{emptyLabel}</p>
+              {filtered && onClearFilters ? (
+                <Button variant="outline" onClick={onClearFilters}>
+                  {t('myWork.clearFilters')}
+                </Button>
+              ) : null}
             </div>
           ) : (
             <WorkQueryVirtualList

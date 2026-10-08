@@ -710,6 +710,8 @@ export default {
   'myWork.delegated': 'Delegated to agents',
   'myWork.displayLayout': 'Layout',
   'myWork.empty': 'Nothing in this list yet',
+  'myWork.emptyFiltered': 'No issues match the current filters',
+  'myWork.clearFilters': 'Clear filters',
   'myWork.filterUnsupported': 'Advanced filters are not available on this tab yet',
   'myWork.filtersActive_one': '{{count}} filter',
   'myWork.filtersActive_other': '{{count}} filters',

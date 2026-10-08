@@ -1084,6 +1084,7 @@ const MyWorkPage = memo(() => {
           collapsedColumns={display.collapsedColumns}
           collapsedGroups={display.collapsedGroups}
           emptyLabel={t('myWork.empty')}
+          filtered={activeFilterCount > 0 || noProject || delegated}
           flatNested={display.showSubIssues && display.nestedSubIssues}
           groupBy={data?.data.groupBy}
           groupIcon={groupIcon}
@@ -1120,6 +1121,10 @@ const MyWorkPage = memo(() => {
           onRetryLoadMore={retryLoadMore}
           onRetryLoadMoreGroup={retryLoadMoreGroup}
           onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
+          onClearFilters={() => {
+            setBuilder(EMPTY_FILTER_BUILDER);
+            if (noProject || delegated) writeParams({ delegated: false, noProject: false });
+          }}
           onSelectTask={(task) => {
             // A plain click picks one issue for the peek — the multi-select
             // set is a bulk-action target, so it releases here.

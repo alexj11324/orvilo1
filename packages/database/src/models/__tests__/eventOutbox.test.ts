@@ -12,6 +12,8 @@ const userId = 'outbox-user';
 const workspaceId = 'outbox-workspace';
 
 beforeEach(async () => {
+  // Personal-scope events have no user FK and survive other suites' user cleanup.
+  await serverDB.delete(eventOutbox);
   await serverDB.delete(users);
   await serverDB.insert(users).values({ id: userId });
   await serverDB
@@ -20,6 +22,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await serverDB.delete(eventOutbox);
   await serverDB.delete(users);
 });
 

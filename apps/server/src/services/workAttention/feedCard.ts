@@ -73,12 +73,17 @@ export const toFeedCard = (
         : null,
     actor: row.metadata?.actor,
     agent: row.metadata?.agent,
+    nativeIntervention: row.metadata?.nativeIntervention,
     activityVersion: row.activityVersion,
-    availableActions: unresolvedAction
-      ? ['archive', 'decide', 'open', 'snooze']
-      : ['archive', 'open', 'snooze'],
+    availableActions:
+      unresolvedAction && !row.metadata?.nativeIntervention
+        ? ['dismiss', 'decide', 'open', 'snooze']
+        : ['dismiss', 'open', 'snooze'],
     content: row.content,
-    decisionVerbs: unresolvedAction ? decisionVerbsFor(actionKind, Boolean(live?.outgoing)) : [],
+    decisionVerbs:
+      unresolvedAction && !row.metadata?.nativeIntervention
+        ? decisionVerbsFor(actionKind, Boolean(live?.outgoing))
+        : [],
     kind: row.kind,
     lastActivityAt: (row.lastActivityAt ?? row.createdAt).toISOString(),
     notificationId: row.id,

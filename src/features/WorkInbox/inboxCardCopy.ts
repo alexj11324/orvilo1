@@ -9,7 +9,10 @@ const SOURCE_TITLE_KEYS = {
   workspace_ownership_transfer: 'inbox.source.workspaceOwnershipTransfer',
 } as const;
 
-export const inboxCardTitleKey = (card: Pick<NotificationFeedCard, 'actionRef' | 'outgoing'>) => {
+export const inboxCardTitleKey = (
+  card: Pick<NotificationFeedCard, 'actionRef' | 'nativeIntervention' | 'outgoing'>,
+) => {
+  if (card.nativeIntervention) return null;
   const kind = card.actionRef?.kind;
   if (!kind) return null;
   if (kind === 'resource_transfer' && card.outgoing) {

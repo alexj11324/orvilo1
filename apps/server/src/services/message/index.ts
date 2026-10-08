@@ -10,6 +10,7 @@ import {
 import { createTimingHelpers, getDurationMs } from '@orvilo/utils';
 
 import { MessageModel } from '@/database/models/message';
+import { NotificationModel } from '@/database/models/notification';
 
 import { FileService } from '../file';
 
@@ -94,11 +95,15 @@ export class MessageService {
   private messageModel: MessageModel;
   private fileService: FileService;
   private compressionRepository: CompressionRepository;
+  private notificationModel: NotificationModel;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.messageModel = new MessageModel(db, userId, workspaceId);
     this.fileService = new FileService(db, userId, workspaceId);
     this.compressionRepository = new CompressionRepository(db, userId, workspaceId);
+    this.notificationModel = new NotificationModel(db, userId, {
+      workspaceId: workspaceId ?? null,
+    });
   }
 
   /**
@@ -331,6 +336,7 @@ export class MessageService {
     options: QueryOptions,
   ): Promise<{ messages?: UIChatMessage[]; success: boolean }> {
     await this.messageModel.updateMessagePlugin(id, value);
+    if (value.intervention) await this.notificationModel.syncNativeInterventions([id]);
     return this.queryWithSuccess(options);
   }
 

@@ -1,13 +1,25 @@
-import { EVENT_CONSUMERS } from '@orvilo/types';
+import { EVENT_CONSUMERS, type NotificationMetadata } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceipt';
 import { NotificationModel } from '@/database/models/notification';
 import { allocateFeedRevision } from '@/database/models/notificationFeed';
+import { TaskModel } from '@/database/models/task';
+import {
+  agents,
+  taskComments,
+  tasks,
+  taskTopics,
+  topics,
+  users,
+  workspaceMembers,
+} from '@/database/schemas';
 import type { EventOutboxItem } from '@/database/schemas/eventOutbox';
 import { eventOutbox } from '@/database/schemas/eventOutbox';
+import { taskSubscriptions } from '@/database/schemas/workAttention';
 import type { OrviloDatabase } from '@/database/type';
+import { extractMentionedUserIds } from '@/server/utils/commentMentions';
 
 const RETRY_DELAY_MS = 30_000;
 const VISIBILITY_TIMEOUT_MS = 5 * 60 * 1000;
@@ -18,6 +30,7 @@ interface ProjectionTarget {
   content: string;
   episodeKey: string;
   kind: 'action' | 'update';
+  metadata?: NotificationMetadata;
   recipientUserId: string;
   resourceId?: string;
   resourceType?: string;
@@ -133,6 +146,151 @@ export const resolveNotificationTargets = (row: EventOutboxItem): ProjectionTarg
 export class NotificationProjectionService {
   constructor(private readonly db: OrviloDatabase) {}
 
+  /** Recipients come from the current Issue and subscriptions, never the whole workspace. */
+  private resolveIssueTargets = async (row: EventOutboxItem): Promise<ProjectionTarget[]> => {
+    const payload = payloadRecord(row.payload);
+    const [task] = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, row.aggregateId),
+          row.workspaceId ? eq(tasks.workspaceId, row.workspaceId) : isNull(tasks.workspaceId),
+        ),
+      )
+      .limit(1);
+    if (!task) return [];
+    const subscriptions = await this.db
+      .select({ userId: taskSubscriptions.userId })
+      .from(taskSubscriptions)
+      .where(
+        and(
+          eq(taskSubscriptions.taskId, task.id),
+          isNull(taskSubscriptions.unsubscribedAt),
+          row.workspaceId
+            ? eq(taskSubscriptions.workspaceId, row.workspaceId)
+            : isNull(taskSubscriptions.workspaceId),
+        ),
+      );
+    const recipientKinds = new Map<string, 'comment' | 'completion' | 'mention'>();
+    const completion = row.eventType.startsWith('task.run.');
+    const commentId = asString(payload.commentId);
+    const comment = commentId
+      ? (
+          await this.db
+            .select()
+            .from(taskComments)
+            .where(and(eq(taskComments.id, commentId), eq(taskComments.taskId, task.id)))
+            .limit(1)
+        )[0]
+      : undefined;
+    if (!completion && !comment) return [];
+    if (completion || row.eventType === 'task.comment.created') {
+      for (const userId of [
+        task.createdByUserId,
+        task.assigneeUserId,
+        ...subscriptions.map((item) => item.userId),
+      ]) {
+        if (userId) recipientKinds.set(userId, completion ? 'completion' : 'comment');
+      }
+    }
+    // Only real member nodes in the persisted comment can upgrade a recipient to a mention.
+    const previousMentions = new Set(
+      row.eventType === 'task.comment.updated'
+        ? extractMentionedUserIds(payload.previousEditorData)
+        : [],
+    );
+    if (comment)
+      for (const userId of extractMentionedUserIds(payload.editorData ?? comment.editorData)) {
+        if (!previousMentions.has(userId)) recipientKinds.set(userId, 'mention');
+      }
+    const actorUserId = completion ? undefined : asString(payload.userId);
+    if (actorUserId) recipientKinds.delete(actorUserId);
+    const candidates = [...recipientKinds.keys()];
+    if (candidates.length === 0) return [];
+    const active = row.workspaceId
+      ? new Set(
+          (
+            await this.db
+              .select({ userId: workspaceMembers.userId })
+              .from(workspaceMembers)
+              .where(
+                and(
+                  eq(workspaceMembers.workspaceId, row.workspaceId),
+                  inArray(workspaceMembers.userId, candidates),
+                  isNull(workspaceMembers.deletedAt),
+                  isNull(workspaceMembers.suspendedAt),
+                ),
+              )
+          ).map((item) => item.userId),
+        )
+      : new Set(candidates);
+    const metadata: NotificationMetadata = {};
+    if (actorUserId) {
+      const [actor] = await this.db.select().from(users).where(eq(users.id, actorUserId)).limit(1);
+      if (actor)
+        metadata.actor = {
+          avatar: actor.avatar ?? undefined,
+          name: actor.fullName || actor.username || undefined,
+          userId: actor.id,
+        };
+    }
+    if (completion && asString(payload.topicId)) {
+      const [agent] = await this.db
+        .select({
+          avatar: agents.avatar,
+          backgroundColor: agents.backgroundColor,
+          id: agents.id,
+          name: agents.title,
+        })
+        .from(taskTopics)
+        .innerJoin(topics, eq(topics.id, taskTopics.topicId))
+        .innerJoin(agents, eq(agents.id, topics.agentId))
+        .where(and(eq(taskTopics.taskId, task.id), eq(taskTopics.topicId, String(payload.topicId))))
+        .limit(1);
+      if (agent)
+        metadata.agent = {
+          avatar: agent.avatar ?? undefined,
+          backgroundColor: agent.backgroundColor ?? undefined,
+          id: agent.id,
+          name: agent.name ?? undefined,
+        };
+    }
+    const targets: ProjectionTarget[] = [];
+    for (const [userId, kind] of recipientKinds) {
+      if (!active.has(userId)) continue;
+      // TaskModel's shared predicate includes private-team and resource ACL.
+      if (!(await new TaskModel(this.db, userId, row.workspaceId ?? undefined).findById(task.id)))
+        continue;
+      if (comment?.visibility === 'private' && comment.userId !== userId) continue;
+      targets.push({
+        content: completion
+          ? row.eventType === 'task.run.completed'
+            ? 'Agent finished this run'
+            : 'Agent run failed'
+          : (asString(payload.content) ?? comment!.content),
+        episodeKey: completion
+          ? `task:${task.id}:run:${String(payload.topicId)}:${String(payload.status)}`
+          : `task:${task.id}:${kind}`,
+        kind: 'update',
+        metadata,
+        recipientUserId: userId,
+        resourceId: task.id,
+        resourceType: 'task',
+        title: task.name || task.instruction,
+        type:
+          kind === 'mention'
+            ? 'mention'
+            : completion
+              ? row.eventType === 'task.run.completed'
+                ? 'agent_run_completed'
+                : 'agent_run_failed'
+              : 'task_comment',
+      });
+    }
+    return targets;
+  };
+
   drainPending = async (limit = 200) => {
     const receipts = new EventConsumerReceiptModel(this.db);
     let drained = 0;
@@ -164,7 +322,11 @@ export class NotificationProjectionService {
       .limit(1);
     if (!row) return;
 
-    const targets = resolveNotificationTargets(row);
+    const targets =
+      row.aggregateType === 'task' &&
+      (row.eventType.startsWith('task.comment.') || row.eventType.startsWith('task.run.'))
+        ? await this.resolveIssueTargets(row)
+        : resolveNotificationTargets(row);
     for (const target of targets) {
       await this.db.transaction(async (tx) => {
         const model = new NotificationModel(tx as typeof this.db, target.recipientUserId, {
@@ -186,6 +348,7 @@ export class NotificationProjectionService {
           content: target.content,
           episodeKey: target.episodeKey,
           feedRevision: revision,
+          metadata: target.metadata,
           recipientUserId: target.recipientUserId,
           title: target.title,
         });
@@ -202,6 +365,7 @@ export class NotificationProjectionService {
           kind: target.kind,
           lastActivityAt: new Date(),
           latestFeedRevision: revision,
+          metadata: target.metadata,
           resourceId: target.resourceId,
           resourceType: target.resourceType,
           sourceEventId: eventId,

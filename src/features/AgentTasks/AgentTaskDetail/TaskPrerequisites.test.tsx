@@ -93,7 +93,8 @@ describe('TaskPrerequisites', () => {
     expect(screen.getByText(relation('blockedBy'))).toBeTruthy();
     expect(screen.getByText(relation('blocking'))).toBeTruthy();
     expect(screen.getByText(relation('relates'))).toBeTruthy();
-    expect(screen.getAllByText(relation('none'))).toHaveLength(3);
+    // An empty field offers only its add button — no filler text.
+    expect(screen.queryByText(relation('none'))).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.getAllByRole('button', { name: relation('add') })).toHaveLength(3);
@@ -134,7 +135,7 @@ describe('TaskPrerequisites', () => {
     render(<TaskPrerequisites />);
     expect(fieldFor('blockedBy').getByText('T-1')).toBeTruthy();
     expect(fieldFor('relates').getByText('T-3')).toBeTruthy();
-    expect(fieldFor('blocking').getByText(relation('none'))).toBeTruthy();
+    expect(fieldFor('blocking').queryByText(relation('none'))).toBeNull();
   });
 
   it('adds a relates edge from search and a blocking edge from the other side', async () => {

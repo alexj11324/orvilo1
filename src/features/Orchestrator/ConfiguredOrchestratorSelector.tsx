@@ -7,6 +7,8 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Spinner } from '@/components/ui/spinner';
 import type { AgentRuntimeConfig } from '@/features/CreateAgent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -64,25 +66,22 @@ const ConfiguredOrchestratorSelector = ({
       ) : error ? (
         <AsyncError error={error} onRetry={() => void mutate()} />
       ) : (
-        <div
+        <RadioGroup
           aria-label={t('orchestrator.select')}
-          className="flex max-h-64 flex-col gap-2 overflow-auto rounded-lg border p-3"
+          className="max-h-64 overflow-auto rounded-lg border p-3"
+          value={value ?? ''}
+          onValueChange={(next) => {
+            const item = data?.find(({ agent }) => agent.id === next);
+            if (!item?.runtime) return;
+            notified.current = `${workspaceId ?? 'personal'}:${visibility}:${item.agent.id}`;
+            notifiedRuntime.current = item.runtime;
+            onSelect(item.agent.id, item.runtime, true);
+          }}
         >
           {data?.map(({ agent, runtime, status }) => (
             <div className="flex items-center gap-2" key={agent.id}>
-              <Button
-                aria-pressed={agent.id === value}
-                className="h-auto min-w-0 flex-1 justify-start gap-3 p-3 text-left"
-                disabled={disabled || status !== 'ready'}
-                variant={agent.id === value ? 'secondary' : 'ghost'}
-                onClick={() => {
-                  if (runtime) {
-                    notified.current = `${workspaceId ?? 'personal'}:${visibility}:${agent.id}`;
-                    notifiedRuntime.current = runtime;
-                    onSelect(agent.id, runtime, true);
-                  }
-                }}
-              >
+              <Label className="min-w-0 flex-1 cursor-pointer gap-3 rounded-md p-3 leading-normal font-normal hover:bg-muted has-data-checked:bg-secondary has-data-disabled:cursor-not-allowed has-data-disabled:opacity-50">
+                <RadioGroupItem disabled={disabled || status !== 'ready'} value={agent.id} />
                 <AgentRuntimeIcon
                   size={24}
                   type={runtime ? resolveAgentRuntimeType(runtime) : undefined}
@@ -98,7 +97,7 @@ const ConfiguredOrchestratorSelector = ({
                         : t(`chat:agentPicker.status.${status}`)}
                   </span>
                 </span>
-              </Button>
+              </Label>
               {status !== 'ready' && (
                 <Button
                   disabled={disabled}
@@ -114,7 +113,7 @@ const ConfiguredOrchestratorSelector = ({
           {!data?.length && (
             <p className="text-sm text-muted-foreground">{t('orchestrator.empty')}</p>
           )}
-        </div>
+        </RadioGroup>
       )}
       {value && data && !selected && (
         <p className="text-sm text-destructive">{t('orchestrator.selectionUnavailable')}</p>

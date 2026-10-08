@@ -30,9 +30,16 @@ import {
 } from '@/utils/onboardingRedirect';
 
 import DesktopAuthGate from './DesktopAuthGate';
+import { type OnboardingAction, resolveOnboardingErrorCopy } from './errorCopy';
 import { finishOnboardingAndNavigate, repairDesktopOnboardingMarkers } from './finishOnboarding';
 import { useOnboardingUserStateReady } from './useOnboardingUserStateReady';
 import { resolveOnboardingWorkspace } from './workspaceResolution';
+
+const SETUP_STEPS = [
+  'setup.stepName.workspace',
+  'setup.stepName.agent',
+  'setup.stepName.orchestrator',
+] as const;
 
 function OnboardingSetup() {
   const { t } = useTranslation('onboarding');
@@ -49,7 +56,8 @@ function OnboardingSetup() {
   const [workspace, setWorkspace] = useState<{ id: string; slug: string }>();
   const createdWorkspaceRef = useRef<{ id: string; slug: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>();
+  const inFlight = useRef(false);
+  const [failure, setFailure] = useState<{ action: OnboardingAction; error: unknown }>();
   const [firstAgentId, setFirstAgentId] = useState(setup?.firstAgentId);
   const [agentVerified, setAgentVerified] = useState(false);
   const [orchestratorAgentId, setOrchestratorAgentId] = useState(setup?.orchestratorAgentId);
@@ -67,12 +75,34 @@ function OnboardingSetup() {
     });
   };
 
-  const continueWorkspace = async (event: FormEvent) => {
-    event.preventDefault();
-    if (busy || !workspaceName.trim() || !workspaceSlug.trim() || workspaceSlugError) return;
+  /**
+   * Run one setup action with a busy state and a failure that names the action and can
+   * be retried. `exclusive` also drops a second call while one is still in flight, which
+   * keeps a double click from submitting twice before `busy` re-renders.
+   */
+  const runAction = async (
+    action: OnboardingAction,
+    task: () => Promise<void>,
+    exclusive = true,
+  ) => {
+    if (exclusive && inFlight.current) return;
+    if (exclusive) inFlight.current = true;
     setBusy(true);
-    setError(undefined);
+    setFailure(undefined);
     try {
+      await task();
+    } catch (error) {
+      setFailure({ action, error });
+    } finally {
+      if (exclusive) inFlight.current = false;
+      setBusy(false);
+    }
+  };
+
+  const continueWorkspace = async (event?: FormEvent) => {
+    event?.preventDefault();
+    if (busy || !workspaceName.trim() || !workspaceSlug.trim() || workspaceSlugError) return;
+    await runAction('workspace', async () => {
       const resolved = await resolveOnboardingWorkspace(
         { workspaceName, workspaceSlug },
         useUserStore.getState().onboarding?.setup?.workspaceId,
@@ -82,19 +112,13 @@ function OnboardingSetup() {
       createdWorkspaceRef.current = resolved;
       await saveWorkspace(resolved);
       setWorkspace(resolved);
-    } catch (error) {
-      setError(error);
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   const completeAgent = async (agentId: string) => {
     if (!workspace) return;
     setFirstAgentId(agentId);
-    setBusy(true);
-    setError(undefined);
-    try {
+    await runAction('agent', async () => {
       const state = useUserStore.getState();
       // Keep the created identity before verification so a failed check resumes
       // this agent instead of inviting the user to create another one.
@@ -119,36 +143,29 @@ function OnboardingSetup() {
       });
       setOrchestratorAgentId(selectedId);
       setAgentVerified(true);
-    } catch (error) {
-      setError(error);
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   const selectOrchestrator = async (agentId: string) => {
     setOrchestratorAgentId(agentId);
     setOrchestratorReady(false);
-    setBusy(true);
-    setError(undefined);
-    try {
-      const state = useUserStore.getState();
-      await state.updateOnboarding({
-        setup: { ...state.onboarding?.setup, orchestratorAgentId: agentId },
-      });
-      setOrchestratorReady(true);
-    } catch (cause) {
-      setError(cause);
-    } finally {
-      setBusy(false);
-    }
+    // Not exclusive: the selector reports its own initial selection on mount.
+    await runAction(
+      'selection',
+      async () => {
+        const state = useUserStore.getState();
+        await state.updateOnboarding({
+          setup: { ...state.onboarding?.setup, orchestratorAgentId: agentId },
+        });
+        setOrchestratorReady(true);
+      },
+      false,
+    );
   };
 
   const finish = async () => {
     if (!workspace || !orchestratorAgentId || !orchestratorReady || busy) return;
-    setBusy(true);
-    setError(undefined);
-    try {
+    await runAction('finish', async () => {
       const state = useUserStore.getState();
       await state.updateOnboarding({
         setup: { ...state.onboarding?.setup, orchestratorAgentId },
@@ -159,44 +176,39 @@ function OnboardingSetup() {
         () => verifyOnboardingOrchestrator(orchestratorAgentId, workspace.id),
         firstAgentId,
       );
-    } catch (cause) {
-      setError(cause);
-    } finally {
-      setBusy(false);
-    }
+    });
   };
+
+  const stepIndex = agentVerified ? 2 : workspace ? 1 : 0;
+  const errorCopy = failure && resolveOnboardingErrorCopy(failure.action, failure.error);
+  const retry = failure
+    ? {
+        agent: firstAgentId ? () => void completeAgent(firstAgentId) : undefined,
+        finish: () => void finish(),
+        selection: orchestratorAgentId
+          ? () => void selectOrchestrator(orchestratorAgentId)
+          : undefined,
+        workspace: () => void continueWorkspace(),
+      }[failure.action]
+    : undefined;
 
   return (
     <main className="orvilo-entry-surface bg-background text-foreground flex min-h-[var(--onboarding-viewport-height,100svh)] w-full flex-col">
-      <OnboardingHeader
-        canGoBack={false}
-        currentStep={agentVerified ? 3 : workspace ? 2 : 1}
-        totalSteps={3}
-        onBack={() => {}}
-      />
+      <OnboardingHeader canGoBack={false} onBack={() => {}} />
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-10">
         <ol
           aria-label={t('setup.steps')}
           className="text-muted-foreground flex justify-center gap-6 text-sm"
         >
-          <li
-            aria-current={!workspace ? 'step' : undefined}
-            className={!workspace ? 'text-foreground font-medium' : ''}
-          >
-            {t('setup.step.workspace')}
-          </li>
-          <li
-            aria-current={workspace && !agentVerified ? 'step' : undefined}
-            className={workspace && !agentVerified ? 'text-foreground font-medium' : ''}
-          >
-            {t('setup.step.agent')}
-          </li>
-          <li
-            aria-current={agentVerified ? 'step' : undefined}
-            className={agentVerified ? 'text-foreground font-medium' : ''}
-          >
-            {t('setup.step.orchestrator')}
-          </li>
+          {SETUP_STEPS.map((label, index) => (
+            <li
+              aria-current={index === stepIndex ? 'step' : undefined}
+              className={index === stepIndex ? 'text-foreground font-medium' : ''}
+              key={label}
+            >
+              {index + 1} {t(label)}
+            </li>
+          ))}
         </ol>
         <div className="flex flex-col gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -218,7 +230,17 @@ function OnboardingSetup() {
             )}
           </p>
         </div>
-        {error !== undefined && <AsyncError error={error} />}
+        {failure && (
+          <div role="alert">
+            <AsyncError
+              description={errorCopy && t(errorCopy.descriptionKey)}
+              error={failure.error}
+              retrying={busy}
+              title={errorCopy && t(errorCopy.titleKey)}
+              onRetry={retry}
+            />
+          </div>
+        )}
         {!workspace ? (
           <form
             className="mx-auto flex w-full max-w-sm flex-col gap-5"
@@ -229,6 +251,7 @@ function OnboardingSetup() {
               <Input
                 required
                 autoComplete="organization"
+                className="h-9"
                 disabled={busy}
                 id="onboarding-workspace"
                 value={workspaceName}
@@ -242,6 +265,7 @@ function OnboardingSetup() {
                 aria-describedby={workspaceSlugError ? 'onboarding-url-error' : undefined}
                 aria-invalid={!!workspaceSlugError}
                 autoComplete="off"
+                className="h-9"
                 disabled={busy}
                 id="onboarding-url"
                 value={workspaceSlug}
@@ -260,12 +284,13 @@ function OnboardingSetup() {
               )}
             </Field>
             <Button
+              loading={busy}
+              size="lg"
               type="submit"
               disabled={
                 busy || !workspaceName.trim() || !workspaceSlug.trim() || !!workspaceSlugError
               }
             >
-              {busy && <Spinner data-icon="inline-start" />}
               {t('reui.action.continue')}
             </Button>
           </form>
@@ -291,20 +316,25 @@ function OnboardingSetup() {
             <Button
               disabled={busy || !orchestratorReady}
               loading={busy}
+              size="lg"
               onClick={() => void finish()}
             >
               {t('setup.orchestrator.finish')}
             </Button>
           </>
         ) : firstAgentId ? (
-          <Button disabled={busy} onClick={() => void completeAgent(firstAgentId)}>
-            {busy && <Spinner data-icon="inline-start" />}
+          <Button
+            disabled={busy}
+            loading={busy}
+            size="lg"
+            onClick={() => void completeAgent(firstAgentId)}
+          >
             {t(busy ? 'setup.agent.verifying' : 'setup.agent.enter')}
           </Button>
         ) : (
           <CreateAgentPanel lockVisibility onCreated={completeAgent} />
         )}
-        {workspace && error !== undefined && (
+        {workspace && failure && (
           <div className="flex justify-center gap-2">
             <Button variant="ghost" onClick={() => navigate('/settings/provider')}>
               {t('setup.provider')}

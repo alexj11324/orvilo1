@@ -13,12 +13,18 @@ export function OnboardingHeader({
   totalSteps,
 }: {
   canGoBack: boolean;
-  currentStep: number;
+  /** Optional counter; omit when the page already renders its own step list. */
+  currentStep?: number;
   onBack: () => void;
   statusLabel?: string;
-  totalSteps: number;
+  totalSteps?: number;
 }) {
   const { t } = useTranslation('onboarding');
+  const counter =
+    statusLabel ??
+    (currentStep && totalSteps
+      ? t('reui.stepper.counter', { current: currentStep, total: totalSteps })
+      : undefined);
 
   return (
     <header className="flex shrink-0 items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-6 lg:px-12">
@@ -38,11 +44,13 @@ export function OnboardingHeader({
         <OnboardingLogo />
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <span className="text-muted-foreground ml-1 hidden text-sm font-medium sm:inline">
-          {statusLabel ?? t('reui.stepper.counter', { current: currentStep, total: totalSteps })}
-        </span>
-      </div>
+      {counter ? (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-muted-foreground ml-1 hidden text-sm font-medium sm:inline">
+            {counter}
+          </span>
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -396,7 +396,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
               <Input
                 autoCapitalize="none"
                 autoComplete="url"
-                className="h-10"
+                className="h-9"
                 disabled={busy || isConnectingServer}
                 id="orvilo-server-url"
                 inputMode="url"

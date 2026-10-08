@@ -1,5 +1,4 @@
 export default {
-  'setup.step.orchestrator': 'Orchestrator',
   'setup.orchestrator.title': 'Choose your Orchestrator',
   'setup.orchestrator.description':
     'Your Orchestrator coordinates groups and projects. Use the Agent you just created or choose another configured Agent.',
@@ -341,8 +340,9 @@ export default {
   'reui.workspace.successTitle': '{{name}} is ready',
 
   'setup.steps': 'Setup steps',
-  'setup.step.workspace': '1 Workspace',
-  'setup.step.agent': '2 Agent',
+  'setup.stepName.workspace': 'Workspace',
+  'setup.stepName.agent': 'Agent',
+  'setup.stepName.orchestrator': 'Orchestrator',
   'setup.workspace.title': 'Set up your workspace',
   'setup.workspace.description': 'Choose a workspace name and address for your work.',
   'setup.agent.title': 'Create your first Agent',
@@ -352,4 +352,14 @@ export default {
   'setup.account': 'Account settings',
   'setup.provider': 'Provider settings',
   'setup.devices': 'Device settings',
+  'setup.error.workspace.title': 'Couldn’t create your workspace',
+  'setup.error.workspace.description':
+    'Check the name and URL, then try again. If the URL is already taken, choose another one.',
+  'setup.error.agent.title': 'Couldn’t set up your Agent',
+  'setup.error.agent.description':
+    'Check your provider and device settings, then try again. Your progress is saved.',
+  'setup.error.selection.title': 'Couldn’t save your choice',
+  'setup.error.selection.description': 'Try again, or choose a different Agent.',
+  'setup.error.finish.title': 'Couldn’t finish setup',
+  'setup.error.finish.description': 'Your progress is saved. Try again in a moment.',
 };

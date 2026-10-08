@@ -459,7 +459,7 @@ describe('createLambdaContext', () => {
 
     expect(context.userId).toBeNull();
     expect(context.oidcAuth).toBeUndefined();
-    expect(mockValidateOIDCJWT).toHaveBeenCalledWith('oidc-token');
+    expect(mockValidateOIDCJWT).toHaveBeenCalledWith('oidc-token', { allowHeteroOperation: true });
     expect(mockGetSession).not.toHaveBeenCalled();
   });
 

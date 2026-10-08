@@ -1,7 +1,15 @@
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
+import urlJoin from 'url-join';
 
+import { appEnv } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
+import {
+  isLegacyHeteroOperationClaims,
+  validateHeteroOperationClaims,
+} from '@/libs/trpc/utils/internalJwt';
+
+export const API_AUDIENCE = 'urn:orvilo:chat';
 
 const log = debug('oidc-jwt');
 
@@ -100,7 +108,10 @@ const getVerificationKey = async () => {
  * @param token - JWT access token
  * @returns Parsed token payload and user information
  */
-export const validateOIDCJWT = async (token: string) => {
+export const validateOIDCJWT = async (
+  token: string,
+  { allowHeteroOperation = false }: { allowHeteroOperation?: boolean } = {},
+) => {
   log('Starting OIDC JWT token validation');
 
   // JWKS / signing key retrieval is an infrastructure concern (misconfigured
@@ -111,10 +122,37 @@ export const validateOIDCJWT = async (token: string) => {
   const publicKey = await getVerificationKey();
 
   try {
-    const { jwtVerify } = await import('jose');
-    const { payload } = await jwtVerify(token, publicKey, {
+    const { decodeJwt, jwtVerify } = await import('jose');
+    // Select the contract before verification; only the verified claims below
+    // can authorize a token. Unknown purposes never use an internal fallback.
+    const purpose = decodeJwt(token).purpose;
+    const { payload, protectedHeader } = await jwtVerify(token, publicKey, {
       algorithms: ['RS256'],
+      requiredClaims: ['sub', 'iat', 'exp'],
+      ...(purpose === undefined
+        ? {
+            audience: API_AUDIENCE,
+            issuer: urlJoin(appEnv.APP_URL!, '/oidc'),
+            requiredClaims: ['sub', 'iat', 'exp', 'jti', 'client_id'],
+            typ: 'at+jwt',
+          }
+        : {}),
     });
+
+    if (
+      (purpose === undefined && (typeof payload.client_id !== 'string' || !payload.client_id)) ||
+      (purpose === 'cli-sandbox' &&
+        (payload.iss !== undefined ||
+          payload.aud !== undefined ||
+          payload.client_id !== undefined ||
+          protectedHeader.typ !== undefined)) ||
+      (purpose === 'hetero-operation' &&
+        (!allowHeteroOperation ||
+          (!validateHeteroOperationClaims(payload) && !isLegacyHeteroOperationClaims(payload)))) ||
+      (purpose !== undefined && purpose !== 'cli-sandbox' && purpose !== 'hetero-operation')
+    ) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid API access token contract' });
+    }
 
     log('JWT validation successful, payload: %O', payload);
 
@@ -122,7 +160,7 @@ export const validateOIDCJWT = async (token: string) => {
     const clientId = payload.client_id;
     const aud = payload.aud;
 
-    if (!userId) {
+    if (typeof userId !== 'string' || !userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'JWT token is missing user ID (sub)',

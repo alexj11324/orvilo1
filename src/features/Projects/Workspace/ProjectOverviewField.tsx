@@ -26,12 +26,18 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 interface ProjectOverviewFieldProps {
+  canEdit?: boolean;
   kind: 'name' | 'summary';
   onSave: (value: string) => Promise<unknown>;
   value: string;
 }
 
-export function ProjectOverviewField({ kind, onSave, value }: ProjectOverviewFieldProps) {
+export function ProjectOverviewField({
+  canEdit = false,
+  kind,
+  onSave,
+  value,
+}: ProjectOverviewFieldProps) {
   const { t } = useTranslation('project');
   const [draft, setDraft] = useState<string>();
   const [saving, setSaving] = useState(false);
@@ -43,7 +49,7 @@ export function ProjectOverviewField({ kind, onSave, value }: ProjectOverviewFie
       cancelBlur.current = false;
       return;
     }
-    if (draft === undefined || pending.current) return;
+    if (!canEdit || draft === undefined || pending.current) return;
     const next = kind === 'name' ? draft.trim() : draft;
     if ((kind === 'name' && !next) || next === value) {
       setDraft(undefined);
@@ -73,7 +79,7 @@ export function ProjectOverviewField({ kind, onSave, value }: ProjectOverviewFie
 
         maxLength={kind === 'name' ? 255 : 280}
         placeholder={kind === 'summary' ? t('create.summaryPlaceholder') : undefined}
-        readOnly={saving}
+        readOnly={saving || !canEdit}
         value={draft ?? value}
         style={{
           fontSize: kind === 'name' ? 24 : 15,

@@ -10,7 +10,9 @@ import {
   pruneWorkingDirByDeviceDeletes,
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
   resolveAgentAgencyConfig,
+  TERMINAL_AGENT_OPERATION_STATUSES,
 } from '@orvilo/types';
+import { resolveAgentRuntimeType } from '@orvilo/utils/agentRuntimeIdentity';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -18,6 +20,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   gt,
   ilike,
   inArray,
@@ -37,6 +40,7 @@ import type { AgentItem } from '../schemas';
 import {
   agentCronJobs,
   agentLabelAssignments,
+  agentOperations,
   agents,
   agentsFiles,
   agentShares,
@@ -66,6 +70,7 @@ import {
   threads,
   topicDocuments,
   topics,
+  workspaceMembers,
 } from '../schemas';
 import type { OrviloDatabase, Transaction } from '../type';
 import {
@@ -93,6 +98,7 @@ import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../
 import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
+import { buildTaskReadableWhere } from '../utils/taskTeamReadable';
 import {
   buildStrictWorkspaceWhere,
   buildWorkspacePayload,
@@ -106,6 +112,8 @@ import {
   rewriteMessageScopeForTopics,
   rewriteResidualMessageScope,
 } from './agentTransferJob';
+import { ProjectModel } from './project';
+import { ResourcePermissionModel } from './resourcePermission';
 import { TaskDispatchModel } from './taskDispatch';
 import { recordBulkTaskMutation } from './taskDomainMutation';
 import {
@@ -114,6 +122,7 @@ import {
   TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS,
 } from './topicComment';
 import { UserModel } from './user';
+import { getActiveWorkspaceMembershipRole } from './workspace';
 import { WorkspaceUserSettingsModel } from './workspaceUserSettings';
 
 /**
@@ -168,12 +177,9 @@ const IMMUTABLE_AGENT_FIELDS = [
   'slug',
   'userId',
   'virtual',
-  // `visibility` has its own authorization rules (`setVisibility` is creator /
-  // workspace-owner gated, `publishToWorkspace` is creator-only), so it must not
-  // ride along in a config patch: a member with edit access on a collaborative
-  // builtin could otherwise flip it to `private`, hiding the shared row from
-  // everyone else while its workspace slug stays occupied — nothing can
-  // reprovision it.
+  // Workspace visibility is public for new Agents. Only the dedicated
+  // managed publication path may promote legacy private records, so config
+  // patches cannot change this boundary.
   'visibility',
   'workspaceId',
 ] as const;
@@ -329,6 +335,14 @@ export class AgentModel {
         workspaceId: agents.workspaceId,
         visibility: agents.visibility,
       },
+    );
+
+  // Internal execution reads run only after server Agent Use authorization.
+  // Keep exact workspace/personal ownership while allowing selected private Agents.
+  private executionScope = () =>
+    buildWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      { userId: agents.userId, workspaceId: agents.workspaceId },
     );
 
   /** Same predicate but for the `sessions` table (used in delete cascade). */
@@ -496,6 +510,40 @@ export class AgentModel {
     }
   };
 
+  /** Resolve identity without returning executable configuration. */
+  getAgentIdForExecution = async (idOrSlug: string): Promise<string | null> => {
+    const row =
+      (await this.db.query.agents.findFirst({
+        columns: { id: true },
+        where: and(this.executionScope(), eq(agents.id, idOrSlug)),
+      })) ??
+      (await this.db.query.agents.findFirst({
+        columns: { id: true },
+        where: and(this.executionScope(), eq(agents.slug, idOrSlug)),
+      }));
+    return row?.id ?? null;
+  };
+
+  /** Server-only read: callers must authorize Agent Use before this lookup. */
+  getAgentConfigForExecution = async (id: string) => {
+    const agent = await this.db.query.agents.findFirst({
+      where: and(eq(agents.id, id), this.executionScope()),
+    });
+    return agent ? this.enrichAgentWithKnowledge(agent) : null;
+  };
+
+  /** Minimal execution snapshot, after the same server Agent Use admission. */
+  getAgentModelConfigForExecution = async (
+    id: string,
+  ): Promise<{ model: string; provider: string } | null> => {
+    const [row] = await this.db
+      .select({ model: agents.model, provider: agents.provider })
+      .from(agents)
+      .where(and(eq(agents.id, id), this.executionScope()))
+      .limit(1);
+    return row?.model && row.provider ? { model: row.model, provider: row.provider } : null;
+  };
+
   getAgentConfigById = async (id: string) => {
     const agent = await this.db.query.agents.findFirst({
       where: and(eq(agents.id, id), this.ownership()),
@@ -661,6 +709,7 @@ export class AgentModel {
       normalizeInboxAgentMeta(
         {
           ...row,
+          heterogeneousType: resolveAgentRuntimeType({ agencyConfig, model }),
           heteroType:
             agencyConfig?.heterogeneousProvider?.type ??
             (isHeterogeneousAgentModelId(model) ? model : undefined),
@@ -708,9 +757,60 @@ export class AgentModel {
    * Get minimal agent info (avatar, title, backgroundColor) by IDs.
    * For inbox agent (slug='inbox'), falls back to OrviloAI defaults when avatar/title are missing.
    */
-  getAgentAvatarsByIds = async (ids: string[]) => {
+  getAgentAvatarsByIds = async (ids: string[], issueTaskIds: string[] = []) => {
     if (ids.length === 0) return [];
 
+    // Issue identity is a read-only projection, never standalone Agent access.
+    const issueAccess =
+      this.workspaceId && issueTaskIds.length > 0
+        ? exists(
+            this.db
+              .select({ one: sql`1` })
+              .from(tasks)
+              .where(
+                and(
+                  inArray(tasks.id, issueTaskIds),
+                  buildTaskReadableWhere(this.db, {
+                    userId: this.userId,
+                    workspaceId: this.workspaceId,
+                  }),
+                  sql`${tasks.isDeleted} IS NOT TRUE`,
+                  or(
+                    and(
+                      eq(tasks.assigneeAgentId, agents.id),
+                      or(
+                        eq(agents.workspaceId, this.workspaceId),
+                        and(isNull(agents.workspaceId), eq(agents.userId, tasks.createdByUserId)),
+                      ),
+                    ),
+                    exists(
+                      this.db
+                        .select({ one: sql`1` })
+                        .from(taskTopics)
+                        .innerJoin(topics, eq(topics.id, taskTopics.topicId))
+                        .where(
+                          and(
+                            eq(taskTopics.taskId, tasks.id),
+                            eq(taskTopics.workspaceId, this.workspaceId),
+                            eq(topics.workspaceId, this.workspaceId),
+                            eq(topics.agentId, agents.id),
+                            isNull(topics.senderId),
+                            or(
+                              eq(agents.workspaceId, this.workspaceId),
+                              and(
+                                isNull(agents.workspaceId),
+                                eq(agents.userId, topics.userId),
+                                eq(taskTopics.userId, topics.userId),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ),
+                  ),
+                ),
+              ),
+          )
+        : undefined;
     const rows = await this.db
       .select({
         avatar: agents.avatar,
@@ -719,11 +819,29 @@ export class AgentModel {
         name: agents.name,
         slug: agents.slug,
         title: agents.title,
+        heterogeneousType: sql<
+          string | null
+        >`${agents.agencyConfig}->'heterogeneousProvider'->>'type'`,
+        personalIdentityOnly: sql<boolean>`${agents.workspaceId} is null and ${agents.userId} <> ${this.userId}`,
       })
       .from(agents)
-      .where(and(this.ownership(), inArray(agents.id, ids)));
+      .where(and(or(this.ownership(), issueAccess), inArray(agents.id, ids)));
 
-    return rows.map(({ slug, ...row }) => normalizeInboxAgentMeta(row, { slug }));
+    return rows.map(({ slug, heterogeneousType, personalIdentityOnly, ...row }) => {
+      if (personalIdentityOnly)
+        return {
+          id: row.id,
+          name: row.name,
+          title: row.title,
+          avatar: null,
+          backgroundColor: null,
+          heterogeneousType,
+        };
+      return {
+        ...normalizeInboxAgentMeta(row, { slug }),
+        ...(issueTaskIds.length > 0 ? { heterogeneousType } : {}),
+      };
+    });
   };
 
   /**
@@ -929,6 +1047,143 @@ export class AgentModel {
       );
   };
 
+  assertAgentManageable = async (
+    agent: Pick<AgentItem, 'userId' | 'workspaceId'> & Pick<Partial<AgentItem>, 'visibility'>,
+    db = this.db,
+  ) => {
+    if (agent.workspaceId && agent.visibility === 'private' && agent.userId !== this.userId)
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+    if (!agent.workspaceId) {
+      if (agent.userId === this.userId) return;
+    } else if (agent.workspaceId === this.workspaceId) {
+      const role = await getActiveWorkspaceMembershipRole(db, {
+        userId: this.userId,
+        workspaceId: agent.workspaceId,
+      });
+      if (
+        role === 'owner' ||
+        role === 'admin' ||
+        (role === 'member' && agent.userId === this.userId)
+      )
+        return;
+    }
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Agent Manage requires its writable creator or workspace Owner/Admin',
+    });
+  };
+
+  private assertAgentNotRunning = async (db: OrviloDatabase, agentIds: string[]) => {
+    if (agentIds.length === 0) return;
+    const [operation] = await db
+      .select({ id: agentOperations.id })
+      .from(agentOperations)
+      .where(
+        and(
+          inArray(agentOperations.agentId, agentIds),
+          notInArray(agentOperations.status, [...TERMINAL_AGENT_OPERATION_STATUSES]),
+        ),
+      )
+      .limit(1);
+    if (operation)
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Complete or stop active Agent operations before changing configuration or deleting the Agent',
+      });
+  };
+
+  private assertAgentNotAssigned = async (db: OrviloDatabase, agentIds: string[]) => {
+    if (agentIds.length === 0) return;
+    const [task] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          inArray(tasks.assigneeAgentId, agentIds),
+          or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
+        ),
+      )
+      .limit(1);
+    if (task)
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reassign Issues before deleting their Agent',
+      });
+  };
+
+  /** Session cascades must pass the same Agent boundary before deleting history. */
+  assertCanDeleteAgents = async (agentIds: string[], db = this.db) => {
+    if (agentIds.length === 0) return;
+    const targets = await db
+      .select({
+        userId: agents.userId,
+        workspaceId: agents.workspaceId,
+        visibility: agents.visibility,
+      })
+      .from(agents)
+      .where(inArray(agents.id, agentIds))
+      .for('update');
+    for (const agent of targets) await this.assertAgentManageable(agent, db);
+    await this.assertAgentNotRunning(db, agentIds);
+    await this.assertAgentNotAssigned(db, agentIds);
+  };
+
+  /** Project governance removes the parent; Agent Manage remains the cleanup authority. */
+  deleteProjectCoordinator = async (projectId: string, agentId: string) => {
+    return this.db.transaction(async (tx) => {
+      const [agent] = await tx
+        .select()
+        .from(agents)
+        .where(and(eq(agents.id, agentId), this.executionScope()))
+        .for('update');
+      if (!agent) return;
+      const project = await new ProjectModel(
+        tx as OrviloDatabase,
+        this.userId,
+        this.workspaceId,
+      ).findManageableById(projectId);
+      if (!project || project.coordinatorAgentId !== agentId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Project coordinator lifecycle requires current Project governance',
+        });
+      }
+      // Retained/reused coordinators cannot make parent removal an indirect Stop.
+      await this.assertAgentNotRunning(tx, [agentId]);
+      const bindings = await tx
+        .select()
+        .from(projectAgents)
+        .where(eq(projectAgents.agentId, agentId));
+      const [groupBinding] = await tx
+        .select({ id: chatGroupsAgents.agentId })
+        .from(chatGroupsAgents)
+        .where(eq(chatGroupsAgents.agentId, agentId))
+        .limit(1);
+      // These are retention filters, never proof of Project origin or Agent Manage.
+      const cleanupEligible =
+        agent.virtual === true &&
+        agent.userId === project.userId &&
+        agent.workspaceId === project.workspaceId &&
+        bindings.length === 1 &&
+        bindings[0].projectId === projectId &&
+        bindings[0].workspaceId === project.workspaceId &&
+        bindings[0].addedByUserId === project.userId &&
+        bindings[0].role === 'coordinator' &&
+        !groupBinding &&
+        !(agent.slug && RESERVED_AGENT_SLUGS.has(agent.slug));
+      if (!cleanupEligible) return;
+      try {
+        await this.assertAgentManageable(agent, tx);
+      } catch (error) {
+        if (error instanceof TRPCError && ['FORBIDDEN', 'NOT_FOUND'].includes(error.code)) return;
+        throw error;
+      }
+      // Cleanup uses ordinary Agent deletion, with every existing dependency/history guard.
+      return new AgentModel(tx as OrviloDatabase, this.userId, this.workspaceId).delete(agentId);
+    });
+  };
+
   /**
    * Delete an agent and its associated session.
    * This will cascade delete messages, topics, etc. through the session deletion.
@@ -939,11 +1194,16 @@ export class AgentModel {
       // lock-then-guard order as transferAgents. A concurrent copy enqueue
       // locks the same source rows, so the guard here cannot run in the window
       // where the enqueue's job row exists but is not yet committed.
-      await trx
-        .select({ id: agents.id })
+      const [lockedAgent] = await trx
+        .select({ id: agents.id, userId: agents.userId, workspaceId: agents.workspaceId })
         .from(agents)
         .where(and(eq(agents.id, agentId), this.ownership()))
         .for('update');
+
+      if (!lockedAgent) return;
+      await this.assertAgentManageable(lockedAgent, trx);
+      await this.assertAgentNotRunning(trx, [agentId]);
+      await this.assertAgentNotAssigned(trx, [agentId]);
 
       // The junction records every agent an unfinished job still maps, a
       // copy's TARGET included — and a group copy's drain writes those ids into
@@ -1005,7 +1265,19 @@ export class AgentModel {
   batchDelete = async (agentIds: string[]) => {
     if (agentIds.length === 0) return;
 
-    return this.db.delete(agents).where(and(this.ownership(), inArray(agents.id, agentIds)));
+    return this.db.transaction(async (tx) => {
+      const affected = await tx
+        .select({ id: agents.id, userId: agents.userId, workspaceId: agents.workspaceId })
+        .from(agents)
+        .where(and(this.ownership(), inArray(agents.id, agentIds)))
+        .for('update');
+      for (const agent of affected) await this.assertAgentManageable(agent, tx);
+      const ids = affected.map((agent) => agent.id);
+      await this.assertAgentNotRunning(tx, ids);
+      await this.assertAgentNotAssigned(tx, ids);
+      if (ids.length === 0) return;
+      return tx.delete(agents).where(and(this.ownership(), inArray(agents.id, ids)));
+    });
   };
 
   toggleFile = async (agentId: string, fileId: string, enabled?: boolean) => {
@@ -1278,40 +1550,7 @@ export class AgentModel {
    * This is used for creating virtual agents (e.g., group chat members).
    */
   create = async (input: Partial<AgentItem>): Promise<AgentItem> => {
-    const config = { ...this.stripReservedSlug(input), avatar: this.runtimeAvatar(input) };
-    // Retired provider fields (`engine`, `adapterType`) are stripped at this
-    // write chokepoint — the request schema refuses them from clients, and
-    // internal callers must not carry them forward either (contract §migration).
-    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(
-      await assertAgentRuntimeCreation(
-        this.db,
-        { userId: this.userId, workspaceId: this.workspaceId },
-        config,
-      ),
-    );
-
-    await this.assertWorkspaceDeviceBinding(
-      this.workspaceId ?? null,
-      agencyConfig,
-      undefined,
-      config.visibility ?? undefined,
-    );
-    await this.assertFixedExecutionTarget(this.workspaceId ?? null, agencyConfig);
-
-    const [result] = await this.db
-      .insert(agents)
-      .values([
-        buildWorkspacePayload(
-          { userId: this.userId, workspaceId: this.workspaceId },
-          {
-            ...config,
-            agencyConfig,
-            model: typeof config.model === 'string' ? config.model : null,
-          },
-        ),
-      ])
-      .returning();
-
+    const [result] = await this.batchCreate([input]);
     return result;
   };
 
@@ -1319,8 +1558,23 @@ export class AgentModel {
    * Batch create multiple agents (without sessions).
    * Used for creating multiple virtual agents at once (e.g., group chat members).
    */
-  batchCreate = async (configs: Partial<AgentItem>[]): Promise<AgentItem[]> => {
+  batchCreate = (configs: Partial<AgentItem>[]): Promise<AgentItem[]> => this.createBatch(configs);
+
+  /** Existing Group factories supply authoritative parent visibility after Group authorization. */
+  batchCreateGroupAgents = (configs: Partial<AgentItem>[]): Promise<AgentItem[]> =>
+    this.createBatch(configs, true);
+
+  private createBatch = async (
+    configs: Partial<AgentItem>[],
+    groupOwned = false,
+  ): Promise<AgentItem[]> => {
     if (configs.length === 0) return [];
+    if (
+      this.workspaceId &&
+      !groupOwned &&
+      configs.some((config) => config.visibility === 'private')
+    )
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'New workspace Agents must be public' });
 
     const normalizedConfigs = await Promise.all(
       configs.map(async (config) => ({
@@ -1348,20 +1602,52 @@ export class AgentModel {
       ]),
     );
 
-    return this.db
-      .insert(agents)
-      .values(
-        normalizedConfigs.map((config) =>
-          buildWorkspacePayload(
-            { userId: this.userId, workspaceId: this.workspaceId },
-            {
-              ...config,
-              model: typeof config.model === 'string' ? config.model : null,
-            },
+    return this.db.transaction(async (tx) => {
+      if (this.workspaceId) {
+        // The same membership lock used by member removal keeps a default grant
+        // from being written after its creator has left or been suspended.
+        const [member] = await tx
+          .select({ role: workspaceMembers.role })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, this.workspaceId),
+              eq(workspaceMembers.userId, this.userId),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+            ),
+          )
+          .for('update');
+        if (!member || !['owner', 'admin', 'member'].includes(member.role))
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Active writable membership is required to create an Agent',
+          });
+      }
+      const created = await tx
+        .insert(agents)
+        .values(
+          normalizedConfigs.map((config) =>
+            buildWorkspacePayload(
+              { userId: this.userId, workspaceId: this.workspaceId },
+              { ...config, model: typeof config.model === 'string' ? config.model : null },
+            ),
           ),
-        ),
-      )
-      .returning();
+        )
+        .returning();
+      if (this.workspaceId) {
+        const permissions = new ResourcePermissionModel(tx, this.workspaceId);
+        for (const agent of created)
+          await permissions.upsertCollaborators({
+            accessLevel: 'use',
+            createdBy: this.userId,
+            resourceId: agent.id,
+            resourceType: 'agent',
+            userIds: [this.userId],
+          });
+      }
+      return created;
+    });
   };
 
   update = async (agentId: string, data: Partial<AgentItem>) => {
@@ -1376,6 +1662,15 @@ export class AgentModel {
       .where(and(eq(agents.id, agentId), this.ownership()))
       .limit(1);
     if (!agent) return;
+    await this.assertAgentManageable(agent);
+    if (
+      Object.keys(sanitizedData).some(
+        (key) =>
+          !['avatar', 'backgroundColor', 'description', 'tags', 'title', 'name'].includes(key),
+      )
+    )
+      await this.assertAgentNotRunning(this.db, [agentId]);
+
     const agencyConfig = normalizeAgencyConfigForWrite(agent.agencyConfig);
     if (
       Object.hasOwn(sanitizedData, 'agencyConfig') ||
@@ -1551,18 +1846,10 @@ export class AgentModel {
     };
   };
 
-  /**
-   * Bidirectional visibility switch. Authorization (creator OR
-   * workspace owner, builtin agents excluded) is the router's responsibility —
-   * this method only applies the ownership-scoped write.
-   *
-   * Uses UPDATE … RETURNING instead of a follow-up SELECT: when a workspace
-   * owner demotes another member's agent to private, the post-update row no
-   * longer matches the visibility-aware ownership predicate, so a read-back
-   * would return 0 rows even though the write succeeded (same pattern as
-   * TaskModel.updateVisibility).
-   */
+  /** Promote a legacy private Agent; workspace Agents cannot become private. */
   setVisibility = async (agentId: string, visibility: 'private' | 'public') => {
+    if (this.workspaceId && visibility === 'private')
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
     // A sidebar folder cannot mix visibilities (HomeRepository.processAgentList
     // buckets grouped items by item visibility under same-visibility groups),
     // so an agent crossing scopes while keyed to a group of the OLD scope
@@ -1580,7 +1867,7 @@ export class AgentModel {
       .limit(1);
 
     // `publishAgentToWorkspace` is the normal client path, but keep the
-    // bidirectional visibility mutation equally safe for direct API callers.
+    // visibility mutation equally safe for direct API callers.
     if (visibility === 'public' && current) {
       await this.assertFixedExecutionTarget(current.workspaceId, current.agencyConfig);
     }
@@ -1601,7 +1888,11 @@ export class AgentModel {
   };
 
   touchUpdatedAt = async (agentId: string) => {
-    return this.update(agentId, {});
+    // Activity metadata follows the caller scope; execution admission is the server caller's responsibility.
+    return this.db
+      .update(agents)
+      .set({ updatedAt: new Date() })
+      .where(and(eq(agents.id, agentId), this.ownership()));
   };
 
   /**
@@ -1660,6 +1951,14 @@ export class AgentModel {
     });
 
     if (!agent) return;
+    await this.assertAgentManageable(agent);
+    if (
+      Object.keys(data).some(
+        (key) =>
+          !['avatar', 'backgroundColor', 'description', 'tags', 'title', 'name'].includes(key),
+      )
+    )
+      await this.assertAgentNotRunning(this.db, [agentId]);
 
     if (replaceRuntime) {
       const [supervisor] = await this.db
@@ -1947,6 +2246,8 @@ export class AgentModel {
     });
 
     if (!sourceAgent) return null;
+    // Copying the full configuration requires the same authority as editing it.
+    await this.assertAgentManageable(sourceAgent);
 
     // The copy is owned by the caller, so device references must be resolvable
     // by the caller too. A public workspace agent may still carry a legacy
@@ -1961,49 +2262,41 @@ export class AgentModel {
       visibility: sourceAgent.visibility ?? undefined,
     });
 
-    // Create new agent with explicit include fields
-    const [newAgent] = await this.db
-      .insert(agents)
-      .values(
-        buildWorkspacePayload(
-          { userId: this.userId, workspaceId: this.workspaceId },
-          {
-            // Agency config (heterogeneous provider, execution target, device
-            // binding, sub-agent defaults, verify rubric...). Duplicating must
-            // preserve it, otherwise a heterogeneous agent is copied as a plain
-            // one and its external runtime config is silently lost.
-            agencyConfig: runtime.agencyConfig,
-            avatar: this.runtimeAvatar(sourceAgent),
-            backgroundColor: sourceAgent.backgroundColor,
-            chatConfig: sourceAgent.chatConfig,
-            description: sourceAgent.description,
-            fewShots: sourceAgent.fewShots,
-            model: runtime.model,
-            openingMessage: sourceAgent.openingMessage,
-            openingQuestions: sourceAgent.openingQuestions,
-            params: sourceAgent.params,
-            pinned: sourceAgent.pinned,
-            // Config
-            plugins: sourceAgent.plugins,
-            provider: runtime.provider,
+    // Reuse creation admission and the removable creator Use grant.
+    const newAgent = await this.create({
+      // Agency config (heterogeneous provider, execution target, device
+      // binding, sub-agent defaults, verify rubric...). Duplicating must
+      // preserve it, otherwise a heterogeneous agent is copied as a plain
+      // one and its external runtime config is silently lost.
+      agencyConfig: runtime.agencyConfig,
+      avatar: this.runtimeAvatar(sourceAgent),
+      backgroundColor: sourceAgent.backgroundColor,
+      chatConfig: sourceAgent.chatConfig,
+      description: sourceAgent.description,
+      fewShots: sourceAgent.fewShots,
+      model: runtime.model,
+      openingMessage: sourceAgent.openingMessage,
+      openingQuestions: sourceAgent.openingQuestions,
+      params: sourceAgent.params,
+      pinned: sourceAgent.pinned,
+      // Config
+      plugins: sourceAgent.plugins,
+      provider: runtime.provider,
 
-            // Session group. Visibility has to travel with it: the column
-            // defaults to `public`, and now that folder placement is shared and
-            // authoritative, a private agent duplicated into its private folder
-            // would be published to the workspace and still render in Ungrouped,
-            // since a public item resolves only against public folders.
-            sessionGroupId: sourceAgent.sessionGroupId,
-            visibility: sourceAgent.visibility,
-            systemRole: sourceAgent.systemRole,
+      // Session group. Visibility has to travel with it: the column
+      // defaults to `public`, and now that folder placement is shared and
+      // authoritative, a private agent duplicated into its private folder
+      // would be published to the workspace and still render in Ungrouped,
+      // since a public item resolves only against public folders.
+      sessionGroupId: sourceAgent.sessionGroupId,
+      visibility: sourceAgent.visibility,
+      systemRole: sourceAgent.systemRole,
 
-            tags: sourceAgent.tags,
-            // Metadata
-            title: newTitle || (sourceAgent.title ? `${sourceAgent.title} (Copy)` : 'Copy'),
-            tts: sourceAgent.tts,
-          },
-        ),
-      )
-      .returning();
+      tags: sourceAgent.tags,
+      // Metadata
+      title: newTitle || (sourceAgent.title ? `${sourceAgent.title} (Copy)` : 'Copy'),
+      tts: sourceAgent.tts,
+    });
 
     return { agentId: newAgent.id };
   };
@@ -2167,23 +2460,56 @@ export class AgentModel {
     // partitioned { target, where } once 0109 has flipped the index in every
     // environment. Payload still carries workspaceId so workspace-scoped
     // builtin agents land in the right workspace.
-    const result = await this.db
-      .insert(agents)
-      .values(
-        buildWorkspacePayload(
-          { userId: this.userId, workspaceId: this.workspaceId },
-          {
-            agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
-            chatConfig: persistConfig.chatConfig,
-            model: persistConfig.model,
-            provider: persistConfig.provider,
-            slug: persistConfig.slug,
-            virtual: true,
-          },
-        ),
+    const result = await this.db.transaction(async (tx) => {
+      const [member] = this.workspaceId
+        ? await tx
+            .select({ role: workspaceMembers.role })
+            .from(workspaceMembers)
+            .where(
+              and(
+                eq(workspaceMembers.workspaceId, this.workspaceId),
+                eq(workspaceMembers.userId, this.userId),
+                isNull(workspaceMembers.deletedAt),
+                isNull(workspaceMembers.suspendedAt),
+              ),
+            )
+            .for('update')
+        : [];
+      const created = await tx
+        .insert(agents)
+        .values(
+          buildWorkspacePayload(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            {
+              agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
+              chatConfig: persistConfig.chatConfig,
+              model: persistConfig.model,
+              provider: persistConfig.provider,
+              slug: persistConfig.slug,
+              virtual: true,
+            },
+          ),
+        )
+        .onConflictDoNothing()
+        .returning();
+
+      // Provisioning is also used by readonly/internal callers. Only the
+      // winning active writable creator gets a Use row; rereads never restore it.
+      if (
+        this.workspaceId &&
+        created[0] &&
+        member &&
+        ['owner', 'admin', 'member'].includes(member.role)
       )
-      .onConflictDoNothing()
-      .returning();
+        await new ResourcePermissionModel(tx, this.workspaceId).upsertCollaborators({
+          accessLevel: 'use',
+          createdBy: this.userId,
+          resourceId: created[0].id,
+          resourceType: 'agent',
+          userIds: [this.userId],
+        });
+      return created;
+    });
 
     if (result[0]) return normalizeInboxAgentMeta(result[0], { slug: result[0].slug });
 

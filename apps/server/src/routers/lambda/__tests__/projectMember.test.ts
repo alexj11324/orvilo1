@@ -182,7 +182,7 @@ describe('projectMemberRouter.add', () => {
     expect(result).toEqual({ added: true, role: 'manager' });
   });
 
-  it('caps the granted role at commenter for workspace viewers', async () => {
+  it('caps the granted role at participant for workspace viewers', async () => {
     mockCallerAccess('admin', null);
     memberModel.getMember.mockResolvedValue(activeTarget('viewer'));
 
@@ -192,9 +192,9 @@ describe('projectMemberRouter.add', () => {
       userId: 'u-target',
     });
 
-    expect(result).toEqual({ added: true, role: 'commenter' });
+    expect(result).toEqual({ added: true, role: 'contributor' });
     expect(projectMemberModel.add).toHaveBeenCalledWith(
-      expect.objectContaining({ role: 'commenter' }),
+      expect.objectContaining({ role: 'contributor' }),
     );
   });
 
@@ -202,7 +202,7 @@ describe('projectMemberRouter.add', () => {
     mockCallerAccess('member', 'contributor');
 
     await expect(
-      createCaller('member').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('member').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(projectMemberModel.add).not.toHaveBeenCalled();
   });
@@ -211,7 +211,7 @@ describe('projectMemberRouter.add', () => {
     mockCallerAccess('viewer', 'manager');
 
     await expect(
-      createCaller('viewer').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('viewer').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
@@ -220,7 +220,7 @@ describe('projectMemberRouter.add', () => {
     memberModel.getMember.mockResolvedValue(undefined);
 
     await expect(
-      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('admin').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
@@ -229,7 +229,7 @@ describe('projectMemberRouter.add', () => {
     memberModel.getMember.mockResolvedValue({ ...activeTarget(), suspendedAt: new Date() });
 
     await expect(
-      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('admin').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
@@ -237,7 +237,7 @@ describe('projectMemberRouter.add', () => {
     queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, workspaceId: 'ws-2' }]);
 
     await expect(
-      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('admin').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
@@ -245,7 +245,7 @@ describe('projectMemberRouter.add', () => {
     mockCallerAccess('admin', null, { callerSuspended: true });
 
     await expect(
-      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('admin').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(projectMemberModel.add).not.toHaveBeenCalled();
     expect(audit.recordAudit).not.toHaveBeenCalled();
@@ -255,7 +255,7 @@ describe('projectMemberRouter.add', () => {
     mockCallerAccess('admin', null, { callerDeleted: true });
 
     await expect(
-      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('admin').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(projectMemberModel.add).not.toHaveBeenCalled();
   });
@@ -304,15 +304,15 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
   it('re-grades a member and records the audit event', async () => {
     const result = await createCaller('member').changeRole({
       projectId: 'proj-1',
-      role: 'viewer',
+      role: 'contributor',
       userId: 'u-target',
     });
 
-    expect(result).toEqual({ changed: true, role: 'viewer' });
-    expect(projectMemberModel.changeRole).toHaveBeenCalledWith('proj-1', 'u-target', 'viewer');
+    expect(result).toEqual({ changed: true, role: 'contributor' });
+    expect(projectMemberModel.changeRole).toHaveBeenCalledWith('proj-1', 'u-target', 'contributor');
   });
 
-  it('caps role changes for workspace viewers at commenter', async () => {
+  it('caps role changes for workspace viewers at participant', async () => {
     mockCallerAccess('admin', null);
     memberModel.getMember.mockResolvedValue(activeTarget('viewer'));
 
@@ -322,7 +322,7 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
       userId: 'u-target',
     });
 
-    expect(result).toEqual({ changed: true, role: 'commenter' });
+    expect(result).toEqual({ changed: true, role: 'contributor' });
   });
 
   it('removes a member via the soft-delete model write', async () => {
@@ -402,7 +402,7 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
     });
 
     await expect(
-      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+      createCaller('admin').add({ projectId: 'proj-1', role: 'contributor', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 

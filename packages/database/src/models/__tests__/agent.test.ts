@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE, INBOX_SESSION_ID } from '@orvilo/const';
 import type { OrviloAgentAgencyConfig } from '@orvilo/types';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { NewAgent } from '../../schemas';
 import {
+  agentOperations,
   agents,
   agentsFiles,
   agentsKnowledgeBases,
@@ -21,14 +22,17 @@ import {
   providerBindings,
   sessionGroups,
   sessions,
+  tasks,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import { agentHistoryJobAgents, agentHistoryJobs } from '../../schemas/agentHistoryJob';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 import { AGENT_TRANSFER_IN_PROGRESS } from '../agentTransferJob';
+import { ResourcePermissionModel } from '../resourcePermission';
 
 const serverDB: OrviloDatabase = await getTestDB();
 
@@ -569,6 +573,45 @@ describe('AgentModel', () => {
 
       // Should return null since user1 cannot access user2's agent
       expect(result).toBeNull();
+    });
+  });
+
+  describe('execution config scope', () => {
+    it('keeps client visibility filtering while an authorized server execution can resolve a private workspace Agent', async () => {
+      const [workspace] = await serverDB
+        .insert(workspaces)
+        .values({ name: 'Execution scope', primaryOwnerId: userId, slug: 'agent-execution-scope' })
+        .returning();
+      const [agent] = await serverDB
+        .insert(agents)
+        .values({
+          model: 'runtime-model',
+          provider: 'runtime-provider',
+          slug: 'private-execution-agent',
+          systemRole: 'Private configured instructions',
+          userId,
+          visibility: 'private',
+          workspaceId: workspace.id,
+        })
+        .returning();
+      const memberModel = new AgentModel(serverDB, userId2, workspace.id);
+      expect(await memberModel.getAgentConfigById(agent.id)).toBeNull();
+      expect(await memberModel.getAgentModelConfig(agent.id)).toBeNull();
+      expect(await memberModel.getAgentIdForExecution('private-execution-agent')).toBe(agent.id);
+      expect(await memberModel.getAgentConfigForExecution(agent.id)).toMatchObject({
+        id: agent.id,
+        systemRole: 'Private configured instructions',
+      });
+      expect(await memberModel.getAgentModelConfigForExecution(agent.id)).toEqual({
+        model: 'runtime-model',
+        provider: 'runtime-provider',
+      });
+      expect(
+        await new AgentModel(serverDB, userId2).getAgentConfigForExecution(agent.id),
+      ).toBeNull();
+      expect(
+        await new AgentModel(serverDB, userId).getAgentConfigForExecution(agent.id),
+      ).toBeNull();
     });
   });
 
@@ -1269,6 +1312,32 @@ describe('AgentModel', () => {
   });
 
   describe('touchUpdatedAt', () => {
+    it('permits scoped execution activity to touch a shared Agent without configuration management', async () => {
+      const [workspace] = await serverDB
+        .insert(workspaces)
+        .values({ name: 'Activity', slug: 'activity-touch', primaryOwnerId: userId })
+        .returning();
+      await serverDB.insert(workspaceMembers).values([
+        { userId, workspaceId: workspace.id, role: 'owner' },
+        { userId: userId2, workspaceId: workspace.id, role: 'member' },
+      ]);
+      const [agent] = await serverDB
+        .insert(agents)
+        .values({
+          userId,
+          workspaceId: workspace.id,
+          visibility: 'public',
+          title: 'Owner configuration',
+        })
+        .returning();
+      const memberModel = new AgentModel(serverDB, userId2, workspace.id);
+      await expect(memberModel.touchUpdatedAt(agent.id)).resolves.toBeDefined();
+      await expect(
+        memberModel.updateConfig(agent.id, { title: 'Member rewrite' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect((await memberModel.getAgentConfigById(agent.id))?.title).toBe('Owner configuration');
+    });
+
     it('should only update updatedAt without changing other fields', async () => {
       const agent = await serverDB
         .insert(agents)
@@ -1314,6 +1383,58 @@ describe('AgentModel', () => {
   });
 
   describe('delete', () => {
+    it.each(['running', 'idle', 'waiting_for_human', 'waiting_for_async_tool'] as const)(
+      'preserves a %s operation until Use-authorized Stop or producer completion',
+      async (status) => {
+        const agent = await agentModel.create(await withRuntime({ title: 'Live Agent' }));
+        const operationId = `active-agent-${status}`;
+        await serverDB
+          .insert(agentOperations)
+          .values({ id: operationId, agentId: agent.id, userId, status });
+        await expect(
+          agentModel.updateConfig(agent.id, { systemRole: 'Replace live prompt' }),
+        ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+        await expect(
+          agentModel.update(agent.id, { systemRole: 'Replace live prompt' }),
+        ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+        await expect(agentModel.delete(agent.id)).rejects.toMatchObject({
+          code: 'PRECONDITION_FAILED',
+        });
+        await expect(agentModel.batchDelete([agent.id])).rejects.toMatchObject({
+          code: 'PRECONDITION_FAILED',
+        });
+        expect((await agentModel.getAgentConfigById(agent.id))?.title).toBe('Live Agent');
+        await serverDB
+          .update(agentOperations)
+          .set({ status: 'done' })
+          .where(eq(agentOperations.id, operationId));
+        await agentModel.delete(agent.id);
+        expect(await agentModel.getAgentConfigById(agent.id)).toBeNull();
+      },
+    );
+
+    it('requires reassigning an Issue before its Agent is deleted', async () => {
+      const agent = await agentModel.create(await withRuntime({ title: 'Assigned Agent' }));
+      const [task] = await serverDB
+        .insert(tasks)
+        .values({
+          name: 'Depends on Agent',
+          instruction: 'Run the assigned Agent',
+          identifier: 'USE-1',
+          seq: 1,
+          createdByUserId: userId,
+          assigneeUserId: userId,
+          assigneeAgentId: agent.id,
+        })
+        .returning();
+      await expect(agentModel.delete(agent.id)).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+      });
+      await serverDB.update(tasks).set({ assigneeAgentId: null }).where(eq(tasks.id, task.id));
+      await agentModel.delete(agent.id);
+      expect(await agentModel.getAgentConfigById(agent.id)).toBeNull();
+    });
+
     it('refuses to delete an agent a pending history job still maps', async () => {
       // A group copy's drain writes the TARGET agent id into `messages.agent_id`.
       // Deleting that agent leaves the queue rows behind, so the drain hits a
@@ -1903,18 +2024,67 @@ describe('AgentModel', () => {
     );
   });
 
+  it('guards direct Agent model config/delete calls with actual creator/Admin roles and Viewer ceiling', async () => {
+    const [workspace] = await serverDB
+      .insert(workspaces)
+      .values({ name: 'Model Manage', slug: 'model-manage', primaryOwnerId: userId })
+      .returning();
+    await serverDB.insert(workspaceMembers).values([
+      { userId, workspaceId: workspace.id, role: 'owner' },
+      { userId: userId2, workspaceId: workspace.id, role: 'member' },
+    ]);
+    const [agent] = await serverDB
+      .insert(agents)
+      .values({ userId, workspaceId: workspace.id, visibility: 'public', title: 'Shared Agent' })
+      .returning();
+    const memberModel = new AgentModel(serverDB, userId2, workspace.id);
+    await expect(memberModel.update(agent.id, { title: 'Changed' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      memberModel.updateConfig(agent.id, { systemRole: 'Changed' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(memberModel.delete(agent.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(memberModel.batchDelete([agent.id])).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await serverDB
+      .update(workspaceMembers)
+      .set({ role: 'admin' })
+      .where(eq(workspaceMembers.userId, userId2));
+    await memberModel.update(agent.id, { title: 'Admin config' });
+    expect((await memberModel.getAgentConfigById(agent.id))?.title).toBe('Admin config');
+    await serverDB
+      .update(workspaceMembers)
+      .set({ role: 'viewer' })
+      .where(eq(workspaceMembers.userId, userId));
+    await expect(
+      new AgentModel(serverDB, userId, workspace.id).update(agent.id, { title: 'Viewer creator' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await memberModel.delete(agent.id);
+  });
+
   describe('create', () => {
     it('should persist explicit selection policy defaults only for workspace agents', async () => {
       const [workspace] = await serverDB
         .insert(workspaces)
         .values({ name: 'selection-defaults', primaryOwnerId: userId, slug: 'selection-defaults' })
         .returning();
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ workspaceId: workspace.id, userId, role: 'owner' });
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspace.id);
 
       const workspaceAgent = await workspaceAgentModel.create(
         await withRuntime({ title: 'Workspace Agent' }, userId, workspace.id),
       );
       const personalAgent = await agentModel.create(await withRuntime({ title: 'Personal Agent' }));
+
+      const permissions = new ResourcePermissionModel(serverDB, workspace.id);
+      expect(await permissions.getCollaboratorLevel('agent', workspaceAgent.id, userId)).toBe(
+        'use',
+      );
+      await permissions.removeCollaborators('agent', workspaceAgent.id, [userId]);
+      expect(await permissions.getCollaboratorLevel('agent', workspaceAgent.id, userId)).toBeNull();
+      expect(await permissions.getCollaboratorLevel('agent', personalAgent.id, userId)).toBeNull();
 
       expect(workspaceAgent.agencyConfig).toEqual({
         boundDeviceId: `creation-host-${workspace.id}`,
@@ -1929,6 +2099,43 @@ describe('AgentModel', () => {
         executionTarget: 'device',
         heterogeneousProvider: { type: 'orvilo' },
       });
+    });
+
+    it('refuses new private workspace Agents and inactive/Viewer creation without inserting', async () => {
+      const [workspace] = await serverDB
+        .insert(workspaces)
+        .values({ name: 'Creator role floor', slug: 'creator-role-floor', primaryOwnerId: userId })
+        .returning();
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ userId, workspaceId: workspace.id, role: 'viewer' });
+      const model = new AgentModel(serverDB, userId, workspace.id);
+      const config = await withRuntime({ title: 'Must not exist' }, userId, workspace.id);
+      await expect(model.create(config)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await serverDB
+        .update(workspaceMembers)
+        .set({ role: 'member', suspendedAt: new Date() })
+        .where(eq(workspaceMembers.userId, userId));
+      await expect(model.create(config)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await serverDB
+        .update(workspaceMembers)
+        .set({ suspendedAt: null })
+        .where(eq(workspaceMembers.userId, userId));
+      await expect(model.create({ ...config, visibility: 'private' })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+      });
+      expect(
+        await serverDB.select().from(agents).where(eq(agents.workspaceId, workspace.id)),
+      ).toEqual([]);
+      const created = await model.create(config);
+      expect(created.visibility).toBe('public');
+      expect(
+        await new ResourcePermissionModel(serverDB, workspace.id).getCollaboratorLevel(
+          'agent',
+          created.id,
+          userId,
+        ),
+      ).toBe('use');
     });
 
     // builtin slugs decide both `getBuiltinAgent` resolution and, for
@@ -2107,6 +2314,9 @@ describe('AgentModel', () => {
           slug: 'selection-overrides',
         })
         .returning();
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ workspaceId: workspace.id, userId, role: 'owner' });
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspace.id);
 
       await withRuntime({}, userId, workspace.id);
@@ -2421,8 +2631,17 @@ describe('AgentModel', () => {
           .values({ name: 'ws', primaryOwnerId: userId, slug: 'ws-slug' })
           .returning();
 
+        await serverDB
+          .insert(workspaceMembers)
+          .values({ workspaceId: workspace.id, userId, role: 'owner' });
         const wsAgentModel = new AgentModel(serverDB, userId, workspace.id);
         const result = await wsAgentModel.getBuiltinAgent(INBOX_SESSION_ID);
+
+        const permissions = new ResourcePermissionModel(serverDB, workspace.id);
+        expect(await permissions.getCollaboratorLevel('agent', result!.id, userId)).toBe('use');
+        await permissions.removeCollaborators('agent', result!.id, [userId]);
+        await wsAgentModel.getBuiltinAgent(INBOX_SESSION_ID);
+        expect(await permissions.getCollaboratorLevel('agent', result!.id, userId)).toBeNull();
 
         expect(result).toBeDefined();
         expect(result?.slug).toBe(INBOX_SESSION_ID);
@@ -2434,6 +2653,27 @@ describe('AgentModel', () => {
           modelSelectionPolicy: 'member',
           topicSharePolicy: 'member',
         });
+      });
+
+      it('provisions a readable workspace builtin for a Viewer without granting execution', async () => {
+        const [workspace] = await serverDB
+          .insert(workspaces)
+          .values({ name: 'Readonly builtin', primaryOwnerId: userId, slug: 'readonly-builtin' })
+          .returning();
+        await serverDB
+          .insert(workspaceMembers)
+          .values({ workspaceId: workspace.id, userId: userId2, role: 'viewer' });
+        const result = await new AgentModel(serverDB, userId2, workspace.id).getBuiltinAgent(
+          INBOX_SESSION_ID,
+        );
+        expect(result?.workspaceId).toBe(workspace.id);
+        expect(
+          await new ResourcePermissionModel(serverDB, workspace.id).getCollaboratorLevel(
+            'agent',
+            result!.id,
+            userId2,
+          ),
+        ).toBeNull();
       });
 
       it('should allow workspace inbox to coexist with personal inbox for the same user', async () => {
@@ -2832,6 +3072,22 @@ describe('AgentModel', () => {
       expect(result[0]).toHaveProperty('backgroundColor');
     });
 
+    it('projects migrated runtime branding without using editable names or avatars', async () => {
+      await serverDB.insert(agents).values({
+        id: 'legacy-codex-brand',
+        userId,
+        name: 'JA',
+        avatar: 'JV',
+        virtual: false,
+        agencyConfig: sql`${JSON.stringify({ heterogeneousProvider: { command: 'codex' } })}::jsonb`,
+      });
+      const result = await agentModel.queryAgents();
+      const agent = result.find((row) => row.id === 'legacy-codex-brand');
+      expect(agent).toMatchObject({ name: 'JA', avatar: 'JV', heterogeneousType: 'codex' });
+      expect(agent).not.toHaveProperty('agencyConfig');
+      expect(agent).not.toHaveProperty('model');
+    });
+
     it('should derive heteroType without assigning a runtime to an unconfigured agent', async () => {
       await serverDB.insert(agents).values({
         agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
@@ -2852,8 +3108,10 @@ describe('AgentModel', () => {
       const hetero = result.find((a) => a.id === 'hetero-agent');
       const normal = result.find((a) => a.title === 'Normal Agent');
       expect(hetero?.heteroType).toBe('claude-code');
+      expect(hetero?.heterogeneousType).toBe('claude-code');
       expect(normal).toBeDefined();
       expect(normal?.heteroType).toBeUndefined();
+      expect(normal?.heterogeneousType).toBe('orvilo');
       // raw agencyConfig must not leak into the result payload
       expect(hetero).not.toHaveProperty('agencyConfig');
     });
@@ -3321,6 +3579,7 @@ describe('AgentModel', () => {
         primaryOwnerId: userId,
         slug: wsId,
       });
+      await serverDB.insert(workspaceMembers).values({ workspaceId: wsId, userId, role: 'owner' });
       await serverDB.insert(devices).values({
         deviceId: 'ws-device-1',
         visibility: 'public',

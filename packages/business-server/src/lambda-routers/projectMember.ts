@@ -11,7 +11,7 @@ import { wsMemberProcedure } from '@/business/server/trpc-middlewares/workspaceA
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
-const projectRoleSchema = z.enum(['manager', 'contributor', 'commenter', 'viewer']);
+const projectRoleSchema = z.enum(['manager', 'contributor']);
 
 const projectScoped = z.object({ projectId: z.string().min(1) });
 const memberRoleInput = projectScoped.extend({

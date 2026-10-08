@@ -18,12 +18,15 @@ import {
   asc,
   desc,
   eq,
+  exists,
   getTableColumns,
   getTableName,
   inArray,
   isNotNull,
   isNull,
   max,
+  ne,
+  not,
   or,
   sql,
 } from 'drizzle-orm';
@@ -47,6 +50,7 @@ import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { works } from '../schemas/work';
+import { workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
@@ -58,7 +62,7 @@ import {
   normalizeProjectOrchestrationPolicy,
 } from './projectOrchestrationPolicy';
 import { TeamModel } from './team';
-import { hasActiveWorkspaceMembership } from './workspace';
+import { getActiveWorkspaceMembershipRole, hasActiveWorkspaceMembership } from './workspace';
 
 export interface ProjectPlanningInput {
   dependencies?: { projectId: string; type: 'blockedBy' | 'blocking' }[];
@@ -123,7 +127,7 @@ export interface ProjectOrchestrationPolicyView {
 }
 
 export interface ProjectModelOptions {
-  /** Workspace administrators may manage shared projects they did not create. */
+  /** Legacy caller hint; live persisted workspace and Project membership is authoritative. */
   canManageAll?: boolean;
 }
 
@@ -278,16 +282,12 @@ const tallyMilestoneCategory = (tally: MilestoneTally, category: TaskWorkflowCat
 };
 
 export class ProjectModel {
-  private readonly canManageAll: boolean;
-
   constructor(
     private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
-    options: ProjectModelOptions = {},
-  ) {
-    this.canManageAll = Boolean(options.canManageAll && workspaceId);
-  }
+    _options: ProjectModelOptions = {},
+  ) {}
 
   private readable() {
     return buildProjectReadableWhere(this.db, {
@@ -297,12 +297,113 @@ export class ProjectModel {
   }
 
   private manageable() {
-    return and(this.readable(), eq(projects.userId, this.userId));
+    return and(
+      this.commentable(),
+      or(
+        and(isNull(projects.workspaceId), eq(projects.userId, this.userId)),
+        exists(
+          this.db
+            .select({ one: sql`1` })
+            .from(workspaceMembers)
+            .where(
+              and(
+                eq(workspaceMembers.workspaceId, projects.workspaceId),
+                eq(workspaceMembers.userId, this.userId),
+                inArray(workspaceMembers.role, ['owner', 'admin']),
+                isNull(workspaceMembers.deletedAt),
+                isNull(workspaceMembers.suspendedAt),
+              ),
+            ),
+        ),
+        exists(
+          this.db
+            .select({ one: sql`1` })
+            .from(projectMembers)
+            .where(
+              and(
+                eq(projectMembers.projectId, projects.id),
+                eq(projectMembers.workspaceId, projects.workspaceId),
+                eq(projectMembers.userId, this.userId),
+                eq(projectMembers.role, 'manager'),
+                isNull(projectMembers.deletedAt),
+                isNull(projectMembers.suspendedAt),
+              ),
+            ),
+        ),
+      ),
+    );
+  }
+
+  private commentable() {
+    return and(
+      this.readable(),
+      or(
+        isNull(projects.workspaceId),
+        exists(
+          this.db
+            .select({ one: sql`1` })
+            .from(workspaceMembers)
+            .where(
+              and(
+                eq(workspaceMembers.workspaceId, projects.workspaceId),
+                eq(workspaceMembers.userId, this.userId),
+                inArray(workspaceMembers.role, ['owner', 'admin', 'member']),
+                isNull(workspaceMembers.deletedAt),
+                isNull(workspaceMembers.suspendedAt),
+              ),
+            ),
+        ),
+      ),
+    );
+  }
+
+  private writable() {
+    // Pending one-time mapping: private legacy read/comment grants cannot acquire ordinary edits.
+    return and(
+      this.commentable(),
+      or(
+        ne(projects.visibility, 'private'),
+        eq(projects.userId, this.userId),
+        not(
+          exists(
+            this.db
+              .select({ one: sql`1` })
+              .from(projectMembers)
+              .where(
+                and(
+                  eq(projectMembers.projectId, projects.id),
+                  eq(projectMembers.workspaceId, projects.workspaceId),
+                  eq(projectMembers.userId, this.userId),
+                  inArray(projectMembers.role, ['viewer', 'commenter']),
+                  isNull(projectMembers.deletedAt),
+                  isNull(projectMembers.suspendedAt),
+                ),
+              ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  async getCapabilities(id: string) {
+    const [commentable, manageable] = await Promise.all([
+      this.db
+        .select({ canEdit: sql<boolean>`${this.writable()}` })
+        .from(projects)
+        .where(and(eq(projects.id, id), this.commentable()))
+        .limit(1),
+      this.findManageableById(id),
+    ]);
+    return {
+      canEdit: commentable[0]?.canEdit ?? false,
+      canComment: commentable.length > 0,
+      canManage: manageable !== null,
+    };
   }
 
   /**
-   * The same predicate TaskModel uses for list/read — workspace visibility,
-   * private-team ACL, and soft-delete. `taskCount` must match what the
+   * The same workspace-member Issue read predicate and soft-delete filter as
+   * TaskModel. `taskCount` must match what the
    * project's Issues list would actually show the caller.
    */
   private taskReadable() {
@@ -313,15 +414,24 @@ export class ProjectModel {
   }
 
   private orchestrationPolicyManageable() {
-    return this.canManageAll
-      ? this.readable()
-      : and(this.readable(), eq(projects.userId, this.userId));
+    return this.manageable();
   }
 
   async create(
     input: CreateProjectInput,
     selectedRuntime?: Awaited<ReturnType<AgentModel['getOrchestratorRuntimeForCreation']>>,
   ) {
+    if (this.workspaceId && input.visibility === 'private')
+      throw new Error('New workspace Projects must be public');
+    if (this.workspaceId) {
+      const role = await getActiveWorkspaceMembershipRole(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      if (!['owner', 'admin', 'member'].includes(role ?? ''))
+        throw new Error('Writable workspace membership is required');
+      input = { ...input, visibility: 'public' };
+    }
     const identifier = input.identifier.trim().toUpperCase();
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
@@ -493,7 +603,13 @@ export class ProjectModel {
       if (teamId && teamModel) await teamModel.linkProject(project.id, teamId);
 
       if (this.workspaceId) {
-        for (const memberId of new Set(memberIds)) {
+        await new ProjectMemberModel(db, this.userId).add({
+          projectId: project.id,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+          role: 'manager',
+        });
+        for (const memberId of new Set(memberIds.filter((id) => id !== this.userId))) {
           await new ProjectMemberModel(db, this.userId).add({
             projectId: project.id,
             userId: memberId,
@@ -633,22 +749,27 @@ export class ProjectModel {
   async delete(id: string) {
     return this.db.transaction(async (tx) => {
       const [project] = await tx
-        .select({ coordinatorAgentId: projects.coordinatorAgentId })
+        .select()
         .from(projects)
         .where(and(eq(projects.id, id), this.manageable()))
-        .limit(1);
+        .for('update');
       if (!project) return null;
 
+      // Resolve parent authority and owned-child cleanup while the Project still exists.
+      if (project.coordinatorAgentId) {
+        await new AgentModel(
+          tx as OrviloDatabase,
+          this.userId,
+          this.workspaceId,
+        ).deleteProjectCoordinator(id, project.coordinatorAgentId);
+      }
       const [deleted] = await tx
         .delete(projects)
         .where(and(eq(projects.id, id), this.manageable()))
         .returning();
-      if (project.coordinatorAgentId) {
-        await new AgentModel(tx as OrviloDatabase, this.userId, this.workspaceId).delete(
-          project.coordinatorAgentId,
-        );
-      }
-      return deleted ?? null;
+      // Child deletion clears the FK; preserve the deleted Project's original DTO.
+      if (!deleted) throw new Error('Project governance changed during deletion');
+      return project;
     });
   }
 
@@ -709,12 +830,17 @@ export class ProjectModel {
   }
 
   async update(id: string, input: UpdateProjectInput) {
+    if (this.workspaceId && input.visibility !== undefined) {
+      const current = await this.findById(id);
+      if (current && current.visibility !== input.visibility)
+        throw new Error('Existing project visibility changes require approved publication');
+    }
     const { labelIds, ...fields } = input;
     return this.db.transaction(async (tx) => {
       const [current] = await tx
         .select()
         .from(projects)
-        .where(and(eq(projects.id, id), this.manageable()))
+        .where(and(eq(projects.id, id), this.writable()))
         .for('update')
         .limit(1);
       if (!current) return null;
@@ -758,7 +884,7 @@ export class ProjectModel {
       const [project] = await tx
         .update(projects)
         .set({ ...fields, updatedAt: new Date() })
-        .where(and(eq(projects.id, id), this.manageable()))
+        .where(and(eq(projects.id, id), this.writable()))
         .returning();
       return project ?? null;
     });
@@ -870,7 +996,8 @@ export class ProjectModel {
     if (status === 'completed' || status === 'reviewing') {
       throw new Error('Completion states must be changed through the review workflow');
     }
-    const project = await this.findManageableById(id);
+    if (!(await this.getCapabilities(id)).canEdit) return null;
+    const project = await this.findById(id);
     if (!project) return null;
     if (project.status === 'reviewing') {
       throw new Error('A project awaiting review must be accepted or rejected');
@@ -895,7 +1022,7 @@ export class ProjectModel {
     const [project] = await this.db
       .update(projects)
       .set({ ...timestamps, status })
-      .where(and(eq(projects.id, id), this.manageable()))
+      .where(and(eq(projects.id, id), this.writable()))
       .returning();
     return project ?? null;
   }
@@ -1191,7 +1318,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1241,7 +1368,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1288,7 +1415,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1321,7 +1448,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1348,7 +1475,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1413,7 +1540,7 @@ export class ProjectModel {
   }
 
   async moveTaskTree(projectId: string, taskId: string) {
-    if (!(await this.findManageableById(projectId))) return null;
+    if (!(await this.getCapabilities(projectId)).canEdit) return null;
     const taskScope = buildTaskReadableWhere(this.db, {
       userId: this.userId,
       workspaceId: this.workspaceId,
@@ -1421,7 +1548,7 @@ export class ProjectModel {
     const [root] = await this.db
       .select()
       .from(tasks)
-      .where(and(eq(tasks.id, taskId), taskScope, eq(tasks.createdByUserId, this.userId)))
+      .where(and(eq(tasks.id, taskId), taskScope))
       .limit(1);
     if (!root) throw new Error('Task not found');
     if (root.parentTaskId) {
@@ -1435,41 +1562,16 @@ export class ProjectModel {
       }
     }
 
-    // Visibility must not hide private descendants here: moving the visible
-    // parent while leaving an unseen child behind would split one tree across
-    // projects. The creator check below still rejects any row not owned by the
-    // caller before the update runs.
-    const treeScope = this.workspaceId
-      ? eq(tasks.workspaceId, this.workspaceId)
-      : and(eq(tasks.createdByUserId, this.userId), isNull(tasks.workspaceId));
-    const descendants = await this.db.execute<{ created_by_user_id: string }>(sql`
-      WITH RECURSIVE task_tree AS (
-        SELECT ${tasks.id}, ${tasks.createdByUserId}
-        FROM ${tasks}
-        WHERE ${tasks.id} = ${root.id} AND ${treeScope}
-        UNION ALL
-        SELECT ${tasks.id}, ${tasks.createdByUserId}
-        FROM ${tasks}
-        JOIN task_tree parent ON ${tasks.parentTaskId} = parent.id
-        WHERE ${treeScope}
-      )
-      SELECT created_by_user_id FROM task_tree
-    `);
-    if (descendants.rows.some(({ created_by_user_id }) => created_by_user_id !== this.userId)) {
-      throw new Error('Cannot move a task tree containing tasks created by another user');
-    }
-
     const { rows } = await this.db.execute<{ id: string }>(sql`
       WITH RECURSIVE task_tree AS (
         SELECT ${tasks.id}
         FROM ${tasks}
         WHERE ${tasks.id} = ${root.id} AND ${taskScope}
-          AND ${tasks.createdByUserId} = ${this.userId}
         UNION ALL
         SELECT ${tasks.id}
         FROM ${tasks}
         JOIN task_tree parent ON ${tasks.parentTaskId} = parent.id
-        WHERE ${taskScope} AND ${tasks.createdByUserId} = ${this.userId}
+        WHERE ${taskScope}
       )
       UPDATE ${tasks}
       SET ${sql.identifier(tasks.projectId.name)} = ${projectId},
@@ -1481,7 +1583,8 @@ export class ProjectModel {
   }
 
   async requestCompletion(id: string) {
-    const project = await this.findManageableById(id);
+    if (!(await this.getCapabilities(id)).canEdit) return null;
+    const project = await this.findById(id);
     if (!project) return null;
     if (!['active', 'paused'].includes(project.status)) {
       throw new Error('Only active or paused projects can request completion');
@@ -1608,7 +1711,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1633,7 +1736,7 @@ export class ProjectModel {
       const [project] = await tx
         .select({ id: projects.id })
         .from(projects)
-        .where(and(eq(projects.id, projectId), this.manageable()))
+        .where(and(eq(projects.id, projectId), this.writable()))
         .for('update')
         .limit(1);
       if (!project) return null;
@@ -1649,7 +1752,7 @@ export class ProjectModel {
     projectId: string,
     input: { body: string; health?: ProjectHealth; kind?: ProjectUpdateKind },
   ) {
-    if (!(await this.findById(projectId))) return null;
+    if (!(await this.getCapabilities(projectId)).canComment) return null;
     const kind = input.kind ?? 'update';
     const health = kind === 'update' ? (input.health ?? 'onTrack') : null;
     return this.db.transaction(async (tx) => {
@@ -1672,8 +1775,8 @@ export class ProjectModel {
 
   /**
    * Fetch one update row joined to its project under the moderation ACL —
-   * the author may edit/delete their own post; the project owner, the project
-   * lead, or a workspace admin (`canManageAll`) may moderate anyone's. The
+   * the author may edit their own post; a project manager or workspace
+   * admin may delete anyone's post. The
    * row-level lock serializes concurrent edit/delete against the denormalized
    * `projects.health` recompute that follows.
    */
@@ -1697,10 +1800,12 @@ export class ProjectModel {
       .limit(1);
     if (!row) return null;
     const canModerate =
-      this.canManageAll ||
-      row.update.userId === this.userId ||
-      row.ownerUserId === this.userId ||
-      row.leadUserId === this.userId;
+      (await new ProjectModel(db, this.userId, this.workspaceId).getCapabilities(projectId))
+        .canComment &&
+      (row.update.userId === this.userId ||
+        (await new ProjectModel(db, this.userId, this.workspaceId).findManageableById(
+          projectId,
+        )) !== null);
     return canModerate ? row : null;
   }
 
@@ -1736,7 +1841,7 @@ export class ProjectModel {
     return this.db.transaction(async (tx) => {
       const db = tx as OrviloDatabase;
       const current = await this.findModeratableUpdate(db, projectId, updateId);
-      if (!current) return null;
+      if (!current || current.update.userId !== this.userId) return null;
       const isStatusUpdate = current.update.kind === 'update';
       const [updated] = await db
         .update(projectUpdates)

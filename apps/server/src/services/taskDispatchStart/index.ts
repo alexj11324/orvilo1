@@ -1,3 +1,5 @@
+import { TRPCError } from '@trpc/server';
+
 import { LinearSyncModel } from '@/database/models/linearSync';
 import {
   TaskDispatchModel,
@@ -5,6 +7,7 @@ import {
 } from '@/database/models/taskDispatch';
 import type { OrviloDatabase } from '@/database/type';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { taskPlanningProposalSchema } from '@/server/services/linearSync/contract';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
@@ -38,6 +41,31 @@ export const processPlanningTaskDispatchStart = async (input: {
     };
   }
 
+  if (!candidate.initiator)
+    return {
+      dispatchId: candidate.dispatchId,
+      outcome: 'waiting',
+      reason: 'execution_initiator_missing',
+    };
+  if (!candidate.agentId)
+    return {
+      dispatchId: candidate.dispatchId,
+      outcome: 'waiting',
+      reason: 'execution_agent_missing',
+    };
+  try {
+    await assertCanUseWorkspaceAgent({
+      agentId: candidate.agentId,
+      db: input.db,
+      userId: candidate.initiator,
+      workspaceId,
+    });
+  } catch (error) {
+    if (!(error instanceof TRPCError) || (error.code !== 'FORBIDDEN' && error.code !== 'NOT_FOUND'))
+      throw error;
+    return { dispatchId: candidate.dispatchId, outcome: 'waiting', reason: 'agent_use_denied' };
+  }
+
   const revision = await new LinearSyncModel(
     input.db,
     workspaceId,
@@ -57,7 +85,7 @@ export const processPlanningTaskDispatchStart = async (input: {
   }
 
   try {
-    await new TaskRunnerService(input.db, candidate.userId, workspaceId).runTask({
+    await new TaskRunnerService(input.db, candidate.initiator, workspaceId).runTask({
       extraPrompt: action.instruction,
       idempotencyKey: candidate.idempotencyKey,
       planRevision: candidate.planRevision,

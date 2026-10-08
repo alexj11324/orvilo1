@@ -38,7 +38,7 @@ const SendButton = memo(() => {
       size={size}
       trigger={['hover']}
       onClick={generating || !canSend ? undefined : () => send()}
-      onStop={() => handleStop()}
+      onStop={canSend ? () => handleStop() : undefined}
     />
   );
 

@@ -15,7 +15,9 @@ import {
   credentials,
   devices,
   projects,
+  resourcePermissions,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../../schemas';
 import { AgentGroupRepository } from '../index';
@@ -97,6 +99,32 @@ describe('resource-owned runtime creation', () => {
       .returning();
     const repaired = await repo.findByIdWithAgents(legacy.id);
     expect(repaired?.agents[0]).toMatchObject({ ...runtime, visibility: 'private' });
+  });
+
+  it('initializes a removable Use grant only for a newly created private workspace supervisor', async () => {
+    await seedPrime();
+    await db
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Factory Use', slug: workspaceId, primaryOwnerId: userId });
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await db.update(devices).set({ workspaceId }).where(eq(devices.deviceId, 'resource-host'));
+    const workspaceRepo = new AgentGroupRepository(db, userId, workspaceId);
+    const created = await workspaceRepo.createGroupWithSupervisor(
+      { title: 'Private group', visibility: 'private' },
+      [],
+      runtime,
+    );
+    const grants = () =>
+      db
+        .select()
+        .from(resourcePermissions)
+        .where(eq(resourcePermissions.resourceId, created.supervisorAgentId));
+    expect(await grants()).toMatchObject([{ userId, accessLevel: 'use', workspaceId }]);
+    await db
+      .delete(resourcePermissions)
+      .where(eq(resourcePermissions.resourceId, created.supervisorAgentId));
+    await workspaceRepo.findByIdWithAgents(created.group.id);
+    expect(await grants()).toEqual([]);
   });
 
   it('creates an owned ACP coordinator without changing the selected source Agent', async () => {

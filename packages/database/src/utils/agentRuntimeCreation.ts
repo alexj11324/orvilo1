@@ -2,11 +2,12 @@ import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
 import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { ProviderBindingModel } from '../models/providerBinding';
+import { ResourcePermissionModel } from '../models/resourcePermission';
 import type { AgentItem } from '../schemas';
-import { devices } from '../schemas';
+import { devices, workspaceMembers } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { normalizeAgentRuntimeIdentity } from './agentRuntimeIdentity';
 import { buildStrictWorkspaceWhere, buildWorkspaceWhere } from './workspace';
@@ -15,7 +16,7 @@ export type AgentRuntimeCreationConfig = Partial<
   Pick<AgentItem, 'agencyConfig' | 'model' | 'provider' | 'visibility'>
 >;
 
-/** Creation admits saved execution authority; an offline host remains a valid binding. */
+/** Explicit hosts require saved authority; unset public workspace profiles select at first send. */
 export const assertAgentRuntimeCreation = async (
   db: OrviloDatabase,
   actor: { userId: string; workspaceId?: string },
@@ -36,27 +37,35 @@ export const assertAgentRuntimeCreation = async (
     const { env: _env, ...provider } = agencyConfig.heterogeneousProvider!;
     agencyConfig.heterogeneousProvider = provider;
   }
-  if (
-    !agencyConfig.boundDeviceId ||
-    !['device', 'local'].includes(agencyConfig.executionTarget ?? '')
-  ) {
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_HOST_REQUIRED' });
-  }
   const publicWorkspaceAgent = Boolean(actor.workspaceId && config.visibility !== 'private');
-  const [host] = await db
-    .select({ deviceId: devices.deviceId })
-    .from(devices)
-    .where(
-      and(
-        eq(devices.deviceId, agencyConfig.boundDeviceId),
-        publicWorkspaceAgent
-          ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
-          : buildWorkspaceWhere(actor, devices),
-      ),
-    )
-    .limit(1);
-  if (!host) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
+  const unsetWorkspaceTarget =
+    publicWorkspaceAgent &&
+    options.purpose !== 'orchestrator' &&
+    agencyConfig.executionTargetSelectionPolicy !== 'fixed' &&
+    agencyConfig.executionTarget === undefined &&
+    agencyConfig.boundDeviceId === undefined;
+  if (!unsetWorkspaceTarget) {
+    if (
+      !agencyConfig.boundDeviceId ||
+      !['device', 'local'].includes(agencyConfig.executionTarget ?? '')
+    ) {
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_HOST_REQUIRED' });
+    }
+    const [host] = await db
+      .select({ deviceId: devices.deviceId })
+      .from(devices)
+      .where(
+        and(
+          eq(devices.deviceId, agencyConfig.boundDeviceId),
+          publicWorkspaceAgent
+            ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
+            : buildWorkspaceWhere(actor, devices),
+        ),
+      )
+      .limit(1);
+    if (!host) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
+    }
   }
   if (agencyConfig.heterogeneousProvider?.type !== 'orvilo') return agencyConfig;
 
@@ -80,4 +89,34 @@ export const assertAgentRuntimeCreation = async (
     throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_PROVIDER_REQUIRED' });
   }
   return agencyConfig;
+};
+
+/** Creation-only initializer: pass only rows returned by the just-completed INSERT. */
+export const initializeAgentCreatorUse = async (
+  db: OrviloDatabase,
+  createdAgents: Pick<AgentItem, 'id' | 'userId' | 'workspaceId'>[],
+) => {
+  for (const agent of createdAgents) {
+    if (!agent.workspaceId) continue;
+    const [member] = await db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, agent.workspaceId),
+          eq(workspaceMembers.userId, agent.userId),
+          isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
+        ),
+      )
+      .for('update');
+    if (!member || !['owner', 'admin', 'member'].includes(member.role)) continue;
+    await new ResourcePermissionModel(db, agent.workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: agent.userId,
+      resourceId: agent.id,
+      resourceType: 'agent',
+      userIds: [agent.userId],
+    });
+  }
 };

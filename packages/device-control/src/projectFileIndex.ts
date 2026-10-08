@@ -232,7 +232,7 @@ export const defaultListProjectDirectory = async ({
 export const defaultGetProjectFileIndex = async (
   params: ProjectFileIndexParams = {},
 ): Promise<ProjectFileIndexResult> => {
-  const requestedScope = params.scope || process.cwd();
+  const requestedScope = path.resolve(params.scope || process.cwd());
 
   try {
     const rootResult = await execFileAsync(
@@ -241,8 +241,8 @@ export const defaultGetProjectFileIndex = async (
       { timeout: 5000 },
     ).catch((error) => error);
     const exitCode = rootResult?.code ?? rootResult?.exitCode;
-    const root =
-      rootResult?.stdout && !exitCode ? rootResult.stdout.trim() || requestedScope : requestedScope;
+    // A parent Git root is metadata, never authority to widen the requested scope.
+    const root = requestedScope;
 
     if (rootResult?.stdout && !exitCode) {
       const [trackedResult, untrackedResult, ignoredResult] = await Promise.all([
@@ -350,7 +350,7 @@ const includeMissingSearchCandidates = (
 export const defaultSearchProjectFiles = async (
   params: ProjectFileSearchParams,
 ): Promise<ProjectFileSearchResult> => {
-  const requestedScope = params.scope || process.cwd();
+  const requestedScope = path.resolve(params.scope || process.cwd());
   const limit = Math.max(1, params.limit ?? PROJECT_FILE_SEARCH_DEFAULT_LIMIT);
 
   try {
@@ -360,12 +360,22 @@ export const defaultSearchProjectFiles = async (
       { timeout: 5000 },
     ).catch((error) => error);
     const exitCode = rootResult?.code ?? rootResult?.exitCode;
-    const root =
-      rootResult?.stdout && !exitCode ? rootResult.stdout.trim() || requestedScope : requestedScope;
+    // A parent Git root is metadata, never authority to widen the requested scope.
+    const root = requestedScope;
 
     if (rootResult?.stdout && !exitCode) {
+      const statusScopeRoot = params.changedOnly ? await realpath(root) : root;
       const includePaths = params.changedOnly
-        ? Object.values(await getGitWorkingTreeFiles(root)).flat()
+        ? Object.values(await getGitWorkingTreeFiles(root))
+            .flat()
+            .map((relativePath) =>
+              toPosixRelativePath(
+                path.relative(
+                  statusScopeRoot,
+                  path.resolve(rootResult.stdout.trim() || root, relativePath),
+                ),
+              ),
+            )
         : undefined;
       const [trackedResult, untrackedResult, ignoredResult] = await Promise.all([
         execFileAsync(

@@ -34,6 +34,7 @@ import {
   resolveHeteroAgentSystemContext,
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
+import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq, sql } from 'drizzle-orm';
 
@@ -49,6 +50,7 @@ import {
   createAgentStateManager,
   createStreamEventManager,
 } from '@/server/modules/AgentExecution/factory';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
@@ -66,6 +68,7 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import {
   bindTopicDeviceAtomically,
+  canSelectCallerPersonalDevice,
   resolveHeteroExecutionPlan,
 } from '@/server/services/deviceGateway/executionAdmission';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -384,6 +387,7 @@ const ensureDispatchAdmission = async (
   },
   ctx: {
     agentId?: string;
+    groupId?: string | null;
     assistantMessageId: string;
     operationId: string;
     topicId: string;
@@ -391,6 +395,14 @@ const ensureDispatchAdmission = async (
   },
 ): Promise<ExecAgentResult | null> => {
   try {
+    if (deps.workspaceId)
+      await assertCanUseWorkspaceAgent({
+        agentId: ctx.agentId,
+        db: deps.db,
+        groupId: ctx.groupId,
+        userId: deps.userId,
+        workspaceId: deps.workspaceId,
+      });
     await writeDispatchAdmission(deps, admission);
     return null;
   } catch (err) {
@@ -399,21 +411,31 @@ const ensureDispatchAdmission = async (
       admission.operationId,
       err,
     );
-    const detail = `DISPATCH_ADMISSION_PERSIST_FAILED: ${err instanceof Error ? err.message : String(err)}`;
-    const errorData: DeviceAdmissionErrorData = {
-      code: 'DISPATCH_ADMISSION_PERSIST_FAILED',
-      deviceId: admission.deviceId,
-      operationId: admission.operationId,
-      retryable: true,
-      scope: deps.workspaceId ? 'workspace' : 'personal',
-      ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
-    };
+    const agentAccessDenied =
+      err instanceof TRPCError && ['FORBIDDEN', 'NOT_FOUND'].includes(err.code);
+    const failureCode = agentAccessDenied
+      ? 'AGENT_USE_FORBIDDEN'
+      : 'DISPATCH_ADMISSION_PERSIST_FAILED';
+    const message = agentAccessDenied
+      ? 'Agent Use denied before dispatch'
+      : 'Run admission could not be persisted';
+    const detail = `${failureCode}: ${err instanceof Error ? err.message : String(err)}`;
+    const errorData: DeviceAdmissionErrorData | undefined = agentAccessDenied
+      ? undefined
+      : {
+          code: 'DISPATCH_ADMISSION_PERSIST_FAILED',
+          deviceId: admission.deviceId,
+          operationId: admission.operationId,
+          retryable: true,
+          scope: deps.workspaceId ? 'workspace' : 'personal',
+          ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+        };
     await finalizeHeteroDispatchError(deps, {
       agentId: ctx.agentId,
       assistantMessageId: ctx.assistantMessageId,
       detail,
       errorData,
-      message: 'Run admission could not be persisted',
+      message,
       operationId: admission.operationId,
       topicId: ctx.topicId,
     });
@@ -422,9 +444,9 @@ const ensureDispatchAdmission = async (
       assistantMessageId: ctx.assistantMessageId,
       autoStarted: false,
       createdAt: new Date().toISOString(),
-      error: 'DISPATCH_ADMISSION_PERSIST_FAILED',
+      error: failureCode,
       errorData,
-      message: 'Run admission could not be persisted — the run was not started.',
+      message: `${message} — the run was not started.`,
       operationId: admission.operationId,
       status: 'error',
       success: false,
@@ -1003,6 +1025,14 @@ export const dispatchHeteroAgent = async (
   const executionPlan = await resolveHeteroExecutionPlan(deps.db, {
     agencyConfig: agentConfig.agencyConfig,
     agentOwnerId: agentConfig.userId,
+    canSelectPersonalDevice: canSelectCallerPersonalDevice({
+      agencyConfig: agentConfig.agencyConfig,
+      agentOwnerId: agentConfig.userId,
+      canManageAgent,
+      userId: deps.userId,
+      visibility: agentConfig.visibility,
+      workspaceId: deps.workspaceId,
+    }),
     canUseDevice,
     explicitDeviceId: requestedDeviceId,
     isPlatformTask: isRemoteHetero,
@@ -1141,19 +1171,9 @@ export const dispatchHeteroAgent = async (
 
   const remoteDeviceId = isRemoteHetero ? admittedDeviceId : undefined;
   const remoteDeviceWorkspaceId = isRemoteHetero ? admittedDeviceWorkspaceId : undefined;
-  // The dispatch runs under the agent author's identity for every resolution
-  // that names the shared/workspace host (session binding, agent default);
-  // caller-picked resolutions (explicit request, member preference, first-bind
-  // of a personal candidate) address the caller's own device.
-  const usesCallersPersonalDevice =
-    executionPlan.kind === 'device' &&
-    !remoteDeviceWorkspaceId &&
-    (executionPlan.reason === 'explicit_request' ||
-      executionPlan.reason === 'user_agent_preference' ||
-      executionPlan.reason === 'single_candidate');
-  const remoteDeviceUserId = usesCallersPersonalDevice
-    ? deps.userId
-    : (agentConfig.userId ?? deps.userId);
+  // Candidate authorization and dispatch use the actual caller for every
+  // resolution reason; Agent authorship cannot select another Device pool.
+  const remoteDeviceUserId = deps.userId;
 
   const cliDeviceId = isRemoteHetero ? undefined : admittedDeviceId;
   const cliDeviceWorkspaceId = isRemoteHetero ? undefined : admittedDeviceWorkspaceId;
@@ -1416,6 +1436,7 @@ export const dispatchHeteroAgent = async (
       },
       {
         agentId: resolvedAgentId,
+        groupId: appContext?.groupId,
         assistantMessageId,
         operationId,
         topicId,
@@ -1757,6 +1778,7 @@ export const dispatchHeteroAgent = async (
         },
         {
           agentId: resolvedAgentId,
+          groupId: appContext?.groupId,
           assistantMessageId,
           operationId,
           topicId,
@@ -2045,6 +2067,7 @@ export const dispatchHeteroAgent = async (
           },
           {
             agentId: resolvedAgentId,
+            groupId: appContext?.groupId,
             assistantMessageId,
             operationId,
             topicId,
@@ -2151,6 +2174,7 @@ export const dispatchHeteroAgent = async (
         },
         {
           agentId: resolvedAgentId,
+          groupId: appContext?.groupId,
           assistantMessageId,
           operationId,
           topicId,

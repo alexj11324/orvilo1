@@ -10,6 +10,7 @@ import {
   taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -56,6 +57,43 @@ afterEach(async () => {
 });
 
 describe('TaskTopicModel', () => {
+  it('allows an authorized Issue cancellation across legacy topic flags while keeping producer lookup unchanged', async () => {
+    const workspaceId = 'topic-shared-issue-ws';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Issue', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB.insert(workspaceMembers).values([
+      { userId, workspaceId, role: 'owner' },
+      { userId: userId2, workspaceId, role: 'member' },
+    ]);
+    const task = await new TaskModel(serverDB, userId, workspaceId).create({
+      instruction: 'Shared Issue',
+    });
+    await serverDB
+      .insert(topics)
+      .values({ id: 'issue-private-topic', userId, workspaceId, visibility: 'private' });
+    await serverDB.insert(taskTopics).values({
+      taskId: task.id,
+      topicId: 'issue-private-topic',
+      userId,
+      workspaceId,
+      seq: 1,
+      status: 'running',
+      visibility: 'private',
+    });
+    const peer = new TaskTopicModel(serverDB, userId2, workspaceId);
+    expect(await peer.findByTopicId('issue-private-topic')).toBeNull();
+    expect(await peer.findIssueTopicById('issue-private-topic')).toMatchObject({ taskId: task.id });
+    expect(
+      await new TaskTopicModel(serverDB, userId2, 'foreign').findIssueTopicById(
+        'issue-private-topic',
+      ),
+    ).toBeNull();
+    expect(await peer.cancelIssueTopicIfRunning(task.id, 'issue-private-topic')).toBe(true);
+    expect((await getTopic('issue-private-topic')).completedAt).not.toBeNull();
+    expect(await peer.cancelIssueTopicIfRunning(task.id, 'issue-private-topic')).toBe(false);
+  });
+
   describe('add and findByTaskId', () => {
     it('should add topic and get topics', async () => {
       const taskModel = new TaskModel(serverDB, userId);

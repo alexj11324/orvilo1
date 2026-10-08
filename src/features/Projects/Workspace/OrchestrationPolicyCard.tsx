@@ -40,7 +40,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import AssigneeAgentSelector from '@/features/AgentTasks/features/AssigneeAgentSelector';
-import { usePermission } from '@/hooks/usePermission';
 import type { ProjectDetail, ProjectOrchestrationPolicyView } from '@/store/project';
 import { useProjectStore } from '@/store/project';
 
@@ -141,7 +140,7 @@ const errorMessage = (error: unknown, fallback: string) =>
 
 const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, projectId }) => {
   const { t } = useTranslation('project');
-  const { allowed: canManagePolicy } = usePermission('manage_settings');
+  const canManagePolicy = detail.capabilities?.canManage === true;
   const policySWR = useProjectStore((state) => state.useFetchProjectOrchestrationPolicy)(
     projectId,
     canManagePolicy,

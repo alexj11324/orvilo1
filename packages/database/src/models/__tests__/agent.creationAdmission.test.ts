@@ -4,7 +4,15 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, credentials, devices, providerBindings, users, workspaces } from '../../schemas';
+import {
+  agents,
+  credentials,
+  devices,
+  providerBindings,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 import { UserModel } from '../user';
@@ -34,6 +42,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
   await db.insert(devices).values([
     { deviceId: 'saved-host', identitySource: 'installation', userId },
     { deviceId: 'other-host', identitySource: 'installation', userId: otherUserId },
@@ -143,10 +152,15 @@ describe('Agent creation admission', () => {
   });
 
   it('does not publish a private source runtime into a public resource', async () => {
-    const source = await new AgentModel(db, userId, workspaceId).create({
-      ...prime,
-      visibility: 'private',
-    });
+    const [source] = await db
+      .insert(agents)
+      .values({
+        ...prime,
+        userId,
+        visibility: 'private',
+        workspaceId,
+      })
+      .returning();
     await expect(
       new AgentModel(db, userId, workspaceId).inheritRuntimeForCreation(source.id, {
         purpose: 'orchestrator',
@@ -246,8 +260,11 @@ describe('Agent creation admission', () => {
     await expect(scoped.create({ ...prime, visibility: 'public' })).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
-    const privateAgent = await scoped.create({ ...prime, visibility: 'private' });
-    expect(privateAgent.agencyConfig?.boundDeviceId).toBe('saved-host');
+    await expect(scoped.create({ ...prime, visibility: 'private' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'New workspace Agents must be public',
+    });
+    expect(await db.select().from(agents)).toHaveLength(0);
   });
 
   it('refuses legacy metadata-only duplication while leaving existing name edits available', async () => {

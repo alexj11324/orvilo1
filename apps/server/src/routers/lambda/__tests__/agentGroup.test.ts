@@ -97,7 +97,7 @@ describe('agentGroupRouter', () => {
     vi.mocked(isWorkspacePrimaryOwner).mockResolvedValue(true);
 
     agentModelMock = {
-      batchCreate: vi.fn(),
+      batchCreateGroupAgents: vi.fn(),
       getOrchestratorSourceAgentId: vi.fn().mockResolvedValue('selected-source'),
       inheritRuntimeForCreation: vi.fn().mockResolvedValue({
         agencyConfig: {
@@ -271,7 +271,7 @@ describe('agentGroupRouter', () => {
         }),
       ).rejects.toThrow('Agent runtime configuration is unavailable');
       expect(agentModelMock.inheritRuntimeForCreation).not.toHaveBeenCalled();
-      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
       expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
     });
 
@@ -293,7 +293,7 @@ describe('agentGroupRouter', () => {
           },
         }),
       ).rejects.toThrow('Agent not found');
-      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
       expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
     });
 
@@ -312,7 +312,7 @@ describe('agentGroupRouter', () => {
       const mockCreatedAgents = [{ id: 'agent-1' }, { id: 'agent-2' }];
       const mockCreatedGroup = { id: 'group-1', title: 'Team Group' };
 
-      agentModelMock.batchCreate.mockResolvedValue(mockCreatedAgents);
+      agentModelMock.batchCreateGroupAgents.mockResolvedValue(mockCreatedAgents);
       agentGroupRepoMock.createGroupWithSupervisor.mockResolvedValue({
         group: mockCreatedGroup,
         supervisorAgentId: 'supervisor-1',
@@ -321,7 +321,7 @@ describe('agentGroupRouter', () => {
       const caller = agentGroupRouter.createCaller(mockCtx);
       const result = await caller.createGroupWithMembers(mockInput);
 
-      expect(agentModelMock.batchCreate).toHaveBeenCalledWith([
+      expect(agentModelMock.batchCreateGroupAgents).toHaveBeenCalledWith([
         { title: 'Agent 1', systemRole: 'Helper', virtual: true },
         { title: 'Agent 2', systemRole: 'Assistant', virtual: true },
       ]);
@@ -683,7 +683,7 @@ describe('agentGroupRouter', () => {
           groupId: 'group-1',
         }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
     });
 
     it('rejects createGroupWithMembers carrying a retired adapterType write', async () => {

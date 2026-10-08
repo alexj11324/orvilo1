@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import type { DeviceListItem, DeviceScope } from '@orvilo/types';
+import type { DeviceCandidate, DeviceListItem, DeviceScope } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,11 +20,29 @@ const listState = vi.hoisted(() => ({
   },
 }));
 
+const runtimeState = vi.hoisted(() => ({
+  current: {
+    data: undefined as
+      | {
+          candidates: DeviceCandidate[];
+          inventoryComplete: boolean;
+          runtimeInventoryError?: string;
+          runtimeInventoryOfflineOnly?: boolean;
+        }
+      | undefined,
+    error: undefined as unknown,
+    isLoading: false,
+  },
+  refresh: vi.fn(),
+}));
+
 vi.mock('./useDeviceList', () => ({
+  useAgentDeviceCandidates: () => ({ ...runtimeState.current, mutate: runtimeState.refresh }),
   useDeviceList: () => ({
     data: listState.current.data,
     error: listState.current.error,
     isLoading: listState.current.isLoading,
+    mutate: vi.fn(),
   }),
 }));
 
@@ -56,6 +74,7 @@ const setInventory = (data?: DeviceListItem[], error?: unknown, isLoading = fals
 };
 
 const renderState = (overrides?: {
+  agentId?: string;
   boundDeviceId?: string;
   canSelectDevice?: boolean;
   canSelectPersonalDevice?: boolean;
@@ -65,6 +84,7 @@ const renderState = (overrides?: {
 }) =>
   renderHook(() =>
     useDeviceSelectorState({
+      agentId: overrides?.agentId,
       boundDeviceId: overrides?.boundDeviceId,
       canSelectDevice: overrides?.canSelectDevice ?? true,
       canSelectPersonalDevice: overrides?.canSelectPersonalDevice,
@@ -78,6 +98,7 @@ const renderState = (overrides?: {
 describe('useDeviceSelectorState', () => {
   beforeEach(() => {
     setInventory([]);
+    runtimeState.current = { data: undefined, error: undefined, isLoading: false };
   });
 
   describe('visibility matrix', () => {
@@ -255,5 +276,120 @@ describe('useDeviceSelectorState', () => {
       const { result } = renderState({ boundDeviceId: 'missing', scope: 'workspace' });
       expect(result.current.bindingState).toBe('invalid');
     });
+  });
+});
+
+describe('Agent settings installed-runtime candidates', () => {
+  const candidate = (deviceId: string, capabilityOk = true): DeviceCandidate => ({
+    deviceId,
+    capabilityOk,
+    versionOk: true,
+    scopeOk: true,
+    isLocalMachine: false,
+    online: true,
+  });
+  beforeEach(() => {
+    setInventory([buildDevice({ deviceId: 'a' }), buildDevice({ deviceId: 'b', online: false })]);
+    runtimeState.current = { data: undefined, error: undefined, isLoading: false };
+  });
+
+  it.each([0, 1, 2])(
+    'counts %i matching runtimes instead of the number of registered hosts',
+    (count) => {
+      runtimeState.current.data = {
+        candidates: [candidate('a', count > 0), candidate('b', count > 1)],
+        inventoryComplete: true,
+      };
+      const { result } = renderState({ agentId: 'codex-agent' });
+      expect(result.current.deviceInventoryComplete).toBe(true);
+      expect(result.current.selectableDevices).toHaveLength(count);
+      expect(result.current.showDeviceSelector).toBe(count > 1);
+      expect(result.current.runnableDevices.map((device) => device.deviceId)).toEqual(
+        count ? ['a'] : [],
+      );
+    },
+  );
+
+  it('never treats unknown or failed runtime verification as a settled singleton', () => {
+    runtimeState.current.data = {
+      candidates: [candidate('a')],
+      inventoryComplete: false,
+      runtimeInventoryError: 'Offline host has no installed-runtime evidence',
+    };
+    const { result } = renderState({ agentId: 'codex-agent' });
+    expect(result.current.deviceInventoryComplete).toBe(false);
+    expect(result.current.runtimeInventoryUnverified).toBe(true);
+    expect(result.current.deviceInventoryError).toBeTruthy();
+    expect(result.current.showDeviceSelector).toBe(false);
+  });
+
+  it('does not offer a host excluded by the authoritative runtime/permission inventory', () => {
+    runtimeState.current.data = { candidates: [candidate('b')], inventoryComplete: true };
+    const { result } = renderState({ agentId: 'codex-agent', boundDeviceId: 'a' });
+    expect(result.current.selectableDevices.map((device) => device.deviceId)).toEqual(['b']);
+    expect(result.current.bindingState).toBe('invalid');
+  });
+
+  it('waits for runtime evidence instead of judging an unloaded query as empty', () => {
+    const { result } = renderState({ agentId: 'codex-agent', boundDeviceId: 'a' });
+    expect(result.current.deviceInventoryComplete).toBe(false);
+    expect(result.current.bindingState).toBe('pending');
+    expect(result.current.selectableDevices).toEqual([]);
+  });
+});
+
+describe('authoritative Agent-specific scope', () => {
+  it('takes personal-pool membership from the server instead of a stale UI permission flag', () => {
+    setInventory([workspaceDevice('shared'), buildDevice({ deviceId: 'personal' })]);
+    runtimeState.current.data = {
+      inventoryComplete: true,
+      candidates: ['shared', 'personal'].map((deviceId) => ({
+        deviceId,
+        capabilityOk: true,
+        versionOk: true,
+        scopeOk: true,
+        online: true,
+        isLocalMachine: false,
+      })),
+    };
+    const { result } = renderState({
+      agentId: 'agent-1',
+      scope: 'workspace',
+      canSelectPersonalDevice: false,
+    });
+    expect(result.current.selectableDevices.map((device) => device.deviceId)).toEqual([
+      'shared',
+      'personal',
+    ]);
+    expect(result.current.showDeviceSelector).toBe(true);
+  });
+});
+
+describe('offline-only runtime inventory metadata', () => {
+  it('retains a confirmed local member and incomplete verdict with unknown offline alternatives', () => {
+    setInventory([
+      buildDevice({ deviceId: 'local' }),
+      buildDevice({ deviceId: 'unknown', online: false }),
+    ]);
+    runtimeState.current.data = {
+      candidates: [
+        {
+          deviceId: 'local',
+          capabilityOk: true,
+          versionOk: true,
+          scopeOk: true,
+          online: true,
+          isLocalMachine: true,
+        },
+      ],
+      inventoryComplete: false,
+      runtimeInventoryError: 'Offline host is unverified',
+      runtimeInventoryOfflineOnly: true,
+    };
+    const { result } = renderState({ agentId: 'agent-1', boundDeviceId: 'local' });
+    expect(result.current.selectableDevices.map((device) => device.deviceId)).toEqual(['local']);
+    expect(result.current.deviceInventoryComplete).toBe(false);
+    expect(result.current.runtimeInventoryOfflineOnly).toBe(true);
+    expect(result.current.bindingState).toBe('pending');
   });
 });

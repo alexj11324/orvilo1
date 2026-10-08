@@ -1,4 +1,4 @@
-import type { WorkingDirEntry } from '@orvilo/types';
+import type { DeviceCapabilitySnapshot, WorkingDirEntry } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 import { index, jsonb, pgTable, text, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
 
@@ -79,7 +79,7 @@ export const devices = pgTable(
      * reads it as `registry:snapshot` evidence when no live probe answers, so
      * an offline-but-known device degrades to `pending`, never fabricated.
      */
-    capabilitySnapshot: jsonb('capability_snapshot').$type<{ supportedTools?: string[] }>(),
+    capabilitySnapshot: jsonb('capability_snapshot').$type<DeviceCapabilitySnapshot>(),
     /** Device client version self-reported at registration (`app.getVersion()`). */
     adapterVersion: varchar('adapter_version', { length: 32 }),
     /** When `capabilitySnapshot`/`adapterVersion` were last verified fresh. */

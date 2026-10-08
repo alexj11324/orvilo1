@@ -88,6 +88,7 @@ import {
   taskAttentionReasonExpr,
 } from './taskExecutionSql';
 import { workflowCategoryForLegacyStatus } from './workflowMove';
+import { getActiveWorkspaceMembershipRole } from './workspace';
 
 /**
  * Full task row for reads and `.returning()` — `status` projects the derived
@@ -202,6 +203,8 @@ const TASK_POLICY_COLUMNS = [
 ] as const satisfies readonly (keyof NewTask)[];
 
 export interface TaskMutationContext {
+  /** Server-resolved Agent actor, verified by the router before model mutation. */
+  actorAgentId?: string;
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
   /**
@@ -369,7 +372,7 @@ export const isTaskIdentifierUniqueViolation = (error: unknown): boolean => {
 };
 
 /**
- * Task reads combine workspace ownership with the team's ACL. Metadata child
+ * Task reads require active workspace membership. Metadata child
  * rows follow their live parent; execution topics keep their own visibility.
  * Sequence allocation is workspace-wide and must not filter by team ACL.
  */
@@ -484,7 +487,7 @@ export class TaskModel {
     this.managedSubject = options.managedSubject ?? false;
   }
 
-  /** Shared workspace task metadata, personal ownership, and private-team ACL. */
+  /** Shared workspace Issue metadata and personal ownership. */
   private ownership = () =>
     buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
 
@@ -512,7 +515,7 @@ export class TaskModel {
       ? eq(tasks.workspaceId, this.workspaceId)
       : (and(eq(tasks.createdByUserId, this.userId), isNull(tasks.workspaceId)) as SQL);
 
-  /** Same read policy for recursive SQL; aliases preserve correlated team checks. */
+  /** Same active workspace read policy for recursive SQL aliases. */
   private ownershipSql = (tableAlias?: string) =>
     buildTaskReadableWhere(
       this.db,
@@ -1171,9 +1174,60 @@ export class TaskModel {
     return (await this.deleteMany([id], mutation)).length > 0;
   }
 
+  private async canGovernTask(task: TaskItem): Promise<boolean> {
+    if (!this.workspaceId) return task.workspaceId === null && task.createdByUserId === this.userId;
+    if (task.workspaceId !== this.workspaceId) return false;
+    const role = await getActiveWorkspaceMembershipRole(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (role === 'owner' || role === 'admin') return true;
+    if (role !== 'member') return false;
+    return (
+      !!task.projectId &&
+      (await new ProjectModel(this.db, this.userId, this.workspaceId).findManageableById(
+        task.projectId,
+      )) !== null
+    );
+  }
+
+  async getCapabilities(task: TaskItem) {
+    const role = this.workspaceId
+      ? await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })
+      : task.workspaceId === null && task.createdByUserId === this.userId
+        ? 'member'
+        : null;
+    return {
+      canEdit:
+        task.workspaceId === (this.workspaceId ?? null) &&
+        ['owner', 'admin', 'member'].includes(role ?? ''),
+      canDelete: await this.canDeleteTask(task),
+    };
+  }
+
+  async canDeleteTask(task: TaskItem): Promise<boolean> {
+    if (await this.canGovernTask(task)) return true;
+    if (task.createdByUserId !== this.userId || task.workspaceId !== (this.workspaceId ?? null))
+      return false;
+    if (!this.workspaceId) return true;
+    return (
+      (await getActiveWorkspaceMembershipRole(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      })) === 'member'
+    );
+  }
+
   /** Validate the entire frozen deletion set before any rows disappear. */
   private async assertCanDeleteTasks(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
+    for (const task of await this.findByIds(ids)) {
+      if (!(await this.canDeleteTask(task)))
+        throw new Error('Issue creator, project manager or workspace admin rights are required');
+    }
     const inbound = await this.db
       .select({ id: taskDependencies.id })
       .from(taskDependencies)
@@ -3836,6 +3890,15 @@ export class TaskModel {
     data: Omit<NewTaskComment, 'id'>,
     mutation: TaskMutationContext = {},
   ): Promise<TaskCommentItem> {
+    if (!(await this.findById(data.taskId))) throw new Error('Issue not found');
+    if (this.workspaceId) {
+      const role = await getActiveWorkspaceMembershipRole(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      if (!['owner', 'admin', 'member'].includes(role ?? ''))
+        throw new Error('Writable workspace membership is required');
+    }
     // Mirror the parent task's visibility onto the comment so subsequent
     // reads/writes can be filtered without a JOIN. Falls back to 'public'
     // if the task is somehow not visible (defensive — the caller should
@@ -3872,16 +3935,60 @@ export class TaskModel {
     return comment;
   }
 
-  async getComments(taskId: string): Promise<TaskCommentItem[]> {
-    if (!(await this.findById(taskId))) return [];
-    return this.db
+  async getComments(
+    taskId: string,
+  ): Promise<(TaskCommentItem & { capabilities: { canEdit: boolean; canDelete: boolean } })[]> {
+    const task = await this.findById(taskId);
+    if (!task) return [];
+    const role = this.workspaceId
+      ? await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })
+      : 'member';
+    const canWrite = ['owner', 'admin', 'member'].includes(role ?? '');
+    const canManage = canWrite && (await this.canGovernTask(task));
+    const comments = await this.db
       .select()
       .from(taskComments)
       .where(and(eq(taskComments.taskId, taskId), this.commentsOwnership()))
       .orderBy(taskComments.createdAt);
+    return comments.map((comment) => {
+      const isAuthor =
+        !comment.authorAgentId && (comment.authorUserId ?? comment.userId) === this.userId;
+      return {
+        ...comment,
+        capabilities: {
+          canEdit: canWrite && isAuthor,
+          canDelete: canWrite && (isAuthor || canManage),
+        },
+      };
+    });
   }
 
   async deleteComment(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
+    const current = await this.findCommentById(id);
+    if (!current) return false;
+    const task = await this.findById(current.taskId);
+    if (!task) return false;
+    if (
+      !(
+        (!current.authorAgentId && (current.authorUserId ?? current.userId) === this.userId) ||
+        (mutation.source === 'agent' && mutation.actorAgentId === current.authorAgentId)
+      ) &&
+      !(await this.canGovernTask(task))
+    )
+      return false;
+    if (
+      this.workspaceId &&
+      !['owner', 'admin', 'member'].includes(
+        (await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })) ?? '',
+      )
+    )
+      return false;
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const externalMapping = this.workspaceId
@@ -3910,6 +4017,16 @@ export class TaskModel {
     content: string,
     opts?: { editorData?: unknown; mutation?: TaskMutationContext },
   ): Promise<TaskCommentItem | undefined> {
+    if (
+      this.workspaceId &&
+      !['owner', 'admin', 'member'].includes(
+        (await getActiveWorkspaceMembershipRole(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })) ?? '',
+      )
+    )
+      return undefined;
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const [comment] = await runner
@@ -3919,7 +4036,24 @@ export class TaskModel {
           ...(opts?.editorData !== undefined ? { editorData: opts.editorData as never } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .where(
+          and(
+            eq(taskComments.id, id),
+            this.commentsOwnership(),
+            or(
+              and(
+                isNull(taskComments.authorAgentId),
+                or(
+                  eq(taskComments.authorUserId, this.userId),
+                  and(isNull(taskComments.authorUserId), eq(taskComments.userId, this.userId)),
+                ),
+              ),
+              opts?.mutation?.source === 'agent' && opts.mutation.actorAgentId
+                ? eq(taskComments.authorAgentId, opts.mutation.actorAgentId)
+                : undefined,
+            ),
+          ),
+        )
         .returning();
       if (!comment) return undefined;
       await this.recordCommentMutation(runner, {

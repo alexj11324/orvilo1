@@ -9,22 +9,24 @@ import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 
+import { useTaskDetailSelector } from './TaskDetailScope';
 import { useTaskCopyActions } from './useTaskCopyActions';
 
 const TaskDetailHeaderActions = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
 
   const navigate = useWorkspaceAwareNavigate();
-  const { allowed: canEditTask } = usePermission('create_content');
+  const canDeleteTask = useTaskDetailSelector(
+    (state, id) => !!id && state.taskDetailMap[id]?.capabilities?.canDelete === true,
+  );
   const { copyBranch, copyId, copyLink, hasBranch, taskId } = useTaskCopyActions();
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const transferItems = useTaskTransferMenuItem(taskId) as SidebarDropdownMenuProps['items'] | null;
 
   const triggerDelete = useCallback(() => {
-    if (!canEditTask) return;
+    if (!canDeleteTask) return;
     if (!taskId) return;
     confirmModal({
       content: t('taskDetail.deleteConfirm.content'),
@@ -36,7 +38,7 @@ const TaskDetailHeaderActions = memo(() => {
       },
       title: t('taskDetail.deleteConfirm.title'),
     });
-  }, [canEditTask, taskId, t, deleteTask, navigate]);
+  }, [canDeleteTask, taskId, t, deleteTask, navigate]);
 
   const menuItems = useMemo<SidebarDropdownMenuProps['items']>(() => {
     if (!taskId) return [];
@@ -69,7 +71,7 @@ const TaskDetailHeaderActions = memo(() => {
     ];
     const deleteItem = {
       danger: true,
-      disabled: !canEditTask,
+      disabled: !canDeleteTask,
       icon: <Trash />,
       key: 'delete',
       label: t('delete', { ns: 'common' }),
@@ -96,7 +98,7 @@ const TaskDetailHeaderActions = memo(() => {
     hasBranch,
     t,
     triggerDelete,
-    canEditTask,
+    canDeleteTask,
     transferItems,
   ]);
 

@@ -9,7 +9,6 @@ import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-reac
 import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
@@ -21,6 +20,7 @@ import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
+import { useCurrentProjectDetail } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -169,24 +169,18 @@ export const useProjectUpdates = (projectId?: string) =>
     return (response?.data ?? []).map(toUpdate);
   });
 
-/**
- * Per-row ⋯-menu gate: the author may always edit/delete their own post; the
- * project owner, the project lead, or a workspace admin may moderate
- * anyone's — the same ACL `ProjectModel.updateUpdate`/`deleteUpdate` enforce.
- * Accepts a possibly-unloaded project so surfaces can call it above their
- * loading early-returns.
- */
-export const useCanModerateProjectUpdate = (
-  project?: { leadUserId?: null | string; userId?: null | string } | null,
-) => {
+/** Server capabilities govern deletion; only the author may edit a post. */
+export const useCanModerateProjectUpdate = (project?: { id?: string } | null) => {
   const userId = useUserStore(userProfileSelectors.userId);
-  const { canManageMembers } = useWorkspaceCapabilities();
-  const canManage =
-    canManageMembers ||
-    (!!userId && (project?.userId === userId || project?.leadUserId === userId));
+  const detail = useCurrentProjectDetail(project?.id);
+  const canComment = detail?.capabilities?.canComment === true;
+  const canManage = detail?.capabilities?.canManage === true;
   return useCallback(
-    (update: ProjectUpdate) => canManage || (!!userId && update.authorId === userId),
-    [canManage, userId],
+    (update: ProjectUpdate) => ({
+      canEdit: canComment && update.authorId === userId,
+      canDelete: canComment && (canManage || update.authorId === userId),
+    }),
+    [canComment, canManage, userId],
   );
 };
 
@@ -212,6 +206,9 @@ export const ProjectUpdateComposer = memo<{
     projectId,
   }) => {
     const { t } = useTranslation(['project', 'common']);
+    const canComment = useCurrentProjectDetail(projectId)?.capabilities?.canComment === true;
+    const userId = useUserStore(userProfileSelectors.userId);
+    const canPost = canComment && (!editingUpdate || editingUpdate.authorId === userId);
     const editing = !!editingUpdate;
     const [body, setBody] = useState(editingUpdate?.body ?? '');
     const [health, setHealth] = useState<ProjectHealth>(editingUpdate?.health ?? 'onTrack');
@@ -224,7 +221,7 @@ export const ProjectUpdateComposer = memo<{
 
     const post = async () => {
       const content = body.trim();
-      if (!content || posting) return;
+      if (!canPost || !content || posting) return;
       setPosting(true);
       try {
         if (editingUpdate) {
@@ -258,6 +255,7 @@ export const ProjectUpdateComposer = memo<{
     if (!expanded) {
       const entry = (
         <button
+          disabled={!canPost}
           type="button"
           className={[styles.collapsed, emptyState && styles.collapsedEmpty]
             .filter(Boolean)
@@ -330,7 +328,7 @@ export const ProjectUpdateComposer = memo<{
           </div>
         )}
         <ProjectUpdateEditor
-          disabled={posting}
+          disabled={!canPost || posting}
           initialContent={editingUpdate?.body}
           key={editorRevision}
           label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
@@ -345,13 +343,13 @@ export const ProjectUpdateComposer = memo<{
           style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
         >
           {editing && (
-            <Button disabled={posting} variant="outline" onClick={onCancelEdit}>
+            <Button disabled={!canPost || posting} variant="outline" onClick={onCancelEdit}>
               {t('common:cancel')}
             </Button>
           )}
           <Button
             aria-busy={posting}
-            disabled={!body.trim() || posting}
+            disabled={!canPost || !body.trim() || posting}
             variant="default"
             onClick={() => void post()}
           >
@@ -371,11 +369,12 @@ ProjectUpdateComposer.displayName = 'ProjectUpdateComposer';
 export const ProjectUpdateRow = memo<{
   /** Whether the ⋯ menu (edit/delete) renders — the caller applies the row ACL. */
   canEdit?: boolean;
+  canDelete?: boolean;
   /** Called after a delete lands so the feed can revalidate. */
   onChanged?: () => void;
   onEdit?: (update: ProjectUpdate) => void;
   update: ProjectUpdate;
-}>(({ update, canEdit, onChanged, onEdit }) => {
+}>(({ update, canEdit, canDelete, onChanged, onEdit }) => {
   const { t } = useTranslation(['project', 'common']);
   const meta = update.health ? PROJECT_HEALTH_META[update.health] : null;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -406,12 +405,12 @@ export const ProjectUpdateRow = memo<{
   return (
     <div
       className={cn('flex flex-row', cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen))}
-      style={{ alignItems: 'flex-start', gap: 10 }}
+      style={{ alignItems: 'flex-start', gap: 12 }}
     >
       <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
       <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
         <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
+          <span className="text-sm" style={{ fontSize: 14, fontWeight: 500 }}>
             {update.authorName || t('overview.updateAnonymous', { defaultValue: 'Member' })}
           </span>
           {meta && update.health && (
@@ -433,27 +432,35 @@ export const ProjectUpdateRow = memo<{
           <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             {dayjs(update.createdAt).format('MMM D')}
           </span>
-          {canEdit && (
+          {(canEdit || canDelete) && (
             <div
               className={cn('flex flex-row', cx(UPDATE_ACTIONS_CLASS, styles.updateActions))}
               style={{ justifyContent: 'flex-end', flex: 1 }}
             >
               <DropdownMenu
                 items={[
-                  {
-                    icon: PencilIcon,
-                    key: 'edit',
-                    label: t('common:edit'),
-                    onClick: () => onEdit?.(update),
-                  },
-                  { type: 'divider' as const },
-                  {
-                    danger: true,
-                    icon: Trash2Icon,
-                    key: 'delete',
-                    label: t('common:delete'),
-                    onClick: confirmDelete,
-                  },
+                  ...(canEdit
+                    ? [
+                        {
+                          icon: PencilIcon,
+                          key: 'edit',
+                          label: t('common:edit'),
+                          onClick: () => onEdit?.(update),
+                        },
+                      ]
+                    : []),
+                  ...(canEdit && canDelete ? [{ type: 'divider' as const }] : []),
+                  ...(canDelete
+                    ? [
+                        {
+                          danger: true,
+                          icon: Trash2Icon,
+                          key: 'delete',
+                          label: t('common:delete'),
+                          onClick: confirmDelete,
+                        },
+                      ]
+                    : []),
                 ]}
                 onOpenChange={setMenuOpen}
               >

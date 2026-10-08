@@ -42,7 +42,10 @@ import {
   topics,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import { assertAgentRuntimeCreation } from '../../utils/agentRuntimeCreation';
+import {
+  assertAgentRuntimeCreation,
+  initializeAgentCreatorUse,
+} from '../../utils/agentRuntimeCreation';
 import { insertInBatches, splitCrossBatchSelfReferences } from '../../utils/batchInsert';
 import { COPIED_TOPIC_USAGE_RESET } from '../../utils/copiedTranscript';
 import { copyMessagesInDatabase, type IdPair } from '../../utils/copyMessagesInDatabase';
@@ -145,6 +148,13 @@ export class AgentGroupRepository {
    * mode (`workspaceId` absent) matches `user_id = ? AND workspace_id IS NULL`;
    * in team mode matches `workspace_id = ?` (shared with all members).
    */
+  private insertCreatedGroupAgents = (configs: NewAgent[]) =>
+    this.db.transaction(async (tx) => {
+      const created = await tx.insert(agents).values(configs).returning();
+      await initializeAgentCreatorUse(tx as OrviloDatabase, created);
+      return created;
+    });
+
   private groupOwnership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, chatGroups);
   private agentOwnership = () =>
@@ -421,17 +431,16 @@ export class AgentGroupRepository {
           this.workspaceId,
         ).getOrchestratorRuntimeForCreation({ visibility: group.visibility }));
       // Create supervisor agent (virtual agent)
-      const [supervisorAgent] = await this.db
-        .insert(agents)
-        .values({
+      const [supervisorAgent] = await this.insertCreatedGroupAgents([
+        {
           ...runtime,
           visibility: group.visibility,
           title: 'Supervisor',
           userId: this.userId,
           virtual: true,
           workspaceId: this.workspaceId ?? null,
-        })
-        .returning();
+        },
+      ]);
 
       // Add supervisor agent to group with role 'supervisor'
       await this.db.insert(chatGroupsAgents).values({
@@ -574,9 +583,8 @@ export class AgentGroupRepository {
     );
 
     // 1. Create supervisor agent (virtual agent)
-    const [supervisorAgent] = await this.db
-      .insert(agents)
-      .values({
+    const [supervisorAgent] = await this.insertCreatedGroupAgents([
+      {
         avatar: supervisorConfig?.avatar,
         backgroundColor: supervisorConfig?.backgroundColor,
         chatConfig: supervisorConfig?.chatConfig,
@@ -595,8 +603,8 @@ export class AgentGroupRepository {
         virtual: true,
         visibility: groupVisibility,
         workspaceId: this.workspaceId ?? null,
-      })
-      .returning();
+      },
+    ]);
 
     // 2. Create the group
     const [group] = await this.db
@@ -930,6 +938,7 @@ export class AgentGroupRepository {
           workspaceId: this.workspaceId ?? null,
         })
         .returning();
+      await initializeAgentCreatorUse(trx as OrviloDatabase, [newSupervisor]);
 
       // 6. Create copies of virtual member agents using include mode
       const newVirtualAgentMap = new Map<string, string>(); // oldId -> newId
@@ -962,6 +971,7 @@ export class AgentGroupRepository {
         }));
 
         const newVirtualAgents = await trx.insert(agents).values(virtualAgentConfigs).returning();
+        await initializeAgentCreatorUse(trx as OrviloDatabase, newVirtualAgents);
 
         // Map old agent IDs to new agent IDs
         for (const [i, virtualMember] of virtualMembers.entries()) {
@@ -1382,6 +1392,14 @@ export class AgentGroupRepository {
             })),
           )
           .returning({ id: agents.id });
+        await initializeAgentCreatorUse(
+          trx as OrviloDatabase,
+          clones.map((agent) => ({
+            id: agent.id,
+            userId: targetUserId,
+            workspaceId: targetWorkspaceId,
+          })),
+        );
 
         for (const [index, member] of referencedMembers.entries()) {
           const newAgentId = clones[index].id;
@@ -1699,6 +1717,7 @@ export class AgentGroupRepository {
           ),
         )
         .returning();
+      await initializeAgentCreatorUse(trx as OrviloDatabase, [newSupervisor]);
 
       const memberAgentIdMap = new Map<string, string>();
       if (sourceMembers.length > 0) {
@@ -1719,6 +1738,14 @@ export class AgentGroupRepository {
             ),
           )
           .returning({ id: agents.id });
+        await initializeAgentCreatorUse(
+          trx as OrviloDatabase,
+          newMembers.map((agent) => ({
+            id: agent.id,
+            userId: targetUserId,
+            workspaceId: targetWorkspaceId,
+          })),
+        );
 
         for (const [index, member] of sourceMembers.entries()) {
           memberAgentIdMap.set(member.agent.id, newMembers[index].id);

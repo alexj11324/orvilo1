@@ -276,7 +276,7 @@ export const agentGroupRouter = router({
         visibility: group.visibility,
       }));
 
-      const createdAgents = await ctx.agentModel.batchCreate(agentConfigs);
+      const createdAgents = await ctx.agentModel.batchCreateGroupAgents(agentConfigs);
       const agentIds = createdAgents.map((agent) => agent.id);
 
       // Add all agents to the group
@@ -525,7 +525,7 @@ export const agentGroupRouter = router({
         { purpose: 'orchestrator' },
       );
 
-      const createdAgents = await ctx.agentModel.batchCreate(memberConfigs);
+      const createdAgents = await ctx.agentModel.batchCreateGroupAgents(memberConfigs);
       const memberAgentIds = createdAgents.map((agent) => agent.id);
 
       // 2. Create group with supervisor and member agents

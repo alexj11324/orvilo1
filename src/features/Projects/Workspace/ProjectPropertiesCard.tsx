@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
@@ -169,7 +170,12 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
           {t('properties.status')}
         </span>
         <DropdownMenu items={statusItems}>
-          <span className={styles.statusTrigger}>
+          <Button
+            className={styles.statusTrigger}
+            disabled={updatingStatus || !detail.capabilities?.canEdit}
+            style={{ padding: 0, height: 'auto' }}
+            variant="ghost"
+          >
             <Badge radius="full" size="sm" style={{ color: statusVisual.color }} variant="outline">
               <ProjectStatusIcon
                 percent={projectIssueProgressPercent(detail.tasks) ?? 0}
@@ -181,7 +187,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
             {updatingStatus ? null : (
               <ChevronDownIcon aria-hidden size={12} style={{ opacity: 0.5 }} />
             )}
-          </span>
+          </Button>
         </DropdownMenu>
       </div>
       <div className={styles.row}>
@@ -210,7 +216,17 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
           {t('properties.members')}
         </span>
         {membersEnabled ? (
-          <ProjectMembersField projectId={project.id} query={membersSWR} />
+          <ProjectMembersField
+            canManage={detail.capabilities?.canManage}
+            projectId={project.id}
+            projectVisibility={project.visibility}
+            query={membersSWR}
+            onChanged={() =>
+              detailSWR
+                .mutate()
+                .catch((error) => console.error('Failed to refresh project capabilities', error))
+            }
+          />
         ) : (
           <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             —

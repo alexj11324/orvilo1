@@ -2,6 +2,7 @@ import { and, eq, exists, isNull, or, type SQL, sql } from 'drizzle-orm';
 
 import { projects } from '../schemas/project';
 import { projectMembers } from '../schemas/projectMember';
+import { workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from './workspace';
 
@@ -29,5 +30,23 @@ export const buildProjectReadableWhere = (
         ),
       ),
   );
-  return or(base, and(eq(projects.workspaceId, ctx.workspaceId), grantedRead)) as SQL;
+  return and(
+    or(base, and(eq(projects.workspaceId, ctx.workspaceId), grantedRead)),
+    or(
+      isNull(projects.workspaceId),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, projects.workspaceId),
+              eq(workspaceMembers.userId, ctx.userId),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+            ),
+          ),
+      ),
+    ),
+  ) as SQL;
 };

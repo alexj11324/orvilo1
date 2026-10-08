@@ -13,23 +13,15 @@ import {
   resolveExecutionTargetSelection,
 } from '@/features/ExecutionTargetPicker';
 import { isHeterogeneousSandboxExecutionAvailable } from '@/helpers/executionTarget';
-import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { useResourcePermission } from './useResourcePermission';
+
 export interface AgentSelectionPoliciesState {
-  /**
-   * Whether the viewer may write these policies at all.
-   *
-   * Deliberately narrower than the Permission page's `canEditConfig`: a
-   * workspace Admin holds `agent:update:all` and so may edit the agent, but the
-   * server strips every policy key unless the caller is the agent's creator or
-   * the workspace owner — and it strips them from an otherwise *successful*
-   * mutation. An enabled control would therefore accept the choice, report no
-   * error, and silently discard it.
-   */
+  /** Creator or actual workspace Owner/Admin, resolved by the server. */
   canEditPolicies: boolean;
   /** Members can be assigned a target only if one is actually resolvable. */
   canFixExecutionTarget: boolean;
@@ -61,11 +53,7 @@ export interface AgentSelectionPoliciesState {
 export const useAgentSelectionPolicies = (agentId: string): AgentSelectionPoliciesState => {
   const agent = useAgentStore(agentByIdSelectors.getAgentById(agentId));
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
-  // Mirrors the server's policy-write gate. The workspace `owner` role is
-  // bound to `workspaces.primaryOwnerId` (a second 'owner' membership resolves
-  // to 'admin'), so this is the same single user the server checks; personal
-  // mode reports allowed, which is right — there are no members to govern.
-  const { allowed: isWorkspaceOwner } = usePermission('edit_others_content');
+  const { data: access } = useResourcePermission('agent', agent?.workspaceId ? agentId : undefined);
   const viewerId = useUserStore(userProfileSelectors.userId);
 
   const { data: devices } = useDeviceList();
@@ -122,7 +110,9 @@ export const useAgentSelectionPolicies = (agentId: string): AgentSelectionPolici
     // An unresolved agent leaves the controls disabled rather than enabled:
     // the values shown above come from the same row, so there is nothing
     // meaningful to edit until it loads.
-    canEditPolicies: isWorkspaceOwner || (!!agent?.userId && agent.userId === viewerId),
+    canEditPolicies:
+      !!agent &&
+      (agent.workspaceId ? access?.canManage === true : !!viewerId && agent.userId === viewerId),
     canFixExecutionTarget:
       !!executionSelection &&
       (executionSelection.target !== 'sandbox' ||

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toast } from '@/components/toast';
-import { useClientDataSWR } from '@/libs/swr';
+import { mutate as revalidateResourcePermission, useClientDataSWR } from '@/libs/swr';
 import type { PermissionResourceType, ResourceAccessLevel } from '@/services/resourcePermission';
 import { resourcePermissionService } from '@/services/resourcePermission';
 
@@ -41,6 +41,8 @@ export const useResourceCollaborators = (
       try {
         await action();
         await mutate();
+        if (resourceType === 'agent')
+          await revalidateResourcePermission(['resource-permission', resourceType, resourceId]);
         return true;
       } catch (e) {
         console.error('[ResourceCollaborators]', e);
@@ -50,7 +52,7 @@ export const useResourceCollaborators = (
         setMutating(false);
       }
     },
-    [mutate, t],
+    [mutate, t, resourceType, resourceId],
   );
 
   const addCollaborators = useCallback(
@@ -80,6 +82,8 @@ export const useResourceCollaborators = (
       try {
         await resourcePermissionService.removeCollaborator(resourceType, resourceId, userId);
         await mutate();
+        if (resourceType === 'agent')
+          await revalidateResourcePermission(['resource-permission', resourceType, resourceId]);
       } catch (e) {
         await mutate(previous, false);
         console.error('[ResourceCollaborators]', e);

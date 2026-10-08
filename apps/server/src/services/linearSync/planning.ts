@@ -20,6 +20,7 @@ import {
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import {
   createGoalTaskOwnershipAdapter,
   projectPlannerOwnershipError,
@@ -740,6 +741,10 @@ export class LinearPlanningWorker {
         }
         const idempotencyKey = `planning:${revision.id}:resume:${task.id}`;
         const requested = await dispatchModel.request({
+          authorizeExecutor: ({ agentId, db, userId }) =>
+            assertCanUseWorkspaceAgent({ agentId, db, userId, workspaceId: this.workspaceId }),
+          executionUserId: userId,
+          initiator: userId,
           idempotencyKey,
           planRevision: revision.inputRevision,
           requestedBy: `planning:${revision.id}`,

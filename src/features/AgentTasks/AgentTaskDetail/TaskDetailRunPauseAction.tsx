@@ -6,6 +6,7 @@ import { DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import StopLoadingIcon from '@/components/StopLoading';
 import { Button } from '@/components/ui/button';
+import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentStore } from '@/store/agent';
@@ -61,6 +62,19 @@ const TaskDetailRunPauseAction = memo(() => {
   const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const runningActivity = detail?.activities?.find(
+    (activity) =>
+      activity.type === 'topic' &&
+      activity.status === 'running' &&
+      (!activity.sourceTaskId || activity.sourceTaskId === detail.id),
+  );
+  const executingAgentId = canPause
+    ? runningActivity?.agentId ||
+      (runningActivity?.author?.type === 'agent' ? runningActivity.author.id : undefined) ||
+      assigneeAgentId
+    : assigneeAgentId || inboxAgentId;
+  const { canUseResource } = useResourceAccess('agent', executingAgentId || undefined);
+  const canExecuteTask = canEditTask && !!executingAgentId && canUseResource;
   const isRerun = status === 'completed';
   const runTask = useTaskStore((s) => s.runTask);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -107,7 +121,7 @@ const TaskDetailRunPauseAction = memo(() => {
   );
 
   const handleRunOrPause = useCallback(async () => {
-    if (!canEditTask) return;
+    if (!canExecuteTask) return;
     if (!taskId) return;
     if (canPause) {
       await updateTaskStatus(taskId, 'paused');
@@ -120,10 +134,10 @@ const TaskDetailRunPauseAction = memo(() => {
     } finally {
       setIsStarting(false);
     }
-  }, [taskId, canRun, canPause, runWithContractCheck, updateTaskStatus, canEditTask]);
+  }, [taskId, canRun, canPause, runWithContractCheck, updateTaskStatus, canExecuteTask]);
 
   const handleRunNow = useCallback(async () => {
-    if (!canEditTask || isBlocked) return;
+    if (!canExecuteTask || isBlocked) return;
     if (!taskId) return;
     setIsRunningNow(true);
     try {
@@ -131,10 +145,10 @@ const TaskDetailRunPauseAction = memo(() => {
     } finally {
       setIsRunningNow(false);
     }
-  }, [canEditTask, isBlocked, taskId, runWithContractCheck]);
+  }, [canExecuteTask, isBlocked, taskId, runWithContractCheck]);
 
   const handleCancelSchedule = useCallback(async () => {
-    if (!canEditTask) return;
+    if (!canExecuteTask) return;
     if (!taskId) return;
     setIsCancellingSchedule(true);
     try {
@@ -145,7 +159,7 @@ const TaskDetailRunPauseAction = memo(() => {
     } finally {
       setIsCancellingSchedule(false);
     }
-  }, [canEditTask, taskId, setAutomationMode, updateTaskStatus, status]);
+  }, [canExecuteTask, taskId, setAutomationMode, updateTaskStatus, status]);
 
   const isScheduled = status === 'scheduled';
 
@@ -186,7 +200,7 @@ const TaskDetailRunPauseAction = memo(() => {
         <div className="inline-flex">
           <Button
             className="rounded-r-none"
-            disabled={!canEditTask || isCancellingSchedule || isRunningNow}
+            disabled={!canExecuteTask || isCancellingSchedule || isRunningNow}
             loading={isCancellingSchedule || isRunningNow}
             title={canEditTask ? undefined : reason}
             variant="default"
@@ -198,7 +212,7 @@ const TaskDetailRunPauseAction = memo(() => {
           <DropdownMenu
             items={[
               {
-                disabled: !canEditTask || isBlocked || isRunningNow || isCancellingSchedule,
+                disabled: !canExecuteTask || isBlocked || isRunningNow || isCancellingSchedule,
                 icon: <PlayIcon size="1em" />,
                 key: 'runNow',
                 label: t('taskDetail.runNow'),
@@ -208,7 +222,7 @@ const TaskDetailRunPauseAction = memo(() => {
           >
             <Button
               className="rounded-l-none border-l-0"
-              disabled={!canEditTask || isCancellingSchedule || isRunningNow}
+              disabled={!canExecuteTask || isCancellingSchedule || isRunningNow}
               variant="default"
             >
               <ChevronDownIcon size={14} />
@@ -245,7 +259,7 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (canPause) {
     return (
-      <Button disabled={!canEditTask} title={reason} onClick={handleRunOrPause}>
+      <Button disabled={!canExecuteTask} title={reason} onClick={handleRunOrPause}>
         <StopLoadingIcon data-icon="inline-start" />
         {t('taskDetail.stopTask')}
       </Button>
@@ -257,7 +271,7 @@ const TaskDetailRunPauseAction = memo(() => {
 
   return (
     <Button
-      disabled={!canEditTask || isBlocked}
+      disabled={!canExecuteTask || isBlocked}
       title={!canEditTask ? reason : isBlocked ? t('taskDetail.prerequisites.blocked') : undefined}
       variant="default"
       onClick={handleRunOrPause}

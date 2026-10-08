@@ -2,6 +2,7 @@
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
@@ -15,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   runTask: vi.fn(),
 }));
 
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/database/models/taskDispatch', () => ({
   TaskDispatchModel: Object.assign(
     vi.fn(function () {
@@ -43,6 +47,8 @@ vi.mock('@/server/services/taskDispatch', async (importOriginal) => {
 });
 
 const candidate = (overrides: Record<string, unknown> = {}) => ({
+  agentId: 'agent-1',
+  initiator: 'user-1',
   dispatchId: 'dispatch-1',
   fence: 2,
   generation: 3,
@@ -59,8 +65,38 @@ const candidate = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('processTaskDispatchResume', () => {
+  it('rechecks the durable initiating member instead of executing under the task owner', async () => {
+    const result = await processTaskDispatchResume({
+      candidate: candidate({ initiator: 'selected-member', userId: 'task-owner' }),
+      db: {} as never,
+    });
+    expect(result.outcome).toBe('resumed');
+    expect(TaskRunnerService).toHaveBeenCalledWith({}, 'selected-member', 'workspace-1');
+  });
+
+  it('does not claim or dispatch a durable run after its initiating member loses Use', async () => {
+    vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValueOnce(
+      new TRPCError({ code: 'FORBIDDEN' }),
+    );
+    await expect(
+      processTaskDispatchResume({ candidate: candidate(), db: {} as never }),
+    ).resolves.toMatchObject({ outcome: 'waiting', reason: 'agent_use_denied' });
+    expect(mocks.claimForResume).not.toHaveBeenCalled();
+    expect(mocks.runTask).not.toHaveBeenCalled();
+    expect(mocks.requestStop).not.toHaveBeenCalled();
+  });
+
+  it('does not substitute the owner or parse the audit actor when no durable initiator exists', async () => {
+    await expect(
+      processTaskDispatchResume({ candidate: candidate({ initiator: null }), db: {} as never }),
+    ).resolves.toMatchObject({ outcome: 'waiting', reason: 'execution_initiator_missing' });
+    expect(mocks.claimForResume).not.toHaveBeenCalled();
+    expect(mocks.runTask).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
     mocks.claimForResume.mockResolvedValue({ dispatch: { id: 'dispatch-1' }, fence: 2 });
     mocks.requestStop.mockResolvedValue({ id: 'dispatch-1' });
     mocks.runTask.mockResolvedValue({ dispatchId: 'dispatch-1' });
@@ -216,6 +252,7 @@ describe('processTaskDispatchResume', () => {
 describe('sweepTaskDispatchResume', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
     mocks.claimForResume.mockResolvedValue({ dispatch: { id: 'dispatch-1' }, fence: 2 });
     mocks.runTask.mockResolvedValue({ dispatchId: 'dispatch-1' });
   });

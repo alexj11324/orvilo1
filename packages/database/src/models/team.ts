@@ -14,7 +14,11 @@ import { and, asc, desc, eq, exists, inArray, isNotNull, or, sql } from 'drizzle
 
 import { projectTeams, teamCycles, teamMembers, teams, teamWorkflowStates } from '../schemas/team';
 import type { OrviloDatabase } from '../type';
-import { hasActiveWorkspaceMembership, hasWorkspaceAdminAccess } from './workspace';
+import {
+  getActiveWorkspaceMembershipRole,
+  hasActiveWorkspaceMembership,
+  hasWorkspaceAdminAccess,
+} from './workspace';
 
 const toTeamItem = (row: typeof teams.$inferSelect): TeamItem => row as TeamItem;
 const toTeamMemberItem = (row: typeof teamMembers.$inferSelect): TeamMemberItem =>
@@ -336,7 +340,27 @@ export class TeamModel {
 
   // ── Project participation (M:N, single project row) ────────────────────
 
+  private async assertProjectAssociation(projectId: string, teamId: string) {
+    const role = await getActiveWorkspaceMembershipRole(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (!['owner', 'admin', 'member'].includes(role ?? ''))
+      throw new Error('Writable workspace membership is required');
+    const { ProjectModel } = await import('./project');
+    const project = new ProjectModel(this.db, this.userId, this.workspaceId);
+    const row = await project.findById(projectId);
+    if (
+      row?.workspaceId !== this.workspaceId ||
+      !(await project.getCapabilities(projectId)).canEdit
+    )
+      throw new Error('Project not available');
+    if (!(await this.listReadable()).some((team) => team.id === teamId && team.status === 'active'))
+      throw new Error('Team not available');
+  }
+
   linkProject = async (projectId: string, teamId: string) => {
+    await this.assertProjectAssociation(projectId, teamId);
     await this.db
       .insert(projectTeams)
       .values({
@@ -349,6 +373,7 @@ export class TeamModel {
   };
 
   unlinkProject = async (projectId: string, teamId: string) => {
+    await this.assertProjectAssociation(projectId, teamId);
     await this.db
       .delete(projectTeams)
       .where(

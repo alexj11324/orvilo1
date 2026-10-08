@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
 
 interface MenuItem {
+  disabled?: boolean;
   key?: string;
   label?: ReactNode;
   type?: string;
@@ -26,7 +27,14 @@ const mocks = vi.hoisted(() => ({
     activeTaskId: 'T-1' as string | undefined,
     taskDetailMap: {
       'T-1': { visibility: 'private' as 'private' | 'public' },
-    } as Record<string, { createdByUserId?: string | null; visibility?: 'private' | 'public' }>,
+    } as Record<
+      string,
+      {
+        createdByUserId?: string | null;
+        visibility?: 'private' | 'public';
+        capabilities?: { canDelete: boolean };
+      }
+    >,
   },
   transferItems: [
     { key: 'transfer-task', label: 'Move to…' },
@@ -112,6 +120,12 @@ describe('TaskDetailHeaderActions', () => {
     mocks.activeWorkspaceId = 'ws-1';
     mocks.currentUserId = 'user-1';
     mocks.isWorkspaceOwner = false;
+  });
+
+  it.each([false, true])('uses the server deletion capability %s', (canDelete) => {
+    mocks.taskState.taskDetailMap = { 'T-1': { capabilities: { canDelete } } };
+    render(<TaskDetailHeaderActions />);
+    expect(mocks.dropdownItems.find((item) => item.key === 'delete')?.disabled).toBe(!canDelete);
   });
 
   it('includes task transfer and copy actions in the detail menu', () => {

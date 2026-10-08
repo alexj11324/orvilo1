@@ -5,8 +5,6 @@ import type { StoreApi } from 'zustand';
 
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -34,38 +32,31 @@ const useChatInputAgentId = (): string | undefined => {
  * Per-resource General-access gating for the chat input: resolves which
  * workspace resource this input sends to (the bound agent, or the group when
  * the input reuses the supervisor's agentId as context — see useGroupContext)
- * and reports whether the member may use it. Home/new-conversation inputs (no
- * explicit agentId), the inbox agent, and private resources are never gated;
- * loading defaults permissive — the server remains the enforcement point.
+ * and reports whether the member may use it. Inputs without an explicit Agent have no resource target to check. Configured
+ * Agents, including legacy private rows, require their actual Use member grant.
  */
 export const useChatInputResourceAccess = () => {
   const chatInputAgentId = useChatInputAgentId();
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const agentVisibility = useAgentStore((s) =>
-    chatInputAgentId ? s.agentMap[chatInputAgentId]?.visibility : undefined,
-  );
   const activeGroup = useAgentGroupStore((s) =>
     s.activeGroupId ? agentGroupSelectors.getGroupById(s.activeGroupId)(s) : undefined,
   );
   const isGroupContext =
     !!chatInputAgentId && !!activeGroup && activeGroup.supervisorAgentId === chatInputAgentId;
 
-  const gatedResourceId = isGroupContext
-    ? activeGroup.visibility === 'private'
-      ? undefined
-      : activeGroup.id
-    : chatInputAgentId && chatInputAgentId !== inboxAgentId && agentVisibility !== 'private'
-      ? chatInputAgentId
-      : undefined;
+  const gatedAgentId = chatInputAgentId;
+  const gatedGroupId =
+    isGroupContext && activeGroup.visibility !== 'private' ? activeGroup.id : undefined;
 
   const { allowed: canCreateContent } = usePermission('create_content');
   const { allowed: canEditContent } = usePermission('edit_own_content');
-  const {
-    canEditResource,
-    canUseResource: canUseResourceLevel,
-    isAccessResolved,
-    isLoading: isAccessLoading,
-  } = useResourceAccess(isGroupContext ? 'agentGroup' : 'agent', gatedResourceId);
+  const groupAccess = useResourceAccess('agentGroup', gatedGroupId);
+  const agentAccess = useResourceAccess('agent', gatedAgentId);
+  const isAccessResolved = agentAccess.isAccessResolved && groupAccess.isAccessResolved;
+  const isAccessLoading = agentAccess.isLoading || groupAccess.isLoading;
+  const canUseResourceLevel = agentAccess.canUseResource && groupAccess.canUseResource;
+  const canEditResource = isGroupContext
+    ? groupAccess.canEditResource
+    : agentAccess.canManageResource;
 
   return {
     canConfigureResource: isAccessResolved && canEditContent && canEditResource,
@@ -75,7 +66,7 @@ export const useChatInputResourceAccess = () => {
     canUseResource: canCreateContent && canUseResourceLevel,
     /**
      * Whether the General-access request has actually resolved. `canUseResource`
-     * stays permissive on error/no-data, so positive messaging (e.g. the
+     * stays read-only on error/no-data for Agents, so positive messaging (e.g. the
      * use-only notice) must additionally require this flag.
      */
     isAccessResolved,
@@ -83,10 +74,8 @@ export const useChatInputResourceAccess = () => {
     isGroupContext,
     /**
      * Whether this input targets a workspace-shared resource whose General
-     * access actually gates the member (home/inbox/private inputs are never
-     * gated). Lets callers scope "use-only"/"view-only" messaging to shared
-     * resources instead of surfacing it for every private agent.
+     * access actually gates the member (home/inbox inputs are never gated).
      */
-    isResourceGated: !!gatedResourceId,
+    isResourceGated: !!gatedAgentId || !!gatedGroupId,
   };
 };

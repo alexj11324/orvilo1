@@ -1,12 +1,24 @@
 // @vitest-environment node
 import type { AutomationOccurrenceSnapshot, TaskExecutionContract, TaskItem } from '@orvilo/types';
+import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { getTestDB } from '@/database/core/getTestDB';
+import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import {
+  agents,
+  resourcePermissions,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '@/database/schemas';
 import type { ActionApprovalItem } from '@/database/schemas/actionApproval';
 import type { TaskTopicItem } from '@/database/schemas/task';
+import type * as WorkspaceAgentGuardModule from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import type * as AgentDelegationModule from '@/server/services/agentDelegation';
 import type { ConsumeForDispatchOutcome } from '@/server/services/agentDelegation/actionApprovals';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -23,8 +35,11 @@ vi.mock('@/database/models/goal', () => ({
 }));
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/database/utils/agent-access', () => ({
-  assertAgentUsableBy: vi.fn().mockResolvedValue(undefined),
+  assertAgentVisibleTo: vi.fn().mockResolvedValue(undefined),
 }));
 // `consumeForDispatch` is an instance field (arrow), not a prototype method —
 // intercept the class via the barrel so tests control the scoped single-use
@@ -73,6 +88,7 @@ vi.mock('./buildTaskPrompt', () => ({
 }));
 
 afterEach(() => {
+  vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
   consumeApprovalMock.mockReset();
   vi.restoreAllMocks();
 });
@@ -182,8 +198,14 @@ const newRunner = () => {
   db.transaction = async (callback) => callback(db);
   const service = new TaskRunnerService(db as never, 'user-1', 'ws-1');
   (service as unknown as { agentModel: unknown }).agentModel = {
-    getAgentModelConfig: vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
+    getAgentModelConfigForExecution: vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
     getAgentConfig: vi.fn().mockResolvedValue({
+      agencyConfig: {
+        heterogeneousProvider: { type: 'codex' },
+        executionTargetSelectionPolicy: 'member',
+      },
+    }),
+    getAgentConfigForExecution: vi.fn().mockResolvedValue({
       agencyConfig: {
         heterogeneousProvider: { type: 'codex' },
         executionTargetSelectionPolicy: 'member',
@@ -221,6 +243,64 @@ const useActualPromptBuilder = async () => {
 };
 
 describe('TaskRunnerService run intent (SA05-A)', () => {
+  it('dispatches a noncreator with explicit private Agent Use to the pinned Device', async () => {
+    const db = await getTestDB();
+    const ownerId = 'private-pinned-owner';
+    await db.insert(users).values([{ id: ownerId }, { id: 'user-1' }]);
+    await db
+      .insert(workspaces)
+      .values({ id: 'ws-1', slug: 'private-pinned', name: 'Pinned', primaryOwnerId: ownerId });
+    await db.insert(workspaceMembers).values([
+      { workspaceId: 'ws-1', userId: ownerId, role: 'owner' },
+      { workspaceId: 'ws-1', userId: 'user-1', role: 'member' },
+    ]);
+    await db.insert(agents).values({
+      id: 'agt_assignee',
+      workspaceId: 'ws-1',
+      userId: ownerId,
+      visibility: 'private',
+      model: 'm',
+      provider: 'p',
+      agencyConfig: {
+        heterogeneousProvider: { type: 'codex' },
+        executionTargetSelectionPolicy: 'fixed',
+        executionTarget: 'device',
+        boundDeviceId: 'pinned-device',
+      },
+    });
+    await db.insert(resourcePermissions).values({
+      resourceType: 'agent',
+      resourceId: 'agt_assignee',
+      workspaceId: 'ws-1',
+      userId: 'user-1',
+      createdBy: ownerId,
+      accessLevel: 'use',
+    });
+    try {
+      const task = baseTask({
+        config: { model: 'm', provider: 'p', automationDeviceId: 'pinned-device' },
+      });
+      const { execAgent } = setupHappyPath(task);
+      const runner = newRunner();
+      const model = new AgentModel(db, 'user-1', 'ws-1');
+      expect(await model.getAgentConfig('agt_assignee')).toBeNull();
+      (runner as unknown as { agentModel: AgentModel }).agentModel = model;
+      const { assertCanUseWorkspaceAgent: actualUse } = await vi.importActual<
+        typeof WorkspaceAgentGuardModule
+      >('@/server/routers/lambda/_helpers/workspaceAgentGuard');
+      vi.mocked(assertCanUseWorkspaceAgent).mockImplementation((input) =>
+        actualUse({ ...input, db }),
+      );
+      await expect(runner.runTask(runParams)).resolves.toMatchObject({ success: true });
+      expect(execAgent).toHaveBeenCalledWith(
+        expect.objectContaining({ agentId: 'agt_assignee', deviceId: 'pinned-device' }),
+      );
+    } finally {
+      await db.delete(workspaces).where(eq(workspaces.id, 'ws-1'));
+      await db.delete(users).where(eq(users.id, ownerId));
+      await db.delete(users).where(eq(users.id, 'user-1'));
+    }
+  });
   it.each(['schedule', 'heartbeat'] as const)(
     'refuses a parked %s automation before dispatch or runtime effects',
     async (trigger) => {
@@ -443,7 +523,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     });
     const { execAgent } = setupHappyPath(task);
     const runner = newRunner();
-    (runner as any).agentModel.getAgentConfig.mockResolvedValue({ agencyConfig });
+    (runner as any).agentModel.getAgentConfigForExecution.mockResolvedValue({ agencyConfig });
     vi.spyOn(TaskDispatchService.prototype, 'freezeAutomationContent').mockResolvedValue(
       undefined as never,
     );

@@ -201,7 +201,7 @@ describe('assertRoomAccess (integration)', () => {
     ).resolves.toEqual({ projectId: undefined });
   });
 
-  it('retains private-team, personal and cross-workspace isolation for task rooms', async () => {
+  it('shares private-Team Issue rooms while preserving personal and cross-workspace isolation', async () => {
     const [team] = await db
       .insert(teams)
       .values({ name: 'Private', key: 'PRV', workspaceId, visibility: 'private' })
@@ -210,7 +210,7 @@ describe('assertRoomAccess (integration)', () => {
     await db.update(tasks).set({ teamId: team.id }).where(eq(tasks.id, task.id));
     await expect(
       assertRoomAccess(db, { userId: memberId, workspaceId }, { id: task.id, scope: 'task' }),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    ).resolves.toEqual({ projectId: undefined });
     await db.insert(teamMembers).values({ teamId: team.id, userId: memberId, workspaceId });
     await expect(
       assertRoomAccess(db, { userId: memberId, workspaceId }, { id: task.id, scope: 'task' }),

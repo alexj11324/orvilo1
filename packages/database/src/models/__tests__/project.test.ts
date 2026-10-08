@@ -40,6 +40,23 @@ const createProject = (projectModel: ProjectModel, input: Omit<CreateProjectInpu
     identifier: `P${String(++projectIdentifierSequence).padStart(5, '0')}`,
   });
 
+const seedLegacyPrivateProject = async (
+  projectModel: ProjectModel,
+  input: Omit<CreateProjectInput, 'identifier' | 'visibility'>,
+) => {
+  const created = await createProject(projectModel, input);
+  const [project] = await serverDB
+    .update(projects)
+    .set({ visibility: 'private' })
+    .where(eq(projects.id, created.id))
+    .returning();
+  await serverDB
+    .update(agents)
+    .set({ visibility: 'private' })
+    .where(eq(agents.id, project.coordinatorAgentId!));
+  return project;
+};
+
 describe('ProjectModel', () => {
   const model = new ProjectModel(serverDB, userId);
   const otherModel = new ProjectModel(serverDB, otherUserId);
@@ -249,7 +266,7 @@ describe('ProjectModel', () => {
     expect(await model.listUpdates(project.id)).toHaveLength(1);
   });
 
-  it('lets the author, project lead and workspace admin moderate updates', async () => {
+  it('restricts edits to authors and grants deletion to workspace governance', async () => {
     const workspaceId = 'project-update-mod-workspace';
     const leadId = 'project-update-lead';
     const memberId = 'project-update-member';
@@ -294,14 +311,12 @@ describe('ProjectModel', () => {
     expect(await member.updateUpdate(project.id, ownerUpdate!.id, { body: 'Nope' })).toBeNull();
     expect(await member.deleteUpdate(project.id, ownerUpdate!.id)).toBeNull();
 
-    // The project lead may edit another member's update — denorm follows.
+    // Lead assignment does not grant management or another author's edit rights.
     expect(
-      await lead.updateUpdate(project.id, ownerUpdate!.id, {
-        body: 'Owner status',
-        health: 'offTrack',
-      }),
-    ).toMatchObject({ health: 'offTrack' });
-    expect(await owner.findById(project.id)).toMatchObject({ health: 'offTrack' });
+      await lead.updateUpdate(project.id, ownerUpdate!.id, { body: 'Nope', health: 'offTrack' }),
+    ).toBeNull();
+    expect(await lead.deleteUpdate(project.id, ownerUpdate!.id)).toBeNull();
+    expect(await owner.findById(project.id)).toMatchObject({ health: 'atRisk' });
 
     // A workspace admin may delete another member's comment; the owner may
     // delete the remaining update, which clears the denormalized health.
@@ -596,6 +611,10 @@ describe('ProjectModel', () => {
       primaryOwnerId: userId,
       slug: 'identifier-workspace',
     });
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId: 'identifier-workspace' },
+      { role: 'member', userId: otherUserId, workspaceId: 'identifier-workspace' },
+    ]);
     await seedRuntimeFixtures();
     const owner = new ProjectModel(serverDB, userId, 'identifier-workspace');
     const member = new ProjectModel(serverDB, otherUserId, 'identifier-workspace');
@@ -723,7 +742,7 @@ describe('ProjectModel', () => {
     expect(await model.list({ limit: 1, offset: 1 })).toHaveLength(1);
   });
 
-  it('shares legacy private workspace task metadata while retaining team and personal isolation', async () => {
+  it('shares legacy private workspace task metadata while retaining personal isolation', async () => {
     const workspaceId = 'legacy-project-task-ws';
     await serverDB
       .insert(workspaces)
@@ -770,12 +789,17 @@ describe('ProjectModel', () => {
         visibility: 'private',
       },
     ]);
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
     const member = new ProjectModel(serverDB, otherUserId, workspaceId);
     expect((await member.listTasks('legacy-project'))?.map((row) => row.id)).toEqual([
       'legacy-shared-task',
+      'legacy-team-task',
     ]);
     expect((await member.listTasks('legacy-project'))?.[0].visibility).toBe('public');
-    expect(await member.list()).toEqual([expect.objectContaining({ taskCount: 1 })]);
+    expect(await member.list()).toEqual([expect.objectContaining({ taskCount: 2 })]);
     expect(await new ProjectModel(serverDB, otherUserId).listTasks('legacy-project')).toBeNull();
   });
 
@@ -809,7 +833,7 @@ describe('ProjectModel', () => {
       instruction: 'Visible',
       projectId: project.id,
     });
-    // A private-team task is invisible to a member who is not on the team.
+    // Issue visibility is workspace-wide even when its Team remains private.
     await ownerTasks.create({
       instruction: 'Team-scoped',
       projectId: project.id,
@@ -820,20 +844,20 @@ describe('ProjectModel', () => {
       projectId: project.id,
     });
     await serverDB.update(tasks).set({ isDeleted: true }).where(eq(tasks.id, deleted.id));
-    // Legacy private flags do not hide workspace task metadata.
+    // A legacy private Issue flag does not restrict active workspace member reads.
     await new TaskModel(serverDB, otherUserId, workspaceId).create({
       instruction: 'Member private',
       projectId: project.id,
       visibility: 'private',
     });
 
-    // The member sees shared tasks, excluding private-team and deleted rows.
+    // Both active members see every live Issue, excluding the soft-deleted row.
     const memberRows = await member.list();
-    expect(memberRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 2 })]);
-    // The owner sees shared and team tasks, excluding the deleted row.
+    expect(memberRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 3 })]);
+    // Creator and Team responsibility do not change the visible Issue count.
     const ownerRows = await owner.list();
     expect(ownerRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 3 })]);
-    // Once the member joins the private team its task becomes readable.
+    // Team enrollment does not change workspace Issue readability.
     await serverDB.insert(teamMembers).values({
       role: 'member',
       teamId: 'project-count-private-team',
@@ -879,17 +903,23 @@ describe('ProjectModel', () => {
       primaryOwnerId: userId,
       slug: 'project-workspace',
     });
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId: 'project-workspace' },
+      { role: 'member', userId: otherUserId, workspaceId: 'project-workspace' },
+    ]);
     await seedRuntimeFixtures();
     const owner = new ProjectModel(serverDB, userId, 'project-workspace');
     const member = new ProjectModel(serverDB, otherUserId, 'project-workspace');
     const publicProject = await createProject(owner, { name: 'Public' });
-    const privateProject = await createProject(owner, { name: 'Private', visibility: 'private' });
+    const privateProject = await seedLegacyPrivateProject(owner, { name: 'Private' });
 
     expect(await member.findById(publicProject.id)).toEqual(
       expect.objectContaining({ id: publicProject.id }),
     );
     expect(await member.findById(privateProject.id)).toBeNull();
-    expect(await member.update(publicProject.id, { name: 'Nope' })).toBeNull();
+    expect(await member.update(publicProject.id, { name: 'Ordinary collaboration' })).toMatchObject(
+      { name: 'Ordinary collaboration' },
+    );
   });
 
   it('lets an active project_members grant read a private workspace project', async () => {
@@ -913,10 +943,7 @@ describe('ProjectModel', () => {
     const owner = new ProjectModel(serverDB, userId, workspaceId);
     const member = new ProjectModel(serverDB, otherUserId, workspaceId);
     const outsider = new ProjectModel(serverDB, granteeId, workspaceId);
-    const privateProject = await createProject(owner, {
-      name: 'Private',
-      visibility: 'private',
-    });
+    const privateProject = await seedLegacyPrivateProject(owner, { name: 'Private' });
 
     // No grant → the private project stays invisible.
     expect(await member.findById(privateProject.id)).toBeNull();
@@ -1102,7 +1129,7 @@ describe('ProjectModel', () => {
     ).rejects.toThrow('Human review is required');
   });
 
-  it('lets a workspace admin manage policy without broadening other project writes', async () => {
+  it('lets a workspace admin manage policy and ordinary collaboration with persisted authority', async () => {
     const workspaceId = 'project-policy-admin-workspace';
     await serverDB.insert(workspaces).values({
       id: workspaceId,
@@ -1111,6 +1138,10 @@ describe('ProjectModel', () => {
       slug: workspaceId,
     });
     await seedRuntimeFixtures();
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'admin', userId: otherUserId, workspaceId },
+    ]);
     const ownerModel = new ProjectModel(serverDB, userId, workspaceId);
     const adminModel = new ProjectModel(serverDB, otherUserId, workspaceId, {
       canManageAll: true,
@@ -1127,7 +1158,9 @@ describe('ProjectModel', () => {
         orchestrationPolicy: project.orchestrationPolicy,
       }),
     ).resolves.toEqual(expect.objectContaining({ orchestrationPolicyRevision: 2 }));
-    expect(await adminModel.update(project.id, { name: 'No broad update' })).toBeNull();
+    expect(await adminModel.update(project.id, { name: 'Ordinary edit' })).toMatchObject({
+      name: 'Ordinary edit',
+    });
   });
 
   it('returns null or false for binding operations on inaccessible projects and resources', async () => {
@@ -1242,28 +1275,35 @@ describe('ProjectModel', () => {
     expect(await model.moveTaskTree('missing', child.id)).toBeNull();
   });
 
-  it('rejects moving a workspace task tree with descendants created by another member', async () => {
+  it('lets a writable nonparticipant move the complete workspace task tree across creators', async () => {
     await serverDB.insert(workspaces).values({
       id: 'mixed-tree-workspace',
       name: 'Mixed Tree',
       primaryOwnerId: userId,
       slug: 'mixed-tree-workspace',
     });
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId: 'mixed-tree-workspace' },
+      { role: 'member', userId: otherUserId, workspaceId: 'mixed-tree-workspace' },
+    ]);
     await seedRuntimeFixtures();
     const workspaceModel = new ProjectModel(serverDB, userId, 'mixed-tree-workspace');
     const ownerTasks = new TaskModel(serverDB, userId, 'mixed-tree-workspace');
     const memberTasks = new TaskModel(serverDB, otherUserId, 'mixed-tree-workspace');
     const project = await createProject(workspaceModel, { name: 'Target' });
     const parent = await ownerTasks.create({ instruction: 'Parent' });
-    await memberTasks.create({
+    const child = await memberTasks.create({
       instruction: 'Member child',
       parentTaskId: parent.id,
       visibility: 'private',
     });
 
-    await expect(workspaceModel.moveTaskTree(project.id, parent.id)).rejects.toThrow(
-      'Cannot move a task tree containing tasks created by another user',
+    const collaborator = new ProjectModel(serverDB, otherUserId, 'mixed-tree-workspace');
+    expect(await collaborator.moveTaskTree(project.id, parent.id)).toEqual(
+      expect.arrayContaining([{ id: parent.id }, { id: child.id }]),
     );
+    expect(await ownerTasks.findById(parent.id)).toMatchObject({ projectId: project.id });
+    expect(await memberTasks.findById(child.id)).toMatchObject({ projectId: project.id });
   });
 
   it('enforces project boundaries in the shared dependency model path', async () => {

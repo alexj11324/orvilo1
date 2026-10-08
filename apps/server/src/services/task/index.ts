@@ -46,6 +46,7 @@ import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 
+import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '../file/resolveAttachments';
@@ -222,7 +223,9 @@ export class TaskService {
     }
 
     if (createData.projectId) {
-      const project = await this.projectModel.findManageableById(createData.projectId);
+      const project = (await this.projectModel.getCapabilities(createData.projectId)).canEdit
+        ? await this.projectModel.findById(createData.projectId)
+        : null;
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
       createData.identifierPrefix ??= project.identifier;
     }
@@ -281,9 +284,14 @@ export class TaskService {
    * Cancel a running topic: interrupt the remote operation (if any), then
    * mark the topic as `canceled` and pause its parent task.
    */
-  async cancelTopic(topicId: string): Promise<void> {
-    const target = await this.taskTopicModel.findByTopicId(topicId);
+  async cancelTopic(topicId: string, authorizedIssueId?: string): Promise<void> {
+    const target = authorizedIssueId
+      ? await this.taskTopicModel.findIssueTopicById(topicId)
+      : await this.taskTopicModel.findByTopicId(topicId);
     if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
+
+    if (authorizedIssueId && target.taskId !== authorizedIssueId)
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
 
     if (target.status !== 'running') {
       throw new TRPCError({
@@ -316,7 +324,13 @@ export class TaskService {
       await this.interruptTaskOperation(aiAgentService, target.operationId);
     }
 
-    await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
+    if (authorizedIssueId) {
+      if (!(await this.taskTopicModel.cancelIssueTopicIfRunning(target.taskId, topicId)))
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Issue topic changed before cancellation.',
+        });
+    } else await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     await this.taskModel.updateStatus(target.taskId, 'paused');
 
     if (stoppingDispatch) {
@@ -1341,11 +1355,22 @@ export class TaskService {
       return { state: 'assigned', task: updated };
     }
 
-    const successorAgentInfo = input.toAgentId
-      ? await this.agentModel.getAgentSnapshotForTaskCreate(input.toAgentId)
-      : null;
+    let successorAgentInfo: { snapshot: { model: string; provider: string } | null } | null = null;
     if (input.toAgentId !== null) {
-      await this.assertAssigneeAgentBelongsToUser(input.toAgentId);
+      if (this.workspaceId) {
+        await assertCanUseWorkspaceAgent({
+          agentId: input.toAgentId,
+          db: this.db,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
+        successorAgentInfo = {
+          snapshot: await this.agentModel.getAgentModelConfigForExecution(input.toAgentId),
+        };
+      } else {
+        await this.assertAssigneeAgentBelongsToUser(input.toAgentId);
+        successorAgentInfo = await this.agentModel.getAgentSnapshotForTaskCreate(input.toAgentId);
+      }
     }
 
     const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
@@ -1629,9 +1654,10 @@ export class TaskService {
         allDescendants.map((s) => s.assigneeAgentId).filter((id): id is string => Boolean(id)),
       ),
     ];
+    const issueTaskIds = [task.id, ...allDescendantIds];
     const subtaskAgents =
       subtaskAssigneeIds.length > 0
-        ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds)
+        ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds, issueTaskIds)
         : [];
     const subtaskAgentMap = new Map(subtaskAgents.map((a) => [a.id, a]));
 
@@ -1796,7 +1822,7 @@ export class TaskService {
       for (const id of [log.payload?.fromId, log.payload?.toId]) if (id) target.add(id);
     }
 
-    const authorMap = await this.resolveAuthors(agentIds, userIds);
+    const authorMap = await this.resolveAuthors(agentIds, userIds, issueTaskIds);
 
     // Every run row answers "and did it pass?" on its own (with counts). Without this the
     // activity feed lists rounds that all look alike, and the only way to learn
@@ -1870,6 +1896,7 @@ export class TaskService {
             : c.authorUserId
               ? authorMap.get(c.authorUserId)
               : undefined,
+          commentCapabilities: c.capabilities,
           content: c.content,
           editorData: c.editorData ?? undefined,
           files: files.length > 0 ? files : undefined,
@@ -1954,6 +1981,7 @@ export class TaskService {
     const scheduleConfig = (taskConfig?.schedule ?? {}) as { maxExecutions?: number | null };
 
     return {
+      capabilities: await this.taskModel.getCapabilities(task),
       agentId: task.assigneeAgentId,
       automationMode: task.automationMode ?? null,
       checkpoint: this.taskModel.getCheckpointConfig(task),
@@ -2033,11 +2061,12 @@ export class TaskService {
   private async resolveAuthors(
     agentIds: Set<string>,
     userIds: Set<string>,
+    issueTaskIds: string[],
   ): Promise<Map<string, TaskDetailActivityAuthor>> {
     const map = new Map<string, TaskDetailActivityAuthor>();
 
     const [agentRows, userRows] = await Promise.all([
-      this.agentModel.getAgentAvatarsByIds([...agentIds]),
+      this.agentModel.getAgentAvatarsByIds([...agentIds], issueTaskIds),
       UserModel.findByIds(this.db, [...userIds]),
     ]);
 
@@ -2045,7 +2074,13 @@ export class TaskService {
     // query already returns rather than letting a live participant render as
     // nameless — the UI reserves its nameless labels for absent identities.
     for (const a of agentRows) {
-      map.set(a.id, { avatar: a.avatar, id: a.id, name: a.title || a.name, type: 'agent' });
+      map.set(a.id, {
+        avatar: a.avatar,
+        id: a.id,
+        name: a.title || a.name,
+        type: 'agent',
+        heterogeneousType: a.heterogeneousType,
+      });
     }
     for (const u of userRows) {
       map.set(u.id, { avatar: u.avatar, id: u.id, name: u.fullName || u.username, type: 'user' });

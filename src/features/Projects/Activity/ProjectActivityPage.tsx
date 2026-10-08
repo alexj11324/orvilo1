@@ -445,7 +445,7 @@ const FeedItem = ({
   onEditUpdate,
   onUpdateChanged,
 }: {
-  canModerate: (update: ProjectUpdate) => boolean;
+  canModerate: (update: ProjectUpdate) => { canEdit: boolean; canDelete: boolean };
   editing: boolean;
   item: ActivityFeedItem;
   onEditUpdate: (updateId: string | null) => void;
@@ -470,7 +470,7 @@ const FeedItem = ({
     return (
       <div className={styles.card}>
         <ProjectUpdateRow
-          canEdit={canModerate(item.update)}
+          {...canModerate(item.update)}
           update={item.update}
           onChanged={onUpdateChanged}
           onEdit={(update) => onEditUpdate(update.id)}

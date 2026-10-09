@@ -103,6 +103,7 @@ export const WebPreviewNavigationButton = ({
             className="h-8 w-8 p-0 hover:text-foreground"
             disabled={disabled}
             size="sm"
+            variant="ghost"
             onClick={onClick}
             {...props}
           >

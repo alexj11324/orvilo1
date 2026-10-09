@@ -190,16 +190,8 @@ const OrviloSkillItem = memo<OrviloSkillItemProps>(({ provider, server, isSelect
           <TooltipTrigger
             render={
               <span className="inline-flex min-w-0">
-                <div
-                  className={'flex min-w-0'}
-                  style={{
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 20,
-                  }}
-                >
-                  {createElement(CircleCheck, { size: 16, style: { color: cssVar.colorSuccess } })}
+                <div className="flex w-5 min-w-0 flex-col items-center justify-center">
+                  {createElement(CircleCheck, { size: 16, className: 'text-success' })}
                 </div>
               </span>
             }

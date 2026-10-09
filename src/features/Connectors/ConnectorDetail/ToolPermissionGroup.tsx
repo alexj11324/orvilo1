@@ -1,5 +1,4 @@
 import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +7,6 @@ import { DropdownMenu } from '@/components/ItemsMenu';
 import { Button } from '@/components/ui/button';
 import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import ToolPermissionRow from './ToolPermissionRow';
 
@@ -28,7 +26,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     background: ${cssVar.colorFillSecondary};
   `,
   groupHeader: css`
-    cursor: pointer;
     user-select: none;
 
     display: flex;
@@ -37,20 +34,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     padding-block: 10px;
     padding-inline: 0;
-
-    &:hover span {
-      color: ${cssVar.colorText};
-    }
-  `,
-  groupLabel: css`
-    display: flex;
-    flex: 1;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
   `,
 }));
 
@@ -92,24 +75,22 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
 
     return (
       <div>
-        <div
-          {...clickableProps()}
-          className={cn(styles.groupHeader, CLICKABLE_FOCUS_RING)}
-          onClick={() => setExpanded((e) => !e)}
-        >
-          <div className={styles.groupLabel}>
+        <div className={styles.groupHeader}>
+          <Button
+            aria-expanded={expanded}
+            className="h-auto flex-1 justify-start gap-1.5 rounded-sm p-0 text-start text-sm font-medium hover:bg-transparent"
+            type="button"
+            variant="ghost"
+            onClick={() => setExpanded((e) => !e)}
+          >
             {expanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
             {label}
             <span className={styles.badge}>{tools.length}</span>
-          </div>
+          </Button>
 
           {!disabled && (
             <DropdownMenu items={batchItems}>
-              <Button
-                size="sm"
-                style={{ fontSize: 12, height: 26 }}
-                onClick={(e) => e.stopPropagation()}
-              >
+              <Button size="xs">
                 <MoreHorizontalIcon size={12} />
                 {t('connector.permission.custom', 'Custom')}
                 <ChevronDownIcon size={12} />

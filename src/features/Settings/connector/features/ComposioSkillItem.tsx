@@ -201,18 +201,10 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
             <TooltipTrigger
               render={
                 <span className="inline-flex min-w-0">
-                  <div
-                    className={'flex min-w-0'}
-                    style={{
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 20,
-                    }}
-                  >
+                  <div className="flex w-5 min-w-0 flex-col items-center justify-center">
                     {createElement(CircleCheck, {
                       size: 16,
-                      style: { color: cssVar.colorSuccess },
+                      className: 'text-success',
                     })}
                   </div>
                 </span>

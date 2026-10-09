@@ -1,5 +1,6 @@
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { ConnectorCredentials, OIDCConfig } from '@/database/schemas';
 import { ConnectorSourceType } from '@/database/schemas';
@@ -64,6 +65,7 @@ const cleanRecord = (record?: Record<string, string>): Record<string, string> | 
  */
 const CustomConnectorModal = memo<CustomConnectorModalProps>(
   ({ open, onClose, connectorId, legacyPlugin, presetPlugin, onEditSuccess }) => {
+    const { t } = useTranslation('tool');
     const createConnector = useToolStore((s) => s.createConnector);
     const deleteConnector = useToolStore((s) => s.deleteConnector);
     const updateConnector = useToolStore((s) => s.updateConnector);
@@ -206,10 +208,10 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
         if (!result.ok) {
           throw new Error(
             result.reason === 'no-mcp'
-              ? 'This custom plugin has no MCP configuration to migrate.'
+              ? t('connector.migrate.noMcp')
               : result.reason === 'no-endpoint'
-                ? 'This custom plugin is missing a URL (for HTTP) or command (for stdio).'
-                : 'This custom plugin uses an unsupported transport.',
+                ? t('connector.migrate.noEndpoint')
+                : t('connector.migrate.unsupportedTransport'),
           );
         }
         onEditSuccess?.();
@@ -280,7 +282,7 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
 
         if (authType === 'oauth2' && isHttp) {
           const popup = ctx?.oauthPopup ?? null;
-          if (!popup) throw new Error('OAuth popup was blocked');
+          if (!popup) throw new Error(t('connector.oauth.popupBlocked'));
           try {
             const attempt = newOAuthAttempt();
             const authorizationUrl = await startConnectorOAuth(connectorId, attempt);
@@ -299,8 +301,8 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
             if (result.status !== 'success') {
               throw new Error(
                 result.status === 'timed-out'
-                  ? 'Authorization timed out. Check the connector status or retry.'
-                  : result.error || 'Authorization was not completed',
+                  ? t('connector.add.timedOut')
+                  : result.error || t('connector.oauth.notCompleted'),
               );
             }
           } catch (e) {
@@ -333,7 +335,7 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
       // DevModal already opened synchronously for us.
       if (isHttp && authType === 'oauth2') {
         const popup = ctx?.oauthPopup ?? null;
-        if (!popup) throw new Error('OAuth popup was blocked');
+        if (!popup) throw new Error(t('connector.oauth.popupBlocked'));
 
         const clientId = mcp.auth?.clientId?.trim();
         try {
@@ -364,8 +366,8 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
           if (result.status !== 'success') {
             throw new Error(
               result.status === 'timed-out'
-                ? 'Authorization timed out. Check the connector status or retry.'
-                : result.error || 'Authorization was not completed',
+                ? t('connector.add.timedOut')
+                : result.error || t('connector.oauth.notCompleted'),
             );
           }
         } catch (e) {

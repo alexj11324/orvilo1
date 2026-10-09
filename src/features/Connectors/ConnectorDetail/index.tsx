@@ -1,4 +1,5 @@
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
+import { createStaticStyles } from 'antd-style';
 import { PencilIcon, RefreshCwIcon, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
@@ -17,6 +18,55 @@ import { connectorSelectors } from '@/store/tool/slices/connector';
 import CustomConnectorModal from '../CustomConnectorModal';
 import { getLocalizedConnectorDetail } from './localization';
 import ToolPermissionGroup from './ToolPermissionGroup';
+
+const styles = createStaticStyles(({ css, cssVar }) => ({
+  actions: css`
+    display: flex;
+    gap: 8px;
+  `,
+  body: css`
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+
+    min-height: 0;
+    padding: 16px;
+  `,
+  description: css`
+    margin-block-end: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: ${cssVar.colorTextSecondary};
+  `,
+  empty: css`
+    font-size: 14px;
+    color: ${cssVar.colorTextTertiary};
+  `,
+  header: css`
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+
+    height: 42px;
+    padding-inline: 16px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  root: css`
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  `,
+  title: css`
+    font-size: 14px;
+    font-weight: 500;
+  `,
+  toolList: css`
+    overflow-y: auto;
+    flex: 1;
+  `,
+}));
 
 interface ConnectorDetailProps {
   /**
@@ -45,7 +95,7 @@ const ManageTooltip = ({ children, title }: { children: ReactNode; title?: strin
   title ? (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{children}</span>} />
+        <TooltipTrigger render={<span className="inline-flex">{children}</span>} />
         <TooltipContent>{title}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -221,22 +271,11 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
     };
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className={styles.root}>
         {/* Header — full-bleed bar with bottom border, aligned with the left pane's header */}
-        <div
-          style={{
-            alignItems: 'center',
-            borderBlockEnd: '1px solid var(--ant-color-border-secondary)',
-            display: 'flex',
-            flexShrink: 0,
-            gap: 8,
-            height: 42,
-            justifyContent: 'space-between',
-            paddingInline: 16,
-          }}
-        >
-          <div style={{ fontSize: 14, fontWeight: 500 }}>{connectorName}</div>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div className={styles.header}>
+          <div className={styles.title}>{connectorName}</div>
+          <div className={styles.actions}>
             {/* Reset permissions: restore all tools to auto (fully open) */}
             <ManageTooltip title={manageTooltip}>
               <Button
@@ -339,33 +378,14 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
         </div>
 
         {/* Body */}
-        <div
-          style={{
-            display: 'flex',
-            flex: 1,
-            flexDirection: 'column',
-            minHeight: 0,
-            padding: 16,
-          }}
-        >
+        <div className={styles.body}>
           {/* Description */}
-          {connectorDescription && (
-            <div
-              style={{
-                color: 'var(--ant-color-text-secondary)',
-                fontSize: 13,
-                lineHeight: 1.6,
-                marginBottom: 16,
-              }}
-            >
-              {connectorDescription}
-            </div>
-          )}
+          {connectorDescription && <div className={styles.description}>{connectorDescription}</div>}
 
           {middleSlot}
 
           {hasTools ? (
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div className={styles.toolList}>
               <ToolPermissionGroup
                 disabled={!canManage}
                 label={t('connector.readOnlyTools', 'Read-only tools')}
@@ -396,7 +416,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
               />
             </div>
           ) : (
-            <div style={{ color: 'var(--lobe-colors-neutral-500)', fontSize: 14 }}>
+            <div className={styles.empty}>
               {t('connector.noTools', 'No tool permissions to configure.')}
             </div>
           )}

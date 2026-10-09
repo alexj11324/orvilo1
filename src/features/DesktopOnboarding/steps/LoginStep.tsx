@@ -320,7 +320,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         : t('screen5.status.description');
 
     return (
-      <EntryPanel className="orvilo-entry-surface text-foreground">
+      <EntryPanel className="orvilo-entry-surface text-foreground max-w-sm gap-6">
         <EntryHeading description={description} title={title} />
         <UserInfo />
         <div className="flex items-center justify-between gap-4">
@@ -358,9 +358,6 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     <EntryPanel className="orvilo-entry-surface text-foreground">
       <EntryHeading
         title={showEndpoint ? t('screen5.entry.serverTitle') : t('screen5.entry.title')}
-        description={
-          showEndpoint ? t('screen5.methods.selfhost.description') : t('screen5.entry.description')
-        }
       />
 
       {failed && (
@@ -372,7 +369,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
 
       {showEndpoint ? (
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             if (!isComposingRef.current && endpoint.trim() && !busy && !isConnectingServer) {
@@ -382,7 +379,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         >
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="orvilo-server-url">
+              <FieldLabel className="sr-only" htmlFor="orvilo-server-url">
                 {t('screen5.selfhost.endpointLabel')}
               </FieldLabel>
               <Input
@@ -465,28 +462,25 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
                 : t('screen5.actions.signInCloud')}
             {!busy && <ExternalLink data-icon="inline-end" />}
           </Button>
+          <Button
+            className="w-full"
+            disabled={busy || isConnectingServer}
+            size="lg"
+            variant="outline"
+            onClick={() => {
+              setShowEndpoint(true);
+              setCloudLoginStatus('idle');
+              setRemoteError(null);
+              clearRemoteServerSyncError();
+            }}
+          >
+            {t('screen5.entry.selfhostAction')}
+          </Button>
           {!busy && (
-            <p className="text-muted-foreground text-center text-xs leading-5">
+            <p className="text-muted-foreground mt-2 text-center text-[13px] leading-5">
               {t('screen5.entry.browserHint')}
             </p>
           )}
-          {/* Cloud is the default path; a server of one's own stays one quiet step away. */}
-          <p className="text-muted-foreground text-center text-xs leading-5">
-            {t('screen5.entry.selfhostPrompt')}{' '}
-            <Button
-              className="h-auto p-0 text-xs"
-              disabled={busy || isConnectingServer}
-              variant="link"
-              onClick={() => {
-                setShowEndpoint(true);
-                setCloudLoginStatus('idle');
-                setRemoteError(null);
-                clearRemoteServerSyncError();
-              }}
-            >
-              {t('screen5.entry.selfhostAction')}
-            </Button>
-          </p>
         </>
       )}
 

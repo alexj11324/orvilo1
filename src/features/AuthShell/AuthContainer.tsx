@@ -23,7 +23,7 @@ const AuthContainer: FC<PropsWithChildren> = ({ children }) => {
       }
       brand={
         <a aria-label={BRANDING_NAME} className={styles.logoLink} href={'/'}>
-          <ProductLogo size={28} type={'combine'} />
+          <ProductLogo size={40} type={'flat'} />
         </a>
       }
     >

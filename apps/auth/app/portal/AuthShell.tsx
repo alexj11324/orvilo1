@@ -13,18 +13,15 @@ export const AuthShell = ({ children }: PropsWithChildren) => {
       data-testid="accounts-auth-shell"
       footer={messages.terms}
       brand={
-        <span className="flex items-center gap-2 text-lg font-medium tracking-tight">
-          {/* The mark ships white-filled; flip it for the light canvas. */}
-          <img
-            alt=""
-            className="invert dark:invert-0"
-            data-testid="orvilo-mark"
-            height="28"
-            src="/icons/icon.svg"
-            width="28"
-          />
-          {messages.brand}
-        </span>
+        // The mark ships white-filled; flip it for the light canvas.
+        <img
+          alt={messages.brand}
+          className="invert dark:invert-0"
+          data-testid="orvilo-mark"
+          height="40"
+          src="/icons/icon.svg"
+          width="40"
+        />
       }
     >
       {children}
@@ -35,7 +32,7 @@ export const AuthShell = ({ children }: PropsWithChildren) => {
 /** Progress and failure copy for the portal's redirect hops, where no form is shown. */
 export const AuthNotice = ({ children, error }: PropsWithChildren<{ error?: boolean }>) =>
   error ? (
-    <Alert className="w-full max-w-sm" variant="destructive">
+    <Alert className="w-full max-w-xs" variant="destructive">
       <AlertDescription>{children}</AlertDescription>
     </Alert>
   ) : (

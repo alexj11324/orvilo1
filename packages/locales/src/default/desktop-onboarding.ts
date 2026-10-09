@@ -94,7 +94,6 @@ export default {
   'screen5.entry.or': 'or',
   'screen5.selfhost.endpointLabel': 'Server address',
   'screen5.entry.selfhostAction': 'Connect your server',
-  'screen5.entry.selfhostPrompt': 'Using your own server?',
   'screen5.errors.desktopOnlyOidc':
     'OIDC authorization is only available in the desktop app runtime.',
   'screen5.errors.timedOut': 'Authorization timed out, please try again',
@@ -105,7 +104,7 @@ export default {
   'screen5.methods.selfhost.description': 'Connect to your own Orvilo server instance',
   'screen5.methods.selfhost.name': 'Self-hosted Instance',
   'screen5.navigation.next': 'Get Started',
-  'screen5.selfhost.endpointPlaceholder': 'Enter your server URL (e.g., https://your-server.com)',
+  'screen5.selfhost.endpointPlaceholder': 'https://your-server.com',
   'screen5.status.cloud.title': 'Connected to Orvilo Cloud',
   'screen5.status.description':
     'Agents, Groups, settings, and Context are syncing across all your devices.',

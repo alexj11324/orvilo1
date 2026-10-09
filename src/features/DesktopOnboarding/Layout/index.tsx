@@ -1,6 +1,6 @@
 'use client';
 
-import { BRANDING_NAME, COPYRIGHT_FULL } from '@orvilo/business-const';
+import { BRANDING_NAME } from '@orvilo/business-const';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { type CSSProperties, type PropsWithChildren } from 'react';
 
@@ -35,7 +35,6 @@ const OnboardingContainer = ({ children, showHeader = true }: OnboardingContaine
         {showHeader ? (
           <EntryShell
             className="min-h-full shrink-0"
-            footer={COPYRIGHT_FULL}
             actions={
               <>
                 <LangButton compact placement="bottomRight" />
@@ -44,7 +43,7 @@ const OnboardingContainer = ({ children, showHeader = true }: OnboardingContaine
             }
             brand={
               <div aria-label={BRANDING_NAME}>
-                <ProductLogo size={28} type="combine" />
+                <ProductLogo size={40} type="flat" />
               </div>
             }
           >

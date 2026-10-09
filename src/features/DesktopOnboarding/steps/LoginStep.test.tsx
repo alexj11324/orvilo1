@@ -40,7 +40,6 @@ vi.mock('react-i18next', () => ({
         'screen5.actions.done': 'Done',
         'screen5.actions.signingIn': 'Signing in...',
         'screen5.entry.selfhostAction': 'Use self-hosted server',
-        'screen5.entry.selfhostPrompt': 'Using your own server?',
         'screen5.entry.title': 'Back to building.',
         'screen5.entry.serverTitle': 'Connect your Orvilo server',
         'screen5.selfhost.endpointLabel': 'Server address',
@@ -202,16 +201,16 @@ describe('Desktop onboarding LoginStep', () => {
     expect(screen.queryByRole('button', { name: 'Sign in Cloud' })).not.toBeInTheDocument();
   });
 
-  it('offers self-hosting as a secondary link under the cloud sign-in, not a second full-width action', async () => {
+  it('lists the cloud sign-in first and self-hosting as the outline method under it', async () => {
     mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
     await renderLoginStep();
 
-    const selfhost = screen.getByRole('button', { name: 'Use self-hosted server' });
-    expect(selfhost.closest('p')).toHaveTextContent(
-      'Using your own server? Use self-hosted server',
-    );
-    expect(selfhost).not.toHaveClass('w-full');
-    expect(screen.getByRole('button', { name: 'Sign in Cloud' })).toHaveClass('w-full');
+    const [cloud, selfhost] = screen.getAllByRole('button');
+    expect(cloud).toHaveAccessibleName('Sign in Cloud');
+    expect(selfhost).toHaveAccessibleName('Use self-hosted server');
+    // Only the primary method is filled; the outline variant carries a visible border.
+    expect(cloud).not.toHaveClass('border-border');
+    expect(selfhost).toHaveClass('border-border');
   });
 
   it('opens self-host connection as a labeled form and submits its address', async () => {

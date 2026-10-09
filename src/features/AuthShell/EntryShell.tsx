@@ -4,18 +4,23 @@ import { cn } from 'cn';
 import type { ComponentProps, ReactNode } from 'react';
 
 interface EntryShellProps extends Omit<ComponentProps<'div'>, 'children'> {
-  /** Controls on the header's trailing edge, e.g. language and theme. */
+  /** Controls pinned to the top corner, e.g. language and theme. */
   actions?: ReactNode;
+  /** The product mark that sits above the page title. */
   brand: ReactNode;
   children: ReactNode;
+  /** A quiet line under the content, e.g. the terms or a hint. */
   footer?: ReactNode;
 }
 
 /**
  * Chrome shared by every signed-out entry page: the accounts portal, the auth
- * routes and the desktop sign-in. Layout only — each host passes its own brand,
+ * routes and the desktop sign-in. Layout only — each host passes its own mark,
  * controls and footer, so it renders without the i18n and theme providers the
  * bare portal routes skip.
+ *
+ * The block hangs from a fixed offset rather than centring, so swapping the
+ * method list for a single field does not move the mark or the title.
  */
 export const EntryShell = ({
   actions,
@@ -27,21 +32,18 @@ export const EntryShell = ({
 }: EntryShellProps) => (
   <div
     className={cn(
-      'orvilo-entry-surface bg-background text-foreground flex min-h-dvh w-full flex-col',
+      'orvilo-entry-surface bg-background text-foreground relative flex min-h-dvh w-full flex-col items-center px-6 pt-[18vh] pb-10',
       className,
     )}
     {...props}
   >
-    <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-5 sm:px-8 sm:py-6 lg:px-10">
-      <span aria-hidden />
-      <div className="flex items-center">{brand}</div>
-      <div className="flex items-center justify-end gap-1">{actions}</div>
-    </header>
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-10 sm:px-8 sm:py-12">
-      {children}
-    </main>
+    {actions ? (
+      <div className="absolute top-3 right-3 flex items-center gap-1">{actions}</div>
+    ) : null}
+    <header className="flex shrink-0 items-center justify-center">{brand}</header>
+    <main className="mt-6 flex w-full flex-col items-center">{children}</main>
     {footer ? (
-      <footer className="text-muted-foreground shrink-0 px-6 py-6 text-center text-xs leading-5">
+      <footer className="text-muted-foreground mt-5 w-full max-w-sm text-center text-[13px] leading-5 text-balance">
         {footer}
       </footer>
     ) : null}
@@ -50,7 +52,7 @@ export const EntryShell = ({
 
 /** The single column every entry page puts its content in. */
 export const EntryPanel = ({ className, ...props }: ComponentProps<'section'>) => (
-  <section className={cn('mx-auto flex w-full max-w-sm flex-col gap-6', className)} {...props} />
+  <section className={cn('mx-auto flex w-full max-w-xs flex-col gap-3', className)} {...props} />
 );
 
 interface EntryHeadingProps {
@@ -59,8 +61,10 @@ interface EntryHeadingProps {
 }
 
 export const EntryHeading = ({ description, title }: EntryHeadingProps) => (
-  <div className="flex flex-col gap-2 text-center">
-    <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-    {description ? <p className="text-muted-foreground text-sm leading-6">{description}</p> : null}
+  <div className="mb-5 flex flex-col gap-2 text-center">
+    <h1 className="m-0 text-xl font-medium tracking-tight">{title}</h1>
+    {description ? (
+      <p className="text-muted-foreground m-0 text-sm leading-6">{description}</p>
+    ) : null}
   </div>
 );

@@ -3,7 +3,7 @@ import { type FormEvent, type PropsWithChildren, type ReactNode, useState } from
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldLabel, FieldSeparator } from '@/components/ui/field';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EntryHeading, EntryPanel } from '@/features/AuthShell/EntryShell';
 
@@ -37,7 +37,7 @@ const GoogleMark = () => (
 );
 
 interface StepProps extends PropsWithChildren {
-  description: ReactNode;
+  description?: ReactNode;
   title: ReactNode;
 }
 
@@ -60,6 +60,7 @@ const LinkRow = ({ children }: PropsWithChildren) => (
 
 export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginFormProps) => {
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [emailChosen, setEmailChosen] = useState(false);
   const {
     code,
     email,
@@ -108,7 +109,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
         description={messages.passwordDescription.replace('{{email}}', email)}
         title={messages.passwordTitle}
       >
-        <form className="flex flex-col gap-4" onSubmit={handlePasswordSubmit}>
+        <form className="flex flex-col gap-3" onSubmit={handlePasswordSubmit}>
           <Field>
             <FieldLabel htmlFor="accounts-password">{messages.password}</FieldLabel>
             <Input
@@ -153,7 +154,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
         description={messages.verifyDescription.replace('{{email}}', email)}
         title={messages.verifyTitle}
       >
-        <form className="flex flex-col gap-4" onSubmit={handleVerificationSubmit}>
+        <form className="flex flex-col gap-3" onSubmit={handleVerificationSubmit}>
           <Field>
             <FieldLabel htmlFor="accounts-verification-code">
               {messages.verificationCode}
@@ -191,7 +192,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
   if (step === 'requirements') {
     return (
       <Step description={messages.completeAccountDescription} title={messages.completeAccount}>
-        <form className="flex flex-col gap-4" onSubmit={handleRequirementsSubmit}>
+        <form className="flex flex-col gap-3" onSubmit={handleRequirementsSubmit}>
           <Field orientation="horizontal">
             <Checkbox
               required
@@ -218,14 +219,44 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
     );
   }
 
+  // The first screen only lists the ways in; email asks for its address on the next one.
+  if (!emailChosen) {
+    return (
+      <Step title={messages.login}>
+        {error && <FormError>{error}</FormError>}
+        <Button
+          aria-busy={loading}
+          disabled={loading || !signIn}
+          size="lg"
+          type="button"
+          onClick={() => void runGoogle(onGoogleLogin)}
+        >
+          <GoogleMark />
+          {messages.google}
+        </Button>
+        <Button
+          disabled={loading || !signIn}
+          size="lg"
+          type="button"
+          variant="outline"
+          onClick={() => setEmailChosen(true)}
+        >
+          {messages.emailButton}
+        </Button>
+        <div id="clerk-captcha" />
+      </Step>
+    );
+  }
+
   return (
-    <Step description={messages.emailDescription} title={messages.login}>
-      <form className="flex flex-col gap-4" onSubmit={handleEmailSubmit}>
+    <Step title={messages.emailTitle}>
+      <form className="flex flex-col gap-3" onSubmit={handleEmailSubmit}>
         <Field>
           <FieldLabel className="sr-only" htmlFor="accounts-email">
             {messages.email}
           </FieldLabel>
           <Input
+            autoFocus
             required
             autoCapitalize="none"
             autoComplete="email"
@@ -249,18 +280,19 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
           {messages.emailButton}
         </Button>
       </form>
-      <FieldSeparator>{messages.continueWith}</FieldSeparator>
-      <Button
-        aria-busy={loading}
-        disabled={loading || !signIn}
-        size="lg"
-        type="button"
-        variant="outline"
-        onClick={() => void runGoogle(onGoogleLogin)}
-      >
-        <GoogleMark />
-        {messages.google}
-      </Button>
+      <LinkRow>
+        <Button
+          disabled={loading}
+          type="button"
+          variant="link"
+          onClick={() => {
+            reset();
+            setEmailChosen(false);
+          }}
+        >
+          {messages.back}
+        </Button>
+      </LinkRow>
       <div id="clerk-captcha" />
     </Step>
   );

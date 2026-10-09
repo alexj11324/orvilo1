@@ -64,8 +64,9 @@ Regressions to capture if seen:
 - Landing on product `/signin` after password submit (cookie not minted)
 - A language selector or theme button in the header = wrong shell (that is the
   auth routes' `AuthContainer`). The portal renders the shared `EntryShell`
-  with `data-testid="accounts-auth-shell"`: centered brand, one column, terms in
-  the footer, following the light/dark theme. A two-panel dark layout is the
+  with `data-testid="accounts-auth-shell"`: the mark above the title, a list of
+  sign-in methods (email asks for its address on the next screen), terms under
+  it, following the light/dark theme. A two-panel dark layout is the
   pre-unification portal.
 
 ## Launch + attach

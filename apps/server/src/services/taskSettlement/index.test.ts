@@ -6,6 +6,7 @@ import { settleTaskExecution, type SettleTaskExecutionInput } from './index';
 
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
+  hasUnresolvedInput: vi.fn(),
   findByOperationId: vi.fn(),
   findByTopicId: vi.fn(),
   listWorkflowStates: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(function () {
     return {
       findById: mocks.findById,
+      hasUnresolvedInput: mocks.hasUnresolvedInput,
       resolveTaskReviewRequirement: mocks.resolveTaskReviewRequirement,
       updateStatus: mocks.updateStatus,
       updateStatusForExecutionContract: mocks.updateStatusForExecutionContract,
@@ -69,6 +71,7 @@ describe('settleTaskExecution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.findById.mockResolvedValue(runningTask());
+    mocks.hasUnresolvedInput.mockResolvedValue(false);
     mocks.findByOperationId.mockResolvedValue({ runState: 'running', status: 'running' });
     mocks.findByTopicId.mockResolvedValue({ dispatchFence: null, executionGeneration: null });
     mocks.listWorkflowStates.mockResolvedValue([]);
@@ -97,6 +100,24 @@ describe('settleTaskExecution', () => {
       'task-1',
       'completed',
       expect.objectContaining({ workflowCategory: 'done' }),
+    );
+  });
+
+  it('keeps a terminal run with unanswered input open and persists its parked reason', async () => {
+    mocks.hasUnresolvedInput.mockResolvedValue(true);
+    const result = await settle({ operationId: 'op-question', outcome: 'succeeded' });
+    expect(result).toMatchObject({
+      applied: true,
+      attention: 'needs_input',
+      legacyStatus: 'paused',
+    });
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      expect.objectContaining({
+        parkedReason: 'needs_input',
+        workflowCategory: 'in_progress',
+      }),
     );
   });
 

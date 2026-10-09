@@ -1,0 +1,44 @@
+{
+  "copyAssigneesCheckedByDefault": true,
+  "database": [
+    {
+      "id": "task_JYDfX3BXWR47",
+      "workflow_category": "todo",
+      "assignee_agent_id": "electron-codex-557-workspace",
+      "assignee_user_id": "user_e2e_test_user_001",
+      "current_topic_id": null,
+      "labels": 2,
+      "operations": 0,
+      "dispatches": 0
+    },
+    {
+      "id": "task_yfvMl3gm61y8",
+      "workflow_category": "todo",
+      "assignee_agent_id": "electron-codex-557-workspace",
+      "assignee_user_id": "user_e2e_test_user_001",
+      "current_topic_id": null,
+      "labels": 2,
+      "operations": 0,
+      "dispatches": 0
+    }
+  ],
+  "omittedCopyAssigneesAPI": {
+    "id": "task_JYDfX3BXWR47",
+    "agent": "electron-codex-557-workspace",
+    "workflowCategory": "todo",
+    "topic": null
+  },
+  "reopen": {
+    "from": "canceled",
+    "to": "todo",
+    "currentTopicId": null
+  },
+  "revision": "90d6b38da2b2efcdd1f3702a289bd8478a9c0a95",
+  "uiCopy": {
+    "id": "task_yfvMl3gm61y8",
+    "agent": "electron-codex-557-workspace",
+    "user": "user_e2e_test_user_001",
+    "workflowCategory": "todo",
+    "currentTopicId": null
+  }
+}

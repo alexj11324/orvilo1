@@ -19,8 +19,10 @@ export class TaskIssueRecurrenceModel {
       taskIssueRecurrences,
     );
   }
-  private async source(taskId: string) {
-    const task = await new TaskModel(this.db, this.userId, this.workspaceId).resolve(taskId);
+  private async source(taskId: string, write = false) {
+    const model = new TaskModel(this.db, this.userId, this.workspaceId);
+    await model.assertWorkspaceAccess(write);
+    const task = await model.resolve(taskId);
     if (!task || task.isDeleted || task.workspaceId !== (this.workspaceId ?? null))
       throw new Error('Task not found');
     return task;
@@ -47,7 +49,7 @@ export class TaskIssueRecurrenceModel {
       nextOccurrenceAt: Date;
     },
   ) {
-    const task = await this.source(taskId);
+    const task = await this.source(taskId, true);
     const [row] = await this.db
       .insert(taskIssueRecurrences)
       .values({
@@ -78,7 +80,7 @@ export class TaskIssueRecurrenceModel {
   }
 
   async setEnabled(taskId: string, enabled: boolean) {
-    const task = await this.source(taskId);
+    const task = await this.source(taskId, true);
     const [row] = await this.db
       .update(taskIssueRecurrences)
       .set({ enabled, lastError: null, updatedAt: new Date() })
@@ -89,7 +91,7 @@ export class TaskIssueRecurrenceModel {
   }
 
   async remove(taskId: string) {
-    const task = await this.source(taskId);
+    const task = await this.source(taskId, true);
     const rows = await this.db
       .delete(taskIssueRecurrences)
       .where(and(eq(taskIssueRecurrences.sourceTaskId, task.id), this.ownership()))

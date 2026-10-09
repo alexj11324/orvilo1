@@ -34,6 +34,30 @@ const editor = (text: string) => ({
   root: { children: [{ type: 'paragraph', children: [{ text, type: 'text' }] }] },
 });
 describe('TaskDescriptionHistoryModel', () => {
+  it('allows viewer history reads but rejects restore and revoked membership', async () => {
+    const task = await model.create({ instruction: 'First', workflowCategory: 'todo' });
+    const edited = (await model.update(task.id, { instruction: 'Second' }))!;
+    const versions = (await history.list(task.id)).versions;
+    await db
+      .update(workspaceMembers)
+      .set({ role: 'viewer' })
+      .where(eq(workspaceMembers.userId, readerId));
+    const viewer = new TaskDescriptionHistoryModel(db, readerId, workspaceId);
+    await expect(viewer.list(task.id)).resolves.toMatchObject({ versions: expect.any(Array) });
+    await expect(
+      viewer.restore(task.id, versions[1].id, edited.domainRevision),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, readerId));
+    await expect(viewer.list(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(
+      viewer.restore(task.id, versions[1].id, edited.domainRevision),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(await model.findById(task.id)).toMatchObject({
+      instruction: 'Second',
+      domainRevision: edited.domainRevision,
+    });
+    expect((await history.list(task.id)).versions).toHaveLength(2);
+  });
   it('captures exact prior/new contents, restores and rejects stale CAS', async () => {
     const task = await model.create({
       instruction: 'First',

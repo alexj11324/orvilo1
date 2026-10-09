@@ -8,10 +8,12 @@ import { TaskModel } from '@/database/models/task';
 import { TaskLabelModel } from '@/database/models/taskLabel';
 import {
   agentOperations,
+  agents,
   projects,
   taskDependencies,
   taskDispatches,
   taskIssueTemplates,
+  taskLabelBindings,
   tasks,
   users,
   workspaceMembers,
@@ -44,6 +46,83 @@ beforeEach(async () => {
 });
 afterEach(clean);
 describe('TaskIssueDefinitionService', () => {
+  it('enforces viewer write restrictions and revoked membership in the service', async () => {
+    const source = await model.create({ instruction: 'Keep', workflowCategory: 'todo' });
+    const reader = new TaskIssueDefinitionService(db, readerId, workspaceId);
+    await db
+      .update(workspaceMembers)
+      .set({ role: 'viewer' })
+      .where(eq(workspaceMembers.userId, readerId));
+    await expect(
+      reader.copyIssue({ id: source.id, expectedDomainRevision: source.domainRevision }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const target = await model.create({ instruction: 'Canonical', workflowCategory: 'todo' });
+    await expect(
+      reader.markDuplicate({
+        id: source.id,
+        targetId: target.id,
+        expectedDomainRevision: source.domainRevision,
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(reader.templates()).resolves.toEqual([]);
+    await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, readerId));
+    await expect(reader.templates()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(await model.findById(source.id)).toMatchObject({ instruction: 'Keep' });
+  });
+
+  it.each([undefined, true])(
+    'copies an Agent assignee with copyAssignees=%s without starting execution',
+    async (copyAssignees) => {
+      const [agent] = await db
+        .insert(agents)
+        .values({
+          userId,
+          workspaceId,
+          title: 'Assigned Agent',
+          model: 'gpt-4',
+          provider: 'openai',
+        })
+        .returning();
+      const source = await model.create({
+        instruction: 'Assigned issue',
+        assigneeAgentId: agent.id,
+        assigneeUserId: userId,
+        workflowCategory: 'done',
+        config: { producerToken: 'old-run-private' },
+      });
+      const copied = await service.copyIssue({
+        id: source.id,
+        expectedDomainRevision: source.domainRevision,
+        copyAssignees,
+      });
+      expect(await model.findById(copied.rootId)).toMatchObject({
+        assigneeAgentId: agent.id,
+        assigneeUserId: userId,
+        workflowCategory: 'todo',
+        currentTopicId: null,
+        runReservationId: null,
+        context: {},
+      });
+      expect((await model.findById(copied.rootId))?.config).not.toHaveProperty('producerToken');
+      expect(
+        await db.select().from(agentOperations).where(eq(agentOperations.taskId, copied.rootId)),
+      ).toHaveLength(0);
+      expect(
+        await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, copied.rootId)),
+      ).toHaveLength(0);
+      const unassigned = await service.copyIssue({
+        id: source.id,
+        expectedDomainRevision: source.domainRevision,
+        copyAssignees: false,
+      });
+      expect(await model.findById(unassigned.rootId)).toMatchObject({
+        assigneeAgentId: null,
+        assigneeUserId: null,
+        workflowCategory: 'todo',
+        currentTopicId: null,
+      });
+    },
+  );
   it('copies selected issue fields/sub-issues with fresh IDs while resetting all execution and automation state', async () => {
     const editorData = { root: { children: [{ type: 'paragraph', text: 'Body' }] } };
     const source = await model.create({
@@ -68,7 +147,9 @@ describe('TaskIssueDefinitionService', () => {
     });
     const labels = new TaskLabelModel(db, userId, workspaceId);
     const label = await labels.create({ name: 'Important' });
+    const secondLabel = await labels.create({ name: 'Release' });
     await labels.assign(source.id, label.id);
+    await labels.assign(source.id, secondLabel.id);
     const current = (await model.findById(source.id))!;
     const result = await service.copyIssue({
       id: source.id,
@@ -106,7 +187,9 @@ describe('TaskIssueDefinitionService', () => {
       name: 'Child',
       parentTaskId: result.rootId,
     });
-    expect(await labels.listForTask(result.rootId)).toMatchObject([{ id: label.id }]);
+    expect((await labels.listForTask(result.rootId)).map((item) => item.id).sort()).toEqual(
+      [label.id, secondLabel.id].sort(),
+    );
     expect(
       await db
         .select()
@@ -117,6 +200,30 @@ describe('TaskIssueDefinitionService', () => {
       await db.select().from(taskDispatches).where(inArray(taskDispatches.taskId, result.taskIds)),
     ).toHaveLength(0);
     expect((await model.findById(child.id))?.parentTaskId).toBe(source.id);
+  });
+
+  it('rejects an unavailable label transactionally instead of silently omitting it', async () => {
+    const source = await model.create({ instruction: 'Label integrity', workflowCategory: 'todo' });
+    const foreign = await new TaskLabelModel(db, readerId).create({ name: 'Outside scope' });
+    await db.insert(taskLabelBindings).values({
+      taskId: source.id,
+      labelId: foreign.id,
+      userId,
+      workspaceId,
+    });
+    const before = await db.select({ id: tasks.id }).from(tasks);
+    await expect(
+      service.copyIssue({ id: source.id, expectedDomainRevision: source.domainRevision }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(await db.select({ id: tasks.id }).from(tasks)).toEqual(before);
+    const skipped = await service.copyIssue({
+      id: source.id,
+      expectedDomainRevision: source.domainRevision,
+      copyLabels: false,
+    });
+    expect(await new TaskLabelModel(db, userId, workspaceId).listForTask(skipped.rootId)).toEqual(
+      [],
+    );
   });
   it('rejects a stale copy revision after a deadline edit', async () => {
     const source = await model.create({ instruction: 'Source', workflowCategory: 'todo' });
@@ -297,7 +404,7 @@ describe('TaskIssueDefinitionService', () => {
       workspaceId,
     });
     const foreign = new TaskIssueDefinitionService(db, readerId, 'foreign-template-workspace');
-    expect(await foreign.templates()).toHaveLength(0);
+    await expect(foreign.templates()).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(foreign.createFromTemplate({ templateId: template.id })).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });

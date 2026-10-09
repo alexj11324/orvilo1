@@ -48,10 +48,12 @@ Comment and run-completion notifications reuse the event outbox and notification
   is excluded. Each candidate must be an active workspace member, must be able to read the Issue
   through `TaskModel.findById`, and never receives another user's private comment.
 
-## Read, snooze and delete
+## Read, snooze and dismiss
 
-Read/unread and snooze keep their existing persisted writes. The row action is now
-"Delete notification": `notification.dismiss` deletes the row under the caller's scope with an
-`activityVersion` compare-and-swap, and records a `notification-dismissal` receipt so source repair
-does not recreate a deleted action card. Deleting a notification does not answer or cancel the
-underlying question.
+Read/unread and snooze keep their existing persisted writes. "Dismiss reminder" marks only the
+observed notification activity as read, under the caller's scope and resource ACL with an
+`activityVersion` compare-and-swap. It clears the unread dot without deleting or archiving the card,
+answering or cancelling the question, or writing a dismissal receipt. The Agent continues waiting
+and the original answer form remains available. Repeated source repair keeps the same read card;
+new activity increments its version and makes it unread again. Pending-action counts remain
+independent of unread badges.

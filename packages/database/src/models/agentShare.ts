@@ -448,6 +448,9 @@ export class AgentShareModel {
         agentId: agentShares.agentId,
         agentName: agents.name,
         agentOpeningQuestions: agents.openingQuestions,
+        agentRuntimeType: sql<
+          string | null
+        >`${agents.agencyConfig}->'heterogeneousProvider'->>'type'`,
         agentSlug: agents.slug,
         agentTags: agents.tags,
         agentTitle: agents.title,

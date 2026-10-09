@@ -22,6 +22,7 @@ import type {
   WorkspaceTreeNode,
 } from '@orvilo/types';
 import { deriveLegacyTaskStatus } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
 import {
   and,
   desc,
@@ -77,6 +78,7 @@ import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
 import { TaskDependencyError } from './taskDependency';
 import {
   hasActiveExecution,
+  hasLiveTaskExecutor,
   hasUnresolvedExecution,
   isAutomationArmed,
   isExecutionParked,
@@ -91,6 +93,7 @@ import {
   taskAttentionReasonExpr,
 } from './taskExecutionSql';
 import { workflowCategoryForLegacyStatus } from './workflowMove';
+import { getActiveWorkspaceMembershipRole } from './workspace';
 
 /**
  * Full task row for reads and `.returning()` — `status` projects the derived
@@ -104,6 +107,8 @@ const taskRowColumns = {
   status: sql<TaskStatus>`${legacyStatusExpr}`,
   dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
   attentionReason: taskAttentionReasonExpr,
+  hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`,
+  parkedReason: sql<string | null>`${tasks.context} #>> '{execution,parked,reason}'`,
 };
 
 /** Columns whose change is worth a line in the task activity feed. */
@@ -237,6 +242,7 @@ export interface TaskMutationContext {
 export interface TaskStatusTransitionExtra {
   completedAt?: Date;
   error?: string | null;
+  parkedReason?: string;
   runReservationExpiresAt?: Date | null;
   runReservationId?: string | null;
   startedAt?: Date;
@@ -782,6 +788,41 @@ export class TaskModel {
     return result[0] || null;
   }
 
+  /** Whether the current generation is demonstrably executing as both assigned actors. */
+  async hasLiveExecutor(id: string, operationId?: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ live: hasLiveTaskExecutor })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, id),
+          this.ownership(),
+          operationId
+            ? sql`EXISTS (
+          SELECT 1 FROM ${taskTopics} current_run
+          WHERE current_run.task_id = ${tasks.id}
+            AND current_run.topic_id = ${tasks.currentTopicId}
+            AND current_run.operation_id = ${operationId}
+        )`
+            : undefined,
+        ),
+      )
+      .limit(1);
+    return row?.live === true;
+  }
+
+  /** Unmet input on the current run; drafts and unacknowledged answers are not completion. */
+  async hasUnresolvedInput(id: string, operationId?: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({
+        unmet: sql<boolean>`has_task_unresolved_input(${tasks.id}, ${operationId ?? null})`,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, id), this.ownership()))
+      .limit(1);
+    return row?.unmet === true;
+  }
+
   async findByIds(ids: string[]): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
     return this.db
@@ -850,16 +891,25 @@ export class TaskModel {
    * the column. Park transitions stamp the canonical parked marker under
    * `context.execution.parked`; every other transition clears it.
    */
-  private static statusTransitionPatch(transition: string) {
+  private static statusTransitionPatch(transition: string, parkedReason?: string) {
     if (transition === 'paused' || transition === 'failed') {
       return {
         context: parkMarkerSet({
           at: new Date().toISOString(),
-          ...(transition === 'failed' ? { reason: 'failed' } : {}),
+          ...(parkedReason
+            ? { reason: parkedReason }
+            : transition === 'failed'
+              ? { reason: 'failed' }
+              : {}),
         }),
       };
     }
     return { context: parkMarkerClear };
+  }
+
+  private static statusTransitionData(transition: string, extra?: TaskStatusTransitionExtra) {
+    const { parkedReason, ...columns } = extra ?? {};
+    return { ...columns, ...TaskModel.statusTransitionPatch(transition, parkedReason) };
   }
 
   /**
@@ -893,7 +943,8 @@ export class TaskModel {
 
   async update(
     id: string,
-    data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
+    data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>> &
+      Pick<TaskStatusTransitionExtra, 'parkedReason'>,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
@@ -969,10 +1020,10 @@ export class TaskModel {
       return null;
     };
 
-    const { status: transition, ...writeData } = data;
+    const { status: transition, parkedReason, ...writeData } = data;
     if (this.workspaceId) writeData.visibility = 'public';
     const transitionPatch =
-      transition === undefined ? {} : TaskModel.statusTransitionPatch(transition);
+      transition === undefined ? {} : TaskModel.statusTransitionPatch(transition, parkedReason);
     if (!eventType) {
       const updated = await this.db
         .update(tasks)
@@ -1237,6 +1288,17 @@ export class TaskModel {
 
   async delete(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
     return (await this.deleteMany([id], mutation)).length > 0;
+  }
+
+  /** Shared boundary for Issue-menu models, services and scheduled definitions. */
+  async assertWorkspaceAccess(write = false): Promise<void> {
+    if (!this.workspaceId) return;
+    const role = await getActiveWorkspaceMembershipRole(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (!role || (write && role === 'viewer'))
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace Issue access required' });
   }
 
   /** Validate the entire frozen deletion set before any rows disappear. */
@@ -1606,6 +1668,11 @@ export class TaskModel {
           ...getTableColumns(tasks),
           visibility: taskVisibilitySql().as('visibility'),
           status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
+          hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`.as('has_live_executor'),
+          attentionReason: taskAttentionReasonExpr.as('attention_reason'),
+          parkedReason: sql<string | null>`${tasks.context} #>> '{execution,parked,reason}'`.as(
+            'parked_reason',
+          ),
           dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`.as('dispatch_phase'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
@@ -1694,6 +1761,11 @@ export class TaskModel {
           ...getTableColumns(tasks),
           visibility: taskVisibilitySql().as('visibility'),
           status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
+          hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`.as('has_live_executor'),
+          attentionReason: taskAttentionReasonExpr.as('attention_reason'),
+          parkedReason: sql<string | null>`${tasks.context} #>> '{execution,parked,reason}'`.as(
+            'parked_reason',
+          ),
           dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`.as('dispatch_phase'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
@@ -2401,8 +2473,7 @@ export class TaskModel {
       .update(tasks)
       .set({
         updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.statusTransitionPatch(transition),
+        ...TaskModel.statusTransitionData(transition, extra),
         ...TaskModel.workflowCategorySet(transition, extra?.workflowCategory),
         ...TaskModel.reviewerBackfillSet(transition),
         domainRevision: sql`${tasks.domainRevision} + 1`,
@@ -2458,8 +2529,7 @@ export class TaskModel {
       .update(tasks)
       .set({
         updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.statusTransitionPatch(status),
+        ...TaskModel.statusTransitionData(status, extra),
         ...TaskModel.reviewerBackfillSet(status),
       })
       .where(
@@ -2657,8 +2727,7 @@ export class TaskModel {
         .update(tasks)
         .set({
           updatedAt: new Date(),
-          ...extra,
-          ...TaskModel.statusTransitionPatch(status),
+          ...TaskModel.statusTransitionData(status, extra),
           ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
           ...TaskModel.reviewerBackfillSet(status),
           domainRevision: sql`${tasks.domainRevision} + 1`,
@@ -2733,8 +2802,7 @@ export class TaskModel {
       .update(tasks)
       .set({
         updatedAt: new Date(),
-        ...extra,
-        ...TaskModel.statusTransitionPatch(status),
+        ...TaskModel.statusTransitionData(status, extra),
         ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
         ...TaskModel.reviewerBackfillSet(status),
         domainRevision: sql`${tasks.domainRevision} + 1`,

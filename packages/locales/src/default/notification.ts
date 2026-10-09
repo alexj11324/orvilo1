@@ -1,6 +1,6 @@
 export default {
-  'inbox.delete': 'Delete notification',
-  'inbox.toast.deleted': 'Notification deleted',
+  'inbox.dismiss': 'Dismiss reminder',
+  'inbox.toast.dismissed': 'Reminder dismissed',
   'inbox.question.unavailable': 'This Agent question is no longer available.',
   'inbox.question.replyFailed':
     'Could not send this reply to the original Agent session. Your answer is kept; refresh the question and try again.',

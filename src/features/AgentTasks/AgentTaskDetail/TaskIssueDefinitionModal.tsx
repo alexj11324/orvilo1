@@ -65,7 +65,7 @@ const TaskIssueDefinitionForm = ({
   const [copied, setCopied] = useState<Record<(typeof COPY_FIELDS)[number], boolean>>({
     includeSubIssues: true,
     copyLabels: true,
-    copyAssignees: false,
+    copyAssignees: true,
     copyDueDate: true,
     copyProject: true,
     copyTeam: true,

@@ -1,0 +1,12 @@
+{
+  "answer": {
+    "accepted": false,
+    "code": "FORBIDDEN",
+    "message": "Operation is outside the caller scope"
+  },
+  "edit": {
+    "accepted": false,
+    "code": "FORBIDDEN",
+    "message": "You do not have permission to edit this resource"
+  }
+}

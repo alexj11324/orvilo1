@@ -1,0 +1,2 @@
+Selected-card dismissal: blue dot cleared; original form and unsent draft retained; pending=1, unread=0
+After reload: same card and original native question remain unanswered

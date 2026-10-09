@@ -10,7 +10,6 @@ import { type UserModel } from '@/database/models/user';
 import { AgentGroupRepository } from '@/database/repositories/agentGroup';
 import { type ChatGroupConfig } from '@/database/types/chatGroup';
 import { getServerDefaultAgentConfig } from '@/server/globalConfig';
-import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 
 type DefaultAgentConfig = Awaited<ReturnType<UserModel['getUserSettingsDefaultAgentConfig']>>;
 
@@ -41,15 +40,7 @@ export class AgentGroupService {
   async getGroupDetail(groupId: string) {
     const group = await this.chatGroupModel.findById(groupId);
     if (!group) return null;
-    const supervisorId = await this.chatGroupModel.getSupervisorAgentId(groupId);
-    const runtime = supervisorId
-      ? undefined
-      : await resolveOrchestratorRuntimeForCreation(
-          { db: this.db, userId: this.userId, workspaceId: this.workspaceId },
-          { visibility: group.visibility ?? undefined },
-        );
-    // Only server-authorized snapshots may provision here, including after a concurrent supervisor removal.
-    return this.agentGroupRepo.findByIdWithAgents(groupId, runtime, false);
+    return this.agentGroupRepo.findByIdWithAgents(groupId);
   }
 
   /**

@@ -83,88 +83,28 @@ export const GroupAgentBuilderManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'Create a new agent group with an automatically generated supervisor agent. Use this when the user needs a new multi-agent workspace rather than a standalone agent.',
+        'Create a Group with existing selected member Agents. The coordinator must be one of those member IDs. Does not create or change any Agent.',
       humanIntervention: 'required',
       name: GroupAgentBuilderApiName.createGroup,
       parameters: {
         properties: {
-          avatar: {
-            description: "An emoji or image URL for the group's avatar.",
-            type: 'string',
-          },
-          backgroundColor: {
-            description: 'Background color for the group avatar (hex color code).',
-            type: 'string',
-          },
-          description: {
-            description: 'A brief description of the group.',
-            type: 'string',
-          },
-          openingMessage: {
-            description:
-              'Opening message shown when starting a new conversation with the group. Set to empty string to create without one.',
-            type: 'string',
-          },
-          openingQuestions: {
-            description: 'Suggested opening questions for the new group.',
-            items: { type: 'string' },
+          avatar: { type: 'string' },
+          backgroundColor: { type: 'string' },
+          description: { type: 'string' },
+          prompt: { description: 'Group Description / shared Markdown context.', type: 'string' },
+          memberAgentIds: {
+            description: 'Existing Agent IDs to include as members.',
             type: 'array',
+            items: { type: 'string' },
+            minItems: 1,
           },
-          prompt: {
-            description:
-              "Initial shared prompt/content for the group. This becomes the group's shared context.",
+          coordinatorAgentId: {
+            description: 'One of memberAgentIds; keeps that same Agent ID.',
             type: 'string',
           },
-          supervisor: {
-            description:
-              'Optional initial configuration for the auto-created supervisor agent. Only include fields you want to set immediately.',
-            properties: {
-              avatar: {
-                description: "An emoji or image URL for the supervisor agent's avatar.",
-                type: 'string',
-              },
-              backgroundColor: {
-                description: 'Background color for the supervisor avatar (hex color code).',
-                type: 'string',
-              },
-              description: {
-                description: 'A brief description of the supervisor agent.',
-                type: 'string',
-              },
-              model: {
-                description: 'The AI model identifier for the supervisor agent.',
-                type: 'string',
-              },
-              params: {
-                description: 'Model parameters for the supervisor agent.',
-                type: 'object',
-              },
-              provider: {
-                description: 'The AI provider identifier for the supervisor agent.',
-                type: 'string',
-              },
-              systemRole: {
-                description: 'The initial system prompt for the supervisor agent.',
-                type: 'string',
-              },
-              tags: {
-                description: 'Tags for categorizing the supervisor agent.',
-                items: { type: 'string' },
-                type: 'array',
-              },
-              title: {
-                description: 'The display name for the supervisor agent.',
-                type: 'string',
-              },
-            },
-            type: 'object',
-          },
-          title: {
-            description: 'The display name for the new group.',
-            type: 'string',
-          },
+          title: { type: 'string' },
         },
-        required: ['title'],
+        required: ['title', 'memberAgentIds', 'coordinatorAgentId'],
         type: 'object',
       },
     },

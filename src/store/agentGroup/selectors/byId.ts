@@ -89,7 +89,10 @@ const agentByIdFromGroup =
 const groupBySupervisorAgentId =
   (supervisorAgentId: string) =>
   (s: ChatGroupStore): AgentGroupDetail | undefined => {
-    return Object.values(s.groupMap).find((group) => group.supervisorAgentId === supervisorAgentId);
+    const matches = Object.values(s.groupMap).filter(
+      (group) => group.supervisorAgentId === supervisorAgentId,
+    );
+    return matches.length === 1 ? matches[0] : undefined;
   };
 
 /**

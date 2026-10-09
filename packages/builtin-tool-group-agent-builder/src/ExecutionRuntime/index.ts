@@ -127,20 +127,14 @@ export class GroupAgentBuilderExecutionRuntime {
   ): Promise<BuiltinToolResult> {
     try {
       const state = getChatGroupStoreState();
-      const groupConfig = {
-        ...(args.openingMessage !== undefined && { openingMessage: args.openingMessage }),
-        ...(args.openingQuestions !== undefined && { openingQuestions: args.openingQuestions }),
-      };
-
       const { group, supervisorAgentId } = await chatGroupService.createGroup({
         avatar: args.avatar,
         backgroundColor: args.backgroundColor,
-        config: Object.keys(groupConfig).length > 0 ? groupConfig : undefined,
-        content: args.prompt,
-        description: args.description,
+        content: args.prompt ?? args.description,
         title: args.title,
         visibility: 'private',
-        supervisorConfig: args.supervisor,
+        agentIds: args.memberAgentIds,
+        coordinatorAgentId: args.coordinatorAgentId,
       });
 
       state.internal_dispatchChatGroup({ payload: group, type: 'addGroup' });

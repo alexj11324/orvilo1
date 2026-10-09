@@ -1,6 +1,7 @@
 'use client';
 
 import type { WorkSummaryItem } from '@orvilo/types';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { PackageOpenIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
@@ -158,7 +159,7 @@ interface WorkGalleryProps {
 }
 
 const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
-  const { t, i18n } = useTranslation('file');
+  const { t } = useTranslation('file');
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
   useFetchAgentList();
 
@@ -191,11 +192,7 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
           ? t('work.date.today')
           : key === yesterdayKey
             ? t('work.date.yesterday')
-            : new Intl.DateTimeFormat(i18n.language, {
-                day: 'numeric',
-                month: 'short',
-                year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric',
-              }).format(date);
+            : formatAbsoluteDate(date);
       const group = byDate.get(key);
       if (group) group.items.push(item);
       else byDate.set(key, { items: [item], title });
@@ -208,7 +205,7 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
         group.items.reduce((total, item) => total + (item.totalCost || 0), 0),
       ),
     }));
-  }, [filteredItems, i18n.language, t]);
+  }, [filteredItems, t]);
 
   const handleOpen = useOpenWork();
 

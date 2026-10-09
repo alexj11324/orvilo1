@@ -1,5 +1,6 @@
 'use client';
 
+import { ABSOLUTE_DATE_FORMAT } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import { CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
@@ -222,7 +223,7 @@ const DatePicker = memo<DatePickerProps>(
     const display = useMemo(() => {
       if (!currentValue) return '';
       if (typeof format === 'function') return format(currentValue);
-      return currentValue.format(format ?? 'YYYY-MM-DD');
+      return currentValue.format(format ?? ABSOLUTE_DATE_FORMAT);
     }, [format, currentValue]);
 
     const pick = (date: Dayjs | null) => {

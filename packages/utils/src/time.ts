@@ -58,6 +58,28 @@ export const fromNow = (time?: string | Date | number | null): string => {
   return date.isValid() ? date.fromNow() : '';
 };
 
+/** Absolute dates are always numeric and language independent: `2026/09/23`. */
+export const ABSOLUTE_DATE_FORMAT = 'YYYY/MM/DD';
+/** Absolute date with time of day: `2026/09/23 14:05`. */
+export const ABSOLUTE_DATE_TIME_FORMAT = 'YYYY/MM/DD HH:mm';
+
+/**
+ * Format an absolute calendar date as `YYYY/MM/DD`. Returns an empty string for
+ * missing or unparseable input so callers can render it unconditionally.
+ */
+export const formatAbsoluteDate = (time?: string | Date | number | Dayjs | null): string => {
+  if (!time) return '';
+  const date = dayjs(time);
+  return date.isValid() ? date.format(ABSOLUTE_DATE_FORMAT) : '';
+};
+
+/** Format an absolute date and time as `YYYY/MM/DD HH:mm`; empty for bad input. */
+export const formatAbsoluteDateTime = (time?: string | Date | number | Dayjs | null): string => {
+  if (!time) return '';
+  const date = dayjs(time);
+  return date.isValid() ? date.format(ABSOLUTE_DATE_TIME_FORMAT) : '';
+};
+
 export interface FormatActivityTimeOptions {
   formatOtherYear?: string;
   formatThisYear?: string;
@@ -78,7 +100,7 @@ const ACTIVITY_TIME_DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Format a timestamp for an activity-feed entry: relative (`from()`) when
- * recent, absolute date (`Apr 29` / `4月29日`) once the gap crosses one day.
+ * recent, absolute date (`2026/04/29`) once the gap crosses one day.
  */
 export const formatActivityTime = (
   time?: string | Date | number | null,
@@ -89,9 +111,9 @@ export const formatActivityTime = (
   if (!date.isValid()) return { text: '', title: '' };
 
   const {
-    formatOtherYear = 'MMM D, YYYY',
-    formatThisYear = 'MMM D',
-    fullDateTimeFormat = 'YYYY-MM-DD HH:mm:ss',
+    formatOtherYear = ABSOLUTE_DATE_FORMAT,
+    formatThisYear = ABSOLUTE_DATE_FORMAT,
+    fullDateTimeFormat = 'YYYY/MM/DD HH:mm:ss',
     now = new Date(),
     relativeThresholdMs = ACTIVITY_TIME_DAY_MS,
   } = options;

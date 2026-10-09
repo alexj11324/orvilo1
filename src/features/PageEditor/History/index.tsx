@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -142,7 +143,7 @@ const HistoryPanel = memo(() => {
       let label: string;
       if (d.isSame(now, 'day')) label = todayLabel;
       else if (d.isSame(now.subtract(1, 'day'), 'day')) label = yesterdayLabel;
-      else label = d.format('MMMM D, YYYY');
+      else label = formatAbsoluteDate(d);
 
       map.set(key, { historyIds: [item.id], key, label });
     }

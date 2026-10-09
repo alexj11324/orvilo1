@@ -1,6 +1,7 @@
 import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { cn } from 'cn';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { CalendarIcon, ClockIcon, PlusIcon, TagIcon, UserCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
@@ -244,7 +245,7 @@ const TaskProperties = memo(() => {
                 )}
               >
                 {dueDate
-                  ? format(parseISO(dueDate), 'MMM d, yyyy')
+                  ? formatAbsoluteDate(parseISO(dueDate))
                   : t('taskDetail.property.addDueDate')}
               </span>
             </Button>

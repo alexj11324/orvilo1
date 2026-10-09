@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { BellIcon, CheckCheckIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -65,9 +66,7 @@ function NotificationItem({
           </div>
           {content && <p className="text-muted-foreground line-clamp-2 text-xs">{content}</p>}
           <div className="flex items-center gap-2 pt-0.5">
-            <p className="text-muted-foreground text-[11px]">
-              {new Date(createdAt).toLocaleDateString()}
-            </p>
+            <p className="text-muted-foreground text-[11px]">{formatAbsoluteDate(createdAt)}</p>
           </div>
         </div>
       </Button>

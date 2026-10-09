@@ -2407,7 +2407,7 @@
   "taskSchedule.maxExecutionsPlaceholder": "无限制",
   "taskSchedule.minutes": "分钟",
   "taskSchedule.nextRun": "下次运行",
-  "taskSchedule.nextRun.format": "M月D日 HH:mm",
+  "taskSchedule.nextRun.format": "YYYY/MM/DD HH:mm",
   "taskSchedule.scheduleType.daily": "每日",
   "taskSchedule.scheduleType.hourly": "每小时",
   "taskSchedule.scheduleType.weekly": "每周",

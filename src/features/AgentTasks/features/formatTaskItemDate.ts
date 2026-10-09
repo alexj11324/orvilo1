@@ -1,3 +1,4 @@
+import { ABSOLUTE_DATE_FORMAT } from '@orvilo/utils/time';
 import dayjs from 'dayjs';
 
 import { normalizeDayjsLocale } from '@/utils/dayjsLocale';
@@ -23,8 +24,8 @@ export const formatTaskItemDate = (
   if (!date.isValid()) return '';
 
   const {
-    formatOtherYear = 'MMM D, YYYY',
-    formatThisYear = 'MMM D',
+    formatOtherYear = ABSOLUTE_DATE_FORMAT,
+    formatThisYear = ABSOLUTE_DATE_FORMAT,
     locale,
     now = new Date(),
   } = options;

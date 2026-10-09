@@ -1,17 +1,5 @@
-export const formatPageEditorInfoTime = (
-  value: Date | string | null | undefined,
-  locale?: string,
-) => {
-  if (!value) return '';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
-};
+/** Page info time as a numeric `YYYY/MM/DD HH:mm`; empty for missing or invalid values. */
+export const formatPageEditorInfoTime = (value: Date | string | null | undefined) =>
+  formatAbsoluteDateTime(value);

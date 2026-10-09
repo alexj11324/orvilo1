@@ -1,6 +1,7 @@
 'use client';
 
 import type { SavedViewItem } from '@orvilo/database/schemas';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
@@ -161,10 +162,7 @@ const viewIcon = (view: SavedViewItem) =>
 
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (
-    <div
-      className="text-[13px] text-muted-foreground"
-      title={dayjs(value).format('YYYY-MM-DD HH:mm')}
-    >
+    <div className="text-[13px] text-muted-foreground" title={formatAbsoluteDateTime(value)}>
       {dayjs(value).fromNow()}
     </div>
   ) : (

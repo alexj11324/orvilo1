@@ -6,6 +6,7 @@ import type {
   LinearSyncRecoveryRow,
   TaskPlanningProposal,
 } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import {
   Check,
@@ -468,12 +469,7 @@ const STEP_ICONS = {
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
 
-const dateLabel = (value: Date | string | null | undefined, locale: string) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-};
+const dateLabel = (value: Date | string | null | undefined) => formatAbsoluteDateTime(value);
 
 const InstallationStatusTag = memo<{ installation: LinearInstallationView }>(({ installation }) => {
   const { t } = useTranslation('setting');
@@ -527,7 +523,7 @@ const StepCard = ({ action, children, description, title }: StepCardProps) => (
 );
 
 const LinearWorkspaceSettings = memo(() => {
-  const { t, i18n } = useTranslation('setting');
+  const { t } = useTranslation('setting');
   const { allowed: canManage, reason } = usePermission('manage_settings');
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -1264,7 +1260,7 @@ const LinearWorkspaceSettings = memo(() => {
                   >
                     <span className={styles.muted} style={{ fontSize: 12 }}>
                       {t('workspaceSetting.linear.operations.age', {
-                        time: dateLabel(row.createdAt, i18n.language),
+                        time: dateLabel(row.createdAt),
                       })}
                     </span>
                     <Button
@@ -1317,7 +1313,7 @@ const LinearWorkspaceSettings = memo(() => {
                         <span style={{ fontWeight: 600 }}>{link.linearIdentifier}</span>
                         <span className={styles.muted} style={{ fontSize: 12 }}>
                           {t('workspaceSetting.linear.conflicts.detectedAt', {
-                            time: dateLabel(conflict.detectedAt, i18n.language),
+                            time: dateLabel(conflict.detectedAt),
                           })}
                         </span>
                       </div>
@@ -1516,7 +1512,7 @@ const LinearWorkspaceSettings = memo(() => {
                 {selectedInstallation.lastSyncAt && (
                   <span className={styles.muted} style={{ fontSize: 12 }}>
                     {t('workspaceSetting.linear.lastSync', {
-                      time: dateLabel(selectedInstallation.lastSyncAt, i18n.language),
+                      time: dateLabel(selectedInstallation.lastSyncAt),
                     })}
                   </span>
                 )}
@@ -1726,7 +1722,7 @@ const LinearWorkspaceSettings = memo(() => {
             {syncScope.importCompletedAt && (
               <span className={styles.muted} style={{ fontSize: 12 }}>
                 {t('workspaceSetting.linear.scopeCompletedAt', {
-                  time: dateLabel(syncScope.importCompletedAt, i18n.language),
+                  time: dateLabel(syncScope.importCompletedAt),
                 })}
               </span>
             )}
@@ -2115,7 +2111,7 @@ const LinearWorkspaceSettings = memo(() => {
               </Badge>
               <span style={{ color: 'var(--muted-foreground)' }}>
                 {selectedBinding.importCompletedAt || selectedBinding.importPhase === 'completed'
-                  ? dateLabel(selectedBinding.importCompletedAt, i18n.language)
+                  ? dateLabel(selectedBinding.importCompletedAt)
                   : importInProgress
                     ? t('workspaceSetting.linear.importInProgress')
                     : t('workspaceSetting.linear.importNotRun')}
@@ -2234,7 +2230,7 @@ const LinearWorkspaceSettings = memo(() => {
             <span style={{ color: 'var(--muted-foreground)' }}>
               {selectedInstallation?.lastSyncAt
                 ? t('workspaceSetting.linear.lastSync', {
-                    time: dateLabel(selectedInstallation.lastSyncAt, i18n.language),
+                    time: dateLabel(selectedInstallation.lastSyncAt),
                   })
                 : t('workspaceSetting.linear.noSyncRecorded')}
             </span>

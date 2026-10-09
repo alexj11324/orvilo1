@@ -1,4 +1,5 @@
 import type { TaskDetailActivity } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -75,7 +76,7 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
       </div>
       <div
         className="truncate min-w-0 text-[12px] text-muted-foreground"
-        title={activity.time ? dayjs(activity.time).format('LLL') : undefined}
+        title={activity.time ? formatAbsoluteDateTime(activity.time) : undefined}
       >
         {activity.time ? dayjs(activity.time).fromNow() : '—'}
       </div>

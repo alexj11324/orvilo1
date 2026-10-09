@@ -1,0 +1,30 @@
+{
+  "route": "/ws-usere2etestu/agent/agt_electron_acceptance_codex",
+  "samples": [
+    {
+      "theme": "light",
+      "dimensions": {
+        "height": "28px",
+        "paddingInlineStart": "8px",
+        "paddingInlineEnd": "8px",
+        "borderRadius": "6px",
+        "fontSize": "12px"
+      },
+      "actualAgentPopoverOpened": true,
+      "closedByEscape": true
+    },
+    {
+      "theme": "dark",
+      "dimensions": {
+        "height": "28px",
+        "paddingInlineStart": "8px",
+        "paddingInlineEnd": "8px",
+        "borderRadius": "6px",
+        "fontSize": "12px"
+      },
+      "actualAgentPopoverOpened": true,
+      "closedByEscape": true
+    }
+  ],
+  "stage": "layered"
+}

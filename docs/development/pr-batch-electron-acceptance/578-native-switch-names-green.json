@@ -1,0 +1,81 @@
+{
+  "componentRevision": "7a2a97851c3cd379b2e9c18139db33b1ddc2fc79",
+  "controls": [
+    {
+      "visibleLabel": "Use Responses API Specification",
+      "computedAccessibleName": "Use Responses API Specification"
+    },
+    {
+      "visibleLabel": "Use Client Request Mode",
+      "computedAccessibleName": "Use Client Request Mode"
+    }
+  ],
+  "formBinding": [
+    {
+      "config": {
+        "enableResponseApi": true
+      },
+      "fetchOnClient": true
+    }
+  ],
+  "iconControls": [
+    {
+      "expectedLocalizedName": "More",
+      "computedAccessibleName": "More"
+    },
+    {
+      "expectedLocalizedName": "Settings",
+      "computedAccessibleName": "Settings"
+    }
+  ],
+  "limitations": [
+    "Actual delivered ProviderConfig and its delivered children mounted via the native product ModalHost with a dummy provider cache. Immutable sources only redirect four unchanged imports to original product dependencies.",
+    "This proves browser-computed switch names and native form binding; no real provider credential, external OAuth, model check or backend provider persistence is exercised."
+  ],
+  "platform": "native Electron app://",
+  "rendererBaseHead": "36eaebc5cc3f941bda05c6ddbf1d21f9a2dffcad",
+  "sourceHashes": {
+    "Checker.tsx": {
+      "originalSha256": "3b1772c04627f88725125736a47f99aa8fe960db64f2741ed7f1afc78ea594a2",
+      "mountedSha256": "3b1772c04627f88725125736a47f99aa8fe960db64f2741ed7f1afc78ea594a2",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "CredentialsPanel.tsx": {
+      "originalSha256": "844751dd33ae3834bbd59e4b59745aa6bf82bd21ba7f302e59e87c457e6e4ac6",
+      "mountedSha256": "844751dd33ae3834bbd59e4b59745aa6bf82bd21ba7f302e59e87c457e6e4ac6",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "EnableSwitch.tsx": {
+      "originalSha256": "6deb5ca222ae766476d8bedc9340c8f3b321062b27644f27154d1ece6220214b",
+      "mountedSha256": "6deb5ca222ae766476d8bedc9340c8f3b321062b27644f27154d1ece6220214b",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "FormSwitch.tsx": {
+      "originalSha256": "4ac06c02294950b14ce4dcef1bf42896131589b8e0e78a3806330984ac062088",
+      "mountedSha256": "4ac06c02294950b14ce4dcef1bf42896131589b8e0e78a3806330984ac062088",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "ProviderHeader.tsx": {
+      "originalSha256": "a2c40f04d0cc821c70218d83ff79e098d8a85e03bde8f336d2b8422d5af19a19",
+      "mountedSha256": "a2c40f04d0cc821c70218d83ff79e098d8a85e03bde8f336d2b8422d5af19a19",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "UpdateProviderInfo/index.tsx": {
+      "originalSha256": "3cc8ab3694e17c1450aac6331bbf011ef70d807ea2dd764899a2ae17971950f6",
+      "mountedSha256": "f7e0d37cbb1955003a1eff6aecafbd68d25e202201365ac7917ed08b59492da8",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "index.tsx": {
+      "originalSha256": "e0482c5f32245d2ab9efbab1cdc5273ac2a2fe5c79013e7b19172fb19fd8cc4f",
+      "mountedSha256": "e613ea433ceeeecbff783c0e27854467776d8f71be67bc7f4b97b0f04e55a69e",
+      "transforms": "Only 4 unchanged relative dependencies redirected to original product modules; all delivered child source preserved"
+    },
+    "Actions.tsx": {
+      "productPath": "src/features/Settings/provider/ProviderMenu/Actions.tsx",
+      "originalSha256": "6664cdbc458cc3ac9bc6b153ede218d14b3e5ad8803a6f220d26635a6ab69ec6",
+      "mountedSha256": "6664cdbc458cc3ac9bc6b153ede218d14b3e5ad8803a6f220d26635a6ab69ec6",
+      "transforms": "None; actual delivered parent Actions source unchanged"
+    }
+  },
+  "stage": "GREEN"
+}

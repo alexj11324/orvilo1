@@ -1,0 +1,28 @@
+{
+  "componentRevision": "ee046be586c2b746e6c38469cd5bdc4238e129ab",
+  "encodedInputLength": 2075,
+  "httpStatus": 200,
+  "limitations": [
+    "Actual native lambdaClient read-only task.list query and real local backend response; window.fetch observer forwards all requests unchanged. The long nonexistent assignee id is a valid filter; no task is written or executed.",
+    "This proves generic oversized query transport only; Created-tab grouped-row rendering and keyboard focus have separate evidence."
+  ],
+  "method": "POST",
+  "platform": "native Electron app://",
+  "rendererBaseHead": "36eaebc5cc3f941bda05c6ddbf1d21f9a2dffcad",
+  "requests": [
+    {
+      "method": "POST",
+      "httpStatus": 200,
+      "urlLength": 22
+    }
+  ],
+  "resultReceived": true,
+  "source": {
+    "componentRevision": "ee046be586c2b746e6c38469cd5bdc4238e129ab",
+    "productPath": "packages/trpc/src/client/lambda.ts",
+    "originalSha256": "8dc97db5cfb40cc0a8410f9eca2e04eb66c4aeb494545a7299e98f92e7a7773c",
+    "mountedSha256": "8dc97db5cfb40cc0a8410f9eca2e04eb66c4aeb494545a7299e98f92e7a7773c",
+    "transforms": "None; no relative imports; exact delivered lambdaClient module"
+  },
+  "urlLength": 22
+}

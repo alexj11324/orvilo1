@@ -1,0 +1,36 @@
+{
+  "route": "/ws-usere2etestu/settings/provider/openai",
+  "samples": [
+    {
+      "theme": "light",
+      "retainedAntdFormMounted": true,
+      "actualOptionPreview": true,
+      "selectedTagPreview": true,
+      "layout": {
+        "display": "flex",
+        "wrap": "wrap",
+        "gap": "8px",
+        "width": 456,
+        "scrollWidth": 456,
+        "clientWidth": 456
+      },
+      "canceledWithoutSavingModel": true
+    },
+    {
+      "theme": "dark",
+      "retainedAntdFormMounted": true,
+      "actualOptionPreview": true,
+      "selectedTagPreview": true,
+      "layout": {
+        "display": "flex",
+        "wrap": "wrap",
+        "gap": "8px",
+        "width": 456,
+        "scrollWidth": 456,
+        "clientWidth": 456
+      },
+      "canceledWithoutSavingModel": true
+    }
+  ],
+  "stage": "layered"
+}

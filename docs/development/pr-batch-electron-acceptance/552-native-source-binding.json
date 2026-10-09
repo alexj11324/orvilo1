@@ -1,0 +1,37 @@
+{
+  "files": [
+    {
+      "path": "packages/locales/src/default/chat.ts",
+      "baselineSha256": "35adfec005b899225dd80c369ce8987458f7a032d65ecda6c5265457d504433d",
+      "candidateSha256": "7802801e55460d3bbd7879932493f47559744231b00457d5c90e29b4c9462f8e"
+    },
+    {
+      "path": "packages/locales/src/default/common.ts",
+      "baselineSha256": "f24fa1da0e4b677d6d6de831952c74cc4b0547730a99c12190c1828f406f17ba",
+      "candidateSha256": "3c514c365a0663e5a0679259edffc2fb4a5be051838cdf709bb27b3330ffbc82"
+    },
+    {
+      "path": "locales/zh-CN/chat.json",
+      "baselineSha256": "ca640dc57a2f417f71cd7ee0ea8a4725097138fbf7674addef3967756bcef4ec",
+      "candidateSha256": "7920905059d6ef6af4f578f9c8df2a6bd6f2b1eadd619e4f7e8106bf73dc7956"
+    },
+    {
+      "path": "locales/zh-CN/common.json",
+      "baselineSha256": "faad9e47a990b05c8ff5baf934c8512a948d220790dc49b4e7afaa6b7746efaf",
+      "candidateSha256": "7a4bad08482fe6b21afe092e893f44bc9c82aa50f20634672cd1d8a1940ac253"
+    },
+    {
+      "path": "locales/en-US/chat.json",
+      "baselineSha256": "4753527e3a6583c87396207cfb8e2b5f89ab3a5b7bb9a07478ee5b31308383cc",
+      "candidateSha256": "713194fd8df61cd15342412ed68a2884d14040ff17e62e8c0440762791fb604e"
+    },
+    {
+      "path": "locales/en-US/common.json",
+      "baselineSha256": "d74069f9d6de2bc49028e34b48976daa8ef8225bce4d086fbe14d492ae26cd9d",
+      "candidateSha256": "b5da236aadf58309c81c936553e039016858a44f80a668adcbcf466974984062"
+    }
+  ],
+  "head": "450d9451208276ab33e04c183bb4b8caa57e4e22",
+  "scope": "Only chat/common namespaces: canonical default TS and actual client-preloaded en-US/zh-CN JSON; other552 locale namespaces are not visually certified.",
+  "sharedBaseHead": "43a541e5e26f7bcf9fe7a3f79735bbe58ac6b99c"
+}

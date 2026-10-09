@@ -1,0 +1,111 @@
+{
+  "565Head": "2c76c903ce67131739c508162325d110741aca40",
+  "573Head": "74c0c66d598f5bc88abc8f98674f0d777f0661be",
+  "dependency": "Existing installed cssinjs2.1.2 package linked for native renderer; no second runtime started.",
+  "pr565SourceEquivalence": [
+    {
+      "path": "src/app/globals.css",
+      "equivalent": true,
+      "basis": "Only573 dormant antd-style slot and explanatory leading comment extend565 global layer order; remaining CSS identical."
+    },
+    {
+      "path": "src/features/AuthShell/AuthThemeLite.tsx",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    },
+    {
+      "path": "src/features/Settings/provider/features/ModelList/CreateNewModelModal/ExtendParamsSelect.tsx",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    },
+    {
+      "path": "src/layout/GlobalProvider/AntdStyleLayer.tsx",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    },
+    {
+      "path": "src/layout/GlobalProvider/AppTheme.tsx",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    },
+    {
+      "path": "src/styles/baseReset.ts",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    },
+    {
+      "path": "src/styles/global.ts",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    },
+    {
+      "path": "src/styles/index.ts",
+      "equivalent": true,
+      "basis": "Byte identical to565 accepted source."
+    }
+  ],
+  "scope": "Actual Electron565 global layers plus573 default-off infrastructure; shared backend auth source changed independently during acceptance, no claims about all other PRs or dormant scoped-layer activation.",
+  "sharedBaseHead": "43a541e5e26f7bcf9fe7a3f79735bbe58ac6b99c",
+  "sourceFiles": [
+    {
+      "path": "plugins/vite/staticStylesPrecompile.ts",
+      "expectedSha256": "cf4136d3eccc9f9f2b1ffc410db3c3a1477ffc1790c523ef24e983077d1949a6",
+      "actualSha256": "cf4136d3eccc9f9f2b1ffc410db3c3a1477ffc1790c523ef24e983077d1949a6"
+    },
+    {
+      "path": "src/app/globals.css",
+      "expectedSha256": "b63ea5e405607a079187b3172029d1c7c63ec203487613b7661090adf8e05c76",
+      "actualSha256": "b63ea5e405607a079187b3172029d1c7c63ec203487613b7661090adf8e05c76"
+    },
+    {
+      "path": "src/features/AuthShell/AuthThemeLite.tsx",
+      "expectedSha256": "94d5c6632a5340d04b7af10ddec24042b521ccfb5686b22a91c02d8a1fdd7972",
+      "actualSha256": "94d5c6632a5340d04b7af10ddec24042b521ccfb5686b22a91c02d8a1fdd7972"
+    },
+    {
+      "path": "src/features/Settings/provider/features/ModelList/CreateNewModelModal/ExtendParamsSelect.tsx",
+      "expectedSha256": "fa4124d83efa495deb06cbf0708b0edf910b8febdf9a69c7608d05706738962a",
+      "actualSha256": "fa4124d83efa495deb06cbf0708b0edf910b8febdf9a69c7608d05706738962a"
+    },
+    {
+      "path": "src/initialize.ts",
+      "expectedSha256": "87344ba9c0bed940671e320a594947c7b5459e17236dbf0c32fcf2140db0cc09",
+      "actualSha256": "87344ba9c0bed940671e320a594947c7b5459e17236dbf0c32fcf2140db0cc09"
+    },
+    {
+      "path": "src/layout/GlobalProvider/AntdStyleLayer.tsx",
+      "expectedSha256": "12c7b800e31491edfcafd379fbb99820117989d910ea6c6162464351ab7ba41e",
+      "actualSha256": "12c7b800e31491edfcafd379fbb99820117989d910ea6c6162464351ab7ba41e"
+    },
+    {
+      "path": "src/layout/GlobalProvider/AppTheme.tsx",
+      "expectedSha256": "ffec365ed659cc60bd103729aedcdedd34cd9de872d61deaa1471141d2aeb463",
+      "actualSha256": "ffec365ed659cc60bd103729aedcdedd34cd9de872d61deaa1471141d2aeb463"
+    },
+    {
+      "path": "src/styles/antdStyleLayer.ts",
+      "expectedSha256": "703938dd67ad73ca83dd2fb59e7f578c529d70586ab3a5d33e66f81d81527558",
+      "actualSha256": "703938dd67ad73ca83dd2fb59e7f578c529d70586ab3a5d33e66f81d81527558"
+    },
+    {
+      "path": "src/styles/baseReset.ts",
+      "expectedSha256": "80ac50f8a59679b6f51eab2f0091634135505d3544aa314f8263277b5a2545a2",
+      "actualSha256": "80ac50f8a59679b6f51eab2f0091634135505d3544aa314f8263277b5a2545a2"
+    },
+    {
+      "path": "src/styles/global.ts",
+      "expectedSha256": "d8595b588b38077cd52fe072a6e17a43ece373d6e1fb73a5c3082fd5c16f4953",
+      "actualSha256": "d8595b588b38077cd52fe072a6e17a43ece373d6e1fb73a5c3082fd5c16f4953"
+    },
+    {
+      "path": "src/styles/index.ts",
+      "expectedSha256": "58b355d1aa1096877cef85f4b364ff6f0f7cb0e6e8380454a4a4e1a614573855",
+      "actualSha256": "58b355d1aa1096877cef85f4b364ff6f0f7cb0e6e8380454a4a4e1a614573855"
+    },
+    {
+      "path": "src/styles/layerEmotionCache.ts",
+      "expectedSha256": "fc1534e3c91415c21128e8b6067021d8fa9ceda1480fe705058d4409aeb2cb1c",
+      "actualSha256": "fc1534e3c91415c21128e8b6067021d8fa9ceda1480fe705058d4409aeb2cb1c"
+    }
+  ]
+}

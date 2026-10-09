@@ -1,0 +1,158 @@
+{
+  "errors": [],
+  "layers": {
+    "declarations": ["@layer properties;", "@layer theme, base, components, utilities;"],
+    "globalAnchors": [
+      {
+        "selector": "a:where(.css-dev-only-do-not-override-ch9ese)",
+        "background": "transparent",
+        "layer": "unlayered"
+      }
+    ],
+    "universal": [
+      {
+        "layer": "unlayered",
+        "scrollbarWidth": "thin",
+        "verticalAlign": "baseline"
+      },
+      {
+        "layer": "unlayered",
+        "scrollbarWidth": "thin",
+        "verticalAlign": ""
+      }
+    ],
+    "scopedLayerCount": 0
+  },
+  "samples": [
+    {
+      "name": "api-docs",
+      "idle": "rgba(0, 0, 0, 0)",
+      "background": "rgba(0, 0, 0, 0.03)",
+      "color": "rgb(76, 144, 255)",
+      "accent": "rgba(0, 0, 0, 0.03)",
+      "hovered": true,
+      "rules": [
+        {
+          "selector": ":where(.css-dev-only-do-not-override-ch9ese) a",
+          "background": "transparent",
+          "layer": "unlayered"
+        },
+        {
+          "selector": ".hover\\:bg-accent:hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".\\[\\&\\:is\\(a\\)\\:hover\\]\\:bg-accent\\!:is(a):hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        }
+      ],
+      "theme": "light"
+    },
+    {
+      "name": "changelog",
+      "idle": "rgba(0, 0, 0, 0)",
+      "background": "rgba(0, 0, 0, 0.03)",
+      "color": "rgb(76, 144, 255)",
+      "accent": "rgba(0, 0, 0, 0.03)",
+      "hovered": true,
+      "rules": [
+        {
+          "selector": ":where(.css-dev-only-do-not-override-ch9ese) a",
+          "background": "transparent",
+          "layer": "unlayered"
+        },
+        {
+          "selector": ".bg-background",
+          "background": "var(--background)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".hover\\:bg-accent:hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".\\[\\&\\:is\\(a\\)\\:hover\\]\\:bg-accent\\!:is(a):hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        }
+      ],
+      "theme": "light"
+    },
+    {
+      "name": "api-docs",
+      "idle": "rgba(0, 0, 0, 0)",
+      "background": "rgba(255, 255, 255, 0.06)",
+      "color": "rgb(167, 211, 255)",
+      "accent": "rgba(255, 255, 255, 0.06)",
+      "hovered": true,
+      "rules": [
+        {
+          "selector": ":where(.css-dev-only-do-not-override-ch9ese) a",
+          "background": "transparent",
+          "layer": "unlayered"
+        },
+        {
+          "selector": ".hover\\:bg-accent:hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".\\[\\&\\:is\\(a\\)\\:hover\\]\\:bg-accent\\!:is(a):hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        }
+      ],
+      "theme": "dark"
+    },
+    {
+      "name": "changelog",
+      "idle": "rgba(0, 0, 0, 0)",
+      "background": "rgba(255, 255, 255, 0.06)",
+      "color": "rgb(167, 211, 255)",
+      "accent": "rgba(255, 255, 255, 0.06)",
+      "hovered": true,
+      "rules": [
+        {
+          "selector": ":where(.css-dev-only-do-not-override-ch9ese) a",
+          "background": "transparent",
+          "layer": "unlayered"
+        },
+        {
+          "selector": ".bg-background",
+          "background": "var(--background)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".hover\\:bg-accent:hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".dark\\:bg-input\\/30:is(.dark *, [data-theme=\"dark\"] *)",
+          "background": "var(--input)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".dark\\:hover\\:bg-input\\/50:is(.dark *, [data-theme=\"dark\"] *):hover",
+          "background": "var(--input)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".dark\\:hover\\:bg-input\\/50:is(.dark *, [data-theme=\"dark\"] *):hover",
+          "background": "color-mix(in oklab, var(--input) 50%, transparent)",
+          "layer": "utilities"
+        },
+        {
+          "selector": ".\\[\\&\\:is\\(a\\)\\:hover\\]\\:bg-accent\\!:is(a):hover",
+          "background": "var(--accent)",
+          "layer": "utilities"
+        }
+      ],
+      "theme": "dark"
+    }
+  ],
+  "stage": "baseline"
+}

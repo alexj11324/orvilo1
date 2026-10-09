@@ -1,0 +1,28 @@
+{
+  "head": "450d9451208276ab33e04c183bb4b8caa57e4e22",
+  "originalLanguageControl": "English",
+  "originalLanguageRestored": true,
+  "resourceNamespaces": ["common", "chat"],
+  "samples": [
+    {
+      "locale": "en-US",
+      "option": "English",
+      "command": "Create New Issue",
+      "placeholder": "Issue title",
+      "submit": "Create issue",
+      "menuText": "Team\nESC\nActions\nNew conversation\nCreate New Issue\nCreate New Project\nNew view\nSettings\nTheme\nNavigate\nResources\nInbox\nMy Work\nIssues\nViews\nTeams\nProjects\nAutomations\nAbout\nContact Us\nSubmit Issue\nStar us on GitHub\nOpen\nSelect",
+      "actualIssueModalOpened": true,
+      "canceledWithoutCreatingIssue": true
+    },
+    {
+      "locale": "zh-CN",
+      "option": "简体中文",
+      "command": "新建 Issue",
+      "placeholder": "Issue 标题",
+      "submit": "创建 Issue",
+      "menuText": "团队\nESC\n操作\n新建会话\n新建 Issue\n新建项目\n新建视图\n设置\n主题\n最近\nNative Inbox comment acceptance 544\nElectron private Team\nNative Team header acceptance\nNative private Team document Issue\nElectron active issue (copy)\nElectron acceptance project reviewed\n导航\n资源\n收件箱\n我的工作\nIssue\n视图\n团队\n项目\n自动化\n关于\n联系我们\n提交问题\n在 GitHub 上给我们 Star\n打开\n选择",
+      "actualIssueModalOpened": true,
+      "canceledWithoutCreatingIssue": true
+    }
+  ]
+}

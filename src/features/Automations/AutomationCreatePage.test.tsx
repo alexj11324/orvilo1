@@ -58,10 +58,6 @@ vi.mock('@/features/NavHeader', () => ({
   ),
 }));
 
-vi.mock('@/features/WideScreenContainer', () => ({
-  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
-}));
-
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
 }));

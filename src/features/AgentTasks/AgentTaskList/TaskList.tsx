@@ -288,7 +288,7 @@ const TaskList = memo<TaskListProps>((props) => {
     [collapsedKeys, groupBy, groupedTaskEntries],
   );
 
-  // The page scrolls in an ancestor (`WideScreenContainer`'s wrapper), with the
+  // The page scrolls in an ancestor (`WorkSurfaceCollection`'s scroll host), with the
   // inline composer above this list. Windowing against that ancestor keeps the
   // page layout intact instead of nesting a second scroller.
   const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();

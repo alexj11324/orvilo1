@@ -1,6 +1,7 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -752,7 +753,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                               {review.submittedAt ? (
                                 <div
                                   className="text-[12px] text-muted-foreground"
-                                  title={dayjs(review.submittedAt).format('YYYY-MM-DD HH:mm')}
+                                  title={formatAbsoluteDateTime(review.submittedAt)}
                                 >
                                   {dayjs(review.submittedAt).fromNow()}
                                 </div>

@@ -67,7 +67,7 @@ const formatMoment = (value: unknown, withDate: boolean, timezone?: string) => {
   // unparseable value has to survive as-is rather than render "Invalid Date".
   if (!moment.isValid()) return text;
 
-  return moment.format(withDate ? 'YYYY-MM-DD HH:mm' : 'HH:mm');
+  return moment.format(withDate ? 'YYYY/MM/DD HH:mm' : 'HH:mm');
 };
 
 /**

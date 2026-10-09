@@ -1,7 +1,7 @@
 import { Markdown } from '@lobehub/ui';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -85,7 +85,7 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
               className={cn('text-[12px] text-muted-foreground', styles.mono)}
               style={{ flex: 'none' }}
             >
-              {dayjs(attempt.startedAt).format('MM-DD HH:mm')}
+              {formatAbsoluteDateTime(attempt.startedAt)}
             </div>
             <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
               {t('goalProcess.attempts.nth', { index: attempt.index })}

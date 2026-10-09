@@ -210,7 +210,15 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       {!isEditing && commentId && !isOptimisticActivityId(commentId) && (
         <div className={`${styles.commentActions} comment-actions`}>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+            <DropdownMenuTrigger
+              render={
+                <ActionIcon
+                  aria-label={t('more', { ns: 'common' })}
+                  icon={MoreHorizontal}
+                  size={'small'}
+                />
+              }
+            />
             <DropdownMenuContent align={'end'} className="min-w-40">
               {menuItems.map((item) => (
                 <DropdownMenuItem

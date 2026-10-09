@@ -7,13 +7,14 @@ import { createElement, memo } from 'react';
 
 import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/reui/badge';
-import NavItem from '@/features/NavPanel/components/NavItem';
 import type { AgentBoundConnector } from '@/store/tool/slices/connector/types';
+
+import ConnectorRow from './ConnectorRow';
 
 /**
  * A row in the unified settings' "Agent Connectors" section.
  *
- * Rendered identically to the base connector rows (same NavItem + the same brand
+ * Rendered identically to the base connector rows (same ConnectorRow + the same brand
  * icon a base Composio/Orvilo connector of this identifier would show), so the
  * only visual difference is a tag naming the owning agent. Selectable — clicking
  * routes to the shared ConnectorDetail on the right, keyed by connector id to
@@ -40,12 +41,12 @@ const AgentConnectorItem = memo<{
   };
 
   return (
-    <NavItem
+    <ConnectorRow
       active={isSelected}
-      extra={connector.agentTitle ? <Badge>{connector.agentTitle}</Badge> : undefined}
-      icon={renderIcon}
+      icon={renderIcon()}
+      tag={connector.agentTitle ? <Badge>{connector.agentTitle}</Badge> : undefined}
       title={brand?.label || connector.name || connector.identifier}
-      onClick={onSelect}
+      onSelect={() => onSelect?.()}
     />
   );
 });

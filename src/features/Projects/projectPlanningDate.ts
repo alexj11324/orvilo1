@@ -1,4 +1,5 @@
 import type { ProjectDatePrecision } from '@orvilo/types';
+import { ABSOLUTE_DATE_FORMAT } from '@orvilo/utils/time';
 import dayjs, { type Dayjs } from 'dayjs';
 
 export const PROJECT_DATE_PRECISIONS = ['day', 'month', 'quarter', 'halfYear', 'year'] as const;
@@ -20,7 +21,7 @@ export const getProjectDatePickerMode = (
 };
 
 /** Numeric day format shared by every project date display (`2026/09/21`). */
-export const PROJECT_DAY_FORMAT = 'YYYY/MM/DD';
+export const PROJECT_DAY_FORMAT = ABSOLUTE_DATE_FORMAT;
 
 /**
  * Format a day for display anywhere under Projects. Never uses month names,

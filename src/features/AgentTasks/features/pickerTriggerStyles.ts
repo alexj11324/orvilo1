@@ -33,3 +33,12 @@ export const blockedPickerContentStyle: CSSProperties = {
   display: 'contents',
   pointerEvents: 'none',
 };
+
+/**
+ * Keyboard focus ring for a picker trigger that is not a Button (a list-row or
+ * board-card icon, an avatar). Same ring as the Button primitive's
+ * `focus-visible` state; `rounded-(--radius-input)` gives the ring a shape
+ * around a bare glyph.
+ */
+export const PICKER_TRIGGER_FOCUS_CLASS =
+  'rounded-(--radius-input) outline-none focus-visible:ring-3 focus-visible:ring-ring/50';

@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import { memo } from 'react';
@@ -82,7 +83,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 const formatTime = (date: Date | string) =>
-  dayjs().diff(dayjs(date), 'd') < 7 ? dayjs(date).fromNow() : dayjs(date).format('YYYY-MM-DD');
+  dayjs().diff(dayjs(date), 'd') < 7 ? dayjs(date).fromNow() : formatAbsoluteDate(date);
 
 const RecentFiles = memo(() => {
   const { t } = useTranslation('file');

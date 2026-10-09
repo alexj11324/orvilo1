@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => {
       }>;
     }>,
     refreshComposioConnectionStatus: vi.fn(),
+    reauthorizeComposioConnection: vi.fn(),
     removeComposioConnection: vi.fn(),
     revokeOrviloSkill: vi.fn(),
     syncBuiltinTool: vi.fn(),
@@ -68,8 +69,10 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@orvilo/const', () => ({
-  COMPOSIO_APP_TYPES: [],
+  COMPOSIO_APP_TYPES: [{ appSlug: 'gmail', identifier: 'gmail', label: 'Gmail' }],
   isDesktop: false,
+  getComposioAppByIdentifier: (identifier: string) =>
+    identifier === 'gmail' ? { label: 'Gmail' } : undefined,
   getOrviloSkillProviderById: (identifier: string) =>
     identifier === 'notion'
       ? {
@@ -95,6 +98,7 @@ vi.mock('react-i18next', () => ({
           'This connector still uses the legacy plugin format. Configure it to finish upgrading, then manage its tool permissions here.',
         'tools.noConfigurablePermissions':
           'This skill does not expose configurable tool permissions.',
+        'tools.notConnected.desc': 'Not connected yet.',
       };
 
       if (translations[key]) return translations[key];
@@ -111,19 +115,28 @@ vi.mock('@/features/AgentSkillDetail', () => ({
 
 vi.mock('@/features/Connectors', () => ({
   ConnectorDetail: ({
+    connectAction,
     connectorId,
     lifecycleActions,
   }: {
+    connectAction?: ReactNode;
     connectorId: string;
     lifecycleActions?: ReactNode;
   }) => (
     <div data-testid="connector-detail">
       <span>{connectorId}</span>
+      {connectAction}
       {lifecycleActions}
     </div>
   ),
   CustomConnectorModal: ({ open }: { open?: boolean }) =>
     open ? <div data-testid="migration-modal" /> : null,
+}));
+
+vi.mock('./PresetConnectButton', () => ({
+  default: ({ connector }: { connector: { id: string } }) => (
+    <button type="button">Connect preset {connector.id}</button>
+  ),
 }));
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -199,6 +212,15 @@ vi.mock('@/store/user/selectors', () => ({
   },
 }));
 
+const presetActions = {
+  addPreset: vi.fn(),
+  closeForm: vi.fn(),
+  githubConnecting: false,
+  githubTimedOut: false,
+  openForm: vi.fn(),
+  showForm: false,
+};
+
 const connectedNotionServer = () => ({
   identifier: 'notion',
   isConnected: true,
@@ -209,6 +231,7 @@ const connectedNotionServer = () => ({
 describe('SkillDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     mocks.permissions.create_content = true;
     mocks.permissions.edit_own_content = true;
     mocks.toolState.composioServers = [];
@@ -216,6 +239,69 @@ describe('SkillDetail', () => {
     mocks.toolState.installedBuiltinIds = [];
     mocks.toolState.installedPlugins = [];
     mocks.toolState.orviloSkillServers = [];
+  });
+
+  it.each(['pending_auth', 'error'])(
+    'reauthorizes a %s Composio connection from its detail pane',
+    async (status) => {
+      const user = userEvent.setup();
+      mocks.toolState.composioServers = [{ identifier: 'gmail', status }];
+      mocks.toolState.reauthorizeComposioConnection.mockResolvedValue({
+        identifier: 'gmail',
+        redirectUrl: 'https://auth.example.com/gmail',
+        status: 'pending_auth',
+      });
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+
+      render(<SkillDetail identifier="gmail" presetActions={presetActions} type="plugin" />);
+      await user.click(await screen.findByRole('button', { name: 'Connect' }));
+
+      await waitFor(() =>
+        expect(mocks.toolState.reauthorizeComposioConnection).toHaveBeenCalledWith('gmail'),
+      );
+      expect(mocks.toolState.createComposioConnection).not.toHaveBeenCalled();
+      expect(open).toHaveBeenCalledWith(
+        'https://auth.example.com/gmail',
+        '_blank',
+        'width=600,height=700',
+      );
+    },
+  );
+
+  it('creates an absent Composio connection and follows its authorization URL', async () => {
+    const user = userEvent.setup();
+    mocks.toolState.createComposioConnection.mockResolvedValue({
+      identifier: 'gmail',
+      redirectUrl: 'https://auth.example.com/new-gmail',
+      status: 'pending_auth',
+    });
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+
+    render(<SkillDetail identifier="gmail" presetActions={presetActions} type="plugin" />);
+    await user.click(await screen.findByRole('button', { name: 'Connect' }));
+
+    await waitFor(() =>
+      expect(open).toHaveBeenCalledWith(
+        'https://auth.example.com/new-gmail',
+        '_blank',
+        'width=600,height=700',
+      ),
+    );
+    expect(mocks.toolState.createComposioConnection).toHaveBeenCalledWith({
+      appSlug: 'gmail',
+      identifier: 'gmail',
+      label: 'Gmail',
+    });
+    expect(mocks.toolState.reauthorizeComposioConnection).not.toHaveBeenCalled();
+  });
+
+  it('renders a stored MCP connector and delegates its preset connection action', async () => {
+    mocks.toolState.connectors = [{ id: 'connector-1', identifier: 'linear' }];
+
+    render(<SkillDetail identifier="linear" presetActions={presetActions} type="mcp-connector" />);
+
+    expect(await screen.findByTestId('connector-detail')).toHaveTextContent('connector-1');
+    expect(await screen.findByRole('button', { name: 'Connect preset connector-1' })).toBeEnabled();
   });
 
   it('offers a Configure migration action for an un-migrated legacy custom MCP', async () => {
@@ -230,7 +316,7 @@ describe('SkillDetail', () => {
       },
     ];
 
-    render(<SkillDetail identifier="my-mcp" type="mcp-connector" />);
+    render(<SkillDetail identifier="my-mcp" presetActions={presetActions} type="mcp-connector" />);
 
     expect(await screen.findByRole('button', { name: 'Configure' })).toBeEnabled();
     expect(
@@ -246,7 +332,9 @@ describe('SkillDetail', () => {
   it('shows a disconnect action for a connected Orvilo connector without configurable tools', async () => {
     mocks.toolState.orviloSkillServers = [connectedNotionServer()];
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     expect(
       await screen.findByText('This skill does not expose configurable tool permissions.'),
@@ -271,7 +359,9 @@ describe('SkillDetail', () => {
       },
     ];
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     expect(await screen.findByTestId('connector-detail')).toHaveTextContent('connector-1');
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
@@ -310,7 +400,9 @@ describe('SkillDetail', () => {
     });
     mocks.toolState.revokeOrviloSkill.mockResolvedValue(undefined);
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
 
@@ -321,7 +413,7 @@ describe('SkillDetail', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('returns to the no-permissions state after a successful disconnect', async () => {
+  it('returns to the not-connected pane after a successful disconnect', async () => {
     const user = userEvent.setup();
     const server = {
       ...connectedNotionServer(),
@@ -342,15 +434,14 @@ describe('SkillDetail', () => {
       server.status = OrviloSkillStatus.NOT_CONNECTED;
     });
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
 
-    await waitFor(() =>
-      expect(
-        screen.getByText('This skill does not expose configurable tool permissions.'),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('Not connected yet.')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument();
   });
 });

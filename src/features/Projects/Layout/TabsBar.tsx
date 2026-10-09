@@ -7,7 +7,6 @@ import { useLocation } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { Badge } from '@/components/reui/badge';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
@@ -101,8 +100,6 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
   const membersSWR = useProjectMembersQuery(detail?.project.id, membersEnabled);
 
   const projectReference = detail?.project.slug ?? projectId ?? '';
-  // Same glyph and colour the project list and the rail draw for this status.
-  const headerStatusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(detail?.project.status)];
 
   const items = useMemo<SwitcherItem[]>(
     () =>
@@ -179,13 +176,9 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         right={
           detail?.project.id ? (
             <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
-              <Badge
-                className="text-xs"
-                radius="full"
-                size="sm"
-                style={{ color: headerStatusVisual.color }}
-                variant="outline"
-              >
+              {/* The glyph carries the status colour; the label stays foreground, since the
+                  status fill colours are not text-safe on light (amber 2.2:1). */}
+              <Badge className="text-xs text-foreground" radius="full" size="sm" variant="outline">
                 <ProjectStatusIcon size={16} status={detail.project.status} />
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,

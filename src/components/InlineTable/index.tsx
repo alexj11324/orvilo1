@@ -4,6 +4,8 @@ import { type CSSProperties, memo, type ReactNode } from 'react';
 
 import { Spinner } from '@/components/ui/spinner';
 
+import { type InlineTableSortOrder, sortIconActiveClass } from './sortOrder';
+
 const styles = createStaticStyles(({ css }) => ({
   hoverToActive: css`
     opacity: 0.6;
@@ -76,7 +78,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-export type InlineTableSortOrder = 'ascend' | 'descend' | null | undefined;
+export type { InlineTableSortOrder };
 
 export interface InlineTableColumn<RecordType = any> {
   align?: 'center' | 'end' | 'left' | 'right' | 'start';
@@ -166,7 +168,7 @@ const InlineTable = memo(<RecordType,>(props: InlineTableProps<RecordType>) => {
                     onClick={() => handleSort(column)}
                   >
                     {column.title}
-                    <span className={cx(styles.sortIcon, column.sortOrder && 'active')}>
+                    <span className={cx(styles.sortIcon, sortIconActiveClass(column.sortOrder))}>
                       {column.sortOrder === 'descend' ? (
                         <ArrowDown size={12} />
                       ) : (

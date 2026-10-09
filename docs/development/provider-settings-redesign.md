@@ -118,3 +118,24 @@ Canary changed these files while the redesign was in flight; the behaviour was r
 - Ollama close button name and OAuth card `Spinner` merged unchanged.
 - Toolbar buttons: the "more" menu is named `common:more`; the add-model button now has a visible "Add Model" label, which names it (the icon-only `common:addNew` label is no longer needed).
 - Model ID copy feedback: `ModelIdChip` keeps the copied toast and adds an inline check mark for two seconds.
+
+## Verification fixes (`fix/provider-settings-verify-findings`)
+
+Defects measured on the real app after the three PRs merged:
+
+- Rail search now also filters the card grid (`features/filterProviders.ts` is the one match rule for both) and the
+  grid shows `menu.notFound` when nothing matches. `SearchBar` gets an accessible name (its placeholder), Esc clears a
+  non-empty query (same as the settings sidebar search) and the clear button returns focus to the input.
+- Status badge: `ProviderConfig/providerStatus.ts` lets the live form value win over the stored one, so clearing the
+  key flips the badge to "Not configured" at once instead of waiting for the runtime config to refresh. An invalid
+  proxy URL is never persisted (autosave drops it, `isPersistableBaseURL`) and no longer counts as configured.
+- Connectivity check without a key or endpoint shows an inline error (`checker.missingCredentials`) instead of
+  sending a request.
+- Focus rings: info icon and AES-GCM link use the standard 3px ring; the password eye is a local `Button`
+  (`icon-sm`, 28px) so it also gets the ring.
+- Credentials and models panels set `--frame-radius` to `--radius-card` (8px) locally; the shared `Frame` default
+  (`--radius-xl`) is unchanged.
+- Model ID chip uses the shared toast (with an error toast when the clipboard write fails) plus the inline check.
+
+Left as is (decisions, see the PR): rail row height and focus ring come from the shared `NavItem`, which the doc
+keeps unchanged; the rail keeps one tab stop per row because no list in the app, Plane or Multica uses roving focus.

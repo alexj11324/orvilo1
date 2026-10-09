@@ -15,6 +15,7 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
+import { PRESSABLE_FOCUS_CLASS, pressableProps } from '../shared/pressableProps';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const flattenWorkspace = (nodes: TaskDetailWorkspaceNode[]): TaskDetailWorkspaceNode[] =>
@@ -64,13 +65,13 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
 
   return (
     <div
-      className="flex items-center gap-2.5 px-3 py-2"
+      className="flex items-center gap-2.5 px-3 py-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       style={{
         border: `1px solid ${cssVar.colorBorder}`,
         borderRadius: cssVar.borderRadiusLG,
         cursor: 'pointer',
       }}
-      onClick={() => void openDocumentModal(node.documentId)}
+      {...pressableProps(() => void openDocumentModal(node.documentId))}
     >
       {createElement(inaccessible ? FileLock2Icon : FileTextIcon, {
         color: cssVar.colorTextSecondary,
@@ -105,6 +106,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
       {node.createdAt && <Time date={node.createdAt} />}
       <SidebarDropdownMenu items={menuItems}>
         <ActionIcon
+          aria-label={t('more', { ns: 'common' })}
           icon={MoreHorizontal}
           size="small"
           onClick={(e) => {
@@ -137,9 +139,10 @@ const TaskArtifacts = memo(() => {
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div
-          className="flex items-center gap-2 px-2 py-1"
+          aria-expanded={isExpanded}
+          className={cn('flex items-center gap-2 px-2 py-1', PRESSABLE_FOCUS_CLASS)}
           style={{ cursor: 'pointer', width: 'fit-content' }}
-          onClick={() => setIsExpanded((prev) => !prev)}
+          {...pressableProps(() => setIsExpanded((prev) => !prev))}
         >
           <Package color={cssVar.colorTextDescription} size={16} />
           <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>

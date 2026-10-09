@@ -1,31 +1,12 @@
-import { TRACING_SCENARIOS } from '@orvilo/const';
-import {
-  chainPickEmoji,
-  chainSummaryAgentName,
-  chainSummaryDescription,
-  chainSummaryTags,
-  PICK_EMOJI_JSON_SCHEMA,
-  PICK_EMOJI_PROMPT_VERSION,
-  SUMMARY_AGENT_NAME_JSON_SCHEMA,
-  SUMMARY_AGENT_NAME_PROMPT_VERSION,
-  SUMMARY_DESCRIPTION_JSON_SCHEMA,
-  SUMMARY_DESCRIPTION_PROMPT_VERSION,
-  SUMMARY_TAGS_JSON_SCHEMA,
-  SUMMARY_TAGS_PROMPT_VERSION,
-} from '@orvilo/prompts';
 import { t as translate } from 'i18next';
 import { type PartialDeep } from 'type-fest';
 import { type StateCreator } from 'zustand/vanilla';
 
 import { toast } from '@/components/toast';
 import { analyticsClient } from '@/libs/analytics/client';
-import { aiChatService } from '@/services/aiChat';
-import { globalHelpers } from '@/store/global/helpers';
 import { useUserStore } from '@/store/user';
-import { systemAgentSelectors } from '@/store/user/slices/settings/selectors';
 import { type OrviloAgentChatConfig, type OrviloAgentConfig } from '@/types/agent';
 import { type MetaData } from '@/types/meta';
-import { type SystemAgentItem } from '@/types/user/settings';
 import { merge } from '@/utils/merge';
 import { setNamespace } from '@/utils/storeDebug';
 
@@ -36,37 +17,10 @@ import { configReducer } from './reducers/config';
 import { type MetaDataDispatch } from './reducers/meta';
 import { metaDataReducer } from './reducers/meta';
 
-export interface PublicAction {
-  /**
-   * Autocomplete agent description
-   * @param id - Agent ID
-   * @returns A Promise for handling after asynchronous operation completes
-   */
-  autocompleteAgentDescription: () => Promise<void>;
-  autocompleteAgentTags: () => Promise<void>;
-  /**
-   * Autocomplete agent title
-   * @param id - Agent ID
-   * @returns A Promise for handling after asynchronous operation completes
-   */
-  autocompleteAgentTitle: () => Promise<void>;
-  /**
-   * Autocomplete assistant metadata
-   */
-  autocompleteAllMeta: (replace?: boolean) => void;
-  autocompleteMeta: (key: keyof MetaData) => void;
-  /**
-   * Auto pick emoji
-   * @param id - Emoji ID
-   */
-  autoPickEmoji: () => Promise<void>;
-}
-
-export interface Action extends PublicAction {
+export interface Action {
   dispatchConfig: (payload: ConfigDispatch) => Promise<void>;
   dispatchMeta: (payload: MetaDataDispatch) => Promise<void>;
 
-  internal_getSystemAgentForMeta: () => SystemAgentItem;
   resetAgentConfig: () => Promise<void>;
 
   resetAgentMeta: () => Promise<void>;
@@ -98,214 +52,6 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
   let metaRevision = 0;
   return {
     ...initialState,
-    autoPickEmoji: async () => {
-      const { config, meta, dispatchMeta } = get();
-
-      const systemRole = config.systemRole;
-
-      const { model, provider } = get().internal_getSystemAgentForMeta();
-
-      get().updateLoadingState('avatar', true);
-      try {
-        const { data } = await aiChatService.generateJSON(
-          {
-            ...chainPickEmoji([meta.title, meta.description, systemRole].filter(Boolean).join(',')),
-            model,
-            provider,
-            schema: PICK_EMOJI_JSON_SCHEMA,
-            tracing: {
-              agentId: get().id,
-              promptVersion: PICK_EMOJI_PROMPT_VERSION,
-              scenario: TRACING_SCENARIOS.AgentMeta,
-              schemaName: PICK_EMOJI_JSON_SCHEMA.name,
-            },
-          },
-          new AbortController(),
-        );
-
-        const emoji = (data as { emoji?: string } | undefined)?.emoji;
-        if (emoji) dispatchMeta({ type: 'update', value: { avatar: emoji } });
-      } catch (error) {
-        console.error('[AgentSettings] autoPickEmoji failed:', error);
-      } finally {
-        get().updateLoadingState('avatar', false);
-      }
-    },
-    autocompleteAgentDescription: async () => {
-      const { dispatchMeta, config, meta, updateLoadingState } = get();
-
-      const systemRole = config.systemRole;
-
-      if (!systemRole) return;
-
-      const preValue = meta.description;
-
-      // Replace with ...
-      dispatchMeta({ type: 'update', value: { description: '...' } });
-
-      const { model, provider } = get().internal_getSystemAgentForMeta();
-
-      updateLoadingState('description', true);
-      try {
-        const { data } = await aiChatService.generateJSON(
-          {
-            ...chainSummaryDescription(systemRole, globalHelpers.getCurrentLanguage()),
-            model,
-            provider,
-            schema: SUMMARY_DESCRIPTION_JSON_SCHEMA,
-            tracing: {
-              agentId: get().id,
-              promptVersion: SUMMARY_DESCRIPTION_PROMPT_VERSION,
-              scenario: TRACING_SCENARIOS.AgentMeta,
-              schemaName: SUMMARY_DESCRIPTION_JSON_SCHEMA.name,
-            },
-          },
-          new AbortController(),
-        );
-
-        const description = (data as { description?: string } | undefined)?.description ?? preValue;
-        dispatchMeta({ type: 'update', value: { description } });
-      } catch {
-        dispatchMeta({ type: 'update', value: { description: preValue } });
-      } finally {
-        updateLoadingState('description', false);
-      }
-    },
-    autocompleteAgentTags: async () => {
-      const { dispatchMeta, config, meta, updateLoadingState } = get();
-
-      const systemRole = config.systemRole;
-
-      if (!systemRole) return;
-
-      const preValue = meta.tags;
-
-      // Replace with ...
-      dispatchMeta({ type: 'update', value: { tags: ['...'] } });
-
-      const { model, provider } = get().internal_getSystemAgentForMeta();
-
-      updateLoadingState('tags', true);
-      try {
-        const { data } = await aiChatService.generateJSON(
-          {
-            ...chainSummaryTags(
-              [meta.title, meta.description, systemRole].filter(Boolean).join(','),
-              globalHelpers.getCurrentLanguage(),
-            ),
-            model,
-            provider,
-            schema: SUMMARY_TAGS_JSON_SCHEMA,
-            tracing: {
-              agentId: get().id,
-              promptVersion: SUMMARY_TAGS_PROMPT_VERSION,
-              scenario: TRACING_SCENARIOS.AgentMeta,
-              schemaName: SUMMARY_TAGS_JSON_SCHEMA.name,
-            },
-          },
-          new AbortController(),
-        );
-
-        const tags = (data as { tags?: string[] } | undefined)?.tags ?? preValue;
-        dispatchMeta({ type: 'update', value: { tags } });
-      } catch {
-        dispatchMeta({ type: 'update', value: { tags: preValue } });
-      } finally {
-        updateLoadingState('tags', false);
-      }
-    },
-    autocompleteAgentTitle: async () => {
-      const { dispatchMeta, config, meta, updateLoadingState } = get();
-
-      const systemRole = config.systemRole;
-
-      if (!systemRole) return;
-
-      const previousTitle = meta.title;
-
-      // Replace with ...
-      dispatchMeta({ type: 'update', value: { title: '...' } });
-
-      const { model, provider } = get().internal_getSystemAgentForMeta();
-
-      updateLoadingState('title', true);
-      try {
-        const { data } = await aiChatService.generateJSON(
-          {
-            ...chainSummaryAgentName(
-              [meta.description, systemRole].filter(Boolean).join(','),
-              globalHelpers.getCurrentLanguage(),
-            ),
-            model,
-            provider,
-            schema: SUMMARY_AGENT_NAME_JSON_SCHEMA,
-            tracing: {
-              agentId: get().id,
-              promptVersion: SUMMARY_AGENT_NAME_PROMPT_VERSION,
-              scenario: TRACING_SCENARIOS.AgentMeta,
-              schemaName: SUMMARY_AGENT_NAME_JSON_SCHEMA.name,
-            },
-          },
-          new AbortController(),
-        );
-
-        const title = (data as { name?: string } | undefined)?.name ?? previousTitle;
-        dispatchMeta({ type: 'update', value: { title } });
-      } catch {
-        dispatchMeta({ type: 'update', value: { title: previousTitle } });
-      } finally {
-        updateLoadingState('title', false);
-      }
-    },
-    autocompleteAllMeta: (replace) => {
-      const { meta } = get();
-
-      if (!meta.title || replace) {
-        get().autocompleteAgentTitle();
-      }
-
-      if (!meta.description || replace) {
-        get().autocompleteAgentDescription();
-      }
-
-      if (!meta.avatar || replace) {
-        get().autoPickEmoji();
-      }
-
-      if (!meta.tags || replace) {
-        get().autocompleteAgentTags();
-      }
-    },
-    autocompleteMeta: (key) => {
-      const {
-        autoPickEmoji,
-        autocompleteAgentTitle,
-        autocompleteAgentDescription,
-        autocompleteAgentTags,
-      } = get();
-
-      switch (key) {
-        case 'avatar': {
-          autoPickEmoji();
-          return;
-        }
-
-        case 'description': {
-          autocompleteAgentDescription();
-          return;
-        }
-
-        case 'title': {
-          autocompleteAgentTitle();
-          return;
-        }
-
-        case 'tags': {
-          autocompleteAgentTags();
-          return;
-        }
-      }
-    },
     dispatchConfig: async (payload) => {
       const revision = ++configRevision;
       const nextConfig = configReducer(get().config, payload);
@@ -357,10 +103,6 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
         }
       }
     },
-    internal_getSystemAgentForMeta: () => {
-      return systemAgentSelectors.agentMeta(useUserStore.getState());
-    },
-
     resetAgentConfig: async () => {
       await get().dispatchConfig({ type: 'reset' });
     },

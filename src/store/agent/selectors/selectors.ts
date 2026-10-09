@@ -5,7 +5,6 @@ import {
   DEFAULT_BACKGROUND_COLOR,
   DEFAULT_INBOX_AVATAR,
   DEFAULT_MODEL,
-  DEFAUTT_AGENT_TTS_CONFIG,
   isDesktop,
 } from '@orvilo/const';
 import {
@@ -15,7 +14,6 @@ import {
   type KnowledgeItem,
   type MetaData,
   type OrviloAgentConfig,
-  type OrviloAgentTTSConfig,
   type RuntimeEnvConfig,
 } from '@orvilo/types';
 import {
@@ -25,7 +23,6 @@ import {
   KnowledgeType,
 } from '@orvilo/types';
 
-import { DEFAULT_OPENING_QUESTIONS } from '@/features/AgentSetting/store/selectors';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { globalAgentContextManager } from '@/helpers/GlobalAgentContextManager';
 import { filterToolIds } from '@/helpers/toolFilters';
@@ -209,15 +206,6 @@ const currentAgentFiles = (s: AgentStoreState) => {
   return config?.files || [];
 };
 
-const currentAgentTTS = (s: AgentStoreState): OrviloAgentTTSConfig => {
-  const config = currentAgentConfig(s);
-
-  return config?.tts || DEFAUTT_AGENT_TTS_CONFIG;
-};
-
-const currentAgentTTSVoice = (s: AgentStoreState): string =>
-  currentAgentTTS(s).voice?.openai || 'alloy';
-
 const currentEnabledKnowledge = (s: AgentStoreState) => {
   const knowledgeBases = currentAgentKnowledgeBases(s);
   const files = currentAgentFiles(s);
@@ -292,10 +280,6 @@ const isAgentConfigError = (s: AgentStoreState) => !!currentAgentConfigError(s);
  * Get agent's slug by ID (used to identify builtin agents)
  */
 const getAgentSlugById = (agentId: string) => (s: AgentStoreState) => s.agentMap[agentId]?.slug;
-
-const openingQuestions = (s: AgentStoreState) =>
-  currentAgentConfig(s)?.openingQuestions || DEFAULT_OPENING_QUESTIONS;
-const openingMessage = (s: AgentStoreState) => currentAgentConfig(s)?.openingMessage || '';
 
 // ==========   Agent Mode Config   ============== //
 
@@ -397,8 +381,6 @@ export const agentSelectors = {
   currentAgentModelProvider,
   currentAgentPlugins,
   currentAgentSystemRole,
-  currentAgentTTS,
-  currentAgentTTSVoice,
   currentAgentTags,
   currentAgentDisplayName,
   currentAgentTitle,
@@ -426,6 +408,4 @@ export const agentSelectors = {
   isAgentModeEnabled,
   isCurrentAgentExternal,
   isCurrentAgentHeterogeneous,
-  openingMessage,
-  openingQuestions,
 };

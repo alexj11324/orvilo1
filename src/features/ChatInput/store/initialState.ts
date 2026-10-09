@@ -38,21 +38,12 @@ export interface ContextWindowMessage {
 }
 
 export interface ChatInputFeature {
-  inputCompletion?: boolean;
   inputHistory?: boolean;
   mention?: boolean;
   slash?: boolean;
 }
 
-export interface InputCompletionError {
-  body?: unknown;
-  errorType?: string;
-  httpStatus?: number;
-  message: string;
-}
-
 export const DEFAULT_CHAT_INPUT_FEATURE = {
-  inputCompletion: true,
   inputHistory: true,
   mention: true,
   slash: true,
@@ -97,8 +88,6 @@ export interface PublicState {
 export interface State extends PublicState {
   _savedEditorState?: Record<string, any>;
   editor?: IEditor;
-  inputCompletionError?: InputCompletionError;
-  inputCompletionErrorDismissed: boolean;
   isContentEmpty: boolean;
   markdownContent: string;
   slashMenuRef: ChatInputProps['slashMenuRef'];
@@ -109,7 +98,6 @@ export const initialState: State = {
   allowExpand: true,
   expand: false,
   feature: DEFAULT_CHAT_INPUT_FEATURE,
-  inputCompletionErrorDismissed: false,
   isContentEmpty: false,
   leftActions: [],
   markdownContent: '',

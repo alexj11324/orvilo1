@@ -344,7 +344,6 @@ export default {
   'agentConnectors.toolCount_other': '{{count}} tools',
   'agentTab.connector': 'Connectors',
   'agentTab.graph': 'Graph Runtime',
-  'agentTab.opening': 'Opening Settings',
   'agentTab.plugin': 'Skill Settings',
   'agentTab.rules': 'Rules & experience',
   'agentTab.selfIteration': 'Self-Iteration',
@@ -1235,11 +1234,6 @@ export default {
   'settingChat.enableAutoScrollOnStreaming.desc': 'Override global setting for this agent',
   'settingChat.enableAutoScrollOnStreaming.title': 'Auto-scroll During AI Response',
   'settingChat.enableCompressHistory.title': 'Enable auto context compression',
-  'settingChat.enableFollowUpChips.desc':
-    'After each reply, show one-click follow-up reply chips below the message. Requires the global Follow-up model to be configured.',
-  'settingChat.enableFollowUpChips.notConfiguredHint':
-    'Configure the global Follow-up model first to enable this.',
-  'settingChat.enableFollowUpChips.title': 'Follow-up Suggestions',
   'settingChat.enableHistoryCount.alias': 'Unlimited',
   'settingChat.enableHistoryCount.limited': 'Include only {{number}} conversation messages',
   'settingChat.enableHistoryCount.setlimited': 'Set limited history messages',
@@ -1407,19 +1401,6 @@ export default {
   'settingModel.topP.desc':
     'How many possibilities to consider; a higher value accepts more potential answers, while a lower value tends to choose the most likely answer. It is not recommended to change this alongside the creativity level.',
   'settingModel.topP.title': 'Openness to Ideas',
-  'settingOpening.openingMessage.desc':
-    "The opening message displayed when the conversation starts, used to introduce the agent's features",
-  'settingOpening.openingMessage.placeholder':
-    'Hello, I am your Custom Agent. You can start chatting with me right away, or go to Agent Settings to complete my information.',
-  'settingOpening.openingMessage.title': 'Opening Message',
-  'settingOpening.openingQuestions.desc':
-    'Guiding questions displayed at the beginning of the conversation',
-  'settingOpening.openingQuestions.empty':
-    'Add opening questions to help users start the conversation quickly',
-  'settingOpening.openingQuestions.placeholder': 'Please enter a question',
-  'settingOpening.openingQuestions.repeat': 'Question already exists',
-  'settingOpening.openingQuestions.title': 'Opening Questions',
-  'settingOpening.title': 'Opening Settings',
   'settingPlugin.title': 'Skill List',
   'settingGraphRuntime.enabled.desc':
     'Route this agent through the graph runtime using the snapshot stored below.',
@@ -1470,7 +1451,7 @@ export default {
   'settingsSearch.tabKeywords.proxy': 'proxy, network, connection, proxy settings',
   'settingsSearch.tabKeywords.referral': 'referral, invite, rewards, bonus',
   'settingsSearch.tabKeywords.serviceModel':
-    'service model, model assignment, topic naming, translation, tts, tts settings, voice, speech, image, image generation, embedding, prompt rewrite, suggestion, search, search model',
+    'service model, model assignment, topic naming, image, image generation, embedding, prompt rewrite, search, search model',
   'settingsSearch.tabKeywords.skill': 'skills, plugins, tools',
   'settingsSearch.tabKeywords.stats': 'analytics, statistics, stats',
   'settingsSearch.tabKeywords.storage':
@@ -1547,32 +1528,6 @@ export default {
   'settingSystemTools.tools.qwen.desc': 'Qwen Code - Alibaba Qwen agentic coding CLI',
   'settingSystemTools.tools.rg.desc': 'ripgrep - extremely fast text search tool',
   'settingSystemTools.tools.uv.desc': 'uv - extremely fast Python package manager',
-  'settingTTS.openai.sttModel': 'OpenAI Speech-to-Text Model',
-  'settingTTS.openai.title': 'OpenAI',
-  'settingTTS.openai.ttsModel': 'OpenAI Text-to-Speech Model',
-  'settingTTS.showAllLocaleVoice.desc':
-    'If closed, only voices in the current language will be displayed',
-  'settingTTS.showAllLocaleVoice.title': 'Show All Locale Voices',
-  'settingTTS.stt': 'Speech Recognition Settings',
-  'settingTTS.sttAutoStop.desc':
-    'When closed, speech recognition will not end automatically and requires manual click to stop',
-  'settingTTS.sttAutoStop.title': 'Auto Stop Speech Recognition',
-  'settingTTS.sttLocale.desc':
-    'The language of the speech input, this option can improve the accuracy of speech recognition',
-  'settingTTS.sttLocale.title': 'Speech Recognition Language',
-  'settingTTS.sttService.desc':
-    "Where 'browser' is the native speech recognition service of the browser",
-  'settingTTS.sttService.title': 'Speech Recognition Service',
-  'settingTTS.submit': 'Update Voice Service',
-  'settingTTS.title': 'Speech Service',
-  'settingTTS.tts': 'Text-to-Speech Settings',
-  'settingTTS.ttsService.desc':
-    'If using OpenAI text-to-speech service, make sure the OpenAI model service is enabled',
-  'settingTTS.ttsService.title': 'Text-to-Speech Service',
-  'settingTTS.voice.desc':
-    'Select a voice for the current agent, different TTS services support different voices',
-  'settingTTS.voice.preview': 'Voice Preview',
-  'settingTTS.voice.title': 'Text-to-Speech Voice',
   'skillGroup.agentConnectors': 'Agent Connectors',
   'skillGroup.builtinSkills': 'Built-in Skills',
   'skillGroup.builtinTools': 'Built-in Tools',
@@ -1693,10 +1648,6 @@ export default {
   'sync.webrtc.signaling.placeholder': 'Enter signaling server address',
   'sync.webrtc.signaling.title': 'Signaling Server',
   'sync.webrtc.title': 'WebRTC Sync',
-  'systemAgent.agentMeta.label': 'Model',
-  'systemAgent.agentMeta.modelDesc':
-    'Model used to generate names, descriptions, avatars, and tags',
-  'systemAgent.agentMeta.title': 'Profile Generation',
   'systemAgent.expertise.modelDesc':
     'Model used to draft expertise domains and extract reusable experience from conversations.',
   'systemAgent.expertise.title': 'Agent Self-Evolution',
@@ -1711,19 +1662,11 @@ export default {
   'systemAgent.generationTopic.label': 'Model',
   'systemAgent.generationTopic.modelDesc': 'Model used to name AI image topics',
   'systemAgent.generationTopic.title': 'AI Image Topic Naming',
-  'systemAgent.followUpAction.label': 'Follow-up Suggestions Model',
-  'systemAgent.followUpAction.modelDesc':
-    'Model used to suggest one-click follow-up replies under each agent message',
-  'systemAgent.followUpAction.title': 'Follow-up Suggestions',
   'systemAgent.helpInfo':
     'When creating a new agent, the default agent settings will be used as preset values.',
   'systemAgent.historyCompress.label': 'Model',
   'systemAgent.historyCompress.modelDesc': 'Model used to compress conversation history',
   'systemAgent.historyCompress.title': 'Auto context compression',
-  'systemAgent.inputCompletion.label': 'Model',
-  'systemAgent.inputCompletion.modelDesc':
-    'Suggests text while you type. When enabled, this model generates the suggestions.',
-  'systemAgent.inputCompletion.title': 'Input Suggestions',
   'systemAgent.userMemoryEmbedding.label': 'Model',
   'systemAgent.userMemoryEmbedding.modelDesc':
     'Model used to embed memory content for retrieval. The context limit caps each embedding input.',
@@ -1747,14 +1690,6 @@ export default {
   'systemAgent.topic.label': 'Model',
   'systemAgent.topic.modelDesc': 'Model used to rename topics',
   'systemAgent.topic.title': 'Topic Auto-Naming',
-  'systemAgent.topicAutoSummary.modelDesc':
-    'Writes a short description and a reusable conversation summary after a topic becomes inactive.',
-  'systemAgent.topicAutoSummary.promptPlaceholder':
-    'Optional custom instructions. The conversation and required JSON output schema are added automatically.',
-  'systemAgent.topicAutoSummary.title': 'Automatic Topic Summary',
-  'systemAgent.translation.label': 'Model',
-  'systemAgent.translation.modelDesc': 'Model used to translate messages',
-  'systemAgent.translation.title': 'Message Translation',
   'tab.about': 'About',
   'tab.advanced': 'Advanced',
   'tab.advanced.appUpdates.title': 'App updates',
@@ -4331,10 +4266,6 @@ export default {
   'settingAgent.execution.target': 'Execution target',
   'settingAgent.execution.cwd': 'Working directory',
   'settingAgent.execution.isolation': 'Isolate commands',
-  'settingAgent.opening.title': 'Opening',
-  'settingAgent.opening.message': 'Opening message',
-  'settingAgent.opening.questions': 'Suggested questions',
-  'settingAgent.opening.questionsHint': 'One question per line.',
   'settingAgent.accessSettings.permissions': 'Resource permissions',
   'settingAgent.accessSettings.managePermissions': 'Manage permissions',
   'settingAgent.accessSettings.topicSharing': 'Who can share conversations',

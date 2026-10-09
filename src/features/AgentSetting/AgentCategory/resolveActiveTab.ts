@@ -3,7 +3,7 @@ import { type ChatSettingsTabs } from '@/store/global/initialState';
 /**
  * Pick the tab to show: the user's choice while it is still offered, otherwise
  * the first tab that has content. The offered tabs change with the agent
- * (inbox hides Opening, labs gate Rules), so a fixed initial tab can point at
+ * (labs gate Rules, feature flags gate Self-iteration), so a fixed initial tab can point at
  * nothing.
  */
 export const resolveActiveTab = (

@@ -54,7 +54,6 @@ const AssistantMessage = memo<AssistantMessageProps>(
       content,
       createdAt,
       tools,
-      extra,
       model,
       provider,
       performance,
@@ -180,8 +179,6 @@ const AssistantMessage = memo<AssistantMessageProps>(
             {interrupted && <InterruptedHint />}
             <AssistantMessageExtra
               content={content}
-              extra={extra}
-              id={id}
               model={model!}
               performance={performance! || metadata}
               provider={provider!}

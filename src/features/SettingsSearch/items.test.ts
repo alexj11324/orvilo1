@@ -15,7 +15,6 @@ const webContext: SettingsSearchContext = {
   enableBusinessFeatures: true,
   enableComposio: true,
   enableGatewayMode: true,
-  enableSTT: true,
   hasEmail: true,
   hideDocs: false,
   isDesktop: false,
@@ -84,7 +83,7 @@ describe('settings search index', () => {
       expect.arrayContaining(['telegram', 'slack', 'discord', 'wechat']),
     );
     expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.ServiceModel]).toEqual(
-      expect.arrayContaining(['search', 'tts settings']),
+      expect.arrayContaining(['search', 'prompt rewrite']),
     );
     expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Storage]).toEqual(
       expect.arrayContaining(['knowledge base']),

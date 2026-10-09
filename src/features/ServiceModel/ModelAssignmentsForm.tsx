@@ -2,7 +2,7 @@
 
 import type { FormGroupItemType, FormItemProps } from '@lobehub/ui';
 import { Flexbox, Form, Tooltip } from '@lobehub/ui';
-import { InputNumber, Switch, TextArea } from '@lobehub/ui/base-ui';
+import { InputNumber, Switch } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +21,18 @@ import type { SystemAgentItem, UserServiceModelConfigKey } from '@/types/user/se
 
 import { serviceModelFormStyles as styles } from './styles';
 
+// Keys with no row here: onboarding models are not user-assigned, and the
+// chat-era features below were removed from the product (their config fields
+// stay persisted, but no locale text or UI exists for them).
 type ModelAssignmentItemKey = Exclude<
   UserServiceModelConfigKey,
-  'onboardingTaskRecommender' | 'onboardingUnderstanding'
+  | 'agentMeta'
+  | 'followUpAction'
+  | 'inputCompletion'
+  | 'onboardingTaskRecommender'
+  | 'onboardingUnderstanding'
+  | 'topicAutoSummary'
+  | 'translation'
 >;
 
 interface SystemAgentModelItem {
@@ -41,17 +50,10 @@ const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [
   { key: 'goal' },
   { key: 'topic' },
   { key: 'generationTopic' },
-  { key: 'translation' },
   { key: 'historyCompress' },
-  { key: 'agentMeta' },
 ];
 
-const OPTIONAL_FEATURE_ITEMS: SystemAgentModelItem[] = [
-  { key: 'topicAutoSummary' },
-  { key: 'followUpAction' },
-  { key: 'inputCompletion' },
-  { key: 'promptRewrite' },
-];
+const OPTIONAL_FEATURE_ITEMS: SystemAgentModelItem[] = [{ key: 'promptRewrite' }];
 
 const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [
   { contextLimit: true, key: 'memoryAnalysisAgentConfig' },
@@ -267,17 +269,6 @@ const ModelAssignmentsForm = memo(() => {
                 />
               </Flexbox>
             </Flexbox>
-            {key === 'topicAutoSummary' && !featureDisabled && (
-              <TextArea
-                autoSize={{ maxRows: 8, minRows: 3 }}
-                defaultValue={value.customPrompt}
-                disabled={!canManageServiceModel}
-                placeholder={t('systemAgent.topicAutoSummary.promptPlaceholder')}
-                onBlur={(event) =>
-                  updateSystemAgentModel(key, { customPrompt: event.currentTarget.value.trim() })
-                }
-              />
-            )}
           </Flexbox>
         </Tooltip>
       ),

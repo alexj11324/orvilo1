@@ -2,7 +2,7 @@
 
 import { cssVar } from 'antd-style';
 import debug from 'debug';
-import { memo, Suspense, useMemo } from 'react';
+import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessConversationAnalytics } from '@/business/client/hooks/useBusinessConversationAnalytics';
@@ -15,22 +15,16 @@ import { ConversationProvider } from '@/features/Conversation';
 import ToolAuthAlert from '@/features/Conversation/AgentWelcome/ToolAuthAlert';
 import { useMessageDeepLink } from '@/features/Conversation/ChatList/hooks/useMessageDeepLink';
 import ComposerDraftReceiver from '@/features/Conversation/ComposerDraftReceiver';
-import { useChatFollowUp } from '@/features/Conversation/hooks/useChatFollowUp';
 import {
   ForwardMessageDispatcher,
   MessageForwardFooter,
 } from '@/features/Conversation/MessageForward';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
-import { mergeConversationHooks } from '@/features/Conversation/utils/mergeConversationHooks';
 import { useGatewayReconnect } from '@/hooks/useGatewayReconnect';
 import { useOperationState } from '@/hooks/useOperationState';
 import { useScheduledRunWatch } from '@/hooks/useScheduledRunWatch';
 import { useAgentStore } from '@/store/agent';
-import {
-  agentByIdSelectors,
-  builtinAgentSelectors,
-  chatConfigByIdSelectors,
-} from '@/store/agent/selectors';
+import { agentByIdSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors, topicSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
@@ -104,13 +98,6 @@ const Conversation = memo(() => {
   // can't fire until the synced `runningOperation` lands in the topic map.
   useScheduledRunWatch(context.topicId);
 
-  const agentChatConfig = useAgentStore(chatConfigByIdSelectors.getChatConfigById(context.agentId));
-  const chatFollowUpHooks = useChatFollowUp({
-    agentChatConfig,
-    conversationKey: chatKey,
-    threadId: context.threadId ?? undefined,
-    topicId: context.topicId ?? undefined,
-  });
   const businessAnalyticsHooks = useBusinessConversationAnalytics(context);
 
   // A topic still awaiting its transfer backfill shows a placeholder instead
@@ -122,10 +109,7 @@ const Conversation = memo(() => {
     context.topicId,
   );
 
-  const hooks = useMemo(
-    () => mergeConversationHooks(businessAnalyticsHooks, chatFollowUpHooks),
-    [businessAnalyticsHooks, chatFollowUpHooks],
-  );
+  const hooks = businessAnalyticsHooks;
 
   const chatInput = !isSubagentThread && !topicPending && (
     <MessageForwardFooter>

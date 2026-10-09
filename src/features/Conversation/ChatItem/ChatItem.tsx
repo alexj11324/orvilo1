@@ -7,8 +7,6 @@ import { memo } from 'react';
 import { Message } from '@/components/ai-elements/message';
 import { useChatbotSurface } from '@/features/AIChatbot/context';
 
-import FollowUpChips from '../FollowUp/FollowUpChips';
-import { contextSelectors, useConversationStore } from '../store';
 import Actions from './components/Actions';
 import Avatar from './components/Avatar';
 import ErrorContent from './components/ErrorContent';
@@ -52,7 +50,6 @@ const ChatItem = memo<ChatItemProps>(
   }) => {
     const isUser = placement === 'right';
     const chatbotSurface = useChatbotSurface();
-    const conversationKey = useConversationStore(contextSelectors.conversationKey);
     const isEmptyMessage =
       !message || String(message).trim() === '' || message === placeholderMessage;
     const errorContent = error && (
@@ -124,9 +121,6 @@ const ChatItem = memo<ChatItemProps>(
           </MessageContent>
         )}
         {belowMessage}
-        {!chatbotSurface && id && conversationKey && (
-          <FollowUpChips conversationKey={conversationKey} messageId={id} />
-        )}
         {(actionAddon || actions) && (
           <Actions actionAddon={actionAddon} actions={actions} placement={placement} />
         )}

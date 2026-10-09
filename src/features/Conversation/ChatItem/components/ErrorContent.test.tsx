@@ -21,7 +21,6 @@ let realAlert = false;
 vi.mock('@/components/ai-elements/message', () => ({
   Message: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
-vi.mock('../../FollowUp/FollowUpChips', () => ({ default: () => null }));
 vi.mock('./Avatar', () => ({ default: () => null }));
 vi.mock('./Actions', () => ({ default: () => null }));
 vi.mock('./MessageContent', () => ({

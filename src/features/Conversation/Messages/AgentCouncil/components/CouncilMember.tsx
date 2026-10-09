@@ -38,7 +38,6 @@ const CouncilMember = memo<CouncilMemberProps>(({ item, index }) => {
     content,
     createdAt,
     tools,
-    extra,
     model,
     provider,
     performance,
@@ -82,8 +81,6 @@ const CouncilMember = memo<CouncilMemberProps>(({ item, index }) => {
       messageExtra={
         <AssistantMessageExtra
           content={content}
-          extra={extra}
-          id={id}
           model={model!}
           performance={performance! || metadata}
           provider={provider!}

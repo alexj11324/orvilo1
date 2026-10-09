@@ -1,10 +1,8 @@
-import { Activity, Handshake, LinkIcon, NotebookText } from 'lucide-react';
+import { Activity, LinkIcon, NotebookText } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type MenuItemType, type MenuProps } from '@/components/Menu';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
+import { type MenuProps } from '@/components/Menu';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
@@ -17,18 +15,12 @@ interface UseCategoryOptions {
 export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
   const { t } = useTranslation('setting');
   const iconSize = mobile ? 20 : undefined;
-  const isInbox = useAgentStore(builtinAgentSelectors.isInboxAgent);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
   const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const cateItems: MenuProps['items'] = useMemo(
     () =>
       [
-        (!isInbox && {
-          icon: <Handshake size={iconSize} />,
-          key: ChatSettingsTabs.Opening,
-          label: t('agentTab.opening'),
-        }) as MenuItemType,
         enableSelfLearning && {
           icon: <NotebookText size={iconSize} />,
           key: ChatSettingsTabs.Rules,
@@ -45,7 +37,7 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           label: t('agentTab.connector', 'Connectors'),
         },
       ].filter(Boolean) as MenuProps['items'],
-    [t, isInbox, iconSize, enableAgentSelfIteration, enableSelfLearning],
+    [t, iconSize, enableAgentSelfIteration, enableSelfLearning],
   );
 
   return cateItems;

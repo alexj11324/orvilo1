@@ -148,3 +148,68 @@ describe('a retired settings tab leaves no way to reach it', () => {
     }
   });
 });
+
+describe('the chat-era service-model features (2026/10/09) stay retired', () => {
+  // Same shape as above: the failure mode is a file or a registration coming
+  // back through a rebase, so these read the repository rather than run it.
+  it('ships no text-to-speech route, hook or message player', () => {
+    expect(exists('src/app/(backend)/webapi/tts'), 'the TTS route is back').toBe(false);
+    expect(exists('src/hooks/useTTS.ts'), 'the TTS hook is back').toBe(false);
+    expect(exists('src/features/Settings/tts'), 'the TTS settings block is back').toBe(false);
+    expect(
+      exists('src/features/Conversation/Messages/components/Extras/TTS'),
+      'the message TTS player is back',
+    ).toBe(false);
+  });
+
+  it('registers no translate or tts message action', () => {
+    const actions = 'src/features/Conversation/Messages/components/MessageActionBar';
+
+    expect(exists(`${actions}/actions/translate.ts`), 'the translate action is back').toBe(false);
+    expect(exists(`${actions}/actions/tts.ts`), 'the tts action is back').toBe(false);
+    expect(exists('src/store/chat/slices/translate'), 'the translate slice is back').toBe(false);
+
+    const registry = read(`${actions}/useBuildActions.ts`);
+    expect(registry).not.toContain('translateAction');
+    expect(registry).not.toContain('ttsAction');
+  });
+
+  it('keeps the AI Suggestions footer and the follow-up chips out of the chat surfaces', () => {
+    expect(exists('src/features/AIChatbot/Suggestions.tsx'), 'the Suggestions footer is back').toBe(
+      false,
+    );
+    expect(read('src/features/AIChatbot/Page.tsx')).not.toContain('Suggestions');
+    expect(
+      exists('src/features/Conversation/hooks/useChatFollowUp.ts'),
+      'the follow-up hook is back',
+    ).toBe(false);
+    expect(
+      exists('src/features/Conversation/FollowUp'),
+      'the follow-up chips renderer is back',
+    ).toBe(false);
+  });
+
+  it('offers no service-model row for the retired chat-era features', () => {
+    const form = read('src/features/ServiceModel/ModelAssignmentsForm.tsx');
+
+    for (const key of [
+      'translation',
+      'agentMeta',
+      'topicAutoSummary',
+      'followUpAction',
+      'inputCompletion',
+    ]) {
+      expect(form, `ModelAssignmentsForm still lists ${key}`).not.toContain(`{ key: '${key}' }`);
+    }
+  });
+
+  it('keeps the opening message and questions out of the agent settings page', () => {
+    expect(
+      exists('src/features/AgentSettings/AgentOpeningSettings.tsx'),
+      'the opening settings section is back',
+    ).toBe(false);
+    expect(read('src/features/Settings/agents/AgentSettingsDetailPage.tsx')).not.toContain(
+      'AgentOpeningSettings',
+    );
+  });
+});

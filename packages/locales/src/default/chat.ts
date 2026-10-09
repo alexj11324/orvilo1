@@ -746,11 +746,7 @@ export default {
     'Estimated from current context, tools, and model pricing. Actual cost may vary.',
   'input.disclaimer': 'Agents can make mistakes. Use your judgment for critical info.',
   'input.errorMsg': 'Send failed: {{errorMsg}}. Retry, or send again later.',
-  'input.inputCompletionError.desc':
-    'Input suggestions stopped after an error. Retry, or adjust the suggestion model in Settings.',
   'input.inputCompletionError.retry': 'Retry',
-  'input.inputCompletionError.settings': 'Settings',
-  'input.inputCompletionError.title': 'Input suggestions paused',
   'input.modelFixedTip':
     'The model is fixed in the Agent Profile and cannot be switched while chatting.',
   'input.modelUnavailable':
@@ -2858,10 +2854,6 @@ export default {
   'topicComment.thread': 'Comment thread',
   'topicComment.title': 'Comments',
   'topicComment.updateFailed': 'Failed to update comment',
-  'translate.action': 'Translate',
-  'translate.clear': 'Clear Translation',
-  'tts.action': 'Text-to-Speech',
-  'tts.clear': 'Clear Speech',
   'turnProcess.done_one': 'Ran {{count}} step',
   'turnProcess.done_other': 'Ran {{count}} steps',
   'turnProcess.ranFor_one': 'Ran {{count}} step ({{duration}})',

@@ -23,7 +23,6 @@ import {
 } from '../Contexts/message-action-context';
 import Actions from './Actions';
 import UserMessageContent from './components/MessageContent';
-import { UserMessageExtra } from './Extra';
 import { getBotSender, resolveSenderIdentity } from './resolveSenderIdentity';
 import ScheduledRunFooter from './ScheduledRunFooter';
 
@@ -35,7 +34,7 @@ interface UserMessageProps {
 
 const UserMessage = memo<UserMessageProps>(({ id, disableEditing, index }) => {
   const item = useConversationStore(dataSelectors.getDisplayMessageById(id), isEqual)!;
-  const { content, createdAt, error, role, extra, targetId, sender, metadata } = item;
+  const { content, createdAt, error, role, targetId, sender, metadata } = item;
   const botSender = getBotSender(item);
 
   const { t } = useTranslation('chat');
@@ -111,7 +110,6 @@ const UserMessage = memo<UserMessageProps>(({ id, disableEditing, index }) => {
       headerAddon={metadata?.steer ? <Badge>{t('steer.tag')}</Badge> : undefined}
       id={id}
       message={content}
-      messageExtra={<UserMessageExtra content={content} extra={extra} id={id} />}
       placement={'right'}
       showAvatar={showSender}
       showTitle={showSender}

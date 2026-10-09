@@ -1,19 +1,13 @@
 import type { IEditor, ISlashMenuOption, ISlashSectionOption } from '@lobehub/editor';
-import { INSERT_MENTION_COMMAND, ReactAutoCompletePlugin } from '@lobehub/editor';
+import { INSERT_MENTION_COMMAND } from '@lobehub/editor';
 import { Editor, useEditorState } from '@lobehub/editor/react';
 import { combineKeys } from '@lobehub/ui';
-import { isDesktop, TRACING_SCENARIOS } from '@orvilo/const';
+import { isDesktop } from '@orvilo/const';
 import { HotkeyEnum, KeyEnum } from '@orvilo/const/hotkeys';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
-import {
-  chainInputCompletion,
-  INPUT_COMPLETION_PROMPT_VERSION,
-  INPUT_COMPLETION_SCHEMA_NAME,
-} from '@orvilo/prompts';
 import { isCommandPressed } from '@orvilo/utils';
 import { css, cx } from 'antd-style';
 import Fuse from 'fuse.js';
-import { KEY_ESCAPE_COMMAND } from 'lexical';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useHotkeysContext } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
@@ -22,18 +16,14 @@ import { usePasteFile, useUploadFiles } from '@/components/DragUploadZone';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { usePermission } from '@/hooks/usePermission';
-import { useSingleton } from '@/hooks/useSingleton';
 import { getHostPort } from '@/platform';
-import { aiChatService } from '@/services/aiChat';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
-import { useChatStore } from '@/store/chat';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import {
   labPreferSelectors,
   settingsSelectors,
-  systemAgentSelectors,
   userProfileSelectors,
 } from '@/store/user/selectors';
 
@@ -48,7 +38,6 @@ import {
   type InsertActionTagPayload,
   useSlashActionItems,
 } from './ActionTag';
-import { createInputCompletionError, isInputCompletionAbortError } from './inputCompletionError';
 import InputHistoryPopup, { getHistoryPreviewText } from './InputHistoryPopup';
 import { INSERT_LOCAL_FILE_TAG_COMMAND } from './LocalFileTag';
 import { mentionFilledClassName } from './mentionStyle';
@@ -93,7 +82,6 @@ const InputEditor = memo<{
     updateMarkdownContent,
     expand,
     slashPlacement,
-    isInputCompletionEnabled,
     isInputHistoryEnabled,
     isMentionEnabled,
     isSlashEnabled,
@@ -104,7 +92,6 @@ const InputEditor = memo<{
     s.updateMarkdownContent,
     s.expand,
     s.slashPlacement ?? 'top',
-    s.feature?.inputCompletion ?? true,
     s.feature?.inputHistory ?? true,
     s.feature?.mention ?? true,
     s.feature?.slash ?? true,
@@ -265,184 +252,6 @@ const InputEditor = memo<{
     [slashActionItems],
   );
 
-  // --- Auto-completion ---
-  const inputCompletionConfig = useUserStore(systemAgentSelectors.inputCompletion);
-  const isAutoCompleteEnabled = isInputCompletionEnabled && inputCompletionConfig.enabled;
-
-  useEffect(() => {
-    storeApi.getState().clearInputCompletionError();
-  }, [inputCompletionConfig.model, inputCompletionConfig.provider, storeApi]);
-
-  const getMessagesRef = useSingleton(() => ({
-    current: storeApi.getState().getMessages,
-  }));
-  useEffect(() => {
-    return storeApi.subscribe((s) => {
-      getMessagesRef.current = s.getMessages;
-    });
-  }, [getMessagesRef, storeApi]);
-
-  // Map each in-flight suggestion to its tracing row so the Tab/Esc/typing
-  // callbacks below can report `recordFeedback` against the correct id.
-  // Keyed by editor-provided `suggestionId`; entries are dropped on
-  // accept/reject (the plugin guarantees one of those eventually fires).
-  const tracingIdBySuggestion = useSingleton(() => new Map<string, string>());
-
-  const handleAutoComplete = useCallback(
-    async ({
-      abortSignal,
-      afterText,
-      input,
-      suggestionId,
-    }: {
-      abortSignal: AbortSignal;
-      afterText: string;
-      editor: any;
-      input: string;
-      selectionType: string;
-      suggestionId?: string;
-    }): Promise<string | null> => {
-      // Skip autocomplete during IME composition (e.g. Chinese input method)
-      if (isComposingRef.current) return null;
-
-      if (storeApi.getState().inputCompletionError) return null;
-
-      if (!input.trim()) return null;
-
-      // Skip when cursor is not at end of paragraph — inserting a placeholder
-      // mid-text causes nested editor updates that freeze the input
-      if (afterText.trim()) return null;
-
-      const config = systemAgentSelectors.inputCompletion(useUserStore.getState());
-      const context = getMessagesRef.current?.();
-      const { messages, schema } = chainInputCompletion(input, afterText, context);
-
-      const abortController = new AbortController();
-      abortSignal.addEventListener('abort', () => abortController.abort());
-
-      const currentTopicId = useChatStore.getState().activeTopicId;
-
-      let envelope: { data?: { completion?: string } | null; tracingId?: string } | null;
-      try {
-        envelope = (await aiChatService.generateJSON(
-          {
-            messages,
-            model: config.model,
-            provider: config.provider,
-            schema,
-            tracing: {
-              agentId,
-              // Use the user's actual typed text as the row's `input_hint`
-              // — the wrapped prompt's first user message is templated and
-              // not human-scannable.
-              inputHint: input,
-              promptVersion: INPUT_COMPLETION_PROMPT_VERSION,
-              scenario: TRACING_SCENARIOS.InputCompletion,
-              schemaName: INPUT_COMPLETION_SCHEMA_NAME,
-              topicId: currentTopicId,
-            },
-          },
-          abortController,
-        )) as { data?: { completion?: string } | null; tracingId?: string } | null;
-      } catch (error) {
-        if (!isInputCompletionAbortError(error)) {
-          storeApi.getState().pauseInputCompletion(createInputCompletionError(error));
-        }
-        return null;
-      }
-
-      if (abortSignal.aborted) return null;
-
-      // Another in-flight request may have failed while this one was waiting.
-      // Keep the breaker active and drop this stale suggestion in that race.
-      if (storeApi.getState().inputCompletionError) return null;
-
-      const completion = envelope?.data?.completion?.trimEnd();
-      if (!completion) return null;
-
-      if (suggestionId && envelope?.tracingId) {
-        tracingIdBySuggestion.set(suggestionId, envelope.tracingId);
-      }
-      return completion;
-    },
-    [agentId, getMessagesRef, isComposingRef, storeApi, tracingIdBySuggestion],
-  );
-
-  const handleSuggestionAccepted = useCallback(
-    ({
-      acceptedText,
-      suggestionId,
-      visibleMs,
-    }: {
-      acceptedText: string;
-      suggestionId: string;
-      visibleMs: number;
-    }) => {
-      const tracingId = tracingIdBySuggestion.get(suggestionId);
-      if (!tracingId) return;
-      tracingIdBySuggestion.delete(suggestionId);
-      aiChatService
-        .recordTracingFeedback({
-          data: { acceptedText, visibleMs },
-          signal: 'positive',
-          source: 'autocomplete_tab',
-          tracingId,
-        })
-        .catch((err) => {
-          console.warn('[InputCompletion] recordFeedback (accepted) failed', err);
-        });
-    },
-    [tracingIdBySuggestion],
-  );
-
-  const handleSuggestionRejected = useCallback(
-    ({
-      reason,
-      suggestionId,
-      visibleMs,
-    }: {
-      reason: 'cursor-move' | 'typing' | 'esc' | 'blur' | 'other';
-      suggestionId: string;
-      visibleMs: number;
-    }) => {
-      const tracingId = tracingIdBySuggestion.get(suggestionId);
-      if (!tracingId) return;
-      tracingIdBySuggestion.delete(suggestionId);
-      // IME composition starts by dispatching KEY_ESCAPE_COMMAND from this
-      // component (see onCompositionStart below); that arrives here with
-      // reason='esc' but it isn't a real reject — recode as neutral so the
-      // signal isn't poisoned for CJK input users.
-      const isImeClear = reason === 'esc' && isComposingRef.current;
-      const signal: 'positive' | 'negative' | 'neutral' =
-        !isImeClear && reason === 'esc' ? 'negative' : 'neutral';
-      const source = isImeClear ? 'autocomplete_ime' : `autocomplete_${reason}`;
-      aiChatService
-        .recordTracingFeedback({
-          data: { reason, visibleMs },
-          signal,
-          source,
-          tracingId,
-        })
-        .catch((err) => {
-          console.warn('[InputCompletion] recordFeedback (rejected) failed', err);
-        });
-    },
-    [isComposingRef, tracingIdBySuggestion],
-  );
-
-  const autoCompletePlugin = useMemo(
-    () =>
-      isAutoCompleteEnabled
-        ? Editor.withProps(ReactAutoCompletePlugin, {
-            delay: 600,
-            onAutoComplete: handleAutoComplete,
-            onSuggestionAccepted: handleSuggestionAccepted,
-            onSuggestionRejected: handleSuggestionRejected,
-          })
-        : null,
-    [isAutoCompleteEnabled, handleAutoComplete, handleSuggestionAccepted, handleSuggestionRejected],
-  );
-
   // --- Stable mentionOption & slashOption to prevent infinite re-render on paste ---
   const mentionMarkdownWriter = useCallback((mention: any) => {
     if (mention.metadata?.type === 'topic') {
@@ -506,12 +315,10 @@ const InputEditor = memo<{
       ? CHAT_INPUT_EMBED_PLUGINS
       : createChatInputRichPlugins({ linkPlugin: false });
 
-    const plugins = autoCompletePlugin ? [...basePlugins, autoCompletePlugin] : basePlugins;
-
     return !enableRichRender
-      ? { enablePasteMarkdown: false, markdownOption: false, plugins }
-      : { plugins };
-  }, [enableRichRender, autoCompletePlugin]);
+      ? { enablePasteMarkdown: false, markdownOption: false, plugins: basePlugins }
+      : { plugins: basePlugins };
+  }, [enableRichRender]);
 
   const handleEditorInit = useCallback(
     (editor: IEditor) => {
@@ -591,14 +398,6 @@ const InputEditor = memo<{
         }}
         onCompositionStart={({ event }) => {
           compositionProps.onCompositionStart(event);
-          // Clear autocomplete placeholder nodes before IME composition starts —
-          // composing next to placeholder inline nodes freezes the editor.
-          if (isAutoCompleteEnabled) {
-            editor?.dispatchCommand(
-              KEY_ESCAPE_COMMAND,
-              new KeyboardEvent('keydown', { key: 'Escape' }),
-            );
-          }
         }}
         onContextMenu={async ({ event: e, editor }) => {
           if (isDesktop) {

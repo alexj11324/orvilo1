@@ -78,7 +78,7 @@ export const useSettingsSearch = (
 } => {
   const { t } = useTranslation(['setting', 'labs', 'electron', 'subscription', 'spend', 'auth']);
   const categoryGroups = useCategory();
-  const { enableSTT, hideDocs } = useServerConfigStore(featureFlagsSelectors);
+  const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const enableGatewayMode = useServerConfigStore(serverConfigSelectors.enableGatewayMode);
   const enableComposio = useServerConfigStore(serverConfigSelectors.enableComposio);
@@ -98,7 +98,6 @@ export const useSettingsSearch = (
       enableBusinessFeatures: !!enableBusinessFeatures,
       enableComposio: !!enableComposio,
       enableGatewayMode: !!enableGatewayMode,
-      enableSTT: !!enableSTT,
       hasEmail,
       hideDocs: !!hideDocs,
       isDesktop,
@@ -223,7 +222,6 @@ export const useSettingsSearch = (
     enableBusinessFeatures,
     enableComposio,
     enableGatewayMode,
-    enableSTT,
     hasEmail,
     hideDocs,
     isLogin,

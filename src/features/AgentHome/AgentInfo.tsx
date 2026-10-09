@@ -29,21 +29,16 @@ const AgentInfo = memo(() => {
   const runtimeType = useAgentStore((s) =>
     resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
   );
-  const openingMessage = useAgentStore(
-    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.openingMessage || '',
-  );
   const fontSize = useUserStore(userGeneralSettingsSelectors.fontSize);
 
   const displayTitle = isInbox
     ? agentDisplayName(meta, 'Orvilo AI')
     : agentDisplayName(meta, t('defaultSession', { ns: 'common' }));
 
-  const message = useMemo(() => {
-    if (openingMessage) return openingMessage;
-    return t('agentDefaultMessageWithSystemRole', {
-      name: displayTitle,
-    });
-  }, [openingMessage, displayTitle, t]);
+  const message = useMemo(
+    () => t('agentDefaultMessageWithSystemRole', { name: displayTitle }),
+    [displayTitle, t],
+  );
 
   if (isLoading) {
     return (

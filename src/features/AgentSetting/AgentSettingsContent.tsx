@@ -10,7 +10,6 @@ import { labPreferSelectors } from '@/store/user/selectors';
 
 import AgentConnectors from './AgentConnectors';
 import AgentGraphRuntime from './AgentGraphRuntime';
-import AgentOpening from './AgentOpening';
 import AgentRules from './AgentRules';
 import AgentSelfIteration from './AgentSelfIteration';
 
@@ -29,7 +28,6 @@ const AgentSettingsContent = memo<AgentSettingsContentProps>(({ tab, loadingSkel
 
   return (
     <>
-      {tab === ChatSettingsTabs.Opening && <AgentOpening />}
       {enableSelfLearning && tab === ChatSettingsTabs.Rules && <AgentRules />}
       {enableAgentSelfIteration && tab === ChatSettingsTabs.SelfIteration && <AgentSelfIteration />}
       {enableAgentGraphConfigLab && tab === ChatSettingsTabs.Graph && <AgentGraphRuntime />}

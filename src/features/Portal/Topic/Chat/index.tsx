@@ -12,16 +12,14 @@ import {
   ChatInput,
   ChatList,
   type ConversationContext,
-  type ConversationHooks,
   ConversationProvider,
 } from '@/features/Conversation';
 import SkeletonList from '@/features/Conversation/components/SkeletonList';
-import { useChatFollowUp } from '@/features/Conversation/hooks/useChatFollowUp';
 import { useGatewayReconnect } from '@/hooks/useGatewayReconnect';
 import { useOperationState } from '@/hooks/useOperationState';
 import HeterogeneousChatInput from '@/routes/(main)/agent/features/Conversation/HeterogeneousChatInput';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
+import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, topicSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
@@ -69,13 +67,6 @@ const TopicChat = memo(() => {
   );
   useGatewayReconnect(portalTopicId, runningOperation);
 
-  const agentChatConfig = useAgentStore(chatConfigByIdSelectors.getChatConfigById(activeAgentId));
-  const hooks: ConversationHooks = useChatFollowUp({
-    agentChatConfig,
-    conversationKey: chatKey,
-    topicId: portalTopicId ?? undefined,
-  });
-
   // Same gate as the main conversation: a topic still awaiting its transfer
   // backfill shows a placeholder instead of an empty history and blocks
   // sending — the server could not assemble the missing context anyway.
@@ -90,7 +81,6 @@ const TopicChat = memo(() => {
     <ConversationProvider
       context={context}
       hasInitMessages={!!messages}
-      hooks={hooks}
       messages={messages}
       operationState={operationState}
       onMessagesChange={(msgs, ctx, meta) => {

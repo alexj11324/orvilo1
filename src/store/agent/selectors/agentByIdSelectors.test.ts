@@ -190,24 +190,6 @@ describe('agentByIdSelectors', () => {
     });
   });
 
-  describe('getAgentTTSVoiceById', () => {
-    it('returns the configured openai voice', () => {
-      const state = createState({
-        agentMap: {
-          'agent-1': { tts: { ttsService: 'openai', voice: { openai: 'nova' } } },
-        },
-      });
-
-      expect(agentByIdSelectors.getAgentTTSVoiceById('agent-1')(state)).toBe('nova');
-    });
-
-    it('falls back to a default voice when the agent config is missing', () => {
-      const state = createState({ agentMap: {} });
-
-      expect(agentByIdSelectors.getAgentTTSVoiceById('missing')(state)).toBe('alloy');
-    });
-  });
-
   describe('isAgentNotFoundById', () => {
     it('returns true only for agents flagged in agentNotFoundMap', () => {
       const state = createState({ agentNotFoundMap: { 'agent-gone': true } });

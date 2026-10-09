@@ -121,3 +121,8 @@ export const detectContext = (pathname: string): MenuContext => {
 
   return 'general';
 };
+
+export const getContextAgentId = (pathname: string): string | undefined =>
+  detectContext(pathname) === 'agent'
+    ? pathname.match(/^(?:\/[^/]+)?\/agent\/([^/?]+)/)?.[1]
+    : undefined;

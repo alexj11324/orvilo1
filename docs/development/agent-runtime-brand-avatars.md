@@ -83,3 +83,11 @@ icon, and groups keep the group avatar.
 - Marketplace Agent cards, the shared Acceptance viewer, the internal link
   preview and the collaboration activity dock draw records that are not in the
   viewer's Agent store; they need a runtime type in their own payloads first.
+
+## Workspace command context
+
+The command palette resolves its active Agent from both `/agent/:id` and
+`/:workspace/agent/:id` using the same Agent-context gate as its menu. The native
+workspace route previously matched Agent context but lost the actor id, so it
+showed a generic Agent label instead of the runtime mark. Group and other routes
+keep their own context and never borrow an Agent id.

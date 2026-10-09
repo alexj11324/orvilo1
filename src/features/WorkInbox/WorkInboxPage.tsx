@@ -8,6 +8,7 @@ import {
   CheckCheckIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
+  FileXIcon,
   InboxIcon,
   ListFilterIcon,
   MoreVerticalIcon,
@@ -46,7 +47,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
-import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurfaceSplit } from '@/features/WorkSurface';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -109,6 +109,9 @@ import { INBOX_LIST_HOTKEY_OPTIONS, useInboxListKeyboard } from './useInboxListK
 // inbox list does not pay for it until a task-backed card is actually opened.
 const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
+);
+const LazyIssuePeekActions = lazy(() =>
+  import('@/features/AgentTasks').then((module) => ({ default: module.IssuePeekActions })),
 );
 
 /**
@@ -1151,11 +1154,12 @@ const WorkInboxPage = memo(() => {
             className="flex flex-row"
             style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
           >
-            <WorkFavoriteButton
-              targetId={selectedIssueIdentifier}
-              targetType="task"
-              variant={'icon'}
-            />
+            <Suspense fallback={null}>
+              <LazyIssuePeekActions
+                taskId={selectedIssueTaskId}
+                onDeleted={() => writeInboxParams({ detail: null, item: null })}
+              />
+            </Suspense>
             {selectedOpenTarget ? (
               <Button
                 aria-label={t('inbox.open')}
@@ -1271,7 +1275,31 @@ const WorkInboxPage = memo(() => {
               </div>
             }
           >
-            <LazyIssueContent taskId={selectedIssueTaskId} />
+            <LazyIssueContent
+              taskId={selectedIssueTaskId}
+              notFound={
+                // NOT_FOUND also hides Issues this member cannot read. Keep the explanation
+                // neutral; the notification's text stays readable above with a way to clear
+                // the row, without claiming the Issue was deleted.
+                <div
+                  className="flex flex-col items-center gap-2 px-4 py-8 text-center"
+                  role="status"
+                >
+                  <FileXIcon aria-hidden className="size-8 shrink-0 text-muted-foreground" />
+                  <p className="text-sm font-medium">{t('inbox.targetDeleted.title')}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('inbox.targetDeleted.description')}
+                  </p>
+                  {displayOption !== 'archived' &&
+                  (selected.availableActions.includes('dismiss') ||
+                    selected.availableActions.includes('archive')) ? (
+                    <Button variant="outline" onClick={() => void toggleArchiveCard(selected)}>
+                      {t('inbox.dismiss')}
+                    </Button>
+                  ) : null}
+                </div>
+              }
+            />
           </Suspense>
         </div>
       </>

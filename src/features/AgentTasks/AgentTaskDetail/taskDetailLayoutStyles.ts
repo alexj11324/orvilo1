@@ -224,9 +224,6 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       margin-inline-start: -6px;
     }
   `,
-  propertyPlaceholder: css`
-    color: ${cssVar.colorTextPlaceholder};
-  `,
   propertyDanger: css`
     color: ${cssVar.colorError};
   `,

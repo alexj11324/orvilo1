@@ -1,3 +1,4 @@
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -179,7 +180,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>((props) => {
           <Clock color={cssVar.colorTextDescription} size={16} />
           <div className="text-muted-foreground">{t('taskSchedule.nextRun', { ns: 'chat' })}</div>
           <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
-            {nextRun.toDate().toLocaleString()}
+            {formatAbsoluteDateTime(nextRun.toDate())}
           </div>
         </div>
       )}

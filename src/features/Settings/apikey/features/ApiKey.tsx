@@ -1,5 +1,6 @@
 'use client';
 import { isDesktop } from '@orvilo/const';
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -193,9 +194,9 @@ const ApiKey: FC = () => {
         apiKey.expiresAt ? (
           <span
             className={isExpired(apiKey) ? 'text-destructive' : undefined}
-            title={apiKey.expiresAt.toLocaleString()}
+            title={formatAbsoluteDateTime(apiKey.expiresAt)}
           >
-            {isExpired(apiKey) ? t('apikey.status.expired') : apiKey.expiresAt.toLocaleDateString()}
+            {isExpired(apiKey) ? t('apikey.status.expired') : formatAbsoluteDate(apiKey.expiresAt)}
           </span>
         ) : (
           <span className="text-muted-foreground">{t('apikey.display.neverExpires')}</span>
@@ -209,7 +210,7 @@ const ApiKey: FC = () => {
         apiKey.lastUsedAt ? (
           // Relative time answers "is this key still in use?" at a glance; the
           // exact timestamp stays one hover away.
-          <span title={apiKey.lastUsedAt.toLocaleString()}>
+          <span title={formatAbsoluteDateTime(apiKey.lastUsedAt)}>
             {dayjs(apiKey.lastUsedAt).fromNow()}
           </span>
         ) : (

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import Form from '@/components/GroupForm';
 import { Separator } from '@/components/ui/separator';
 import { DOWNLOAD_URL, mailTo, OFFICIAL_SITE } from '@/const/url';
+import { getHostContext } from '@/platform';
 
 import AboutList from './AboutList';
 import ItemCard from './ItemCard';
@@ -25,6 +26,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const About = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { t } = useTranslation('common');
+  // The download entry only makes sense on web; the desktop app is already installed.
+  const inDesktopApp = getHostContext().kind === 'desktop';
 
   return (
     <Form.Group
@@ -72,18 +75,22 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
           ]}
         />
         <Separator style={{ marginBlock: 0 }} />
-        <div className={styles.title}>{t('getApp')}</div>
-        <AboutList
-          ItemRender={ItemLink}
-          items={[
-            {
-              href: DOWNLOAD_URL.default,
-              label: t('getDesktopApp'),
-              value: 'desktop',
-            },
-          ]}
-        />
-        <Separator style={{ marginBlock: 0 }} />
+        {!inDesktopApp && (
+          <>
+            <div className={styles.title}>{t('getApp')}</div>
+            <AboutList
+              ItemRender={ItemLink}
+              items={[
+                {
+                  href: DOWNLOAD_URL.default,
+                  label: t('getDesktopApp'),
+                  value: 'desktop',
+                },
+              ]}
+            />
+            <Separator style={{ marginBlock: 0 }} />
+          </>
+        )}
         <div className={styles.title}>{t('contact')}</div>
         <AboutList
           ItemRender={ItemLink}

@@ -259,7 +259,7 @@ describe('viteStaticStylesPrecompile', () => {
     },
   };
 
-  it('bundles precompiled styles against the antd-style runtime', async () => {
+  it('bundles unlayered precompiled styles against the default antd-style runtime', async () => {
     const result = await build({
       build: {
         minify: false,
@@ -284,6 +284,7 @@ describe('viteStaticStylesPrecompile', () => {
     expect(code).not.toContain('createStaticStyles');
     expect(code).toMatch(/import \{ styleManager \} from ["']antd-style["']/);
     expect(code).toContain('cache.sheet.insert(rule)');
+    expect(code).not.toContain('@layer antd-style{');
     expect(code).toContain('color:var(--ant-color-text-secondary)');
   });
 });

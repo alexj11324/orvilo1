@@ -76,7 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: paradedb/paradedb:latest
+        # Keep the test database identical to test.yml's validated image.
+        image: paradedb/paradedb@sha256:52fc9c95fdfd462201168d1d82334ed61f85cbd921957cab083ec39800a217ac
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
@@ -119,8 +120,9 @@ jobs:
       # checkpoints spread out. Every setting is SIGHUP-reloadable; GitHub
       # service `options` can't pass postgres args (they'd be docker args).
       - name: Tune test Postgres for CI
+        env:
+          CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
           # One -c per statement: a multi-statement -c wraps everything in an
           # implicit transaction and ALTER SYSTEM rejects transaction blocks.
           docker exec "$CONTAINER" psql -U postgres -d postgres \

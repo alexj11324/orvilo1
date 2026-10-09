@@ -60,6 +60,28 @@ export type InboxSnoozeDays = (typeof INBOX_SNOOZE_DAYS)[number];
 export const snoozeUntilForDays = (days: InboxSnoozeDays, now = new Date()): string =>
   new Date(now.getTime() + days * 86_400_000).toISOString();
 
+/**
+ * Resolve the Custom snooze picker's date + `HH:mm` pair to an absolute ISO
+ * moment in the user's local timezone. `null` when the pair is incomplete or
+ * not strictly in the future, so the confirm button can stay disabled instead
+ * of snoozing a notification into the past (which would wake it immediately).
+ */
+export const resolveCustomSnoozeUntil = (
+  date: Date | null | undefined,
+  time: string,
+  now = new Date(),
+): string | null => {
+  if (!date || Number.isNaN(date.getTime())) return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return null;
+  const until = new Date(date);
+  until.setHours(hour, minute, 0, 0);
+  return until.getTime() > now.getTime() ? until.toISOString() : null;
+};
+
 /** Same-app relative paths navigate in-app; allowlisted https opens a new tab. */
 export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' =>
   classifyWorkAttentionActionUrl(url).mode;

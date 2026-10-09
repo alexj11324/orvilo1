@@ -1,8 +1,8 @@
 'use client';
 
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { CalendarClockIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +47,7 @@ const ScheduledSendChip = memo(() => {
   return (
     <div className={cn('flex items-center gap-1', styles.chip)}>
       <CalendarClockIcon size={12} style={{ color: cssVar.colorInfoText }} />
-      <div className={styles.label}>{dayjs(scheduledSendAt).format('MM-DD HH:mm')}</div>
+      <div className={styles.label}>{formatAbsoluteDateTime(scheduledSendAt)}</div>
       <ActionIcon
         icon={XIcon}
         size={'small'}

@@ -62,7 +62,7 @@ describe('getActivityMemoryViewModel', () => {
     // The card shows the timezone label next to these digits, so they have to come
     // from that same zone — otherwise a 14:00 Shanghai meeting reads as "23:00
     // Asia/Shanghai" for a viewer in America/Los_Angeles.
-    expect(vm.schedule).toBe('2026-08-03 14:00 → 15:00');
+    expect(vm.schedule).toBe('2026/08/03 14:00 → 15:00');
   });
 
   it('falls back to the viewer timezone when the activity declares none or an unknown one', () => {
@@ -73,7 +73,7 @@ describe('getActivityMemoryViewModel', () => {
     );
 
     // An unusable zone must still produce a readable time rather than throwing.
-    expect(unknownZone.schedule).toMatch(/^2026-08-0[23] \d{2}:\d{2}$/);
+    expect(unknownZone.schedule).toMatch(/^2026\/08\/0[23] \d{2}:\d{2}$/);
   });
 
   it('drops the repeated date when an activity starts and ends the same day', () => {
@@ -87,7 +87,7 @@ describe('getActivityMemoryViewModel', () => {
       }),
     );
 
-    expect(vm.schedule).toMatch(/^2024-05-03 \d{2}:\d{2} → \d{2}:\d{2}$/);
+    expect(vm.schedule).toMatch(/^2024\/05\/03 \d{2}:\d{2} → \d{2}:\d{2}$/);
   });
 
   it('keeps both dates for a multi-day activity', () => {
@@ -97,7 +97,7 @@ describe('getActivityMemoryViewModel', () => {
       }),
     );
 
-    expect(vm.schedule).toMatch(/^2024-05-03 \d{2}:\d{2} → 2024-05-07 \d{2}:\d{2}$/);
+    expect(vm.schedule).toMatch(/^2024\/05\/03 \d{2}:\d{2} → 2024\/05\/07 \d{2}:\d{2}$/);
   });
 
   it('handles a one-sided or unparseable schedule instead of rendering Invalid Date', () => {
@@ -108,7 +108,7 @@ describe('getActivityMemoryViewModel', () => {
     expect(
       getActivityMemoryViewModel(asParams({ withActivity: { endsAt: '2024-05-03T15:00:00Z' } }))
         .schedule,
-    ).toMatch(/^2024-05-03 \d{2}:\d{2}$/);
+    ).toMatch(/^2024\/05\/03 \d{2}:\d{2}$/);
   });
 
   it('normalizes scalars sent where arrays are expected', () => {

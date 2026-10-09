@@ -24,6 +24,12 @@ describe('PROJECT_HEALTH_META', () => {
     }
   });
 
+  it('gives every state a text-safe status role for its label, never the fill color', () => {
+    expect(PROJECT_HEALTH_META.onTrack.textClass).toBe('text-success-text');
+    expect(PROJECT_HEALTH_META.atRisk.textClass).toBe('text-warning-text');
+    expect(PROJECT_HEALTH_META.offTrack.textClass).toBe('text-destructive-text');
+  });
+
   it('covers every ProjectHealth state with a list.health label', () => {
     for (const state of PROJECT_HEALTH_STATES) {
       expect(PROJECT_HEALTH_META[state].key, state).toBe(`list.health.${state}`);

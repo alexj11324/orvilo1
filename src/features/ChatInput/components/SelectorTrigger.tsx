@@ -1,69 +1,16 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ZapIcon } from 'lucide-react';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { memo } from 'react';
 
 import { Button } from '@/components/ui/button';
 
-const styles = createStaticStyles(({ css }) => ({
-  label: css`
-    overflow: hidden;
-
-    min-width: 0;
-    max-width: 200px;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  secondary: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-    transition: color 0.2s;
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 100%;
-    height: 28px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 12px;
-    font-weight: inherit;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-
-      [data-secondary] {
-        color: ${cssVar.colorTextSecondary};
-      }
-    }
-
-    &[aria-expanded='true'] {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorTextSecondary};
-      outline-offset: 2px;
-    }
-  `,
-}));
+const styles = {
+  label: 'overflow-hidden min-w-0 max-w-50 text-ellipsis whitespace-nowrap',
+  secondary: 'flex-none text-[var(--ant-color-text-tertiary)] [transition:color_0.2s]',
+  trigger:
+    "cursor-pointer flex flex-initial gap-1.5 items-center min-w-0 max-w-full h-7 px-2 border-0 rounded-(--radius-input) text-xs [font-weight:inherit] text-muted-foreground whitespace-nowrap bg-transparent bg-none [transition:all_0.2s] hover:text-foreground hover:bg-selected hover:bg-none hover:[&_[data-secondary]]:text-muted-foreground [&[aria-expanded='true']]:text-foreground [&[aria-expanded='true']]:bg-selected [&[aria-expanded='true']]:bg-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-muted-foreground focus-visible:outline-offset-2",
+};
 
 /**
  * The chip the composer selectors open from — the agent picker, the
@@ -97,7 +44,7 @@ const SelectorTrigger = memo<TriggerProps>(
     <Button
       {...rest}
       aria-label={ariaLabel}
-      className={cx(styles.trigger, className)}
+      className={cn(styles.trigger, className)}
       size="sm"
       type={type}
       variant="ghost"

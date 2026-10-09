@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Crown, PauseCircle, PlayCircle, Repeat, UserMinus } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -254,7 +255,7 @@ const MemberRow = memo<MemberRowProps>(
           </Tag>
         </div>
 
-        <div className={styles.numeric}>{joinedAt ? joinedAt.toLocaleDateString() : '—'}</div>
+        <div className={styles.numeric}>{joinedAt ? formatAbsoluteDate(joinedAt) : '—'}</div>
 
         <div>
           {menuItems.length > 0 && (

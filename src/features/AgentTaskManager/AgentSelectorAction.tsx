@@ -171,6 +171,14 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
             className={cx('flex items-center justify-center gap-1 px-1.5', styles.container)}
             style={{ height: 28 }}
             type={'button'}
+            aria-label={
+              activeAgent
+                ? t('taskDetail.fieldValue', {
+                    field: t('taskDetail.agent'),
+                    value: agentDisplayName(activeAgent, t('untitledAgent', { ns: 'chat' })),
+                  })
+                : t('taskDetail.agent')
+            }
           >
             <AgentRuntimeIcon
               size={22}

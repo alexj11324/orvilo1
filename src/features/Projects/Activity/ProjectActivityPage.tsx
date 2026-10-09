@@ -16,9 +16,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { getProjectOverviewPath } from '@/features/Projects/Layout/navigation';
 import { getMilestoneAnchorId } from '@/features/Projects/milestoneRow';
+import { formatProjectActivityTime } from '@/features/Projects/projectPlanningDate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
-import { useActivityTime } from '@/hooks/useActivityTime';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
@@ -115,7 +115,7 @@ const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent
 };
 
 const RelTime = memo<{ time: string }>(({ time }) => {
-  const { text, title } = useActivityTime(time);
+  const { text, title } = formatProjectActivityTime(time);
   return (
     <TimelineDate className="mb-0 inline font-normal" dateTime={time} title={title}>
       {text}

@@ -102,7 +102,11 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
             />
           )}
           <SidebarDropdownMenu items={menuItems}>
-            <ActionIcon icon={MoreHorizontal} size={'small'} />
+            <ActionIcon
+              aria-label={t('more', { ns: 'common' })}
+              icon={MoreHorizontal}
+              size={'small'}
+            />
           </SidebarDropdownMenu>
         </div>
         {showFull && (

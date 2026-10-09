@@ -1,7 +1,12 @@
 import { HOTKEYS_REGISTRATION } from '@orvilo/const/hotkeys';
 import { describe, expect, it } from 'vitest';
 
-import { DESKTOP_ONLY_HOTKEY_IDS, getHotkeyConflicts, getVisibleHotkeys } from './visibleHotkeys';
+import {
+  DESKTOP_ONLY_HOTKEY_IDS,
+  getDesktopHotkeyConflicts,
+  getHotkeyConflicts,
+  getVisibleHotkeys,
+} from './visibleHotkeys';
 
 const ids = (desktop: boolean, group: 'conversation' | 'essential') =>
   getVisibleHotkeys(HOTKEYS_REGISTRATION, group, desktop).map((item) => item.id);
@@ -35,7 +40,7 @@ describe('getVisibleHotkeys', () => {
 });
 
 describe('getHotkeyConflicts', () => {
-  it('lists the other registered bindings but not the shortcut itself', () => {
+  it('lists other bindings of the same group but not the shortcut itself', () => {
     const conflicts = getHotkeyConflicts(
       { commandPalette: 'mod+k', search: 'mod+j' },
       'search',
@@ -43,6 +48,32 @@ describe('getHotkeyConflicts', () => {
     );
 
     expect(conflicts).toEqual(['mod+k']);
+  });
+
+  it('counts bindings from another group', () => {
+    const group = (id: string) => HOTKEYS_REGISTRATION.find((item) => item.id === id)?.group;
+    expect(group('commandPalette')).toBe('essential');
+    expect(group('saveTopic')).toBe('conversation');
+
+    expect(
+      getHotkeyConflicts(
+        { commandPalette: 'mod+k', saveTopic: 'mod+s' },
+        'commandPalette',
+        HOTKEYS_REGISTRATION,
+      ),
+    ).toEqual(['mod+s']);
+  });
+
+  it('counts desktop global shortcuts passed as external bindings, even with a colliding id', () => {
+    // `showApp` exists both as an in-app and as an Electron global shortcut.
+    const conflicts = getHotkeyConflicts(
+      { showApp: 'mod+shift+a' },
+      'showApp',
+      HOTKEYS_REGISTRATION,
+      ['alt+shift+space', '', undefined],
+    );
+
+    expect(conflicts).toEqual(['alt+shift+space']);
   });
 
   it('ignores stored bindings of shortcuts that were retired from the registry', () => {
@@ -57,5 +88,47 @@ describe('getHotkeyConflicts', () => {
 
   it('skips cleared bindings', () => {
     expect(getHotkeyConflicts({ search: '' }, 'commandPalette', HOTKEYS_REGISTRATION)).toEqual([]);
+  });
+});
+
+describe('getDesktopHotkeyConflicts', () => {
+  const desktopBindings = {
+    openSettings: 'CommandOrControl+,',
+    quickChat: '',
+    quickComposer: 'Alt+Shift+Space',
+    showApp: '',
+  };
+
+  it('rejects an in-app binding for an empty desktop row (Quick Chat vs Command Palette)', () => {
+    const conflicts = getDesktopHotkeyConflicts(
+      desktopBindings,
+      'quickChat',
+      { commandPalette: 'mod+k' },
+      HOTKEYS_REGISTRATION,
+    );
+
+    expect(conflicts).toContain('mod+k');
+  });
+
+  it('includes the other desktop shortcuts in HotkeyInput format but not itself', () => {
+    const conflicts = getDesktopHotkeyConflicts(
+      desktopBindings,
+      'quickComposer',
+      {},
+      HOTKEYS_REGISTRATION,
+    );
+
+    expect(conflicts).toEqual(['mod+comma']);
+  });
+
+  it('does not let a retired in-app id block a combination', () => {
+    expect(
+      getDesktopHotkeyConflicts(
+        desktopBindings,
+        'quickChat',
+        { regenerateMessage: 'mod+k' },
+        HOTKEYS_REGISTRATION,
+      ),
+    ).not.toContain('mod+k');
   });
 });

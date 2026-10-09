@@ -13,12 +13,14 @@ import { HOTKEYS_REGISTRATION } from '@/const/hotkeys';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { useSaveState } from '@/hooks/useSaveState';
+import { useElectronStore } from '@/store/electron';
+import { desktopHotkeysSelectors } from '@/store/electron/selectors';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
 import { type HotkeyItem } from '@/types/hotkey';
 
 import { hotkeyFormStyles } from './styles';
-import { getHotkeyConflicts, getVisibleHotkeys } from './visibleHotkeys';
+import { getDesktopBindingKeys, getHotkeyConflicts, getVisibleHotkeys } from './visibleHotkeys';
 
 interface HotkeySettingProps {
   /** Whether the Electron-only shortcuts apply on this surface. */
@@ -31,6 +33,8 @@ const HotkeySetting = memo<HotkeySettingProps>(({ desktop }) => {
 
   const { hotkey } = useUserStore(settingsSelectors.currentSettings, isEqual);
   const [setSettings, isUserStateInit] = useUserStore((s) => [s.setSettings, s.isUserStateInit]);
+  // Electron global shortcuts share the keyboard; their bindings only exist in the desktop app.
+  const desktopBindings = useElectronStore(desktopHotkeysSelectors.hotkeys, isEqual);
   const { status: saveStatus, lastSavedAt, save, retry } = useSaveState();
 
   if (!isUserStateInit) return <SettingsSectionSkeleton />;
@@ -43,7 +47,12 @@ const HotkeySetting = memo<HotkeySettingProps>(({ desktop }) => {
   };
 
   const mapHotkeyItem = (item: HotkeyItem) => {
-    const hotkeyConflicts = getHotkeyConflicts(hotkey, item.id, HOTKEYS_REGISTRATION);
+    const hotkeyConflicts = getHotkeyConflicts(
+      hotkey,
+      item.id,
+      HOTKEYS_REGISTRATION,
+      desktop ? getDesktopBindingKeys(desktopBindings) : [],
+    );
 
     return {
       children: (

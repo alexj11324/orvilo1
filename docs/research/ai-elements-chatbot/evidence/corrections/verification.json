@@ -1,0 +1,27 @@
+{
+  "darkBackground": "rgb(13, 13, 13)",
+  "darkThemeVerified": true,
+  "lightBackground": "rgb(255, 255, 255)",
+  "model": "opencode/step-5-preview-free",
+  "realGeneratingCanvases": [
+    {
+      "width": 42,
+      "height": 42
+    },
+    {
+      "width": 42,
+      "height": 42
+    },
+    {
+      "width": 42,
+      "height": 42
+    },
+    {
+      "width": 20,
+      "height": 20
+    }
+  ],
+  "reply": "ORBS_VISIBLE_OK",
+  "sourceCommit": "7b947d199da657cafa3b68f587babcc82ad11c5d",
+  "uiCommit": "08d8614ceb8367dcb6798001a63cdefb82588fe0"
+}

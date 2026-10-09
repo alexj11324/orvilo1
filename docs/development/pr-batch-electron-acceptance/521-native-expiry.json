@@ -1,0 +1,8 @@
+{
+  "clearedToNull": true,
+  "fixture": "Disabled local API Key record with an unusable vault value and no authentication hash; no usable credential generated",
+  "persistedAfterReload": true,
+  "prRevision": "976fa3c78222ac73bbeb583a8822011c08d14390",
+  "rendererRevision": "d49566e42",
+  "selectedDate": "2026-10-20"
+}

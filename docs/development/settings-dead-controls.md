@@ -46,3 +46,13 @@ The retired workspace Storage URL remains a bookmark redirect to the workspace s
 - **`navigateToChat` ("切换至默认会话") is kept**: `useNavigateToChatHotkey` registers a handler through `useRegisterGlobalHotkeys`.
 - zh-CN labels for Quick Chat / Quick Composer are translated.
 - Settings > About hides the "Get desktop app" section inside the desktop app.
+
+## 2026-10-09: executable model routes and notification preferences (#621, #623, #624)
+
+Provider settings now resolve standard OpenAI-compatible service endpoints when only a key is supplied. Saving credentials or enabling a model keeps its binding disabled until a completion probe and capability check succeed. Credential changes invalidate enabled routes before replacing the shared secret; checks are fenced by the binding revision. Unsupported protocols and local/device targets remain visible with a reason in the built-in Agent settings. Batch enable verifies each model once.
+
+Planning, acceptance drafting and self-evolution resolve the owning built-in Agent model before the global service fallback. A configured but unavailable binding blocks the operation rather than silently substituting another model. CLI Agent owners are explicitly unsupported for these server judgments. Memory extraction covers conversations from all runtimes; memory injection remains built-in-only.
+
+Workspace owners/admins can update name, URL slug and icon through the scoped workspace update procedure. Duplicate slugs fail with a conflict, and a successful slug edit redirects the settings URL. Personal and workspace notification settings expose inbox and push preferences for Issue assignment, review requests, status changes, run completion, run failure and approval. Workspace events read workspace preferences rather than personal overrides. Email is hidden because the open-source build has no email delivery pipeline.
+
+Backend retirement (#622) is deliberately deferred until frontend PRs #612, #615, #616 and #617 merge. These changes do not delete their routes, persisted settings or tables.

@@ -10,6 +10,7 @@ import { cn } from 'cn';
 import { Bell, Smartphone } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { PartialDeep } from 'type-fest';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { Switch } from '@/components/ui/switch';
@@ -85,7 +86,7 @@ const CHANNELS = [
 ] as const satisfies readonly ChannelDef[];
 
 const ItemRows = memo<{
-  channel: NotificationChannelSettings;
+  channel: PartialDeep<NotificationChannelSettings>;
   onToggle: (category: string, item: string, value: boolean) => void;
 }>(({ channel, onToggle }) => {
   const { t } = useTranslation('setting');
@@ -124,7 +125,7 @@ const ItemRows = memo<{
 
 const ChannelRow = memo<{
   def: (typeof CHANNELS)[number];
-  settings: NotificationChannelSettings | undefined;
+  settings: PartialDeep<NotificationChannelSettings> | undefined;
   onToggleChannel: (key: ChannelDef['key'], value: boolean) => void;
   onToggleItem: (key: ChannelDef['key'], category: string, item: string, value: boolean) => void;
 }>(({ def, settings, onToggleChannel, onToggleItem }) => {

@@ -5,7 +5,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
@@ -41,7 +41,7 @@ const GeneralField = memo<{ children: React.ReactNode; label: string }>(({ child
 GeneralField.displayName = 'GeneralField';
 
 const WorkspaceGeneral = memo(() => {
-  const { t } = useTranslation('setting');
+  const { t } = useTranslation(['setting', 'common']);
   const workspace = useActiveWorkspace();
   const { mutate } = useFetchWorkspaces();
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ const WorkspaceGeneral = memo(() => {
           })
         }
       >
-        {t('common:save')}
+        {t('save', { ns: 'common' })}
       </Button>
       <AutoSaveHint
         lastUpdatedTime={lastSavedAt}

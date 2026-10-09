@@ -118,3 +118,42 @@ Canary changed these files while the redesign was in flight; the behaviour was r
 - Ollama close button name and OAuth card `Spinner` merged unchanged.
 - Toolbar buttons: the "more" menu is named `common:more`; the add-model button now has a visible "Add Model" label, which names it (the icon-only `common:addNew` label is no longer needed).
 - Model ID copy feedback: `ModelIdChip` keeps the copied toast and adds an inline check mark for two seconds.
+
+## Verification fixes (`fix/provider-settings-verify-findings`)
+
+Defects measured on the real app after the three PRs merged:
+
+- Rail search now also filters the card grid (`features/filterProviders.ts` is the one match rule for both) and the
+  grid shows `menu.notFound` when nothing matches. `SearchBar` gets an accessible name (its placeholder), Esc clears a
+  non-empty query (same as the settings sidebar search) and the clear button returns focus to the input.
+- Status badge: `ProviderConfig/providerStatus.ts` lets the live form value win over the stored one, so clearing the
+  key flips the badge to "Not configured" at once instead of waiting for the runtime config to refresh. An invalid
+  proxy URL is never persisted (autosave drops it, `isPersistableBaseURL`) and no longer counts as configured.
+- Connectivity check without a key or endpoint shows an inline error (`checker.missingCredentials`) instead of
+  sending a request.
+- Focus rings: info icon and AES-GCM link use the standard 3px ring; the password eye is a local `Button`
+  (`icon-sm`, 28px) so it also gets the ring.
+- Credentials and models panels set `--frame-radius` to `--radius-card` (8px) locally; the shared `Frame` default
+  (`--radius-xl`) is unchanged.
+- Model ID chip uses the shared toast (with an error toast when the clipboard write fails) plus the inline check.
+
+Left as is (decisions, see the PR): rail row height and focus ring come from the shared `NavItem`, which the doc
+keeps unchanged; the rail keeps one tab stop per row because no list in the app, Plane or Multica uses roving focus.
+
+### Unconfigured provider null credentials
+
+Coordinator Electron acceptance of the original `ee8370929a7a18e889e7d46b1741803ed80c15c4`
+provider-status helper hit a real detail-page crash after selecting an unconfigured builtin provider:
+the form passed watched fields as an object, while saved `keyVaults` was `null`. A default parameter
+of `{}` only covers `undefined`, so reading `stored.baseURL` threw; credential reads had the same gap.
+
+The author repair at `bbd25dedcbcd4e681e780e05732885b3a5d718c0` accepts absent/null live and
+stored values and reads their fields optionally. It preserves intentional live clears and the
+stored-value fallback for invalid live proxy URLs. Existing-file regressions additionally cover
+the observed live-object/stored-null shape in both helpers, valid live values, empty clears, and
+an invalid live URL with no stored fallback. Against the original helper these tests fail with
+the real `baseURL`/`apiKey` null-read exceptions; with the repaired helper all 14 status tests and
+4 existing provider-filter tests pass with one worker.
+
+These are utility tests, not fresh Electron acceptance of the repaired source. The corrected
+unconfigured-provider route and complete provider verification remain pending coordinator acceptance.

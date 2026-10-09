@@ -53,7 +53,7 @@ interface CredentialsPanelProps {
  * rules, valuePropName, ...) keeps working.
  */
 const CredentialsPanel = ({ items }: CredentialsPanelProps) => (
-  <Frame dense>
+  <Frame dense className="[--frame-radius:var(--radius-card)]">
     <FramePanel className="p-0">
       {items.map((item, index) => {
         if (isNode(item)) return <Fragment key={`node-${index}`}>{item.node}</Fragment>;

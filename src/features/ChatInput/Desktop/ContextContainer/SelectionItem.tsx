@@ -4,11 +4,17 @@ import { Code2Icon, TextIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ClosableBadge from '@/components/ClosableBadge';
+import {
+  Attachment,
+  AttachmentHoverCard,
+  AttachmentHoverCardContent,
+  AttachmentHoverCardTrigger,
+  AttachmentInfo,
+  AttachmentPreview,
+  AttachmentRemove,
+} from '@/components/ai-elements/attachments';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
-
-import { SimpleTooltip } from '../../SimpleTooltip';
 
 const styles = createStaticStyles(({ css }) => ({
   codeLine: css`
@@ -56,15 +62,6 @@ const styles = createStaticStyles(({ css }) => ({
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
-  name: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
   textPreview: css`
     max-width: min(420px, 70vw);
     color: ${cssVar.colorText};
@@ -76,7 +73,6 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const MAX_PREVIEW_LENGTH = 8;
 const MAX_CODE_PREVIEW_LINES = 8;
 
 const getPreviewText = (content?: string, fallback?: string) => {
@@ -89,7 +85,7 @@ const getPreviewText = (content?: string, fallback?: string) => {
     .trim();
   if (!plain) return 'Text selection';
 
-  return plain.length > MAX_PREVIEW_LENGTH ? `${plain.slice(0, MAX_PREVIEW_LENGTH)}...` : plain;
+  return plain;
 };
 
 const getLocationText = ({
@@ -151,23 +147,38 @@ const SelectionItem = memo<ChatContextContent>(
     }, [content, filePath, isCodeSelection, lineRange, preview, title]);
 
     return (
-      <ClosableBadge
-        closeLabel={t('close')}
-        size={'lg'}
-        variant="secondary"
-        onClose={() => {
-          if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
-        }}
-      >
-        {isCodeSelection ? (
-          <Code2Icon data-icon="inline-start" size={16} />
-        ) : (
-          <TextIcon data-icon="inline-start" size={16} />
-        )}
-        <SimpleTooltip title={tooltip}>
-          <span className={styles.name}>{displayText}</span>
-        </SimpleTooltip>
-      </ClosableBadge>
+      <AttachmentHoverCard>
+        <AttachmentHoverCardTrigger
+          render={
+            <Attachment
+              className="min-w-0 max-w-full"
+              data={{
+                type: 'source-document',
+                id,
+                sourceId: id,
+                mediaType: isCodeSelection ? 'text/plain' : 'text/html',
+                title: displayText,
+              }}
+              onRemove={() => {
+                if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
+              }}
+            >
+              <AttachmentPreview
+                fallbackIcon={
+                  isCodeSelection ? (
+                    <Code2Icon className="size-3" />
+                  ) : (
+                    <TextIcon className="size-3" />
+                  )
+                }
+              />
+              <AttachmentInfo className="max-w-64" />
+              <AttachmentRemove label={t('close')} />
+            </Attachment>
+          }
+        />
+        <AttachmentHoverCardContent>{tooltip}</AttachmentHoverCardContent>
+      </AttachmentHoverCard>
     );
   },
 );

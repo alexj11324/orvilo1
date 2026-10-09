@@ -1,129 +1,24 @@
 'use client';
-
 import { type StepContextTodos } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import { ChevronDown, ChevronUp, CircleArrowRight } from 'lucide-react';
-import { createElement, memo, useMemo, useState } from 'react';
+import { Circle, CircleArrowRight, CircleCheck } from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Plan,
+  PlanAction,
+  PlanContent,
+  PlanHeader,
+  PlanTitle,
+  PlanTrigger,
+} from '@/components/ai-elements/plan';
+import { TaskItem } from '@/components/ai-elements/task';
 import { Badge } from '@/components/reui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
-import { shinyTextStyles } from '@/styles';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../store';
-
-const RING_SIZE = 14;
-const RING_STROKE = 2;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUM = 2 * Math.PI * RING_RADIUS;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  collapsed: css`
-    max-height: 0;
-    margin-block-start: 0 !important;
-    padding-block: 0 !important;
-    border-block-start: none !important;
-
-    opacity: 0;
-  `,
-  container: css`
-    cursor: pointer;
-    user-select: none;
-
-    padding-block: 8px 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorFillSecondary};
-    border-block-end: none;
-    border-start-start-radius: 12px;
-    border-start-end-radius: 12px;
-
-    background: ${cssVar.colorBgElevated};
-
-    transition: all 0.2s ${cssVar.motionEaseInOut};
-  `,
-  containerTopAttached: css`
-    border-start-start-radius: 0;
-    border-start-end-radius: 0;
-  `,
-  count: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  expanded: css`
-    max-height: 300px;
-    opacity: 1;
-  `,
-  header: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  itemRow: css`
-    padding-block: 6px;
-    padding-inline: 4px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-    font-size: 13px;
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  listContainer: css`
-    overflow: hidden auto;
-    overscroll-behavior-y: contain;
-
-    /* The rows are Base UI Checkbox labels, which are inline-flex. In a plain
-       block container they lay out as INLINE boxes — two or three short todos
-       share a line and the list wraps like prose. A column flex container
-       blockifies them, so one todo is one row again. */
-    display: flex;
-    flex-direction: column;
-
-    margin-block-start: 8px;
-    padding-block: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    transition:
-      max-height 0.25s ${cssVar.motionEaseInOut},
-      opacity 0.2s ${cssVar.motionEaseInOut},
-      padding 0.2s ${cssVar.motionEaseInOut};
-  `,
-  processingRow: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  `,
-  ring: css`
-    transform: rotate(-90deg);
-    flex-shrink: 0;
-  `,
-  ringProgress: css`
-    transition:
-      stroke-dashoffset 240ms ease,
-      stroke 240ms ease;
-  `,
-  ringTrack: css`
-    stroke: ${cssVar.colorFillSecondary};
-  `,
-  textCompleted: css`
-    color: ${cssVar.colorTextQuaternary};
-    text-decoration: line-through;
-  `,
-  textProcessing: css`
-    color: ${cssVar.colorText};
-  `,
-  textTodo: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
 
 interface TodoProgressProps {
   className?: string;
@@ -154,7 +49,6 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
   const items = todos?.items || [];
   const total = items.length;
   const completed = items.filter((item) => item.status === 'completed').length;
-  const progressPercent = total > 0 ? (completed / total) * 100 : 0;
 
   // Find current pending task (first non-completed item, prioritize processing)
   const currentPendingTask =
@@ -164,103 +58,55 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
   // Don't render if no todos
   if (total === 0) return null;
 
-  const allDone = completed === total;
-  const ringColor = allDone ? cssVar.colorSuccess : cssVar.colorInfo;
-  const ringOffset = RING_CIRCUM * (1 - progressPercent / 100);
-
-  const toggleExpanded = () => setExpanded(!expanded);
-
   return (
-    <div
-      {...clickableProps()}
-      className={cn(
-        cx(styles.container, topAttached && styles.containerTopAttached, className),
-        CLICKABLE_FOCUS_RING,
-      )}
-      onClick={toggleExpanded}
+    <Plan
+      className={cn('rounded-b-none', topAttached && 'rounded-t-none', className)}
+      isStreaming={isAIGenerating}
+      open={expanded}
+      onOpenChange={setExpanded}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 justify-between">
-        <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
-          <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>
-            <circle
-              className={styles.ringTrack}
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              fill="none"
-              r={RING_RADIUS}
-              strokeWidth={RING_STROKE}
-            />
-            <circle
-              className={styles.ringProgress}
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              fill="none"
-              r={RING_RADIUS}
-              stroke={ringColor}
-              strokeDasharray={RING_CIRCUM}
-              strokeDashoffset={ringOffset}
-              strokeLinecap="round"
-              strokeWidth={RING_STROKE}
-            />
-          </svg>
-          <span className={cx(styles.header, isAIGenerating && shinyTextStyles.shinyText)}>
-            {currentPendingTask?.text ||
-              t('todoProgress.allCompleted', { defaultValue: 'All tasks completed' })}
-          </span>
-          <Badge size="sm" style={{ flexShrink: 0 }}>
-            <span className={styles.count}>
-              {completed}/{total}
-            </span>
-          </Badge>
+      <PlanHeader>
+        <div className="min-w-0 flex-1 space-y-2">
+          <PlanTitle className="truncate">
+            {currentPendingTask?.text || t('todoProgress.allCompleted')}
+          </PlanTitle>
+          <Progress aria-label={t('todoProgress.title')} value={(completed / total) * 100} />
         </div>
-        {createElement(expanded ? ChevronUp : ChevronDown, {
-          size: 16,
-          style: { color: cssVar.colorTextTertiary, flexShrink: 0 },
-        })}
-      </div>
-
-      {/* Expandable Todo List */}
-      <div className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
+        <Badge className="shrink-0" size="sm">
+          {completed}/{total}
+        </Badge>
+        <PlanAction>
+          <PlanTrigger />
+        </PlanAction>
+      </PlanHeader>
+      <PlanContent className="max-h-72 space-y-2 overflow-auto overscroll-contain">
         {items.map((item, index) => {
-          const isCompleted = item.status === 'completed';
-          const isProcessing = item.status === 'processing';
-
-          // Processing state uses CircleArrowRight icon
-          if (isProcessing) {
-            return (
-              <div className={cx(styles.itemRow, styles.processingRow)} key={index}>
-                <CircleArrowRight size={17} style={{ color: cssVar.colorTextSecondary }} />
-                <span className={styles.textProcessing}>{item.text}</span>
-              </div>
-            );
-          }
-
-          // Todo and completed states use Checkbox
+          const completed = item.status === 'completed';
+          const StatusIcon = completed
+            ? CircleCheck
+            : item.status === 'processing'
+              ? CircleArrowRight
+              : Circle;
           return (
-            <label className={styles.itemRow} key={index}>
-              <Checkbox
-                checked={isCompleted}
-                className="rounded-full data-checked:border-success data-checked:bg-success"
-                style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
+            <TaskItem className="flex items-start gap-2" key={index}>
+              <StatusIcon
+                aria-hidden
+                className={cn('mt-0.5 size-4 shrink-0', completed && 'text-success')}
               />
               <span
-                className={cx(
-                  styles.textTodo,
-                  isCompleted && styles.textCompleted,
-                  isCompleted && 'text-muted-foreground',
+                className={cn(
+                  completed && 'line-through',
+                  item.status === 'processing' && 'text-foreground',
                 )}
               >
                 {item.text}
               </span>
-            </label>
+            </TaskItem>
           );
         })}
-      </div>
-    </div>
+      </PlanContent>
+    </Plan>
   );
 });
-
 TodoProgress.displayName = 'TodoProgress';
-
 export default TodoProgress;

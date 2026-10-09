@@ -1,0 +1,62 @@
+[
+  {
+    "name": "example-tool",
+    "url": "https://elements.ai-sdk.dev/api/registry/example-tool.json",
+    "files": [
+      {
+        "path": "registry/default/examples/tool.tsx",
+        "sha256": "64053575e475d0caf17100f883f63f4296b45444d7865e543b37ec990dd97137"
+      }
+    ]
+  },
+  {
+    "name": "example-confirmation",
+    "url": "https://elements.ai-sdk.dev/api/registry/example-confirmation.json",
+    "files": [
+      {
+        "path": "registry/default/examples/confirmation.tsx",
+        "sha256": "e6c3305727959f1d90e0e88ad9b5d4ccd4eba23bf93a65eae2bb67e71bc562de"
+      }
+    ]
+  },
+  {
+    "name": "example-artifact",
+    "url": "https://elements.ai-sdk.dev/api/registry/example-artifact.json",
+    "files": [
+      {
+        "path": "registry/default/examples/artifact.tsx",
+        "sha256": "bc34d822ce48c94a6bfbd5221931db0c6312a2068852ec38d3d6ec189630f6ab"
+      }
+    ]
+  },
+  {
+    "name": "example-attachments-inline",
+    "url": "https://elements.ai-sdk.dev/api/registry/example-attachments-inline.json",
+    "files": [
+      {
+        "path": "registry/default/examples/attachments-inline.tsx",
+        "sha256": "105497bd01b357320e93e31b6dcde996a22416d46c1354cdbdb31dbbc28278ec"
+      }
+    ]
+  },
+  {
+    "name": "example-task",
+    "url": "https://elements.ai-sdk.dev/api/registry/example-task.json",
+    "files": [
+      {
+        "path": "registry/default/examples/task.tsx",
+        "sha256": "07b6f65581068b0afcd5df23973f2fc72880c0f224b8817730a145fc7b175e34"
+      }
+    ]
+  },
+  {
+    "name": "example-plan",
+    "url": "https://elements.ai-sdk.dev/api/registry/example-plan.json",
+    "files": [
+      {
+        "path": "registry/default/examples/plan.tsx",
+        "sha256": "aa0d527df5bf3e642394bd3be4556947ddff7d37761a8f6577d2dba05ecc7d5e"
+      }
+    ]
+  }
+]

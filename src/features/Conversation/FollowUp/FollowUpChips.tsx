@@ -1,13 +1,11 @@
 'use client';
 
 import type { FollowUpChip } from '@orvilo/types';
-import { Reply } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 
+import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
 import { messageStateSelectors, useConversationStore } from '@/features/Conversation/store';
 import { followUpActionSelectors, useFollowUpActionStore } from '@/store/followUpAction';
-
-import { styles } from './style';
 
 interface FollowUpChipsProps {
   conversationKey: string;
@@ -39,21 +37,18 @@ const FollowUpChips = memo<FollowUpChipsProps>(({ conversationKey, messageId }) 
   if (chips.length === 0 || isGenerating) return null;
 
   return (
-    <div className={styles.root}>
+    <Suggestions>
       {chips.map((chip, i) => (
-        <button
+        <Suggestion
           aria-label={chip.label}
-          className={styles.chip}
           key={`${messageId}-${i}`}
-          style={{ animationDelay: `${i * 60}ms` }}
-          type="button"
+          suggestion={chip.message}
           onClick={() => handleClick(chip)}
         >
-          <Reply className={`${styles.chipIcon} followup-icon`} size={14} />
           <span>{chip.label}</span>
-        </button>
+        </Suggestion>
       ))}
-    </div>
+    </Suggestions>
   );
 });
 

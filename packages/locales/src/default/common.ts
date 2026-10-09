@@ -71,6 +71,8 @@ export default {
   'datePicker.previous': 'Previous',
   'clearSearch': 'Clear search',
   'viewExecutionDetails': 'View execution details',
+  'clear': 'Clear',
+  'error': 'Error',
   'cancel': 'Cancel',
   'changelog': 'Changelog',
   'alreadyUpToDate': 'Already Up to Date',

@@ -1,14 +1,18 @@
+import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
+import { BotAvatar } from 'bot-avatars';
 import { type CSSProperties, type MouseEventHandler } from 'react';
 import { memo } from 'react';
 
 import A from '@/components/Avatar';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
+import { useIsDark } from '@/hooks/useIsDark';
 
 import { type ChatItemProps } from '../type';
 
 export interface AvatarProps {
   alt?: string;
+  assistantAvatar?: boolean;
   avatar: ChatItemProps['avatar'];
   loading?: boolean;
   onClick?: ChatItemProps['onAvatarClick'] | MouseEventHandler<HTMLDivElement>;
@@ -18,10 +22,14 @@ export interface AvatarProps {
 }
 
 const Avatar = memo<AvatarProps>(
-  ({ loading, avatar, unoptimized, onClick, size = 28, style, alt }) => {
+  ({ loading, avatar, unoptimized, onClick, size = 28, style, alt, assistantAvatar }) => {
+    const dark = useIsDark();
+    const useBot = assistantAvatar && (!avatar.avatar || avatar.avatar === DEFAULT_INBOX_AVATAR);
     const displayName = agentDisplayName(avatar);
 
-    if (avatar.agentId) {
+    // Assistant rows explicitly opt into Libraries.dev/default or custom avatars.
+    // Other agent identity surfaces keep the canonical runtime branding from canary.
+    if (avatar.agentId && !assistantAvatar) {
       return (
         <div className="inline-flex" style={style} onClick={onClick}>
           <AssigneeAvatar agentId={avatar.agentId} size={size} />
@@ -33,14 +41,29 @@ const Avatar = memo<AvatarProps>(
       <A
         alt={alt || displayName}
         animation={loading}
-        avatar={avatar.avatar}
-        background={avatar.backgroundColor}
+        background={useBot ? 'transparent' : avatar.backgroundColor}
         name={displayName}
         shape={'square'}
         size={size}
-        style={style}
+        // The upstream canvas overscans its box for jumps and turns.
+        style={useBot ? { ...style, overflow: 'visible' } : style}
         title={displayName}
         unoptimized={unoptimized}
+        avatar={
+          useBot ? (
+            <BotAvatar
+              aria-hidden="true"
+              interactive={false}
+              shading="fabric"
+              size={size}
+              state={loading ? 'working' : 'default'}
+              theme={dark ? 'dark' : 'light'}
+              type="clover"
+            />
+          ) : (
+            avatar.avatar
+          )
+        }
         onClick={onClick}
       />
     );

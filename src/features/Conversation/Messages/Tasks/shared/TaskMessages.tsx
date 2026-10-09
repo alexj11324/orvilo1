@@ -1,14 +1,12 @@
 'use client';
-import {Markdown} from '@lobehub/ui';
 import { type AssistantContentBlock, type UIChatMessage } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import { ScrollText, Workflow } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Task, TaskContent, TaskTrigger } from '@/components/ai-elements/task';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import Markdown from '@/features/Conversation/Markdown';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
@@ -20,13 +18,6 @@ import Usage from '../../components/Extras/Usage';
 import AnimatedNumber from '../../components/Extras/Usage/UsageDetail/AnimatedNumber';
 import { accumulateUsage, formatDuration, formatElapsedTime } from './utils';
 
-const styles = createStaticStyles(({ css }) => ({
-  instructionContent: css`
-    overflow: auto;
-    max-height: 300px;
-  `,
-}));
-
 /**
  * InstructionAccordion - Shows the task instruction in a collapsible accordion
  */
@@ -36,30 +27,35 @@ const InstructionAccordion = memo<{ childrenCount: number; instruction: string }
 
     // Auto-collapse instruction when children count exceeds threshold
     const [expandedKeys, setExpandedKeys] = useState<string[]>(['instruction']);
+    const hasMultipleSteps = childrenCount > 1;
 
     useEffect(() => {
-      if (childrenCount > 1) {
+      if (hasMultipleSteps) {
         setExpandedKeys([]);
       }
-    }, [childrenCount > 1]);
+    }, [hasMultipleSteps]);
 
     return (
-      <Accordion multiple className='gap-2' value={expandedKeys} onValueChange={setExpandedKeys}><AccordionItem value='instruction'><AccordionTrigger className="hover:no-underline" style={{ paddingBlock: 4, paddingInline: 4 }}>{(
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
-                >
-                  <ScrollText color={cssVar.colorTextSecondary} />
-                </div>
-                <span className='text-muted-foreground'>
-                  {t('task.instruction')}
-                </span>
-              </div>
-            )}</AccordionTrigger><AccordionContent>{(
-              <div className={cn('flex flex-col p-3', styles.instructionContent)} style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}
-              >
-                <Markdown variant={'chat'}>{instruction}</Markdown>
-              </div>
-            )}</AccordionContent></AccordionItem></Accordion>
+      <Task
+        open={expandedKeys.includes('instruction')}
+        onOpenChange={(open) => setExpandedKeys(open ? ['instruction'] : [])}
+      >
+        <TaskTrigger title={t('task.instruction')}>
+          {
+            <div className="flex items-center gap-2">
+              <ScrollText className="size-4 shrink-0" />
+              <span className="text-muted-foreground">{t('task.instruction')}</span>
+            </div>
+          }
+        </TaskTrigger>
+        <TaskContent>
+          {
+            <div className="max-h-75 overflow-auto">
+              <Markdown variant={'chat'}>{instruction}</Markdown>
+            </div>
+          }
+        </TaskContent>
+      </Task>
     );
   },
 );
@@ -138,25 +134,20 @@ const ProcessingView = memo<{
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 px-1">
-        <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
-        >
+        <div className="flex size-4 shrink-0 items-center justify-center">
           <NeuralNetworkLoading size={16} />
         </div>
         <div className="flex items-center gap-1">
-          <span className='text-muted-foreground font-medium'>
+          <span className="text-muted-foreground font-medium">
             <AnimatedNumber
               duration={500}
               formatter={(v) => Math.round(v).toString()}
               value={totalToolCalls}
             />
           </span>
-          <span className='text-muted-foreground'>
-            {t('task.metrics.toolCallsShort')}
-          </span>
+          <span className="text-muted-foreground">{t('task.metrics.toolCallsShort')}</span>
           {startTime && (
-            <span className='text-muted-foreground'>
-              ({formatElapsedTime(elapsedTime)})
-            </span>
+            <span className="text-muted-foreground">({formatElapsedTime(elapsedTime)})</span>
           )}
         </div>
       </div>
@@ -209,20 +200,13 @@ const CompletedView = memo<{
 
   const title = (
     <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
-      >
-        <Workflow color={cssVar.colorTextSecondary} />
-      </div>
+      <Workflow className="size-4 shrink-0" />
       <div className="flex items-center gap-1">
-        <span className='text-muted-foreground font-medium'>
-          {totalToolCalls}
-        </span>
-        <span className='text-muted-foreground'>
-          {t('task.metrics.toolCallsShort')}
-        </span>
+        <span className="text-muted-foreground font-medium">{totalToolCalls}</span>
+        <span className="text-muted-foreground">{t('task.metrics.toolCallsShort')}</span>
         {/* Duration display */}
         {duration && (
-          <span className='text-muted-foreground'>
+          <span className="text-muted-foreground">
             {t('task.metrics.duration', { duration: formatDuration(duration) })}
           </span>
         )}
@@ -234,18 +218,23 @@ const CompletedView = memo<{
     <div className="flex flex-col gap-2">
       {/* Intermediate steps - collapsed by default */}
       {intermediateBlocks.length > 0 && (
-        <Accordion multiple className='gap-2' defaultValue={[]}><AccordionItem value='intermediate'><AccordionTrigger className="hover:no-underline" style={{ paddingBlock: 4, paddingInline: 4 }}>{title}</AccordionTrigger><AccordionContent>{(
-                <div className="flex flex-col gap-2 px-1" style={{ marginTop: 8 }}>
-                  {intermediateBlocks.map((block) => (
-                    <ContentBlock
-                      {...block}
-                      disableEditing
-                      assistantId={assistantId}
-                      key={block.id}
-                    />
-                  ))}
-                </div>
-              )}</AccordionContent></AccordionItem></Accordion>
+        <Task defaultOpen={false}>
+          <TaskTrigger title={t('task.metrics.stepsShort')}>{title}</TaskTrigger>
+          <TaskContent>
+            {
+              <div className="flex flex-col gap-2">
+                {intermediateBlocks.map((block) => (
+                  <ContentBlock
+                    {...block}
+                    disableEditing
+                    assistantId={assistantId}
+                    key={block.id}
+                  />
+                ))}
+              </div>
+            }
+          </TaskContent>
+        </Task>
       )}
 
       {/* Final result - always visible */}

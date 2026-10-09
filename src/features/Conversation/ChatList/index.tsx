@@ -4,6 +4,7 @@ import type { UIChatMessage } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo } from 'react';
 
+import { Conversation, ConversationContent } from '@/components/ai-elements/conversation';
 import AsyncError from '@/components/AsyncError';
 import { TopicNotFoundRedirect } from '@/features/TopicNotFound';
 import { useFetchTopicMemories } from '@/hooks/useFetchMemoryForTopic';
@@ -315,7 +316,7 @@ const ChatList = memo<ChatListProps>(
       );
 
     return (
-      <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
+      <Conversation scrollMode="external" style={{ height: '100%', minHeight: 0 }}>
         {messageAuthorAgentIds.map((agentId) => (
           <MessageAuthorConfigLoader
             agentId={agentId}
@@ -323,9 +324,7 @@ const ChatList = memo<ChatListProps>(
             key={agentId}
           />
         ))}
-        <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
-          {content}
-        </div>
+        <ConversationContent scrollMode="external">{content}</ConversationContent>
         {feedback.showBackgroundError && (
           <RefreshError
             error={refreshError.error}
@@ -333,7 +332,7 @@ const ChatList = memo<ChatListProps>(
             onRetry={refreshError.retry}
           />
         )}
-      </div>
+      </Conversation>
     );
   },
 );

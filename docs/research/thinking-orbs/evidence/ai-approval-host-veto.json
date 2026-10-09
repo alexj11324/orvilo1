@@ -1,0 +1,14 @@
+{
+  "calls": [
+    {
+      "type": "approved",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "rejected",
+      "id": "msg_ai_approval_tool",
+      "reason": "Synthetic vetoed reason"
+    }
+  ],
+  "fixture": "Supported conversation host hooks returned false before execution; no permission bypass, no tool executed."
+}

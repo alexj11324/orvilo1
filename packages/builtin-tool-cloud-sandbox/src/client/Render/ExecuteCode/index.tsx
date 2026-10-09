@@ -4,6 +4,14 @@ import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
+import {
+  Terminal,
+  TerminalActions,
+  TerminalContent,
+  TerminalCopyButton,
+  TerminalHeader,
+  TerminalTitle,
+} from '@/components/ai-elements/terminal';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import type { ExecuteCodeState } from '../../../types';
@@ -36,21 +44,21 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
           >
             <CodeBlockCopyButton />
           </CodeBlock>
-          {pluginState?.output && (
-            <CodeBlock
-              wrap
-              code={pluginState.output}
-              language={'text'}
-              style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
-              variant={'default'}
-            >
-              <CodeBlockCopyButton />
-            </CodeBlock>
-          )}
-          {pluginState?.stderr && (
-            <CodeBlock wrap code={pluginState.stderr} language={'text'} variant={'default'}>
-              <CodeBlockCopyButton />
-            </CodeBlock>
+          {[
+            ['stdout', pluginState?.output],
+            ['stderr', pluginState?.stderr],
+          ].map(([label, output]) =>
+            output ? (
+              <Terminal autoScroll={false} key={label} output={output}>
+                <TerminalHeader>
+                  <TerminalTitle>{label}</TerminalTitle>
+                  <TerminalActions>
+                    <TerminalCopyButton />
+                  </TerminalActions>
+                </TerminalHeader>
+                <TerminalContent className="max-h-[200px] p-2 text-xs" />
+              </Terminal>
+            ) : null,
           )}
         </div>
       </div>

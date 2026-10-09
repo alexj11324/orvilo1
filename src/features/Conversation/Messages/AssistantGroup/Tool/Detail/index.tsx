@@ -1,9 +1,25 @@
 import { getBuiltinStreaming } from '@orvilo/builtin-tools/streamings';
-import { type ChatToolResult, type ToolIntervention } from '@orvilo/types';
-import { safeParsePartialJSON } from '@orvilo/utils';
+import {
+  type ChatToolResult,
+  classifyToolInterventionPresentation,
+  type ToolIntervention,
+} from '@orvilo/types';
+import { safeParseJSON, safeParsePartialJSON } from '@orvilo/utils';
+import { CheckIcon } from 'lucide-react';
 import { memo, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import {
+  Confirmation,
+  ConfirmationAccepted,
+  ConfirmationTitle,
+} from '@/components/ai-elements/confirmation';
+import { ToolInput } from '@/components/ai-elements/tool';
+
+import UserInterventionErrorBoundary from '../../../../InterventionBar/UserInterventionErrorBoundary';
+import { dataSelectors, useConversationStore } from '../../../../store';
 import AbortResponse from './AbortResponse';
+import Intervention from './Intervention';
 import LoadingPlaceholder from './LoadingPlaceholder';
 import RejectedResponse from './RejectedResponse';
 import ToolRender from './Render';
@@ -49,9 +65,42 @@ const Render = memo<RenderProps>(
     isToolCalling,
     showCustomToolRender,
   }) => {
-    // Pending interventions are rendered in the bottom InterventionBar, not inline
+    const { t } = useTranslation('chat');
+    // Use the real display turn owner rather than this content block's id.
+    // Parallel approval batching and continuation must use the same anchor as
+    // the pending-intervention selector used by the conversation host.
+    const assistantGroupId = useConversationStore(
+      (s) =>
+        dataSelectors.pendingInterventions(s).find((item) => item.toolCallId === toolCallId)
+          ?.assistantGroupId,
+    );
+
     if (toolMessageId && intervention?.status === 'pending' && !disableEditing) {
-      return null;
+      if (classifyToolInterventionPresentation(identifier, apiName).surface !== 'binary')
+        return null;
+      return (
+        <div className="space-y-4">
+          <ToolInput input={safeParseJSON(requestArgs || '') ?? requestArgs ?? {}} />
+          <UserInterventionErrorBoundary
+            apiName={apiName}
+            assistantGroupId={assistantGroupId}
+            identifier={identifier}
+            key={`${toolCallId}:${requestArgs}`}
+            requestArgs={requestArgs || ''}
+            toolCallId={toolCallId}
+            toolMessageId={toolMessageId}
+          >
+            <Intervention
+              apiName={apiName}
+              assistantGroupId={assistantGroupId}
+              id={toolMessageId}
+              identifier={identifier}
+              requestArgs={requestArgs || ''}
+              toolCallId={toolCallId}
+            />
+          </UserInterventionErrorBoundary>
+        </div>
+      );
     }
 
     if (intervention?.status === 'rejected') {
@@ -60,6 +109,7 @@ const Render = memo<RenderProps>(
           apiName={apiName}
           reason={intervention.rejectedReason}
           skipped={intervention.skipped}
+          toolCallId={toolCallId}
         />
       );
     }
@@ -106,9 +156,26 @@ const Render = memo<RenderProps>(
 
     return (
       <Suspense fallback={placeholder}>
-        <div className="flex flex-col gap-2">
+        <div className="space-y-4">
+          {intervention?.status === 'approved' &&
+            classifyToolInterventionPresentation(identifier, apiName).surface === 'binary' && (
+              <Confirmation
+                approval={{ id: toolCallId, approved: true }}
+                state="approval-responded"
+              >
+                <ConfirmationTitle>
+                  <ConfirmationAccepted>
+                    <span className="flex items-center gap-2">
+                      <CheckIcon className="size-4 shrink-0 text-success" />
+                      {t('tool.intervention.approved')}
+                    </span>
+                  </ConfirmationAccepted>
+                </ConfirmationTitle>
+              </Confirmation>
+            )}
           <ToolRender
             content={result.content || ''}
+            errorText={result.error?.message || result.error?.type}
             messageId={toolMessageId}
             pluginState={result.state}
             showCustomToolRender={result.error ? false : showCustomToolRender}

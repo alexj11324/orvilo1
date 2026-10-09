@@ -1,10 +1,8 @@
 'use client';
 
-
-import { cssVar } from 'antd-style';
 import { memo, useMemo, useState } from 'react';
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Task, TaskContent as TaskPanel, TaskTrigger } from '@/components/ai-elements/task';
 import { useChatStore } from '@/store/chat';
 import { displayMessageSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
@@ -20,7 +18,7 @@ interface ClientTaskItemProps {
 }
 
 const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
-  const { id, agentId: itemAgentId, groupId: itemGroupId, metadata, taskDetail } = item;
+  const { agentId: itemAgentId, groupId: itemGroupId, metadata, taskDetail } = item;
   const [expanded, setExpanded] = useState(false);
 
   const title = taskDetail?.title || metadata?.taskTitle;
@@ -118,36 +116,43 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
   const hasBlocks = blocks && childrenCount > 0;
 
   return (
-    <Accordion keepMounted multiple value={expanded ? [id] : []} onValueChange={(value) => setExpanded(value.includes(id))}><AccordionItem value={id}><AccordionTrigger className="hover:no-underline" style={{ paddingBlock: 4, paddingInline: 4 }}><TaskTitle metrics={metrics} status={status} title={title} /></AccordionTrigger><AccordionContent>{(
-            <div className="flex flex-col gap-4 p-3" style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}>
-              {instruction && (
-                <div className="flex flex-col p-3">
-                  <div className='text-sm text-muted-foreground'>
-                    {instruction}
-                  </div>
-                </div>
-              )}
+    <Task open={expanded} onOpenChange={setExpanded}>
+      <TaskTrigger
+        title={title || ''}
+      >
+        <TaskTitle metrics={metrics} status={status} title={title} />
+      </TaskTrigger>
+      <TaskPanel keepMounted>
+        {
+          <div className="flex flex-col gap-4">
+            {instruction && (
+              <div className="flex flex-col">
+                <div className="text-sm text-muted-foreground">{instruction}</div>
+              </div>
+            )}
 
-              {/* Initializing State - no taskDetail yet or no blocks */}
-              {(isInitializing || (isProcessing && !hasBlocks)) && <InitializingState />}
+            {/* Initializing State - no taskDetail yet or no blocks */}
+            {(isInitializing || (isProcessing && !hasBlocks)) && <InitializingState />}
 
-              {/* Processing or Completed State - show blocks via TaskMessages */}
-              {!isInitializing && (isProcessing || isCompleted) && hasBlocks && threadMessages && (
-                <TaskMessages
-                  duration={taskDetail?.duration}
-                  isProcessing={isProcessing}
-                  messages={threadMessages}
-                  model={model ?? undefined}
-                  provider={provider ?? undefined}
-                  startTime={item.createdAt}
-                  totalCost={taskDetail?.totalCost}
-                />
-              )}
+            {/* Processing or Completed State - show blocks via TaskMessages */}
+            {!isInitializing && (isProcessing || isCompleted) && hasBlocks && threadMessages && (
+              <TaskMessages
+                duration={taskDetail?.duration}
+                isProcessing={isProcessing}
+                messages={threadMessages}
+                model={model ?? undefined}
+                provider={provider ?? undefined}
+                startTime={item.createdAt}
+                totalCost={taskDetail?.totalCost}
+              />
+            )}
 
-              {/* Error State */}
-              {!isInitializing && isError && taskDetail && <ErrorState taskDetail={taskDetail} />}
-            </div>
-          )}</AccordionContent></AccordionItem></Accordion>
+            {/* Error State */}
+            {!isInitializing && isError && taskDetail && <ErrorState taskDetail={taskDetail} />}
+          </div>
+        }
+      </TaskPanel>
+    </Task>
   );
 }, Object.is);
 

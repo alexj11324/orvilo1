@@ -2,10 +2,11 @@
  * @vitest-environment happy-dom
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as errorAlertModule from '../../components/ErrorAlert';
+import ChatItem from '../ChatItem';
 import ErrorContent from './ErrorContent';
 
 const deleteMessageMock = vi.fn();
@@ -13,6 +14,17 @@ const updateMessageErrorMock = vi.fn();
 let messageContent: string | undefined = '';
 let isRegenerating = false;
 let realAlert = false;
+
+// Keep the ChatItem integration focused on its real metadata/header and Title.
+vi.mock('@/components/ai-elements/message', () => ({
+  Message: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+vi.mock('../../FollowUp/FollowUpChips', () => ({ default: () => null }));
+vi.mock('./Avatar', () => ({ default: () => null }));
+vi.mock('./Actions', () => ({ default: () => null }));
+vi.mock('./MessageContent', () => ({
+  default: ({ message }: { message: ReactNode }) => <div>{message}</div>,
+}));
 
 // Drive the Alert's `afterClose` directly via a click, so we exercise
 // ErrorContent's dismiss branching without the real close animation.
@@ -37,6 +49,7 @@ vi.mock('../../components/ErrorAlert', async (importOriginal) => {
 });
 
 vi.mock('@/features/Conversation/store', () => ({
+  contextSelectors: { conversationKey: () => undefined },
   dataSelectors: {
     getDisplayMessageById: (id: string) => () => ({ content: messageContent, id }),
   },
@@ -49,6 +62,39 @@ vi.mock('@/features/Conversation/store', () => ({
       updateMessageError: updateMessageErrorMock,
     }),
 }));
+
+describe('ChatItem metadata when personal sender details are hidden', () => {
+  it.each([Date.UTC(2026, 9, 9, 12), 1])('keeps the provided timestamp %s visible', (time) => {
+    const view = render(
+      <ChatItem
+        avatar={{ title: 'Personal sender' }}
+        message="Personal message"
+        placement="right"
+        showAvatar={false}
+        showTitle={false}
+        time={time}
+      />,
+    );
+    const timestamp = view.getByLabelText('published-date');
+    expect(timestamp.tagName).toBe('TIME');
+    expect(timestamp.textContent).not.toBe('');
+    expect(view.queryByText('Personal sender')).toBeNull();
+  });
+
+  it('omits the metadata row when there is no timestamp or sender detail', () => {
+    const view = render(
+      <ChatItem
+        avatar={{ title: 'Personal sender' }}
+        message="Personal message"
+        placement="right"
+        showAvatar={false}
+        showTitle={false}
+      />,
+    );
+    expect(view.queryByLabelText('published-date')).toBeNull();
+    expect(view.container.querySelector('.message-header')).toBeNull();
+  });
+});
 
 describe('ErrorContent dismiss behavior', () => {
   beforeEach(() => {

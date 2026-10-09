@@ -1,9 +1,8 @@
 import { splitAssistantGroupFinalAnswer } from '@orvilo/conversation-flow';
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Fragment, memo, useMemo } from 'react';
 
+import { ChainOfThought, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
 import ContentLoading from '@/features/Conversation/Messages/components/ContentLoading';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
@@ -22,16 +21,6 @@ import type { GroupRenderSegment } from './segments';
 import { countAssistantLlmCalls, hasRenderableFinalAnswer, shouldFoldProcess } from './segments';
 import SteerMessage from './SteerMessage';
 import type { WorkflowExpandLevelDefault } from './WorkflowCollapse';
-
-const styles = createStaticStyles(({ css }) => {
-  return {
-    container: css`
-      &:has(.tool-blocks) {
-        width: 100%;
-      }
-    `,
-  };
-});
 
 const ACTIVE_OPERATION_STATUSES = new Set<OperationStatus>(['pending', 'paused', 'running']);
 
@@ -147,7 +136,28 @@ const Group = memo<GroupChildrenProps>(
         key={`${view.id}.${variant}`}
         value={contextValues[views.indexOf(view)]!}
       >
-        {segments.map((segment) => renderChainSegment(view, segment, renderOptions))}
+        {segments.map((segment, index) => {
+          const output = renderChainSegment(view, segment, renderOptions);
+          const rendered = Array.isArray(output) ? output.filter(Boolean) : output;
+          // Final answers keep their full-width Markdown surface. Timeline
+          // markers only describe persisted process steps, without repeating
+          // the reasoning/tool headings supplied by their specialized renderer.
+          const isFinalAnswer = view === lastView && finalSegments.includes(segment);
+          if (!rendered || (Array.isArray(rendered) && rendered.length === 0)) return null;
+          if (variant === 'final' || isFinalAnswer || segment.kind === 'workflow') return rendered;
+          return (
+            <ChainOfThoughtStep
+              key={`${view.id}.process.${index}`}
+              status={
+                index === segments.length - 1 && (view.isGenerating || view.hasActiveOperation)
+                  ? 'active'
+                  : 'complete'
+              }
+            >
+              {rendered}
+            </ChainOfThoughtStep>
+          );
+        })}
       </MessageAggregationContext>
     );
 
@@ -183,13 +193,13 @@ const Group = memo<GroupChildrenProps>(
           key={view.id}
           stepCount={countAssistantLlmCalls(view.segments)}
         >
-          <div className="flex flex-col gap-2">{renderChain(view, segments, 'process')}</div>
+          {renderChain(view, segments, 'process')}
         </ProcessFold>
       );
     };
 
     return (
-      <div className={cn('flex flex-col gap-4', styles.container)}>
+      <ChainOfThought defaultOpen>
         {views.map((view, index) => (
           <Fragment key={view.id}>
             {view.steerUserId && <SteerMessage id={view.steerUserId} />}
@@ -201,7 +211,7 @@ const Group = memo<GroupChildrenProps>(
           : lastView.showTailRunningIndicator && (
               <ContentLoading id={lastView.id} startTime={lastBlockCreatedAt} />
             )}
-      </div>
+      </ChainOfThought>
     );
   },
   isEqual,

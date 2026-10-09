@@ -1,28 +1,7 @@
 'use client';
 
 import Anser from 'anser';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
-
-const styles = createStaticStyles(({ css }) => ({
-  pre: css`
-    overflow: auto;
-
-    max-height: 200px;
-    margin: 0;
-    padding: 8px;
-    border-radius: 6px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 1.6;
-    color: ${cssVar.colorText};
-    word-break: break-word;
-    white-space: pre-wrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
 
 interface AnsiOutputProps {
   text: string;
@@ -40,7 +19,7 @@ const AnsiOutput = memo<AnsiOutputProps>(({ text }) => {
   );
 
   return (
-    <pre className={styles.pre}>
+    <pre className="m-0 whitespace-pre-wrap break-words font-[inherit]">
       {segments.map((seg, i) => {
         const decorations = seg.decorations ?? [];
         const isDim = decorations.includes('dim');

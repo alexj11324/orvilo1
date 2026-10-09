@@ -1,8 +1,18 @@
-import type { ActionIconGroupEvent, ActionIconGroupItemType } from '@lobehub/ui';
-import { ActionIconGroup } from '@lobehub/ui';
-import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo } from 'react';
+import { MoreHorizontalIcon } from 'lucide-react';
+import {
+  createElement,
+  type ElementType,
+  isValidElement,
+  memo,
+  type ReactNode,
+  useMemo,
+} from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { MessageAction, MessageActions } from '@/components/ai-elements/message';
+import SidebarDropdownMenu, {
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 
 import { type MessageActionItem, type MessageActionItemOrDivider } from '../../../types';
@@ -12,42 +22,20 @@ import { useBuildActions } from './useBuildActions';
 
 const VIEWER_BAR: MessageActionSlot[] = ['copy', 'comments'];
 
-/**
- * Prepares an item for `ActionIconGroup`, which owns dispatch for the items it
- * is handed — our own `handleClick` is not part of that contract, so it is
- * stripped and re-dispatched through `onActionClick`.
- *
- * Submenu children are the exception: `ActionIconGroup` only attaches an
- * `onClick` to top-level menu items, and the underlying menu ignores any item
- * that has none. A nested child therefore has to carry its own — without this,
- * clicking a submenu entry closes the menu and does nothing at all.
- */
-const stripHandleClick = (item: MessageActionItemOrDivider): ActionIconGroupItemType => {
-  if ('type' in item && item.type === 'divider') return item as unknown as ActionIconGroupItemType;
-  const { children, ...rest } = item as MessageActionItem;
-  const baseItem = { ...rest } as MessageActionItem;
-  delete (baseItem as { handleClick?: unknown }).handleClick;
-  if (children) {
+// The menu adapter owns keyboard/submenu behavior; each action keeps its real
+// callback, including nested entries. Permission filtering stays in the registry.
+const toMenu = (items: MessageActionItemOrDivider[]): SidebarMenuItems =>
+  items.map((item) => {
+    if ('type' in item && item.type === 'divider') return item;
+    const { handleClick, children, ...rest } = item as MessageActionItem;
     return {
-      ...baseItem,
-      children: children.map((child) => {
-        const nextChild = { ...child, onClick: () => child.handleClick?.() } as MessageActionItem;
-        delete (nextChild as { handleClick?: unknown }).handleClick;
-        return nextChild;
-      }),
-    } as ActionIconGroupItemType;
-  }
-  return baseItem as ActionIconGroupItemType;
-};
-
-/** Top-level items by key; submenu children carry their own dispatch. */
-const buildActionsMap = (items: MessageActionItemOrDivider[]): Map<string, MessageActionItem> => {
-  const map = new Map<string, MessageActionItem>();
-  for (const item of items) {
-    if ('key' in item && item.key) map.set(String(item.key), item as MessageActionItem);
-  }
-  return map;
-};
+      ...rest,
+      children: children ? toMenu(children) : undefined,
+      onClick: () => {
+        void handleClick?.();
+      },
+    };
+  });
 
 interface MessageActionBarProps {
   /** Bar slots (always visible as icons) */
@@ -62,7 +50,7 @@ interface MessageActionBarProps {
 
 /**
  * Universal action bar. Resolves declarative slot keys (`'copy'`, `'edit'`,
- * `'divider'`, ...) against the registry and renders an ActionIconGroup.
+ * `'divider'`, ...) against the registry and renders AI Elements actions.
  */
 export const MessageActionBar = memo<MessageActionBarProps>(({ ctx, bar, leading, menu }) => {
   const built = useBuildActions(ctx);
@@ -88,50 +76,52 @@ export const MessageActionBar = memo<MessageActionBarProps>(({ ctx, bar, leading
     [menuSlots, built],
   );
 
-  const items = useMemo(
-    () => barItems.filter((item) => !('disabled' in item && item.disabled)).map(stripHandleClick),
-    [barItems],
-  );
-  // An all-null menu (every slot's action opted out) must collapse to no menu —
-  // ActionIconGroup renders the overflow trigger for any truthy array, even [].
-  const menuStripped = useMemo(
-    () => (menuItems?.length ? menuItems.map(stripHandleClick) : undefined),
+  const { t } = useTranslation('common');
+  const renderedMenu = useMemo(
+    () => (menuItems?.length ? toMenu(menuItems) : undefined),
     [menuItems],
   );
-
-  const allActions = useMemo(
-    () => buildActionsMap([...barItems, ...(menuItems ?? [])]),
-    [barItems, menuItems],
-  );
-
-  // Submenu children dispatch themselves (see `stripHandleClick`); what reaches
-  // here is always a top-level item.
-  const handleAction = useCallback(
-    (event: ActionIconGroupEvent) => {
-      const action = allActions.get(event.key);
-      action?.handleClick?.();
-    },
-    [allActions],
-  );
-
-  const actionGroup = (
-    <ActionIconGroup items={items} menu={menuStripped} onActionClick={handleAction} />
-  );
-
-  if (!leading) return actionGroup;
-
   return (
-    <div className="flex items-center p-0.5">
+    <MessageActions aria-label={t('more')} role="toolbar">
       {leading}
-      <ActionIconGroup
-        items={items}
-        menu={menuStripped}
-        padding={0}
-        style={{ background: 'transparent', border: 'none', borderRadius: 0, boxShadow: 'none' }}
-        variant={'borderless'}
-        onActionClick={handleAction}
-      />
-    </div>
+      {barItems.map((item, index) => {
+        if ('type' in item && item.type === 'divider') return null;
+        const action = item as MessageActionItem;
+        const label = typeof action.label === 'string' ? action.label : String(action.key);
+        const control = (
+          <MessageAction
+            disabled={action.disabled}
+            key={String(action.key ?? index)}
+            tooltip={label}
+            onClick={() => {
+              void action.handleClick?.();
+            }}
+          >
+            {action.icon
+              ? isValidElement(action.icon)
+                ? action.icon
+                : createElement(action.icon as ElementType, {
+                    className: action.spin ? 'size-4 animate-spin' : 'size-4',
+                  })
+              : action.label}
+          </MessageAction>
+        );
+        return action.children?.length ? (
+          <SidebarDropdownMenu items={toMenu(action.children)} key={String(action.key)}>
+            {control}
+          </SidebarDropdownMenu>
+        ) : (
+          control
+        );
+      })}
+      {renderedMenu && (
+        <SidebarDropdownMenu items={renderedMenu}>
+          <MessageAction label={t('more')}>
+            <MoreHorizontalIcon className="size-4" />
+          </MessageAction>
+        </SidebarDropdownMenu>
+      )}
+    </MessageActions>
   );
 });
 

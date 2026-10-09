@@ -1,0 +1,34 @@
+{
+  "artifactClosed": [],
+  "artifactOpened": [
+    {
+      "artifact": {
+        "id": "msg_ai_preview_assistant",
+        "identifier": "synthetic-svg",
+        "title": "Synthetic Artifact",
+        "type": "image/svg+xml"
+      },
+      "type": "artifact"
+    }
+  ],
+  "attachments": {
+    "localBlob": true,
+    "previewOpened": true,
+    "removed": true
+  },
+  "errors": [],
+  "htmlFrameText": ["Synthetic HTML preview\n\nNo network or script content."],
+  "iframes": [
+    {
+      "sandbox": "allow-scripts allow-forms allow-modals",
+      "src": null,
+      "srcdoc": "<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;color-scheme:light dark;}</style><script>\n(function () {\n  function createStorage() {\n    var store = Object.create(null);\n    return {\n      get length() {\n        return Object.keys(store).length;\n      },\n      key: function (i) {\n        var keys = Object.keys(store);\n        return i >= 0 && i < keys.length ? keys[i] : null;\n     "
+    }
+  ],
+  "mermaid": [
+    {
+      "text": "\n\n#mermaid-_r_1b9_ 500;600;700&display=swap');\n  text { font-family: 'Inter', system-ui, sans-serif; }\n#mermaid-_r_1b9_ {\n    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */\n    --_text:          var(--fg);\n    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));\n    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));\n    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));\n    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));\n    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));\n    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));\n    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));\n    --_group-fill:    var(--bg);\n    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));\n    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));\n    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));\n  }\n\n\n  \n    \n  \n  \n    \n  \n\n\n\n  \n  Synthetic input\n\n\n  \n  Verified preview\n\n",
+      "viewBox": "0 0 392.70399999999995 116.9"
+    }
+  ]
+}

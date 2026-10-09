@@ -4,19 +4,19 @@ import { SquareDashedMousePointer } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ClosableBadge from '@/components/ClosableBadge';
+import {
+  Attachment,
+  AttachmentHoverCard,
+  AttachmentHoverCardContent,
+  AttachmentHoverCardTrigger,
+  AttachmentInfo,
+  AttachmentPreview,
+  AttachmentRemove,
+} from '@/components/ai-elements/attachments';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
 
-import { SimpleTooltip } from '../../SimpleTooltip';
-
 const styles = createStaticStyles(({ css }) => ({
-  name: css`
-    overflow: hidden;
-    max-width: 200px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
   selector: css`
     overflow: hidden;
 
@@ -27,17 +27,6 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorTextSecondary};
     text-overflow: ellipsis;
     white-space: nowrap;
-  `,
-  tagBadge: css`
-    padding-block: 0;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
   `,
   thumbnail: css`
     display: block;
@@ -91,22 +80,30 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
   );
 
   return (
-    <ClosableBadge
-      closeLabel={t('close')}
-      size={'lg'}
-      variant="secondary"
-      onClose={() => {
-        if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
-      }}
-    >
-      <SquareDashedMousePointer data-icon="inline-start" size={16} />
-      <SimpleTooltip title={tooltip}>
-        <span>
-          <span className={styles.tagBadge}>{`<${element.tag}>`}</span>{' '}
-          <span className={styles.name}>{preview}</span>
-        </span>
-      </SimpleTooltip>
-    </ClosableBadge>
+    <AttachmentHoverCard>
+      <AttachmentHoverCardTrigger
+        render={
+          <Attachment
+            className="min-w-0 max-w-full"
+            data={{
+              type: 'source-document',
+              id,
+              sourceId: id,
+              mediaType: 'text/html',
+              title: `<${element.tag}> ${preview || ''}`.trim(),
+            }}
+            onRemove={() => {
+              if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
+            }}
+          >
+            <AttachmentPreview fallbackIcon={<SquareDashedMousePointer className="size-3" />} />
+            <AttachmentInfo className="max-w-64" />
+            <AttachmentRemove label={t('close')} />
+          </Attachment>
+        }
+      />
+      <AttachmentHoverCardContent>{tooltip}</AttachmentHoverCardContent>
+    </AttachmentHoverCard>
   );
 });
 

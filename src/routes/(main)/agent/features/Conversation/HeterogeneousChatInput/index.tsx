@@ -1,10 +1,7 @@
 'use client';
 
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import {
-  canMountBuiltinToolSurface,
-  HETEROGENEOUS_TYPE_LABELS,
-} from '@orvilo/heterogeneous-agents';
+import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { TriangleAlertIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,15 +30,14 @@ import HeteroPlus from './HeteroPlus';
 import ScheduledSendChip from './ScheduledSendChip';
 
 // Heterogeneous agents (e.g. Claude Code) bring their own toolchain and memory,
-// so most Orvilo-side pickers don't apply. MCP-capable runtimes keep the
-// existing tool selector; `extraActionItems` provides a hetero-only `+` menu
+// so most Orvilo-side pickers don't apply. Skills remain available through
+// slash commands; `extraActionItems` provides a hetero-only `+` menu
 // (formatting toolbar + "Send later") in the input's bottom-left corner.
 //
 // The right side carries the agent selector and nothing else: the CLI's model
 // and its thinking effort are the agent's own Engine config, not picks the
 // composer offers per conversation.
-export const getHeterogeneousComposerLeftActions = (providerType?: string): ActionKeys[] =>
-  canMountBuiltinToolSurface({ type: providerType }) ? ['tools'] : [];
+export const heterogeneousComposerLeftActions: ActionKeys[] = [];
 const rightActions: ActionKeys[] = ['agent'];
 
 /**
@@ -78,7 +74,7 @@ GuardBanner.displayName = 'GuardBanner';
  *
  * Simplified ChatInput for heterogeneous agents (Claude Code, etc.).
  * Keeps only: text input, typo toggle, send button, and a working-directory
- * picker and supported builtin tools — no model/memory/KB/runtime-mode/upload.
+ * picker — no model/memory/KB/runtime-mode/upload/tool-selector button.
  *
  * In cloud (web) mode, shows a configuration prompt and disables the input
  * until the user sets up their cloud credentials in agent profile.
@@ -103,7 +99,7 @@ const HeterogeneousChatInput = memo(() => {
   const { agencyConfig, isPreferenceLoading, workspaceScoped } = useTopicAgencyConfig(agentId);
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
   const providerType = heterogeneousProvider?.type;
-  const leftActions = getHeterogeneousComposerLeftActions(providerType);
+  const leftActions = heterogeneousComposerLeftActions;
   const isApiAuth = heterogeneousProvider?.authMode === 'api';
   const providerApiConfig =
     isApiAuth &&

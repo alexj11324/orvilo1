@@ -45,8 +45,12 @@ const ChatLayout = memo(() => {
             style={{ width: '100%', minHeight: 0, overflow: 'hidden', position: 'relative' }}
           >
             <div
-              className={cn('flex flex-col flex-1', styles.conversationColumn)}
+              // Keep the floating history utility clear of approval actions when the composer is hidden.
               style={{ minHeight: 0, minWidth: 0 }}
+              className={cn(
+                'flex flex-col flex-1 has-[[data-intervention-placement=bottom]]:pb-10',
+                styles.conversationColumn,
+              )}
             >
               <ChatHeader />
               <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>

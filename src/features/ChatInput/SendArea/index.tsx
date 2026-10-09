@@ -1,6 +1,8 @@
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 
+import { PromptInputTools } from '@/components/ai-elements/prompt-input';
+
 import { type ActionKey } from '../ActionBar/config';
 import { actionMap } from '../ActionBar/config';
 import { useChatInputResourceAccess } from '../hooks/useChatInputResourceAccess';
@@ -44,11 +46,11 @@ const SendArea = memo<SendAreaProps>(({ hideContextWindow = true }) => {
   );
 
   return (
-    /** The model label must yield space before the footer clips Send on narrow panels. */
-    <div className="flex flex-row items-center gap-3" style={{ minWidth: 0, flex: '0 1 auto' }}>
+    /** Preserve room for Send beside the retained agent selector on narrow panels. */
+    <PromptInputTools className="flex-[0_1_auto]">
       {items}
       {!audioInputActive && <SendButton />}
-    </div>
+    </PromptInputTools>
   );
 });
 

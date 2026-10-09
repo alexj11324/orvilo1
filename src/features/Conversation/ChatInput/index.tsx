@@ -1,7 +1,7 @@
 'use client';
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { type VoiceMessageRecording } from '@orvilo/types';
+import { classifyToolInterventionPresentation, type VoiceMessageRecording } from '@orvilo/types';
 import debug from 'debug';
 import { Info, X } from 'lucide-react';
 import { type ReactNode } from 'react';
@@ -41,7 +41,6 @@ import {
 } from '../store';
 import TodoProgress from '../TodoProgress';
 import InputCompletionErrorAlert from './InputCompletionErrorAlert';
-import OpStatusTray from './OpStatusTray';
 import QueueTray from './QueueTray';
 import { sendVoiceMessage } from './sendVoiceMessage';
 import {
@@ -279,6 +278,20 @@ const ChatInput = memo<ChatInputProps>(
       },
     );
     const hasPendingInterventions = pendingInterventions.length > 0;
+    const hasBottomInterventions = pendingInterventions.some(
+      ({ identifier, apiName }) =>
+        classifyToolInterventionPresentation(identifier, apiName).surface !== 'binary',
+    );
+    const reviewInlineIntervention = useCallback(
+      (toolCallId: string) => {
+        const state = storeApi.getState();
+        const intervention = dataSelectors
+          .pendingInterventions(state)
+          .find((item) => item.toolCallId === toolCallId);
+        if (intervention) state.virtuaScrollMethods?.scrollToMessage?.(intervention.toolMessageId);
+      },
+      [storeApi],
+    );
 
     // Send message error from ConversationStore
     const sendMessageErrorMsg = useConversationStore(messageStateSelectors.sendMessageError);
@@ -295,15 +308,8 @@ const ChatInput = memo<ChatInputProps>(
     );
 
     // Detect whether TodoProgress will render (mirrors its own gating) so we
-    // can square the top corners of OpStatusTray when it sits flush below.
+    // can square the top corners of GoalTray when it sits flush below.
     const hasTodos = (selectCurrentTurnTodosFromMessages(dbMessages)?.items.length ?? 0) > 0;
-
-    // Detect whether OpStatusTray will render (mirrors its own `!startTime`
-    // gate) so GoalTray — which sits flush below it — can square its top corners
-    // and merge with the status strip instead of showing a seam.
-    const hasOpStatus = useChatStore(
-      (s) => operationSelectors.getVisibleAgentRuntimeStartTimeByContext(context)(s) !== undefined,
-    );
 
     // Pre-topic "armed goal" state (topic Goal lab). `armedAt` is only ever set
     // by the lab-gated "+" → Goal entry, so its presence already implies the
@@ -468,10 +474,15 @@ const ChatInput = memo<ChatInputProps>(
       <WideScreenContainer
         style={{ position: 'relative', ...(skipScrollMarginWithList ? { marginTop: -12 } : null) }}
       >
-        {hasPendingInterventions && <InterventionBar interventions={pendingInterventions} />}
+        {hasPendingInterventions && (
+          <InterventionBar
+            interventions={pendingInterventions}
+            onReviewInline={reviewInlineIntervention}
+          />
+        )}
         {/* Keep the chat input mounted while an intervention panel is showing —
             unmounting would wipe the Lexical editor's in-memory document. */}
-        <div style={{ display: hasPendingInterventions ? 'none' : 'contents' }}>
+        <div style={{ display: hasBottomInterventions ? 'none' : 'contents' }}>
           {sendMessageErrorMsg && (
             <div className="flex flex-col px-3" style={{ paddingBlock: '0 6px' }}>
               <Alert variant="default">
@@ -505,21 +516,19 @@ const ChatInput = memo<ChatInputProps>(
             <InputCompletionErrorAlert />
             {!disableQueue && hasQueuedMessages && <QueueTray />}
             <TodoProgress topAttached={!disableQueue && hasQueuedMessages} />
-            <OpStatusTray topAttached={(!disableQueue && hasQueuedMessages) || hasTodos} />
-            <GoalTray
-              topAttached={(!disableQueue && hasQueuedMessages) || hasTodos || hasOpStatus}
-            />
+            <GoalTray topAttached={(!disableQueue && hasQueuedMessages) || hasTodos} />
           </div>
           {/* Append the armed-goal chip to every composer's action bar. While armed,
               the next message becomes the goal and the placeholder explains that state. */}
           <DesktopChatInput
             actionBarStyle={actionBarStyle}
+            beamActive={isInputLoading}
             borderRadius={12}
             compact={compact}
             controlBarInCard={controlBarInCard}
             controlBarSlot={controlBarSlot}
             editorDefaultRows={editorDefaultRows}
-            hidden={hasPendingInterventions}
+            hidden={hasBottomInterventions}
             isConfigLoading={isConfigLoading}
             leftContent={leftContent}
             placeholderVariant={placeholderVariant}

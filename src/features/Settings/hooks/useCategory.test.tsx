@@ -2,6 +2,7 @@ import { cleanup, renderHook } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { useWorkspaceContextStore } from '@/business/client/workspaceContextStore';
 import { mapFeatureFlagsEnvToState } from '@/config/featureFlags';
 import { SettingsTabs } from '@/store/global/initialState';
 import { initServerConfigStore, Provider } from '@/store/serverConfig/store';
@@ -61,6 +62,7 @@ const initialUserStoreState = useUserStore.getState();
 afterEach(() => {
   cleanup();
   useUserStore.setState(initialUserStoreState, true);
+  useWorkspaceContextStore.getState().setActiveWorkspace(null);
 });
 
 describe('settings useCategory', () => {
@@ -182,5 +184,76 @@ describe('settings useCategory', () => {
 
     expect(keys).toContain(SettingsTabs.APIKey);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  // Regression: settings used to be two sidebars. `/:slug/settings/*` had its
+  // own navigation that re-listed Profile, Appearance, Hotkey, Notification,
+  // Connector, API Key, Advanced and About next to the workspace pages, while
+  // Devices, Statistics and Credentials existed once in each. There is one
+  // sidebar now: workspace pages are a group in it, and a capability with a
+  // workspace page has exactly one row, pointing at that page.
+  describe('inside a workspace', () => {
+    const renderInWorkspace = (serverConfig: Partial<GlobalServerConfig> = {}) => {
+      useWorkspaceContextStore.getState().setActiveWorkspace({ id: 'ws-1', slug: 'acme' });
+
+      return renderHook(() => useCategory(), {
+        wrapper: createWrapper(true, {}, serverConfig),
+      }).result.current;
+    };
+
+    it('adds the workspace pages as one group of the same sidebar', () => {
+      const workspace = renderInWorkspace().find(
+        (group) => group.key === SettingsGroupKey.Workspace,
+      );
+
+      expect(workspace?.items.map((item) => item.href)).toEqual([
+        '/acme/settings/general',
+        '/acme/settings/members',
+        '/acme/settings/imports',
+      ]);
+    });
+
+    it('lists every capability once and sends the shared ones to the workspace page', () => {
+      const items = renderInWorkspace().flatMap((group) => group.items);
+      const hrefOf = (tab: SettingsTabs) => items.find((item) => item.key === tab)?.href;
+
+      expect(new Set(items.map((item) => item.key)).size).toBe(items.length);
+      expect(hrefOf(SettingsTabs.Devices)).toBe('/acme/settings/devices');
+      expect(hrefOf(SettingsTabs.Stats)).toBe('/acme/settings/statistics');
+      expect(hrefOf(SettingsTabs.Creds)).toBe('/acme/settings/credential');
+      // Account pages stay personal: no workspace URL, so no second copy.
+      for (const tab of [
+        SettingsTabs.Profile,
+        SettingsTabs.Appearance,
+        SettingsTabs.Notification,
+        SettingsTabs.Connector,
+        SettingsTabs.Advanced,
+      ]) {
+        expect(hrefOf(tab), `${tab} points into the workspace tree`).toBeUndefined();
+      }
+    });
+
+    it('sends the billing rows to the workspace pages and adds the workspace-only budget', () => {
+      const items = renderInWorkspace({ enableBusinessFeatures: true }).flatMap(
+        (group) => group.items,
+      );
+
+      expect(items.map((item) => item.href)).toEqual(
+        expect.arrayContaining([
+          '/acme/settings/plans',
+          '/acme/settings/usage',
+          '/acme/settings/credits',
+          '/acme/settings/budget',
+          '/acme/settings/billing',
+        ]),
+      );
+    });
+  });
+
+  it('shows no workspace group and no workspace URL outside a workspace', () => {
+    const { result } = renderHook(() => useCategory(), { wrapper: createWrapper(true) });
+
+    expect(result.current.some((group) => group.key === SettingsGroupKey.Workspace)).toBe(false);
+    expect(result.current.flatMap((group) => group.items).every((item) => !item.href)).toBe(true);
   });
 });

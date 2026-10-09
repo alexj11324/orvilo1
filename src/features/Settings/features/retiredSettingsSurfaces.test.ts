@@ -203,10 +203,10 @@ describe('a retired settings tab leaves no way to reach it', () => {
     // is how the mobile Referral row outlived the page: it was listed *inside*
     // the Plans gate rather than behind its own, so retiring the page left the
     // row pointing at a not-found. `SettingsTabs.<tab>` is also a substring of
-    // `WorkspaceSettingsTabs.<tab>`, so this one pattern covers both enums.
+    // `WorkspaceSettingsTabs.<tab>`, so this one pattern covers both enums in
+    // the single desktop sidebar.
     for (const file of [
       'src/features/Settings/hooks/useCategory.tsx',
-      'src/features/WorkspaceSetting/hooks/useCategory.tsx',
       'src/routes/(mobile)/me/settings/features/useCategory.tsx',
       'src/routes/(mobile)/settings/_layout/Header.tsx',
     ]) {

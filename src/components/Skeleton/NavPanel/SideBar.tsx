@@ -148,18 +148,17 @@ export const NavSideBarSkeleton = ({
 // that happens. The eval workbench kept no such path — its nav key left the
 // resolver when the route was retired, so its shapes went with it.
 export const NAV_SKELETON_SHAPES: Record<string, NavSkeletonShape> = {
-  'agent': { groups: [0, 12], headerVariant: 'title', navRows: 5 },
-  'discover': { navRows: 6 },
-  'group': { groups: [3, 8], headerVariant: 'title' },
-  'home': { bodyGap: 1, groups: [5, 7, 3], headerVariant: 'title', leadingRows: 2, navRows: 2 },
-  'image': { bodyGap: 1, groups: [4], groupTitleHeight: 40, navGap: 0, navRows: 2 },
-  'memory': { navRows: 7 },
-  'page': { bodyGap: 1, groups: [12], headerVariant: 'title', navRows: 1 },
-  'resource': { bodyPaddingBlock: 8, groups: [5], navRows: 6 },
-  'resourceLibrary': { bodyPaddingBlock: 8, groups: [6], search: true },
-  'settings': { bodyGap: 4, groups: [6, 5, 8, 3], groupTitleHeight: 27, search: true },
-  'video': { bodyGap: 1, groups: [4], groupTitleHeight: 40, navGap: 0, navRows: 2 },
-  'workspace-settings': { groups: [5, 5, 6, 3], groupTitleHeight: 27 },
+  agent: { groups: [0, 12], headerVariant: 'title', navRows: 5 },
+  discover: { navRows: 6 },
+  group: { groups: [3, 8], headerVariant: 'title' },
+  home: { bodyGap: 1, groups: [5, 7, 3], headerVariant: 'title', leadingRows: 2, navRows: 2 },
+  image: { bodyGap: 1, groups: [4], groupTitleHeight: 40, navGap: 0, navRows: 2 },
+  memory: { navRows: 7 },
+  page: { bodyGap: 1, groups: [12], headerVariant: 'title', navRows: 1 },
+  resource: { bodyPaddingBlock: 8, groups: [5], navRows: 6 },
+  resourceLibrary: { bodyPaddingBlock: 8, groups: [6], search: true },
+  settings: { bodyGap: 4, groups: [6, 5, 8, 3], groupTitleHeight: 27, search: true },
+  video: { bodyGap: 1, groups: [4], groupTitleHeight: 40, navGap: 0, navRows: 2 },
 };
 
 export const DEFAULT_NAV_SKELETON_SHAPE: NavSkeletonShape = { groups: [6, 4] };

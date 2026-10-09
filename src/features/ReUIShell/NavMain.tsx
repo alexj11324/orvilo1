@@ -26,7 +26,6 @@ const PANEL_KEYS = new Set([
   'resource',
   'resourceLibrary',
   'settings',
-  'workspace-settings',
 ]);
 
 /**

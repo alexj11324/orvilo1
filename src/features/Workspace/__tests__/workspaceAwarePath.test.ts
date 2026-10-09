@@ -95,7 +95,6 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/billing', 'acme')).toBe('/acme/settings/billing');
     expect(buildWorkspaceAwarePath('/settings/credits', 'acme')).toBe('/acme/settings/credits');
     expect(buildWorkspaceAwarePath('/settings/usage', 'acme')).toBe('/acme/settings/usage');
-    expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
     expect(buildWorkspaceAwarePath('/settings/credential', 'acme')).toBe(
       '/acme/settings/credential',
@@ -140,16 +139,22 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/audit-log', 'acme')).toBe('/settings/audit-log');
   });
 
-  // Account-level tabs are mirrored under the workspace so members can reach
-  // them without leaving it.
-  it('prefixes the account-level settings tabs', () => {
-    expect(buildWorkspaceAwarePath('/settings/profile', 'acme')).toBe('/acme/settings/profile');
-    expect(buildWorkspaceAwarePath('/settings/appearance', 'acme')).toBe(
-      '/acme/settings/appearance',
-    );
-    expect(buildWorkspaceAwarePath('/settings/hotkey', 'acme')).toBe('/acme/settings/hotkey');
-    expect(buildWorkspaceAwarePath('/settings/advanced', 'acme')).toBe('/acme/settings/advanced');
-    expect(buildWorkspaceAwarePath('/settings/about', 'acme')).toBe('/acme/settings/about');
+  // Account pages follow the person. Their workspace mirrors were retired, so
+  // a link to one must stay on the personal page instead of taking a redirect
+  // round trip through the workspace tree.
+  it('leaves the account-level settings tabs personal', () => {
+    for (const tab of [
+      'profile',
+      'appearance',
+      'hotkey',
+      'notification',
+      'connector',
+      'apikey',
+      'advanced',
+      'about',
+    ]) {
+      expect(buildWorkspaceAwarePath(`/settings/${tab}`, 'acme')).toBe(`/settings/${tab}`);
+    }
   });
 
   it('skips prefix for personal-only settings sub-paths', () => {
@@ -166,10 +171,10 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/settings/labels');
   });
 
-  it('prefixes the `/settings` index — both personal and workspace have a meaningful redirect', () => {
-    expect(buildWorkspaceAwarePath('/settings', 'acme')).toBe('/acme/settings');
-    expect(buildWorkspaceAwarePath('/settings/', 'acme')).toBe('/acme/settings/');
-    expect(buildWorkspaceAwarePath('/settings?foo=bar', 'acme')).toBe('/acme/settings?foo=bar');
+  it('keeps the `/settings` index personal — the workspace pages are a group inside it', () => {
+    expect(buildWorkspaceAwarePath('/settings', 'acme')).toBe('/settings');
+    expect(buildWorkspaceAwarePath('/settings/', 'acme')).toBe('/settings/');
+    expect(buildWorkspaceAwarePath('/settings?foo=bar', 'acme')).toBe('/settings?foo=bar');
   });
 });
 

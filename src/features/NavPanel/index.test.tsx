@@ -71,7 +71,7 @@ describe('ReUI sidebar panel selection', () => {
 
   it.each([
     ['/settings/profile', 'settings'],
-    ['/orvilo-team/settings/general', 'workspace-settings'],
+    ['/orvilo-team/settings/general', 'settings'],
   ])('renders the registered Settings navigation for %s', (route, key) => {
     pathname = route;
     render(
@@ -165,7 +165,7 @@ describe('NavPanel', () => {
         <NavPanelPortal navKey="home">
           <div>Home sidebar</div>
         </NavPanelPortal>
-        <NavPanelPortal navKey="workspace-settings">
+        <NavPanelPortal navKey="settings">
           <div>Workspace settings sidebar</div>
         </NavPanelPortal>
         <NavPanel />
@@ -175,13 +175,13 @@ describe('NavPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Workspace settings sidebar')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-nav-key', 'workspace-settings');
+    expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-nav-key', 'settings');
     expect(screen.queryByText('Home sidebar')).not.toBeInTheDocument();
   });
 
   it('keeps handing the Home entry down while a route-owned panel is active', async () => {
-    const owner = Symbol('workspace-settings');
-    registerNavPanelContent('workspace-settings', owner, <div>Workspace settings sidebar</div>);
+    const owner = Symbol('settings');
+    registerNavPanelContent('settings', owner, <div>Workspace settings sidebar</div>);
     render(<NavPanel />);
 
     expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-has-home', 'false');
@@ -191,7 +191,7 @@ describe('NavPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-has-home', 'true');
     });
-    expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-nav-key', 'workspace-settings');
+    expect(screen.getByTestId('nav-panel')).toHaveAttribute('data-nav-key', 'settings');
   });
 
   it('uses the Home entry for routes without a dedicated navigation panel', async () => {
@@ -243,7 +243,7 @@ describe('NavPanel', () => {
     expect(screen.queryByTestId('nav-sidebar-skeleton-nav')).not.toBeInTheDocument();
   });
 
-  it('drops the search placeholder for the searchless workspace settings sidebar', async () => {
+  it('gives a workspace settings URL the same searchable skeleton as a personal one', async () => {
     pathname = '/orvilo-team/settings/general';
 
     render(<NavPanel />);
@@ -251,7 +251,7 @@ describe('NavPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('nav-sidebar-skeleton-search')).not.toBeInTheDocument();
+    expect(screen.getByTestId('nav-sidebar-skeleton-search')).toBeInTheDocument();
   });
 
   it('shapes the skeleton per nav key: memory is header-plus-nav with no search', async () => {

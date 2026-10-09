@@ -21,7 +21,7 @@ const elementOf = (routes: Routes, pathname: string) =>
 
 describe('business-only workspace settings routes', () => {
   it.each(surfaces)('%s gates every business tab behind the deployment flag', (_, routes) => {
-    for (const tab of ['plans', 'usage', 'credits', 'budget', 'billing', 'notification']) {
+    for (const tab of ['plans', 'usage', 'credits', 'budget', 'billing']) {
       const element = elementOf(routes, `/acme/settings/${tab}`);
 
       expect(element?.type, `${tab} is not gated`).toBe(WorkspaceSettingsTabGate);
@@ -29,10 +29,15 @@ describe('business-only workspace settings routes', () => {
     }
   });
 
-  it.each(surfaces)('%s gates the notification channel detail route too', (_, routes) => {
-    expect(elementOf(routes, '/acme/settings/notification/email')?.type).toBe(
-      WorkspaceSettingsTabGate,
-    );
+  // Notification preferences are personal, so the workspace URL is a redirect
+  // on every deployment rather than a gated business page.
+  it.each(surfaces)('%s sends workspace notification URLs to the personal page', (_, routes) => {
+    for (const pathname of ['/acme/settings/notification', '/acme/settings/notification/email']) {
+      const element = elementOf(routes, pathname);
+
+      expect(element?.type, `${pathname} is still a page`).not.toBe(WorkspaceSettingsTabGate);
+      expect((element?.props as { to?: string }).to).toBe('/settings/notification');
+    }
   });
 
   it.each(surfaces)('%s leaves ordinary tabs ungated', (_, routes) => {

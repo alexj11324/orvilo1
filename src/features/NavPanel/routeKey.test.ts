@@ -22,7 +22,7 @@ describe('resolveNavPanelKey', () => {
     ['/group/group-1', null, 'group'],
     ['/orvilo-team/group/group-1', 'orvilo-team', 'group'],
     ['/settings/profile', null, 'settings'],
-    ['/orvilo-team/settings/general', 'orvilo-team', 'workspace-settings'],
+    ['/orvilo-team/settings/general', 'orvilo-team', 'settings'],
     ['/orvilo-team/resource', 'orvilo-team', 'resource'],
     ['/orvilo-team/resource/library', 'orvilo-team', 'resourceLibrary'],
     ['/orvilo-team/memory', 'orvilo-team', 'memory'],

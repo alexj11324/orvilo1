@@ -363,21 +363,18 @@ describe('workspace switcher header', () => {
     expect(screen.getByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeTruthy();
     expect(screen.queryByText('Orvilo')).toBeNull();
   });
-  it.each(['workspace-settings', 'settings'])(
-    'renders no shell header on the expanded %s surface',
-    (navKey) => {
-      route.key = navKey;
-      render(
-        <SidebarProvider open>
-          <AppSidebar />
-        </SidebarProvider>,
-      );
-      expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
-      expect(screen.queryByText('Orvilo')).toBeNull();
-    },
-  );
+  it.each(['settings'])('renders no shell header on the expanded %s surface', (navKey) => {
+    route.key = navKey;
+    render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
+    expect(screen.queryByText('Orvilo')).toBeNull();
+  });
   it('keeps settings free of the shell header while collapsed, since no rail is left to host it', () => {
-    route.key = 'workspace-settings';
+    route.key = 'settings';
     render(
       <SidebarProvider open={false}>
         <AppSidebar />
@@ -387,7 +384,7 @@ describe('workspace switcher header', () => {
     expect(screen.queryByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeNull();
   });
   it('hides the shell header inside the settings mobile drawer', () => {
-    route.key = 'workspace-settings';
+    route.key = 'settings';
     viewport.mobile = true;
     render(
       <SidebarProvider openMobile open={false}>

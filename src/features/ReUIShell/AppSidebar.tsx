@@ -8,14 +8,12 @@ import { NotificationsPopover } from './NotificationsPopover';
 import { SettingsSignOut } from './SettingsSignOut';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
-const SETTINGS_NAV_KEYS = new Set(['settings', 'workspace-settings']);
-
 export function AppSidebar() {
   const activeNavKey = useActiveNavKey();
   // Settings surfaces carry no shell header — their nav panel starts with a
   // back row instead, and the account menu that lives in the switcher is out of
   // reach there, so a one-row footer keeps sign-out available.
-  const hideSwitcherHeader = SETTINGS_NAV_KEYS.has(activeNavKey);
+  const hideSwitcherHeader = activeNavKey === 'settings';
 
   return (
     <>

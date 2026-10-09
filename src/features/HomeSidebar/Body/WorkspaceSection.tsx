@@ -130,7 +130,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
           icon: <Settings2 />,
           key: 'workspaceSettings',
           label: t('navPanel.workspaceSettings'),
-          onClick: () => navigate('/settings'),
+          onClick: () => navigate('/settings/general'),
         },
       ] as SidebarMenuItems,
     [navigate, t],

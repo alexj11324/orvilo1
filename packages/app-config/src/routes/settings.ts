@@ -335,6 +335,18 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   { alias: 'labs', target: 'advanced' },
   // Agent labels were removed; old workspace bookmarks land on the settings index.
   { alias: 'labels', target: 'root' },
+  // Account, notification, connector and developer pages follow the person,
+  // not the workspace. Their workspace mirrors rendered the very same personal
+  // pages inside a second sidebar, so the mirrors were retired and the old URLs
+  // land on the pages that own them.
+  { alias: 'about', target: '/settings/about' },
+  { alias: 'advanced', target: '/settings/advanced' },
+  { alias: 'apikey', target: '/settings/apikey' },
+  { alias: 'appearance', target: '/settings/appearance' },
+  { alias: 'connector', target: '/settings/connector' },
+  { alias: 'hotkey', target: '/settings/hotkey' },
+  { alias: 'notification', subPaths: true, target: '/settings/notification' },
+  { alias: 'profile', target: '/settings/profile' },
 ];
 
 /**
@@ -351,7 +363,6 @@ const BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'billing',
   'budget',
   'credits',
-  'notification',
   'plans',
   'usage',
 ]);

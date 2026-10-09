@@ -4,24 +4,21 @@
 
 ## 行为
 
-个人通知页和工作区通知页都用一张矩阵表达通知偏好：每行一个事件，每列一个渠道（收件箱、桌面与移动端）。首行 “全部通知” 是各渠道的总开关，关掉后该列的事件勾选框禁用但保留原值。
+通知页用一张矩阵表达通知偏好：每行一个事件，每列一个渠道（收件箱、桌面与移动端）。首行 “全部通知” 是各渠道的总开关，关掉后该列的事件勾选框禁用但保留原值。
 
 每次改动只保存变化的那一个叶子值，保存状态显示在卡片标题右侧，不挤占正文。
 
 邮件渠道没有发送管线，不提供。
 
-## 两套版式各归各
+## 只有一页
 
-| 页面              | 版式                                       | 数据                               |
-| ----------------- | ------------------------------------------ | ---------------------------------- |
-| 个人设置 → 通知   | 与其他个人设置页一致：宽版、填充卡片       | 用户自己的 `settings.notification` |
-| 工作区设置 → 通知 | 与其他工作区设置页一致：640 窄栏、页内标题 | 当前成员在该工作区的偏好           |
+通知偏好跟人走，只有个人设置里这一页。旧的 `/:slug/settings/notification` 地址重定向到 `/settings/notification`，见 [settings-single-sidebar.md](./settings-single-sidebar.md)。
 
 ## 实现
 
 - `src/features/Settings/notification/NotificationPreferences.tsx`：纯展示的矩阵，只接收 `value` 和 `onChange`。
 - `src/features/Settings/notification/personal.tsx`：个人页外壳，读写用户设置。桌面端通知页在提示音设置下方渲染它，Web 端单独渲染它。
-- `src/business/client/BusinessSettingPages/WorkspaceNotification.tsx`：工作区页外壳，负责加载、失败重试与保存。
+- `src/business/client/BusinessSettingPages/WorkspaceNotification.tsx`：按工作区保存偏好的外壳。当前没有路由指向它，保留是因为该目录由云端版整体替换。
 
 个人页不再引用 `business/client` 下的工作区组件。该目录会被云端版整体替换，个人设置不能依赖它。
 

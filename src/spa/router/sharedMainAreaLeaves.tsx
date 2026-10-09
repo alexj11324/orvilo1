@@ -3,7 +3,6 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 
-import NotificationSettingsSkeleton from '@/components/Skeleton/Settings/Notification';
 import WorkspaceGeneralSkeleton from '@/components/Skeleton/Settings/WorkspaceGeneral';
 import type { SurfaceSkeletonVariant } from '@/components/Skeleton/Surface';
 import {
@@ -398,13 +397,6 @@ export const workspaceSettingsLeafElement = (
 export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
   {
     fullBleed: true,
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/connector'),
-    name: 'Connector',
-    path: 'connector',
-    skeleton: 'list',
-  },
-  {
-    fullBleed: true,
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/imports'),
     name: 'Imports',
     path: 'imports',
@@ -429,22 +421,6 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
     name: 'Members',
     path: 'members',
     skeleton: 'list',
-  },
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
-    meta: routeMeta({ Skeleton: NotificationSettingsSkeleton }),
-    name: 'Notification',
-    path: 'notification',
-    skeleton: 'form',
-  },
-  // Channel detail level of the two-level notification settings — the page
-  // reads the channel id from the `sub` route param.
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
-    meta: routeMeta({ Skeleton: NotificationSettingsSkeleton }),
-    name: 'Notification > Channel',
-    path: 'notification/:sub',
-    skeleton: 'form',
   },
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/statistics'),
@@ -489,49 +465,10 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
     skeleton: 'form',
   },
   {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/apikey'),
-    name: 'API Key',
-    path: 'apikey',
-    skeleton: 'list',
-  },
-  {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/devices'),
     name: 'Devices',
     path: 'devices',
     skeleton: 'list',
-  },
-  // Account-level tabs mirrored inside the workspace — the pages are the
-  // personal settings pages; only the chrome is workspace-owned.
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/profile'),
-    name: 'Profile',
-    path: 'profile',
-    skeleton: 'form',
-  },
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/appearance'),
-    name: 'Appearance',
-    path: 'appearance',
-    skeleton: 'form',
-  },
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/hotkey'),
-    name: 'Hotkey',
-    path: 'hotkey',
-    skeleton: 'form',
-  },
-  // Developer tools mirrored inside the workspace (user preferences).
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
-    name: 'Advanced',
-    path: 'advanced',
-    skeleton: 'form',
-  },
-  {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/about'),
-    name: 'About',
-    path: 'about',
-    skeleton: 'form',
   },
 ];
 

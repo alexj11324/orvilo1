@@ -89,7 +89,8 @@ const WorkspaceGeneral = () => {
                 label: t('workspaceSetting.general.created', { defaultValue: 'Created' }),
               },
             ],
-            title: t('workspaceSetting.tab.general', { defaultValue: 'General' }),
+            // The page header already names the page; a card title would repeat it.
+            title: null,
           },
         ]}
       />

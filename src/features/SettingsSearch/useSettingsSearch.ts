@@ -4,7 +4,7 @@ import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useCategory } from '@/features/Settings/hooks/useCategory';
+import { type SettingsNavKey, useCategory } from '@/features/Settings/hooks/useCategory';
 import { SettingsTabs } from '@/store/global/initialState';
 import {
   featureFlagsSelectors,
@@ -32,7 +32,7 @@ export interface SettingsSearchResult {
   icon?: LucideIcon;
   key: string;
   label: string;
-  tab: SettingsTabs;
+  tab: SettingsNavKey;
   url: string;
 }
 
@@ -108,7 +108,7 @@ export const useSettingsSearch = (
     // Tab-level entries first so they rank above item-level matches.
     const entries: IndexedEntry[] = [];
     const visibleTabs = new Map<
-      SettingsTabs,
+      SettingsNavKey,
       { groupTitle: string; icon?: LucideIcon; label: string; url: string }
     >();
 
@@ -122,7 +122,10 @@ export const useSettingsSearch = (
         // agreeing with that rule if one ever is.
         if (visibleTabs.has(item.key)) continue;
 
-        const url = item.href ?? getTabUrl(item.key);
+        // Workspace-only rows have no entry in the keyword tables, which are
+        // keyed by personal tab; the lookups below simply miss for them.
+        const tab = item.key as SettingsTabs;
+        const url = item.href ?? getTabUrl(tab);
         visibleTabs.set(item.key, {
           groupTitle: group.title,
           icon: item.icon,
@@ -130,12 +133,12 @@ export const useSettingsSearch = (
           url,
         });
 
-        const keywordsKey = TAB_SEARCH_KEYWORDS_KEYS[item.key];
+        const keywordsKey = TAB_SEARCH_KEYWORDS_KEYS[tab];
         // English floor + localized enrichment (deduped: on en-US they overlap)
         const texts = Array.from(
           new Set([
             item.label.toLowerCase(),
-            ...(TAB_SEARCH_EN_KEYWORDS[item.key] ?? []),
+            ...(TAB_SEARCH_EN_KEYWORDS[tab] ?? []),
             ...(keywordsKey ? splitKeywords(t(keywordsKey as never) as string) : []),
           ]),
         );

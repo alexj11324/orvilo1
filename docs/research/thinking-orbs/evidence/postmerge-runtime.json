@@ -1,0 +1,31 @@
+{
+  "errors": [],
+  "idle": {
+    "canvases": 1,
+    "beamActive": false,
+    "draft": "Postmerge synthetic fixture draft retained.",
+    "editorSame": true
+  },
+  "state": {
+    "url": "app://renderer/ws-usere2etestu/chat/tpc_orbs_fixture",
+    "agent": "agt_acceptance_chat",
+    "canvases": [
+      {
+        "width": 42,
+        "height": 42,
+        "aria": "true",
+        "parentOverflow": "visible"
+      },
+      {
+        "width": 20,
+        "height": 20,
+        "aria": "true",
+        "parentOverflow": "visible"
+      }
+    ],
+    "beamActive": true,
+    "userEmoji": true,
+    "draft": "Postmerge synthetic fixture draft retained.",
+    "editorSame": true
+  }
+}

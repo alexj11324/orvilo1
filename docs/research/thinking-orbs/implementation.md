@@ -69,3 +69,12 @@ prove it. Source CDP visual comparison and package motion captures pending.
   library's 1.5x overscan canvas during jumps. The default bot alone now permits
   visible overflow; custom/user avatars keep their original clipping and styles.
   The changed avatar file passed scoped lint; final captures use this correction.
+
+## Canary reconciliation
+
+Merged canary ab23ec9c9 after PR creation. Its canonical runtime avatars remain
+on non-opted-in agent identity rows. Assistant rows explicitly opt into this
+experiment: default avatars use BotAvatar, custom avatars use the existing adapter.
+This is a deliberate chat-only visual override of the new runtime-brand default.
+Scoped avatar/meta lint passed and 12 useAgentMeta tests passed. Independent
+bounded postmerge Electron recheck is attached separately.

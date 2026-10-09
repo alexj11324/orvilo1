@@ -1042,6 +1042,9 @@ importers:
       react-i18next:
         specifier: '*'
         version: 17.0.15(i18next@25.10.10(typescript@6.0.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
+      zod:
+        specifier: 4.5.4
+        version: 4.5.4
     devDependencies:
       '@orvilo/types':
         specifier: workspace:*

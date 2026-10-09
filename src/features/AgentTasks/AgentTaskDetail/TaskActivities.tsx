@@ -27,18 +27,27 @@ import { getPriorityIconColor } from '@/components/PriorityIcon';
 import SimpleEmpty from '@/components/SimpleEmpty';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { PRIORITY_META } from '../features/TaskPriorityTag';
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
-import { type ActivityFeedFilter, matchesActivityFilter } from './activityFeedFilter';
+import {
+  ACTIVITY_FEED_FILTERS,
+  type ActivityFeedFilter,
+  matchesActivityFilter,
+  readStoredActivityFilter,
+  writeStoredActivityFilter,
+} from './activityFeedFilter';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
@@ -402,7 +411,20 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const activeTaskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
-  const [feedFilter, setFeedFilter] = useState<ActivityFeedFilter>('all');
+  const viewerId = useUserStore(userProfileSelectors.userId);
+  const [feedFilter, setFeedFilter] = useState<ActivityFeedFilter>(() =>
+    readStoredActivityFilter(viewerId),
+  );
+  const handleFilterChange = useCallback(
+    (values: string[]) => {
+      // A single-choice control: pressing the active item again must not clear it.
+      const next = values[0] as ActivityFeedFilter | undefined;
+      if (!next) return;
+      setFeedFilter(next);
+      writeStoredActivityFilter(viewerId, next);
+    },
+    [viewerId],
+  );
 
   const refreshActiveTask = useCallback(async () => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
@@ -538,21 +560,18 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
           <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
         </Button>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
-        {(['all', 'comments', 'updates'] as const).map((filter) => (
-          <button
-            aria-pressed={feedFilter === filter}
-            className="text-xs"
-            key={filter}
-            type="button"
-            style={{
-              color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
-              fontWeight: feedFilter === filter ? 600 : 400,
-            }}
-            onClick={() => setFeedFilter(filter)}
-          >
-            {t(`taskDetail.activities.filter.${filter}`)}
-          </button>
-        ))}
+        <ToggleGroup
+          aria-label={t('taskDetail.activities.filter.label')}
+          size="sm"
+          value={[feedFilter]}
+          onValueChange={handleFilterChange}
+        >
+          {ACTIVITY_FEED_FILTERS.map((filter) => (
+            <ToggleGroupItem key={filter} value={filter}>
+              {t(`taskDetail.activities.filter.${filter}`)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
       {commentInput}
       <Collapsible open={isExpanded}>

@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PushChannel } from '../PushChannel';
 import type { PushDeliveryContext, PushTicketRecord } from '../types';
 
+vi.mock('@/database/models/user', () => ({
+  UserModel: class {
+    getUserSettings = async () => undefined;
+  },
+}));
+
 const mockListByUserId = vi.fn();
 const { mockLog } = vi.hoisted(() => ({ mockLog: vi.fn() }));
 

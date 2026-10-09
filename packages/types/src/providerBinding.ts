@@ -105,3 +105,25 @@ export interface ProviderBinding extends StoredProviderBindingConfig {
   revision: number;
   updatedAt: Date;
 }
+
+/** Shared by the builtin picker and dispatch; unavailable routes remain visible with a reason. */
+export const providerBindingUnavailableReason = (
+  config: Pick<
+    ProviderBindingConfig,
+    'enabled' | 'endpoint' | 'model' | 'provider' | 'providerSettings' | 'selection'
+  >,
+): 'configuration' | 'local' | 'endpoint' | 'protocol' | 'unverified' | 'disabled' | undefined => {
+  if (config.model === PROVIDER_CONFIG_ANCHOR_MODEL) return 'configuration';
+  if (config.selection.runtime !== 'orvilo' || config.selection.target !== 'sandbox')
+    return 'local';
+  if (config.endpoint.includes('bindings.invalid')) return 'endpoint';
+  const sdk = config.providerSettings?.settings?.sdkType ?? config.providerSettings?.sdkType;
+  if (
+    sdk
+      ? sdk !== 'openai'
+      : ['anthropic', 'google', 'bedrock', 'azure', 'ollama'].includes(config.provider)
+  )
+    return 'protocol';
+  if (config.providerSettings?.enabled === false) return 'disabled';
+  if (!config.enabled) return 'unverified';
+};

@@ -278,7 +278,7 @@ describe('checkConnection failure matrix — never a green check', () => {
     const result = await caller(OWNER).checkConnection({ id: row.id, revision: row.revision });
 
     expect(result.status).toBe('unavailable');
-    const req = seenRequests.find((r) => r.url === '/models');
+    const req = seenRequests.find((r) => r.url === '/chat/completions');
     expect(req?.headers['authorization']).toBe('Bearer env-secret-7');
   });
 

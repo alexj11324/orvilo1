@@ -22,6 +22,26 @@ import {
 import { renderAvatarToDataUrl } from './notificationAvatar';
 import { topicMapKey } from './topicMapKey';
 
+vi.mock('@/store/user', () => ({
+  useUserStore: {
+    getState: () => ({ settings: {}, defaultSettings: {}, workspaceUserPreference: {} }),
+  },
+}));
+vi.mock('@/libs/trpc/client', () => ({
+  createWorkspaceLambdaClient: () => ({
+    workspace: {
+      list: {
+        query: async () => [
+          { id: 'workspace', slug: 'team' },
+          { id: 'workspace', slug: 'acme' },
+          { id: 'workspace', slug: 'workspace' },
+        ],
+      },
+    },
+    workspaceUserSettings: { getPreference: { query: async () => ({}) } },
+  }),
+}));
+
 const { getNotificationSoundFile, playSound, setBadgeCount, showNotification } = vi.hoisted(() => ({
   getNotificationSoundFile: vi.fn(),
   playSound: vi.fn(),

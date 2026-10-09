@@ -11,6 +11,7 @@ import {
   requestOwnershipTransfer,
   respondOwnershipTransfer,
 } from '@/business/server/membershipLifecycle/ownershipTransfer';
+import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import {
   wsAdminProcedure,
   wsCompatProcedure,
@@ -50,13 +51,6 @@ const workspaceSlugSchema = z
 const workspaceStatisticsInput = z
   .object({ todayStartAt: z.string().datetime().optional() })
   .optional();
-
-const cloudOnly = (feature: string): never => {
-  throw new TRPCError({
-    code: 'NOT_IMPLEMENTED',
-    message: `${feature} is a cloud-only feature.`,
-  });
-};
 
 const PG_UNIQUE_VIOLATION = '23505';
 
@@ -315,13 +309,27 @@ export const workspaceRouter = router({
     }),
 
   update: wsAdminProcedure
+    .use(withScopedPermission('workspace:update'))
+    .use(serverDatabase)
     .input(
       z.object({
         avatar: z.string().optional(),
         description: z.string().max(1000).optional(),
-        name: z.string().min(1).max(255).optional(),
+        name: z.string().trim().min(1).max(255).optional(),
         slug: workspaceSlugSchema.optional(),
       }),
     )
-    .mutation(async (): Promise<void> => cloudOnly('Workspace update')),
+    .mutation(async ({ ctx, input }) => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
+      const workspace = await model.findById(ctx.workspaceId!);
+      if (!workspace) throw new TRPCError({ code: 'NOT_FOUND' });
+      try {
+        await model.update(workspace.id, input);
+      } catch (error) {
+        if (isUniqueViolation(error))
+          throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
+        throw error;
+      }
+      return { ...workspace, ...input };
+    }),
 });

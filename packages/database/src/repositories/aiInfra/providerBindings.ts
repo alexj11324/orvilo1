@@ -52,6 +52,8 @@ export interface ProviderBindingPlaneDeps {
    * binding plane so its existing enabled models become resolvable rows.
    */
   resolveEnabledModelIds?: (providerId: string) => Promise<string[]>;
+  /** Server-owned verification; absent compositions always leave routes disarmed. */
+  verifyBinding?: (row: ProviderBindingRow) => Promise<unknown>;
   /**
    * The caller's workspace scope. Bindings and credentials themselves are
    * always personal — this only selects which legacy `ai_providers`/`ai_models`
@@ -73,8 +75,7 @@ const PROVIDER_CREDENTIAL_KEY = (providerId: string) => `provider-binding:${prov
 /**
  * Placeholder endpoint for providers whose keyVaults carry no URL (e.g. SDK
  * providers like Bedrock that configure region + keys instead). Such bindings
- * resolve but never connect — `SqlTrustedProviderBackend` fails the request
- * like any unreachable endpoint.
+ * remain disarmed and are explained as missing-endpoint in the picker.
  */
 const PLACEHOLDER_ENDPOINT = 'https://bindings.invalid/no-endpoint';
 
@@ -114,12 +115,20 @@ const unflattenKeyVaults = (values: Record<string, string>): Record<string, unkn
   return keyVaults;
 };
 
-const resolveEndpoint = (keyVaults: Record<string, unknown>): string => {
+const DEFAULT_ENDPOINTS: Record<string, string> = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com/v1',
+  deepseek: 'https://api.deepseek.com/v1',
+  groq: 'https://api.groq.com/openai/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+};
+
+const resolveEndpoint = (providerId: string, keyVaults: Record<string, unknown>): string => {
   for (const key of ENDPOINT_KEYS) {
     const value = keyVaults[key];
     if (typeof value === 'string' && URL.canParse(value)) return value;
   }
-  return PLACEHOLDER_ENDPOINT;
+  return DEFAULT_ENDPOINTS[providerId] ?? PLACEHOLDER_ENDPOINT;
 };
 
 /**
@@ -355,9 +364,10 @@ export class ProviderBindingPlane {
 
     for (const row of bound.models) {
       await this.updateRow(row, {
-        enabled: providerSettings.enabled,
+        enabled: false,
         endpoint: anchorConfig.endpoint,
         secretReference: anchorConfig.secretReference,
+        providerSettings,
         selection,
       });
     }
@@ -442,7 +452,7 @@ export class ProviderBindingPlane {
         (isBuiltinProvider(providerId) ? 'builtin' : 'custom'),
     };
 
-    const endpoint = resolveEndpoint(legacyKeyVaults);
+    const endpoint = resolveEndpoint(providerId, legacyKeyVaults);
     await this.rewriteAnchor(undefined, providerId, {
       enabled: false,
       endpoint,
@@ -459,7 +469,7 @@ export class ProviderBindingPlane {
     const selection = buildSelection(providerSettings, endpoint);
     for (const modelId of enabledModelIds) {
       await this.bindings.create({
-        enabled: providerSettings.enabled,
+        enabled: false,
         endpoint,
         model: modelId.slice(0, 200),
         name: `${providerId}/${modelId}`.slice(0, 120),
@@ -503,10 +513,10 @@ export class ProviderBindingPlane {
       enabled: true,
       logo: input.logo,
       name: input.name,
-      settings: input.settings ?? undefined,
+      settings: { ...input.settings, sdkType: input.sdkType },
       source: input.source,
     };
-    const endpoint = resolveEndpoint(input.keyVaults ?? {});
+    const endpoint = resolveEndpoint(input.id, input.keyVaults ?? {});
     await this.rewriteAnchor(undefined, input.id, {
       enabled: false,
       endpoint,
@@ -542,6 +552,8 @@ export class ProviderBindingPlane {
       name: (providerSettings.name ?? anchorConfig.name).slice(0, 120),
       providerSettings,
     });
+    await this.propagateToModelRows((await this.getManaged(id)) ?? bound, providerSettings);
+    await this.verifyModels(id);
   }
 
   async updateProviderConfig(id: string, value: UpdateAiProviderConfigParams): Promise<void> {
@@ -564,13 +576,16 @@ export class ProviderBindingPlane {
       ...(typeof value.fetchOnClient === 'boolean' ? { fetchOnClient: value.fetchOnClient } : {}),
     };
 
+    // Invalidate issued revisions before changing the shared credential.
+    for (const row of bound.models) await this.updateRow(row, { enabled: false });
+
     const credential = keyVaults
       ? await this.upsertCredential(id, providerSettings.name, keyVaults, 'replace')
       : ((await this.credentials.findPersonalById(
           anchor.config!.secretReference.slice('credential:'.length),
         )) ?? (await this.upsertCredential(id, providerSettings.name, {})));
 
-    const endpoint = keyVaults ? resolveEndpoint(keyVaults) : anchor.config!.endpoint;
+    const endpoint = keyVaults ? resolveEndpoint(id, keyVaults) : anchor.config!.endpoint;
     await this.rewriteAnchor(anchor, id, {
       ...anchor.config!,
       endpoint,
@@ -579,6 +594,7 @@ export class ProviderBindingPlane {
       secretReference: secretReferenceOf(credential.id),
     });
     await this.propagateToModelRows((await this.getManaged(id)) ?? bound, providerSettings);
+    await this.verifyModels(id);
   }
 
   async setProviderEnabled(id: string, enabled: boolean): Promise<void> {
@@ -594,6 +610,7 @@ export class ProviderBindingPlane {
       providerSettings,
     });
     await this.propagateToModelRows((await this.getManaged(id)) ?? bound, providerSettings);
+    await this.verifyModels(id);
   }
 
   async setProviderOrder(sortMap: { id: string; sort: number }[]): Promise<void> {
@@ -660,21 +677,36 @@ export class ProviderBindingPlane {
     }
     if (row) {
       // Re-arm under the current provider enable state.
-      await this.updateRow(row, { enabled: anchor.config.providerSettings?.enabled ?? false });
+      await this.updateRow(row, { enabled: false });
+      await this.verifyModels(providerId, [modelId]);
       return;
     }
 
     const anchorConfig = anchor.config;
     const providerSettings = anchorConfig.providerSettings ?? { enabled: true };
     await this.bindings.create({
-      enabled: providerSettings.enabled,
+      enabled: false,
       endpoint: anchorConfig.endpoint,
       model: modelId.slice(0, 200),
       name: `${providerId}/${modelId}`.slice(0, 120),
       provider: providerId,
       secretReference: anchorConfig.secretReference,
+      providerSettings,
       selection: buildSelection(providerSettings, anchorConfig.endpoint),
     });
+    await this.verifyModels(providerId, [modelId]);
+  }
+
+  private async verifyModels(providerId: string, modelIds?: string[]) {
+    const bound = await this.getManaged(providerId);
+    if (!bound?.anchor?.config.providerSettings?.enabled || !this.deps.verifyBinding) return;
+    for (const row of bound.models) {
+      if (modelIds && !modelIds.includes(row.config.model)) continue;
+      if (row.config.selection.target !== 'sandbox' || row.config.endpoint === PLACEHOLDER_ENDPOINT)
+        continue;
+      // A failed probe keeps the saved settings, but never makes the route selectable.
+      await this.deps.verifyBinding(row).catch(() => undefined);
+    }
   }
 
   /** Mirror a batch enable-set write (same semantics as setModelEnabled). */

@@ -530,6 +530,13 @@ export const buildRunLifecycle = (
           break;
         }
         case 'failed': {
+          if (adapter.runScope === 'top_level') {
+            await notifyDesktopAgentCompleted(get, {
+              context: { agentId, groupId, topicId, workspaceSlug },
+              event: 'agent_run_failed',
+              badge: true,
+            });
+          }
           get().failOperation(operationId, {
             type: 'runtime_error',
             message: 'Agent runtime execution failed',

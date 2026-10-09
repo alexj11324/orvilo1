@@ -1,4 +1,21 @@
 export default {
+  'settingAgent.modelSettings.unavailable.disabled':
+    'Provider is disabled. Enable it in AI provider settings first.',
+  'notification.events.task_assigned': 'Issue assigned to me',
+  'notification.events.task_review': 'Review or acceptance requested',
+  'notification.events.task_status_changed': 'Issue status changed',
+  'notification.events.agent_run_completed': 'Agent run completed',
+  'notification.events.agent_run_failed': 'Agent run failed',
+  'notification.events.acp_permission': 'Agent needs approval',
+
+  'settingAgent.modelSettings.unavailable.local':
+    'This route is local-only and cannot be used by the built-in agent in the cloud.',
+  'settingAgent.modelSettings.unavailable.endpoint': 'Set an API endpoint in AI provider settings.',
+  'settingAgent.modelSettings.unavailable.protocol':
+    'The built-in agent does not support this API protocol yet. Use an OpenAI-compatible endpoint.',
+  'settingAgent.modelSettings.unavailable.unverified':
+    'Connection is not verified. Check the key, endpoint and model access, then retry.',
+  'settingAgent.modelSettings.verifyBinding': 'Verify connection',
   'tab.orchestrator': 'Orchestrator',
   'orchestrator.description':
     'Choose a configured Agent to coordinate new groups and projects. Existing conversations keep their current coordinator.',
@@ -919,7 +936,7 @@ export default {
   'memory.effort.medium': 'Medium — Balanced behavior',
   'memory.effort.title': 'Aggressiveness',
   'memory.enabled.desc':
-    'Allow Orvilo to extract preferences and info from conversations and use them later. You can view, edit, or clear memory anytime.',
+    'Extract memories from conversations with all agents. Saved memories are injected only into the built-in Orvilo agent; CLI agents do not receive them.',
   'memory.enabled.title': 'Enable Memory',
   'memory.manageEntry': 'Manage memories',
   'memory.title': 'Memory Settings',
@@ -1698,10 +1715,10 @@ export default {
     'Model used to generate names, descriptions, avatars, and tags',
   'systemAgent.agentMeta.title': 'Profile Generation',
   'systemAgent.expertise.modelDesc':
-    'Model used to draft expertise domains and extract reusable experience from conversations.',
+    'Last fallback for self-evolution when the owning built-in agent has no model. CLI agents are not supported for these flows.',
   'systemAgent.expertise.title': 'Agent Self-Evolution',
   'systemAgent.goal.modelDesc':
-    'Model used to turn a persistent goal into its standing acceptance criteria.',
+    'Last fallback for planning and acceptance when the owning built-in agent has no model. CLI agents are not supported for these flows.',
   'systemAgent.goal.title': 'Goal Creation',
   'systemAgent.customPrompt.addPrompt': 'Add Custom Prompt',
   'systemAgent.customPrompt.desc':

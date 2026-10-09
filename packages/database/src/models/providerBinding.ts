@@ -67,14 +67,8 @@ export class ProviderBindingModel {
         .returning()
     )[0];
 
-  /**
-   * Flip the runtime gate (`config.enabled`) without touching the config
-   * content. `enabled` is not part of the credential-minting payload, so it is
-   * NOT revision-fenced: `revision` keeps fencing edits to what the binding
-   * connects to, while `enabled` is itself re-checked every time execution
-   * credentials are issued.
-   */
-  setEnabled = async (id: string, enabled: boolean) =>
+  /** Fence verification against concurrent edits without incrementing the configuration revision. */
+  setEnabled = async (id: string, enabled: boolean, revision?: number) =>
     (
       await this.db
         .update(providerBindings)
@@ -82,7 +76,13 @@ export class ProviderBindingModel {
           config: sql`jsonb_set(${providerBindings.config}, '{enabled}', ${enabled}::jsonb)`,
           updatedAt: new Date(),
         })
-        .where(and(eq(providerBindings.userId, this.userId), eq(providerBindings.id, id)))
+        .where(
+          and(
+            eq(providerBindings.userId, this.userId),
+            eq(providerBindings.id, id),
+            revision === undefined ? undefined : eq(providerBindings.revision, revision),
+          ),
+        )
         .returning()
     )[0];
 

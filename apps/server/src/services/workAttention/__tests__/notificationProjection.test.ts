@@ -15,8 +15,10 @@ import {
   teams,
   topics,
   users,
+  userSettings,
   workspaceMembers,
   workspaces,
+  workspaceUserSettings,
 } from '@/database/schemas';
 import type { EventOutboxItem } from '@/database/schemas/eventOutbox';
 import { taskSubscriptions } from '@/database/schemas/workAttention';
@@ -155,6 +157,56 @@ describe('real Issue notification producers and projection', () => {
   };
   const feed = (userId: string) =>
     new NotificationModel(db, userId, { workspaceId: wsId }).listFeed();
+
+  it('honors workspace event switches independently of personal settings and preserves other recipients', async () => {
+    await db
+      .insert(userSettings)
+      .values({ id: author, notification: { inbox: { enabled: false } } });
+    await db.insert(workspaceUserSettings).values({
+      workspaceId: wsId,
+      userId: subscriber,
+      preference: {
+        notification: { inbox: { items: { work: { task_status_changed: false } } } },
+      },
+    });
+    await db
+      .update(tasks)
+      .set({ workflowCategory: 'in_review', reviewerUserId: author })
+      .where(eq(tasks.id, 'projection-issue'));
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'state-changed',
+      eventType: 'task.status.changed',
+      workspaceId: wsId,
+      payload: { userId: owner },
+    });
+    await project();
+    expect(await feed(subscriber)).toHaveLength(0);
+    expect(await feed(owner)).toHaveLength(0);
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_review' })]);
+    await project();
+    expect(await feed(author)).toHaveLength(1);
+  });
+
+  it('honors an inbox channel opt-out for assignment and keeps unauthorized users out', async () => {
+    await db.insert(workspaceUserSettings).values({
+      workspaceId: wsId,
+      userId: author,
+      preference: { notification: { inbox: { enabled: false } } },
+    });
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'assigned',
+      eventType: 'task.assigned',
+      workspaceId: wsId,
+      payload: { userId: owner, assigneeUserId: outsider },
+    });
+    await project();
+    expect(await feed(author)).toHaveLength(0);
+    expect(await feed(outsider)).toHaveLength(0);
+  });
 
   it('notifies creator, subscriber and authorized mentions once, excludes the actor and arbitrary mention ids', async () => {
     const comment = await new TaskModel(db, author, wsId).addComment({

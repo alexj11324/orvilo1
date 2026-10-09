@@ -550,7 +550,14 @@ describe('buildRunLifecycle.afterRunComplete — desktop notification body', () 
       await lifecycle('client', get).completeRun(completeEvent('client', { status }));
 
       expect(store.summaryTopicTitle).not.toHaveBeenCalled();
-      expect(desktopNotificationMock.notifyDesktopAgentCompleted).not.toHaveBeenCalled();
+      if (status === 'failed') {
+        expect(desktopNotificationMock.notifyDesktopAgentCompleted).toHaveBeenCalledWith(
+          get,
+          expect.objectContaining({ event: 'agent_run_failed' }),
+        );
+      } else {
+        expect(desktopNotificationMock.notifyDesktopAgentCompleted).not.toHaveBeenCalled();
+      }
     },
   );
 

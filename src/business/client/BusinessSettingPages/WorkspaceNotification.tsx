@@ -1,13 +1,19 @@
 'use client';
 
-import type { NotificationChannelSettings, NotificationSettings } from '@orvilo/types';
+import {
+  type NotificationChannelSettings,
+  type NotificationSettings,
+  WORK_NOTIFICATION_EVENTS,
+} from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
-import { Bell, Mail, Smartphone } from 'lucide-react';
+import { Bell, Smartphone } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { Switch } from '@/components/ui/switch';
+import { useSaveState } from '@/hooks/useSaveState';
 import { useUserStore } from '@/store/user';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -71,12 +77,6 @@ const CHANNELS = [
     labelKey: 'workspaceSetting.notification.inbox',
   },
   {
-    descriptionKey: 'workspaceSetting.notification.emailDesc',
-    icon: Mail,
-    key: 'email',
-    labelKey: 'workspaceSetting.notification.email',
-  },
-  {
     descriptionKey: 'workspaceSetting.notification.pushDesc',
     icon: Smartphone,
     key: 'push',
@@ -84,13 +84,16 @@ const CHANNELS = [
   },
 ] as const satisfies readonly ChannelDef[];
 
-const humanize = (key: string) => key.replaceAll(/[-_]/g, ' ');
-
 const ItemRows = memo<{
   channel: NotificationChannelSettings;
   onToggle: (category: string, item: string, value: boolean) => void;
 }>(({ channel, onToggle }) => {
-  const categories = channel.items;
+  const { t } = useTranslation('setting');
+  const categories = {
+    work: Object.fromEntries(
+      WORK_NOTIFICATION_EVENTS.map((event) => [event, channel.items?.work?.[event] !== false]),
+    ),
+  };
   if (!categories) return null;
   return (
     <>
@@ -101,11 +104,15 @@ const ItemRows = memo<{
             key={`${category}.${item}`}
           >
             <div className={cn(styles.itemLabel)}>
-              {humanize(category)} · {humanize(item)}
+              {t(`notification.events.${item as (typeof WORK_NOTIFICATION_EVENTS)[number]}`)}
             </div>
             <Switch
               checked={enabled !== false}
+              disabled={channel.enabled === false}
               size="sm"
+              aria-label={t(
+                `notification.events.${item as (typeof WORK_NOTIFICATION_EVENTS)[number]}`,
+              )}
               onCheckedChange={(value: boolean) => onToggle(category, item, value)}
             />
           </div>
@@ -133,6 +140,7 @@ const ChannelRow = memo<{
           </div>
         </div>
         <Switch
+          aria-label={t(def.labelKey)}
           checked={settings?.enabled !== false}
           onCheckedChange={(value: boolean) => onToggleChannel(def.key, value)}
         />
@@ -145,20 +153,35 @@ const ChannelRow = memo<{
   );
 });
 
-export const WorkspaceNotification = memo(() => {
+export const WorkspaceNotification = memo(({ personal = false }: { personal?: boolean }) => {
   const { t } = useTranslation('setting');
+  const { status, save, retry, lastSavedAt } = useSaveState();
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   useFetchWorkspaceUserPreference();
   const preference = useUserStore((s) => s.workspaceUserPreference);
   const updateWorkspaceUserPreference = useUserStore((s) => s.updateWorkspaceUserPreference);
-  const notification = useMemo(() => preference.notification ?? {}, [preference.notification]);
+  const settings = useUserStore((s) => s.settings.notification);
+  const setSettings = useUserStore((s) => s.setSettings);
+  const notification = useMemo(
+    () => (personal ? settings : preference.notification) ?? {},
+    [personal, settings, preference.notification],
+  );
 
   const patch = (partial: NotificationSettings) =>
-    updateWorkspaceUserPreference({ notification: partial });
+    save(() =>
+      personal
+        ? setSettings({ notification: partial })
+        : updateWorkspaceUserPreference({ notification: partial }),
+    );
 
   return (
     <div className={`${styles.container} flex flex-col`}>
       <div className={cn(styles.pageTitle)}>{t('workspaceSetting.notification.title')}</div>
+      <AutoSaveHint
+        lastUpdatedTime={lastSavedAt}
+        saveStatus={status}
+        onRetry={() => void retry()}
+      />
       <div className={`${styles.section} flex flex-col`}>
         <div className={cn(styles.groupTitle)}>{t('workspaceSetting.notification.channels')}</div>
         {CHANNELS.map((def) => (

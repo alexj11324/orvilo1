@@ -13,6 +13,7 @@ import {
   getHeteroSelectorCapability,
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   normalizeHeterogeneousProviderConfig,
+  providerBindingUnavailableReason,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { TriangleAlertIcon } from 'lucide-react';
@@ -48,6 +49,7 @@ import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { usePermission } from '@/hooks/usePermission';
 import { useSaveState } from '@/hooks/useSaveState';
+import { providerBindingService } from '@/services/providerBinding';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useAiInfraStore } from '@/store/aiInfra';
@@ -122,13 +124,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
     if (!builtinEngine) return [];
     const routes = new Set<string>();
     for (const binding of bindings) {
-      const selection = binding.selection;
-      if (
-        binding.enabled === true &&
-        selection?.runtime === 'orvilo' &&
-        selection.target === 'sandbox' &&
-        binding.model
-      ) {
+      if (!providerBindingUnavailableReason(binding)) {
         routes.add(binding.model);
       }
     }
@@ -288,6 +284,40 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
           isLoading={bindingQuery.isLoading}
           onRetry={() => void bindingQuery.mutate()}
         >
+          {bindings
+            .filter((binding) => {
+              const reason = providerBindingUnavailableReason(binding);
+              return reason && reason !== 'configuration';
+            })
+            .map((binding) => (
+              <SettingsRow key={binding.id} label={`${binding.provider} / ${binding.model}`}>
+                <div className={settingsStyles.hint}>
+                  {t(
+                    `settingAgent.modelSettings.unavailable.${providerBindingUnavailableReason(binding) as 'local' | 'endpoint' | 'protocol' | 'unverified' | 'disabled'}`,
+                  )}
+                </div>
+                {providerBindingUnavailableReason(binding) === 'unverified' && (
+                  <Button
+                    disabled={!canEdit || status === 'saving'}
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      void save(async () => {
+                        const result = await providerBindingService.checkConnection(
+                          binding.id,
+                          binding.revision,
+                        );
+                        await bindingQuery.mutate();
+                        if (result.status !== 'ready')
+                          throw new Error(t('settingAgent.modelSettings.unavailable.unverified'));
+                      })
+                    }
+                  >
+                    {t('settingAgent.modelSettings.verifyBinding')}
+                  </Button>
+                )}
+              </SettingsRow>
+            ))}
           {primeModelOptions.length > 0 ? (
             <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
               <AgentModelPicker

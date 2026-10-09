@@ -8,6 +8,7 @@ import { createElement, useCallback, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BusinessNotification from '@/business/client/BusinessSettingPages/Notification';
+import { WorkspaceNotification } from '@/business/client/BusinessSettingPages/WorkspaceNotification';
 import Form from '@/components/GroupForm';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Alert, AlertAction, AlertDescription } from '@/components/ui/alert';
@@ -285,6 +286,7 @@ export const DesktopNotificationSettings = () => {
           ]}
         />
       )}
+      <WorkspaceNotification personal />
       {enableBusinessFeatures && <BusinessNotification />}
     </>
   );

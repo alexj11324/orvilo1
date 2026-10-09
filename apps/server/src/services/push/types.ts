@@ -43,6 +43,7 @@ export interface PushDeliveryContext {
   userEmail?: string;
   /** Target user — push channel fans out to all of this user's `push_tokens` */
   userId: string;
+  workspaceId?: string | null;
 }
 
 export interface PushDeliveryResult {

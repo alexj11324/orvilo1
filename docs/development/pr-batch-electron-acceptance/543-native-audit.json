@@ -1,0 +1,43 @@
+{
+  "avatar": {
+    "width": 18,
+    "height": 18
+  },
+  "briefSkeletonCells": 9,
+  "browser": "Electron 43.2.0 app:// renderer via Playwright CDP; Browser plugin not available",
+  "consoleHealth": {
+    "uncaughtPageErrors": 0,
+    "expectedTransportFailure": "The injected home.searchAgents HTTP 500 is intentional and is followed by a real successful Retry."
+  },
+  "credentials": {
+    "width": 892,
+    "parentWidth": 892,
+    "padding": "4px 16px",
+    "widthMatches": true
+  },
+  "importAfter": {
+    "all": "400",
+    "codex": "600"
+  },
+  "importBefore": {
+    "all": "600",
+    "codex": "500"
+  },
+  "limitations": [
+    "The current Shell sidebar does not mount the retained AllAgentsDrawer. Its actual Content is mounted in a native modal with a controlled search input for component verification; this does not prove a reachable sidebar entry.",
+    "Injected HTTP 500 affects only home.searchAgents. Retry uses the real authenticated local backend.",
+    "The component gallery uses the actual delivered components with fixed non-production display data; it proves CSS and Suspense rendering, not local transcript discovery, agent execution, or external browser OAuth."
+  ],
+  "page": {
+    "url": "app://renderer/ws-usere2etestu/settings/credential",
+    "title": "Orvilo"
+  },
+  "prRevision": "10c5101eabb06ff2b7bab6ce6178151d318a229b",
+  "rendererRevision": "a28ae0364",
+  "search": {
+    "hits": 2,
+    "realHits": 1
+  },
+  "searchRecoveryLabel": "Reload",
+  "switcherWeight": "500"
+}

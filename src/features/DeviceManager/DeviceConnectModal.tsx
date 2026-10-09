@@ -100,7 +100,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
     const { t } = useTranslation('setting');
     const workspaceId = useActiveWorkspaceId();
     const isWorkspace = scope === 'workspace';
-    const isDesktopHost = getHostContext().kind === 'desktop';
+    const isDesktopHost = getHostContext().capabilities.has('window.manage');
 
     const [active, setActive] = useState<'cli' | 'desktop'>(initialTab ?? 'desktop');
     useEffect(() => {
@@ -111,7 +111,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
       cliReleaseService.getLatest(),
     );
 
-    const desktop = useConnectDesktopDevice({ scope, visibility, onClose });
+    const desktop = useConnectDesktopDevice({ scope, visibility, onClose, open });
     const status = useElectronStore((s) => s.gatewayConnectionStatus);
     const fetchStatus = useElectronStore((s) => s.useFetchGatewayStatus);
     const statusQuery = fetchStatus();

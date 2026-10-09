@@ -1,0 +1,30 @@
+{
+  "browser": "Electron 43.2.0 native app:// renderer",
+  "builtin": {
+    "label": "Agent: Known builtin Agent",
+    "src": "/app-icons/icon-512x512.png"
+  },
+  "claude": {
+    "label": "Agent: Editable Claude name",
+    "brand": "Claude Code"
+  },
+  "codex": {
+    "label": "Agent: Editable Codex name",
+    "brand": "Codex"
+  },
+  "limitations": [
+    "The native component gallery mounts the delivered shared AssigneeAvatar with controlled display-store fixtures. It proves branding and rename behavior, not real runtime connectivity or every consumer surface.",
+    "No Agent configuration is persisted by this gallery. Human and Group marks are not changed by this PR."
+  ],
+  "prRevision": "f838efe87b3b121ac410cc294683fa7324d2709a",
+  "renamed": {
+    "label": "Agent: Changed Codex name",
+    "brand": "Codex"
+  },
+  "rendererRevision": "a28ae0364499a1f3883b4f3f672fe484bb7fff99-plus-529-f838efe87",
+  "unknown": {
+    "label": "Agent: Custom Agent",
+    "circleHelp": 1,
+    "images": 0
+  }
+}

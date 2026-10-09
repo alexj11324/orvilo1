@@ -1,5 +1,5 @@
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
@@ -16,8 +16,10 @@ export const useConnectDesktopDevice = ({
   scope,
   visibility = 'private',
   onClose,
+  open = true,
 }: {
   onClose: () => void;
+  open?: boolean;
   scope: DeviceScope;
   visibility?: DeviceVisibility;
 }) => {
@@ -27,6 +29,7 @@ export const useConnectDesktopDevice = ({
   const identity = fetchIdentity();
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string>();
+  useEffect(() => setError(undefined), [open]);
 
   const connect = async () => {
     setConnecting(true);
@@ -37,6 +40,12 @@ export const useConnectDesktopDevice = ({
       const result = await gatewayConnectionService.connect();
       if (!result.success)
         throw new Error(result.error || t('devices.connectWizard.desktop.connectFailed'));
+      const deadline = Date.now() + 15_000;
+      while ((await gatewayConnectionService.getConnectionStatus()).status !== 'connected') {
+        if (Date.now() >= deadline)
+          throw new Error(t('devices.connectWizard.desktop.connectFailed'));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
       const info = await identity.mutate();
       if (!info) throw new Error(t('devices.connectWizard.desktop.identityUnavailable'));
       const devices = await deviceService.listDevices();

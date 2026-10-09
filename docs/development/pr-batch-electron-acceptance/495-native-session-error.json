@@ -1,0 +1,27 @@
+{
+  "connectionErrorHash": "86895250093a18e43b3e176340871521211bdc0cf56bca0d88940a4e2d056913",
+  "errorClearedAfterReopen": true,
+  "failureRetained": true,
+  "initialAlerts": 1,
+  "initialErrorHashes": ["0cce28f9607978037730796ad88753909351f8b1997a7caa10d8f5c486a5b717"],
+  "integratedSources": {
+    "DeviceConnectModal.tsx": {
+      "sourceEquivalent": true,
+      "sha256": "13a7988e3dbd7f65a58cab02c0315293fa63af04d086cdccb582d9ac6b273db9"
+    },
+    "useConnectDesktopDevice.ts": {
+      "sourceEquivalent": true,
+      "sha256": "407691437ae5b71c3f80ec9742221a6a4ba6836b5bc1d078269dd0533efe402e"
+    }
+  },
+  "limitations": [
+    "Local auth/gateway connection is expected to fail. This proves error retention and clearing across modal sessions, not successful enrollment, PKCE, registered production device or gateway operation.",
+    "A native popup was not opened; its capability selection remains scoped test evidence."
+  ],
+  "native": "Electron 43.2.0 app:// renderer",
+  "nativeMethod": true,
+  "pr": 495,
+  "rendererBaseRevision": "a28ae0364499a1f3883b4f3f672fe484bb7fff99",
+  "scope": "Actual candidate controlled enrollment modal and hook integrated at their delivered renderer paths; actual native connection service, no mocked IPC, component gallery mount.",
+  "source": "de02869e7c73a215bfbed9a95a779fb1aea677cf"
+}

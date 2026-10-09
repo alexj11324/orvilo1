@@ -1,0 +1,20 @@
+{
+  "browser": "Electron 43.2.0 native app:// renderer",
+  "commandMenu": {
+    "agentChipBrand": "Codex",
+    "shortcut": "Control+k",
+    "placeholder": "Enter a command or search..."
+  },
+  "limitations": [
+    "Real existing local Agent configuration reports No device; this verifies identity rendering and navigation, not a Codex execution or gateway connection.",
+    "Navigation uses the actual Electron tab-store addTab action with the existing persisted Agent id. The command menu is opened by the real Control+K shortcut."
+  ],
+  "prRevision": "96dcc05818d504ea5f4b4cc0d8c9e8f5997a06e4",
+  "rendererRevision": "a28ae0364499a1f3883b4f3f672fe484bb7fff99-plus-529-96dcc0581",
+  "tab": {
+    "label": "Agent: Acceptance Codex fixture",
+    "brand": "Codex",
+    "ancestor": "src/features/Electron/titlebar/TabBar/TabItem.tsx:214:7:span",
+    "url": "app://renderer/ws-usere2etestu/agent/agt_electron_acceptance_codex"
+  }
+}

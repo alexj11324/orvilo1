@@ -3,18 +3,20 @@
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatTokenNumber } from '@orvilo/utils/format';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Trash2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/reui/badge';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
 import { useRemoveWork } from '@/features/Work/useRemoveWork';
 import { useResourceDeletedPrompt } from '@/features/Work/useResourceDeletedPrompt';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { getWorkVersionTotalTokens } from '@/utils/workCumulativeUsage';
 import { formatWorkVersionCost } from '@/utils/workVersionCost';
 
@@ -217,11 +219,10 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
 
   return (
     <div
-      className={cx(
-        'work-preview-card',
-        'flex flex-col',
-        styles.card,
-        clickable && styles.clickable,
+      {...clickableProps(clickable)}
+      className={cn(
+        cx('work-preview-card', 'flex flex-col', styles.card, clickable && styles.clickable),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={
         clickable ? () => (resourceDeleted ? promptResourceDeleted(item) : onOpen(item)) : undefined
@@ -263,14 +264,7 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
         <div className={cx('flex items-baseline gap-[7px]', styles.footer)}>
           {agent && (
             <>
-              <Avatar
-                emojiScaleWithBackground
-                avatar={agent.avatar}
-                background={agent.backgroundColor}
-                className={styles.agentAvatar}
-                shape={'square'}
-                size={24}
-              />
+              <AssigneeAvatar agentId={item.originAgentId} size={24} />
               <div className={cx('flex flex-col gap-0.5', styles.identityMeta)}>
                 <div className="flex items-baseline gap-[7px]">
                   <span className={styles.agentName}>{agent.title}</span>

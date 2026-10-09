@@ -1,0 +1,130 @@
+{
+  "changedAfterRun": [],
+  "endOverlaySHA256": "a903bdf732af05bd5af920b1776be202059143ce250353ccb61b13c6c0a2d58f",
+  "productionSourceUnchangedAfterRun": true,
+  "rendererBase": "a28ae0364499a1f3883b4f3f672fe484bb7fff99",
+  "rendererOverlaySHA256": "6a026dbb9d147b4ae57f230ccc0330e3acdc778f8bb607288be83c52b4d399ce",
+  "revision": "c94366b9916ff39ee574c707b7a7e70b71d86351",
+  "source": [
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/RunIntegrationTag.tsx",
+      "prSourceHash": "c988dc6b16841bb088b31f588deb9b9fbc518925c3669f46d60e308e30e0c48d",
+      "runtimeSourceHash": "c988dc6b16841bb088b31f588deb9b9fbc518925c3669f46d60e308e30e0c48d",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskDetailAssignee.tsx",
+      "prSourceHash": "7f05a77bddedbe6191dfdee0825c8cf03d47238cccec9bbe351f7abdc7701c94",
+      "runtimeSourceHash": "7f05a77bddedbe6191dfdee0825c8cf03d47238cccec9bbe351f7abdc7701c94",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskDetailPage.tsx",
+      "prSourceHash": "d75536d90b3bc22845792ed85a63de81cc7df3ba1ed0056ee7fedce6c45a620f",
+      "runtimeSourceHash": "333cdb113dff351d533b20db72fd99f39992a05a66ef5362b4c4b4a9458780f2",
+      "identical": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskDetailSections.tsx",
+      "prSourceHash": "5c8a913a69a0c2fa06a02fa11b3124069b548422e9e8e9420dff7b9870aad946",
+      "runtimeSourceHash": "4dda61fd83f3d4773fca6600831be1aae43b28e698c8050b7279cc0fd7b15043",
+      "identical": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton.tsx",
+      "prSourceHash": "72bcdbf7e2fc0a0c93c37595b7c405fb99e79dc2c8f29cda9a711c89c5dc11f8",
+      "runtimeSourceHash": "72bcdbf7e2fc0a0c93c37595b7c405fb99e79dc2c8f29cda9a711c89c5dc11f8",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskDetailTitleInput.tsx",
+      "prSourceHash": "2a7f7e54959d2575a75fc6276226809e9f8d495e99109d8779b4c54bc0df0ceb",
+      "runtimeSourceHash": "2a7f7e54959d2575a75fc6276226809e9f8d495e99109d8779b4c54bc0df0ceb",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskInstruction.tsx",
+      "prSourceHash": "c09a9c55778f1d608de1e23eb98ec59d7b33798190a981459a50b8352758a156",
+      "runtimeSourceHash": "c09a9c55778f1d608de1e23eb98ec59d7b33798190a981459a50b8352758a156",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.test.tsx",
+      "prSourceHash": "d62d1aad67b0298d20d4a12ac1911b23e8c75c1cd661fd319b4c031a570234af",
+      "runtimeSourceHash": "d62d1aad67b0298d20d4a12ac1911b23e8c75c1cd661fd319b4c031a570234af",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.tsx",
+      "prSourceHash": "755e6038d2444bf731ddcbaa7f5fc7f483ad2c34aa1ec8454e7d698d2e74a206",
+      "runtimeSourceHash": "319ee2554eb39c295e83eaf493892332e494f62bfdfe4863bd07772300973f76",
+      "identical": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskProjectSection.tsx",
+      "prSourceHash": "22fc7eb709d68779f3f9b2cc9651d95157c9ee37e5b8e835bacdc8332ec60017",
+      "runtimeSourceHash": "22fc7eb709d68779f3f9b2cc9651d95157c9ee37e5b8e835bacdc8332ec60017",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskProperties.test.tsx",
+      "prSourceHash": "1189e1d8dcb00470f16bc409b8896040a1e38b9b0c0a623404b17833b7d90f67",
+      "runtimeSourceHash": "1189e1d8dcb00470f16bc409b8896040a1e38b9b0c0a623404b17833b7d90f67",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskProperties.tsx",
+      "prSourceHash": "68dc7a5d3017d53111b33b8d4541b77ba71c7d2d05e86394a27a22263f316d42",
+      "runtimeSourceHash": "68dc7a5d3017d53111b33b8d4541b77ba71c7d2d05e86394a27a22263f316d42",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/railText.test.ts",
+      "prSourceHash": "2b44d0c52e2947db8c6a8f2f8fd676051ab9194dc782f99cb1af9c2da8e97e24",
+      "runtimeSourceHash": "2b44d0c52e2947db8c6a8f2f8fd676051ab9194dc782f99cb1af9c2da8e97e24",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/taskDetailLayoutStyles.ts",
+      "prSourceHash": "31a9f66aa6a38eeb5e60b39be731751848fcd84f3b10a10dd0a14846d2ea9e88",
+      "runtimeSourceHash": "31a9f66aa6a38eeb5e60b39be731751848fcd84f3b10a10dd0a14846d2ea9e88",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/features/AssigneeAgentSelector.tsx",
+      "prSourceHash": "ba2fdb6e91743001dbc4295c29a55499eec92fbed69c1d7dff59a3ab42580266",
+      "runtimeSourceHash": "ba2fdb6e91743001dbc4295c29a55499eec92fbed69c1d7dff59a3ab42580266",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/features/AssigneeMemberSelector.tsx",
+      "prSourceHash": "a52868c3f0b8757b88563cf6461c9b2dd1af16d59295d5f94c069a479de8b4a7",
+      "runtimeSourceHash": "a52868c3f0b8757b88563cf6461c9b2dd1af16d59295d5f94c069a479de8b4a7",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/features/IssueStatusPicker.tsx",
+      "prSourceHash": "ea87ff82919bfdf3bb505326239420e6dc1b0130dc93162462bcd0dbb905f769",
+      "runtimeSourceHash": "ea87ff82919bfdf3bb505326239420e6dc1b0130dc93162462bcd0dbb905f769",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/features/TaskLabelSelector.tsx",
+      "prSourceHash": "7307128b3fe75e803af5e4ce453b45672b71709b5808d4c286e34030e4bd30e4",
+      "runtimeSourceHash": "7307128b3fe75e803af5e4ce453b45672b71709b5808d4c286e34030e4bd30e4",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/features/TaskPriorityTag.tsx",
+      "prSourceHash": "bdefab1c6927a9d2b24086996a6f5ff3fbd668c3e6ba57593dab4f07200352d3",
+      "runtimeSourceHash": "bdefab1c6927a9d2b24086996a6f5ff3fbd668c3e6ba57593dab4f07200352d3",
+      "identical": true
+    },
+    {
+      "path": "src/features/AgentTasks/features/menuExtra.tsx",
+      "prSourceHash": "9168117a830f84613d3be9e41e754e20194ab443b4e67dd37a2d0bc534537763",
+      "runtimeSourceHash": "9168117a830f84613d3be9e41e754e20194ab443b4e67dd37a2d0bc534537763",
+      "identical": true
+    }
+  ]
+}

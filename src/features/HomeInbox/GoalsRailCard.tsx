@@ -4,8 +4,8 @@ import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -75,16 +75,7 @@ const GoalAgentAvatar = memo<{ agentId: string | null }>(({ agentId }) => {
   const agent = useAgentDisplayMeta(agentId);
   if (!agent) return null;
 
-  return (
-    <Avatar
-      avatar={agent.avatar}
-      background={agent.backgroundColor}
-      shape={'circle'}
-      size={AVATAR_SIZE}
-      style={{ flex: 'none' }}
-      title={agent.title}
-    />
-  );
+  return <AssigneeAvatar agentId={agentId} size={AVATAR_SIZE} />;
 });
 
 interface GoalRowProps {

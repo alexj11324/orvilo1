@@ -1,0 +1,30 @@
+{
+  "initialEmptyRelations": 0,
+  "modules": [
+    "src/features/AgentTasks/AgentTaskDetail/TaskDetailAssignee.tsx",
+    "src/features/AgentTasks/AgentTaskDetail/TaskDetailPage.tsx",
+    "src/features/AgentTasks/AgentTaskDetail/TaskDetailSections.tsx",
+    "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.tsx",
+    "src/features/AgentTasks/AgentTaskDetail/TaskProperties.tsx",
+    "src/features/AgentTasks/AgentTaskDetail/taskDetailLayoutStyles.ts",
+    "src/features/AgentTasks/AgentTaskDetail/useTaskCopyActions.ts"
+  ],
+  "narrow": {
+    "width": 692,
+    "position": "static",
+    "gridColumn": "auto",
+    "overflow": false,
+    "text": "Done\nAgent\nSucceeded\nET\nE2E Test User\nHigh\nAdd due date\nBlocked by\nAdd property\nNo project"
+  },
+  "rendererBase": "a28ae0364",
+  "revealed": ["Due date", "Blocked by"],
+  "revision": "9291d6e1a7ec7ffefab4d006d93d0012acecc652",
+  "scope": "Seven delivered author modules temporarily loaded in actual Electron on composite renderer. Real persisted Issue backend. Other components retained; not a complete standalone build.",
+  "wide": {
+    "width": 232,
+    "position": "sticky",
+    "gridColumn": "2",
+    "overflow": false,
+    "text": "Properties\nDone\nAgent\nSucceeded\nET\nE2E Test User\nHigh\nAdd due date\nBlocked by\nAdd property\nProject\nNo project"
+  }
+}

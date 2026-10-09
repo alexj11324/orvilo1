@@ -261,7 +261,6 @@ const ConnectorDetailPanel = memo<ConnectorDetailProps>(({ identifier, type, onD
           usageAgentId ? (
             <Suspense fallback={null}>
               <AgentConnectorUsage
-                agentAvatar={agentBoundConnector?.agentAvatar}
                 agentId={usageAgentId}
                 agentTitle={agentDisplayName({
                   name: agentBoundConnector?.agentName,

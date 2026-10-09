@@ -12,6 +12,7 @@ import type { AgentRuntimeConfig } from '@/features/CreateAgent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
 import { listConfiguredOrchestrators } from '@/services/orchestrator';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 export interface ConfiguredOrchestratorSelectorProps {
   disabled?: boolean;
@@ -84,7 +85,7 @@ const ConfiguredOrchestratorSelector = ({
               >
                 <AgentRuntimeIcon
                   size={24}
-                  type={runtime?.agencyConfig?.heterogeneousProvider?.type}
+                  type={runtime ? resolveAgentRuntimeType(runtime) : undefined}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{agent.name || agent.title}</span>

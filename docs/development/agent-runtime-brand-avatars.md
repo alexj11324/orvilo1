@@ -1,9 +1,10 @@
 # Agent runtime brand avatars
 
-Task assignees and the agent authors shown in task detail are identified by the
-runtime the agent runs on (Codex, Claude Code, Orvilo, …), not by the editable
-name or avatar. Renaming an agent or changing its avatar no longer changes the
-mark that tells a reader which runtime did the work.
+An Agent is always identified by the runtime it runs on (Codex, Claude Code,
+Orvilo, …), never by name initials, an emoji, or its editable avatar. Renaming
+an Agent or changing its avatar does not change the mark that tells a reader
+which runtime did the work. Real user avatars and group identities keep their
+own semantics.
 
 ## Identity chain
 
@@ -24,32 +25,69 @@ mark that tells a reader which runtime did the work.
    - `orvilo` for the inbox agent;
    - `null` when nothing resolves the agent (deleted, or outside the viewer's
      scope).
-4. `AssigneeAvatar` (`src/features/AgentTasks/features/AssigneeAvatar.tsx`)
-   renders `AgentRuntimeIcon` for a known runtime inside a `role="img"` wrapper
-   labelled `Agent: <display name>`. A `null` runtime keeps the previous default
-   avatar, so an unresolvable agent is never shown under a brand it may not use.
+4. `AssigneeAvatar` (`src/features/AgentTasks/features/AssigneeAvatar.tsx`) is
+   the shared Agent identity mark. It renders `AgentRuntimeIcon` inside a
+   `role="img"` wrapper labelled `Agent: <display name>`.
+5. `AgentRuntimeIcon` (`src/components/AgentRuntimeIcon.tsx`) draws the Orvilo
+   app icon for `orvilo`, the provider brand for a connectable runtime, and the
+   unknown-runtime glyph (`CircleHelp`) for anything else, including an empty
+   type. An Agent the viewer cannot resolve is therefore never shown under a
+   brand it may not use. `src/features/AgentRuntimeIcon` re-exports the same
+   component, so there is one rendering.
+
+The home sidebar payload deliberately carries `heterogeneousType: null` for an
+Agent with no saved runtime (onboarding uses that to tell connected harnesses
+from the builtin engine). Render sites that draw a known Agent row straight
+from that payload pass `heterogeneousType || 'orvilo'`, the same rule
+`useAgentDisplayMeta` applies, so a builtin Agent shows the Orvilo mark rather
+than the unknown glyph.
 
 ## Surfaces
 
-Every `AssigneeAvatar` caller picks this up, which covers task lists, boards,
-the create-task entries, the task detail assignee, and automation assignees.
+Use `AssigneeAvatar agentId={…}` wherever an Agent id is in hand.
 
-In task detail, agent authors now go through the same component, keyed by
-`author.id` (the agent id for `type: 'agent'` authors, as built by
-`TaskService.resolveAuthors`):
+- Tasks: task lists, boards, create-task entries, the task detail assignee,
+  automation assignees, and task-detail agent authors (`CommentCard`,
+  `TaskActivities` `RowMark`, `TaskRunReport`, `TopicCard`), keyed by
+  `author.id`.
+- Conversation: message author avatar (`ChatItem/components/Avatar`, fed by
+  `useAgentMeta`, which now returns `agentId`), compressed history rows, and
+  group task rows (`GroupTasks/TaskItem/TaskTitle`).
+- Home inbox: running tasks stack, topic rows, unread topics, goals rail,
+  brief cards and the news list.
+- Electron tab bar: an `/agent/:aid` tab resolves `meta.agentId` from the route
+  and draws the runtime mark; group and page tabs are unchanged.
+- Portal: agent detail title and body, thread header.
+- Work gallery: agent filter chips and the card footer.
+- Agent profile card and popup, global approval card.
+- Command menu: `@` mention list, Ask AI list, selected/active Agent chips,
+  the send-to-agent row and topic search results.
+- Chat input `@` mention list, the quick chat Agent switcher, share image
+  header, the Agent Builder and Page Copilot welcome, the "Ask Copilot" editor
+  item, the workspace Agents panel and the connector "used by Agent" row.
+- Agent pickers that draw sidebar rows directly: home sidebar Agent list, home
+  Agent select, Agent settings list, Agents page, forward modals, Task Manager
+  and Page Copilot Agent selectors.
 
-- `CommentCard` — comment header avatar
-- `TaskActivities` — `RowMark` on the activity rail
-- `TaskRunReport` — report author
-- `TopicCard` — run card avatar
-
-Human authors keep their profile avatar and authorless rows keep their activity
-icon.
+Human authors keep their profile avatar, authorless rows keep their activity
+icon, and groups keep the group avatar.
 
 ## Not changed
 
-- `src/components/AgentRuntimeIcon.tsx` still falls back to the Orvilo mark when
-  `type` is empty, and `src/features/AgentRuntimeIcon` keeps its own rendering.
-  Existing callers of both look the same as before.
-- Avatars in conversations, the home inbox, Electron tabs, groups and the portal
-  agent views are not part of this change.
+- Group surfaces that read members from the group session (group thread
+  header, the group `@` member menu and mention popover) keep the member
+  avatar, matching the source branch. Group member lists in Group settings are
+  owned by the Group configuration change.
+- The Agent avatar editor (`EditingPopover/AgentContent`) still edits the
+  stored avatar field.
+- Marketplace Agent cards, the shared Acceptance viewer, the internal link
+  preview and the collaboration activity dock draw records that are not in the
+  viewer's Agent store; they need a runtime type in their own payloads first.
+
+## Workspace command context
+
+The command palette resolves its active Agent from both `/agent/:id` and
+`/:workspace/agent/:id` using the same Agent-context gate as its menu. The native
+workspace route previously matched Agent context but lost the actor id, so it
+showed a generic Agent label instead of the runtime mark. Group and other routes
+keep their own context and never borrow an Agent id.

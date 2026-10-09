@@ -63,6 +63,18 @@ describe('resolveTab', () => {
     expect(resolved.meta.icon).toBe(MessageSquare);
   });
 
+  it('keeps agent actor identity independent of editable cached avatars', () => {
+    const agent = resolveTab(
+      fixtureRoutes,
+      tab('/agent/abc', { avatar: 'JA', title: 'JV' }),
+      false,
+      t,
+    );
+    expect(agent.meta.agentId).toBe('abc');
+    const group = resolveTab(fixtureRoutes, tab('/group/g1', { avatar: 'JA' }), false, t);
+    expect(group.meta.agentId).toBeUndefined();
+  });
+
   it('active tab: live dynamic meta overlays the snapshot', () => {
     const resolved = resolveTab(
       fixtureRoutes,

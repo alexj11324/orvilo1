@@ -1,0 +1,89 @@
+{
+  "loadedNarrow": {
+    "width": 692,
+    "position": "static",
+    "gridColumn": "auto",
+    "overflow": false,
+    "buttons": [
+      {
+        "text": "Add due date",
+        "left": 656.265625,
+        "height": 28
+      },
+      {
+        "text": "Add property",
+        "left": 771.171875,
+        "height": 28
+      },
+      {
+        "text": "No project",
+        "left": 883.890625,
+        "height": 28
+      }
+    ]
+  },
+  "loadedWide": {
+    "width": 232,
+    "position": "sticky",
+    "gridColumn": "2",
+    "overflow": false,
+    "buttons": [
+      {
+        "text": "Add due date",
+        "left": 1243,
+        "height": 28
+      },
+      {
+        "text": "Add property",
+        "left": 1243,
+        "height": 28
+      },
+      {
+        "text": "No project",
+        "left": 1249,
+        "height": 28
+      }
+    ]
+  },
+  "revision": "c94366b9916ff39ee574c707b7a7e70b71d86351",
+  "scope": "Actual delivered TaskDetailSkeleton chrome=body in native modal, controlled 1080/640px container. Proves component layout; not a route loading timing claim.",
+  "skeletonNarrow": {
+    "container": 640,
+    "columns": "640px",
+    "sideWidth": 640,
+    "sideColumn": "auto",
+    "sidePosition": "static",
+    "overflow": false,
+    "propertyRows": 16
+  },
+  "skeletonWide": {
+    "container": 1080,
+    "columns": "808px 232px",
+    "sideWidth": 232,
+    "sideColumn": "2",
+    "sidePosition": "sticky",
+    "overflow": false,
+    "propertyRows": 16
+  },
+  "theme": "dark",
+  "wideContentAlignment": [
+    {
+      "text": "Add due date",
+      "buttonLeft": 1243,
+      "paddingLeft": "6px",
+      "contentLeft": 1249
+    },
+    {
+      "text": "Add property",
+      "buttonLeft": 1243,
+      "paddingLeft": "6px",
+      "contentLeft": 1250
+    },
+    {
+      "text": "No project",
+      "buttonLeft": 1249,
+      "paddingLeft": "0px",
+      "contentLeft": 1249
+    }
+  ]
+}

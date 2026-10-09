@@ -154,8 +154,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
       </div>
     ) : (
       <AgentProfileCard
-        avatar={merged.avatar}
-        backgroundColor={merged.backgroundColor}
+        agentId={agentId}
         description={merged.description}
         loading={isLoading && !merged.description}
         title={agentDisplayName(merged, t('defaultSession', { ns: 'common' }))}

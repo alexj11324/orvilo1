@@ -119,7 +119,10 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
             style={{ height: 28 }}
           >
             <div className="flex items-center gap-1">
-              <AgentRuntimeIcon size={22} type={activeAgent?.heterogeneousType} />
+              <AgentRuntimeIcon
+                size={22}
+                type={activeAgent && (activeAgent.heterogeneousType || 'orvilo')}
+              />
               <ChevronsUpDownIcon className={styles.chevron} size={14} />
             </div>
           </div>

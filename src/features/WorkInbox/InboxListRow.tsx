@@ -12,7 +12,7 @@ import {
   TimerOffIcon,
   Trash2Icon,
 } from 'lucide-react';
-import { createElement, memo, type MouseEvent, useRef } from 'react';
+import { createElement, memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
@@ -162,7 +162,6 @@ const InboxListRow = memo((props: InboxListRowProps) => {
     onCustomSnooze,
   } = props;
   const { i18n, t } = useTranslation('notification');
-  const customSnoozeRequested = useRef(false);
   const senderName = card.actor?.name ?? card.agent?.name;
 
   return (
@@ -205,7 +204,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             <span className="text-muted-foreground">{card.content}</span>
             {'.'}
           </p>
-          <div className="hidden shrink-0 items-center gap-2 group-focus-within:flex group-hover:flex">
+          {/* The snooze menu popup is portaled out of this row, so once the pointer or focus
+              moves into it the row stops matching `group-hover` / `group-focus-within`; without
+              `has-data-popup-open` the container goes back to `display: none`, the trigger's
+              rect collapses to 0x0 and the popup jumps away (the next click then lands on the
+              row beneath). Base UI marks the open trigger with `data-popup-open`. */}
+          <div className="hidden shrink-0 items-center gap-2 group-focus-within:flex group-hover:flex has-data-popup-open:flex">
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -258,16 +262,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
               </Tooltip>
             ) : null}
             {card.availableActions.includes('snooze') ? (
-              <DropdownMenu
-                // Open the custom-time dialog only once the menu has fully closed. Opening it
-                // inside the item's click lets the menu's teardown (focus return, dismissal
-                // bookkeeping) race the dialog's mount, which on a mouse click left no dialog.
-                onOpenChangeComplete={(open) => {
-                  if (open || !customSnoozeRequested.current) return;
-                  customSnoozeRequested.current = false;
-                  onCustomSnooze(card);
-                }}
-              >
+              <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <button
@@ -309,7 +304,10 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                   <DropdownMenuItem
                     onClick={(event) => {
                       stopRowClick(event);
-                      customSnoozeRequested.current = true;
+                      // Same as the Issue header menu's Custom entries: the modal is
+                      // imperative (rendered by ModalHost, not under this row), so it
+                      // survives the menu closing.
+                      onCustomSnooze(card);
                     }}
                   >
                     {t('inbox.snoozePreset.custom')}

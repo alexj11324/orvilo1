@@ -203,7 +203,7 @@ export default {
   'taskManager.agent': 'Task Agent',
   'taskManager.agentSelector.privateGroup': 'Private',
   'taskManager.agentSelector.workspaceGroup': 'Workspace',
-  'taskManager.welcome': 'Ask me about your tasks',
+  'taskManager.welcome': 'Ask me about your issues',
   'temp': 'Temporary',
   'title': 'Topic',
 };

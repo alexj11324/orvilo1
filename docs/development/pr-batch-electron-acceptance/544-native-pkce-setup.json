@@ -1,0 +1,50 @@
+{
+  "consentCount": 2,
+  "device": {
+    "matchesRenderer": true,
+    "platform": "linux"
+  },
+  "handoffCreated": true,
+  "inferencePerformed": false,
+  "localIdentity": {
+    "proven": true
+  },
+  "nativeAuthorizationRequested": true,
+  "remoteActive": true,
+  "sessionStatus": 200,
+  "source": "Real native AuthCtr requestAuthorization, local OIDC endpoints and native PKCE token exchange",
+  "stages": [
+    {
+      "action": "/oidc/[last-segment]",
+      "status": 303
+    },
+    {
+      "action": "interaction",
+      "status": 200
+    },
+    {
+      "action": "accept-login",
+      "status": 303
+    },
+    {
+      "action": "/oidc/auth/[last-segment]",
+      "status": 303
+    },
+    {
+      "action": "interaction",
+      "status": 200
+    },
+    {
+      "action": "accept-consent",
+      "status": 303
+    },
+    {
+      "action": "/oidc/auth/[last-segment]",
+      "status": 303
+    },
+    {
+      "action": "/oidc/callback/[last-segment]",
+      "status": 307
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "compactHead": "e4db867730c779305a3b5ffc6cb5feee55c73071",
+  "files": [
+    {
+      "file": "src/features/CreateGroupChat/index.tsx",
+      "identical": true,
+      "sha256": "c6ddf84eee5d6db81a3daf3a57aeebfb8616603df5109307e3af6b5ed81b21a0",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/features/CreateGroupChat/useGroupChatCreation.ts",
+      "identical": true,
+      "sha256": "7feb4b25ca8d8f1e3950f0b12b4fe38a7ef1f7d419ec8aff9737af834f2d27b9",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/features/GroupProfile/index.tsx",
+      "identical": true,
+      "sha256": "cb6795468482c8b1968b23c9a79f15051d188d2c979575eeb6252bed448c300a",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/routes/(main)/group/profile/features/GroupProfile/index.tsx",
+      "identical": true,
+      "sha256": "a1668b90dd966dc39aa1c0f469187878f5073805ec4713910b6fce02c2e9e157",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/routes/(main)/group/profile/features/GroupProfile/useBasicSettingsDraft.ts",
+      "identical": true,
+      "sha256": "be33c27757041bcb8ae5f841e404848b8f33053842fda190b7ef3c62835cd4cf",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/routes/(main)/group/features/GroupIndex/index.tsx",
+      "identical": true,
+      "sha256": "42de66845d1f3a11a357cb098b7463c99abdf870ca8e98612e51af45defa26ea",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/services/chatGroup/index.ts",
+      "identical": true,
+      "sha256": "d40931ae0e49f89ed0469665331464b577f931e70d6054e1209c5a87204fa3f1",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/store/agentGroup/slices/lifecycle.ts",
+      "identical": true,
+      "sha256": "f8e2cc48657b80b6d47b96f140eaf6a6c1997a7d6247591b505800be56ff1872",
+      "identicalToCompact": true
+    },
+    {
+      "file": "apps/server/src/routers/lambda/agentGroup.ts",
+      "identical": true,
+      "sha256": "214bc91b8d029b5b59dfae0e32c828163d987d3e29c9e2ee0968eedc5b954ede",
+      "identicalToCompact": true
+    },
+    {
+      "file": "apps/server/src/routers/lambda/_helpers/resourceConfigGuard.ts",
+      "identical": true,
+      "sha256": "cc5556216b5b14dd48d9ce4d3e32dab1e122d2838815a8f564acae88e8b6d227",
+      "identicalToCompact": true
+    },
+    {
+      "file": "apps/server/src/services/agentGroup/index.ts",
+      "identical": true,
+      "sha256": "72d20a45685e0ef8145b1c5d0afb9d5e48b7dc59b2ad94cc4877c4fd9f955151",
+      "identicalToCompact": true
+    },
+    {
+      "file": "apps/server/src/services/toolExecution/serverRuntimes/groupAgentBuilder.ts",
+      "identical": true,
+      "sha256": "e30464867c7d5d54848f61158b55a8a98221c67a2318852df4cef419f5ec8da1",
+      "identicalToCompact": true
+    },
+    {
+      "file": "packages/database/src/repositories/agentGroup/index.ts",
+      "identical": true,
+      "sha256": "7bc6a1ca7b47e9d99b620bb0c102f7253cfa68b91a7938f2668e53d168f5df3e",
+      "identicalToCompact": true
+    },
+    {
+      "file": "packages/database/src/models/chatGroup.ts",
+      "identical": true,
+      "sha256": "1869ea46945a492568b6a351ba1775e4f1e7f52dca690aeb25cde4e018a63d69",
+      "identicalToCompact": true
+    },
+    {
+      "file": "packages/database/src/utils/groupMembership.ts",
+      "identical": true,
+      "sha256": "08b341605c58c1d5a2a0c782144701cff9fdd8679574ad89f8194e6756d17c0b",
+      "identicalToCompact": true
+    },
+    {
+      "file": "packages/heterogeneous-agents/src/spawn/builtinToolMount.ts",
+      "identical": true,
+      "sha256": "12fa005b9718fec1d6ccdacba1616d5a0927b227708a9e803a155b1b3d4a865d",
+      "identicalToCompact": true
+    },
+    {
+      "file": "apps/server/src/routers/lambda/agent.ts",
+      "identical": true,
+      "sha256": "0ad514f1088a3352ffec61444cc4dac42eb58a3b4914037d978f5fd2803c2dfe",
+      "identicalToCompact": true
+    },
+    {
+      "file": "src/services/agent.ts",
+      "identical": true,
+      "sha256": "502c3fd76641795890526757d5d761c7a616e26aeaaa0ce8e5bf6396c71371e8",
+      "identicalToCompact": true
+    }
+  ],
+  "prHead": "f18c3bd94834a0ac7b68458e2242aa8f256c098b"
+}

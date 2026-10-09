@@ -1,0 +1,10 @@
+{
+  "localDeviceProven": true,
+  "modelRequestsRunning": false,
+  "nativeConfigurationSessionPreviouslyStopped": true,
+  "path": "/tasks",
+  "pendingAuthorizationCleared": true,
+  "source": "owned native profile cleanup and full renderer reload",
+  "transientAuthorizationCaptureAbsent": true,
+  "visibleHarnessGallery": false
+}

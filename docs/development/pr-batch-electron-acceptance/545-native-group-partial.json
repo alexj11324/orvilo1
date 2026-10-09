@@ -1,0 +1,25 @@
+{
+  "coordinatorAndDescriptionSurviveFullReload": true,
+  "coordinatorChangedFromAtoB": true,
+  "createAddsNoAgentRows": true,
+  "createFromExistingTwoOfflineCodexAgents": true,
+  "descriptionSavedThroughRealPostAndDatabaseChecked": true,
+  "dirtyDescriptionRetainedAcrossCoordinatorChange": true,
+  "environment": "Actual Electron 43.2.0 with real local backend and dedicated PostgreSQL acceptance database",
+  "fixtureCleanup": "All synthetic Group/Agent rows removed in finally; no modal or running acceptance script remains. Cleanup is not claimed as a Group delete product test.",
+  "groupDeleteAcceptanceStatus": "Not covered by this earlier configuration-only run. Superseded for deletion by 545-native-group-retained-delete.json, which exercises the actual retained GroupItem menu/confirmation and verifies full member rows unchanged.",
+  "groupDeletedThroughUI": false,
+  "harnessCorrections": [
+    "Inner has-locator scope fixed",
+    "Dialog identity fixed because pending button changed matching accessible name; premature fixture cleanup induced a BAD_REQUEST that is excluded from product findings",
+    "Filled Description located by its textarea; exact label match included filled value",
+    "Waited for real group.updateGroup success instead of saving-disabled state before querying persistence"
+  ],
+  "kind": "Earlier configuration-only receipt; actual Electron configuration/membership lifecycle, no CLI execution or gateway claim",
+  "oldCoordinatorAndOpeningTabsAbsent": true,
+  "originalEquivalentGroupHead": "f18c3bd94834a0ac7b68458e2242aa8f256c098b",
+  "prHead": "e4db867730c779305a3b5ffc6cb5feee55c73071",
+  "screenshots": ["545-native-group-created.png", "545-native-group-coordinator-reloaded.png"],
+  "sourceEquivalenceReceipt": "545-native-core-equivalence.json",
+  "supersededForDeletionBy": "545-native-group-retained-delete.json"
+}

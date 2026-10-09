@@ -1,0 +1,45 @@
+{
+  "files": [
+    {
+      "path": "src/features/HomeSidebar/Body/Agent/List/AgentGroupItem/index.tsx",
+      "sha256": "7179bcc5e78b7695a00076f353033ed8b10f8879c7247ff3c7d0967f020d82a8",
+      "identicalToHead": true
+    },
+    {
+      "path": "src/features/HomeSidebar/Body/Agent/List/AgentGroupItem/useDropdownMenu.tsx",
+      "sha256": "f550b3b5658862a710c7adf2e6164b0b7958f43aff7ec3ffff678304e88d4a01",
+      "identicalToHead": true
+    },
+    {
+      "path": "src/store/home/slices/sidebarUI/action.ts",
+      "sha256": "ff3d8c491eead671d76b27e3218627b84230000259de5ebda9ed1895a421a52a",
+      "identicalToHead": true
+    },
+    {
+      "path": "src/services/chatGroup/index.ts",
+      "sha256": "d40931ae0e49f89ed0469665331464b577f931e70d6054e1209c5a87204fa3f1",
+      "identicalToHead": true
+    },
+    {
+      "path": "apps/server/src/services/agentGroup/index.ts",
+      "sha256": "72d20a45685e0ef8145b1c5d0afb9d5e48b7dc59b2ad94cc4877c4fd9f955151",
+      "identicalToHead": true
+    },
+    {
+      "path": "apps/server/src/routers/lambda/agentGroup.ts",
+      "sha256": "214bc91b8d029b5b59dfae0e32c828163d987d3e29c9e2ee0968eedc5b954ede",
+      "identicalToHead": true
+    },
+    {
+      "path": "packages/database/src/models/chatGroup.ts",
+      "sha256": "1869ea46945a492568b6a351ba1775e4f1e7f52dca690aeb25cde4e018a63d69",
+      "identicalToHead": true
+    },
+    {
+      "path": "src/routes/(main)/group/features/GroupIndex/index.tsx",
+      "sha256": "42de66845d1f3a11a357cb098b7463c99abdf870ca8e98612e51af45defa26ea",
+      "identicalToHead": true
+    }
+  ],
+  "head": "e4db867730c779305a3b5ffc6cb5feee55c73071"
+}

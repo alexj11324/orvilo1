@@ -1,0 +1,23 @@
+{
+  "bothExistingAgentsFullyUnchanged": true,
+  "deletedVirtualAgentIds": [],
+  "executionClaim": "Config/coordinator/membership/deletion acceptance only; no producer, gateway, or CLI execution asserted",
+  "fixtureCleanupVerified": true,
+  "groupAndJunctionRowsRemoved": true,
+  "groupCreatedUsingExistingMembers": true,
+  "groupDeletedThroughActualRendererService": true,
+  "harnessCorrections": [
+    "Vite optimized React exposes createElement on its default export",
+    "Retained row action positioning needs a containing row; hover reveals real More action",
+    "Public deletion response field is deletedVirtualAgentIds, not internal deletedOwnedAgentIds"
+  ],
+  "harnessLayout": "Actual retained GroupItem gets style.position=relative from the harness container and normal row hover; no production source edits. Mounted in actual ModalHost, not current Shell sidebar.",
+  "kind": "Actual Electron retained legacy GroupItem mounted through actual ModalHost with a persisted Home-service Group item; actual Group menu, confirmModal, HomeStore.removeAgentGroup, chatGroupService and real local backend. Temporary existing offline Agent configurations; no fetch stub or CLI execution.",
+  "limitations": "This supplements the actual create/coordinator/dirtyDescription-save/reload UI receipt. It proves the retained GroupItem deletion control and changed backend lifecycle. Current Shell does not mount that legacy GroupItem and GroupIndex has no deletion action; normal sidebar reachability is not certified.",
+  "noVisibleModalRemaining": true,
+  "normalShellSidebarDeleteReachabilityExercised": false,
+  "prHead": "e4db867730c779305a3b5ffc6cb5feee55c73071",
+  "sourceEquivalenceReceipt": "545-native-delete-equivalence.json",
+  "timestampUTC": "2026-10-09T02:25:00Z",
+  "uiDeleteControlExercised": true
+}

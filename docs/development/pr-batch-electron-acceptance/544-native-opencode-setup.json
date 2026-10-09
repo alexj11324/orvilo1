@@ -1,0 +1,12 @@
+{
+  "catalogueStatus": "success",
+  "inferencePerformed": false,
+  "model": "opencode/step-5-preview-free",
+  "modelCount": 101,
+  "path": "/tasks",
+  "producerQuestionCreated": false,
+  "selectedModelAvailable": true,
+  "sessionConfigCreated": true,
+  "sessionStopped": true,
+  "source": "actual guarded Electron service -> native IPC -> installed OpenCode catalog; startSession configuration only, no sendPrompt"
+}

@@ -1,0 +1,219 @@
+{
+  "inferencePerformed": false,
+  "models": [
+    {
+      "id": "opencode/big-pickle",
+      "name": "Big Pickle",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 200000,
+        "input": 160000,
+        "output": 32000
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/exo-free",
+      "name": "Exo Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 1048576,
+        "output": 131072
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/ling-3.0-flash-fin-free",
+      "name": "Ling 3.0 Flash Fin Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 262144,
+        "output": 32768
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/ling-3.1-flash-free",
+      "name": "Ling 3.1 Flash Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 262144,
+        "output": 32768
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/longcat-2.5-preview-free",
+      "name": "LongCat 2.5 Preview Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 1000000,
+        "output": 131072
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/mimo-v2.6-flash-free",
+      "name": "MiMo-V2.6-Flash Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 200000,
+        "output": 32000
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/muse-spark-1.3-contributor-free",
+      "name": "Muse Spark 1.3 Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 1048576,
+        "output": 131072
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/nemotron-3-ultra-free",
+      "name": "Nemotron 3 Ultra Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/nemotron-3.5-lightning-free",
+      "name": "Nemotron 3.5 Lightning Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 262144,
+        "output": 262144
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/space-bunny-free",
+      "name": "Space Bunny Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 1048576,
+        "input": 524288,
+        "output": 524288
+      },
+      "toolcall": true,
+      "reasoning": true
+    },
+    {
+      "id": "opencode/step-5-preview-free",
+      "name": "Step 5 Preview Free",
+      "status": "active",
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      },
+      "limit": {
+        "context": 1000000,
+        "input": 1000000,
+        "output": 65536
+      },
+      "toolcall": true,
+      "reasoning": true
+    }
+  ],
+  "source": "actual opencode models opencode --pure --refresh --verbose",
+  "version": "1.18.35"
+}

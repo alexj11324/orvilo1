@@ -1,0 +1,38 @@
+{
+  "paidOrOtherModelFallback": false,
+  "productAcceptance": {
+    "nativePKCE": "passed",
+    "nativeIdentityGuardAndCatalog": "passed",
+    "realQuestionInboxAnswerSameProducerContinuation": "not completed; free inference unavailable"
+  },
+  "rootDirectRequest": {
+    "exitCode": 1,
+    "observedError": "UnknownError: Unexpected server error. Check server logs for details.",
+    "reference": "err_c8c4b046",
+    "sessionId": "ses_ee190322dffe20IqrPRNXOrqcH",
+    "assistantMessageCount": 0,
+    "modelRequestRecorded": false,
+    "originalStackRecovered": false,
+    "classification": "local internal HTTP 500; exact original cause unproven; not counted as provider refusal"
+  },
+  "selectedModel": "opencode/step-5-preview-free",
+  "singleCorrectedRequest": {
+    "corrections": [
+      "previously working isolated workspace",
+      "official --print-logs --log-level DEBUG",
+      "isolated XDG cache",
+      "all tools denied"
+    ],
+    "exitCode": 1,
+    "sessionId": "ses_ee186d512ffebVMCdn4JtOCZ6T",
+    "modelRequestRecorded": true,
+    "statusCode": 403,
+    "errorName": "APIError",
+    "message": "OpenCode's free tier can only be used from within OpenCode",
+    "isRetryable": false,
+    "expectedReplyReceived": false,
+    "assistantOutputEvents": 0,
+    "stack": "AI_APICallError -> /$bunfs/root/chunk-jrdr7d31.js:6:14272 -> :6:12790 -> processTicksAndRejections"
+  },
+  "source": "official unmodified opencode-ai 1.18.35 CLI; actual logs and exported root session"
+}

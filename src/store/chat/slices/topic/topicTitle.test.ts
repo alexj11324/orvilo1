@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveTopicTitleModel, resolveTopicTitleSource, sliceTopicTitle } from './topicTitle';
+import {
+  isExternalAgentRuntime,
+  resolveTopicTitleModel,
+  resolveTopicTitleSource,
+  sliceTopicTitle,
+} from './topicTitle';
+
+describe('isExternalAgentRuntime', () => {
+  it('treats the built-in orvilo runtime and a missing type as not external', () => {
+    expect(isExternalAgentRuntime('orvilo')).toBe(false);
+    expect(isExternalAgentRuntime(undefined)).toBe(false);
+    expect(isExternalAgentRuntime(null)).toBe(false);
+  });
+
+  it('treats any CLI/ACP runtime as external', () => {
+    expect(isExternalAgentRuntime('claude-code')).toBe(true);
+    expect(isExternalAgentRuntime('codex')).toBe(true);
+  });
+});
 
 describe('resolveTopicTitleModel', () => {
   it('uses the built-in agent model and provider', () => {

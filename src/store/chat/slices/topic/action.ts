@@ -71,7 +71,7 @@ import { type TopicData } from './initialState';
 import { type ChatTopicDispatch } from './reducer';
 import { topicReducer } from './reducer';
 import { topicSelectors } from './selectors';
-import { resolveTopicTitleSource, sliceTopicTitle } from './topicTitle';
+import { isExternalAgentRuntime, resolveTopicTitleSource, sliceTopicTitle } from './topicTitle';
 
 const n = setNamespace('t');
 
@@ -397,7 +397,10 @@ export class ChatTopicActionImpl {
     const titleSource = resolveTopicTitleSource(
       agentId
         ? {
-            heterogeneous: agentByIdSelectors.isAgentHeterogeneousById(agentId)(agentState),
+            heterogeneous: isExternalAgentRuntime(
+              agentByIdSelectors.getAgencyConfigById(agentId)(agentState)?.heterogeneousProvider
+                ?.type,
+            ),
             model: agentConfig?.model,
             provider: agentConfig?.provider,
           }

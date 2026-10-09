@@ -3501,6 +3501,36 @@ describe('topic action', () => {
         expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: expect.any(String) });
       });
 
+      it('names with the built-in agent model even though it carries the orvilo runtime type', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+              model: 'deepseek-v4-flash',
+              provider: 'deepseek',
+            } as any,
+          },
+        });
+        const result = await seedTopic('');
+        const updateTopicSpy = vi
+          .spyOn(result.current, 'internal_updateTopic')
+          .mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON').mockResolvedValue({
+          data: { title: '简单问候' },
+          tracingId: 'tracing-1',
+        } as any);
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ model: 'deepseek-v4-flash', provider: 'deepseek' }),
+          expect.anything(),
+        );
+        expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: '简单问候' });
+      });
+
       it('never calls a cloud model for a heterogeneous agent', async () => {
         useAgentStore.setState({
           agentMap: {

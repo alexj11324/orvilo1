@@ -122,6 +122,10 @@ profile. For an Electron instance already running with CDP on port 9263, use
 `bun run dev:desktop:login-local`; set `ORVILO_DESKTOP_CDP_PORT` if it uses a
 different port. Both commands require an HTTP server on literal `localhost`.
 
+These renderer-session helpers do **not** authorize the Electron main process or
+connect an execution device. For real local-agent requests, follow
+[Electron real-model integration](./electron-real-model.md).
+
 ## Ports
 
 | Port | Service                                                  |

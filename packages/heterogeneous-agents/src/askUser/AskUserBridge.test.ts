@@ -37,8 +37,9 @@ describe('AskUserBridge', () => {
       expect(req.data.toolCallId).toMatch(/^[\da-f-]{36}$/);
       expect(JSON.parse(req.data.arguments)).toEqual({ questions: [{ q: 'foo' }] });
 
-      bridge.resolve(req.data.toolCallId, { result: { foo: 'bar' } });
+      expect(bridge.resolve(req.data.toolCallId, { result: { foo: 'bar' } })).toBe(true);
       await expect(pending).resolves.toEqual({ result: { foo: 'bar' } });
+      expect(bridge.resolve(req.data.toolCallId, { result: { foo: 'bar' } })).toBe(false);
     });
 
     it('uses caller-supplied toolCallId as the wire correlation key', async () => {
@@ -73,7 +74,7 @@ describe('AskUserBridge', () => {
       const drain = drainEvents(bridge);
       const pending = bridge.pending({ arguments: {} });
 
-      bridge.resolve('not-a-real-id', { result: 'x' });
+      expect(bridge.resolve('not-a-real-id', { result: 'x' })).toBe(false);
 
       // Promise should still be unresolved — fast-forward past timeout to confirm.
       vi.advanceTimersByTime(10 * 60 * 1000 + 1);

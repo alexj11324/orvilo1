@@ -1,8 +1,30 @@
-import { describe, expect, it } from 'vitest';
+import { getTestDB } from '@orvilo/database/test-utils';
+import { eq } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceipt';
+import { NotificationModel } from '@/database/models/notification';
+import { TaskModel } from '@/database/models/task';
+import { TaskTopicModel } from '@/database/models/taskTopic';
+import {
+  agents,
+  eventOutbox,
+  notifications,
+  tasks,
+  taskTopics,
+  teams,
+  topics,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '@/database/schemas';
 import type { EventOutboxItem } from '@/database/schemas/eventOutbox';
+import { taskSubscriptions } from '@/database/schemas/workAttention';
 
-import { resolveNotificationTargets } from '../notificationProjection';
+import {
+  NotificationProjectionService,
+  resolveNotificationTargets,
+} from '../notificationProjection';
 
 const event = (overrides: Partial<EventOutboxItem> = {}): EventOutboxItem =>
   ({
@@ -74,5 +96,223 @@ describe('resolveNotificationTargets', () => {
         recipientUserId: 'u-2',
       }),
     ]);
+  });
+});
+
+const db = await getTestDB();
+describe('real Issue notification producers and projection', () => {
+  const wsId = 'notification-projection-workspace';
+  const owner = 'projection-owner';
+  const author = 'projection-author';
+  const subscriber = 'projection-subscriber';
+  const mentioned = 'projection-mentioned';
+  const outsider = 'projection-outsider';
+
+  beforeEach(async () => {
+    await db.delete(eventOutbox);
+    await db.delete(users);
+    await db
+      .insert(users)
+      .values([owner, author, subscriber, mentioned, outsider].map((id) => ({ id })));
+    await db.insert(workspaces).values({
+      id: wsId,
+      name: 'Notification projection',
+      primaryOwnerId: owner,
+      slug: 'notification-projection',
+    });
+    await db
+      .insert(workspaceMembers)
+      .values(
+        [owner, author, subscriber, mentioned].map((userId) => ({ userId, workspaceId: wsId })),
+      );
+    await db.insert(tasks).values({
+      assigneeUserId: author,
+      createdByUserId: owner,
+      id: 'projection-issue',
+      identifier: 'T-1',
+      instruction: 'Work',
+      name: 'Original Issue',
+      seq: 1,
+      workspaceId: wsId,
+    });
+    await db
+      .insert(taskSubscriptions)
+      .values({ taskId: 'projection-issue', userId: subscriber, workspaceId: wsId });
+  });
+  afterEach(async () => {
+    await db.delete(eventOutbox);
+    await db.delete(users);
+  });
+
+  const project = async () => {
+    const rows = await db.select().from(eventOutbox);
+    for (const row of rows)
+      await new EventConsumerReceiptModel(db).fanOut(db, {
+        eventId: row.eventId,
+        outboxId: row.id,
+      });
+    await new NotificationProjectionService(db).drainPending();
+  };
+  const feed = (userId: string) =>
+    new NotificationModel(db, userId, { workspaceId: wsId }).listFeed();
+
+  it('notifies creator, subscriber and authorized mentions once, excludes the actor and arbitrary mention ids', async () => {
+    const comment = await new TaskModel(db, author, wsId).addComment({
+      authorUserId: author,
+      content: 'Please review this',
+      editorData: {
+        root: {
+          children: [mentioned, outsider, author].map((id) => ({
+            metadata: { id, type: 'member' },
+            type: 'mention',
+          })),
+        },
+      },
+      taskId: 'projection-issue',
+      userId: author,
+    });
+    const [produced] = await db.select().from(eventOutbox);
+    expect(produced).toMatchObject({
+      aggregateId: 'projection-issue',
+      payload: { commentId: comment.id },
+      workspaceId: wsId,
+    });
+    await project();
+    await project();
+    expect(await feed(owner)).toHaveLength(1);
+    expect(await feed(subscriber)).toHaveLength(1);
+    expect(await feed(mentioned)).toMatchObject([
+      { resourceId: 'projection-issue', type: 'mention' },
+    ]);
+    expect(await feed(author)).toEqual([]);
+    expect(await feed(outsider)).toEqual([]);
+  });
+
+  it('projects manual and scheduled Agent completion without excluding its human owner or changing Issue status', async () => {
+    await db
+      .insert(agents)
+      .values({ id: 'projection-agent', title: 'Codex', userId: owner, workspaceId: wsId });
+    for (const [index, trigger] of ['manual', 'schedule'].entries()) {
+      const topicId = `projection-topic-${index}`;
+      await db
+        .insert(topics)
+        .values({ agentId: 'projection-agent', id: topicId, userId: owner, workspaceId: wsId });
+      await db.insert(taskTopics).values({
+        operationId: `projection-op-${index}`,
+        seq: index + 1,
+        taskId: 'projection-issue',
+        topicId,
+        trigger: trigger as 'manual' | 'schedule',
+        userId: owner,
+        workspaceId: wsId,
+      });
+      const model = new TaskTopicModel(db, owner, wsId);
+      await model.updateStatus('projection-issue', topicId, 'completed');
+      await model.updateStatus('projection-issue', topicId, 'completed');
+    }
+    expect(await db.select().from(eventOutbox)).toHaveLength(2);
+    await project();
+    expect(await feed(owner)).toHaveLength(2);
+    expect(await feed(subscriber)).toHaveLength(2);
+    expect(await feed(author)).toHaveLength(2);
+    expect((await feed(owner))[0]).toMatchObject({
+      metadata: { agent: { id: 'projection-agent', name: 'Codex' } },
+      resourceId: 'projection-issue',
+      type: 'agent_run_completed',
+    });
+    expect(
+      (await db.select().from(tasks).where(eq(tasks.id, 'projection-issue')))[0].workflowCategory,
+    ).toBe('backlog');
+  });
+
+  it('only notifies newly added mentions on edits and keeps a deleted comment out of Inbox', async () => {
+    const model = new TaskModel(db, author, wsId);
+    const editorData = (ids: string[]) => ({
+      root: { children: ids.map((id) => ({ metadata: { id, type: 'member' }, type: 'mention' })) },
+    });
+    const comment = await model.addComment({
+      authorUserId: author,
+      content: 'First note',
+      editorData: editorData([mentioned]),
+      taskId: 'projection-issue',
+      userId: author,
+    });
+    await model.updateComment(comment.id, 'Updated note', {
+      editorData: editorData([mentioned, subscriber]),
+    });
+    await project();
+    expect(await feed(mentioned)).toMatchObject([
+      { activityVersion: 1, content: 'First note', type: 'mention' },
+    ]);
+    expect((await feed(subscriber)).map((row) => row.type).sort()).toEqual([
+      'mention',
+      'task_comment',
+    ]);
+    expect(await feed(owner)).toMatchObject([{ activityVersion: 1 }]);
+    const removed = await model.addComment({
+      authorUserId: author,
+      content: 'Removed before projection',
+      taskId: 'projection-issue',
+      userId: author,
+    });
+    await model.deleteComment(removed.id);
+    await project();
+    expect(await feed(owner)).toMatchObject([{ activityVersion: 1 }]);
+  });
+
+  it('drops suspended and unsubscribed recipients and respects a private Issue ACL', async () => {
+    await db
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(eq(workspaceMembers.userId, mentioned));
+    await db
+      .update(taskSubscriptions)
+      .set({ unsubscribedAt: new Date() })
+      .where(eq(taskSubscriptions.userId, subscriber));
+    const model = new TaskModel(db, author, wsId);
+    await model.addComment({
+      authorUserId: author,
+      content: 'Public note',
+      editorData: {
+        root: { children: [{ metadata: { id: mentioned, type: 'member' }, type: 'mention' }] },
+      },
+      taskId: 'projection-issue',
+      userId: author,
+    });
+    await project();
+    expect(await feed(owner)).toHaveLength(1);
+    expect(await feed(mentioned)).toEqual([]);
+    expect(await feed(subscriber)).toEqual([]);
+    // Workspace Issues are shared; a private Team the recipient is not in is the Issue ACL.
+    await db.insert(teams).values({
+      id: 'projection-private-team',
+      key: 'PRV',
+      name: 'Private team',
+      visibility: 'private',
+      workspaceId: wsId,
+    });
+    await db
+      .update(tasks)
+      .set({ teamId: 'projection-private-team' })
+      .where(eq(tasks.id, 'projection-issue'));
+    await db
+      .update(taskSubscriptions)
+      .set({ unsubscribedAt: null })
+      .where(eq(taskSubscriptions.userId, subscriber));
+    await new TaskModel(db, owner, wsId).addComment({
+      authorUserId: owner,
+      content: 'Private note',
+      editorData: {
+        root: { children: [{ metadata: { id: subscriber, type: 'member' }, type: 'mention' }] },
+      },
+      taskId: 'projection-issue',
+      userId: owner,
+    });
+    await project();
+    expect(await feed(subscriber)).toEqual([]);
+    // The projection itself must not store the row; the feed's read ACL is a second gate.
+    expect(
+      await db.select().from(notifications).where(eq(notifications.userId, subscriber)),
+    ).toEqual([]);
   });
 });

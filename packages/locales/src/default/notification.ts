@@ -1,4 +1,9 @@
 export default {
+  'inbox.delete': 'Delete notification',
+  'inbox.toast.deleted': 'Notification deleted',
+  'inbox.question.unavailable': 'This Agent question is no longer available.',
+  'inbox.question.replyFailed':
+    'Could not send this reply to the original Agent session. Your answer is kept; refresh the question and try again.',
   'agent_cron_job_completed': 'Your scheduled task "{{jobName}}" completed successfully.',
   'agent_cron_job_completed_title': 'Scheduled task completed',
   'agent_cron_job_failed':

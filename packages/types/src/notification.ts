@@ -29,6 +29,8 @@ export interface NotificationAgent {
 export interface NotificationMetadata {
   actor?: NotificationActor;
   agent?: NotificationAgent;
+  /** The original persisted native question. Inbox mounts its existing form and transport. */
+  nativeIntervention?: NativeInterventionReference;
   /**
    * Link to the resource-transfer request this notification is about. Inbox
    * surfaces use it to pair the immutable row with the live request: while
@@ -36,4 +38,13 @@ export interface NotificationMetadata {
    * and once resolved the row stands alone as the historical record.
    */
   transfer?: { requestId: string };
+}
+
+export interface NativeInterventionReference {
+  agentId: string;
+  messageId: string;
+  operationId: string;
+  threadId?: string | null;
+  toolCallId: string;
+  topicId: string;
 }

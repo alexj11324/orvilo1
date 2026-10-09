@@ -9,13 +9,15 @@ import { createContext, use } from 'react';
  * - cloud-sandbox: provides none (renders without loading state, open file actions)
  */
 export interface ToolRenderCapabilities {
+  canOpenFile?: (path: string) => boolean;
+  canOpenFolder?: (path: string) => boolean;
   /** Display a path relative to working directory. Returns the path as-is if not provided. */
   displayRelativePath?: (path: string) => string;
   /** Whether a tool call is currently loading for a given messageId */
   isLoading?: (messageId: string) => boolean;
-  /** Open a file in the OS file manager */
+  /** Preview a file using the execution host. */
   openFile?: (path: string) => void;
-  /** Open the containing folder of a file in the OS file manager */
+  /** Reveal a file or directory in the execution workspace explorer */
   openFolder?: (path: string) => void;
 }
 

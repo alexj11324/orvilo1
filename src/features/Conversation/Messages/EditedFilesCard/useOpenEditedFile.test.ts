@@ -6,6 +6,7 @@ import {
   isWithinWorkingDirectory,
   planFilesystemOpen,
   resolveEntryPath,
+  resolveWorkingTreePath,
 } from './useOpenEditedFile';
 
 describe('resolveEntryPath', () => {
@@ -187,5 +188,21 @@ describe('planFilesystemOpen', () => {
         workingDirectory: '\\\\server\\share',
       }),
     ).toEqual({});
+  });
+});
+
+describe('resolveWorkingTreePath', () => {
+  it('reveals normalized files and directories using existing tree IDs', () => {
+    expect(resolveWorkingTreePath('/repo/src/../a.ts', '/repo')).toBe('a.ts');
+    expect(resolveWorkingTreePath('src', '/repo')).toBe('src');
+    expect(resolveWorkingTreePath('/repo', '/repo')).toBe('');
+  });
+  it('rejects paths outside the execution workspace', () => {
+    expect(resolveWorkingTreePath('../elsewhere/a.ts', '/repo')).toBeUndefined();
+    expect(resolveWorkingTreePath('/repository/a.ts', '/repo')).toBeUndefined();
+    expect(resolveWorkingTreePath('/repo/a.ts', '')).toBeUndefined();
+  });
+  it('handles Windows separators and case-insensitive roots', () => {
+    expect(resolveWorkingTreePath('C:\\Repo\\src\\a.ts', 'c:\\repo')).toBe('src/a.ts');
   });
 });

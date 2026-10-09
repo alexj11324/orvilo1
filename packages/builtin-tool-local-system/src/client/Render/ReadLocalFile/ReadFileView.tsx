@@ -80,7 +80,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const ReadFileView = memo<ReadFileState>(
   ({ filename: filenameProp, path, fileType, content, images }) => {
     const { t } = useTranslation('tool');
-    const { openFile, openFolder, displayRelativePath } = useToolRenderCapabilities();
+    const { canOpenFile, canOpenFolder, openFile, openFolder, displayRelativePath } =
+      useToolRenderCapabilities();
     const filename = filenameProp || path.split('/').pop() || path;
 
     // Reading an image is best shown as the image itself: no card, no header, no path.
@@ -106,19 +107,21 @@ const ReadFileView = memo<ReadFileState>(
 
     const isHtml = isHtmlFile({ fileName: filename, fileType, path });
 
-    const handleOpenFile = openFile
-      ? (e: React.MouseEvent) => {
-          e.stopPropagation();
-          openFile(path);
-        }
-      : undefined;
+    const handleOpenFile =
+      openFile && (canOpenFile?.(path) ?? true)
+        ? (e: React.MouseEvent) => {
+            e.stopPropagation();
+            openFile(path);
+          }
+        : undefined;
 
-    const handleOpenFolder = openFolder
-      ? (e: React.MouseEvent) => {
-          e.stopPropagation();
-          openFolder(path);
-        }
-      : undefined;
+    const handleOpenFolder =
+      openFolder && (canOpenFolder?.(path) ?? true)
+        ? (e: React.MouseEvent) => {
+            e.stopPropagation();
+            openFolder(path);
+          }
+        : undefined;
 
     const displayPath = displayRelativePath ? displayRelativePath(path) : path;
 

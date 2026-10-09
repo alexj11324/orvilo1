@@ -36,6 +36,8 @@ import TypoBar from '@/features/ChatInput/TypoBar';
 import VoiceMessage from '@/features/ChatInput/VoiceMessage';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
+import { AgentInfo } from './AgentInfo';
+
 interface ComposerProps {
   controlBarSlot?: ReactNode;
   extraContent?: ReactNode;
@@ -170,6 +172,7 @@ export default function Composer({
                       className="w-96 max-w-[calc(100vw-2rem)] space-y-3"
                       side="top"
                     >
+                      <AgentInfo />
                       {controlBarSlot ?? (showControlBar && <ControlBar />)}
                       <div className="flex flex-wrap items-center gap-2">
                         {(controlBarSlot || !showControlBar) && <ContextWindow />}

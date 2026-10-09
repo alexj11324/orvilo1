@@ -1,4 +1,18 @@
 export default {
+  'aiElementsMore.audioError': 'Unable to play this audio. Check the file or try again.',
+  'aiElementsMore.copyHash': 'Copy commit hash',
+  'aiElementsMore.copyStack': 'Copy stack trace',
+  'aiElementsMore.rawOutput': 'Original {{stream}} output',
+  'aiElementsMore.passed': '{{count}} passed',
+  'aiElementsMore.failed': '{{count}} failed',
+  'aiElementsMore.skipped': '{{count}} skipped',
+  'aiElementsMore.instructions': 'Instructions',
+  'aiElementsMore.tools': 'Tools',
+  'aiElementsMore.outputSchema': 'Output schema',
+  'aiElementsMore.noDescription': 'No description',
+  'aiElementsMore.noStackFrames': 'No stack frames',
+  'aiElementsMore.files': 'Files',
+
   'chatbot.welcome': 'How can I help you?',
   'chatbot.description': 'Ask a question or choose a suggestion to get started.',
   'creation.runtime.title': 'Configure Agent',

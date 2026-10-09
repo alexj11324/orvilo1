@@ -1,3 +1,4 @@
 export { default as GitHubRender } from './GitHub';
 export { default as LinearRender } from './Linear';
 export { default as RunCommandRender } from './RunCommand';
+export { StructuredOutput, useStructuredOutput } from './RunCommand/StructuredOutput';

@@ -1,0 +1,53 @@
+{
+  "audio-dark": {
+    "count": 1,
+    "width": 382,
+    "theme": "dark"
+  },
+  "audio-light": {
+    "count": 1,
+    "width": 382,
+    "theme": "light"
+  },
+  "commit-dark": {
+    "count": 1,
+    "width": 449,
+    "theme": "dark"
+  },
+  "commit-light": {
+    "count": 1,
+    "width": 449,
+    "theme": "light"
+  },
+  "errors": [],
+  "files-dark": {
+    "count": 1,
+    "width": 197,
+    "theme": "dark"
+  },
+  "files-light": {
+    "count": 1,
+    "width": 197,
+    "theme": "light"
+  },
+  "stack-dark": {
+    "count": 1,
+    "width": 528,
+    "theme": "dark"
+  },
+  "stack-light": {
+    "count": 1,
+    "width": 528,
+    "theme": "light"
+  },
+  "tests-dark": {
+    "count": 1,
+    "width": 344,
+    "theme": "dark"
+  },
+  "tests-light": {
+    "count": 1,
+    "width": 344,
+    "theme": "light"
+  }
+}

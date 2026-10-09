@@ -3,6 +3,9 @@ import { type ChatPluginPayload } from '@orvilo/types';
 import { safeParseJSON } from '@orvilo/utils';
 import { memo } from 'react';
 
+import { LocalToolCapabilities } from './LocalToolCapabilities';
+import { normalizeOpenCodeRender } from './normalizeOpenCode';
+
 interface CustomRenderProps {
   content: string;
   /**
@@ -23,18 +26,29 @@ const CustomRender = memo<CustomRenderProps>(
 
     if (!Render) return null;
 
-    return (
+    const input =
+      plugin?.identifier === 'opencode'
+        ? normalizeOpenCodeRender(safeParseJSON(plugin?.arguments), pluginState, plugin.apiName)
+        : { args: safeParseJSON(plugin?.arguments), pluginState };
+
+    const result = (
       <div className="flex flex-col gap-3" id={toolCallId} style={{ width: '100%' }}>
         <Render
           apiName={plugin?.apiName}
-          args={safeParseJSON(plugin?.arguments)}
+          args={input.args}
           content={content}
           identifier={plugin?.identifier}
           messageId={messageId!}
-          pluginState={pluginState}
+          pluginState={input.pluginState}
           toolCallId={toolCallId}
         />
       </div>
+    );
+
+    return plugin?.identifier === 'orvilo-local-system' || plugin?.identifier === 'opencode' ? (
+      <LocalToolCapabilities>{result}</LocalToolCapabilities>
+    ) : (
+      result
     );
   },
 );

@@ -1,3 +1,4 @@
+import { normalize } from 'pathe';
 import { useCallback } from 'react';
 
 import { isDesktop } from '@/const/version';
@@ -100,6 +101,15 @@ export const isWithinWorkingDirectory = (resolvedPath: string, workingDirectory:
   return file === root || file.startsWith(`${root}/`);
 };
 
+/** Relative tree IDs must stay within the execution workspace, including dot segments. */
+export const resolveWorkingTreePath = (path: string, workingDirectory: string) => {
+  const resolved = resolveEntryPath(path, workingDirectory);
+  if (!workingDirectory || !isWithinWorkingDirectory(resolved, workingDirectory)) return undefined;
+  const root = normalize(workingDirectory.replaceAll('\\', '/')).replace(/\/$/, '');
+  const file = normalize(resolved.replaceAll('\\', '/'));
+  return file.slice(root.length).replace(/^\//, '');
+};
+
 /**
  * A deleted file has nothing to preview on ANY transport (the sandbox read and
  * both filesystem hosts would all error) — the deletion diff stays the row's
@@ -171,7 +181,9 @@ export const useOpenEditedFile = () => {
   const filesystemAvailable = (effectiveTarget === 'local' && isDesktop) || isDeviceMode;
 
   return useCallback(
-    (entry: OperationEditedFile): (() => void) | undefined => {
+    (
+      entry: Pick<OperationEditedFile, 'kind' | 'path' | 'sandboxBacked'>,
+    ): (() => void) | undefined => {
       if (!canPreviewEditedFile(entry)) return undefined;
       if (entry.sandboxBacked) {
         if (!activeTopicId) return undefined;

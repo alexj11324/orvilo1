@@ -23,6 +23,7 @@ import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import { getRunCommandDisplayCommand } from '../../utils/runCommand';
 import AnsiOutput from './AnsiOutput';
+import { StructuredOutput, useStructuredOutput } from './StructuredOutput';
 
 interface RunCommandArgs {
   background?: boolean;
@@ -34,9 +35,11 @@ interface RunCommandArgs {
 const RunCommand = memo<BuiltinRenderProps<RunCommandArgs, RunCommandState>>(
   ({ args, content, pluginState }) => {
     const { t } = useTranslation('chat');
-    const output = pluginState?.stdout || pluginState?.output || content;
+    const output = pluginState?.stdout ?? pluginState?.output ?? content;
     const stderr = pluginState?.stderr;
     const command = getRunCommandDisplayCommand(args?.command);
+    const stdoutView = useStructuredOutput(command, output || '');
+    const stderrView = useStructuredOutput(command, stderr || '');
 
     return (
       <div className="flex min-w-0 flex-col gap-2">
@@ -60,21 +63,29 @@ const RunCommand = memo<BuiltinRenderProps<RunCommandArgs, RunCommandState>>(
             </Snippet>
           )}
           {[
-            ['stdout', output],
-            ['stderr', stderr?.trim() ? stderr : undefined],
-          ].map(([label, text]) =>
+            { label: 'stdout', text: output, view: stdoutView },
+            { label: 'stderr', text: stderr?.trim() ? stderr : undefined, view: stderrView },
+          ].map(({ label, text, view }) =>
             text ? (
-              <Terminal autoScroll={false} key={label} output={text}>
-                <TerminalHeader>
-                  <TerminalTitle>{label}</TerminalTitle>
-                  <TerminalActions>
-                    <TerminalCopyButton />
-                  </TerminalActions>
-                </TerminalHeader>
-                <TerminalContent className="max-h-[200px] p-2 text-xs">
-                  <AnsiOutput text={text} />
-                </TerminalContent>
-              </Terminal>
+              <div className="space-y-2" key={label}>
+                <StructuredOutput view={view} />
+                <details open={!(view.tests || view.commits || view.stack)}>
+                  <summary className="cursor-pointer text-xs text-muted-foreground">
+                    {t('aiElementsMore.rawOutput', { stream: label })}
+                  </summary>
+                  <Terminal autoScroll={false} output={text}>
+                    <TerminalHeader>
+                      <TerminalTitle>{label}</TerminalTitle>
+                      <TerminalActions>
+                        <TerminalCopyButton />
+                      </TerminalActions>
+                    </TerminalHeader>
+                    <TerminalContent className="max-h-[200px] p-2 text-xs">
+                      <AnsiOutput text={text} />
+                    </TerminalContent>
+                  </Terminal>
+                </details>
+              </div>
             ) : null,
           )}
         </div>

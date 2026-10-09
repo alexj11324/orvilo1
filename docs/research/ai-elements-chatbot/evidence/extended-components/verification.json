@@ -1,0 +1,32 @@
+{
+  "agent": {
+    "note": "Initial action run preceded the runtime-label fix. Final light/dark screenshots verify the opencode label; see acceptance.md."
+  },
+  "audio": {
+    "duration": 8,
+    "currentTime": 0.259751,
+    "paused": true,
+    "playPause": true,
+    "afterSeek": 1.392725
+  },
+  "commit": {
+    "expanded": true,
+    "copyClicked": true,
+    "text": "Render structured tool results\n12345678\nAcceptance Fixture <fixture@example.com>\n10/9/2026\nRender structured tool results\n\nSynthetic commit metadata; no repository mutation."
+  },
+  "files": {
+    "count": 2,
+    "text": "chat.ts\n0.1 KB\nreports"
+  },
+  "pageErrors": [],
+  "stack": {
+    "expanded": true,
+    "copyClicked": true,
+    "text": "TypeError\nCannot read properties of undefined\nat renderMessage (/tmp/ai-elements-more-acceptance/chat.ts:24:7)\nat update (/tmp/ai-elements-more-acceptance/chat.ts:40:3)\nat processTicksAndRejections (node:internal/process/task_queues:105:5)"
+  },
+  "tests": {
+    "text": "2 passed\n1 failed\n1 skipped\nchatbot.test.ts\nsends messages\n14ms\npreserves draft\n9ms\nretries upload\n21ms\n\nExpected status 200, received 503\nSynthetic failure for rendering acceptance.\n\nvoice input",
+    "collapsed": "false",
+    "rawVisible": 1
+  }
+}

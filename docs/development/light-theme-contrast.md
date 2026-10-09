@@ -26,3 +26,7 @@ A context row is a parent shown only to place a nested child that matched the qu
 
 - `transition: all 0s` on Issue list rows is the computed serialization of "no transition" (initial `transition-property: all`, `0s` duration; also what `transition: none !important` from the disabled-animation stylesheet reports). Neither the row nor an ancestor declares `transition: all`, so there is nothing to replace.
 - Decorative glyph colours (status icons, the dashed no-update health glyph) are graphics, not text.
+
+## Task manager panel labels
+
+The right AI panel (`AgentTaskManager`) reads the lazily fetched `topic` namespace. On a cold load `t()` returned the raw keys (`taskManager.welcome`, `actions.addNewTopic`, `actions.showTopics`) for several seconds. The welcome line, the topic title fallback and the toolbar titles now wait for react-i18next's `ready` for that namespace and render nothing (no title) until it lands. No render test was added: the change is a `ready` gate, with no pure logic to assert.

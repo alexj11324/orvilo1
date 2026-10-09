@@ -23,7 +23,11 @@ import { serviceModelFormStyles as styles } from './styles';
 
 type ModelAssignmentItemKey = Exclude<
   UserServiceModelConfigKey,
-  'onboardingTaskRecommender' | 'onboardingUnderstanding'
+  | 'generationTopic'
+  | 'historyCompress'
+  | 'onboardingTaskRecommender'
+  | 'onboardingUnderstanding'
+  | 'promptRewrite'
 >;
 
 interface SystemAgentModelItem {

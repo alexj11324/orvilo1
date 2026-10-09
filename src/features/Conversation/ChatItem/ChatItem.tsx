@@ -19,6 +19,7 @@ const ChatItem = memo<ChatItemProps>(
   ({
     onAvatarClick,
     avatarProps,
+    assistantAvatar,
     customAvatarRender,
     afterActions,
     actionAddon,
@@ -58,6 +59,7 @@ const ChatItem = memo<ChatItemProps>(
     const avatarContent = (
       <Avatar
         alt={avatarProps?.alt || agentDisplayName(avatar, 'avatar')}
+        assistantAvatar={assistantAvatar}
         loading={loading}
         shape={'square'}
         onClick={onAvatarClick}

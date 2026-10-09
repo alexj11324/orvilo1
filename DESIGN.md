@@ -236,3 +236,15 @@ Reduce anxiety and restore control without being sentimental. Default to 80% inf
 3. Give the next action (button or path).
 
 Avoid preachy encouragement ("don't worry"), grand narratives, and over-anthropomorphizing ("I understand you", "I'll always remember you"). The stance: Agents accelerate output, but the user owns the judgment and the final decision.
+
+### Libraries.dev conversation effects experiment
+
+The user-requested `feat/orbs-chat` experiment directly reuses Libraries.dev's
+Thinking Orbs, Border Beam and Bot Avatars rather than approximating their visuals.
+Within conversation AI status, composer glow and default assistant avatar only,
+upstream particle geometry, animation and effect colors are permitted. Existing
+application theme, input layout, custom identity and accessible controls remain
+owned by Orvilo. This scoped exception also permits `thinking-orbs` in the two
+conversation status components despite the inherited ESLint preference for
+LobeHub Spin. It does not authorize replacing unrelated spinners or user avatars.
+Evidence and state contract: `docs/research/thinking-orbs/implementation.md`.

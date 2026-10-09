@@ -514,6 +514,7 @@ const ChatInput = memo<ChatInputProps>(
               the next message becomes the goal and the placeholder explains that state. */}
           <DesktopChatInput
             actionBarStyle={actionBarStyle}
+            beamActive={isInputLoading}
             borderRadius={12}
             compact={compact}
             controlBarInCard={controlBarInCard}

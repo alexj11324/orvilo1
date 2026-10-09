@@ -17,6 +17,8 @@ export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 
   actions?: ReactNode;
   actionsWrapWidth?: number;
   afterActions?: ReactNode;
+  /** Opt in only for assistant identities; users and tool rows retain their own fallback. */
+  assistantAvatar?: boolean;
   avatar: ChatItemAvatarMeta;
   avatarProps?: AvatarProps;
   belowMessage?: ReactNode;

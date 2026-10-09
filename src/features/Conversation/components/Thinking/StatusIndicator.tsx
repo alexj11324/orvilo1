@@ -1,8 +1,8 @@
 import { cssVar } from 'antd-style';
 import { AtomIcon } from 'lucide-react';
 import { memo } from 'react';
-
-import { Spinner } from '@/components/ui/spinner';
+// eslint-disable-next-line no-restricted-imports -- User-requested Libraries.dev visual replacement; keep the upstream orb implementation.
+import { ThinkingOrb } from 'thinking-orbs';
 
 interface StatusIndicatorProps {
   showDetail?: boolean;
@@ -13,7 +13,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(({ thinking, showDetail }) =>
   let icon;
 
   if (thinking) {
-    icon = <Spinner className="text-muted-foreground" />;
+    icon = <ThinkingOrb aria-hidden size={20} state="solving" />;
   } else {
     icon = <AtomIcon color={showDetail ? cssVar.purple : cssVar.colorTextDescription} />;
   }

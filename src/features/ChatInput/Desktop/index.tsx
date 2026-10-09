@@ -30,6 +30,7 @@ import { useTopicDrop } from '../InputEditor/ReferTopic/useTopicDrop';
 import { useWorkspaceFileDrop } from '../InputEditor/useWorkspaceFileDrop';
 import SendArea from '../SendArea';
 import TypoBar from '../TypoBar';
+import ComposerBeam from './ComposerBeam';
 import ContextContainer from './ContextContainer';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -84,6 +85,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 interface DesktopChatInputProps extends ActionToolbarProps {
   actionBarStyle?: React.CSSProperties;
+  /** Conversation-only busy effect; undefined leaves other editor surfaces unchanged. */
+  beamActive?: boolean;
   /**
    * Collapse the editor to a single bordered row by dropping the action bar footer.
    * Send still works through the Enter keybinding; the rest of the chrome
@@ -141,6 +144,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     inputContainerProps,
     extentHeaderContent,
     actionBarStyle,
+    beamActive,
     borderRadius,
     extraActionItems,
     dropdownPlacement,
@@ -259,59 +263,61 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <ChatInput
-          data-testid="chat-input"
-          defaultHeight={chatInputHeight || 32}
-          fullscreen={expand}
-          maxHeight={320}
-          minHeight={36}
-          resize={true}
-          slashMenuRef={slashMenuRef}
-          footer={
-            compact ? undefined : (
-              <>
-                <ChatInputActionBar
-                  left={loadingLeftSlot ?? leftSlot}
-                  style={actionBarStyle ?? { paddingRight: 8 }}
-                  right={
-                    loadingRightSlot ??
-                    rightContent ??
-                    (sendAreaPrefix ? (
-                      <div className="flex flex-row items-center gap-1.5">
-                        {sendAreaPrefix}
+        <ComposerBeam active={beamActive} fullscreen={expand}>
+          <ChatInput
+            data-testid="chat-input"
+            defaultHeight={chatInputHeight || 32}
+            fullscreen={expand}
+            maxHeight={320}
+            minHeight={36}
+            resize={true}
+            slashMenuRef={slashMenuRef}
+            footer={
+              compact ? undefined : (
+                <>
+                  <ChatInputActionBar
+                    left={loadingLeftSlot ?? leftSlot}
+                    style={actionBarStyle ?? { paddingRight: 8 }}
+                    right={
+                      loadingRightSlot ??
+                      rightContent ??
+                      (sendAreaPrefix ? (
+                        <div className="flex flex-row items-center gap-1.5">
+                          {sendAreaPrefix}
+                          <SendArea hideContextWindow={hasControlBar} />
+                        </div>
+                      ) : (
                         <SendArea hideContextWindow={hasControlBar} />
-                      </div>
-                    ) : (
-                      <SendArea hideContextWindow={hasControlBar} />
-                    ))
-                  }
-                />
-                {controlBarInsideCard && controlBarNode ? (
-                  <div className={styles.controlBarInCard}>{controlBarNode}</div>
-                ) : null}
-              </>
-            )
-          }
-          header={
-            <div className="flex flex-col gap-0">
-              {extentHeaderContent}
-              {showTypoBar && <TypoBar />}
-              {contextContainerNode}
-            </div>
-          }
-          onSizeChange={(height) => {
-            updateSystemStatus({ chatInputHeight: height });
-          }}
-          {...inputContainerProps}
-          className={cx(expand && styles.inputFullscreen, inputContainerProps?.className)}
-        >
-          <InputEditor
-            defaultRows={editorDefaultRows}
-            initialContent={initialContent}
-            placeholder={placeholder}
-            placeholderVariant={placeholderVariant}
-          />
-        </ChatInput>
+                      ))
+                    }
+                  />
+                  {controlBarInsideCard && controlBarNode ? (
+                    <div className={styles.controlBarInCard}>{controlBarNode}</div>
+                  ) : null}
+                </>
+              )
+            }
+            header={
+              <div className="flex flex-col gap-0">
+                {extentHeaderContent}
+                {showTypoBar && <TypoBar />}
+                {contextContainerNode}
+              </div>
+            }
+            onSizeChange={(height) => {
+              updateSystemStatus({ chatInputHeight: height });
+            }}
+            {...inputContainerProps}
+            className={cx(expand && styles.inputFullscreen, inputContainerProps?.className)}
+          >
+            <InputEditor
+              defaultRows={editorDefaultRows}
+              initialContent={initialContent}
+              placeholder={placeholder}
+              placeholderVariant={placeholderVariant}
+            />
+          </ChatInput>
+        </ComposerBeam>
         {controlBarInsideCard ? null : controlBarNode}
         {showFootnote && !expand && (
           <div

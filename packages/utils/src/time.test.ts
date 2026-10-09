@@ -345,6 +345,12 @@ describe('time utilities', () => {
   });
 
   describe('formatAbsoluteDate', () => {
+    it('formats the Unix epoch instead of treating numeric zero as missing', () => {
+      const epoch = dayjs(0);
+      expect(formatAbsoluteDate(0)).toBe(epoch.format('YYYY/MM/DD'));
+      expect(formatAbsoluteDateTime(0)).toBe(epoch.format('YYYY/MM/DD HH:mm'));
+    });
+
     it('formats dates as YYYY/MM/DD without month names', () => {
       expect(formatAbsoluteDate(new Date(2026, 8, 5))).toBe('2026/09/05');
       expect(formatAbsoluteDate('2026-09-23T10:00:00')).toBe('2026/09/23');

@@ -162,7 +162,10 @@ const viewIcon = (view: SavedViewItem) =>
 
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (
-    <div className="text-[13px] text-muted-foreground" title={formatAbsoluteDateTime(value)}>
+    <div
+      className="text-[13px] text-muted-foreground" // linear-token-override: retain the existing dense date-cell typography.
+      title={formatAbsoluteDateTime(value)}
+    >
       {dayjs(value).fromNow()}
     </div>
   ) : (

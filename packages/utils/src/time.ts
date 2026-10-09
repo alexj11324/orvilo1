@@ -68,14 +68,14 @@ export const ABSOLUTE_DATE_TIME_FORMAT = 'YYYY/MM/DD HH:mm';
  * missing or unparseable input so callers can render it unconditionally.
  */
 export const formatAbsoluteDate = (time?: string | Date | number | Dayjs | null): string => {
-  if (!time) return '';
+  if (time === undefined || time === null || time === '') return '';
   const date = dayjs(time);
   return date.isValid() ? date.format(ABSOLUTE_DATE_FORMAT) : '';
 };
 
 /** Format an absolute date and time as `YYYY/MM/DD HH:mm`; empty for bad input. */
 export const formatAbsoluteDateTime = (time?: string | Date | number | Dayjs | null): string => {
-  if (!time) return '';
+  if (time === undefined || time === null || time === '') return '';
   const date = dayjs(time);
   return date.isValid() ? date.format(ABSOLUTE_DATE_TIME_FORMAT) : '';
 };

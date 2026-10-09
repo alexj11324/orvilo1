@@ -16,6 +16,7 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import { taskInstructionStyles } from './taskInstructionStyles';
 import { useAttachInstructionFiles } from './useAttachInstructionFiles';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
 
@@ -146,7 +147,7 @@ const TaskInstruction = memo(() => {
         onCollapsedChange={handleCollapsedChange}
         onOverflowChange={setOverflowing}
       >
-        <div onFocus={handleFocus}>
+        <div className={taskInstructionStyles.content} onFocus={handleFocus}>
           <EditorCanvas
             contentRevision={instructionRevision}
             // Linear's issue body runs 15px at a slightly darker weight than

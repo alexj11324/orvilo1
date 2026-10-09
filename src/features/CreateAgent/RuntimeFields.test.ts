@@ -23,6 +23,23 @@ const state = vi.hoisted(() => ({
   reset: vi.fn(),
   scanState: { agents: { codex: { available: true } }, status: 'success' } as AgentScanState,
 }));
+const publicDevice = Object.freeze({
+  channels: [],
+  defaultCwd: null,
+  deviceId: 'public-device',
+  enroller: null,
+  friendlyName: null,
+  hostname: null,
+  identitySource: null,
+  lastSeen: '2026-10-08T00:00:00.000Z',
+  online: true,
+  platform: null,
+  registered: true,
+  scope: 'workspace',
+  visibility: 'public',
+  workingDirs: [],
+} satisfies DeviceListItem);
+
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => undefined,
 }));
@@ -134,14 +151,7 @@ describe('shared Agent runtime form', () => {
 });
 
 it('creates a locked public source in the new workspace using its public device', async () => {
-  const device = {
-    channels: [],
-    deviceId: 'public-device',
-    registered: true,
-    online: true,
-    scope: 'workspace',
-    visibility: 'public',
-  } as DeviceListItem;
+  const device = publicDevice;
   state.host = { deviceId: device.deviceId, isLocal: false, loading: false, device };
   vi.mocked(deviceService.listDevices).mockImplementation(async (scope) =>
     scope === 'new-workspace' ? [device] : [],
@@ -171,14 +181,7 @@ it.each([
 ] as const)(
   'updates a locked %s destination to %s without losing the draft',
   async (initial, next) => {
-    const device = {
-      channels: [],
-      deviceId: 'public-device',
-      registered: true,
-      online: true,
-      scope: 'workspace',
-      visibility: 'public',
-    } as DeviceListItem;
+    const device = publicDevice;
     state.host = { deviceId: device.deviceId, isLocal: false, loading: false, device };
     vi.mocked(deviceService.listDevices).mockResolvedValue([device]);
     state.create.mockImplementation(async (params) => ({

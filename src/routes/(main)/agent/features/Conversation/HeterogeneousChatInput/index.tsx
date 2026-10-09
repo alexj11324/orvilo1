@@ -13,9 +13,9 @@ import { useHeteroAgentCloudConfig } from '@/business/client/hooks/useHeteroAgen
 import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
+import ChatInput from '@/features/AssistantChat/Composer';
 import { type ActionKeys } from '@/features/ChatInput';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
-import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useProviderBindingValidation } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -273,6 +273,8 @@ const HeterogeneousChatInput = memo(() => {
   // workspace preference loads, keep send disabled: the effective target isn't
   // known yet, so neither guard can vouch for the run.
   const inputDisabled =
+    apiModeTargetUnsupported ||
+    apiModeBindingBlocked ||
     isPreferenceLoading ||
     deviceSelectionRequired ||
     (!isConfigured && !isDeviceExecution) ||

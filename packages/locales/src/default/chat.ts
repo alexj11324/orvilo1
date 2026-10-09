@@ -1,4 +1,20 @@
 export default {
+  'assistantUi.welcome': 'How can I help you today?',
+  'assistantUi.welcomeHint': 'Ask a question or describe a task.',
+  'assistantUi.reasoning': 'Reasoning',
+  'assistantUi.approval': 'Awaiting approval',
+  'assistantUi.task': 'Open task',
+  'assistantUi.responseError': 'The response could not be completed.',
+  'assistantUi.compressed': 'Earlier messages',
+  'assistantUi.previousBranch': 'Previous version',
+  'assistantUi.nextBranch': 'Next version',
+  'assistantUi.retry': 'Regenerate response',
+  'assistantUi.scrollBottom': 'Scroll to latest message',
+  'assistantUi.placeholder': 'Write a message\u2026',
+  'assistantUi.attach': 'Attach files',
+  'assistantUi.queue': 'Queue message',
+  'assistantUi.schedule': 'Send later',
+
   'creation.runtime.title': 'Configure Agent',
   'creation.runtime.description':
     'Choose which agent powers the new one — Orvilo AI on one of your machines, or a connected coding agent.',

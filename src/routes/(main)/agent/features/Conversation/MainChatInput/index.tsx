@@ -2,8 +2,8 @@
 
 import { memo, useMemo } from 'react';
 
+import ChatInput from '@/features/AssistantChat/Composer';
 import { type ActionKeys } from '@/features/ChatInput';
-import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';

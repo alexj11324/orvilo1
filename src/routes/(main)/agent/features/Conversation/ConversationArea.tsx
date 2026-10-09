@@ -7,13 +7,12 @@ import { useTranslation } from 'react-i18next';
 
 import { useBusinessConversationAnalytics } from '@/business/client/hooks/useBusinessConversationAnalytics';
 import { Spinner } from '@/components/ui/spinner';
-import AgentHome from '@/features/AgentHome';
 import {
   TopicMigrationPlaceholder,
   useTopicMigrationPending,
 } from '@/features/AgentTransferMigration';
-import ChatMiniMap from '@/features/ChatMiniMap';
-import { ChatList, ConversationProvider } from '@/features/Conversation';
+import AssistantThread from '@/features/AssistantChat/Thread';
+import { ConversationProvider } from '@/features/Conversation';
 import ToolAuthAlert from '@/features/Conversation/AgentWelcome/ToolAuthAlert';
 import { useMessageDeepLink } from '@/features/Conversation/ChatList/hooks/useMessageDeepLink';
 import ComposerDraftReceiver from '@/features/Conversation/ComposerDraftReceiver';
@@ -38,10 +37,9 @@ import { useChatStore } from '@/store/chat';
 import { threadSelectors, topicSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
-import ExamplePrompts from './ExamplePrompts';
 import ExposeMainEditor from './ExposeMainEditor';
 import HeterogeneousChatInput from './HeterogeneousChatInput';
-import InboxAgentLanding, {
+import {
   isInboxAgentRouteTarget,
   shouldShowInboxAgentLanding,
   shouldShowInboxAgentResolving,
@@ -72,7 +70,7 @@ const styles = createStaticStyles(({ css }) => ({
  * ConversationArea
  *
  * Main conversation area component using the new ConversationStore architecture.
- * Uses ChatList from @/features/Conversation and MainChatInput for custom features.
+ * Uses assistant-ui for the thread and composer, retaining domain controls.
  */
 const Conversation = memo(() => {
   const { t } = useTranslation('chat');
@@ -182,76 +180,38 @@ const Conversation = memo(() => {
         replaceMessages(messages, { context: ctx, source: meta?.source });
       }}
     >
-      {showInboxLanding ? (
-        <InboxAgentLanding>
-          <ToolAuthAlert />
-          {isInboxResolving ? (
-            // Neutral loading while the builtin map resolves the real inbox
-            // id — the composer must not send under the `inbox` slug, and the
-            // populated path would flash the deprecated AgentHome welcome.
-            <div
-              aria-label={t('loading', { ns: 'common' })}
-              className="flex flex-col items-center flex-1 justify-center"
-              role={'status'}
-            >
-              <Spinner className="size-5 text-muted-foreground" />
-            </div>
-          ) : (
-            /* The first-agent gate lives at the (main) layout now — while no
-               usable agent exists it covers the whole window, so by the time
-               this renders the composer is always backed by a real agent. */
-            <>
-              {chatInput}
-              {/* Reference state B: the examples row sits inside the same
-                  centered group as the composer, so its appearance lifts the
-                  composer (~91px in the reference) instead of needing a fixed
-                  offset. */}
-              <ExamplePrompts />
-            </>
-          )}
-        </InboxAgentLanding>
-      ) : (
-        <>
-          <SplitDropZone>
-            <div
-              className="flex flex-col flex-1"
-              style={{
-                width: '100%',
-
-                overflowX: 'hidden',
-                overflowY: 'auto',
-                position: 'relative',
-              }}
-            >
-              {topicPending ? (
-                <TopicMigrationPlaceholder agentId={context.agentId} topicId={context.topicId} />
-              ) : (
-                <ChatList
-                  headerSlot={<div aria-hidden className={styles.floatingHeaderSpacer} />}
-                  messageDeepLink={messageDeepLink}
-                  welcome={<AgentHome />}
-                  footerSlot={
-                    isSubagentThread ? (
-                      <div className="flex items-center justify-center py-1.5 px-4">
-                        <span
-                          style={{
-                            color: cssVar.colorTextDescription,
-                            fontSize: 12,
-                            textAlign: 'center',
-                          }}
-                        >
-                          {t('thread.subagentReadOnlyHint')}
-                        </span>
-                      </div>
-                    ) : undefined
-                  }
-                />
-              )}
-            </div>
-          </SplitDropZone>
-          {chatInput}
-        </>
-      )}
+      <SplitDropZone>
+        {topicPending ? (
+          <TopicMigrationPlaceholder agentId={context.agentId} topicId={context.topicId} />
+        ) : isInboxResolving ? (
+          <div
+            aria-label={t('loading', { ns: 'common' })}
+            className="flex flex-1 items-center justify-center"
+            role="status"
+          >
+            <Spinner className="size-5 text-muted-foreground" />
+          </div>
+        ) : (
+          <AssistantThread
+            composer={chatInput}
+            disabled={isSubagentThread}
+            messageDeepLink={messageDeepLink}
+            footer={
+              isSubagentThread ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  {t('thread.subagentReadOnlyHint')}
+                </p>
+              ) : undefined
+            }
+            header={
+              <>
+                <div aria-hidden className={styles.floatingHeaderSpacer} />
+                {showInboxLanding && <ToolAuthAlert />}
+              </>
+            }
+          />
+        )}
+      </SplitDropZone>
       {topicPending && (
         <div className="flex items-center justify-center py-1.5 px-4">
           <span style={{ color: cssVar.colorTextDescription, fontSize: 12, textAlign: 'center' }}>
@@ -266,7 +226,6 @@ const Conversation = memo(() => {
       <ExposeMainEditor />
       <ComposerDraftReceiver />
       <ThreadHydration />
-      <ChatMiniMap />
       <ForwardMessageDispatcher />
       {/* Held back while the topic is still migrating: the composer above is
           already disabled, and letting `?message=` through would send into the

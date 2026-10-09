@@ -17,6 +17,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import { toast } from '@/components/toast';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -40,7 +39,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
-import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
@@ -61,6 +59,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { teamAccordionKey, useTeamSubNav } from '../hooks/useTeamSubNav';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
+import SectionHeader from './SectionHeader';
 import TeamListSkeleton from './TeamListSkeleton';
 import { buildTeamMenuEntries } from './teamMenu';
 import { resolveTeamsListView } from './teamsListView';
@@ -142,8 +141,10 @@ const TeamItem = memo<TeamItemProps>(({ team, activeTab, open, onOpenChange }) =
   return sidebarState === 'collapsed' ? (
     <SidebarMenuItem>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<SidebarMenuButton aria-label={team.name} tooltip={team.name} />}
+        <SidebarMenuButton
+          aria-label={team.name}
+          render={<DropdownMenuTrigger />}
+          tooltip={team.name}
         >
           <TeamIdentity
             color={team.color}
@@ -151,7 +152,7 @@ const TeamItem = memo<TeamItemProps>(({ team, activeTab, open, onOpenChange }) =
             letter={(team.key || team.name).slice(0, 1)}
           />
           <span>{team.name}</span>
-        </DropdownMenuTrigger>
+        </SidebarMenuButton>
         <DropdownMenuContent align="start" className="min-w-48" side="right" sideOffset={8}>
           <DropdownMenuGroup>
             <DropdownMenuLabel>{team.name}</DropdownMenuLabel>
@@ -177,43 +178,40 @@ const TeamItem = memo<TeamItemProps>(({ team, activeTab, open, onOpenChange }) =
       </DropdownMenu>
     </SidebarMenuItem>
   ) : (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        aria-controls={`team-subnav-${team.id}`}
-        aria-expanded={open}
-        className="gap-1.5"
-        tooltip={team.name}
-        onClick={() => onOpenChange(!open)}
-      >
+    <Collapsible
+      open={open}
+      render={<SidebarMenuItem />}
+      onOpenChange={(next) => onOpenChange(next)}
+    >
+      {/* The whole team row toggles the sub-navigation; Home is a child link. */}
+      <SidebarMenuButton className="gap-1.5" render={<CollapsibleTrigger />} tooltip={team.name}>
         <TeamIdentity
           color={team.color}
           id={team.id}
           letter={(team.key || team.name).slice(0, 1)}
         />
         <span className="truncate">{team.name}</span>
-        <SidebarCollapseIcon open={open} />
+        <SidebarCollapseIcon />
       </SidebarMenuButton>
       <SidebarDropdownMenu items={menu}>
         <SidebarMenuAction showOnHover aria-label={t('teams.menu')}>
           <MoreHorizontalIcon />
         </SidebarMenuAction>
       </SidebarDropdownMenu>
-      {open && (
-        <SidebarMenuSub id={`team-subnav-${team.id}`}>
-          {subItems.map((sub) => (
-            <SidebarMenuSubItem key={sub.key}>
-              <SidebarMenuSubButton
-                isActive={activeTab === sub.tab}
-                render={<WorkspaceLink style={{ color: 'inherit' }} to={pathFor(sub.tab)} />}
-              >
-                <sub.icon aria-hidden="true" />
-                <span>{t(sub.titleKey)}</span>
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
-          ))}
-        </SidebarMenuSub>
-      )}
-    </SidebarMenuItem>
+      <CollapsibleContent render={<SidebarMenuSub />}>
+        {subItems.map((sub) => (
+          <SidebarMenuSubItem key={sub.key}>
+            <SidebarMenuSubButton
+              isActive={activeTab === sub.tab}
+              render={<WorkspaceLink to={pathFor(sub.tab)} />}
+            >
+              <sub.icon aria-hidden="true" />
+              <span>{t(sub.titleKey)}</span>
+            </SidebarMenuSubButton>
+          </SidebarMenuSubItem>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 });
 
@@ -302,74 +300,60 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
   // workspace has been provisioned (activeWorkspaceId still null) it shows
   // the single "Teams" row that deep-links to /teams.
   return (
-    <SidebarGroup className="group/section">
-      <SidebarContextMenu items={contextMenu}>
-        <SidebarGroupLabel
-          className="focus-visible:ring-sidebar-ring w-full cursor-pointer gap-0.5 whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none group-data-[collapsible=icon]:hidden"
-          render={
-            <button
-              aria-controls={`sidebar-section-${itemKey}`}
-              aria-expanded={open}
-              onClick={() => onOpenChange?.(!open)}
-            />
-          }
-        >
-          {t('navPanel.yourTeams')}
-          <SidebarCollapseIcon open={open} />
-        </SidebarGroupLabel>
-      </SidebarContextMenu>
-      <SidebarDropdownMenu items={sectionMenu}>
-        <SidebarGroupAction
-          aria-label={t('navPanel.more')}
-          className="opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100"
-        >
-          <MoreHorizontalIcon />
-        </SidebarGroupAction>
-      </SidebarDropdownMenu>
-      {(open || sidebarState === 'collapsed') && (
-        <SidebarGroupContent id={`sidebar-section-${itemKey}`}>
-          <SidebarMenu className="gap-0.25">
-            {teams.map((team) => {
-              const key = teamAccordionKey(team.id);
-              return (
-                <TeamItem
-                  activeTab={activeTeamTab(team.id)}
-                  key={team.id}
-                  open={expandedTeamKeys.includes(key)}
-                  team={team}
-                  onOpenChange={(next) =>
-                    setExpandedTeamKeys(
-                      next
-                        ? [...expandedTeamKeys, key]
-                        : expandedTeamKeys.filter((expanded) => expanded !== key),
-                    )
-                  }
-                />
-              );
-            })}
-            {view === 'loading' && <TeamListSkeleton collapsed={sidebarState === 'collapsed'} />}
-            {view === 'error' && (
-              <SidebarMenuItem>
-                <AsyncError
-                  error={error}
-                  retrying={isValidating}
-                  variant="inline"
-                  onRetry={() => void mutate()}
-                />
-              </SidebarMenuItem>
-            )}
-            {(view === 'fallback' || view === 'error') && (
-              <SidebarNavItem
-                active={tab === 'teams'}
-                icon={Layers}
-                render={<WorkspaceLink to="/teams" />}
-                title={t('tab.teams')}
+    <Collapsible
+      open={open || sidebarState === 'collapsed'}
+      render={<SidebarGroup className="group/section" />}
+      onOpenChange={(next) => onOpenChange?.(next)}
+    >
+      <SectionHeader
+        contextMenu={contextMenu}
+        moreLabel={t('navPanel.more')}
+        moreMenu={sectionMenu}
+      >
+        {t('navPanel.yourTeams')}
+      </SectionHeader>
+      <CollapsibleContent render={<SidebarGroupContent />}>
+        <SidebarMenu className="gap-0.25">
+          {teams.map((team) => {
+            const key = teamAccordionKey(team.id);
+            return (
+              <TeamItem
+                activeTab={activeTeamTab(team.id)}
+                key={team.id}
+                open={expandedTeamKeys.includes(key)}
+                team={team}
+                onOpenChange={(next) =>
+                  setExpandedTeamKeys(
+                    next
+                      ? [...expandedTeamKeys, key]
+                      : expandedTeamKeys.filter((expanded) => expanded !== key),
+                  )
+                }
               />
-            )}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      )}
-    </SidebarGroup>
+            );
+          })}
+          {view === 'loading' && <TeamListSkeleton collapsed={sidebarState === 'collapsed'} />}
+          {view === 'error' && (
+            <SidebarMenuItem>
+              <AsyncError
+                error={error}
+                retrying={isValidating}
+                variant="inline"
+                onRetry={() => void mutate()}
+              />
+            </SidebarMenuItem>
+          )}
+          {(view === 'fallback' || view === 'error') && (
+            <SidebarNavItem
+              active={tab === 'teams'}
+              icon={Layers}
+              render={<WorkspaceLink to="/teams" />}
+              title={t('tab.teams')}
+            />
+          )}
+        </SidebarMenu>
+      </CollapsibleContent>
+    </Collapsible>
   );
 });
 

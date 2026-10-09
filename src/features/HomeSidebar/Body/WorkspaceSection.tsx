@@ -17,17 +17,14 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
-import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
@@ -40,6 +37,7 @@ import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
+import SectionHeader from './SectionHeader';
 
 interface WorkspaceSectionProps {
   itemKey: string;
@@ -152,51 +150,37 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
   );
 
   return (
-    <SidebarGroup className="group/section group-data-[collapsible=icon]:hidden">
-      <SidebarContextMenu items={contextMenu}>
-        <SidebarGroupLabel
-          className="focus-visible:ring-sidebar-ring w-full cursor-pointer gap-0.5 whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none"
-          render={
-            <button
-              aria-controls={`sidebar-section-${itemKey}`}
-              aria-expanded={open}
-              onClick={() => onOpenChange?.(!open)}
-            />
-          }
-        >
-          {t('navPanel.workspace')}
-          <SidebarCollapseIcon open={open} />
-        </SidebarGroupLabel>
-      </SidebarContextMenu>
-      <SidebarDropdownMenu items={contextMenu}>
-        <SidebarGroupAction
-          aria-label={t('navPanel.more')}
-          className="opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100"
-        >
-          <MoreHorizontalIcon />
-        </SidebarGroupAction>
-      </SidebarDropdownMenu>
-      {open && (
-        <SidebarGroupContent id={`sidebar-section-${itemKey}`}>
-          <SidebarMenu className="gap-0.25">
-            {row('project', PROJECT_ENTITY_ICON, t('navPanel.projects'), '/projects')}
-            {row('views', LayoutList, t('tab.views'), '/views')}
-            {/* Linear renders "More" as a row — it opens a menu headed by
+    <Collapsible
+      open={open}
+      render={<SidebarGroup className="group/section group-data-[collapsible=icon]:hidden" />}
+      onOpenChange={(next) => onOpenChange?.(next)}
+    >
+      <SectionHeader
+        contextMenu={contextMenu}
+        moreLabel={t('navPanel.more')}
+        moreMenu={contextMenu}
+      >
+        {t('navPanel.workspace')}
+      </SectionHeader>
+      <CollapsibleContent render={<SidebarGroupContent />}>
+        <SidebarMenu className="gap-0.25">
+          {row('project', PROJECT_ENTITY_ICON, t('navPanel.projects'), '/projects')}
+          {row('views', LayoutList, t('tab.views'), '/views')}
+          {/* Linear renders "More" as a row — it opens a menu headed by
               "Showing all items" (Members / Teams / Customize sidebar),
               then the retired surfaces (Automations / Resource / workspace
               settings) behind a divider. */}
-            <SidebarMenuItem>
-              <SidebarDropdownMenu items={moreMenu}>
-                <SidebarMenuButton tooltip={t('navPanel.more')}>
-                  <MoreHorizontalIcon />
-                  <span>{t('navPanel.more')}</span>
-                </SidebarMenuButton>
-              </SidebarDropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      )}
-    </SidebarGroup>
+          <SidebarMenuItem>
+            <SidebarDropdownMenu items={moreMenu}>
+              <SidebarMenuButton tooltip={t('navPanel.more')}>
+                <MoreHorizontalIcon />
+                <span>{t('navPanel.more')}</span>
+              </SidebarMenuButton>
+            </SidebarDropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </CollapsibleContent>
+    </Collapsible>
   );
 });
 

@@ -30,7 +30,13 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarContextMenu', () => ({
-  default: ({ children }: { children: React.ReactNode }) => children,
+  default: ({
+    children,
+  }: {
+    children:
+      | React.ReactElement
+      | ((trigger: (inner: React.ReactElement) => React.ReactElement) => React.ReactElement);
+  }) => (typeof children === 'function' ? children((inner) => inner) : children),
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({

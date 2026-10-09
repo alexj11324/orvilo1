@@ -68,7 +68,7 @@ export const Confirmation = ({ className, approval, state, ...props }: Confirmat
   return (
     <ConfirmationContext value={contextValue}>
       <Alert
-        className={cn('flex flex-col gap-2', className)}
+        className={cn('flex flex-col items-stretch gap-2', className)}
         data-ai-element="confirmation"
         {...props}
       />

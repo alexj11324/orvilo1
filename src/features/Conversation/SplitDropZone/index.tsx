@@ -3,7 +3,7 @@
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { PanelRight } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { type CSSProperties, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConversationPanelDrop } from './useConversationPanelDrop';
@@ -35,34 +35,37 @@ const styles = createStaticStyles(({ css }) => ({
  * can be dropped to open side-by-side in the portal. Renders a highlight
  * overlay while a droppable payload hovers.
  */
-const SplitDropZone = memo<{ children: ReactNode }>(({ children }) => {
-  const { t } = useTranslation('common');
-  const { dragKind, onDragEnter, onDragLeave, onDragOver, onDrop, onDropCapture } =
-    useConversationPanelDrop();
+const SplitDropZone = memo<{ children: ReactNode; style?: CSSProperties }>(
+  ({ children, style }) => {
+    const { t } = useTranslation('common');
+    const { dragKind, onDragEnter, onDragLeave, onDragOver, onDrop, onDropCapture } =
+      useConversationPanelDrop();
 
-  return (
-    <div
-      className={cn('flex flex-col', styles.root)}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDropCapture={onDropCapture}
-    >
-      {children}
-      {dragKind && (
-        <div className={cn('flex flex-col items-center justify-center', styles.overlay)}>
-          <div className="flex flex-col items-center gap-2" style={{ color: cssVar.colorInfo }}>
-            <PanelRight size={28} />
-            <div style={{ color: 'inherit', fontSize: 14, fontWeight: 500 }}>
-              {t('openOnRightHint')}
+    return (
+      <div
+        className={cn('flex flex-col', styles.root)}
+        style={style}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDropCapture={onDropCapture}
+      >
+        {children}
+        {dragKind && (
+          <div className={cn('flex flex-col items-center justify-center', styles.overlay)}>
+            <div className="flex flex-col items-center gap-2" style={{ color: cssVar.colorInfo }}>
+              <PanelRight size={28} />
+              <div style={{ color: 'inherit', fontSize: 14, fontWeight: 500 }}>
+                {t('openOnRightHint')}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-});
+        )}
+      </div>
+    );
+  },
+);
 
 SplitDropZone.displayName = 'SplitDropZone';
 

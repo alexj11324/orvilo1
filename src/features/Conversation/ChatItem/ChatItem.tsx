@@ -5,6 +5,7 @@ import { cn } from 'cn';
 import { memo } from 'react';
 
 import { Message } from '@/components/ai-elements/message';
+import { useChatbotSurface } from '@/features/AIChatbot/context';
 
 import FollowUpChips from '../FollowUp/FollowUpChips';
 import { contextSelectors, useConversationStore } from '../store';
@@ -50,6 +51,7 @@ const ChatItem = memo<ChatItemProps>(
     ...rest
   }) => {
     const isUser = placement === 'right';
+    const chatbotSurface = useChatbotSurface();
     const conversationKey = useConversationStore(contextSelectors.conversationKey);
     const isEmptyMessage =
       !message || String(message).trim() === '' || message === placeholderMessage;
@@ -75,9 +77,15 @@ const ChatItem = memo<ChatItemProps>(
         {...rest}
         className={cn('message-wrapper', styles.container, className)}
         data-message-id={id}
+        role={chatbotSurface ? 'article' : rest.role}
         style={style}
+        aria-label={
+          chatbotSurface
+            ? avatarProps?.alt || agentDisplayName(avatar, 'avatar')
+            : rest['aria-label']
+        }
       >
-        {(showAvatar || showTitle || headerAddon) && (
+        {!chatbotSurface && (showAvatar || showTitle || headerAddon) && (
           <div
             className={cn('message-header flex items-center gap-2', isUser && 'flex-row-reverse')}
           >
@@ -85,6 +93,12 @@ const ChatItem = memo<ChatItemProps>(
               (customAvatarRender ? customAvatarRender(avatar, avatarContent) : avatarContent)}
             {headerAddon}
             <Title avatar={avatar} showTitle={showTitle} time={time} titleAddon={titleAddon} />
+          </div>
+        )}
+        {chatbotSurface && (headerAddon || titleAddon) && (
+          <div className={cn('flex items-center gap-2', isUser && 'self-end')}>
+            {headerAddon}
+            {titleAddon}
           </div>
         )}
         {aboveMessage}
@@ -108,7 +122,7 @@ const ChatItem = memo<ChatItemProps>(
           </MessageContent>
         )}
         {belowMessage}
-        {id && conversationKey && (
+        {!chatbotSurface && id && conversationKey && (
           <FollowUpChips conversationKey={conversationKey} messageId={id} />
         )}
         {(actionAddon || actions) && (

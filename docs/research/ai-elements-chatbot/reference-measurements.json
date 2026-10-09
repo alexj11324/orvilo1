@@ -1,0 +1,125 @@
+{
+  "areas": [
+    {
+      "placeholder": "What would you like to know?",
+      "parents": [
+        {
+          "tag": "TEXTAREA",
+          "cls": "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex w-full px-3 text-base transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0 dark:bg-transparent field-sizing-content max-h-48 min-h-16",
+          "w": 1056,
+          "h": 64,
+          "x": 318,
+          "y": 776,
+          "padding": "12px",
+          "gap": "normal",
+          "font": "14px / 20px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "cls": "contents",
+          "w": 0,
+          "h": 0,
+          "x": 0,
+          "y": 0,
+          "padding": "0px",
+          "gap": "normal",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "cls": "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none h-9 min-w-0 has-[>textarea]:h-auto has-[>[data-align=inline-start]]:[&>input]:pl-2 has-[>[data-align=inline-end]]:[&>input]:pr-2 has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3 has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-[3px] has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40 overflow-hidden",
+          "w": 1058,
+          "h": 134,
+          "x": 317,
+          "y": 757,
+          "padding": "0px",
+          "gap": "normal",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "1px solid lab(90.952 0 -0.0000119209)",
+          "radius": "8px"
+        },
+        {
+          "tag": "FORM",
+          "cls": "w-full",
+          "w": 1058,
+          "h": 134,
+          "x": 317,
+          "y": 757,
+          "padding": "0px",
+          "gap": "normal",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "cls": "w-full px-4 pb-4",
+          "w": 1090,
+          "h": 150,
+          "x": 301,
+          "y": 757,
+          "padding": "0px 16px 16px",
+          "gap": "normal",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "cls": "grid shrink-0 gap-4 pt-4",
+          "w": 1090,
+          "h": 214,
+          "x": 301,
+          "y": 693,
+          "padding": "16px 0px 0px",
+          "gap": "16px",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "cls": "relative flex size-full flex-col divide-y overflow-hidden",
+          "w": 1090,
+          "h": 600,
+          "x": 301,
+          "y": 307,
+          "padding": "0px",
+          "gap": "normal",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "cls": "h-[600px] overflow-auto p-0",
+          "w": 1090,
+          "h": 600,
+          "x": 301,
+          "y": 307,
+          "padding": "0px",
+          "gap": "normal",
+          "font": "16px / 28px Geist, \"Geist Fallback\"",
+          "background": "rgba(0, 0, 0, 0)",
+          "border": "0px solid lab(90.952 0 -0.0000119209)",
+          "radius": "0px"
+        }
+      ]
+    }
+  ],
+  "frames": [],
+  "text": "AI Elements\n\nDocs\nComponents\nExamples\nSearch...\n⌘K\nAsk AI\nChatbot\nIDE\nv0 clone\nWorkflow\nChatbot\n\nAn example of how to use the AI Elements to build a chatbot.\n\nPreview\nCode\n\nCan you explain how to use React hooks effectively?\n\nUsed 2 sources\n\nReact Hooks Best Practices\n\nReact hooks are a powerful feature that let you use state and other React features without writing classes. Here are some tips for using them effectively:\n\nRules of Hooks\nOnly call hooks at the top level of your component or custo",
+  "title": "Chatbot",
+  "url": "https://elements.ai-sdk.dev/examples/chatbot"
+}

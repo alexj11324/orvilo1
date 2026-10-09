@@ -14,6 +14,8 @@ import {
 } from '@/business/client/hooks/useBusinessChatInputSendAreaPrefix';
 import ActionIcon from '@/components/ActionIcon';
 import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import ChatbotComposer from '@/features/AIChatbot/Composer';
+import { useChatbotSurface } from '@/features/AIChatbot/context';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
 import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
@@ -245,8 +247,13 @@ const ChatInput = memo<ChatInputProps>(
     // Observe the floating overlay's height (TodoProgress + QueueTray) and
     // publish it so the ChatList container can reserve matching bottom
     // padding — keeps the overlay floating without occluding chat content.
+    const chatbotSurface = useChatbotSurface();
     const overlayRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
+      if (chatbotSurface) {
+        setChatInputOverlayHeight(0);
+        return;
+      }
       const node = overlayRef.current;
       if (!node) return;
       const observer = new ResizeObserver(([entry]) => {
@@ -257,7 +264,7 @@ const ChatInput = memo<ChatInputProps>(
         observer.disconnect();
         setChatInputOverlayHeight(0);
       };
-    }, [setChatInputOverlayHeight]);
+    }, [chatbotSurface, setChatInputOverlayHeight]);
 
     // Loading state from ConversationStore (bridged from ChatStore)
     const isInputLoading = useConversationStore(messageStateSelectors.isInputVisiblyLoading);
@@ -470,9 +477,13 @@ const ChatInput = memo<ChatInputProps>(
       [context, sendMessage],
     );
 
+    const InputContainer = chatbotSurface ? 'div' : WideScreenContainer;
     const defaultContent = (
-      <WideScreenContainer
-        style={{ position: 'relative', ...(skipScrollMarginWithList ? { marginTop: -12 } : null) }}
+      <InputContainer
+        style={{
+          position: 'relative',
+          ...(!chatbotSurface && skipScrollMarginWithList ? { marginTop: -12 } : null),
+        }}
       >
         {hasPendingInterventions && (
           <InterventionBar
@@ -503,15 +514,19 @@ const ChatInput = memo<ChatInputProps>(
           )}
           {businessAlerts}
           <div
-            className="flex flex-col px-3"
+            className={chatbotSurface ? 'flex flex-col gap-2' : 'flex flex-col px-3'}
             ref={overlayRef}
-            style={{
-              bottom: '100%',
-              left: 12,
-              position: 'absolute',
-              right: 12,
-              zIndex: 10,
-            }}
+            style={
+              chatbotSurface
+                ? undefined
+                : {
+                    bottom: '100%',
+                    left: 12,
+                    position: 'absolute',
+                    right: 12,
+                    zIndex: 10,
+                  }
+            }
           >
             <InputCompletionErrorAlert />
             {!disableQueue && hasQueuedMessages && <QueueTray />}
@@ -520,30 +535,53 @@ const ChatInput = memo<ChatInputProps>(
           </div>
           {/* Append the armed-goal chip to every composer's action bar. While armed,
               the next message becomes the goal and the placeholder explains that state. */}
-          <DesktopChatInput
-            actionBarStyle={actionBarStyle}
-            beamActive={isInputLoading}
-            borderRadius={12}
-            compact={compact}
-            controlBarInCard={controlBarInCard}
-            controlBarSlot={controlBarSlot}
-            editorDefaultRows={editorDefaultRows}
-            hidden={hasBottomInterventions}
-            isConfigLoading={isConfigLoading}
-            leftContent={leftContent}
-            placeholderVariant={placeholderVariant}
-            sendAreaPrefix={businessSendAreaPrefix}
-            showControlBar={showControlBar}
-            extraActionItems={[
-              ...(extraActionItems ?? []),
-              { children: <GoalArmedChip />, key: 'goal-armed-chip' },
-            ]}
-            placeholder={
-              goalArmed ? t('acceptance.tray.goalArmedPlaceholder', { ns: 'verify' }) : undefined
-            }
-          />
+          {chatbotSurface ? (
+            <ChatbotComposer
+              controlBarSlot={controlBarSlot}
+              extraContent={<GoalArmedChip />}
+              hidden={hasBottomInterventions}
+              isConfigLoading={isConfigLoading}
+              placeholderVariant={placeholderVariant}
+              sendAreaPrefix={businessSendAreaPrefix}
+              showControlBar={showControlBar}
+              placeholder={
+                goalArmed ? t('acceptance.tray.goalArmedPlaceholder', { ns: 'verify' }) : undefined
+              }
+              primaryContent={
+                <>
+                  {leftContent}
+                  {extraActionItems?.map((item) =>
+                    'children' in item && !Array.isArray(item.children) ? item.children : null,
+                  )}
+                </>
+              }
+            />
+          ) : (
+            <DesktopChatInput
+              actionBarStyle={actionBarStyle}
+              beamActive={isInputLoading}
+              borderRadius={12}
+              compact={compact}
+              controlBarInCard={controlBarInCard}
+              controlBarSlot={controlBarSlot}
+              editorDefaultRows={editorDefaultRows}
+              hidden={hasBottomInterventions}
+              isConfigLoading={isConfigLoading}
+              leftContent={leftContent}
+              placeholderVariant={placeholderVariant}
+              sendAreaPrefix={businessSendAreaPrefix}
+              showControlBar={showControlBar}
+              extraActionItems={[
+                ...(extraActionItems ?? []),
+                { children: <GoalArmedChip />, key: 'goal-armed-chip' },
+              ]}
+              placeholder={
+                goalArmed ? t('acceptance.tray.goalArmedPlaceholder', { ns: 'verify' }) : undefined
+              }
+            />
+          )}
         </div>
-      </WideScreenContainer>
+      </InputContainer>
     );
 
     return (

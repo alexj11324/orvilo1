@@ -2658,6 +2658,8 @@
   "verifyConfig.generateInvalidProviderAPIKey": "{{provider}} 的 API 密钥无效或缺失，请检查 {{model}} 的服务商设置后重试。",
   "verifyConfig.generating": "正在拆解验收项…",
   "verifyConfig.manualAdd": "手动添加",
+  "verifyConfig.modelLoading": "正在加载智能体模型配置…",
+  "verifyConfig.modelUnavailable": "智能体模型配置不可用。请检查智能体后再生成验收项。",
   "verifyConfig.moreActions": "更多操作",
   "verifyConfig.regenerate": "重新生成",
   "verifyConfig.removeCriterion": "删除验收项",

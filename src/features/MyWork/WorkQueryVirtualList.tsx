@@ -3,9 +3,23 @@
 import { type TaskWorkflowCategory } from '@orvilo/types';
 import { cn } from 'cn';
 import { ChevronDownIcon, PlusIcon } from 'lucide-react';
-import { createElement, type ReactNode, useMemo, useState } from 'react';
+import {
+  createElement,
+  type ReactNode,
+  type Ref,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
-import { GroupedVirtuoso, type GroupProps, Virtuoso } from 'react-virtuoso';
+import {
+  GroupedVirtuoso,
+  type GroupedVirtuosoHandle,
+  type GroupProps,
+  Virtuoso,
+  type VirtuosoHandle,
+} from 'react-virtuoso';
 
 import AsyncError from '@/components/AsyncError';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
@@ -14,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { useClosestScrollParent } from '@/features/AgentTasks/AgentTaskList/useClosestScrollParent';
+import { useIssuePeekKeyboard } from '@/features/WorkSurface/useIssuePeekKeyboard';
 
 import type { WorkQueryGroupPage, WorkQueryResultTask } from './workQueryPaging';
 import {
@@ -23,15 +38,27 @@ import {
   nestWorkQueryListGroups,
   stickyVirtualSections,
   type WorkQueryVirtualItem,
+  workQueryVirtualRowIdentifiers,
 } from './workQueryVirtualListModel';
 
 const DEFAULT_ROW_HEIGHT = 44;
+
+const noopPeek = () => {};
 
 const StickyGroup = ({ children, style, ...rest }: GroupProps) => (
   <div {...rest} className="z-2 bg-background" style={style}>
     {children}
   </div>
 );
+
+export interface WorkQueryPeekKeys {
+  /** Full page for an Issue identifier. Absent: Enter keeps the row's own navigation. */
+  onOpen?: (identifier: string) => void;
+  /** Open / follow (`identifier`) or close (`null`) the peek. */
+  onPeek: (identifier: string | null) => void;
+  /** Issue shown in the peek pane right now, or `null`. */
+  peekId: string | null;
+}
 
 export interface WorkQueryVirtualListProps {
   allTasks: readonly WorkQueryResultTask[];
@@ -50,6 +77,12 @@ export interface WorkQueryVirtualListProps {
   onCreateInGroup?: (groupKey: string) => void;
   onLoadMoreGroup?: (groupKey: string) => void;
   onRetryLoadMoreGroup?: (groupKey: string) => void;
+  /**
+   * Linear's keyboard peek (Space / J / K / Enter / Esc). Present only when the
+   * host has a peek pane; this list owns the visible order and the virtualizer,
+   * so it binds the keys.
+   */
+  peekKeys?: WorkQueryPeekKeys;
   primaryAxis: string;
   rankOf?: (key: string) => number;
   renderRow: (
@@ -87,13 +120,14 @@ const WorkQueryVirtualList = ({
   onCreateInGroup,
   onLoadMoreGroup,
   onRetryLoadMoreGroup,
+  peekKeys,
   primaryAxis,
   rankOf,
   renderRow,
   tasks,
 }: WorkQueryVirtualListProps) => {
   const { t } = useTranslation(['common', 'chat']);
-  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
+  const { node: anchorNode, ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
   const [sessionCollapsed, setSessionCollapsed] = useState<readonly string[]>([]);
   const collapsedKeys = collapsedGroups ?? sessionCollapsed;
   const collapsed = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
@@ -147,6 +181,28 @@ const WorkQueryVirtualList = ({
     () => (listGroupBy === 'none' ? undefined : stickyVirtualSections(items)),
     [items, listGroupBy],
   );
+
+  const virtuosoRef = useRef<GroupedVirtuosoHandle | VirtuosoHandle>(null);
+  const peekRows = useMemo(
+    () => workQueryVirtualRowIdentifiers(sections ? sections.items : items, taskById),
+    [items, sections, taskById],
+  );
+  const revealRow = useCallback(
+    (identifier: string) => {
+      const index = peekRows.indexOf.get(identifier);
+      if (index !== undefined) virtuosoRef.current?.scrollToIndex({ align: 'center', index });
+    },
+    [peekRows],
+  );
+  useIssuePeekKeyboard({
+    scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
+    enabled: Boolean(peekKeys),
+    ids: peekRows.ids,
+    onOpenPage: peekKeys?.onOpen,
+    onPeek: peekKeys?.onPeek ?? noopPeek,
+    peekId: peekKeys?.peekId ?? null,
+    reveal: revealRow,
+  });
 
   const labelFor = (item: WorkQueryVirtualItem) => {
     const titled = groupTitle?.(item.axis, item.labelKey);
@@ -266,6 +322,7 @@ const WorkQueryVirtualList = ({
           groupCounts={sections.groupCounts}
           increaseViewportBy={{ bottom: 600, top: 600 }}
           itemContent={(_index, _groupIndex, item) => renderItem(item)}
+          ref={virtuosoRef as Ref<GroupedVirtuosoHandle>}
         />
       ) : scrollParent ? (
         <Virtuoso
@@ -275,6 +332,7 @@ const WorkQueryVirtualList = ({
           defaultItemHeight={DEFAULT_ROW_HEIGHT}
           increaseViewportBy={{ bottom: 600, top: 600 }}
           itemContent={(_index, item) => renderItem(item)}
+          ref={virtuosoRef as Ref<VirtuosoHandle>}
         />
       ) : unresolved ? null : (
         <div className="flex flex-col">

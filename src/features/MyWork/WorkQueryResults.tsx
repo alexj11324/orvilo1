@@ -66,7 +66,7 @@ import {
   workQueryLoadedTasks,
   type WorkQueryResultTask,
 } from './workQueryPaging';
-import WorkQueryVirtualList from './WorkQueryVirtualList';
+import WorkQueryVirtualList, { type WorkQueryPeekKeys } from './WorkQueryVirtualList';
 
 export type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -239,6 +239,12 @@ interface WorkQueryResultsProps {
   onMoved?: () => void;
   /** Full-page escape for peek mode — the row's double-click. */
   onOpenTask?: (task: WorkQueryResultTask) => void;
+  /**
+   * Keyboard peek: Space opens / follows (`task`) or closes (`null`) the host's
+   * peek pane. The host owns arming it. Supplying this binds Space / J / K /
+   * Enter / Esc on the list layout — see `useIssuePeekKeyboard`.
+   */
+  onPeekTask?: (task: WorkQueryResultTask | null) => void;
   /** Re-issues the failed tail-page request shown by `loadMoreError`. */
   onRetryLoadMore?: () => void;
   /** Re-issues the failed page request for one group key (`loadMoreGroupErrors`). */
@@ -378,6 +384,7 @@ export const WorkQueryTaskRow = memo(
         aria-selected={bulkSelected ? 'true' : undefined}
         data-bulk-row-id={onBulkSelectTask ? task.id : undefined}
         data-bulk-selected={bulkSelected || undefined}
+        data-issue-context={muted || undefined}
         className={cn(
           'group/work-row relative flex items-center rounded-lg pe-2',
           selected && 'bg-accent',
@@ -794,6 +801,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onRetryLoadMore,
     onRetryLoadMoreGroup,
     onOpenTask,
+    onPeekTask,
     onSelectTask,
     onToggleFollow,
     peekOnSelect,
@@ -856,6 +864,22 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       peekOnSelect,
       rowExtras,
     };
+    const peekKeys: WorkQueryPeekKeys | undefined = onPeekTask
+      ? {
+          onOpen: onOpenTask
+            ? (identifier) => {
+                const task = allTasks.find((item) => item.identifier === identifier);
+                if (task) onOpenTask(task);
+              }
+            : undefined,
+          onPeek: (identifier) => {
+            const task =
+              identifier === null ? null : allTasks.find((item) => item.identifier === identifier);
+            if (task !== undefined) onPeekTask(task);
+          },
+          peekId: peekOnSelect ? (selectedTaskId ?? null) : null,
+        }
+      : undefined;
     const rowSelected = (task: WorkQueryResultTask) =>
       selectedTaskId !== undefined && task.identifier === selectedTaskId;
 
@@ -997,6 +1021,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               loadMoreGroupErrors={loadMoreGroupErrors}
               loadMoreLabel={loadMoreLabel}
               nestRows={nestRows}
+              peekKeys={peekKeys}
               primaryAxis={listGroupBy}
               rankOf={axisRank(listGroupBy)}
               tasks={tasks}

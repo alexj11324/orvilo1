@@ -43,6 +43,24 @@ describe('isInteractiveRowClick', () => {
     }
   });
 
+  it('does not treat the row root itself as interactive, only real controls inside it', () => {
+    // `AgentTaskItem`'s root is `role="button"` (keyboard-operable). Without
+    // this, every click on row text matched it and peek never selected.
+    const root = document.createElement('div');
+    root.setAttribute('role', 'button');
+    root.setAttribute('data-issue-row', 'T-1');
+    const title = document.createElement('span');
+    const menu = document.createElement('button');
+    const menuIcon = document.createElement('svg');
+    menu.append(menuIcon);
+    root.append(title, menu);
+
+    expect(isInteractiveRowClick(root)).toBe(false);
+    expect(isInteractiveRowClick(title)).toBe(false);
+    expect(isInteractiveRowClick(menu)).toBe(true);
+    expect(isInteractiveRowClick(menuIcon)).toBe(true);
+  });
+
   it('ignores plain row chrome and non-Element targets', () => {
     expect(isInteractiveRowClick(document.createElement('div'))).toBe(false);
     expect(isInteractiveRowClick(null)).toBe(false);

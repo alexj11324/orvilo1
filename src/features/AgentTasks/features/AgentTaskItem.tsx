@@ -381,6 +381,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
+        data-issue-row={task.identifier}
         role="button"
         tabIndex={0}
         className={cn(

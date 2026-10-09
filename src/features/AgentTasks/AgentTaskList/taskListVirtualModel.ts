@@ -112,3 +112,24 @@ export const flattenTaskListEntries = (
 
   return items;
 };
+
+/**
+ * Issue identifiers of the rows the list renders, in order, with each row's
+ * index in the virtual window — the walk order for keyboard navigation and the
+ * scroll target when the next row is not mounted. Collapsed groups contribute
+ * no rows; muted parent-context repeats are skipped.
+ */
+export const taskListRowIdentifiers = (
+  items: readonly TaskListVirtualItem[],
+): { ids: string[]; indexOf: Map<string, number> } => {
+  const ids: string[] = [];
+  const indexOf = new Map<string, number>();
+  items.forEach((item, index) => {
+    if (item.kind !== 'row' || item.row.isParentContext) return;
+    const { identifier } = item.row.task;
+    if (indexOf.has(identifier)) return;
+    ids.push(identifier);
+    indexOf.set(identifier, index);
+  });
+  return { ids, indexOf };
+};

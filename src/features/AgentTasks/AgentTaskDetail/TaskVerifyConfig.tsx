@@ -37,14 +37,13 @@ import { useRubrics } from '@/features/Acceptance/hooks';
 import { usePermission } from '@/hooks/usePermission';
 import { useSingleton } from '@/hooks/useSingleton';
 import { type VerifyCriterionDraft, verifyService } from '@/services/verify';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { resolveTaskAcceptanceGoal } from './resolveTaskAcceptanceGoal';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import { useTaskVerifyModel } from './useTaskVerifyModel';
 
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -140,20 +139,15 @@ const TaskVerifyConfig = memo(() => {
   const taskProvider = useTaskDetailSelector(taskDetailSelectors.taskProvider);
   const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
 
-  // Resolve model/provider the same way TaskModelConfig does: task override first,
-  // then the assignee agent's model, then the active agent for unassigned tasks.
-  const agentModel = useAgentStore((s) =>
-    assigneeAgentId
-      ? agentByIdSelectors.getAgentModelById(assigneeAgentId)(s)
-      : agentSelectors.currentAgentModel(s),
-  );
-  const agentProvider = useAgentStore((s) =>
-    assigneeAgentId
-      ? agentByIdSelectors.getAgentModelProviderById(assigneeAgentId)(s)
-      : agentSelectors.currentAgentModelProvider(s),
-  );
-  const model = taskModel || agentModel || '';
-  const provider = taskProvider || agentProvider || '';
+  const {
+    isLoading: generationModelLoading,
+    isReady: generationModelReady,
+    model,
+    provider,
+  } = useTaskVerifyModel({ assigneeAgentId, taskModel, taskProvider });
+  const generationHint = generationModelReady
+    ? undefined
+    : t(generationModelLoading ? 'verifyConfig.modelLoading' : 'verifyConfig.modelUnavailable');
   const taskAcceptanceGoal = resolveTaskAcceptanceGoal({
     description: taskDescription,
     instruction: taskInstruction,
@@ -395,12 +389,12 @@ const TaskVerifyConfig = memo(() => {
   }, [generateCriteria, generating, model, provider, requirement]);
 
   const handleCollapsedClick = useCallback(() => {
-    if (savedCount > 0 || requirement.trim()) {
+    if (savedCount > 0 || requirement.trim() || !generationModelReady) {
       setExpanded(true);
       return;
     }
     void generateCriteria(taskAcceptanceGoal);
-  }, [generateCriteria, requirement, savedCount, taskAcceptanceGoal]);
+  }, [generateCriteria, generationModelReady, requirement, savedCount, taskAcceptanceGoal]);
 
   const handleRemove = useCallback(
     (id: string) => {
@@ -601,7 +595,13 @@ const TaskVerifyConfig = memo(() => {
             {/* Actions live top-right, de-emphasized, so they never outweigh the
                 requirement input that is the empty state's primary focus. */}
             <div className="flex items-center gap-1">
-              <Button disabled={!requirement.trim()} size="sm" onClick={handleGenerate}>
+              <Button
+                disabled={!requirement.trim() || !generationModelReady}
+                loading={generationModelLoading}
+                size="sm"
+                title={generationHint}
+                onClick={handleGenerate}
+              >
                 <Sparkles data-icon="inline-start" />
                 {t('verifyConfig.generate')}
               </Button>
@@ -625,6 +625,11 @@ const TaskVerifyConfig = memo(() => {
               ? t('verifyConfig.empty.materializeHint')
               : t('verifyConfig.empty.subtitle')}
           </div>
+          {generationHint && (
+            <div className={cn('text-sm', styles.subtitle)} role="status">
+              {generationHint}
+            </div>
+          )}
           <Textarea
             placeholder={t('verifyConfig.requirementPlaceholder')}
             rows={2}
@@ -672,7 +677,7 @@ const TaskVerifyConfig = memo(() => {
       type: 'checkbox',
     },
     {
-      disabled: !requirementText,
+      disabled: !requirementText || !generationModelReady,
       icon: <RotateCcw size={16} />,
       key: 'regenerate',
       label: t('verifyConfig.regenerate'),
@@ -709,6 +714,12 @@ const TaskVerifyConfig = memo(() => {
             />
           </DropdownMenu>
         </div>
+
+        {generationHint && (
+          <div className={cn('text-sm', styles.subtitle)} role="status">
+            {generationHint}
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <div className={cn('text-[12px]', styles.subtitle)}>

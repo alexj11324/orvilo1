@@ -481,6 +481,18 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   // Peek only arms on the project issues list — board cards own their clicks.
   const peekEnabled = !!projectId && isOrdinaryCollection && ordinarySurface === 'list';
   const peekOnSelect = peekEnabled && detailsOpen;
+  // Keyboard peek (Space / J / K / Esc): an Issue arms the pane and selects it;
+  // `null` closes the pane — the header close button's contract.
+  const peekTask = useMemo(
+    () =>
+      peekEnabled
+        ? (task: { identifier: string } | null) => {
+            if (task) setSelectedIdentifier(task.identifier);
+            setDetailsOpen(task !== null);
+          }
+        : undefined,
+    [peekEnabled],
+  );
   const openSelectedTaskPage = useCallback(() => {
     if (!selectedIdentifier) return;
     const task = storeTasks.find((item) => item.identifier === selectedIdentifier);
@@ -1085,6 +1097,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                             )
                           : undefined
                       }
+                      onPeekTask={peekTask}
                       onRetryLoadMoreGroup={retryIssueListGroup}
                       onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
                       onLoadMoreGroup={(key) =>
@@ -1115,6 +1128,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                           (!issueListPages.settled && !issueListPages.error)
                         : isLoading || (!isTaskListInit && !error)
                     }
+                    onPeekTask={peekTask}
                     onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
                     onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
                     onShowHiddenCompleted={handleShowHiddenCompleted}
@@ -1136,7 +1150,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 ) : null}
               </WorkSurfaceCollection>
               {peekOnSelect && (
-                <div className={styles.detailPane}>
+                <div className={styles.detailPane} data-issue-peek-pane="">
                   <IssueDetailPane
                     identifier={selectedIdentifier}
                     onClose={() => setDetailsOpen(false)}

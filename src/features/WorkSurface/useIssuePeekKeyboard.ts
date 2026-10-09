@@ -2,16 +2,28 @@
 
 import { useEffect, useRef } from 'react';
 
-import { issuePeekKeyFromEvent, reduceIssuePeekKey } from './issuePeekKeyboard';
+import {
+  issuePeekKeyFromEvent,
+  type IssuePeekOrderEntry,
+  reduceIssuePeekHeaderKey,
+  reduceIssuePeekKey,
+  resolvePeekRowKey,
+} from './issuePeekKeyboard';
 import {
   findIssueRowElement,
   isIssueElementVisible,
+  issueRowKeyOf,
   resolveIssueKeyScope,
 } from './issuePeekKeyContext';
 
 export interface UseIssuePeekKeyboardOptions {
   /** Off when the list has no peek (board layout, no project scope...). */
   enabled?: boolean;
+  /**
+   * Group headers and rows in render order. Lets J / K from a focused group
+   * header jump to the nearest row. Absent: headers do not drive the list.
+   */
+  headerOrder?: readonly IssuePeekOrderEntry[];
   /** Issue identifier of a row key. Default: the key is the identifier. */
   idOf?: (key: string) => string;
   /**
@@ -46,6 +58,8 @@ const REVEAL_EVERY_FRAMES = 8;
  * looked up at call time. Other split panes cannot replace the request.
  */
 interface SurfaceFocusState {
+  /** Row key the keyboard / focus last sat on (survives list remounts). */
+  lastRowKey?: string;
   request: number;
   reveal?: (id: string) => void;
 }
@@ -112,16 +126,18 @@ export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void
       if (!key) return;
       const scope = resolveIssueKeyScope(event.target, scopeRoot);
       if (!scope) return;
-      const { idOf, ids, onOpenPage, onPeek, peekId } = latest.current;
+      const { headerOrder, idOf, ids, onOpenPage, onPeek, peekId } = latest.current;
       const toId = (rowKey: string) => idOf?.(rowKey) ?? rowKey;
       // The reducer works in row keys. The peeked Issue is the focused row when
-      // that row shows it (any section's copy), else its first listed row.
-      const peekKey =
-        peekId === null
-          ? null
-          : scope.rowId && toId(scope.rowId) === peekId
-            ? scope.rowId
-            : (ids.find((rowKey) => toId(rowKey) === peekId) ?? peekId);
+      // that row shows it (any section's copy), else the row the keyboard last
+      // sat on, else its first listed row.
+      const peekKey = resolvePeekRowKey({
+        focusedKey: scope.rowId,
+        ids,
+        lastKey: state.lastRowKey ?? null,
+        peekId,
+        toId,
+      });
 
       // Space / Enter on a button or link keeps its native meaning; the arrow
       // keys scroll the peek pane, so only J / K drive the list from there.
@@ -139,10 +155,21 @@ export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void
         return;
       }
 
-      const result = reduceIssuePeekKey(
-        { currentId: scope.rowId ?? peekKey, ids, peekId: peekKey },
-        key,
-      );
+      // A focused group header has no row of its own: J / K go to the nearest
+      // row after / before it.
+      const headerResult =
+        scope.headerKey !== null && headerOrder
+          ? reduceIssuePeekHeaderKey(
+              { headerKey: scope.headerKey, order: headerOrder, peekId: peekKey },
+              key,
+            )
+          : null;
+      if (scope.headerKey !== null && (key === 'next' || key === 'previous') && !headerResult) {
+        return;
+      }
+      const result =
+        headerResult ??
+        reduceIssuePeekKey({ currentId: scope.rowId ?? peekKey, ids, peekId: peekKey }, key);
       if (!result) return;
 
       event.preventDefault();
@@ -155,13 +182,27 @@ export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void
       // Focus stays on (or returns to) the list: the peek never takes it, so
       // J / K keep working, and closing hands it back to the peeked row.
       const focusId = result.focusId ?? result.peekId ?? (result.peekId === null ? peekKey : null);
-      if (focusId) focusIssueRow(focusId, scopeRoot);
+      if (focusId) {
+        state.lastRowKey = focusId;
+        focusIssueRow(focusId, scopeRoot);
+      }
+    };
+
+    // Remember the row focus last sat on (a click, Tab, a remount): the peeked
+    // Issue may be listed twice, and only the row key says which copy.
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target || !scopeRoot.contains(target)) return;
+      const rowKey = issueRowKeyOf(target);
+      if (rowKey) state.lastRowKey = rowKey;
     };
 
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('focusin', onFocusIn, true);
     return () => {
       if (state.reveal === reveal) state.reveal = undefined;
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('focusin', onFocusIn, true);
     };
   }, [enabled, scopeRoot]);
 };

@@ -1,6 +1,8 @@
 import { WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
+import { reduceIssuePeekHeaderKey } from '@/features/WorkSurface/issuePeekKeyboard';
+
 import { myWorkPriorityGroupRank } from './myWorkDisplay';
 import type { WorkQueryResultTask } from './workQueryPaging';
 import {
@@ -223,6 +225,19 @@ describe('workQueryVirtualPeekRows', () => {
     expect(indexOf.get('y:row:a')).toBe(4);
   });
 
+  it('orders group headers (by collapse key) between the rows they own', () => {
+    const headerOf = (collapseKey: string) => ({ collapseKey, kind: 'header' }) as never;
+    const { order } = workQueryVirtualPeekRows(
+      [headerOf('g1'), rowItem('a', 'g1:row:a'), headerOf('g2'), rowItem('a', 'ctx', true)],
+      taskById,
+    );
+    expect(order).toEqual([
+      { key: 'g1', kind: 'header' },
+      { key: 'g1:row:a', kind: 'row' },
+      { key: 'g2', kind: 'header' },
+    ]);
+  });
+
   it('contributes no rows for a collapsed section', () => {
     const { items } = flattenWorkQueryVirtualItems({
       allTasks: [],
@@ -275,6 +290,78 @@ describe('collapsing a later group (peek layout)', () => {
     const { ids } = workQueryVirtualPeekRows(closed.items, byId);
     expect(ids).toEqual(closed.items.map((item) => item.key));
     expect(ids.some((key) => key.startsWith('blocking:'))).toBe(false);
+  });
+
+  it.each([{ collapsed: [] }, { collapsed: ['blocking'] }])(
+    'navigates from sticky headers while keeping body reveal indexes: $collapsed',
+    ({ collapsed }) => {
+      const items = flatten(collapsed);
+      const sections = stickyVirtualSections(items)!;
+      const peekRows = workQueryVirtualPeekRows(sections.items, byId, items);
+      const header = sections.headers.flat().find((item) => item.collapseKey === 'blocking')!;
+      const before = sections.items.find((item) => item.taskId === 'u6')!;
+      const after = sections.items.find(
+        (item) => item.taskId === (header.collapsed ? 'r1' : 'b1'),
+      )!;
+
+      expect(
+        reduceIssuePeekHeaderKey(
+          { headerKey: header.collapseKey, order: peekRows.order, peekId: null },
+          'previous',
+        ),
+      ).toEqual({ focusId: before.key });
+      expect(
+        reduceIssuePeekHeaderKey(
+          { headerKey: header.collapseKey, order: peekRows.order, peekId: before.key },
+          'next',
+        ),
+      ).toEqual({ focusId: after.key, peekId: after.key });
+      expect(peekRows.ids).toEqual(sections.items.map((item) => item.key));
+      expect(peekRows.indexOf.get(after.key)).toBe(sections.items.indexOf(after));
+    },
+  );
+
+  it('navigates from a collapsed sticky lane using the same render snapshot', () => {
+    const sep = WORK_QUERY_BOARD_KEY_SEP;
+    const laneTasks = [task('a'), task('b'), task('c')];
+    const groups = nestWorkQueryListGroups(
+      laneTasks.map((row, index) => ({
+        key: `todo${sep}${index}`,
+        tasks: [row],
+        total: 1,
+      })),
+      true,
+    );
+    const collapsedKey = groups[0]!.key + sep + groups[0]!.children[1]!.key;
+    const { items } = flattenWorkQueryVirtualItems({
+      allTasks: laneTasks,
+      collapsed: new Set([collapsedKey]),
+      groups,
+      laneAxis: 'assignee',
+      nestRows: false,
+      primaryAxis: 'status',
+    });
+    const sections = stickyVirtualSections(items)!;
+    const peekRows = workQueryVirtualPeekRows(
+      sections.items,
+      indexWorkQueryVirtualTasks([laneTasks]),
+      items,
+    );
+    const before = sections.items.find((item) => item.taskId === laneTasks[0]!.id)!;
+    const after = sections.items.find((item) => item.taskId === laneTasks[2]!.id)!;
+    expect(
+      reduceIssuePeekHeaderKey(
+        { headerKey: collapsedKey, order: peekRows.order, peekId: null },
+        'previous',
+      ),
+    ).toEqual({ focusId: before.key });
+    expect(
+      reduceIssuePeekHeaderKey(
+        { headerKey: collapsedKey, order: peekRows.order, peekId: null },
+        'next',
+      ),
+    ).toEqual({ focusId: after.key });
+    expect(peekRows.indexOf.get(after.key)).toBe(sections.items.indexOf(after));
   });
 
   it('keys every flat slot: group slots and rows, headers counted', () => {

@@ -213,8 +213,8 @@ const WorkQueryVirtualList = ({
 
   const virtuosoRef = useRef<GroupedVirtuosoHandle | VirtuosoHandle>(null);
   const peekRows = useMemo(
-    () => workQueryVirtualPeekRows(windowItems, taskById),
-    [windowItems, taskById],
+    () => workQueryVirtualPeekRows(windowItems, taskById, items),
+    [windowItems, taskById, items],
   );
   const revealRow = useCallback(
     (rowKey: string) => {
@@ -226,6 +226,7 @@ const WorkQueryVirtualList = ({
   useIssuePeekKeyboard({
     scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
     enabled: Boolean(peekKeys),
+    headerOrder: peekRows.order,
     idOf: (rowKey) => peekRows.idOf.get(rowKey) ?? rowKey,
     ids: peekRows.ids,
     onOpenPage: peekKeys?.onOpen,

@@ -1,5 +1,7 @@
 import { WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 
+import type { IssuePeekOrderEntry } from '@/features/WorkSurface/issuePeekKeyboard';
+
 import { workQueryHierarchyRows } from './workQueryHierarchy';
 import type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -328,12 +330,22 @@ export const flattenWorkQueryFlatItems = (
  * A key is the window item's own key (section + Issue): an Issue listed in two
  * sections is two rows, and a collapsed section contributes none. Muted
  * parent-context repeats are skipped: they are not rows a user moves through.
+ * `renderItems` retains group headers before sticky sections move them out of
+ * the body window. Only the body window supplies row/reveal indexes.
  */
 export const workQueryVirtualPeekRows = (
   windowItems: readonly WorkQueryVirtualItem[],
   taskById: ReadonlyMap<string, WorkQueryResultTask>,
-): { idOf: Map<string, string>; ids: string[]; indexOf: Map<string, number> } => {
+  renderItems: readonly WorkQueryVirtualItem[] = windowItems,
+): {
+  idOf: Map<string, string>;
+  ids: string[];
+  indexOf: Map<string, number>;
+  /** Headers (collapse key) and rows (row key) in render order. */
+  order: IssuePeekOrderEntry[];
+} => {
   const ids: string[] = [];
+  const order: IssuePeekOrderEntry[] = [];
   const idOf = new Map<string, string>();
   const indexOf = new Map<string, number>();
   windowItems.forEach((item, index) => {
@@ -344,7 +356,15 @@ export const workQueryVirtualPeekRows = (
     idOf.set(item.key, identifier);
     indexOf.set(item.key, index);
   });
-  return { idOf, ids, indexOf };
+  const orderedRows = new Set<string>();
+  for (const item of renderItems) {
+    if (item.kind === 'header') order.push({ key: item.collapseKey, kind: 'header' });
+    else if (item.kind === 'row' && indexOf.has(item.key) && !orderedRows.has(item.key)) {
+      order.push({ key: item.key, kind: 'row' });
+      orderedRows.add(item.key);
+    }
+  }
+  return { idOf, ids, indexOf, order };
 };
 
 /**

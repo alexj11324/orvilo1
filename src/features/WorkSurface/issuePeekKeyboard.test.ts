@@ -1,9 +1,112 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { issuePeekKeyFromEvent, reduceIssuePeekKey } from './issuePeekKeyboard';
+import {
+  issuePeekKeyFromEvent,
+  type IssuePeekOrderEntry,
+  reduceIssuePeekHeaderKey,
+  reduceIssuePeekKey,
+  resolvePeekRowKey,
+} from './issuePeekKeyboard';
 import { requestIssueGroupHeaderFocus, restoreIssueGroupHeaderFocus } from './issuePeekKeyContext';
 
 const ids = ['T-1', 'T-2', 'T-3'];
+
+// Same Issue (APX-3) listed in two sections: two row keys, one identifier.
+const dupIds = ['blocking:APX-3', 'started:PMI-5', 'started:APX-3', 'started:APX-4'];
+const dupToId = (key: string) => key.split(':')[1]!;
+
+describe('resolvePeekRowKey (an Issue shown in two sections)', () => {
+  it('keeps the second copy when focus was lost and the keyboard last sat on it', () => {
+    // Before: the peeked Issue id mapped back to its FIRST row, so J from the
+    // second copy went to PMI-5 / skipped it.
+    expect(
+      resolvePeekRowKey({
+        focusedKey: null,
+        ids: dupIds,
+        lastKey: 'started:APX-3',
+        peekId: 'APX-3',
+        toId: dupToId,
+      }),
+    ).toBe('started:APX-3');
+  });
+
+  it('prefers the focused row, then the last row, then the first listed copy', () => {
+    const base = { ids: dupIds, peekId: 'APX-3', toId: dupToId };
+    expect(
+      resolvePeekRowKey({ ...base, focusedKey: 'started:APX-3', lastKey: 'blocking:APX-3' }),
+    ).toBe('started:APX-3');
+    expect(resolvePeekRowKey({ ...base, focusedKey: null, lastKey: 'started:APX-4' })).toBe(
+      'blocking:APX-3',
+    );
+    expect(resolvePeekRowKey({ ...base, focusedKey: null, lastKey: null })).toBe('blocking:APX-3');
+  });
+
+  it('is null with no peek', () => {
+    expect(
+      resolvePeekRowKey({
+        focusedKey: 'x:A-1',
+        ids: ['x:A-1'],
+        lastKey: null,
+        peekId: null,
+        toId: dupToId,
+      }),
+    ).toBeNull();
+  });
+
+  it('walks both copies with J when the current key is the row key', () => {
+    const key = (current: string) =>
+      reduceIssuePeekKey({ currentId: current, ids: dupIds, peekId: 'APX-3' }, 'next');
+    expect(key('blocking:APX-3')).toEqual({ focusId: 'started:PMI-5', peekId: 'started:PMI-5' });
+    expect(key('started:PMI-5')).toEqual({ focusId: 'started:APX-3', peekId: 'started:APX-3' });
+    expect(key('started:APX-3')).toEqual({ focusId: 'started:APX-4', peekId: 'started:APX-4' });
+  });
+});
+
+describe('reduceIssuePeekHeaderKey (J / K from a focused group header)', () => {
+  const order: IssuePeekOrderEntry[] = [
+    { key: 'g1', kind: 'header' },
+    { key: 'g1:A-1', kind: 'row' },
+    { key: 'g1:A-2', kind: 'row' },
+    { key: 'g2', kind: 'header' },
+    { key: 'g3', kind: 'header' },
+    { key: 'g3:B-1', kind: 'row' },
+  ];
+
+  it('J goes to the first row after the header, K to the last row before it', () => {
+    expect(reduceIssuePeekHeaderKey({ headerKey: 'g1', order, peekId: null }, 'next')).toEqual({
+      focusId: 'g1:A-1',
+    });
+    expect(reduceIssuePeekHeaderKey({ headerKey: 'g3', order, peekId: null }, 'previous')).toEqual({
+      focusId: 'g1:A-2',
+    });
+  });
+
+  it('skips headers of collapsed groups on the way', () => {
+    expect(reduceIssuePeekHeaderKey({ headerKey: 'g2', order, peekId: null }, 'next')).toEqual({
+      focusId: 'g3:B-1',
+    });
+  });
+
+  it('lets an open peek follow', () => {
+    expect(reduceIssuePeekHeaderKey({ headerKey: 'g1', order, peekId: 'A-9' }, 'next')).toEqual({
+      focusId: 'g1:A-1',
+      peekId: 'g1:A-1',
+    });
+  });
+
+  it('does nothing without a row in that direction, for an unknown header, or other keys', () => {
+    expect(
+      reduceIssuePeekHeaderKey({ headerKey: 'g1', order, peekId: null }, 'previous'),
+    ).toBeNull();
+    expect(
+      reduceIssuePeekHeaderKey({ headerKey: 'g3', order: order.slice(0, 5), peekId: null }, 'next'),
+    ).toBeNull();
+    expect(reduceIssuePeekHeaderKey({ headerKey: 'nope', order, peekId: null }, 'next')).toBeNull();
+    expect(
+      reduceIssuePeekHeaderKey({ headerKey: 'g1', order, peekId: null }, 'togglePeek'),
+    ).toBeNull();
+  });
+});
 
 describe('reduceIssuePeekKey', () => {
   it('moves to the next / previous visible Issue', () => {

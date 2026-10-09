@@ -34,18 +34,38 @@ describe('resolveIssueKeyScope', () => {
       `${rowsHtml}<aside data-issue-peek-pane><p id="pane">pane</p></aside><nav id="nav" tabindex="0"></nav>`,
     );
     const row = host.querySelector('[data-issue-row="T-2"]')!;
-    expect(resolveIssueKeyScope(row)).toEqual({ fromList: true, onControl: false, rowId: 'T-2' });
+    expect(resolveIssueKeyScope(row)).toEqual({
+      fromList: true,
+      headerKey: null,
+      onControl: false,
+      rowId: 'T-2',
+    });
     expect(resolveIssueKeyScope(document.body)).toEqual({
       fromList: true,
+      headerKey: null,
       onControl: false,
       rowId: null,
     });
     expect(resolveIssueKeyScope(host.querySelector('#pane'))).toEqual({
       fromList: false,
+      headerKey: null,
       onControl: false,
       rowId: null,
     });
     expect(resolveIssueKeyScope(host.querySelector('#nav'))).toBeNull();
+  });
+
+  it('reports a focused group header so J / K can leave it', () => {
+    const host = mount(
+      `<button data-work-group-header="g1" id="hdr"><span id="lbl">Group</span></button>${rowsHtml}`,
+    );
+    expect(resolveIssueKeyScope(host.querySelector('#hdr'))).toEqual({
+      fromList: true,
+      headerKey: 'g1',
+      onControl: true,
+      rowId: null,
+    });
+    expect(resolveIssueKeyScope(host.querySelector('#lbl'))?.headerKey).toBe('g1');
   });
 
   it('flags a control inside the row but not the row root itself', () => {

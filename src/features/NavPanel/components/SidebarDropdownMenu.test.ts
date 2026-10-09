@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { Trash2Icon } from 'lucide-react';
 import { createElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,27 @@ import SidebarContextMenu from './SidebarContextMenu';
 import SidebarDropdownMenu from './SidebarDropdownMenu';
 
 describe('SidebarDropdownMenu', () => {
+  it('opens commands with forwarded icon components and existing icon elements', async () => {
+    const command = vi.fn();
+    render(
+      createElement(SidebarDropdownMenu, {
+        children: createElement('button', { type: 'button' }, 'Open icon menu'),
+        items: [
+          { icon: Trash2Icon, key: 'component', label: 'Component icon', onClick: command },
+          { icon: createElement(Trash2Icon), key: 'element', label: 'Element icon' },
+        ],
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Open icon menu' }));
+    const componentItem = await screen.findByRole('menuitem', { name: 'Component icon' });
+    expect(componentItem.querySelector('svg')).not.toBeNull();
+    expect(
+      screen.getByRole('menuitem', { name: 'Element icon' }).querySelector('svg'),
+    ).not.toBeNull();
+    fireEvent.click(componentItem);
+    expect(command).toHaveBeenCalledWith(expect.objectContaining({ key: 'component' }));
+  });
+
   it('runs nested commands with their key path and blocks disabled commands', async () => {
     const nestedCommand = vi.fn();
     const disabledCommand = vi.fn();

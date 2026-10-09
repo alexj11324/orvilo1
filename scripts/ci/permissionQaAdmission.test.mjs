@@ -191,10 +191,10 @@ test('workflow QA excludes every original production job and retains original no
 import re, subprocess, sys, types, yaml
 workflow = yaml.safe_load(open(sys.argv[1]))
 base = yaml.safe_load(subprocess.check_output(['git', 'show', '${candidateSha}:.github/workflows/deploy-orvilo1.yml']))
-def evaluate(expression, event, qa, build, deploy, retag, result, diagnose=False, ref='refs/heads/codex/permission-qa-current'):
+def evaluate(expression, event, qa, build, deploy, retag, result, diagnose=False, ref='refs/heads/codex/permission-qa-current', cleanup=False):
     expression = expression.replace('&&', ' and ').replace('||', ' or ')
     expression = re.sub(r'!(?!=)', 'not ', expression)
-    context = dict(github=types.SimpleNamespace(event_name=event, ref=ref), inputs=types.SimpleNamespace(qa_permission=qa, qa_diagnose=diagnose, build=build, deploy=deploy, retag_main_from=retag), needs=types.SimpleNamespace(build=types.SimpleNamespace(result=result)), always=lambda: True)
+    context = dict(github=types.SimpleNamespace(event_name=event, ref=ref), inputs=types.SimpleNamespace(qa_permission=qa, qa_diagnose=diagnose, qa_dns_cleanup=cleanup, build=build, deploy=deploy, retag_main_from=retag), needs=types.SimpleNamespace(build=types.SimpleNamespace(result=result)), always=lambda: True)
     return bool(eval(expression, {'__builtins__': {}}, context))
 for name in ['build', 'promote', 'retag-main', 'deploy']:
     for build in [False, True]:
@@ -216,6 +216,14 @@ for qa in [False, True]:
 for ref in ['refs/heads/canary', 'refs/heads/main']:
     assert not evaluate(workflow['jobs']['qa-diagnose']['if'], 'workflow_dispatch', True, False, False, '', 'success', True, ref)
 assert workflow[True]['workflow_dispatch']['inputs']['qa_diagnose']['default'] is False
+assert workflow[True]['workflow_dispatch']['inputs']['qa_dns_cleanup']['default'] is False
+for qa in [False, True]:
+    for diagnose in [False, True]:
+        for build in [False, True]:
+            for deploy in [False, True]:
+                for retag in ['', 'a' * 40]:
+                    for name in ['build', 'promote', 'retag-main', 'deploy', 'qa-gateways', 'qa-deploy']:
+                        assert not evaluate(workflow['jobs'][name]['if'], 'workflow_dispatch', qa, build, deploy, retag, 'success', diagnose, cleanup=True), name
 print('QA exclusion and original production admission verified')
 `;
   const { stdout } = await run('python3', [
@@ -408,6 +416,175 @@ globalThis.fetch = async (input, options) => {
           variant === 'foreign-origin' ? 'QA_ORIGIN' : 'QA_ZONE_ACCOUNT',
         );
       }
+    }
+  }
+});
+
+test('actual fixed DNS cleanup admits only one proven record and never broadens deletion', async () => {
+  const run = promisify(execFile);
+  const { stdout } = await run('python3', [
+    '-c',
+    'import json,sys,yaml; w=yaml.safe_load(open(sys.argv[1])); print(json.dumps(w["jobs"]["qa-diagnose"]["steps"]))',
+    path.resolve(import.meta.dirname, '../../.github/workflows/deploy-orvilo1.yml'),
+  ]);
+  const steps = JSON.parse(stdout);
+  const cleanup = steps.find(
+    (step) => step.name === 'Delete only the confirmed task QA application DNS record',
+  );
+  assert.ok(cleanup);
+  assert.equal(cleanup.if, 'success() && inputs.qa_dns_cleanup');
+  assert.ok(
+    steps.indexOf(cleanup) >
+      steps.findIndex((step) => step.name === 'Read only exact QA DNS metadata'),
+  );
+  const script = cleanup.run.split("<<'NODE'\n")[1].split('\nNODE')[0];
+  const admission = steps.find(
+    (step) => step.name === 'Admit only explicit fixed DNS cleanup controls',
+  );
+  assert.ok(admission);
+  for (const overrides of [
+    {},
+    { INPUT_BUILD: 'true' },
+    { INPUT_DEPLOY: 'true' },
+    { INPUT_RETAG: 'a'.repeat(40) },
+    { INPUT_QA: 'false' },
+    { INPUT_DIAGNOSE: 'false' },
+  ]) {
+    const result = await run('bash', ['-c', admission.run], {
+      env: {
+        ...process.env,
+        INPUT_CLEANUP: 'true',
+        INPUT_QA: 'true',
+        INPUT_DIAGNOSE: 'true',
+        INPUT_BUILD: 'false',
+        INPUT_DEPLOY: 'false',
+        INPUT_RETAG: '',
+        ...overrides,
+      },
+    }).catch((error) => error);
+    assert.equal(result.code, Object.keys(overrides).length ? 1 : undefined);
+  }
+  for (const variant of [
+    'valid',
+    'absent-receipt',
+    'receipt-zero',
+    'receipt-multiple',
+    'receipt-zone',
+    'receipt-id',
+    'receipt-time',
+    'foreign-zone',
+    'foreign-account',
+    'foreign-id',
+    'foreign-name',
+    'foreign-type',
+    'foreign-origin',
+    'foreign-proxy',
+    'foreign-time',
+    'get-403',
+    'delete-403',
+    'replacement',
+  ]) {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'permission-dns-cleanup-'));
+    try {
+      const id = '9f1969f44f6421408a8de8d6f3db7206';
+      const time = '2026-10-08T11:31:03.484927Z';
+      const record = {
+        id,
+        name: 'qa-permission.aspectlylabs.com',
+        type: 'A',
+        proxied: true,
+        created_on: time,
+        modified_on: time,
+        matches_known_qa_origin: true,
+      };
+      const metadata = {
+        readOnly: true,
+        zone: {
+          id: 'c71d288fdeb11a7ebf3c179d8a4961c8',
+          name: 'aspectlylabs.com',
+          account_id: 'd8f6630c7869111a5139bc5ed4d24ace',
+        },
+        lookups: [
+          { label: 'exact-zone', http_status: 200 },
+          { label: record.name, http_status: 200, record_count: 1 },
+        ],
+        records: [record],
+      };
+      if (variant === 'receipt-zero') {
+        metadata.lookups[1].record_count = 0;
+        metadata.records = [];
+      }
+      if (variant === 'receipt-multiple') {
+        metadata.lookups[1].record_count = 2;
+        metadata.records.push({ ...record });
+      }
+      if (variant === 'receipt-zone') metadata.zone.id = 'foreign';
+      if (variant === 'receipt-id') record.id = 'foreign';
+      if (variant === 'receipt-time') record.modified_on = 'foreign';
+      if (variant !== 'absent-receipt')
+        await writeFile(
+          path.join(directory, 'qa-dns-metadata.safe.json'),
+          JSON.stringify(metadata),
+        );
+      const fake = String.raw`
+import assert from 'node:assert/strict';
+const variant = ${JSON.stringify(variant)};
+const fixtureZone = 'c71d288fdeb11a7ebf3c179d8a4961c8';
+const fixtureId = '9f1969f44f6421408a8de8d6f3db7206';
+let deletes = 0;
+globalThis.fetch = async (input, options) => {
+  const url = new URL(input);
+  assert.equal(url.origin, 'https://api.cloudflare.com');
+  assert.equal(options.headers.Authorization, 'Bearer fixture_dns_secret_never_used_for_network');
+  assert.ok(['GET', 'DELETE'].includes(options.method));
+  let status = 200;
+  let result;
+  if (url.pathname === '/client/v4/zones/' + fixtureZone) {
+    assert.equal(options.method, 'GET');
+    result = { id: variant === 'foreign-zone' ? 'foreign' : fixtureZone, name: 'aspectlylabs.com', account: { id: variant === 'foreign-account' ? 'foreign' : 'd8f6630c7869111a5139bc5ed4d24ace' } };
+  } else if (url.pathname.endsWith('/dns_records/' + fixtureId)) {
+    if (options.method === 'DELETE') { deletes++; assert.equal(deletes, 1); status = variant === 'delete-403' ? 403 : 200; result = { id: fixtureId }; }
+    else {
+      status = variant === 'get-403' ? 403 : 200;
+      result = { id: variant === 'foreign-id' ? 'foreign' : fixtureId, name: variant === 'foreign-name' ? 'foreign.aspectlylabs.com' : 'qa-permission.aspectlylabs.com', type: variant === 'foreign-type' ? 'AAAA' : 'A', content: variant === 'foreign-origin' ? '198.51.100.8' : '192.0.2.7', proxied: variant !== 'foreign-proxy', created_on: '2026-10-08T11:31:03.484927Z', modified_on: variant === 'foreign-time' ? 'foreign' : '2026-10-08T11:31:03.484927Z' };
+    }
+  } else {
+    assert.equal(url.pathname, '/client/v4/zones/' + fixtureZone + '/dns_records');
+    assert.equal(options.method, 'GET');
+    assert.equal(url.searchParams.get('name'), 'qa-permission.aspectlylabs.com');
+    assert.equal(deletes, 1);
+    result = variant === 'replacement' ? [{ id: 'replacement' }] : [];
+  }
+  return { ok: status === 200, status, json: async () => ({ success: status === 200, result, errors: status === 403 ? [{ code: 10000 }] : [] }) };
+};
+`;
+      const result = await run(process.execPath, ['--input-type=module', '-e', fake + script], {
+        env: {
+          ...process.env,
+          RUNNER_TEMP: directory,
+          CLOUDFLARE_DNS_API_TOKEN: 'fixture_dns_secret_never_used_for_network',
+          SSH_HOST: '192.0.2.7',
+        },
+      }).catch((error) => error);
+      const receipt = JSON.parse(result.stdout);
+      assert.ok(
+        !result.stdout.includes('fixture_dns_secret') &&
+          !result.stdout.includes('192.0.2.7') &&
+          !result.stdout.includes('198.51.100.8'),
+      );
+      assert.equal(
+        receipt.operations.filter((operation) => operation.method === 'DELETE').length,
+        ['valid', 'delete-403', 'replacement'].includes(variant) ? 1 : 0,
+      );
+      assert.equal(result.code, variant === 'valid' ? undefined : 1);
+      assert.equal(receipt.absent_after_delete, variant === 'valid');
+      if (variant === 'valid')
+        assert.deepEqual(
+          receipt.operations.map((operation) => operation.method),
+          ['GET', 'GET', 'DELETE', 'GET'],
+        );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
     }
   }
 });

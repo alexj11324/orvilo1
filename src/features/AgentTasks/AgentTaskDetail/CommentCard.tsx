@@ -3,9 +3,10 @@ import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
+import { Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
@@ -28,11 +29,16 @@ import {
 import { LinearFileCard } from '@/features/EditorCanvas/LinearFilePlugin';
 import { useWorkspaceCommentMentionOption } from '@/features/Portal/TopicComments/useWorkspaceCommentMentionOption';
 import { useActivityTime } from '@/hooks/useActivityTime';
+import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { isOptimisticActivityId } from '@/store/task/slices/detail/optimisticActivity';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { styles } from '../shared/style';
+import { commentAnchorId, getCommentActions, isCommentAnchorHash } from './commentActions';
+import { useCommentCopyLink } from './useCommentCopyLink';
 
 // Keep saved comments visually consistent with the editor: render FileNodes
 // as the Linear-style card on its own row instead of the default inline pill.
@@ -62,6 +68,22 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time);
   const content = activity.content || t('taskDetail.activities.fallback.comment');
   const commentId = activity.id;
+  const viewerId = useUserStore(userProfileSelectors.userId);
+  const { allowed: canWrite } = usePermission('create_content');
+  const actions = getCommentActions(activity, viewerId, { canWrite });
+  const copyCommentLink = useCommentCopyLink();
+
+  // `#comment-<id>` deep link: scroll the card into view and ring it briefly.
+  const { hash } = useLocation();
+  const isLinkTarget = !!commentId && isCommentAnchorHash(hash, commentId);
+  const [highlighted, setHighlighted] = useState(false);
+  useEffect(() => {
+    if (!isLinkTarget) return;
+    document.getElementById(commentAnchorId(commentId!))?.scrollIntoView({ block: 'center' });
+    setHighlighted(true);
+    const timer = window.setTimeout(() => setHighlighted(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [isLinkTarget, commentId]);
 
   const editorData = useMemo(
     () => ({
@@ -120,28 +142,61 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
     });
   }, [commentId, deleteComment, t]);
 
+  const handleCopyLink = useCallback(() => {
+    if (commentId) void copyCommentLink(commentId);
+  }, [commentId, copyCommentLink]);
+
   const menuItems = useMemo(
     () => [
-      {
-        icon: Pencil,
-        key: 'edit',
-        label: t('taskDetail.comment.edit'),
-        onClick: handleEdit,
-      },
-      {
-        danger: true,
-        icon: Trash,
-        key: 'delete',
-        label: t('taskDetail.comment.delete'),
-        onClick: handleDelete,
-      },
+      ...(actions.canEdit
+        ? [
+            {
+              danger: false,
+              icon: Pencil,
+              key: 'edit',
+              label: t('taskDetail.comment.edit'),
+              onClick: handleEdit,
+            },
+          ]
+        : []),
+      ...(actions.canCopyLink
+        ? [
+            {
+              danger: false,
+              icon: Link2,
+              key: 'copyLink',
+              label: t('taskDetail.comment.copyLink'),
+              onClick: handleCopyLink,
+            },
+          ]
+        : []),
+      ...(actions.canDelete
+        ? [
+            {
+              danger: true,
+              icon: Trash,
+              key: 'delete',
+              label: t('taskDetail.comment.delete'),
+              onClick: handleDelete,
+            },
+          ]
+        : []),
     ],
-    [t, handleEdit, handleDelete],
+    [
+      actions.canCopyLink,
+      actions.canDelete,
+      actions.canEdit,
+      t,
+      handleCopyLink,
+      handleEdit,
+      handleDelete,
+    ],
   );
 
   return (
     <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-3 ${styles.commentCard}`}
+      className={`relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-3 transition-shadow ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+      id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
         borderColor: cssVar.colorBorderSecondary,
         borderRadius: cssVar.borderRadiusLG,
@@ -210,7 +265,15 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       {!isEditing && commentId && !isOptimisticActivityId(commentId) && (
         <div className={`${styles.commentActions} comment-actions`}>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+            <DropdownMenuTrigger
+              render={
+                <ActionIcon
+                  aria-label={t('more', { ns: 'common' })}
+                  icon={MoreHorizontal}
+                  size={'small'}
+                />
+              }
+            />
             <DropdownMenuContent align={'end'} className="min-w-40">
               {menuItems.map((item) => (
                 <DropdownMenuItem

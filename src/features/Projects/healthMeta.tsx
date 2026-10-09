@@ -11,12 +11,29 @@ import { memo } from 'react';
  * (green/yellow/red); a status glyph like a checkmark or alert octagon would
  * read as success/failure, so the icon is always the same filled circle and
  * only the color carries the meaning. `key` is the `project:` namespace
- * label; `color` names the antd token the dot resolves against the theme.
+ * label; `color` names the antd token the dot resolves against the theme and
+ * `textClass` the `*-text` role the label takes: the fill colour is not
+ * text-safe on a light canvas (amber 2.2:1, green 3.5:1), the text role is.
  */
 export const PROJECT_HEALTH_META = {
-  atRisk: { color: 'colorWarning', key: 'list.health.atRisk', tag: 'warning' },
-  offTrack: { color: 'colorError', key: 'list.health.offTrack', tag: 'error' },
-  onTrack: { color: 'colorSuccess', key: 'list.health.onTrack', tag: 'success' },
+  atRisk: {
+    color: 'colorWarning',
+    key: 'list.health.atRisk',
+    tag: 'warning',
+    textClass: 'text-warning-text',
+  },
+  offTrack: {
+    color: 'colorError',
+    key: 'list.health.offTrack',
+    tag: 'error',
+    textClass: 'text-destructive-text',
+  },
+  onTrack: {
+    color: 'colorSuccess',
+    key: 'list.health.onTrack',
+    tag: 'success',
+    textClass: 'text-success-text',
+  },
 } as const satisfies Record<
   ProjectHealth,
   {
@@ -25,6 +42,8 @@ export const PROJECT_HEALTH_META = {
     key: string;
     /** lobehub `Tag` system-preset name for the same semantic color. */
     tag: 'error' | 'success' | 'warning';
+    /** Text-safe status role for the label (the dot keeps the fill colour). */
+    textClass: 'text-destructive-text' | 'text-success-text' | 'text-warning-text';
   }
 >;
 

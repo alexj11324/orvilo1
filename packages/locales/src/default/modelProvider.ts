@@ -203,6 +203,8 @@ export default {
     'Built-in providers cannot be removed from the list. If you don’t use this provider, just disable it.',
   'providerModels.config.checker.button': 'Check',
   'providerModels.config.checker.desc': 'Test if the API Key and proxy URL are correctly filled',
+  'providerModels.config.checker.missingCredentials':
+    'Enter an API key or endpoint first, then check the connection.',
   'providerModels.config.checker.pass': 'Check passed',
   'providerModels.config.checker.title': 'Connectivity Check',
   'providerModels.config.credentials.title': 'Credentials',

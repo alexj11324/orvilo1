@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { Fragment, type PointerEvent as ReactPointerEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,62 +10,13 @@ import { DIVIDER_WIDTH, paneTrackWidth, resizePanes } from './paneLayout';
 import type { TerminalPane } from './store';
 import TerminalView from './TerminalView';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  close: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 2px;
-    inset-inline-end: 2px;
-
-    opacity: 0;
-
-    transition: opacity 0.15s;
-  `,
-  divider: css`
-    cursor: col-resize;
-    position: relative;
-    flex: none;
-    inline-size: ${DIVIDER_WIDTH}px;
-
-    &::after {
-      content: '';
-
-      position: absolute;
-      inset-block: 0;
-      inset-inline-start: ${(DIVIDER_WIDTH - 1) / 2}px;
-
-      inline-size: 1px;
-
-      background: ${cssVar.colorBorderSecondary};
-
-      transition: background 0.15s;
-    }
-
-    &:hover::after {
-      background: ${cssVar.colorPrimary};
-    }
-  `,
-  pane: css`
-    position: relative;
-    overflow: hidden;
-    min-inline-size: 0;
-    transition: opacity 0.15s;
-
-    /* Set only while split, so a lone pane is never dimmed. */
-    &[data-inactive-pane] {
-      opacity: 0.7;
-    }
-
-    &:hover [data-pane-close],
-    &:focus-within [data-pane-close] {
-      opacity: 1;
-    }
-  `,
-  root: css`
-    display: flex;
-    block-size: 100%;
-  `,
-}));
+const styles = {
+  close: 'absolute z-1 [inset-block-start:2px] end-0.5 opacity-0 [transition:opacity_0.15s]',
+  divider:
+    "cursor-col-resize relative flex-none after:content-[''] after:absolute after:[inset-block:0] after:[inset-inline-start:calc(50%_-_0.5px)] after:[inline-size:1px] after:bg-sidebar-border after:bg-none after:[transition:background_0.15s] hover:after:bg-primary",
+  pane: 'relative overflow-hidden [min-inline-size:0] [transition:opacity_0.15s] data-[inactive-pane]:opacity-70 hover:[&_[data-pane-close]]:opacity-100 focus-within:[&_[data-pane-close]]:opacity-100',
+  root: 'flex [block-size:100%]',
+};
 
 interface SplitViewProps {
   activePaneId: string;
@@ -124,7 +74,11 @@ const SplitView = ({
       {panes.map((pane, index) => (
         <Fragment key={pane.id}>
           {index > 0 && (
-            <div className={styles.divider} onPointerDown={handleDividerDown(index - 1)} />
+            <div
+              className={styles.divider}
+              style={{ inlineSize: DIVIDER_WIDTH }}
+              onPointerDown={handleDividerDown(index - 1)}
+            />
           )}
           <div
             className={styles.pane}

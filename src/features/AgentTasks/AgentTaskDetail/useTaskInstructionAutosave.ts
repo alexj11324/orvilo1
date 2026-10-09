@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { TaskStore } from '@/store/task';
 import { useTaskStore } from '@/store/task';
 
+import { runTrackedDescriptionSave } from './taskSaveRetry';
+
 const DEBOUNCE_MS = 300;
 
 interface UseTaskInstructionAutosaveOptions {
@@ -72,10 +74,12 @@ export const useTaskInstructionAutosave = ({
       lastSavedJsonRef.current = jsonSignature;
 
       const markdown = String(editor.getDocument('markdown') ?? '');
-      updateTask(taskId, { editorData: json, instruction: markdown }, { source: 'editor' }).catch(
-        (error) => {
-          console.error('[TaskInstruction] Failed to save:', error);
-        },
+      void runTrackedDescriptionSave(taskId, (retrying) =>
+        updateTask(
+          taskId,
+          { editorData: json, instruction: markdown },
+          { source: retrying ? 'external' : 'editor' },
+        ),
       );
     }, DEBOUNCE_MS);
   }, [cancelPendingSave, contentRevision, editable, editor, onEdit, taskId, updateTask]);

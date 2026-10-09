@@ -26,6 +26,8 @@ vi.mock('dayjs', () => {
     format: () => '2026-05-24',
     fromNow: () => 'now',
   });
+  // `@orvilo/utils/time` extends dayjs with plugins on import.
+  dayjs.extend = () => {};
   return { default: dayjs };
 });
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { CalendarClockIcon, CheckIcon, ChevronRight, PlusIcon, TypeIcon } from 'lucide-react';
@@ -61,7 +62,7 @@ const HeteroPlus = memo(() => {
               <CheckIcon size={16} style={{ color: cssVar.colorSuccess }} />
             ) : (
               <span style={{ color: cssVar.colorTextTertiary, fontSize: 12 }}>
-                {resolveScheduleTime(hours).format('MM-DD HH:mm')}
+                {formatAbsoluteDateTime(resolveScheduleTime(hours))}
               </span>
             ),
           key: `scheduleSend-${hours}h`,

@@ -1,3 +1,4 @@
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import { Clock3Icon, PlusIcon } from 'lucide-react';
@@ -62,7 +63,7 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
         const displayTime =
           dayjs().diff(dayjs(topic.updatedAt), 'd') < 7
             ? dayjs(topic.updatedAt).fromNow()
-            : dayjs(topic.updatedAt).format('YYYY-MM-DD');
+            : formatAbsoluteDate(topic.updatedAt);
 
         return (
           <DropdownMenuCheckboxItem

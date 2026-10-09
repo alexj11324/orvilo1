@@ -2,6 +2,7 @@
 
 import type { QuotaLimitReading } from '@orvilo/heterogeneous-agents/quota';
 import { projectWindows } from '@orvilo/heterogeneous-agents/quota';
+import { ABSOLUTE_DATE_TIME_FORMAT, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import type { TFunction } from 'i18next';
@@ -421,7 +422,7 @@ const BurnChart = memo<{
         : null;
   const willExhaust = projection.kind === 'exhaust';
   const exhausted = projection.kind === 'exhausted';
-  const timeFormat = series.type === 'session' ? 'HH:mm' : 'M/D HH:mm';
+  const timeFormat = series.type === 'session' ? 'HH:mm' : ABSOLUTE_DATE_TIME_FORMAT;
 
   const statusText = !isLive
     ? t('heteroAgent.claudeQuota.calendar.pastWindow')
@@ -609,7 +610,7 @@ CapacityMeter.displayName = 'CapacityMeter';
 
 const windowTooltip = (stat: WindowStat, t: TFunction<'chat'>) =>
   [
-    `${dayjs(stat.windowStartAt).format('M/D HH:mm')} – ${dayjs(stat.resetsAt).format('M/D HH:mm')}`,
+    `${formatAbsoluteDateTime(stat.windowStartAt)} – ${formatAbsoluteDateTime(stat.resetsAt)}`,
     t('heteroAgent.claudeQuota.calendar.windowUtilization', {
       percent: Math.round(stat.peakUtilization),
     }),

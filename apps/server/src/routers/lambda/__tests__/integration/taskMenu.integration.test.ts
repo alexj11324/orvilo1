@@ -10,6 +10,7 @@ import {
   taskIssueRecurrences,
   taskIssueTemplates,
   taskResources,
+  tasks,
   users,
   workspaceMembers,
   workspaces,
@@ -72,6 +73,31 @@ describe('Task Menu Router', () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await clean();
+  });
+
+  it('keeps legacy-id resource reads and writes on the exact row', async () => {
+    const other = await createIssue();
+    const targetId = other.identifier;
+    await testDB.insert(tasks).values({
+      id: targetId,
+      identifier: 'LEGACY-2',
+      seq: 2,
+      createdByUserId: ownerId,
+      workspaceId,
+      instruction: 'Exact legacy target',
+    });
+    const caller = callerFor(ownerId);
+    const resource = await caller.addLink({
+      id: targetId,
+      kind: 'link',
+      url: 'https://example.com/legacy-resource',
+    });
+    expect((await caller.links({ id: targetId })).data.map((row) => row.id)).toContain(
+      resource.data.id,
+    );
+    expect((await caller.links({ id: other.id })).data).toEqual([]);
+    expect((await caller.removeLink({ id: other.id, linkId: resource.data.id })).data).toBe(false);
+    expect((await caller.removeLink({ id: targetId, linkId: resource.data.id })).data).toBe(true);
   });
 
   it('requires authentication', async () => {

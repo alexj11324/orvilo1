@@ -1,5 +1,6 @@
 'use client';
 import { WORK_SEARCH_MAX_PER_TYPE } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { useDebounce } from 'ahooks';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -92,10 +93,7 @@ const TeamRow = memo<{ team: TeamRowData }>(({ team }) => (
       </div>
       {team.key ? <span className={styles.key}>{team.key}</span> : null}
       {team.updatedAt ? (
-        <span
-          className={cn('text-sm', styles.meta)}
-          title={dayjs(team.updatedAt).format('YYYY-MM-DD HH:mm')}
-        >
+        <span className={cn('text-sm', styles.meta)} title={formatAbsoluteDateTime(team.updatedAt)}>
           {dayjs(team.updatedAt).fromNow()}
         </span>
       ) : null}

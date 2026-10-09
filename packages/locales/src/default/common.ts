@@ -227,8 +227,6 @@ export default {
 
   'cmdk.mentionAgent': 'Mention Agent',
 
-  'cmdk.myWork': 'My Work',
-
   'cmdk.navigate': 'Navigate',
 
   'cmdk.newAgent': 'New Agent',
@@ -320,7 +318,7 @@ export default {
   'cmdk.sendToAgent': 'Send to {{agent}}',
   'cmdk.settings': 'Settings',
   'cmdk.starOnGitHub': 'Star us on GitHub',
-  'cmdk.submitIssue': 'Submit Issue',
+  'cmdk.submitIssue': 'Report a problem',
   'cmdk.tasks': 'Issues',
   'cmdk.teams': 'Teams',
   'cmdk.theme': 'Theme',
@@ -1241,8 +1239,8 @@ export default {
   'telemetry.title': 'Help improve {{appName}}',
   'temp': 'Temporary',
   'terms': 'Terms of Service',
-  'time.formatOtherYear': 'MMM D, YYYY',
-  'time.formatThisYear': 'MMM D',
+  'time.formatOtherYear': 'YYYY/MM/DD',
+  'time.formatThisYear': 'YYYY/MM/DD',
   'time.today': 'Today',
   'time.yesterday': 'Yesterday',
   'unknownError': 'Unknown error',

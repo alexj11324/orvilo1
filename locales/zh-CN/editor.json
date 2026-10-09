@@ -20,6 +20,7 @@
   "autoSave.retry": "重试",
   "autoSave.saved": "已保存",
   "autoSave.saving": "自动保存中…",
+  "autoSave.savingShort": "保存中…",
   "cancel": "取消",
   "codemirror.copyFailed": "复制失败",
   "codemirror.copySuccess": "代码已复制到剪贴板",

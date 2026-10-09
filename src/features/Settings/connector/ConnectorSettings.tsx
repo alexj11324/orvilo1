@@ -1,9 +1,15 @@
 'use client';
 
+import {
+  getComposioAppByIdentifier,
+  getOrviloSkillProviderById,
+  matchMcpPresetByConnector,
+} from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { memo, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 
+import { CustomConnectorModal } from '@/features/Connectors';
 import NavHeader from '@/features/NavHeader';
 import { useToolStore } from '@/store/tool';
 import {
@@ -15,13 +21,17 @@ import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
-import ConnectorDetailPanel, { type ConnectorDetailType } from './features/ConnectorDetail';
+import ConnectorDetailPanel from './features/ConnectorDetail';
+import {
+  fromMcpPresetSelectionId,
+  isSelectionResolvable,
+  type SelectedConnector,
+} from './features/connectorSelection';
 import LeftPanel from './features/LeftPanel';
+import { useConnectorPresetActions } from './features/useConnectorPresetActions';
+import { visibleMcpPresets } from './features/visibleMcpPresets';
 
-export interface SelectedConnector {
-  identifier: string;
-  type: ConnectorDetailType;
-}
+export type { SelectedConnector } from './features/connectorSelection';
 
 const styles = createStaticStyles(({ css }) => ({
   detail: css`
@@ -48,6 +58,12 @@ const styles = createStaticStyles(({ css }) => ({
  */
 export const ConnectorSettings = memo(() => {
   const [selected, setSelected] = useState<SelectedConnector | null>(null);
+  // Hoisted from the list so the detail pane offers the same Connect actions.
+  const selectConnector = useCallback(
+    (identifier: string) => setSelected({ identifier, type: 'mcp-connector' }),
+    [],
+  );
+  const presetActions = useConnectorPresetActions(selectConnector);
 
   const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
   const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
@@ -61,15 +77,36 @@ export const ConnectorSettings = memo(() => {
   // custom plugin, then agent-owned connector.
   useEffect(() => {
     if (selected) {
+      // A preset that gained a connector (the user just connected it) moves to
+      // that connector's pane instead of staying on the not-connected one.
+      const presetId =
+        selected.type === 'mcp-preset' ? fromMcpPresetSelectionId(selected.identifier) : undefined;
+      const presetConnector = presetId
+        ? customConnectors.find(
+            (c) => matchMcpPresetByConnector(c, visibleMcpPresets)?.id === presetId,
+          )
+        : undefined;
+      if (presetConnector) {
+        setSelected({ identifier: presetConnector.identifier, type: 'mcp-connector' });
+        return;
+      }
+
       // The connector list is scope-bound and can refill when the workspace
       // context resolves — drop a selection whose row no longer exists so the
-      // picker below re-runs instead of showing a phantom detail.
-      const stillResolvable =
-        allOrviloSkillServers.some((s) => s.identifier === selected.identifier) ||
-        allComposioServers.some((s) => s.identifier === selected.identifier) ||
-        customConnectors.some((c) => c.identifier === selected.identifier) ||
-        installedPluginList.some((p) => p.identifier === selected.identifier) ||
-        agentBoundConnectors.some((c) => c.id === selected.identifier);
+      // picker below re-runs instead of showing a phantom detail. Rows that are
+      // listed but not connected have no record yet and still count as rows.
+      const stillResolvable = isSelectionResolvable(selected, {
+        agentConnectorIds: agentBoundConnectors.map((c) => c.id),
+        connectorIdentifiers: customConnectors.map((c) => c.identifier),
+        isComposioCatalogId: (identifier) => Boolean(getComposioAppByIdentifier(identifier)),
+        isOrviloCatalogId: (identifier) => Boolean(getOrviloSkillProviderById(identifier)),
+        pluginIdentifiers: installedPluginList.map((p) => p.identifier),
+        presetIds: visibleMcpPresets.map((preset) => preset.id),
+        serverIdentifiers: [
+          ...allOrviloSkillServers.map((server) => server.identifier),
+          ...allComposioServers.map((server) => server.identifier),
+        ],
+      });
       if (stillResolvable) return;
       setSelected(null);
     }
@@ -124,6 +161,7 @@ export const ConnectorSettings = memo(() => {
       <NavHeader />
       <div className={styles.root}>
         <LeftPanel
+          presetActions={presetActions}
           selectedIdentifier={selected?.identifier}
           onSelect={(identifier, type) => setSelected({ identifier, type })}
         />
@@ -132,12 +170,18 @@ export const ConnectorSettings = memo(() => {
           <div className={styles.detail}>
             <ConnectorDetailPanel
               identifier={selected.identifier}
+              presetActions={presetActions}
               type={selected.type}
               onDelete={() => setSelected(null)}
             />
           </div>
         )}
       </div>
+      <CustomConnectorModal
+        open={presetActions.showForm}
+        presetPlugin={presetActions.presetPlugin}
+        onClose={presetActions.closeForm}
+      />
     </>
   );
 });

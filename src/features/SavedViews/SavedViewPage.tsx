@@ -7,6 +7,7 @@ import {
   type SavedViewVisibility,
   type WorkQuery,
 } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -209,7 +210,7 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
         {project.updatedAt ? (
           <div
             className={cn('text-[12px]', styles.updatedAt)}
-            title={dayjs(project.updatedAt).format('YYYY-MM-DD HH:mm')}
+            title={formatAbsoluteDateTime(project.updatedAt)}
           >
             {dayjs(project.updatedAt).fromNow()}
           </div>

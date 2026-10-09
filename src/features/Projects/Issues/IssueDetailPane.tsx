@@ -11,6 +11,10 @@ const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
 );
 
+const LazyIssuePeekActions = lazy(() =>
+  import('@/features/AgentTasks').then((module) => ({ default: module.IssuePeekActions })),
+);
+
 const styles = createStaticStyles(({ css }) => ({
   /**
    * Sticky inside the pane's own scroll host — the header stays put while
@@ -61,7 +65,15 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
         <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
           {identifier ?? t('taskList.details.open')}
         </span>
-        <div className="flex flex-row" style={{ justifyContent: 'flex-end', gap: 4, flex: 1 }}>
+        <div
+          className="flex flex-row"
+          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
+        >
+          {identifier && (
+            <Suspense fallback={null}>
+              <LazyIssuePeekActions taskId={identifier} onDeleted={onClose} />
+            </Suspense>
+          )}
           {identifier && (
             <Button
               aria-label={t('taskList.detail.openFullPage')}

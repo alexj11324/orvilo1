@@ -1,19 +1,19 @@
 import { useEffect } from 'react';
 
-import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { useAgentStore } from '@/store/agent';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
+import { isTaskNotFound } from './isTaskNotFound';
+import { isTaskDetailResolving } from './taskDetailReadiness';
+
 export interface ActiveTaskDetailState {
   /** A transient fetch failure (network / 500) with no cached detail — distinct from a resolved not-found. Render a reload state, not a 404. */
   error?: unknown;
   /**
-   * Hard loading gate: the first task snapshot isn't ready yet, OR it is but the
-   * assignee agent's config (model / heterogeneous runtime) hasn't hydrated. The
-   * detail surfaces depend on the assignee config to render the model picker
-   * correctly, so we hold the skeleton until it lands.
+   * Loading gate: the first task snapshot isn't ready yet. The assignee agent's
+   * config hydrates in the background and never holds the page.
    */
   isInitialLoading: boolean;
   /** The task fetch settled with a *resolved* not-found (deleted / never existed) and there is no cached detail. */
@@ -43,7 +43,6 @@ export const useActiveTaskDetail = (taskId?: string): ActiveTaskDetailState => {
   const assigneeAgentId = useTaskStore((s) =>
     taskId ? (s.taskDetailMap[taskId]?.agentId ?? undefined) : undefined,
   );
-  const assigneeInMap = useAgentStore((s) => !!(assigneeAgentId && s.agentMap[assigneeAgentId]));
 
   useEffect(() => {
     if (!taskId) return;
@@ -65,7 +64,7 @@ export const useActiveTaskDetail = (taskId?: string): ActiveTaskDetailState => {
 
   // Hydrate-only (never touches `activeAgentId`); no-ops on an empty id, so it
   // simply activates once the assignee is known from the task detail.
-  const { isLoading: agentConfigLoading } = useHydrateAgentConfig(isLogin, assigneeAgentId ?? '');
+  useHydrateAgentConfig(isLogin, assigneeAgentId ?? '');
 
   if (!taskId) return { isInitialLoading: false, isNotFound: false, onRetry: () => {} };
 
@@ -74,26 +73,15 @@ export const useActiveTaskDetail = (taskId?: string): ActiveTaskDetailState => {
   // carries an HTTP status instead. Only the former is a real 404 (a dead-end);
   // a transient failure must offer Reload, not tell the user the task was deleted.
   const settledWithoutDetail = !!taskError && !hasTaskDetail;
-  const isResolvedNotFound = normalizeAsyncError(taskError).code === 'TASK_NOT_FOUND';
+  const isResolvedNotFound = isTaskNotFound(taskError);
   const isNotFound = settledWithoutDetail && isResolvedNotFound;
   const fetchError = settledWithoutDetail && !isResolvedNotFound ? taskError : undefined;
-  // Anything that isn't "we have the detail", "confirmed gone", or "errored" is
-  // still resolving — keep the skeleton up instead of flashing empty/404.
-  const isTaskResolving = !hasTaskDetail && !settledWithoutDetail;
-
-  // Block on the assignee config only while its fetch is genuinely in-flight and
-  // we don't already have it cached. Gating on `isLoading` (not "absent from the
-  // map") is what avoids the deadlock: a settled fetch that resolves to `null` —
-  // the assignee was deleted or moved to another workspace, so the ownership-
-  // scoped query returns null *without* erroring — leaves `isLoading=false` and
-  // no error, releasing the gate instead of waiting forever for a config that
-  // will never land in the map.
-  const isAssigneeResolving =
-    !!assigneeAgentId && isLogin === true && !assigneeInMap && agentConfigLoading;
-
   return {
     error: fetchError,
-    isInitialLoading: isTaskResolving || (hasTaskDetail && isAssigneeResolving),
+    // Anything that isn't "we have the detail", "confirmed gone", or "errored"
+    // is still resolving — keep the skeleton up instead of flashing empty/404.
+    // The assignee config hydrates in the background and does not gate the page.
+    isInitialLoading: isTaskDetailResolving({ hasTaskDetail, settledWithoutDetail }),
     isNotFound,
     onRetry: () => mutate(),
   };

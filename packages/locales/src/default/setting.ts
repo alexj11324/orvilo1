@@ -1708,18 +1708,12 @@ export default {
     'Once filled out, the system agent will use the custom prompt when generating content',
   'systemAgent.customPrompt.placeholder': 'Please enter custom prompt',
   'systemAgent.customPrompt.title': 'Custom Prompt',
-  'systemAgent.generationTopic.label': 'Model',
-  'systemAgent.generationTopic.modelDesc': 'Model used to name AI image topics',
-  'systemAgent.generationTopic.title': 'AI Image Topic Naming',
   'systemAgent.followUpAction.label': 'Follow-up Suggestions Model',
   'systemAgent.followUpAction.modelDesc':
     'Model used to suggest one-click follow-up replies under each agent message',
   'systemAgent.followUpAction.title': 'Follow-up Suggestions',
   'systemAgent.helpInfo':
     'When creating a new agent, the default agent settings will be used as preset values.',
-  'systemAgent.historyCompress.label': 'Model',
-  'systemAgent.historyCompress.modelDesc': 'Model used to compress conversation history',
-  'systemAgent.historyCompress.title': 'Auto context compression',
   'systemAgent.inputCompletion.label': 'Model',
   'systemAgent.inputCompletion.modelDesc':
     'Suggests text while you type. When enabled, this model generates the suggestions.',
@@ -1736,10 +1730,6 @@ export default {
   'systemAgent.userMemoryPersonaWriter.modelDesc':
     'Model used to write persona-oriented memory summaries.',
   'systemAgent.userMemoryPersonaWriter.title': 'Memory Persona Writer',
-  'systemAgent.promptRewrite.label': 'Model',
-  'systemAgent.promptRewrite.modelDesc':
-    'Improves prompts before generation. When enabled, this model rewrites the prompt.',
-  'systemAgent.promptRewrite.title': 'Prompt Rewriting',
   'systemAgent.thread.label': 'Model',
   'systemAgent.thread.modelDesc': 'Model used to rename subtopics',
   'systemAgent.thread.title': 'Subtopic Auto-Naming',

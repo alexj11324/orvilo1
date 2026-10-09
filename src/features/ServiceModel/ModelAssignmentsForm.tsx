@@ -40,9 +40,7 @@ const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [
   { key: 'expertise' },
   { key: 'goal' },
   { key: 'topic' },
-  { key: 'generationTopic' },
   { key: 'translation' },
-  { key: 'historyCompress' },
   { key: 'agentMeta' },
 ];
 
@@ -50,7 +48,6 @@ const OPTIONAL_FEATURE_ITEMS: SystemAgentModelItem[] = [
   { key: 'topicAutoSummary' },
   { key: 'followUpAction' },
   { key: 'inputCompletion' },
-  { key: 'promptRewrite' },
 ];
 
 const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [

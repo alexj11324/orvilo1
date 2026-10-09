@@ -148,3 +148,47 @@ describe('a retired settings tab leaves no way to reach it', () => {
     }
   });
 });
+
+describe('controls removed because nothing read them (2026/10/09) stay removed', () => {
+  it('keeps the dead system-agent rows out of the Service model form and its selectors', () => {
+    const form = read('src/features/ServiceModel/ModelAssignmentsForm.tsx');
+    const selectors = read('src/store/user/slices/settings/selectors/systemAgent.ts');
+
+    for (const key of ['promptRewrite', 'generationTopic', 'historyCompress']) {
+      expect(form, `the Service model form lists ${key} again`).not.toContain(key);
+      expect(selectors, `systemAgentSelectors exposes ${key} again`).not.toContain(key);
+    }
+  });
+
+  it('keeps the uncalled history-summary action and the rows copy gone', () => {
+    expect(
+      exists('src/store/chat/slices/agentRun/actions/state/memory.ts'),
+      'the dead internal_summaryHistory action is back',
+    ).toBe(false);
+    expect(read('src/store/chat/slices/agentRun/actions/index.ts')).not.toContain('Memory');
+
+    const locale = read('packages/locales/src/default/setting.ts');
+    for (const key of ['promptRewrite', 'generationTopic', 'historyCompress']) {
+      expect(locale, `the default locale carries systemAgent.${key} again`).not.toContain(key);
+    }
+  });
+
+  it('keeps the 404 Blog, Terms and Privacy links off the About page', () => {
+    const about = read('src/features/Settings/about/features/About.tsx');
+
+    for (const retired of ['BLOG', 'TERMS_URL', 'PRIVACY_URL']) {
+      expect(about, `About links ${retired} again`).not.toContain(retired);
+    }
+  });
+
+  it('ships no orphaned workspace Linear sync page, but keeps its bookmark redirect', () => {
+    expect(exists('src/features/WorkspaceSetting/Linear'), 'the old sync page is back').toBe(false);
+    expect(
+      exists('src/routes/(main)/[workspaceSlug]/settings/linear'),
+      'the old sync route stub is back',
+    ).toBe(false);
+    expect(read('src/spa/router/sharedMainAreaLeaves.tsx')).toContain(
+      `redirectElement('../imports/linear'), path: 'linear'`,
+    );
+  });
+});

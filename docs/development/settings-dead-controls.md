@@ -39,3 +39,21 @@
 ## Workspace route parity integration
 
 The retired workspace Storage URL remains a bookmark redirect to the workspace settings index. It is deliberately excluded from automatic workspace prefixing, so personal storage stays personal. The shared Web/Electron parity test now compares registered tabs against both live workspace tabs and declared legacy aliases; existing alias tests still assert their exact redirect destinations. The prior owning CI failed both parity cases for the additional `storage` redirect; the scoped shared-router and alias suites pass all 81 cases after this correction. Canonical Issue hotkey copy is preserved while dead delete actions are removed.
+
+## 2026/10/09 移除无读取方的设置项
+
+只删控件与死代码；持久化类型字段与默认值保留（见 "未做"）。
+
+| 项                                                                                       | 证据                                                                                                                                                                                                              | 处理                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Service model「Prompt Rewriting / AI Image Topic Naming / Auto context compression」三行 | `src`、`packages`、`apps` 全仓搜索：`promptRewrite` 仅有 selector 与服务端 env 默认值；`generationTopic` 无读取（图片工作台已退役）；`historyCompress` 唯一读取方是 `internal_summaryHistory`，该 action 零调用方 | 删除三行、两个 selector、整个 `state/memory.ts`（类内只剩这一个方法）及其在 `agentRun/actions/index.ts` 的接线、en-US /zh-CN/default 的 `systemAgent.{key}.*` 文案 |
+| About 页 Blog、服务条款、隐私政策                                                        | `curl` 官网 `/blog`、`/terms`、`/privacy` 均返回 404                                                                                                                                                              | 删除 Blog 卡片与整个 Legal 分组、`common` 的 `blog` / `legal` / `terms` / `privacy` 文案（仅 About 使用）                                                          |
+| 旧 Linear 同步设置页 `WorkspaceSetting/Linear` 及路由桩 `settings/linear/index.tsx`      | 全仓无导入（含测试、barrel）；`/:slug/settings/linear` 由 `sharedMainAreaLeaves.tsx` 重定向到 `imports/linear`                                                                                                    | 删除页面与路由桩，保留重定向                                                                                                                                       |
+
+### 未做
+
+- `DEFAULT_SYSTEM_AGENT_CONFIG` / `UserSystemAgentConfig` 中的 `promptRewrite`、`generationTopic`、`historyCompress` 字段，以及 `parseSystemAgent.ts` 的 `promptRewrite` 默认值：已持久化到用户设置，服务端 env 解析测试仍断言 `historyCompress`，删除需要迁移，保留。
+- `TERMS_URL` / `PRIVACY_URL`：登录页与授权弹窗仍在用，只移除 About 引用；`BLOG` 常量已无引用，但在 `packages/const`，本次不动。
+- `workspaceSetting.linear.*` 文案：`LinearImport` 仍共用大量键且存在模板拼接键，无法证明旧页独有，保留。
+- 存储页 `useTransferAgentsFormItem`：位于 `src/business/client/hooks`，是业务 overlay 注入点，保留。
+- `agentMeta`、`topicAutoSummary`、记忆相关行仍在调查，未触碰。

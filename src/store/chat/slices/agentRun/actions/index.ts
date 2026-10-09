@@ -7,8 +7,6 @@ import { type ConversationControlAction } from './entries/conversationControl';
 import { ConversationControlActionImpl } from './entries/conversationControl';
 import { type ConversationLifecycleAction } from './entries/conversationLifecycle';
 import { ConversationLifecycleActionImpl } from './entries/conversationLifecycle';
-import { type ChatMemoryAction } from './state/memory';
-import { ChatMemoryActionImpl } from './state/memory';
 import { type StreamingStatesAction } from './state/streamingStates';
 import { StreamingStatesActionImpl } from './state/streamingStates';
 import { type ClientToolExecutionAction } from './transports/client/clientToolExecution';
@@ -18,8 +16,7 @@ import { StreamingExecutorActionImpl } from './transports/client/streamingExecut
 import { type GatewayAction } from './transports/gateway/gateway';
 import { GatewayActionImpl } from './transports/gateway/gateway';
 
-export type ChatAgentRunAction = ChatMemoryAction &
-  ClientToolExecutionAction &
+export type ChatAgentRunAction = ClientToolExecutionAction &
   ConversationLifecycleAction &
   ConversationControlAction &
   GatewayAction &
@@ -37,7 +34,6 @@ export const chatAgentRun: StateCreator<
   >
 ) =>
   flattenActions<ChatAgentRunAction>([
-    new ChatMemoryActionImpl(...params),
     new ClientToolExecutionActionImpl(...params),
     new ConversationLifecycleActionImpl(...params),
     new ConversationControlActionImpl(...params),

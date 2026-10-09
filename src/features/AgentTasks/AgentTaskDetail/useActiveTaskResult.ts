@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 
-import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { useTaskStore } from '@/store/task';
+
+import { isTaskNotFound } from './isTaskNotFound';
 
 interface ActiveTaskResultState {
   error?: unknown;
@@ -29,7 +30,7 @@ export const useActiveTaskResult = (taskId?: string): ActiveTaskResultState => {
   if (!taskId) return { isInitialLoading: false, isNotFound: false, onRetry: () => {} };
 
   const settledWithoutDetail = Boolean(taskError) && !hasTaskDetail;
-  const isResolvedNotFound = normalizeAsyncError(taskError).code === 'TASK_NOT_FOUND';
+  const isResolvedNotFound = isTaskNotFound(taskError);
 
   return {
     error: settledWithoutDetail && !isResolvedNotFound ? taskError : undefined,

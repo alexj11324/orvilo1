@@ -8,6 +8,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
 import { resolveIssueDetailCapabilities } from './issueDetailCapabilities';
+import { issueResourceRef } from './issueResourceRef';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 /** Attachable resource kinds, in menu order. Shared by the header menu and the body. */
@@ -40,24 +41,24 @@ export const useIssueDetailCapabilities = () => {
 export const useIssueDetailActions = () => {
   const capabilities = useIssueDetailCapabilities();
   const taskId = useTaskDetailTaskId();
-  const taskUuid = useTaskDetailSelector(taskDetailSelectors.taskDetail)?.id;
+  const resourceRef = issueResourceRef(useTaskDetailSelector(taskDetailSelectors.taskDetail));
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
 
   const addResource = useCallback(
     (kind: IssueResourceKind) => {
-      if (!capabilities.canAddResource || !taskUuid) return;
+      if (!capabilities.canAddResource || !resourceRef) return;
       openTaskIssueResourceModal({
         kind,
         onChanged: async () => {
           await Promise.all([
             taskId ? refreshTaskDetail(taskId) : undefined,
-            mutate(['issue-resources', taskUuid]),
+            mutate(['issue-resources', resourceRef]),
           ]);
         },
-        taskId: taskUuid,
+        taskId: resourceRef,
       });
     },
-    [capabilities.canAddResource, refreshTaskDetail, taskId, taskUuid],
+    [capabilities.canAddResource, refreshTaskDetail, taskId, resourceRef],
   );
 
   return { addResource, capabilities };

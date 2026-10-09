@@ -46,6 +46,7 @@ import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 import { renderMenuCheck } from '../features/menuExtra';
 import { useIssueStatusMove } from '../features/useIssueStatusMove';
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
+import { issueResourceRef } from './issueResourceRef';
 import { relationKindOf } from './relationGroups';
 import { openTaskDescriptionHistoryModal } from './TaskDescriptionHistoryModal';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -164,6 +165,8 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
   const copy = useTaskCopyActions();
   const task = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const taskUuid = task?.id;
+  // Links/PRs are addressed by identifier, not the database id (see issueResourceRef).
+  const resourceRef = issueResourceRef(task);
   const domainRevision = task?.domainRevision;
   const isClosed = task?.workflowCategory === 'canceled' || task?.workflowCategory === 'done';
 
@@ -189,8 +192,8 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     projectService.teams(),
   );
   const { data: resources, mutate: refreshResources } = useClientDataSWR(
-    open && taskUuid ? ['issue-resources', taskUuid] : null,
-    () => taskMenuService.links(taskUuid!),
+    open && resourceRef ? ['issue-resources', resourceRef] : null,
+    () => taskMenuService.links(resourceRef!),
   );
   const { data: recurrence, mutate: refreshRecurrence } = useClientDataSWR(
     open && taskUuid ? ['task:recurrence', taskUuid] : null,
@@ -347,7 +350,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
       label: link.title ?? link.url,
       onClick: () =>
         void apply(async () => {
-          await taskMenuService.removeLink(taskUuid!, link.id);
+          await taskMenuService.removeLink(resourceRef!, link.id);
           await refresh();
         }),
     });
@@ -445,7 +448,8 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
       key: `add-${kind}`,
       label: t(`taskDetail.menu.add.${kind}`),
       onClick: () => {
-        if (editable) openTaskIssueResourceModal({ kind, onChanged: refresh, taskId: taskUuid! });
+        if (editable)
+          openTaskIssueResourceModal({ kind, onChanged: refresh, taskId: resourceRef! });
       },
     })),
     { type: 'divider' },

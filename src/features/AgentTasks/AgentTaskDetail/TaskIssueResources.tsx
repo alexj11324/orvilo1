@@ -12,6 +12,7 @@ import { taskMenuService } from '@/services/taskMenu';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { trpcErrorMessage } from '@/utils/trpcError';
 
+import { issueResourceRef } from './issueResourceRef';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 import { ISSUE_RESOURCE_KINDS, useIssueDetailActions } from './useIssueDetailActions';
@@ -23,7 +24,7 @@ import { ISSUE_RESOURCE_KINDS, useIssueDetailActions } from './useIssueDetailAct
  */
 const TaskIssueResources = () => {
   const { t } = useTranslation('chat');
-  const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
+  const taskId = issueResourceRef(useTaskDetailSelector(taskDetailSelectors.taskDetail));
   const { allowed: editable } = usePermission('create_content');
   const { addResource, capabilities } = useIssueDetailActions();
   const [isExpanded, setIsExpanded] = useState(true);

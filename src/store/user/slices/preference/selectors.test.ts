@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type UserStore } from '@/store/user';
 
 import { initialPreferenceState } from './initialState';
-import { labPreferSelectors, preferenceSelectors } from './selectors';
+import { preferenceSelectors } from './selectors';
 
 describe('preferenceSelectors', () => {
   let store: UserStore;
@@ -94,41 +94,6 @@ describe('preferenceSelectors', () => {
       store.preference.terminalFontFamily = '   ';
 
       expect(preferenceSelectors.terminalFontFamily(store)).toBeUndefined();
-    });
-  });
-
-  describe('labPreferSelectors', () => {
-    const labFlags = [
-      'enableAgentGraphConfig',
-      'enableArtifactDeployment',
-      'enableDesktopSplitView',
-      'enableHeteroSessionImport',
-      'enableInputMarkdown',
-      'enableMessageTextSelectionActions',
-      'enableProjects',
-      'enableSelfLearning',
-      'enableTaskVerify',
-      'enableTopicAcceptance',
-    ] as const;
-
-    it('turns every lab experiment on when the preference is unset', () => {
-      store.preference.lab = undefined;
-
-      for (const flag of labFlags) {
-        expect(labPreferSelectors[flag](store)).toBe(true);
-      }
-    });
-
-    it('keeps an explicit lab opt-out off and leaves the other experiments on', () => {
-      store.preference.lab = {
-        enableDesktopSplitView: false,
-        enableProjects: false,
-      };
-
-      expect(labPreferSelectors.enableDesktopSplitView(store)).toBe(false);
-      expect(labPreferSelectors.enableProjects(store)).toBe(false);
-      expect(labPreferSelectors.enableInputMarkdown(store)).toBe(true);
-      expect(labPreferSelectors.enableMessageTextSelectionActions(store)).toBe(true);
     });
   });
 });

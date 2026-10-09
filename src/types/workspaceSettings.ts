@@ -21,7 +21,6 @@ export enum WorkspaceSettingsTabs {
   Hotkey = 'hotkey',
   Imports = 'imports',
   Labels = 'labels',
-  Labs = 'labs',
   Linear = 'linear',
   Members = 'members',
   Notification = 'notification',

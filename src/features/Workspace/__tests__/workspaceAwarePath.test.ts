@@ -140,7 +140,6 @@ describe('buildWorkspaceAwarePath', () => {
     );
     expect(buildWorkspaceAwarePath('/settings/hotkey', 'acme')).toBe('/acme/settings/hotkey');
     expect(buildWorkspaceAwarePath('/settings/advanced', 'acme')).toBe('/acme/settings/advanced');
-    expect(buildWorkspaceAwarePath('/settings/labs', 'acme')).toBe('/acme/settings/labs');
     expect(buildWorkspaceAwarePath('/settings/about', 'acme')).toBe('/acme/settings/about');
   });
 

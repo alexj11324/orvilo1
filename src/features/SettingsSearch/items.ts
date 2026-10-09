@@ -1,4 +1,3 @@
-import { LAB_FEATURES } from '@/features/Settings/labs/features';
 import { SettingsTabs } from '@/store/global/initialState';
 
 export interface SettingsSearchContext {
@@ -29,7 +28,7 @@ export interface SettingsSearchItem {
   /** i18n key of the item label */
   labelKey: string;
   /** i18n namespace of `labelKey` / `descKey`, defaults to `setting` */
-  ns?: 'auth' | 'electron' | 'labs' | 'setting' | 'spend' | 'subscription';
+  ns?: 'auth' | 'electron' | 'setting' | 'spend' | 'subscription';
   tab: SettingsTabs;
   /**
    * Extra visibility gate mirroring the target item's own render condition
@@ -67,7 +66,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.Creds]: ['credentials', 'secrets', 'oauth'],
   [SettingsTabs.Devices]: ['devices', 'sessions', 'logged in devices'],
   [SettingsTabs.Hotkey]: ['hotkey', 'shortcut', 'keyboard'],
-  [SettingsTabs.Labs]: ['labs', 'experiment', 'beta', 'preview', 'developer'],
   [SettingsTabs.Memory]: ['memory', 'memories', 'personalization'],
   [SettingsTabs.Messenger]: [
     'messenger',
@@ -167,7 +165,6 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Devices]: 'settingsSearch.tabKeywords.devices',
   [SettingsTabs.Labels]: 'settingsSearch.tabKeywords.labels',
   [SettingsTabs.Hotkey]: 'settingsSearch.tabKeywords.hotkey',
-  [SettingsTabs.Labs]: 'settingsSearch.tabKeywords.labs',
   [SettingsTabs.Memory]: 'settingsSearch.tabKeywords.memory',
   [SettingsTabs.Messenger]: 'settingsSearch.tabKeywords.messenger',
   [SettingsTabs.Notification]: 'settingsSearch.tabKeywords.notification',
@@ -405,18 +402,6 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     tab: SettingsTabs.Advanced,
     visible: (ctx) => ctx.isDesktop,
   },
-  // Labs — derived from the LAB_FEATURES catalog the page renders, so a new
-  // lab flag becomes searchable without a second registration. Anchors use
-  // `labs-${flag}`, matching the SettingsSearchAnchor wrap on each toggle.
-  ...LAB_FEATURES.map(({ desktopOnly, flag, i18nKey, searchKeywords }): SettingsSearchItem => ({
-    anchor: `labs-${flag}`,
-    descKey: `features.${i18nKey}.desc`,
-    keywords: searchKeywords,
-    labelKey: `features.${i18nKey}.title`,
-    ns: 'labs',
-    tab: SettingsTabs.Labs,
-    ...(desktopOnly ? { visible: (ctx: SettingsSearchContext) => ctx.isDesktop } : {}),
-  })),
   // Service Model
   {
     anchor: 'service-model-assignments',

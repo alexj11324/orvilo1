@@ -29,11 +29,7 @@ import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
-import {
-  labPreferSelectors,
-  preferenceSelectors,
-  userProfileSelectors,
-} from '@/store/user/selectors';
+import { preferenceSelectors, userProfileSelectors } from '@/store/user/selectors';
 
 import { useAgentTopicGroupMode } from './hooks/useAgentTopicGroupMode';
 
@@ -152,8 +148,6 @@ export const useTopicActionsDropdownMenu = (
   const { expandedKeys, setExpandedKeys } = useTopicGroupCollapse(topicGroupMode, groupIds);
   const isAllCollapsed = expandedKeys.length === 0;
 
-  const enableHeteroSessionImport = useUserStore(labPreferSelectors.enableHeteroSessionImport);
-
   return useCallback((): SidebarMenuItems => {
     const pageSizeOptions = [20, 40, 60, 100];
     const pageSizeItems = pageSizeOptions.map((size) => ({
@@ -198,8 +192,8 @@ export const useTopicActionsDropdownMenu = (
         ...(onUploadClose ? { closeOnClick: false } : null),
       },
       // local CLI transcript import needs main-process file access — desktop
-      // only, behind the heteroSessionImport Labs toggle
-      ...(isDesktop && enableHeteroSessionImport
+      // only
+      ...(isDesktop
         ? [
             {
               disabled: !canCreateTopic || !activeAgentId,
@@ -293,7 +287,6 @@ export const useTopicActionsDropdownMenu = (
     onUploadClose,
     handleArchiveMergedPullRequests,
     activeAgentId,
-    enableHeteroSessionImport,
     removeUnstarredTopic,
     removeAllTopic,
     activeWorkspaceId,

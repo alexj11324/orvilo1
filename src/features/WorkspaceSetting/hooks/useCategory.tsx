@@ -8,7 +8,6 @@ import {
   Coins,
   CreditCard,
   EllipsisIcon,
-  FlaskConical,
   HandCoins,
   Import,
   Info,
@@ -62,7 +61,6 @@ export interface WorkspaceSettingCategoryGroup {
 export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] => {
   const { t } = useTranslation('setting');
   const { t: tAuth } = useTranslation('auth');
-  const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
   const { allowed: canManageWorkspace } = usePermission('manage_settings');
   const { allowed: canViewBilling } = usePermission('view_billing');
@@ -247,7 +245,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
           title: t('group.system'),
         },
         // Developer group sits last, mirroring the personal sidebar: Advanced
-        // and Labs are user preferences (always shown), API Key keeps its gate.
+        // is a user preference (always shown), API Key keeps its gate.
         {
           items: [
             {
@@ -260,11 +258,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               key: WorkspaceSettingsTabs.APIKey,
               label: tAuth('tab.apikey'),
             },
-            {
-              icon: FlaskConical,
-              key: WorkspaceSettingsTabs.Labs,
-              label: tLabs('title'),
-            },
           ].filter(Boolean) as WorkspaceSettingCategoryItem[],
           key: WorkspaceSettingsGroupKey.Developer,
           title: t('group.developer'),
@@ -273,7 +266,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
     [
       t,
       tAuth,
-      tLabs,
       tSubscription,
       canManageWorkspace,
       canViewBilling,

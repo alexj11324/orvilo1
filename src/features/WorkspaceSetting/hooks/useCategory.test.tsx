@@ -176,7 +176,7 @@ describe('workspace settings useCategory', () => {
 
   // Viewers hold no `API_KEY_*` grant, so the tab would open onto a list
   // request that immediately 403s.
-  it('hides API Key from viewers but keeps Advanced and Labs in the Developer group', () => {
+  it('hides API Key from viewers but keeps Advanced in the Developer group', () => {
     mocks.canCreateContent = false;
     mocks.canManageWorkspace = false;
 
@@ -185,10 +185,7 @@ describe('workspace settings useCategory', () => {
       (group) => group.key === WorkspaceSettingsGroupKey.Developer,
     );
 
-    expect(developerGroup?.items.map((item) => item.key)).toEqual([
-      WorkspaceSettingsTabs.Advanced,
-      WorkspaceSettingsTabs.Labs,
-    ]);
+    expect(developerGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Advanced]);
   });
 
   // The business (subscription) pages only exist where the deployment ships

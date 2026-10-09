@@ -1355,7 +1355,6 @@
   "settingsSearch.tabKeywords.devices": "devices, sessions, logged in devices",
   "settingsSearch.tabKeywords.hotkey": "hotkey, shortcut, keyboard",
   "settingsSearch.tabKeywords.labels": "labels, tags, grouping",
-  "settingsSearch.tabKeywords.labs": "labs, experiment, beta, preview, developer",
   "settingsSearch.tabKeywords.memory": "memory, memories, personalization",
   "settingsSearch.tabKeywords.messenger": "messenger, chat platform, bot, telegram, slack, discord, wechat",
   "settingsSearch.tabKeywords.notification": "notification, email, push, alerts, inbox, telegram, slack, discord, wechat",

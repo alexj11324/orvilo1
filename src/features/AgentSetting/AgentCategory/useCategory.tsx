@@ -7,8 +7,6 @@ import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 interface UseCategoryOptions {
   mobile?: boolean;
@@ -19,7 +17,6 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
   const iconSize = mobile ? 20 : undefined;
   const isInbox = useAgentStore(builtinAgentSelectors.isInboxAgent);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
-  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const cateItems: MenuProps['items'] = useMemo(
     () =>
@@ -29,7 +26,7 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           key: ChatSettingsTabs.Opening,
           label: t('agentTab.opening'),
         }) as MenuItemType,
-        enableSelfLearning && {
+        {
           icon: <NotebookText size={iconSize} />,
           key: ChatSettingsTabs.Rules,
           label: t('agentTab.rules'),
@@ -45,7 +42,7 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           label: t('agentTab.connector', 'Connectors'),
         },
       ].filter(Boolean) as MenuProps['items'],
-    [t, isInbox, iconSize, enableAgentSelfIteration, enableSelfLearning],
+    [t, isInbox, iconSize, enableAgentSelfIteration],
   );
 
   return cateItems;

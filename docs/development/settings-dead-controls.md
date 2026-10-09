@@ -47,6 +47,18 @@ The retired workspace Storage URL remains a bookmark redirect to the workspace s
 - zh-CN labels for Quick Chat / Quick Composer are translated.
 - Settings > About hides the "Get desktop app" section inside the desktop app.
 
+## 2026/10/09 移除 Labs 设置页
+
+Labs 里每个开关的默认值都是开（`DEFAULT_PREFERENCE.lab`），页面实际只剩一个把核心功能关掉的入口，所以整页移除，原先被它控制的功能一律无条件启用。
+
+| 项   | 处理                                                                                                                                                                                                                                                                                                                                                      |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 开关 | `enableAgentGraphConfig`、`enableInputMarkdown`、`enableMessageTextSelectionActions`、`enableSelfLearning`、`enableTopicAcceptance`、`enableProjects`、`enableDesktopSplitView`、`enableHeteroSessionImport` 的读取点全部去掉条件。`enableTaskVerify`、`enableArtifactDeployment` 早已没有读取点，只删选择器。桌面端专属功能仍由各自的 `isDesktop` 判断。 |
+| 代码 | 删除 `LAB_FEATURES`、`labPreferSelectors`、`src/features/Settings/labs`、工作区 Labs 路由与 `ProjectDisabled`（它唯一的出口是 `/settings/labs`）。                                                                                                                                                                                                        |
+| 入口 | 个人与工作区两个侧栏、移动端标题映射、组件映射、搜索索引（含 Labs 标签关键词）全部去掉。`/settings/labs` 通过 `SETTINGS_CAPABILITIES` 的 `aliasOf` 重定向到 Advanced；`/:slug/settings/labs` 通过 `WORKSPACE_SETTINGS_ALIASES` 重定向到 Advanced，并从 `WORKSPACE_SETTINGS_TABS` 去掉。`SettingsTabs.Labs` 枚举值保留，作为退役注册表的键。               |
+| 文案 | 删除 `labs` 命名空间（`default/labs.ts`、en-US、zh-CN）、`settingsSearch.tabKeywords.labs`、`project` 里的 `disabled.*`。其他语言包的 `labs.json` 留给每日 i18n 流程清理。                                                                                                                                                                                |
+| 保留 | 持久化的 `preference.lab` 字段、`UserLab` 类型和默认常量不动，避免数据迁移；只是不再读取。                                                                                                                                                                                                                                                                |
+
 ## 2026/10/09 移除无读取方的设置项
 
 只删控件与死代码；持久化类型字段与默认值保留（见 "未做"）。

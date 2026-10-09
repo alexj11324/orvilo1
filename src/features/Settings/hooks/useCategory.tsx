@@ -11,7 +11,6 @@ import {
   Database,
   EllipsisIcon,
   EthernetPort,
-  FlaskConical,
   GitBranchIcon,
   Info,
   KeyboardIcon,
@@ -68,7 +67,6 @@ export interface CategoryGroup {
 export const useCategory = () => {
   const { t } = useTranslation('setting');
   const { t: tAuth } = useTranslation('auth');
-  const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
   const { showProvider } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
@@ -289,7 +287,7 @@ export const useCategory = () => {
       },
 
       // 开发者 — app-level settings that operate on the install rather than on any
-      // capability: update channel, diagnostics, lab flags, version info. The plan
+      // capability: update channel, diagnostics, version info. The plan
       // names no group for these, and fitting them elsewhere would mislabel them.
       {
         items: [
@@ -297,11 +295,6 @@ export const useCategory = () => {
             icon: EllipsisIcon,
             key: SettingsTabs.Advanced,
             label: t('tab.advanced'),
-          },
-          {
-            icon: FlaskConical,
-            key: SettingsTabs.Labs,
-            label: tLabs('title'),
           },
           offered(SettingsTabs.About) && {
             icon: Info,
@@ -313,7 +306,7 @@ export const useCategory = () => {
         title: t('group.developer'),
       },
     ].filter((group) => group.items.length > 0);
-  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username, showProvider]);
+  }, [t, tAuth, tSubscription, capabilityContext, avatarUrl, username, showProvider]);
 
   return categoryGroups;
 };

@@ -15,7 +15,6 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
-import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
@@ -26,8 +25,6 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
 import { projectService } from '@/services/project';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import {
   ProjectUpdateComposer,
@@ -105,7 +102,6 @@ const ProjectWorkspace = memo(() => {
   const { t } = useTranslation('project');
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useWorkspaceAwareNavigate();
-  const enabled = useUserStore(labPreferSelectors.enableProjects);
   const detail = useCurrentProjectDetail(projectId);
   const updateProject = useProjectStore((s) => s.updateProject);
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
@@ -118,7 +114,6 @@ const ProjectWorkspace = memo(() => {
   const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
   if (isLoading || !detail)
     return (

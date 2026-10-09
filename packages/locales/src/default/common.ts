@@ -70,7 +70,6 @@ export default {
   'datePicker.next': 'Next',
   'datePicker.previous': 'Previous',
   'clearSearch': 'Clear search',
-  'search': 'Search',
   'viewExecutionDetails': 'View execution details',
   'cancel': 'Cancel',
   'changelog': 'Changelog',

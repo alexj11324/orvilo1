@@ -40,7 +40,6 @@ export const KeyEnum = {
 } as const;
 
 export const HotkeyEnum = {
-  AddUserMessage: 'addUserMessage',
   CommandPalette: 'commandPalette',
   CreateTask: 'createTask',
   EditMessage: 'editMessage',
@@ -192,12 +191,6 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
     group: HotkeyGroupEnum.Conversation,
     id: HotkeyEnum.SaveTopic,
     keys: combineKeys([KeyEnum.Alt, 'n']),
-    scopes: [HotkeyScopeEnum.Chat],
-  },
-  {
-    group: HotkeyGroupEnum.Conversation,
-    id: HotkeyEnum.AddUserMessage,
-    keys: combineKeys([KeyEnum.Alt, KeyEnum.Enter]),
     scopes: [HotkeyScopeEnum.Chat],
   },
   {

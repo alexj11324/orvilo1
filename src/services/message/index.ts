@@ -1,4 +1,3 @@
-import { type HeatmapsProps } from '@lobehub/charts';
 import {
   type ChatMessageError,
   type ChatMessagePluginError,
@@ -196,14 +195,6 @@ export class MessageService {
     startDate?: string;
   }): Promise<number> => {
     return lambdaClient.message.countWords.query(params);
-  };
-
-  getHeatmaps = async (): Promise<HeatmapsProps['data']> => {
-    return lambdaClient.message.getHeatmaps.query();
-  };
-
-  getTokenHeatmaps = async (): Promise<HeatmapsProps['data']> => {
-    return lambdaClient.message.getTokenHeatmaps.query();
   };
 
   updateMessageError = async (id: string, value: ChatMessageError, ctx?: MessageQueryContext) => {

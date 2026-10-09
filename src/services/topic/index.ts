@@ -154,10 +154,6 @@ export class TopicService {
     return lambdaClient.topic.countTopics.query(params);
   };
 
-  getMaxTaskDuration = async (): Promise<number> => {
-    return lambdaClient.topic.getMaxTaskDuration.query();
-  };
-
   /**
    * Fetch a single topic row by id, bypassing the paginated list store.
    * Used when a deep-linked topic is not on the loaded page but its metadata

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import WorkspaceSpendInsights from '@/business/client/features/WorkspaceSpendInsights';
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import Page from '@/features/Settings/stats';
-import WorkspaceWelcome from '@/features/Settings/stats/features/overview/WorkspaceWelcome';
 import { type UserDisplay } from '@/features/Settings/stats/types';
 
 interface WorkspaceStatsMemberProfile {
@@ -48,12 +47,7 @@ const WorkspaceStatsSetting = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Page
-        enableUserDimension
-        headerNode={<WorkspaceWelcome />}
-        resolveUser={resolveUser}
-        showSettingHeader={false}
-      />
+      <Page enableUserDimension resolveUser={resolveUser} showSettingHeader={false} />
       <WorkspaceSpendInsights />
     </div>
   );

@@ -22,8 +22,3 @@ export enum GroupBy {
   Provider = 'provider',
   User = 'user',
 }
-
-export enum HeatmapType {
-  Messages = 'messages',
-  Tokens = 'tokens',
-}

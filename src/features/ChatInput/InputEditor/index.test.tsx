@@ -26,10 +26,6 @@ const getEditorStyle = async () => {
 vi.mock('@orvilo/const', () => ({
   isDesktop: false,
 }));
-vi.mock('@orvilo/const/hotkeys', () => ({
-  HotkeyEnum: { AddUserMessage: 'add-user-message' },
-  KeyEnum: { Alt: 'alt', Enter: 'enter' },
-}));
 vi.mock('@orvilo/heterogeneous-agents', () => ({ HETEROGENEOUS_TYPE_LABELS: {} }));
 vi.mock('@orvilo/utils', () => ({
   isRecord: (value: unknown): value is Record<PropertyKey, unknown> =>
@@ -56,19 +52,12 @@ vi.mock('@lobehub/editor/react', () => {
     useEditorState: vi.fn(() => ({ isEmpty: true })),
   };
 });
-vi.mock('@lobehub/ui', () => ({ combineKeys: vi.fn(() => 'alt+enter') }));
 vi.mock('fuse.js', () => ({
   default: class Fuse {
     search() {
       return [];
     }
   },
-}));
-vi.mock('react-hotkeys-hook', () => ({
-  useHotkeysContext: () => ({
-    disableScope: vi.fn(),
-    enableScope: vi.fn(),
-  }),
 }));
 
 vi.mock('@/components/DragUploadZone', () => ({
@@ -121,7 +110,6 @@ vi.mock('@/store/user', () => {
   return { useUserStore };
 });
 vi.mock('@/store/user/selectors', () => ({
-  settingsSelectors: { getHotkeyById: () => () => 'alt+enter' },
   userProfileSelectors: { userId: () => 'user-id' },
 }));
 

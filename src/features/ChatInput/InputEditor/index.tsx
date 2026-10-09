@@ -1,15 +1,12 @@
 import type { IEditor, ISlashMenuOption, ISlashSectionOption } from '@lobehub/editor';
 import { INSERT_MENTION_COMMAND } from '@lobehub/editor';
 import { Editor, useEditorState } from '@lobehub/editor/react';
-import { combineKeys } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
-import { HotkeyEnum, KeyEnum } from '@orvilo/const/hotkeys';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { isCommandPressed } from '@orvilo/utils';
 import { css, cx } from 'antd-style';
 import Fuse from 'fuse.js';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 
 import { usePasteFile, useUploadFiles } from '@/components/DragUploadZone';
@@ -22,7 +19,6 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import {
-  settingsSelectors,
   userProfileSelectors,
 } from '@/store/user/selectors';
 
@@ -104,9 +100,7 @@ const InputEditor = memo<{
   // view-level General access on the bound agent/group = full read-only input,
   // matching the workspace-viewer treatment (ChatInputNotice explains why).
   const { canUseResource } = useChatInputResourceAccess();
-  const hotkey = useUserStore(settingsSelectors.getHotkeyById(HotkeyEnum.AddUserMessage));
   const userId = useUserStore(userProfileSelectors.userId);
-  const { enableScope, disableScope } = useHotkeysContext();
   const agentId = useAgentId();
   const inputHistoryScope = useMemo(() => ({ agentId, userId }), [agentId, userId]);
 
@@ -381,7 +375,6 @@ const InputEditor = memo<{
         onCompositionEnd={({ event }) => compositionProps.onCompositionEnd(event)}
         onInit={handleEditorInit}
         onBlur={() => {
-          disableScope(HotkeyEnum.AddUserMessage);
           saveDraftDebounced.flush();
         }}
         onChange={() => {
@@ -403,9 +396,6 @@ const InputEditor = memo<{
             });
           }
         }}
-        onFocus={() => {
-          enableScope(HotkeyEnum.AddUserMessage);
-        }}
         onKeyDown={({ event }) => {
           if (inputHistory.handleKeyDown(event)) return true;
         }}
@@ -418,8 +408,6 @@ const InputEditor = memo<{
             return true;
           }
           if (e.shiftKey || isComposingRef.current) return;
-          // when user like alt + enter to add ai message
-          if (e.altKey && hotkey === combineKeys([KeyEnum.Alt, KeyEnum.Enter])) return true;
           // In fullscreen mode, Enter inserts newline; only Cmd/Ctrl+Enter sends
           if (expand) {
             if (isCommandPressed(e)) {

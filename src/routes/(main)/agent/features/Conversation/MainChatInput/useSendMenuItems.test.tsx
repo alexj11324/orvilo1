@@ -41,10 +41,6 @@ vi.mock('@/features/Conversation', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useHotkeys', () => ({
-  useAddUserMessageHotkey: vi.fn(),
-}));
-
 vi.mock('@/store/user', () => ({
   useUserStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ updatePreference: mocks.updatePreference }),
@@ -52,7 +48,6 @@ vi.mock('@/store/user', () => ({
 
 vi.mock('@/store/user/selectors', () => ({
   preferenceSelectors: { useCmdEnterToSend: () => false },
-  settingsSelectors: { getHotkeyById: () => () => [] },
 }));
 
 type MenuAction = { key?: string; onClick?: () => void };

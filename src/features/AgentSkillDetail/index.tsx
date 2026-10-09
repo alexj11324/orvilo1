@@ -130,7 +130,7 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
                   {t('agentSkillDetail.updatedAt')}{' '}
                   <PublishedTime
                     date={new Date(skillDetail.updatedAt).toISOString()}
-                    template={'MMM DD, YYYY'}
+                    template={'YYYY/MM/DD'}
                   />
                 </div>
                 {(repository || sourceUrl) && (

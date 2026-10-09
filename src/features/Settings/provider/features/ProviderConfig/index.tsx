@@ -33,11 +33,13 @@ import Checker from './Checker';
 import CredentialsPanel, { type CredentialItem } from './CredentialsPanel';
 import FormSwitch from './FormSwitch';
 import OAuthDeviceFlowAuth from './OAuthDeviceFlowAuth';
-import ProviderHeader, {
-  ProviderHeaderActions,
-  ProviderIdentity,
-  type ProviderStatus,
-} from './ProviderHeader';
+import ProviderHeader, { ProviderHeaderActions, ProviderIdentity } from './ProviderHeader';
+import {
+  hasApiCredential,
+  hasEndpoint,
+  isPersistableBaseURL,
+  resolveProviderStatus,
+} from './providerStatus';
 
 const SwitchSkeleton = () => <Skeleton className="h-[18px] w-8 rounded-full" />;
 
@@ -134,26 +136,23 @@ const ProviderConfig = memo<ProviderConfigProps>(
     const formUsername = Form.useWatch(['keyVaults', 'username'], form);
     const formPassword = Form.useWatch(['keyVaults', 'password'], form);
 
-    // Check if provider has endpoint and apiKey based on runtime config
-    // Fallback to data.keyVaults if runtime config is not yet loaded
+    // Stored credentials, from the runtime config with the detail payload as fallback.
     const keyVaults = providerRuntimeConfig?.keyVaults || data?.keyVaults;
-    // Use form values first (for immediate update), fallback to stored values
-    const isProviderEndpointNotEmpty =
-      !!formBaseURL || !!formEndpoint || !!keyVaults?.baseURL || !!keyVaults?.endpoint;
-    // Check if any credential is present for different authentication types:
-    // - Standard apiKey (OpenAI, Azure, Cloudflare, VertexAI, etc.)
-    // - AWS Bedrock credentials (accessKeyId, secretAccessKey)
-    // - ComfyUI basic auth (username and password)
-    const isProviderApiKeyNotEmpty = !!(
-      formApiKey ||
-      keyVaults?.apiKey ||
-      formAccessKeyId ||
-      keyVaults?.accessKeyId ||
-      formSecretAccessKey ||
-      keyVaults?.secretAccessKey ||
-      (formUsername && formPassword) ||
-      (keyVaults?.username && keyVaults?.password)
-    );
+    // The live form value wins over the stored one so the badge and switches
+    // follow edits immediately, including clearing a field and an invalid
+    // proxy URL that is never saved (see providerStatus.ts).
+    const liveCredentials = {
+      accessKeyId: formAccessKeyId,
+      apiKey: formApiKey,
+      baseURL: formBaseURL,
+      endpoint: formEndpoint,
+      password: formPassword,
+      secretAccessKey: formSecretAccessKey,
+      username: formUsername,
+    };
+    const isProviderEndpointNotEmpty = hasEndpoint(liveCredentials, keyVaults);
+    // Covers apiKey (OpenAI, Azure, ...), AWS Bedrock keys and ComfyUI basic auth.
+    const isProviderApiKeyNotEmpty = hasApiCredential(liveCredentials, keyVaults);
 
     // Track the last initialized provider ID to avoid resetting form during edits
     const lastInitializedIdRef = useRef<string | null>(null);
@@ -349,6 +348,12 @@ const ProviderConfig = memo<ProviderConfigProps>(
                 checkErrorRender={checkErrorRender}
                 model={data?.checkModel || checkModel!}
                 provider={id}
+                missingCredentials={
+                  showApiKey &&
+                  !isOAuthProvider &&
+                  !isProviderApiKeyNotEmpty &&
+                  !isProviderEndpointNotEmpty
+                }
                 onAfterCheck={async () => {
                   // Reset connection test state to allow subsequent onValuesChange updates
                   isCheckingConnection.current = false;
@@ -375,16 +380,12 @@ const ProviderConfig = memo<ProviderConfigProps>(
 
     const logoUrl = data?.logo ?? logo;
 
-    // "Not configured" is only claimed when nothing the provider could be
-    // configured with is present; the connectivity result is not persisted, so
-    // no connected/failed state is shown.
-    const isConfigured =
-      isProviderApiKeyNotEmpty || isProviderEndpointNotEmpty || isOAuthAuthenticated;
-    const status: ProviderStatus = enabled
-      ? 'enabled'
-      : isConfigured
-        ? 'disabled'
-        : 'notConfigured';
+    const status = resolveProviderStatus({
+      enabled,
+      hasApiKey: isProviderApiKeyNotEmpty,
+      hasProviderEndpoint: isProviderEndpointNotEmpty,
+      isOAuthAuthenticated,
+    });
 
     const descriptionText = isCustom
       ? description
@@ -448,8 +449,8 @@ const ProviderConfig = memo<ProviderConfigProps>(
                 if (!canManageProvider) return;
 
                 cancelDebouncedHandleValueChange();
-                const baseURL = values.keyVaults?.baseURL;
-                if (baseURL && !AiProviderBaseURLSchema.safeParse(baseURL).success) return;
+                // An invalid proxy URL is never written (and the pending save is dropped).
+                if (!isPersistableBaseURL(values.keyVaults?.baseURL)) return;
 
                 debouncedHandleValueChange(id, normalizeValues(values));
               }}
@@ -464,7 +465,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
                     components={[
                       <span key="0" />,
                       <a
-                        className="mx-1 underline underline-offset-2"
+                        className="mx-1 rounded-sm underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                         href={AES_GCM_URL}
                         key="1"
                         rel="noreferrer"

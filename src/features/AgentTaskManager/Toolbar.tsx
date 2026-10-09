@@ -13,8 +13,12 @@ import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 import { useGlobalStore } from '@/store/global';
 
+import { toolbarActionLabel } from './toolbarActionLabel';
+
 const Toolbar = memo(() => {
-  const { t } = useTranslation('topic');
+  // The `topic` namespace is fetched lazily; `t` returns the raw key until it lands, so
+  // every label below waits for `ready` instead of flashing a key string.
+  const { t, ready } = useTranslation('topic');
   const [topicPopoverOpen, setTopicPopoverOpen] = useState(false);
   const agentId = useConversationStore(conversationSelectors.agentId);
 
@@ -32,7 +36,7 @@ const Toolbar = memo(() => {
   const toggleTaskAgentPanel = useGlobalStore((s) => s.toggleTaskAgentPanel);
 
   const isLoadingTopics = topics === undefined;
-  const topicTitle = currentTopic?.title || t('title');
+  const topicTitle = currentTopic?.title || (ready ? t('title') : '');
   const hasTopics = !!topics && topics.length > 0;
 
   const handleCreate = () => {
@@ -56,7 +60,7 @@ const Toolbar = memo(() => {
           <ActionIcon
             icon={PlusIcon}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-            title={t('actions.addNewTopic')}
+            {...toolbarActionLabel(ready, t('actions.addNewTopic'), 'Start New Topic')}
             onClick={handleCreate}
           />
           <Popover
@@ -70,7 +74,7 @@ const Toolbar = memo(() => {
                   icon={Clock3Icon}
                   loading={isLoadingTopics}
                   size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                  title={t('actions.showTopics')}
+                  {...toolbarActionLabel(ready, t('actions.showTopics'), 'Topics')}
                 />
               }
             />

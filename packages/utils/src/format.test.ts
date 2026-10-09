@@ -318,19 +318,19 @@ describe('format', () => {
   });
 
   describe('formatSpendTime', () => {
-    it('should drop the year for entries from the current year', () => {
+    it('should render a numeric date with seconds for entries from the current year', () => {
       const date = dayjs().month(6).date(12).hour(12).minute(12).second(32);
-      expect(formatSpendTime(date.toDate())).toBe(date.format('MMM D HH:mm:ss'));
+      expect(formatSpendTime(date.toDate())).toBe(date.format('YYYY/MM/DD HH:mm:ss'));
     });
 
-    it('should keep the year for entries from another year', () => {
+    it('should render the same numeric format for entries from another year', () => {
       const date = dayjs().subtract(1, 'year').month(6).date(12);
-      expect(formatSpendTime(date.toDate())).toBe(date.format('MMM D, YYYY HH:mm:ss'));
+      expect(formatSpendTime(date.toDate())).toBe(date.format('YYYY/MM/DD HH:mm:ss'));
     });
 
     it('should accept an ISO string', () => {
       const iso = dayjs().subtract(2, 'year').startOf('year').toISOString();
-      expect(formatSpendTime(iso)).toBe(dayjs(iso).format('MMM D, YYYY HH:mm:ss'));
+      expect(formatSpendTime(iso)).toBe(dayjs(iso).format('YYYY/MM/DD HH:mm:ss'));
     });
 
     it('should fall back for empty and unparseable input', () => {

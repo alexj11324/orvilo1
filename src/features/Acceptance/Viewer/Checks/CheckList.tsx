@@ -1,9 +1,9 @@
 'use client';
 
 import type { AcceptanceGroupFeedback } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cssVar } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import {
   BadgeCheck,
   ChevronRight,
@@ -385,7 +385,7 @@ const CheckList = memo<CheckListProps>(
                             {t('acceptance.group.feedbackLabel')}
                           </div>
                           <div className="text-[12px] text-muted-foreground">
-                            {hydrated ? dayjs(entry.createdAt).format('MM-DD HH:mm') : null}
+                            {hydrated ? formatAbsoluteDateTime(entry.createdAt) : null}
                           </div>
                         </div>
                         <div style={{ fontSize: 12 }}>{entry.comment}</div>

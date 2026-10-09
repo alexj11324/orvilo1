@@ -3,6 +3,7 @@
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -80,7 +81,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 export const formatUpdatedAt = (updatedAt: Date | number | string) =>
   dayjs().diff(dayjs(updatedAt), 'd') < 7
     ? dayjs(updatedAt).fromNow()
-    : dayjs(updatedAt).format('YYYY-MM-DD');
+    : formatAbsoluteDate(updatedAt);
 
 export interface AgentRowAuthor {
   avatar?: string | null;
@@ -174,7 +175,7 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
             )}
             <div
               className={cn('text-[12px]', styles.updatedAt)}
-              title={updatedAt ? dayjs(updatedAt).format('YYYY-MM-DD HH:mm') : undefined}
+              title={updatedAt ? formatAbsoluteDateTime(updatedAt) : undefined}
             >
               {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
             </div>

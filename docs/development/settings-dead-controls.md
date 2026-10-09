@@ -40,6 +40,13 @@
 
 The retired workspace Storage URL remains a bookmark redirect to the workspace settings index. It is deliberately excluded from automatic workspace prefixing, so personal storage stays personal. The shared Web/Electron parity test now compares registered tabs against both live workspace tabs and declared legacy aliases; existing alias tests still assert their exact redirect destinations. The prior owning CI failed both parity cases for the additional `storage` redirect; the scoped shared-router and alias suites pass all 81 cases after this correction. Canonical Issue hotkey copy is preserved while dead delete actions are removed.
 
+## Round 3 follow-ups
+
+- **Hotkey conflicts across surfaces.** The Electron global shortcuts (Quick Composer, Quick Chat, Show App, App Settings) live in a separate store from the in-app shortcuts, and the Desktop rows passed no `hotkeyConflicts` at all, so recording ⌘K on the empty Quick Chat row was accepted while Command Palette uses ⌘K. `getHotkeyConflicts` takes an `external` list (matched by key combination only, because `showApp` exists on both sides) and `getDesktopHotkeyConflicts` feeds in-app bindings to the Desktop rows; Desktop also toasts the existing `hotkey.errors.CONFLICT` message before calling the main process. The in-app rows receive the desktop bindings when running in the desktop app. The retired-id rule is unchanged (stale ids never block).
+- **`navigateToChat` ("切换至默认会话") is kept**: `useNavigateToChatHotkey` registers a handler through `useRegisterGlobalHotkeys`.
+- zh-CN labels for Quick Chat / Quick Composer are translated.
+- Settings > About hides the "Get desktop app" section inside the desktop app.
+
 ## 2026/10/09：移除 Agent 标签与空 Security 标签页
 
 Owner 决定：删除 Agent 标签功能和空的 Security 设置标签页。只做前端删除，不重组、不改名。

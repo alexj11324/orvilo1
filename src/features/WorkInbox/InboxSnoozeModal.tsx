@@ -9,6 +9,8 @@ import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+import { resolveCustomSnoozeUntil } from './inboxOrganize';
+
 /**
  * Plane's "Custom" snooze: a date + time pair resolved to an absolute moment
  * in the user's own timezone.
@@ -20,10 +22,11 @@ const InboxSnoozeContent = ({ onConfirm }: { onConfirm: (iso: string) => void })
   const [date, setDate] = useState<Dayjs | null>(() => dayjs().add(1, 'day'));
   const [time, setTime] = useState('09:00');
 
+  const until = resolveCustomSnoozeUntil(date?.toDate(), time);
+
   const confirm = () => {
-    if (!date) return;
-    const [hour = 9, minute = 0] = time.split(':').map(Number);
-    onConfirm(date.hour(hour).minute(minute).second(0).millisecond(0).toDate().toISOString());
+    if (!until) return;
+    onConfirm(until);
     close();
   };
 
@@ -45,7 +48,7 @@ const InboxSnoozeContent = ({ onConfirm }: { onConfirm: (iso: string) => void })
         <Button variant="outline" onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!date} onClick={confirm}>
+        <Button disabled={!until} onClick={confirm}>
           {t('inbox.snooze')}
         </Button>
       </div>

@@ -3857,6 +3857,8 @@ export default {
   'workspaceSetting.tab.skill': 'Skills',
   'tools.add': 'Add Skill',
   'tools.noConfigurablePermissions': 'This skill does not expose configurable tool permissions.',
+  'tools.notConnected.desc':
+    'Not connected yet. Connect to review and configure which tools agents may use.',
   'tools.legacyConnector.configure': 'Configure',
   'tools.legacyConnector.upgradeDesc':
     'This connector still uses the legacy plugin format. Configure it to finish upgrading, then manage its tool permissions here.',

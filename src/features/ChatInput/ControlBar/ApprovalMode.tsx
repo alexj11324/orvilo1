@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, ChevronDown, Hand, ListChecks, Zap } from 'lucide-react';
 import { type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -20,52 +20,23 @@ import { type ApprovalMode } from '@/store/user/slices/settings/selectors';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  desc: css`
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextDescription};
-  `,
-  icon: css`
-    border: 1px solid ${cssVar.colorFillTertiary};
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorBgElevated};
-  `,
-  modeButton: css`
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextSecondary};
-  `,
-  selectedItem: css`
-    &&,
-    &&:hover,
-    &&:focus {
-      background: var(--muted);
-    }
-  `,
-  modeButtonOpen: css`
-    &&,
-    &&:hover {
-      color: var(--foreground);
-      background: var(--muted);
-    }
-  `,
-  modeButtonDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.5;
-  `,
-  title: css`
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  desc: 'text-[12px] leading-[1.4] text-[var(--ant-color-text-description)]',
+  icon: 'border border-solid border-accent rounded-(--radius-card) bg-popover bg-none',
+  modeButton: 'text-xs text-muted-foreground',
+  selectedItem:
+    'bg-muted bg-none hover:bg-muted hover:bg-none [&:focus]:bg-muted [&:focus]:bg-none',
+  modeButtonOpen:
+    'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
+  modeButtonDisabled: 'cursor-not-allowed opacity-50',
+  title: 'text-[14px] font-medium leading-[1.4] text-foreground',
+};
 
 const ModeItemLabel = memo<{ desc: string; icon: LucideIcon; title: string }>(
   ({ desc, icon, title }) => (
     <div className="flex flex-row items-start gap-3">
       <div
-        className={cx(
+        className={cn(
           'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
           styles.icon,
         )}
@@ -179,7 +150,7 @@ const ModeSelector = memo(() => {
 
   const button = (
     <Button
-      className={cx(styles.modeButton, dropdownOpen && styles.modeButtonOpen)}
+      className={cn(styles.modeButton, dropdownOpen && styles.modeButtonOpen)}
       disabled={disabled}
       size="sm"
       variant="ghost"

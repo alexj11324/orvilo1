@@ -46,11 +46,10 @@ interface UseMenuOptions {
 
 export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
   const { onCopyLink, onDeleted, onOpenHistory } = options;
-  const { i18n, t } = useTranslation(['file', 'common', 'chat', 'setting']);
+  const { t } = useTranslation(['file', 'common', 'chat', 'setting']);
 
   const storeApi = useStoreApi();
   const { lg = true } = useResponsive();
-  const dateLocale = i18n.resolvedLanguage || i18n.language;
 
   const documentId = usePageEditorStore((s) => s.documentId);
   const { allowed: canCreatePage } = usePermission('create_content');
@@ -305,11 +304,11 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
               {authorName && lastUpdatedTime
                 ? t('pageEditor.editedAtBy', {
                     name: authorName,
-                    time: formatPageEditorInfoTime(lastUpdatedTime, dateLocale),
+                    time: formatPageEditorInfoTime(lastUpdatedTime),
                   })
                 : lastUpdatedTime
                   ? t('pageEditor.editedAt', {
-                      time: formatPageEditorInfoTime(lastUpdatedTime, dateLocale),
+                      time: formatPageEditorInfoTime(lastUpdatedTime),
                     })
                   : t('pageEditor.editedBy', { name: authorName })}
             </span>
@@ -328,7 +327,6 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
     t,
     setRightPanelMode,
     wideScreen,
-    dateLocale,
     toggleWideScreen,
     togglePageAgentPanel,
     showViewModeSwitch,

@@ -1,7 +1,5 @@
 'use client';
 
-import '@/app/globals.css';
-
 import { type AuthorizationPhase, type AuthorizationProgress } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { ArrowLeft, ArrowRight, Cloud, ExternalLink, LogOutIcon, Server } from 'lucide-react';
@@ -16,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { OFFICIAL_SITE } from '@/const/url';
 import { isDesktop } from '@/const/version';
+import { EntryHeading, EntryPanel } from '@/features/AuthShell/EntryShell';
 import UserInfo from '@/features/User/UserInfo';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { useSignOut } from '@/hooks/useSignOut';
@@ -321,11 +320,8 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         : t('screen5.status.description');
 
     return (
-      <section className="orvilo-entry-surface text-foreground mx-auto flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground text-sm leading-6">{description}</p>
-        </div>
+      <EntryPanel className="orvilo-entry-surface text-foreground max-w-sm gap-6">
+        <EntryHeading description={description} title={title} />
         <UserInfo />
         <div className="flex items-center justify-between gap-4">
           {isStatusMode ? (
@@ -348,7 +344,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
             <ArrowRight data-icon="inline-end" />
           </Button>
         </div>
-      </section>
+      </EntryPanel>
     );
   }
 
@@ -359,17 +355,10 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     : remoteError || t('authResult.failed.desc');
 
   return (
-    <section className="orvilo-entry-surface text-foreground mx-auto flex w-full max-w-sm flex-col gap-6">
-      <div className="flex flex-col gap-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {showEndpoint ? t('screen5.entry.serverTitle') : t('screen5.entry.title')}
-        </h1>
-        <p className="text-muted-foreground text-sm leading-6">
-          {showEndpoint
-            ? t('screen5.methods.selfhost.description')
-            : t('screen5.entry.description')}
-        </p>
-      </div>
+    <EntryPanel className="orvilo-entry-surface text-foreground">
+      <EntryHeading
+        title={showEndpoint ? t('screen5.entry.serverTitle') : t('screen5.entry.title')}
+      />
 
       {failed && (
         <Alert variant="destructive">
@@ -380,7 +369,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
 
       {showEndpoint ? (
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             if (!isComposingRef.current && endpoint.trim() && !busy && !isConnectingServer) {
@@ -390,7 +379,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         >
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="orvilo-server-url">
+              <FieldLabel className="sr-only" htmlFor="orvilo-server-url">
                 {t('screen5.selfhost.endpointLabel')}
               </FieldLabel>
               <Input
@@ -476,7 +465,8 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
           <Button
             className="w-full"
             disabled={busy || isConnectingServer}
-            variant="ghost"
+            size="lg"
+            variant="outline"
             onClick={() => {
               setShowEndpoint(true);
               setCloudLoginStatus('idle');
@@ -484,11 +474,10 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
               clearRemoteServerSyncError();
             }}
           >
-            <Server data-icon="inline-start" />
             {t('screen5.entry.selfhostAction')}
           </Button>
           {!busy && (
-            <p className="text-muted-foreground text-center text-xs leading-5">
+            <p className="text-muted-foreground mt-2 text-center text-[13px] leading-5">
               {t('screen5.entry.browserHint')}
             </p>
           )}
@@ -537,7 +526,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
           {t('screen5.legacyLocalDb.link')}
         </Button>
       )}
-    </section>
+    </EntryPanel>
   );
 });
 

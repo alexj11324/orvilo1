@@ -1,7 +1,7 @@
 import { ClerkProvider } from '@clerk/react-router';
 import { createContext, type PropsWithChildren, use } from 'react';
 
-import { AuthShell } from './AuthShell';
+import { AuthNotice, AuthShell } from './AuthShell';
 import { AUTH_CONTRACT } from './contract';
 import { usePortalMessages } from './messagesContext';
 
@@ -20,7 +20,7 @@ export const RuntimeClerkProvider = ({
   if (!publishableKey) {
     return (
       <AuthShell>
-        <p role="alert">{messages.unavailable}</p>
+        <AuthNotice error>{messages.unavailable}</AuthNotice>
       </AuthShell>
     );
   }

@@ -30,11 +30,12 @@ const Search = actionMap['search'];
 const EMPTY_LEFT_ACTIONS: [] = [];
 
 const Welcome = memo(() => {
-  const { t } = useTranslation('topic');
+  // The `topic` namespace is fetched lazily; `t` returns the raw key until it lands.
+  const { t, ready } = useTranslation('topic');
   return (
     <div className="flex flex-col flex-1 items-center justify-center p-6">
       <div className="text-muted-foreground" style={{ fontSize: 15 }}>
-        {t('taskManager.welcome')}
+        {ready ? t('taskManager.welcome') : null}
       </div>
     </div>
   );

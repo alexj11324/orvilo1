@@ -19,11 +19,8 @@ import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
-import {
-  blockedPickerContentStyle,
-  blockedPickerTriggerStyle,
-  pickerTriggerStyle,
-} from './pickerTriggerStyles';
+import { type PickerControl, pickerTriggerRender } from './PickerTrigger';
+import { blockedPickerContentStyle, blockedPickerTriggerStyle } from './pickerTriggerStyles';
 import { SimpleTooltip } from './SimpleTooltip';
 
 interface TaskLabelSelectorProps {
@@ -34,6 +31,8 @@ interface TaskLabelSelectorProps {
    */
   assignedLabels: readonly TaskLabelSummary[];
   children: ReactNode;
+  /** Render the trigger as a real Button (the Issue rail's value cell). */
+  control?: PickerControl;
   disabled?: boolean;
   /** Identifier or id — the label model resolves either under the caller's scope. */
   taskIdentifier: string;
@@ -77,7 +76,7 @@ const isConflictError = (error: unknown): boolean =>
  * multi-select — the popover stays open so several labels can flip in one go.
  */
 const TaskLabelSelector = memo<TaskLabelSelectorProps>(
-  ({ assignedLabels, children, disabled, taskIdentifier }) => {
+  ({ assignedLabels, children, control, disabled, taskIdentifier }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [search, setSearch] = useState('');
@@ -233,12 +232,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
     return (
       <Popover>
         <PopoverTrigger
-          nativeButton={false}
-          render={
-            <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
-              {children}
-            </div>
-          }
+          {...pickerTriggerRender(children, control, undefined, t('taskDetail.labels.title'))}
         />
         <PopoverContent
           align="start"

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
@@ -100,7 +100,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     min-width: 0;
 
     font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
+    color: ${cssVar.colorTextSecondary};
     white-space: nowrap;
   `,
   /**
@@ -151,7 +151,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     font-size: 12px;
     font-weight: 450;
-    color: ${cssVar.colorTextTertiary};
+    color: ${cssVar.colorTextSecondary};
   `,
   identifier: css`
     flex: none;
@@ -336,7 +336,6 @@ const PROJECT_PRIORITY_LABEL_KEY = {
  */
 const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
   const { t } = useTranslation('project');
-  const theme = useTheme();
   const health: null | ProjectHealth =
     project.health && project.health in PROJECT_HEALTH_META ? project.health : null;
   return (
@@ -348,12 +347,11 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
     >
       <ProjectHealthIcon health={health} size={14} />
       <span
-        className="text-sm"
-        style={{
-          fontSize: 12,
-          fontWeight: health ? undefined : 500,
-          color: health ? theme[PROJECT_HEALTH_META[health].color] : 'var(--muted-foreground)',
-        }}
+        style={{ fontSize: 12, fontWeight: health ? undefined : 500 }}
+        className={cn(
+          'text-sm',
+          health ? PROJECT_HEALTH_META[health].textClass : 'text-muted-foreground',
+        )}
       >
         {health
           ? t(PROJECT_HEALTH_META[health].key, { defaultValue: health })

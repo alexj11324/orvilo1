@@ -1745,6 +1745,7 @@
   "tools.mcpPreset.tokenSetup": "设置令牌",
   "tools.mcpPreset.unknownError": "未知错误",
   "tools.noConfigurablePermissions": "此技能未提供可配置的工具权限。",
+  "tools.notConnected.desc": "尚未连接。连接后即可查看并配置智能体可使用的工具。",
   "tools.notInstalled": "未安装",
   "tools.notInstalledWarning": "当前技能暂未安装，可能会影响智能体使用",
   "tools.orviloSkill.authorize": "授权",

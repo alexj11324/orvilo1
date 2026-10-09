@@ -1,5 +1,7 @@
 import { WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 
+import type { IssuePeekOrderEntry } from '@/features/WorkSurface/issuePeekKeyboard';
+
 import { workQueryHierarchyRows } from './workQueryHierarchy';
 import type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -319,4 +321,98 @@ export const flattenWorkQueryFlatItems = (
     items,
     orderedIds: items.flatMap((item) => (item.taskId && !item.parentContext ? [item.taskId] : [])),
   };
+};
+
+/**
+ * Row keys of the rows a virtual window renders, in order — what keyboard
+ * navigation walks (`ids`) — with each key's Issue identifier (`idOf`) and
+ * window index (`indexOf`, what it scrolls to when the row is not mounted).
+ * A key is the window item's own key (section + Issue): an Issue listed in two
+ * sections is two rows, and a collapsed section contributes none. Muted
+ * parent-context repeats are skipped: they are not rows a user moves through.
+ * `renderItems` retains group headers before sticky sections move them out of
+ * the body window. Only the body window supplies row/reveal indexes.
+ */
+export const workQueryVirtualPeekRows = (
+  windowItems: readonly WorkQueryVirtualItem[],
+  taskById: ReadonlyMap<string, WorkQueryResultTask>,
+  renderItems: readonly WorkQueryVirtualItem[] = windowItems,
+): {
+  idOf: Map<string, string>;
+  ids: string[];
+  indexOf: Map<string, number>;
+  /** Headers (collapse key) and rows (row key) in render order. */
+  order: IssuePeekOrderEntry[];
+} => {
+  const ids: string[] = [];
+  const order: IssuePeekOrderEntry[] = [];
+  const idOf = new Map<string, string>();
+  const indexOf = new Map<string, number>();
+  windowItems.forEach((item, index) => {
+    if (item.kind !== 'row' || item.parentContext || !item.taskId) return;
+    const identifier = taskById.get(item.taskId)?.identifier;
+    if (!identifier || indexOf.has(item.key)) return;
+    ids.push(item.key);
+    idOf.set(item.key, identifier);
+    indexOf.set(item.key, index);
+  });
+  const orderedRows = new Set<string>();
+  for (const item of renderItems) {
+    if (item.kind === 'header') order.push({ key: item.collapseKey, kind: 'header' });
+    else if (item.kind === 'row' && indexOf.has(item.key) && !orderedRows.has(item.key)) {
+      order.push({ key: item.key, kind: 'row' });
+      orderedRows.add(item.key);
+    }
+  }
+  return { idOf, ids, indexOf, order };
+};
+
+/**
+ * Keys of every slot `GroupedVirtuoso` lays out for these sections — one per
+ * group header slot, then one per row — indexed by the FLAT slot index the
+ * library hands to `computeItemKey` when no `data` prop is given.
+ *
+ * Do not pass `data` to `GroupedVirtuoso`. react-virtuoso 4.18 looks `data` up
+ * by flat slot index (headers count as slots, `index.mjs` list-state builders)
+ * and sizes the first paint by `data.length`, so a rows-only array is read
+ * shifted by the number of group headers before the row and truncated; a
+ * collapsed (zero-row) group moves every later row by one more slot. Rows are
+ * resolved by item index from `sections.items` instead, which is the same
+ * array `workQueryVirtualPeekRows` walks.
+ */
+export const stickyFlatKeys = (sections: WorkQueryStickySections): string[] => {
+  const keys: string[] = [];
+  let rowIndex = 0;
+  sections.groupCounts.forEach((count, group) => {
+    const stack = sections.headers[group] ?? [];
+    keys.push(`group:${group}:${stack.map((header) => header.key).join('>')}`);
+    for (let offset = 0; offset < count; offset += 1) {
+      keys.push(sections.items[rowIndex]?.key ?? `row:${rowIndex}`);
+      rowIndex += 1;
+    }
+  });
+  return keys;
+};
+
+/**
+ * Whether collapsing the group `collapseKey` (and the lanes under it) hides the
+ * row of Issue `identifier` — the peeked Issue must not stay open on a row that
+ * just left the list.
+ */
+export const groupHidesIssue = (
+  windowItems: readonly WorkQueryVirtualItem[],
+  taskById: ReadonlyMap<string, WorkQueryResultTask>,
+  collapseKey: string,
+  identifier: string | null | undefined,
+): boolean => {
+  if (!identifier) return false;
+  const lanePrefix = `${collapseKey}${WORK_QUERY_BOARD_KEY_SEP}`;
+  return windowItems.some(
+    (item) =>
+      item.kind === 'row' &&
+      !item.parentContext &&
+      (item.collapseKey === collapseKey || item.collapseKey.startsWith(lanePrefix)) &&
+      Boolean(item.taskId) &&
+      taskById.get(item.taskId!)?.identifier === identifier,
+  );
 };

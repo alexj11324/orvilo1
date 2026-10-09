@@ -1,12 +1,13 @@
 'use client';
 
 import isEqual from 'fast-deep-equal';
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 
+import { filterProviders } from '../../features/filterProviders';
 import Card from './Card';
 
 const loadingArr = Array.from({ length: 12 })
@@ -49,7 +50,24 @@ const List = memo((props: ListProps) => {
     aiProviderSelectors.disabledCustomAiProviderList,
     isEqual,
   );
-  const [initAiProviderList] = useAiInfraStore((s) => [s.initAiProviderList]);
+  const [initAiProviderList, searchKeyword] = useAiInfraStore((s) => [
+    s.initAiProviderList,
+    s.providerSearchKeyword,
+  ]);
+  // The rail search drives this grid too, with the same match rule.
+  const visibleEnabled = useMemo(
+    () => filterProviders(enabledList, searchKeyword),
+    [enabledList, searchKeyword],
+  );
+  const visibleCustom = useMemo(
+    () => filterProviders(disabledCustomList, searchKeyword),
+    [disabledCustomList, searchKeyword],
+  );
+  const visibleDisabled = useMemo(
+    () => filterProviders(disabledList, searchKeyword),
+    [disabledList, searchKeyword],
+  );
+  const hasResults = visibleEnabled.length + visibleCustom.length + visibleDisabled.length > 0;
   // Own the same list fetch (SWR-deduped with ProviderMenu) so a failed load
   // shows error + Retry here too, instead of a permanent skeleton grid
   // (`initAiProviderList` only flips on success).
@@ -92,23 +110,35 @@ const List = memo((props: ListProps) => {
     >
       <div>
         {header}
-        <Section count={enabledList.length} title={t('list.title.enabled')}>
-          {enabledList.map((item) => (
-            <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
-          ))}
-        </Section>
-        {disabledCustomList.length > 0 && (
-          <Section count={disabledCustomList.length} title={t('list.title.custom')}>
-            {disabledCustomList.map((item) => (
-              <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
-            ))}
-          </Section>
+        {hasResults ? (
+          <>
+            {visibleEnabled.length > 0 && (
+              <Section count={visibleEnabled.length} title={t('list.title.enabled')}>
+                {visibleEnabled.map((item) => (
+                  <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
+                ))}
+              </Section>
+            )}
+            {visibleCustom.length > 0 && (
+              <Section count={visibleCustom.length} title={t('list.title.custom')}>
+                {visibleCustom.map((item) => (
+                  <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
+                ))}
+              </Section>
+            )}
+            {visibleDisabled.length > 0 && (
+              <Section count={visibleDisabled.length} title={t('list.title.disabled')}>
+                {visibleDisabled.map((item) => (
+                  <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
+                ))}
+              </Section>
+            )}
+          </>
+        ) : (
+          <p className="py-12 text-center text-sm text-muted-foreground" role="status">
+            {t('menu.notFound')}
+          </p>
         )}
-        <Section count={disabledList.length} title={t('list.title.disabled')}>
-          {disabledList.map((item) => (
-            <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
-          ))}
-        </Section>
       </div>
     </AsyncBoundary>
   );

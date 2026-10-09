@@ -98,6 +98,7 @@ const Page = memo(() => {
     children: [
       {
         children: <Switch />,
+        className: '[&_.ant-form-item-row]:items-center',
         desc: t('settingCommon.devMode.desc'),
         label: (
           <SettingsSearchAnchor id={'advanced-dev-mode'}>

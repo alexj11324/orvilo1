@@ -1,9 +1,7 @@
 import type { ProjectStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
-import dayjs, { type Dayjs } from 'dayjs';
 import {
-  CalendarIcon,
   ChevronRightIcon,
   GitBranchIcon,
   TagsIcon,
@@ -16,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
-import DatePicker from '@/components/DatePicker';
 import EmojiPicker from '@/components/EmojiPicker';
 import { ModalFooter, useModalContext } from '@/components/Modal';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
@@ -45,7 +42,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -63,12 +59,8 @@ import {
 } from './createProjectForm';
 import { ProjectIcon } from './ProjectIcon';
 import ProjectMilestoneEditor from './ProjectMilestoneEditor';
-import {
-  formatProjectDate,
-  PROJECT_DATE_PRECISIONS,
-  type ProjectDatePrecision,
-} from './projectPlanningDate';
 import { ProjectStatusIcon } from './ProjectStatusIcon';
+import { ProjectDatePill } from './Workspace/ProjectPlanningFields';
 
 export interface CreateProjectOptions {
   /**
@@ -161,50 +153,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: 24px;
   `,
 
-  date: css`
-    width: auto;
-    min-width: 88px;
-    height: 24px;
-    padding-block: 0;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    input {
-      font-size: 13px;
-    }
-  `,
-  calendar: css`
-    .ant-picker-panel-container {
-      width: 304px;
-    }
-
-    .ant-picker-date-panel {
-      width: 304px;
-    }
-
-    .ant-picker-header {
-      padding-inline: 12px;
-    }
-
-    .ant-picker-header-view {
-      order: -1;
-      text-align: start;
-    }
-
-    .ant-picker-super-prev-icon,
-    .ant-picker-super-next-icon {
-      display: none;
-    }
-
-    .ant-picker-header-super-prev-btn,
-    .ant-picker-header-super-next-btn {
-      display: none;
-    }
-
-    .ant-picker-cell-inner {
-      border-radius: 999px;
-    }
-  `,
   footer: css`
     margin: 0;
     padding-block: 12px 20px;
@@ -227,34 +175,6 @@ export const CreateProjectTitle = memo(() => {
 
   return t('create.title');
 });
-
-interface ProjectDatePrecisionTabsProps {
-  onChange: (precision: ProjectDatePrecision) => void;
-  precision: ProjectDatePrecision;
-  t: (key: `create.datePrecision.${ProjectDatePrecision}`) => string;
-}
-
-const ProjectDatePrecisionTabs = memo<ProjectDatePrecisionTabsProps>(
-  ({ onChange, precision, t }) => (
-    <Tabs
-      value={precision}
-      onValueChange={(value) => {
-        if (PROJECT_DATE_PRECISIONS.includes(value as ProjectDatePrecision))
-          onChange(value as ProjectDatePrecision);
-      }}
-    >
-      <TabsList>
-        {PROJECT_DATE_PRECISIONS.map((item) => (
-          <TabsTrigger key={item} value={item}>
-            {t(`create.datePrecision.${item}`)}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
-  ),
-);
-
-ProjectDatePrecisionTabs.displayName = 'ProjectDatePrecisionTabs';
 
 const CreateProjectContent = memo<CreateProjectOptions>(
   ({ onCreated, projectLabels: suppliedLabels, teamId }) => {
@@ -299,18 +219,6 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       getDependencyValue(type, projectId),
     );
     const labelValues = [...(form.labelIds ?? []), ...(form.newLabelNames ?? [])];
-
-    const updateDate = (
-      field: 'startDate' | 'targetDate',
-      precisionField: 'startDatePrecision' | 'targetDatePrecision',
-      date: Dayjs | null,
-      precision: ProjectDatePrecision,
-    ) => {
-      updateForm({
-        [field]: date?.isValid() ? date.format('YYYY-MM-DD') : undefined,
-        [precisionField]: precision,
-      });
-    };
 
     const updateForm = (patch: Partial<CreateProjectFormState>) => {
       setForm((current) => ({ ...current, ...patch }));
@@ -710,92 +618,24 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                 </>
               </Combobox>
             )}
-            <DatePicker
-              aria-label={t('create.startDate')}
-              className={styles.date}
-              classNames={{ popup: { root: styles.calendar } }}
-              placeholder={t('create.start')}
-              prefix={<CalendarIcon size={13} />}
-              size={'small'}
-              suffixIcon={null}
-              value={form.startDate ? dayjs(form.startDate) : null}
-              format={(date) =>
-                formatProjectDate(date.format('YYYY-MM-DD'), form.startDatePrecision ?? 'day')
-              }
-              panelRender={(panel) => (
-                <>
-                  <ProjectDatePrecisionTabs
-                    precision={form.startDatePrecision ?? 'day'}
-                    t={(key) => t(key)}
-                    onChange={(precision) => updateForm({ startDatePrecision: precision })}
-                  />
-                  <span
-                    className="text-sm"
-                    style={{ fontSize: 12, display: 'block', padding: '12px 16px' }}
-                  >
-                    {t('create.startDate')}
-                  </span>
-                  {panel}
-                </>
-              )}
-              picker={
-                form.startDatePrecision === 'day'
-                  ? 'date'
-                  : form.startDatePrecision === 'halfYear'
-                    ? 'month'
-                    : form.startDatePrecision
-              }
-              onChange={(value) =>
-                updateDate(
-                  'startDate',
-                  'startDatePrecision',
-                  Array.isArray(value) ? (value[0] ?? null) : value,
-                  form.startDatePrecision ?? 'day',
-                )
+            <ProjectDatePill
+              kind="startDate"
+              value={{ date: form.startDate, precision: form.startDatePrecision }}
+              onCommit={({ date, precision }) =>
+                updateForm({
+                  startDate: date ?? undefined,
+                  startDatePrecision: precision ?? 'day',
+                })
               }
             />
-            <DatePicker
-              aria-label={t('create.targetDate')}
-              className={styles.date}
-              classNames={{ popup: { root: styles.calendar } }}
-              placeholder={t('create.target')}
-              prefix={<CalendarIcon size={13} />}
-              size={'small'}
-              suffixIcon={null}
-              value={form.targetDate ? dayjs(form.targetDate) : null}
-              format={(date) =>
-                formatProjectDate(date.format('YYYY-MM-DD'), form.targetDatePrecision ?? 'day')
-              }
-              panelRender={(panel) => (
-                <>
-                  <ProjectDatePrecisionTabs
-                    precision={form.targetDatePrecision ?? 'day'}
-                    t={(key) => t(key)}
-                    onChange={(precision) => updateForm({ targetDatePrecision: precision })}
-                  />
-                  <span
-                    className="text-sm"
-                    style={{ fontSize: 12, display: 'block', padding: '12px 16px' }}
-                  >
-                    {t('create.targetDate')}
-                  </span>
-                  {panel}
-                </>
-              )}
-              picker={
-                form.targetDatePrecision === 'day'
-                  ? 'date'
-                  : form.targetDatePrecision === 'halfYear'
-                    ? 'month'
-                    : form.targetDatePrecision
-              }
-              onChange={(value) =>
-                updateDate(
-                  'targetDate',
-                  'targetDatePrecision',
-                  Array.isArray(value) ? (value[0] ?? null) : value,
-                  form.targetDatePrecision ?? 'day',
-                )
+            <ProjectDatePill
+              kind="targetDate"
+              value={{ date: form.targetDate, precision: form.targetDatePrecision }}
+              onCommit={({ date, precision }) =>
+                updateForm({
+                  targetDate: date ?? undefined,
+                  targetDatePrecision: precision ?? 'day',
+                })
               }
             />
             <Combobox

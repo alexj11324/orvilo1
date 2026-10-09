@@ -1,0 +1,26 @@
+{
+  "completion": {
+    "accepted": false,
+    "code": "INTERNAL_SERVER_ERROR",
+    "message": "Failed to update task"
+  },
+  "copy": {
+    "id": "task_0jTOuD71OP4b",
+    "agent": "electron-codex-557-workspace",
+    "workflowCategory": "todo",
+    "topic": null
+  },
+  "failedCopy": {
+    "success": false,
+    "code": "PRECONDITION_FAILED",
+    "message": "One or more issue labels are unavailable"
+  },
+  "original": {
+    "attentionReason": "needs_input",
+    "hasLiveExecutor": false
+  },
+  "share": {
+    "code": "FORBIDDEN",
+    "message": "Agent sharing is not available on this deployment"
+  }
+}

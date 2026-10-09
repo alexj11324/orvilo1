@@ -92,6 +92,7 @@ vi.mock('@/database/models/task', () => ({
     vi.fn(function () {
       return {
         findById,
+        hasUnresolvedInput: vi.fn().mockResolvedValue(false),
         resolveTaskReviewRequirement,
         updateContext,
         updateStatus,

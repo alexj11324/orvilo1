@@ -236,6 +236,32 @@ describe('DiscoverService', () => {
   });
 
   describe('Assistant Market (new source)', () => {
+    it('returns a safe runtime type for lists, details and related Agents', async () => {
+      mockMarket.agents.getAgentList.mockResolvedValue({
+        items: [
+          {
+            ...mockMarketAssistantList[0],
+            config: {
+              agencyConfig: { heterogeneousProvider: { type: 'codex', token: 'private' } },
+            },
+          },
+          { ...mockMarketAssistantList[1], runtimeType: 'future-unknown' },
+        ],
+      });
+      mockMarket.agents.getAgentDetail.mockResolvedValue({
+        ...mockMarketAgentDetail,
+        config: {
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code', token: 'private' } },
+        },
+      });
+      const list = await service.getAssistantList();
+      expect(list.items.map((item) => item.runtimeType)).toEqual(['codex', 'orvilo']);
+      const detail = await service.getAssistantDetail({ identifier: 'market-assistant-1' });
+      expect(detail?.runtimeType).toBe('claude-code');
+      expect(detail?.related[0].runtimeType).toBe('orvilo');
+      expect(typeof detail?.runtimeType).toBe('string');
+    });
+
     it('getAssistantList should transform market SDK response', async () => {
       const result = await service.getAssistantList({ includeCategoryCounts: true });
 

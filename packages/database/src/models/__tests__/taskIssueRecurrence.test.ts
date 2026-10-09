@@ -47,6 +47,25 @@ beforeEach(async () => {
 afterEach(clean);
 
 describe('TaskIssueRecurrenceModel', () => {
+  it('allows viewer reads but rejects every viewer write and revoked membership', async () => {
+    await db.insert(workspaceMembers).values({ role: 'viewer', userId: otherId, workspaceId });
+    const task = await new TaskModel(db, userId, workspaceId).create({
+      instruction: 'Shared review',
+    });
+    const owner = new TaskIssueRecurrenceModel(db, userId, workspaceId);
+    const created = await owner.set(task.id, input);
+    const viewer = new TaskIssueRecurrenceModel(db, otherId, workspaceId);
+    await expect(viewer.findForTask(task.id)).resolves.toMatchObject({ id: created.id });
+    await expect(viewer.set(task.id, { ...input, interval: 9 })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(viewer.setEnabled(task.id, false)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(viewer.remove(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, otherId));
+    await expect(viewer.findForTask(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(viewer.setEnabled(task.id, false)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(await owner.findForTask(task.id)).toMatchObject({ enabled: true, interval: 1 });
+  });
   it('creates, updates, disables, re-enables and removes one durable definition per issue', async () => {
     const task = await new TaskModel(db, userId).create({ instruction: 'Review' });
     expect(await model.findForTask(task.id)).toBeNull();

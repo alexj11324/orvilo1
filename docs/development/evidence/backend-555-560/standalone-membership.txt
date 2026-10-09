@@ -1,0 +1,2 @@
+Viewer { read: true, write: false, code: 'FORBIDDEN' }
+Suspended member { accepted: false, code: 'FORBIDDEN' }

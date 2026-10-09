@@ -135,6 +135,7 @@ describe('shareRouter', () => {
           description: 'A shared agent',
           name: 'Alice',
           openingQuestions: ['What can you do?'],
+          runtimeType: 'orvilo',
           tags: ['research'],
           title: 'Research Assistant',
         },
@@ -155,6 +156,7 @@ describe('shareRouter', () => {
       expect(result).not.toHaveProperty('ownerId');
       expect(result).not.toHaveProperty('shareConfig');
       expect(result).not.toHaveProperty('userViewCount');
+      expect(result).not.toHaveProperty('agencyConfig');
       // Visitor topics live under the creator's account, so the counter has to
       // run as the owner rather than the caller.
       expect(topicModelConstructor).toHaveBeenCalledWith(expect.anything(), 'owner-user');
@@ -177,6 +179,27 @@ describe('shareRouter', () => {
       });
       expect(AgentShareModel.incrementUserViewCount).not.toHaveBeenCalled();
     });
+
+    it.each([
+      ['codex', 'codex'],
+      ['claude-code', 'claude-code'],
+      ['unknown-runtime', 'orvilo'],
+      [null, 'orvilo'],
+    ])(
+      'returns a safe scalar runtime for %s without private config',
+      async (agentRuntimeType, runtimeType) => {
+        vi.mocked(AgentShareModel.findBySlugOrId).mockResolvedValue({
+          ...agentShare,
+          agentRuntimeType,
+        } as any);
+        const caller = shareRouter.createCaller(
+          await createContextInner({ userId: 'visitor-user' }),
+        );
+        const result = await caller.getSharedAgent({ slugOrId: 'shared-agent' });
+        expect(result.agentMeta.runtimeType).toBe(runtimeType);
+        expect(result.agentMeta).not.toHaveProperty('agencyConfig');
+      },
+    );
 
     it('resolves by raw share id', async () => {
       const caller = shareRouter.createCaller(await createContextInner({ userId: 'visitor-user' }));

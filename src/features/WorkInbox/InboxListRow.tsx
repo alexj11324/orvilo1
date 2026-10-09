@@ -5,11 +5,11 @@ import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   ArchiveRestoreIcon,
+  BellOffIcon,
   ClockIcon,
   MailIcon,
   MailOpenIcon,
   TimerOffIcon,
-  Trash2Icon,
 } from 'lucide-react';
 import { createElement, memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -234,7 +234,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                 <TooltipTrigger
                   render={
                     <button
-                      aria-label={archivedView ? t('inbox.unarchive') : t('inbox.delete')}
+                      aria-label={archivedView ? t('inbox.unarchive') : t('inbox.dismiss')}
                       className={styles.optionButton}
                       type="button"
                       onClick={(event) => {
@@ -247,11 +247,11 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                   {archivedView ? (
                     <ArchiveRestoreIcon aria-hidden className="size-3" />
                   ) : (
-                    <Trash2Icon aria-hidden className="size-3" />
+                    <BellOffIcon aria-hidden className="size-3" />
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  {archivedView ? t('inbox.unarchive') : t('inbox.delete')}
+                  {archivedView ? t('inbox.unarchive') : t('inbox.dismiss')}
                 </TooltipContent>
               </Tooltip>
             ) : null}

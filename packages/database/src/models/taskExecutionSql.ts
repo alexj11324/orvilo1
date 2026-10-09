@@ -187,3 +187,9 @@ export const parkMarkerSet = (parked: { at: string; reason?: string }) =>
   sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{execution}', coalesce(${tasks.context} -> 'execution', '{}'::jsonb) || ${JSON.stringify({ parked })}::jsonb)`;
 
 export const parkMarkerClear = sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{execution}', coalesce(${tasks.context} -> 'execution', '{}'::jsonb) - 'parked')`;
+
+/** Real current executor, shared with the database workflow-entry trigger. */
+export const hasLiveTaskExecutor = sql<boolean>`has_task_live_executor(
+  ${tasks.id}, ${tasks.assigneeAgentId}, ${tasks.assigneeUserId},
+  ${tasks.currentTopicId}, ${tasks.executionGeneration}
+) AND NOT coalesce(jsonb_exists(${tasks.context} -> 'execution', 'parked'), false)`;

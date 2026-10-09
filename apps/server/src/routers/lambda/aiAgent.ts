@@ -756,12 +756,7 @@ const resolveHeteroTopicWorkspace = async (params: {
   return topic.workspaceId;
 };
 
-/**
- * Workspace `use` guard for operation-keyed endpoints: resolve the operation
- * row to its agent and run the same `use` guard. Operations without an agent
- * (detached / legacy rows) fall through — there is no resource to guard.
- * No-op in personal mode (no workspaceId).
- */
+/** Operation mutations require the author and matching scope, then Agent Use in workspaces. */
 const assertCanUseOperationAgent = async (params: {
   db: OrviloDatabase;
   operationId: string;
@@ -769,21 +764,23 @@ const assertCanUseOperationAgent = async (params: {
   workspaceId?: string | null;
 }) => {
   const { db, operationId, userId, workspaceId } = params;
-  if (!workspaceId) return;
-
   const [row] = await db
-    .select({ agentId: agentOperations.agentId })
+    .select({
+      agentId: agentOperations.agentId,
+      userId: agentOperations.userId,
+      workspaceId: agentOperations.workspaceId,
+    })
     .from(agentOperations)
     .where(eq(agentOperations.id, operationId))
     .limit(1);
-  if (!row?.agentId) return;
-
-  await assertCanUseWorkspaceAgent({
-    agentId: row.agentId,
-    db,
-    userId,
-    workspaceId,
-  });
+  if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Operation not found' });
+  if (row.workspaceId !== (workspaceId ?? null) || row.userId !== userId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
+  }
+  if (!workspaceId) return;
+  if (!row.agentId)
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation has no authorized Agent' });
+  await assertCanUseWorkspaceAgent({ agentId: row.agentId, db, userId, workspaceId });
 };
 
 /**

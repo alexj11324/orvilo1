@@ -14,14 +14,12 @@ import Connector from '../connector';
 import Creds from '../creds';
 import Devices from '../devices';
 import Hotkey from '../hotkey';
-import Labels from '../labels';
 import Labs from '../labs';
 import Memory from '../memory';
 import { DesktopNotificationSettings } from '../notification';
 import Profile from '../profile';
 import Provider from '../provider';
 import Proxy from '../proxy';
-import Security from '../security';
 import ServiceModel from '../service-model';
 import Stats from '../stats';
 import Storage from '../storage';
@@ -43,14 +41,12 @@ export const componentMap = {
   [SettingsTabs.SystemTools]: SystemTools,
   [SettingsTabs.Storage]: Storage,
   [SettingsTabs.Devices]: Devices,
-  [SettingsTabs.Labels]: Labels,
   // Profile related tabs
   [SettingsTabs.Profile]: Profile,
   [SettingsTabs.Stats]: Stats,
   [SettingsTabs.Usage]: Usage,
   [SettingsTabs.APIKey]: APIKey,
   [SettingsTabs.Creds]: Creds,
-  [SettingsTabs.Security]: Security,
   [SettingsTabs.Connector]: Connector,
 
   [SettingsTabs.Plans]: Plans,

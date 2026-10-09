@@ -121,6 +121,14 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // to fall through to Appearance; it must not, so it deliberately names no
   // alias and answers not-found.
   [SettingsTabs.LLM]: { status: 'retired' },
+  // Agent labels only decorated the agent list; nothing in assignment,
+  // orchestration or execution read them. The page is gone and old links land
+  // on the settings root (Profile, the index tab).
+  [SettingsTabs.Labels]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  // The Security tab was an empty redirect to the settings index with no
+  // sidebar entry. (The sidebar *group* of that name holds Credentials and
+  // API keys and is unrelated.)
+  [SettingsTabs.Security]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
   [SettingsTabs.ServiceModel]: { scope: 'user', status: 'enabled' },
   [SettingsTabs.TTS]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
 
@@ -169,7 +177,6 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Messenger/IM adapters were retired as a product surface; stored links are dead ends.
   [SettingsTabs.Messenger]: { status: 'retired' },
   [SettingsTabs.Connector]: { scope: 'user', status: 'enabled' },
-  [SettingsTabs.Labels]: { scope: 'user', status: 'enabled' },
   // The user-built OAuth application console was retired. First-party clients
   // (`orvilo-cli`, desktop, mobile, market) come from the provider's static
   // `defaultClients`, and login / GitHub / Linear / device auth never went
@@ -212,7 +219,6 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
     scope: 'user',
     status: 'enabled',
   },
-  [SettingsTabs.Security]: { scope: 'user', status: 'enabled' },
 
   [SettingsTabs.Storage]: { scope: 'user', status: 'enabled' },
   [SettingsTabs.Devices]: { scope: 'device', status: 'enabled' },
@@ -321,4 +327,6 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   // The workspace Storage page held only permanently disabled "coming soon"
   // controls, so it was retired. Old bookmarks land on the settings index.
   { alias: 'storage', target: 'root' },
+  // Agent labels were removed; old workspace bookmarks land on the settings index.
+  { alias: 'labels', target: 'root' },
 ];

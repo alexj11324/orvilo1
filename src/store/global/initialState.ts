@@ -236,7 +236,7 @@ export interface SystemStatus {
    * Display options of the agent view-all page (grouping / ordering)
    */
   agentListViewOptions?: {
-    groupBy: 'author' | 'label' | 'none';
+    groupBy: 'author' | 'none';
     orderBy: 'author' | 'title' | 'updatedAt';
     orderDirection: 'asc' | 'desc';
   };

@@ -14,7 +14,6 @@ import {
 
 import { type ModalInstance } from '@/components/Modal';
 import EditingPopover from '@/features/EditingPopover';
-import { openLabelFormModal } from '@/features/WorkspaceSetting/Labels/LabelFormModal';
 
 import ConfigGroupModal from './Modals/ConfigGroupModal';
 import { openCreateGroupModal } from './Modals/CreateGroupModal';
@@ -39,12 +38,6 @@ interface AgentModalContextValue {
   closeMemberSelectionModal: () => void;
   openConfigGroupModal: (scope?: 'private' | 'public') => void;
   openCreateGroupModal: (sessionId?: string, visibility?: 'private' | 'public') => void;
-  /**
-   * Create an agent label from anywhere in the list (e.g. the Labels
-   * submenu). When `assignTo` is given, the new label is applied to that
-   * agent right after creation.
-   */
-  openCreateLabelModal: (assignTo?: { agentId: string; currentLabelIds: string[] }) => void;
   openGroupWizardModal: (callbacks: GroupWizardCallbacks) => void;
   openMemberSelectionModal: (callbacks: MemberSelectionCallbacks) => void;
   setGroupWizardLoading: (loading: boolean) => void;
@@ -116,9 +109,6 @@ export const AgentModalProvider = memo<AgentModalProviderProps>(({ children }) =
       },
       openCreateGroupModal: (sessionId?: string, visibility?: 'private' | 'public') => {
         createGroupModalRef.current = openCreateGroupModal({ id: sessionId, visibility });
-      },
-      openCreateLabelModal: (assignTo?: { agentId: string; currentLabelIds: string[] }) => {
-        openLabelFormModal({ assignTo });
       },
       openGroupWizardModal: (callbacks: GroupWizardCallbacks) => {
         setGroupWizardCallbacks(callbacks);

@@ -96,7 +96,7 @@ describe('settings useCategory', () => {
 
     // The skill marketplace and the OAuth-app console were both retired, so the
     // tools group is exactly the two tabs that are still live.
-    expect(keysOf(SettingsGroupKey.Tools)).toEqual([SettingsTabs.Connector, SettingsTabs.Labels]);
+    expect(keysOf(SettingsGroupKey.Tools)).toEqual([SettingsTabs.Connector]);
   });
 
   it('keeps Provider visible when provider settings are enabled', () => {

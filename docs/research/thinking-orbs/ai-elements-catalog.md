@@ -42,7 +42,7 @@ fit decisions, not claims that AI Elements supplies equivalent business logic.
 
 ## Adaptations to official source
 
-Source hashes and registry URLs are in `ai-elements-registry.json`; MIT license
+Source hashes and registry URLs are in `ai-elements-registry.json`; Apache-2.0 license
 in `AI-ELEMENTS-LICENSE`. Existing local Base UI/shadcn primitives replace Radix
 `asChild` conventions with `render` and their own open-state attributes. Theme
 colors resolve through existing application semantic tokens. Shared primitives

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import SkeletonBar from '@/components/Skeleton/Bar';
@@ -11,91 +11,69 @@ import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import { taskDetailLayoutStyles as layout } from './taskDetailLayoutStyles';
 
-const styles = createStaticStyles(({ css }) => ({
-  acceptance: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  divider: css`
-    width: 100%;
-    height: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  control: css`
-    height: 32px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
+/** Status, assignee, priority — the three properties every issue shows. */
+const PROPERTY_VALUE_WIDTHS = [64, 88, 72];
+const DESCRIPTION_LINE_WIDTHS = ['94%', '88%', '72%'];
+const BODY_LINE_WIDTHS = ['62%', '48%'];
 
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
-
+/**
+ * Mirrors `TaskDetailSections` through the same layout classes, so the
+ * container query places the skeleton exactly like the loaded issue: the
+ * properties wrap into a strip under the title in a narrow pane, and become
+ * the labelled 232px rail beside the text in a wide one.
+ */
 const TaskDetailBodySkeleton = () => (
-  <div aria-busy className={`flex flex-col flex-1 ${layout.root}`}>
+  <div aria-busy className={cn('flex flex-1 flex-col', layout.root)}>
     <div className={layout.header}>
-      <div className={`flex flex-col gap-3 ${layout.main}`}>
-        <div style={{ paddingBottom: 5, paddingTop: 5 }}>
+      <div className={cn('flex flex-col gap-3', layout.main)}>
+        {/* Title: 20px type on a 28px line. */}
+        <div className="py-1">
           <SkeletonBar height={20} width={'min(520px, 56%)'} />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <div className={`flex items-center gap-2 ${styles.control}`} style={{ width: 76 }}>
-            <SkeletonBar height={12} radius={3} width={12} />
-            <SkeletonBar height={10} width={36} />
-          </div>
-          <div className={`flex items-center gap-2 ${styles.control}`} style={{ width: 96 }}>
-            <SkeletonBar height={16} radius={'50%'} width={16} />
-            <SkeletonBar height={10} width={48} />
-          </div>
-          <div className={`flex items-center gap-2 ${styles.control}`} style={{ width: 176 }}>
-            <SkeletonBar height={16} radius={'50%'} width={16} />
-            <SkeletonBar height={10} width={116} />
-          </div>
+        {/* "Sub-issue of" parent bar: one 28px control line. */}
+        <div className="flex h-7 items-center gap-2">
+          <SkeletonBar height={12} width={72} />
+          <SkeletonBar height={16} radius={'50%'} width={16} />
+          <SkeletonBar height={12} width={160} />
         </div>
       </div>
+
       <div className={layout.side}>
-        <div className={layout.properties}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div className={layout.propertyRow} key={index}>
-              <div className="flex items-center gap-2">
-                <SkeletonBar height={16} radius={4} width={16} />
-                <SkeletonBar height={10} width={56} />
-              </div>
-              <div className={layout.propertyValue}>
-                <SkeletonBar height={10} width={index === 1 ? 88 : 64} />
-              </div>
+        <div className={layout.propertyGroups}>
+          <div className={layout.railSection}>
+            {/* Hidden in the narrow strip, like the real "Properties" label. */}
+            <span className={layout.railSectionLabel}>
+              <SkeletonBar height={12} width={72} />
+            </span>
+            <div className={layout.properties}>
+              {PROPERTY_VALUE_WIDTHS.map((width) => (
+                <div className={layout.propertyRow} key={width}>
+                  <div className={cn('gap-1.5', layout.propertyValue)}>
+                    <SkeletonBar height={16} radius={'50%'} width={16} />
+                    <SkeletonBar height={12} width={width} />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* Same grid child as the real body column — the skeleton mirrors the
-          two-column layout instead of painting a full-width block. */}
-      <div className={`flex flex-col gap-6 ${layout.body}`}>
-        <div className="flex flex-col gap-3">
-          <SkeletonBar height={14} width={'94%'} />
-          <SkeletonBar height={14} width={'88%'} />
-          <SkeletonBar height={14} width={'72%'} />
-        </div>
+      <div className={cn('flex flex-col gap-3', layout.description)}>
+        {DESCRIPTION_LINE_WIDTHS.map((width) => (
+          <SkeletonBar height={14} key={width} width={width} />
+        ))}
+      </div>
 
+      <div className={cn('flex flex-col gap-6', layout.body)}>
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <SkeletonBar height={16} radius={'50%'} width={16} />
-            <SkeletonBar height={18} width={112} />
+            <SkeletonBar height={14} width={112} />
           </div>
-          <div className={`flex flex-col ${styles.acceptance}`}>
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div className="flex flex-col" key={index}>
-                {index > 0 && <div className={styles.divider} />}
-                <div className="flex items-center gap-2.5 p-3">
-                  <SkeletonBar height={16} radius={'50%'} width={16} />
-                  <SkeletonBar height={12} width={24} />
-                  <SkeletonBar height={14} width={`${58 + index * 9}%`} />
-                </div>
-              </div>
-            ))}
-          </div>
+          {BODY_LINE_WIDTHS.map((width) => (
+            <SkeletonBar height={14} key={width} width={width} />
+          ))}
         </div>
       </div>
     </div>

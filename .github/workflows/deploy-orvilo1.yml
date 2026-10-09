@@ -26,11 +26,24 @@ on:
         description: '构建完成后部署到生产主机'
         type: boolean
         default: false
+      qa_permission:
+        description: 'Deploy only the isolated permission QA target (QA harness ref only)'
+        type: boolean
+        default: false
+      qa_diagnose:
+        description: 'Read only fixed permission QA host metadata (never deploy or clean up)'
+        type: boolean
+        default: false
+      qa_candidate_build_run:
+        description: 'Successful exact product-candidate build-only run ID (QA only)'
+        type: string
+        required: false
       retag_main_from:
         description: '可选：把 :canary 浮动标签指到这个已有 sha-* 镜像（不动构建/部署，用于修正污染的标签）'
         required: false
 
 permissions:
+  actions: read
   contents: read
   packages: write
   checks: read
@@ -41,7 +54,7 @@ env:
 
 jobs:
   retag-main:
-    if: github.event_name == 'workflow_dispatch' && inputs.retag_main_from != ''
+    if: (github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.retag_main_from != '') && !inputs.qa_diagnose
     runs-on: ubuntu-latest
     # 与 promote 串行：手动修标签不能和自动提升交错写同一批浮动标签。
     concurrency:
@@ -85,7 +98,7 @@ jobs:
     # 的镜像内容必然相同，而一次 Next.js 生产构建要十几分钟。
     # 例外：workflow_dispatch 显式勾 build，用于给没有 push 构建产物的
     # 分支（验收部署等）产出 sha-<commit> 镜像。
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build && inputs.retag_main_from == '')
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.build && inputs.retag_main_from == '')) && !inputs.qa_diagnose
     # 部署目标是 aarch64，这里用 GitHub 的 arm64 runner 原生构建，
     # 不走 QEMU —— 那会让一次 Next.js 生产构建慢到不可接受。
     runs-on: ubuntu-24.04-arm
@@ -145,7 +158,7 @@ jobs:
   promote:
     # 把 :canary / :main 浮动标签提升到刚构建的 sha 镜像——但只在该 commit
     # 的 Required Quality Gate 变绿之后。门禁失败/取消/超时都不会动标签。
-    if: github.event_name == 'push'
+    if: (github.event_name == 'push') && !inputs.qa_diagnose
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -194,7 +207,7 @@ jobs:
     # build 未勾选时它会被 skipped —— 部署已有镜像仍要允许；只有 build
     # 真跑了且失败时才不该部署。always() 让 skipped 不阻塞本 job。
     needs: build
-    if: always() && github.event_name == 'workflow_dispatch' && inputs.deploy && inputs.retag_main_from == '' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    if: (always() && github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.deploy && inputs.retag_main_from == '' && (needs.build.result == 'success' || needs.build.result == 'skipped')) && !inputs.qa_diagnose
     runs-on: ubuntu-latest
     environment: production
     # 生产部署串行：两次手动 deploy 不能交错 pull/up 同一批容器。
@@ -372,3 +385,233 @@ jobs:
           # crash-looping after a deploy.
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             'sudo docker inspect -f "{{.State.Running}}" orvilo-collaboration-gateway | grep -qx true'
+
+
+  qa-gateways:
+    if: github.event_name == 'workflow_dispatch' && inputs.qa_permission && !inputs.qa_diagnose
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    outputs:
+      digest: ${{ steps.gateway-image.outputs.digest }}
+    env:
+      QA_CANDIDATE_SHA: c02d5592605fe56b73b1dd6289ff6e661f5326c9
+      QA_IMAGE_REF: ghcr.io/alexj11324/orvilo1@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      INPUT_BUILD: ${{ inputs.build }}
+      INPUT_DEPLOY: ${{ inputs.deploy }}
+      INPUT_RETAG: ${{ inputs.retag_main_from }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Admit only unchanged candidate business source and isolated QA controls
+        run: |
+          python3 -m pip install PyYAML==6.0.3
+          node --test scripts/ci/permissionQaAdmission.test.mjs
+          node docker-compose/qa-permission/admit.mjs
+          shellcheck docker-compose/qa-permission/{activate,build-gateways,qa-ci}.sh
+      - name: Require candidate quality gate
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: c02d5592605fe56b73b1dd6289ff6e661f5326c9
+      - name: Require harness quality gate
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ github.sha }}
+      - name: Build existing pinned gateway source and verify both gateways
+        run: bash docker-compose/qa-permission/build-gateways.sh
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish QA gateways by digest
+        id: gateway-image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/qa-gateways
+          file: ${{ runner.temp }}/qa-gateways/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:qa-permission-gateways-${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-gateway-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/qa-gateways/source-receipt.json
+            ${{ runner.temp }}/qa-gateways/SHA256SUMS
+          if-no-files-found: error
+
+  qa-deploy:
+    needs: qa-gateways
+    if: github.event_name == 'workflow_dispatch' && inputs.qa_permission && !inputs.qa_diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: qa-permission-20261008
+    concurrency:
+      group: orvilo1-qa-permission-20261008
+      cancel-in-progress: false
+    env:
+      QA_BUILD_RUN_ID: ${{ inputs.qa_candidate_build_run }}
+      QA_GATEWAY_IMAGE_REF: ghcr.io/${{ github.repository }}@${{ needs.qa-gateways.outputs.digest }}
+      INPUT_BUILD: ${{ inputs.build }}
+      INPUT_DEPLOY: ${{ inputs.deploy }}
+      INPUT_RETAG: ${{ inputs.retag_main_from }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SSH_HOST: ${{ secrets.ORACLE_HOST }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-env
+      - name: Install existing build dependencies
+        run: |
+          pnpm install
+          npm install --prefix apps/auth/cf --no-package-lock
+          echo "$GITHUB_WORKSPACE/apps/auth/cf/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Build the maintained auth portal with only the sibling QA config
+        env:
+          VITE_CDN_BASE: /
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: |
+          cp docker-compose/qa-permission/auth.cloudflare.config.ts apps/auth/cf/cloudflare.config.ts
+          bun run --cwd apps/auth build
+          cd apps/auth/cf
+          node_modules/.bin/cf build
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure the authorized pinned SSH identity
+        env:
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?}" "${SSH_KNOWN_HOSTS:?}" "${SSH_HOST:?}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+      - name: Activate only the fresh QA target through CI
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.QA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+        run: bash docker-compose/qa-permission/qa-ci.sh
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: permission-qa-deployment-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qa-permission-receipt.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove only this run's temporary QA secret inputs
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -rf -- "$RUNNER_TEMP/qa-env-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          if [ -f ~/.ssh/deploy_key ]; then
+            ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
+              "if test \"\$(sudo cat /run/orvilo-qa-permission/owner.id 2>/dev/null)\" = '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'; then sudo rm -f /run/orvilo-qa-permission/compose.env /run/orvilo-qa-permission/app.env /run/orvilo-qa-permission/agent-gateway.env /run/orvilo-qa-permission/device-gateway.env /run/orvilo-qa-permission/collaboration.env /run/orvilo-qa-permission/hatchet-token; fi"
+            rm -f ~/.ssh/deploy_key
+          fi
+
+  qa-diagnose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/permission-qa-current' && inputs.qa_permission && inputs.qa_diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    environment: qa-permission-20261008
+    env:
+      SSH_HOST: ${{ secrets.ORACLE_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Configure the authorized pinned SSH identity
+        env:
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?}" "${SSH_KNOWN_HOSTS:?}" "${SSH_HOST:?}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+      - name: Collect only fixed target read-only metadata
+        run: bash docker-compose/qa-permission/qa-diagnose.sh | tee "$RUNNER_TEMP/qa-diagnosis.txt"
+      - name: Read only exact QA DNS metadata
+        if: always()
+        env:
+          CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+        run: |
+          node --input-type=module > "$RUNNER_TEMP/qa-dns-metadata.safe.json" <<'NODE'
+          import { isIP } from 'node:net';
+          const zoneId = 'c71d288fdeb11a7ebf3c179d8a4961c8';
+          const accountId = 'd8f6630c7869111a5139bc5ed4d24ace';
+          const names = ['qa-permission.aspectlylabs.com', 'accounts-qa-permission.aspectlylabs.com'];
+          const token = process.env.CLOUDFLARE_DNS_API_TOKEN;
+          const origin = process.env.SSH_HOST;
+          const receipt = { readOnly: true, zone: null, lookups: [], records: [] };
+          const read = async (path, label) => {
+            const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
+              method: 'GET', headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000),
+            });
+            const body = await response.json().catch(() => ({}));
+            receipt.lookups.push({ label, http_status: response.status,
+              provider_error_codes: (body.errors || []).map((error) => error.code).filter(Number.isInteger) });
+            if (!response.ok || body.success !== true) { process.exitCode = 1; return null; }
+            return body.result;
+          };
+          try {
+            if (!token || isIP(origin || '') !== 4) throw new Error('QA input admission');
+            const zone = await read(`/zones/${zoneId}`, 'exact-zone');
+            if (!zone || zone.id !== zoneId || zone.name !== 'aspectlylabs.com' || zone.account?.id !== accountId) {
+              receipt.admissionError = 'QA_ZONE_ACCOUNT'; process.exitCode = 1;
+            } else {
+              receipt.zone = { id: zone.id, name: zone.name, account_id: zone.account.id };
+              for (const name of names) {
+                const records = await read(`/zones/${zoneId}/dns_records?name=${encodeURIComponent(name)}&per_page=100`, name);
+                const lookup = receipt.lookups.at(-1);
+                lookup.record_count = Array.isArray(records) ? records.length : null;
+                if (!Array.isArray(records)) { process.exitCode = 1; continue; }
+                for (const record of records) {
+                  if (record.name !== name) { receipt.admissionError = 'FOREIGN_RECORD'; process.exitCode = 1; break; }
+                  const matches = record.type === 'A' && record.content === origin;
+                  receipt.records.push({ id: record.id, name: record.name, type: record.type, proxied: record.proxied,
+                    created_on: record.created_on, modified_on: record.modified_on, matches_known_qa_origin: matches });
+                  if (name === names[0] && !matches) { receipt.admissionError = 'QA_ORIGIN'; process.exitCode = 1; break; }
+                }
+                if (receipt.admissionError) break;
+              }
+            }
+          } catch {
+            receipt.admissionError = 'TRANSPORT_OR_INPUT'; process.exitCode = 1;
+          }
+          console.log(JSON.stringify(receipt));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: permission-qa-diagnosis-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/qa-diagnosis.txt
+            ${{ runner.temp }}/qa-dns-metadata.safe.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove the runner SSH identity
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

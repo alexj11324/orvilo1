@@ -10,6 +10,7 @@ import {
   agents,
   eventOutbox,
   notifications,
+  taskComments,
   tasks,
   taskTopics,
   teams,
@@ -260,7 +261,7 @@ describe('real Issue notification producers and projection', () => {
     expect(await feed(owner)).toMatchObject([{ activityVersion: 1 }]);
   });
 
-  it('drops suspended and unsubscribed recipients and respects a private Issue ACL', async () => {
+  it('drops inactive and unsubscribed recipients while sharing Issue dialogue across private Teams', async () => {
     await db
       .update(workspaceMembers)
       .set({ suspendedAt: new Date() })
@@ -283,7 +284,7 @@ describe('real Issue notification producers and projection', () => {
     expect(await feed(owner)).toHaveLength(1);
     expect(await feed(mentioned)).toEqual([]);
     expect(await feed(subscriber)).toEqual([]);
-    // Workspace Issues are shared; a private Team the recipient is not in is the Issue ACL.
+    // Active workspace members can read Issue dialogue without private Team membership.
     await db.insert(teams).values({
       id: 'projection-private-team',
       key: 'PRV',
@@ -301,18 +302,52 @@ describe('real Issue notification producers and projection', () => {
       .where(eq(taskSubscriptions.userId, subscriber));
     await new TaskModel(db, owner, wsId).addComment({
       authorUserId: owner,
-      content: 'Private note',
+      content: 'Shared note in a private Team',
       editorData: {
-        root: { children: [{ metadata: { id: subscriber, type: 'member' }, type: 'mention' }] },
+        root: {
+          children: [subscriber, mentioned, outsider].map((id) => ({
+            metadata: { id, type: 'member' },
+            type: 'mention',
+          })),
+        },
       },
       taskId: 'projection-issue',
       userId: owner,
     });
     await project();
-    expect(await feed(subscriber)).toEqual([]);
-    // The projection itself must not store the row; the feed's read ACL is a second gate.
-    expect(
-      await db.select().from(notifications).where(eq(notifications.userId, subscriber)),
-    ).toEqual([]);
+    expect(await feed(subscriber)).toMatchObject([
+      { content: 'Shared note in a private Team', type: 'mention' },
+    ]);
+    for (const userId of [mentioned, outsider]) {
+      expect(await feed(userId)).toEqual([]);
+      // Denied recipients must be filtered before persistence, as well as at feed read.
+      expect(await db.select().from(notifications).where(eq(notifications.userId, userId))).toEqual(
+        [],
+      );
+    }
+  });
+
+  it('does not project a persisted private comment to other readable Issue members', async () => {
+    const comment = await new TaskModel(db, author, wsId).addComment({
+      authorUserId: author,
+      content: 'Private comment body',
+      editorData: {
+        root: { children: [{ metadata: { id: mentioned, type: 'member' }, type: 'mention' }] },
+      },
+      taskId: 'projection-issue',
+      userId: author,
+    });
+    // Retain the separate read boundary of an existing private comment row.
+    await db
+      .update(taskComments)
+      .set({ visibility: 'private' })
+      .where(eq(taskComments.id, comment.id));
+    await project();
+    for (const userId of [owner, subscriber, mentioned]) {
+      expect(await feed(userId)).toEqual([]);
+      expect(await db.select().from(notifications).where(eq(notifications.userId, userId))).toEqual(
+        [],
+      );
+    }
   });
 });

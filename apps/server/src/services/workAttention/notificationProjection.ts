@@ -259,7 +259,7 @@ export class NotificationProjectionService {
     const targets: ProjectionTarget[] = [];
     for (const [userId, kind] of recipientKinds) {
       if (!active.has(userId)) continue;
-      // TaskModel's shared predicate includes private-team and resource ACL.
+      // TaskModel enforces active workspace Issue readability independently of private Team membership.
       if (!(await new TaskModel(this.db, userId, row.workspaceId ?? undefined).findById(task.id)))
         continue;
       if (comment?.visibility === 'private' && comment.userId !== userId) continue;

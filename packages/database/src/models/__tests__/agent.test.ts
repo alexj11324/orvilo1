@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE, INBOX_SESSION_ID } from '@orvilo/const';
 import type { OrviloAgentAgencyConfig } from '@orvilo/types';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -2832,6 +2832,23 @@ describe('AgentModel', () => {
       expect(result[0]).toHaveProperty('backgroundColor');
     });
 
+    it('projects migrated runtime branding without using editable names or avatars', async () => {
+      await serverDB.insert(agents).values({
+        id: 'legacy-codex-brand',
+        userId,
+        name: 'JA',
+        avatar: 'JV',
+        virtual: false,
+        // Replay stored pre-migration JSON without weakening the current config type.
+        agencyConfig: sql`${JSON.stringify({ heterogeneousProvider: { command: 'codex' } })}::jsonb`,
+      });
+      const result = await agentModel.queryAgents();
+      const agent = result.find((row) => row.id === 'legacy-codex-brand');
+      expect(agent).toMatchObject({ name: 'JA', avatar: 'JV', heterogeneousType: 'codex' });
+      expect(agent).not.toHaveProperty('agencyConfig');
+      expect(agent).not.toHaveProperty('model');
+    });
+
     it('should derive heteroType without assigning a runtime to an unconfigured agent', async () => {
       await serverDB.insert(agents).values({
         agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
@@ -2852,8 +2869,10 @@ describe('AgentModel', () => {
       const hetero = result.find((a) => a.id === 'hetero-agent');
       const normal = result.find((a) => a.title === 'Normal Agent');
       expect(hetero?.heteroType).toBe('claude-code');
+      expect(hetero?.heterogeneousType).toBe('claude-code');
       expect(normal).toBeDefined();
       expect(normal?.heteroType).toBeUndefined();
+      expect(normal?.heterogeneousType).toBe('orvilo');
       // raw agencyConfig must not leak into the result payload
       expect(hetero).not.toHaveProperty('agencyConfig');
     });

@@ -67,6 +67,6 @@ describe('issue rail milestone date', () => {
 
   it('keeps the milestone date on a non-shrinking span', () => {
     expect(source).toContain('milestoneDate');
-    expect(source).toMatch(/milestoneDate[\s\S]*?flex: 'none'/);
+    expect(source).toMatch(/milestoneDate && \([\s\S]*?className="flex-none/);
   });
 });

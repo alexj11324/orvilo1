@@ -1,4 +1,3 @@
-import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
 import { cn } from 'cn';
@@ -6,8 +5,8 @@ import { ArrowLeft, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Badge as Tag } from '@/components/reui/badge';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
@@ -69,16 +68,7 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
         <div className={styles.contextWrapper}>
           {hasActiveAgent ? (
             <Tag className={cn(styles.contextTag)}>
-              {
-                <Avatar
-                  emojiScaleWithBackground
-                  avatar={activeAgentMeta?.avatar || DEFAULT_AVATAR}
-                  background={activeAgentMeta?.backgroundColor}
-                  name={agentDisplayName(activeAgentMeta, t('defaultAgent'))}
-                  shape="square"
-                  size={14}
-                />
-              }
+              <AssigneeAvatar agentId={activeAgentId} size={14} />
               {agentDisplayName(activeAgentMeta, t('defaultAgent'))}
             </Tag>
           ) : (
@@ -106,15 +96,7 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
         )}
         {hasSelectedAgent && (
           <Tag>
-            {
-              <Avatar
-                emojiScaleWithBackground
-                avatar={selectedAgent.avatar}
-                name={agentDisplayName(selectedAgent)}
-                shape="square"
-                size={14}
-              />
-            }
+            <AssigneeAvatar agentId={selectedAgent.id} size={14} />
             {agentDisplayName(selectedAgent)}
             <button
               aria-label={t('close', { ns: 'common' })}

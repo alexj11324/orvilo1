@@ -1,7 +1,7 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { SimpleTooltip } from './SimpleTooltip';
@@ -16,6 +16,7 @@ interface AssigneeAvatarProps {
 
 const AssigneeAvatar = memo<AssigneeAvatarProps>(
   ({ agentId, fallbackToDefault, size = 18, tooltip }) => {
+    const { t } = useTranslation('common');
     const displayMeta = useAgentDisplayMeta(agentId, { fallbackToDefault });
 
     if (!displayMeta) {
@@ -23,14 +24,13 @@ const AssigneeAvatar = memo<AssigneeAvatarProps>(
     }
 
     const avatar = (
-      <Avatar
-        avatar={displayMeta.avatar}
-        background={displayMeta.backgroundColor || cssVar.colorBgContainer}
-        shape={'circle'}
-        size={size}
-        title={displayMeta.title}
-        variant={'outlined'}
-      />
+      <span
+        aria-label={`${t('cmdk.context.agent')}: ${displayMeta.title}`}
+        className="inline-flex shrink-0"
+        role="img"
+      >
+        <AgentRuntimeIcon size={size} type={displayMeta.runtimeType} />
+      </span>
     );
 
     return tooltip ? <SimpleTooltip title={displayMeta.title}>{avatar}</SimpleTooltip> : avatar;

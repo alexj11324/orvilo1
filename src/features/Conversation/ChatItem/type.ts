@@ -9,7 +9,7 @@ import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAl
  * it only carries `title`. Every caller in this app passes an agent meta that also
  * has `name` (see `useAgentMeta`), which is what the author label resolves from.
  */
-export type ChatItemAvatarMeta = MetaData & { name?: string | null };
+export type ChatItemAvatarMeta = MetaData & { agentId?: string; name?: string | null };
 
 export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 'onChange'> {
   aboveMessage?: ReactNode;

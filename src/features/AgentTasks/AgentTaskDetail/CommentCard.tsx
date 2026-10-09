@@ -31,6 +31,7 @@ import { useActivityTime } from '@/hooks/useActivityTime';
 import { useTaskStore } from '@/store/task';
 import { isOptimisticActivityId } from '@/store/task/slices/detail/optimisticActivity';
 
+import AssigneeAvatar from '../features/AssigneeAvatar';
 import { styles } from '../shared/style';
 
 // Keep saved comments visually consistent with the editor: render FileNodes
@@ -148,7 +149,9 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       }}
     >
       <div className="flex items-center gap-2">
-        {activity.author?.avatar ? (
+        {activity.author?.type === 'agent' ? (
+          <AssigneeAvatar agentId={activity.author.id} size={24} />
+        ) : activity.author?.avatar ? (
           <Avatar avatar={activity.author.avatar} size={24} />
         ) : (
           <div className={styles.activityAvatar}>

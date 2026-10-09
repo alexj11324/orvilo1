@@ -1,9 +1,4 @@
-import {
-  AGENT_CHAT_TOPIC_URL,
-  DEFAULT_AVATAR,
-  GROUP_CHAT_TOPIC_URL,
-  GROUP_CHAT_URL,
-} from '@orvilo/const';
+import { AGENT_CHAT_TOPIC_URL, GROUP_CHAT_TOPIC_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
 import dayjs from 'dayjs';
@@ -23,7 +18,7 @@ import {
 import { memo, type ReactNode, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
@@ -256,12 +251,7 @@ const SearchResults = memo<SearchResultsProps>(
         }
         return (
           <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-            <Avatar
-              avatar={result.agent.avatar || DEFAULT_AVATAR}
-              background={result.agent.backgroundColor || undefined}
-              name={agentDisplayName(result.agent, t('defaultAgent'))}
-              size={14}
-            />
+            <AssigneeAvatar agentId={result.agentId} size={14} />
             <span style={{ flex: 'none' }}>
               {agentDisplayName(result.agent, t('defaultAgent'))}
             </span>

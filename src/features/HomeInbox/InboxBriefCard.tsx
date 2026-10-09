@@ -1,12 +1,8 @@
-import { DEFAULT_AVATAR, INBOX_SESSION_ID } from '@orvilo/const';
-import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
-import { DEFAULT_INBOX_AVATAR } from '@/const/meta';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import BriefCardActions from '@/features/DailyBrief/BriefCardActions';
 import BriefCardArtifacts from '@/features/DailyBrief/BriefCardArtifacts';
@@ -46,11 +42,9 @@ interface InboxBriefCardProps {
  * produced, not next to the metadata.
  */
 const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
-  const { t } = useTranslation('common');
   const navigate = useWorkspaceAwareNavigate();
 
   const agent = brief.agent;
-  const isInbox = agent?.id === INBOX_SESSION_ID;
   const canNavigate = Boolean(brief.taskId);
 
   // Error briefs carry their title + human, localized summary from the server
@@ -98,19 +92,7 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
       )}
 
       <div className="flex items-start gap-2.5">
-        {agent && (
-          <Avatar
-            avatar={agent.avatar || (isInbox ? DEFAULT_INBOX_AVATAR : DEFAULT_AVATAR)}
-            background={agent.backgroundColor || cssVar.colorBgContainer}
-            shape={'circle'}
-            size={28}
-            style={{ flex: 'none' }}
-            title={agentDisplayName(
-              agent,
-              isInbox ? t('inbox.title', { ns: 'chat' }) : t('defaultSession'),
-            )}
-          />
-        )}
+        {agent && <AssigneeAvatar agentId={agent.id} size={28} />}
         <div className="flex flex-col flex-1 gap-1.5" style={{ minWidth: 0 }}>
           <div className="flex items-center gap-2">
             <div

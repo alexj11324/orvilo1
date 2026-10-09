@@ -11,6 +11,7 @@ import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import {
   renderSidebarMenuItems,
   type SidebarDropdownMenuProps,
@@ -211,7 +212,9 @@ const TabItem = memo<TabItemProps>(
 
     const indicator = (
       <span className={styles.avatarWrapper}>
-        {meta.avatar ? (
+        {meta.agentId ? (
+          <AssigneeAvatar agentId={meta.agentId} size={16} />
+        ) : meta.avatar ? (
           <Avatar
             emojiScaleWithBackground
             avatar={meta.avatar}

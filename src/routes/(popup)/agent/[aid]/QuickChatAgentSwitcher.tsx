@@ -10,12 +10,12 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import Avatar from '@/components/Avatar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import { type SidebarAgentItem } from '@/database/repositories/home';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
@@ -211,12 +211,7 @@ const QuickChatAgentSwitcher = memo(() => {
                     type={'button'}
                     onClick={() => handleSelect(item)}
                   >
-                    <Avatar
-                      avatar={item.avatar}
-                      background={item.background}
-                      shape={'square'}
-                      size={AVATAR_SIZE}
-                    />
+                    <AssigneeAvatar agentId={item.id} size={AVATAR_SIZE} />
                   </button>
                 </span>
               }
@@ -256,12 +251,7 @@ const QuickChatAgentSwitcher = memo(() => {
                       key={item.id}
                       onClick={() => handleSelect(item)}
                     >
-                      <Avatar
-                        avatar={item.avatar}
-                        background={item.background}
-                        shape={'square'}
-                        size={22}
-                      />
+                      <AssigneeAvatar agentId={item.id} size={22} />
                       <span
                         style={{
                           overflow: 'hidden',

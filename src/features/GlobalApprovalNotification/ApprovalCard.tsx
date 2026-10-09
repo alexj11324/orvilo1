@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { ConversationProvider } from '@/features/Conversation';
 import InterventionContent from '@/features/Conversation/InterventionBar/InterventionContent';
 import InterventionTabBar from '@/features/Conversation/InterventionBar/InterventionTabBar';
@@ -146,12 +146,7 @@ const ApprovalCard = memo<ApprovalCardProps>(({ group }) => {
     >
       <div data-pending-hotkey-scope className={styles.card}>
         <div className={styles.header}>
-          <Avatar
-            avatar={meta.avatar}
-            background={meta.backgroundColor}
-            size={28}
-            title={agentDisplayName(meta)}
-          />
+          <AssigneeAvatar agentId={context.agentId} size={28} />
           <div className={styles.headerMeta}>
             <div className={styles.headerSubtitle}>
               {agentDisplayName(meta) && <span>{agentDisplayName(meta)}</span>}

@@ -23,7 +23,7 @@ const AgentAvatar = memo<AgentAvatarProps>(({ item, size }) => {
       size={size}
     />
   ) : (
-    <AgentRuntimeIcon size={size} type={item.heterogeneousType} />
+    <AgentRuntimeIcon size={size} type={item.heterogeneousType || 'orvilo'} />
   );
 });
 

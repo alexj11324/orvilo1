@@ -5,6 +5,7 @@ import { type CSSProperties, type MouseEventHandler } from 'react';
 import { memo } from 'react';
 
 import A from '@/components/Avatar';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useIsDark } from '@/hooks/useIsDark';
 
 import { type ChatItemProps } from '../type';
@@ -25,6 +26,16 @@ const Avatar = memo<AvatarProps>(
     const dark = useIsDark();
     const useBot = assistantAvatar && (!avatar.avatar || avatar.avatar === DEFAULT_INBOX_AVATAR);
     const displayName = agentDisplayName(avatar);
+
+    // Assistant rows explicitly opt into Libraries.dev/default or custom avatars.
+    // Other agent identity surfaces keep the canonical runtime branding from canary.
+    if (avatar.agentId && !assistantAvatar) {
+      return (
+        <div className="inline-flex" style={style} onClick={onClick}>
+          <AssigneeAvatar agentId={avatar.agentId} size={size} />
+        </div>
+      );
+    }
 
     return (
       <A

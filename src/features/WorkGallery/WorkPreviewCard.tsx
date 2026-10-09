@@ -9,8 +9,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/reui/badge';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
@@ -264,14 +264,7 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
         <div className={cx('flex items-baseline gap-[7px]', styles.footer)}>
           {agent && (
             <>
-              <Avatar
-                emojiScaleWithBackground
-                avatar={agent.avatar}
-                background={agent.backgroundColor}
-                className={styles.agentAvatar}
-                shape={'square'}
-                size={24}
-              />
+              <AssigneeAvatar agentId={item.originAgentId} size={24} />
               <div className={cx('flex flex-col gap-0.5', styles.identityMeta)}>
                 <div className="flex items-baseline gap-[7px]">
                   <span className={styles.agentName}>{agent.title}</span>

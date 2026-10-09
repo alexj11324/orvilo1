@@ -15,9 +15,8 @@ import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownM
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
-import AccordionArrowIcon from '../shared/AccordionArrowIcon';
-import { PRESSABLE_FOCUS_CLASS, pressableProps } from '../shared/pressableProps';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 
 const flattenWorkspace = (nodes: TaskDetailWorkspaceNode[]): TaskDetailWorkspaceNode[] =>
   nodes.flatMap((node) => [
@@ -134,21 +133,13 @@ const TaskArtifacts = memo(() => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div
-          aria-expanded={isExpanded}
-          className={cn('flex items-center gap-2 px-2 py-1', PRESSABLE_FOCUS_CLASS)}
-          style={{ cursor: 'pointer', width: 'fit-content' }}
-          {...pressableProps(() => setIsExpanded((prev) => !prev))}
-        >
-          <Package color={cssVar.colorTextDescription} size={16} />
-          <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
-            {t('taskDetail.artifacts')}
-          </div>
-          <Tag size="sm">{items.length}</Tag>
-          <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-        </div>
-      </div>
+      <TaskDetailSectionHeader
+        count={items.length}
+        icon={Package}
+        open={isExpanded}
+        title={t('taskDetail.artifacts')}
+        onToggle={() => setIsExpanded((prev) => !prev)}
+      />
       {isExpanded && (
         <div className="flex flex-col gap-2 px-3">
           {items.map((node) => (

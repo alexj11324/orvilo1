@@ -23,10 +23,15 @@ interface SearchFilesProps {
 }
 
 const SearchFiles = memo<SearchFilesProps>(({ listResults = [], messageId, pluginError }) => {
-  const { isLoading, openFile, openFolder } = useToolRenderCapabilities();
+  const { canOpenFile, canOpenFolder, isLoading, openFile, openFolder } =
+    useToolRenderCapabilities();
   const [selectedPath, setSelectedPath] = useState<string>();
   const { t } = useTranslation('tool');
   const loading = isLoading?.(messageId);
+  const canOpen = (path: string, directory: boolean) =>
+    directory
+      ? !!openFolder && (canOpenFolder?.(path) ?? true)
+      : !!openFile && (canOpenFile?.(path) ?? true);
 
   if (loading) {
     return (
@@ -61,7 +66,7 @@ const SearchFiles = memo<SearchFilesProps>(({ listResults = [], messageId, plugi
       selectedPath={selectedPath}
       onSelect={(path) => {
         const item = listResults.find((entry) => entry.path === path);
-        if (!item?.path) return;
+        if (!item?.path || !canOpen(item.path, item.isDirectory)) return;
         setSelectedPath(path);
         if (item.isDirectory) openFolder?.(path);
         else openFile?.(path);
@@ -69,7 +74,7 @@ const SearchFiles = memo<SearchFilesProps>(({ listResults = [], messageId, plugi
     >
       {listResults.map((item) => (
         <FileTreeFile
-          aria-disabled={!item.path || !(item.isDirectory ? openFolder : openFile)}
+          aria-disabled={!item.path || !canOpen(item.path, item.isDirectory)}
           key={item.path || item.name}
           name={item.name}
           path={item.path || item.name}
@@ -86,7 +91,7 @@ const SearchFiles = memo<SearchFilesProps>(({ listResults = [], messageId, plugi
             {item.size !== undefined && (
               <span className="text-xs text-muted-foreground">{formatSize(item.size)}</span>
             )}
-            {!item.isDirectory && item.path && openFolder && (
+            {!item.isDirectory && item.path && openFolder && canOpen(item.path, true) && (
               <Button
                 aria-label={t('localFiles.openFolder')}
                 size="icon-sm"

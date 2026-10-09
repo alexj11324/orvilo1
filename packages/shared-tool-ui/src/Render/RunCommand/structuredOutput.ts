@@ -126,7 +126,11 @@ export function parseErrorStack(output: string) {
   if (output.length > 200_000) return;
   const text = Anser.ansiToText(output).trim();
   const lines = text.split('\n');
-  if (lines.length < 2 || !/^\w*Error:\s*\S/.test(lines[0])) return;
-  if (!lines.slice(1).every((line) => /^\s+at\s+.+/.test(line))) return;
-  return text;
+  // Node adds a source excerpt before the error and a runtime-version footer after its frames.
+  const start = lines.findIndex((line) => /^\w*Error:\s*\S/.test(line));
+  if (start < 0) return;
+  let end = start + 1;
+  while (end < lines.length && /^\s+at\s+.+/.test(lines[end])) end++;
+  if (end === start + 1) return;
+  return lines.slice(start, end).join('\n');
 }

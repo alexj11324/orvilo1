@@ -117,3 +117,9 @@ describe('structured command output', () => {
     ).toBeUndefined();
   });
 });
+
+it('extracts actual Node stderr with source context and runtime footer', () => {
+  const text =
+    '/repo/error.cjs:1\nthrow new TypeError("boom");\n^\n\nTypeError: boom\n    at run (/repo/error.cjs:1:7)\n\nNode.js v24.19.0';
+  expect(parseErrorStack(text)).toBe('TypeError: boom\n    at run (/repo/error.cjs:1:7)');
+});

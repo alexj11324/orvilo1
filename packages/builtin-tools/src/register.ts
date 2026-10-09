@@ -159,6 +159,7 @@ import { registerBuiltinInterventions } from './interventions';
 import { KimiCodeInspectors, KimiCodeRenders } from './kimiCode';
 import { LinearIdentifier, LinearInspectors, LinearRenders } from './linear';
 import { NotebookIdentifier, NotebookRenders } from './notebook';
+import { OpenCodeGlob } from './opencode/Glob';
 import { registerBuiltinPlaceholders } from './placeholders';
 import { registerBuiltinPortals } from './portals';
 import { registerBuiltinRenders } from './renders';
@@ -274,7 +275,10 @@ export const registerBuiltinToolSurfaces = (): void => {
     [OrviloActivatorManifest.identifier]: OrviloActivatorRenders as Record<string, BuiltinRender>,
     [WebBrowsingManifest.identifier]: WebBrowsingRenders as Record<string, BuiltinRender>,
     [WebOnboardingManifest.identifier]: WebOnboardingRenders as Record<string, BuiltinRender>,
-    [OPENCODE_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, heterogeneousCliRenders),
+    [OPENCODE_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, {
+      ...heterogeneousCliRenders,
+      glob: OpenCodeGlob as BuiltinRender,
+    }),
     [PI_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, heterogeneousCliRenders),
     [KIMI_CODE_IDENTIFIER]: withAskUserQuestion(
       askUserQuestionRender,

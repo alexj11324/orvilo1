@@ -206,6 +206,18 @@ describe('TaskDetailSliceAction', () => {
       });
     };
 
+    it('returns the committed comment when only the follow-up refresh fails', async () => {
+      seed();
+      const committed = { data: { id: 'cmt_committed' } };
+      vi.mocked(taskService.addComment).mockResolvedValue(committed as any);
+      const { mutate } = await import('@/libs/swr');
+      vi.mocked(mutate).mockRejectedValue(new Error('refresh offline'));
+
+      await expect(useTaskStore.getState().addComment('T-1', 'Saved')).resolves.toBe(committed);
+      expect(taskService.addComment).toHaveBeenCalledTimes(1);
+      expect(useTaskStore.getState().taskDetailMap['T-1'].activities).toHaveLength(1);
+    });
+
     it('shows the comment on send, before the mutation resolves', async () => {
       seed();
       let release!: () => void;

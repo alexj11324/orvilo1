@@ -193,13 +193,30 @@ const LARGE_INPUT_QUERY_PROCEDURES = new Set([
   'group.getTransferJobStatus',
 ]);
 
+const BATCH_URL_BUDGET = 2083;
+// A single query this large cannot share a batched GET URL with anything else
+// (URL base, path and the batch envelope take the rest of the budget).
+const MAX_BATCHED_INPUT_LENGTH = 1500;
+
+// Any query whose own input would not fit the GET budget — e.g. a work query
+// carrying many filter ids or group cursors — goes over POST instead of being
+// rejected client-side with "Input is too big for a single dispatch".
+const hasOversizedInput = (op: { input: unknown; type: string }) => {
+  if (op.type !== 'query' || op.input === undefined) return false;
+  try {
+    return encodeURIComponent(JSON.stringify(op.input)).length > MAX_BATCHED_INPUT_LENGTH;
+  } catch {
+    return false;
+  }
+};
+
 // 3. splitLink to conditionally disable batching
 const buildHttpLinks = (options: typeof linkOptions) =>
   splitLink({
-    condition: (op) => LARGE_INPUT_QUERY_PROCEDURES.has(op.path),
+    condition: (op) => LARGE_INPUT_QUERY_PROCEDURES.has(op.path) || hasOversizedInput(op),
     false: splitLink({
       condition: (op) => SKIP_BATCH_PROCEDURES.has(op.path),
-      false: httpBatchLink({ ...options, maxURLLength: 2083 }),
+      false: httpBatchLink({ ...options, maxURLLength: BATCH_URL_BUDGET }),
       true: httpLink(options),
     }),
     true: httpLink({ ...options, methodOverride: 'POST' }),

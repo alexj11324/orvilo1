@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { myWorkPriorityGroupRank } from './myWorkDisplay';
 import {
   flattenWorkQueryVirtualItems,
+  indexWorkQueryVirtualTasks,
   nestWorkQueryListGroups,
   stickyVirtualSections,
 } from './workQueryVirtualListModel';
@@ -176,5 +177,19 @@ describe('stickyVirtualSections', () => {
     ]);
     expect(sections?.items.every((item) => item.kind !== 'header')).toBe(true);
     expect(sections?.groupCounts).toEqual([1, 2]);
+  });
+});
+
+describe('indexWorkQueryVirtualTasks', () => {
+  it('resolves grouped-page tasks that the flat lists do not carry', () => {
+    const grouped = [task('a'), task('b')];
+    const index = indexWorkQueryVirtualTasks([[], [], grouped]);
+    expect([...index.keys()]).toEqual(['a', 'b']);
+  });
+
+  it('prefers the later source when a task appears twice', () => {
+    const first = { id: 'a', identifier: 'OLD' } as never;
+    const second = { id: 'a', identifier: 'NEW' } as never;
+    expect(indexWorkQueryVirtualTasks([[first], [second]]).get('a')).toBe(second);
   });
 });

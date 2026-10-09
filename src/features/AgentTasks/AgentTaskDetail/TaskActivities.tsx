@@ -25,6 +25,7 @@ import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -523,17 +524,20 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        className="flex items-center gap-2 px-2 py-1"
-        style={{ cursor: 'pointer', width: 'fit-content' }}
-        onClick={() => setIsExpanded((prev) => !prev)}
-      >
-        <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
-        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
-          {t('taskDetail.activities')}
-        </div>
+      <div className="flex items-center gap-2 px-2 py-1" style={{ width: 'fit-content' }}>
+        <Button
+          aria-expanded={isExpanded}
+          className="gap-2 text-sm font-medium text-muted-foreground"
+          size="sm"
+          type="button"
+          variant="ghost"
+          onClick={() => setIsExpanded((prev) => !prev)}
+        >
+          <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
+          <span>{t('taskDetail.activities')}</span>
+          <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
+        </Button>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
-        <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
         {(['all', 'comments', 'updates'] as const).map((filter) => (
           <button
             aria-pressed={feedFilter === filter}
@@ -544,10 +548,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
               color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
               fontWeight: feedFilter === filter ? 600 : 400,
             }}
-            onClick={(event) => {
-              event.stopPropagation();
-              setFeedFilter(filter);
-            }}
+            onClick={() => setFeedFilter(filter)}
           >
             {t(`taskDetail.activities.filter.${filter}`)}
           </button>

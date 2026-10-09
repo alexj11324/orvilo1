@@ -324,10 +324,16 @@ const INTERVENTION_KINDS = new Set<AgentInterventionInteractionKind>([
 ]);
 
 const INTERVENTION_PROVIDERS = new Set<AgentInterventionProvider>([
+  'amp',
   'claude-code',
+  'codebuddy',
+  'codex',
   'cursor',
   'devin',
   'droid',
+  'kimi-code',
+  'opencode',
+  'pi',
   'qoder',
 ]);
 

@@ -189,7 +189,6 @@ vi.mock('@/store/user', () => {
   return { useUserStore };
 });
 vi.mock('@/store/user/selectors', () => ({
-  labPreferSelectors: { enableInputMarkdown: () => false },
   settingsSelectors: { getHotkeyById: () => () => 'alt+enter' },
   systemAgentSelectors: {
     inputCompletion: () => mocks.inputCompletionConfig,

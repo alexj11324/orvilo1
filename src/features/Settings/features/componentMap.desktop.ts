@@ -15,7 +15,6 @@ import Creds from '../creds';
 import Devices from '../devices';
 import Hotkey from '../hotkey';
 import Labels from '../labels';
-import Labs from '../labs';
 import Memory from '../memory';
 import { DesktopNotificationSettings } from '../notification';
 import Profile from '../profile';
@@ -29,7 +28,6 @@ import SystemTools from '../system-tools';
 
 export const componentMap = {
   [SettingsTabs.Advanced]: Advanced,
-  [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,
   [SettingsTabs.Agents]: Agents,
   [SettingsTabs.Orchestrator]: Orchestrator,

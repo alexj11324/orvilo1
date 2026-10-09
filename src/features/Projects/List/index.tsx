@@ -37,7 +37,6 @@ import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
-import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { PROJECT_ENTITY_ICON, ProjectIcon } from '@/features/Projects/ProjectIcon';
 import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
@@ -50,7 +49,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import AddFilterPopover from './AddFilterPopover';
 import {
@@ -869,15 +868,14 @@ ProjectListGroupHeader.displayName = 'ProjectListGroupHeader';
 
 const ProjectListPage = memo(() => {
   const { t } = useTranslation('project');
-  const enabled = useUserStore(labPreferSelectors.enableProjects);
   const projects = useCurrentProjectList();
-  const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(enabled);
+  const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(true);
   const {
     data: membersData,
     error: membersError,
     isLoading: membersLoading,
     mutate: revalidateMembers,
-  } = useWorkspaceMembersQuery({ enabled });
+  } = useWorkspaceMembersQuery();
   // The hook returns a fresh object each render; rebuild a stable one so the
   // memoized rows below skip unrelated re-renders (e.g. search keystrokes).
   const members = useMemo<MembersQuery>(
@@ -970,8 +968,6 @@ const ProjectListPage = memo(() => {
     (field: ProjectListSortableOrdering) => updateOptions(nextSortFromHeader(options, field)),
     [options, updateOptions],
   );
-
-  if (!enabled) return <ProjectDisabled />;
 
   const groupHeader = (groupKey: string): ReactNode => (
     <ProjectListGroupHeader groupKey={groupKey} leadAvatar={memberAvatar} leadName={memberName} />

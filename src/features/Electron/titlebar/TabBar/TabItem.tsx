@@ -58,7 +58,6 @@ interface TabItemProps {
   onOpenInSplitView: (id: string) => void;
   onTogglePin: (id: string) => void;
   pinnedCount: number;
-  splitViewEnabled: boolean;
   tier: TabTier;
   totalCount: number;
   width: number;
@@ -72,7 +71,6 @@ const TabItem = memo<TabItemProps>(
     isSplitVisible,
     index,
     pinnedCount,
-    splitViewEnabled,
     tier,
     totalCount,
     width,
@@ -184,7 +182,6 @@ const TabItem = memo<TabItemProps>(
           onTogglePin,
           pinned,
           pinnedCount,
-          splitViewEnabled,
           t,
           totalCount,
         }),
@@ -195,7 +192,6 @@ const TabItem = memo<TabItemProps>(
         totalCount,
         pinned,
         pinnedCount,
-        splitViewEnabled,
         isSplitVisible,
         onClose,
         onCloseOthers,

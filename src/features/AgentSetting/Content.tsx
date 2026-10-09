@@ -23,8 +23,6 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 const TAB_META = {
@@ -48,20 +46,18 @@ const Content = memo(() => {
   const meta = useAgentStore(agentSelectors.currentAgentMeta, isEqual);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
-  const enableAgentGraphConfigLab = useUserStore(labPreferSelectors.enableAgentGraphConfig);
-  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
   const [tab, setTab] = useState(ChatSettingsTabs.Opening);
-  const showGraphTab = enableAgentGraphConfigLab && !isInbox && !isHeterogeneous;
+  const showGraphTab = !isInbox && !isHeterogeneous;
 
   const availableTabs = useMemo(
     () =>
       [
         ChatSettingsTabs.Opening,
-        enableSelfLearning ? ChatSettingsTabs.Rules : null,
+        ChatSettingsTabs.Rules,
         enableAgentSelfIteration ? ChatSettingsTabs.SelfIteration : null,
         showGraphTab ? ChatSettingsTabs.Graph : null,
       ].filter(Boolean) as ChatSettingsTabs[],
-    [enableAgentSelfIteration, enableSelfLearning, showGraphTab],
+    [enableAgentSelfIteration, showGraphTab],
   );
 
   const activeTab = availableTabs.includes(tab) ? tab : availableTabs[0];

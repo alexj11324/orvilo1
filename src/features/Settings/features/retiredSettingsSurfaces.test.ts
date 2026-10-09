@@ -16,8 +16,6 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { LAB_FEATURES } from '../labs/features';
-
 const repoRoot = path.resolve(import.meta.dirname, '../../../..');
 
 const exists = (relativePath: string) =>
@@ -55,11 +53,47 @@ describe('the self-built OAuth app console (HS-50) stays retired', () => {
   });
 
   it('offers no lab toggle that could switch the console back on', () => {
-    expect(LAB_FEATURES.map((feature) => feature.flag)).not.toContain('enableOAuthApps');
+    // The whole Labs page is gone (see below), so no toggle can exist.
+    expect(exists('src/features/Settings/labs'), 'the Labs page is back').toBe(false);
   });
 
   // The sidebar check lives in the shared describe below — it covers every
   // retired tab on both shells, so it is not repeated here.
+});
+
+describe('the Labs settings page stays retired', () => {
+  // Every flag it exposed defaulted on, so the page only offered a way to turn
+  // core features off. The features ship unconditionally now.
+  it('ships neither the page nor its flag catalog nor its workspace route', () => {
+    expect(exists('src/features/Settings/labs'), 'the Labs page is back').toBe(false);
+    expect(
+      exists('src/routes/(main)/[workspaceSlug]/settings/labs'),
+      'the workspace Labs route is back',
+    ).toBe(false);
+  });
+
+  it('leaves no LAB_FEATURES catalog or lab selector wiring behind', () => {
+    expect(exists('src/store/user/slices/preference/selectors/labPrefer.ts')).toBe(false);
+    expect(read('src/store/user/selectors.ts')).not.toContain('labPreferSelectors');
+    expect(read('src/features/SettingsSearch/items.ts')).not.toContain('LAB_FEATURES');
+  });
+
+  it('ships no labs locale namespace', () => {
+    expect(exists('packages/locales/src/default/labs.ts'), 'the labs namespace is back').toBe(
+      false,
+    );
+    expect(read('packages/locales/src/default/index.ts')).not.toMatch(/\blabs\b/);
+  });
+
+  it('answers /settings/labs with a redirect to Advanced', () => {
+    expect(read('packages/app-config/src/routes/settings.ts')).toContain(
+      `[SettingsTabs.Labs]: { aliasOf: SettingsTabs.Advanced, status: 'retired' }`,
+    );
+  });
+
+  it('keeps labs out of the workspace-aware settings tab allowlist', () => {
+    expect(read('src/features/Workspace/workspaceAwarePath.ts')).not.toContain(`'labs'`);
+  });
 });
 
 describe('the Referral shell settings page (HS-52) stays retired', () => {
@@ -98,7 +132,7 @@ describe('a retired settings tab leaves no way to reach it', () => {
   //
   // These assert on the wiring files as text, because the failure mode is a
   // *registration* coming back, not a behaviour changing.
-  const RETIRED_TABS = ['OAuthApps', 'Referral', 'Skill'] as const;
+  const RETIRED_TABS = ['Labs', 'OAuthApps', 'Referral', 'Skill'] as const;
 
   it('keeps no search-index wiring for a retired tab', () => {
     const items = read('src/features/SettingsSearch/items.ts');

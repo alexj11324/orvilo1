@@ -3,10 +3,7 @@
 import { memo, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
-import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import { projectPathSection } from './navigation';
 import ProjectSidePanel from './ProjectSidePanel';
@@ -37,14 +34,11 @@ const usePanelViewport = () => {
 };
 
 const ProjectLayout = memo(() => {
-  const enabled = useUserStore(labPreferSelectors.enableProjects);
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const { pathname } = useLocation();
   const panelViewport = usePanelViewport();
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   const showPanel = panelViewport && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
-
-  if (!enabled) return <ProjectDisabled />;
 
   return (
     <ProjectToolbarContext value={toolbar}>

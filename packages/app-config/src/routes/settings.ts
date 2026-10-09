@@ -218,7 +218,9 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   [SettingsTabs.Devices]: { scope: 'device', status: 'enabled' },
 
   [SettingsTabs.Advanced]: { scope: 'user', status: 'enabled' },
-  [SettingsTabs.Labs]: { scope: 'user', status: 'enabled' },
+  // Labs held only on/off switches for features that now ship unconditionally,
+  // so the page was retired. Old bookmarks land on Advanced, its sibling.
+  [SettingsTabs.Labs]: { aliasOf: SettingsTabs.Advanced, status: 'retired' },
   // `hideDocs` withholds the *documentation* surface. The About page also
   // carries version, update channel and diagnostics, and `/apps` (retired)
   // still redirects into it, so the page stays enabled and only its nav row
@@ -321,4 +323,7 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   // The workspace Storage page held only permanently disabled "coming soon"
   // controls, so it was retired. Old bookmarks land on the settings index.
   { alias: 'storage', target: 'root' },
+  // The workspace Labs mirror was retired with the personal page; old bookmarks
+  // land on its sibling Advanced tab.
+  { alias: 'labs', target: 'advanced' },
 ];

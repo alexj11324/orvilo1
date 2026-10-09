@@ -11,9 +11,6 @@ export const componentMap = {
   [SettingsTabs.Advanced]: dynamic(() => import('../advanced'), {
     loading: loading('Settings > Advanced'),
   }),
-  [SettingsTabs.Labs]: dynamic(() => import('../labs'), {
-    loading: loading('Settings > Labs'),
-  }),
   [SettingsTabs.Appearance]: dynamic(() => import('../appearance'), {
     loading: loading('Settings > Appearance'),
   }),

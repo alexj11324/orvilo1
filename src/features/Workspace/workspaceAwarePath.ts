@@ -30,7 +30,7 @@ const isPersonalPath = (to: string): boolean => PERSONAL_PATH_REGEX.test(to);
  * and never prefixed.
  */
 export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
-  // About and the developer tools (advanced / labs) are user-level pages
+  // About and the developer tools (advanced) are user-level pages
   // mirrored under the workspace alongside the account-level tabs.
   'about',
   'advanced',
@@ -52,7 +52,6 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'hotkey',
   'imports',
   'labels',
-  'labs',
   'linear',
   'members',
   'notification',

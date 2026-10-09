@@ -462,7 +462,7 @@ export interface SystemStatus {
    */
   showTaskAgentPanel?: boolean;
   /**
-   * Visibility of the chat bottom terminal panel (desktop-only, Labs gated).
+   * Visibility of the chat bottom terminal panel (desktop-only).
    */
   showTerminalPanel?: boolean;
   /**

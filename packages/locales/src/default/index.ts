@@ -19,7 +19,6 @@ import file from './file';
 import home from './home';
 import hotkey from './hotkey';
 import knowledgeBase from './knowledgeBase';
-import labs from './labs';
 import marketAuth from './marketAuth';
 import memory from './memory';
 import metadata from './metadata';
@@ -71,7 +70,6 @@ const resources = {
   home,
   hotkey,
   knowledgeBase,
-  labs,
   marketAuth,
   memory,
   metadata,

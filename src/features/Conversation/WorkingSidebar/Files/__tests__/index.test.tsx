@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useGlobalStore } from '@/store/global';
 import { initialState } from '@/store/global/initialState';
-import { useUserStore } from '@/store/user';
 
 import Files from '../index';
 
@@ -461,41 +460,24 @@ describe('Files — reveal request integration', () => {
   });
 
   it('does not offer a publish action in the open-source build', () => {
-    const previousLab = useUserStore.getState().preference.lab;
-    useUserStore.setState({
-      preference: {
-        ...useUserStore.getState().preference,
-        lab: { ...previousLab, enableArtifactDeployment: true },
-      },
-    });
+    render(<Files workingDirectory="/repo" />);
 
-    try {
-      render(<Files workingDirectory="/repo" />);
+    const getContextMenuItems = explorerTreeProps.current?.getContextMenuItems as (
+      node: unknown,
+    ) => { key: string }[];
 
-      const getContextMenuItems = explorerTreeProps.current?.getContextMenuItems as (
-        node: unknown,
-      ) => { key: string }[];
-
-      expect(
-        getContextMenuItems({
-          data: {
-            isDirectory: false,
-            name: 'index.html',
-            path: '/repo/index.html',
-            relativePath: 'index.html',
-          },
-          id: 'index.html',
-          isFolder: false,
-        }).map((item) => item.key),
-      ).not.toContain('publish');
-    } finally {
-      useUserStore.setState({
-        preference: {
-          ...useUserStore.getState().preference,
-          lab: previousLab,
+    expect(
+      getContextMenuItems({
+        data: {
+          isDirectory: false,
+          name: 'index.html',
+          path: '/repo/index.html',
+          relativePath: 'index.html',
         },
-      });
-    }
+        id: 'index.html',
+        isFolder: false,
+      }).map((item) => item.key),
+    ).not.toContain('publish');
   });
 
   it('opens file previews with the indexed project root as the approved workspace root', () => {

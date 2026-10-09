@@ -32,10 +32,6 @@ const permissionMock = vi.hoisted(() => ({
   create_content: true,
   edit_own_content: true,
 }));
-const labMock = vi.hoisted(() => ({
-  enableSelfLearning: true,
-  enableTopicAcceptance: true,
-}));
 vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
   useResourceAccess: () => ({ canEditResource: true, isAccessResolved: true }),
 }));
@@ -138,20 +134,6 @@ vi.mock('@/store/serverConfig', () => ({
   ) => selector({ featureFlags: { isAgentEditable: true } }),
 }));
 
-vi.mock('@/store/user', () => ({
-  useUserStore: (selector: (state: unknown) => unknown) =>
-    selector({ preference: { lab: labMock } }),
-}));
-
-vi.mock('@/store/user/selectors', () => ({
-  labPreferSelectors: {
-    enableSelfLearning: (state: { preference: { lab?: { enableSelfLearning?: boolean } } }) =>
-      state.preference.lab?.enableSelfLearning ?? false,
-    enableTopicAcceptance: (state: { preference: { lab?: { enableTopicAcceptance?: boolean } } }) =>
-      state.preference.lab?.enableTopicAcceptance ?? false,
-  },
-}));
-
 describe('Agent sidebar header nav', () => {
   beforeEach(() => {
     appNavigateMock.mockReset();
@@ -166,8 +148,6 @@ describe('Agent sidebar header nav', () => {
     usePathnameMock.mockReset();
     permissionMock.create_content = true;
     permissionMock.edit_own_content = true;
-    labMock.enableSelfLearning = true;
-    labMock.enableTopicAcceptance = true;
 
     useParamsMock.mockReturnValue({ aid: 'agt_eH4zL98zBx5u', topicId: 'tpc_2FCHvjS7d4CA' });
   });

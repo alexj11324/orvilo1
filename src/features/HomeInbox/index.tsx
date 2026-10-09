@@ -26,7 +26,6 @@ import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { authSelectors, userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
 import GoalsRailCard from './GoalsRailCard';
@@ -177,10 +176,8 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   const shownNewsOffset = newsSWR.data ? resolveShownNewsOffset(newsSWR.data.day) : 0;
 
   // Goals are the one home feed that is not about today: they run for days, so
-  // the dashboard is where you check on them. Behind the same lab toggle as the
-  // goal pages themselves — without it a row would navigate to a redirect.
-  const goalsEnabled = useUserStore(labPreferSelectors.enableTopicAcceptance);
-  const showGoals = isLogin === true && goalsEnabled && showRailSections;
+  // the dashboard is where you check on them.
+  const showGoals = isLogin === true && showRailSections;
   const useFetchHomeGoals = useGoalStore((s) => s.useFetchHomeGoals);
   const goalsSWR = useFetchHomeGoals(showGoals, cacheScope);
   const goals = useGoalStore(goalSelectors.homeGoals(cacheScope));

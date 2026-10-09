@@ -76,7 +76,7 @@ export const useSettingsSearch = (
   isIndexing: boolean;
   results: SettingsSearchResult[];
 } => {
-  const { t } = useTranslation(['setting', 'labs', 'electron', 'subscription', 'spend', 'auth']);
+  const { t } = useTranslation(['setting', 'electron', 'subscription', 'spend', 'auth']);
   const categoryGroups = useCategory();
   const { enableSTT, hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);

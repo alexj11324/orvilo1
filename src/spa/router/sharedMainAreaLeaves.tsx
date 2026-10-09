@@ -524,12 +524,6 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
     skeleton: 'form',
   },
   {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/labs'),
-    name: 'Labs',
-    path: 'labs',
-    skeleton: 'form',
-  },
-  {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/about'),
     name: 'About',
     path: 'about',

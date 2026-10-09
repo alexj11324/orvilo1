@@ -11,8 +11,6 @@ import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import ProjectItem from './ProjectItem';
 
@@ -22,12 +20,9 @@ interface ProjectProps {
 
 const Project = memo<ProjectProps>(({ itemKey }) => {
   const { t } = useTranslation('project');
-  const enabled = useUserStore(labPreferSelectors.enableProjects);
   const navigate = useWorkspaceAwareNavigate();
   const projects = useCurrentProjectList();
-  const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(enabled);
-
-  if (!enabled) return null;
+  const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(true);
 
   return (
     <AccordionItem value={itemKey}>

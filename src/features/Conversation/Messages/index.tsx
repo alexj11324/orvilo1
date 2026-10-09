@@ -10,8 +10,6 @@ import { memo, Suspense, useCallback } from 'react';
 import BubblesLoading from '@/components/BubblesLoading';
 import SafeBoundary from '@/components/ErrorBoundary';
 import { getHostPort } from '@/platform';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import History from '../components/History';
 import { useChatItemContextMenu } from '../hooks/useChatItemContextMenu';
@@ -78,9 +76,6 @@ const MessageItem = memo<MessageItemProps>(
     isLatestItem,
   }) => {
     const topic = useConversationStore((s) => s.context.topicId);
-    const enableMessageTextSelectionActions = useUserStore(
-      labPreferSelectors.enableMessageTextSelectionActions,
-    );
 
     // Get message from ConversationStore
     const message = useConversationStore(dataSelectors.getDisplayMessageById(id), isEqual);
@@ -260,12 +255,11 @@ const MessageItem = memo<MessageItemProps>(
       </SafeBoundary>
     );
 
-    const selectableContent =
-      enableMessageTextSelectionActions && supportsTextSelectionActions ? (
-        <TextSelectionActionLayer>{content}</TextSelectionActionLayer>
-      ) : (
-        content
-      );
+    const selectableContent = supportsTextSelectionActions ? (
+      <TextSelectionActionLayer>{content}</TextSelectionActionLayer>
+    ) : (
+      content
+    );
 
     return (
       <>

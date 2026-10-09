@@ -413,6 +413,8 @@ jobs:
           node-version: '24'
       - name: Admit only unchanged candidate business source and isolated QA controls
         run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zsh
           python3 -m pip install PyYAML==6.0.3
           node --test scripts/ci/permissionQaAdmission.test.mjs
           node docker-compose/qa-permission/admit.mjs

@@ -30,3 +30,13 @@ A context row is a parent shown only to place a nested child that matched the qu
 ## Task manager panel labels
 
 The right AI panel (`AgentTaskManager`) reads the lazily fetched `topic` namespace. On a cold load `t()` returned the raw keys (`taskManager.welcome`, `actions.addNewTopic`, `actions.showTopics`) for several seconds. The welcome line, the topic title fallback and the toolbar titles now wait for react-i18next's `ready` for that namespace and render nothing (no title) until it lands. No render test was added: the change is a `ready` gate, with no pure logic to assert.
+
+## Round 4: counts, separators, composer placeholder
+
+Measured on the light theme: board column counts 2.85:1, the team-page breadcrumb separator 1.92:1 and the Topics (话题) panel composer placeholder 2.85:1. All three now take the semantic `text-muted-foreground` role (`--ant-color-text-secondary`, #666 on white, 5.74:1) instead of `colorTextTertiary` / `colorTextDescription` / `colorTextQuaternary`:
+
+- `KanbanColumn` `count` and `collapsedCount`: the colour is removed from the antd-style classes and applied as a utility, so no antd-style colour competes with it.
+- Team Issues / Team Projects breadcrumb `›`: `aria-hidden`, so the 3:1 non-text target applies; it uses the same `text-muted-foreground` token as the separator in `ui/breadcrumb` and `AgentTaskItem`, which exceeds it.
+- `Placeholder` (composer, both variants): `text-muted-foreground` on the placeholder span.
+
+Dark theme: `--muted-foreground` is #aaaaaa on #070707 (8.7:1), which is higher than the tertiary roles it replaces.

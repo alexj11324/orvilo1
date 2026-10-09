@@ -131,7 +131,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   collapsedCount: css`
     font-size: 11px;
     font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
   `,
   collapsedDropOver: css`
     border-color: ${cssVar.colorPrimary};
@@ -224,7 +223,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     flex: none;
     font-size: 12px;
     font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextDescription};
   `,
   header: css`
     display: flex;
@@ -301,7 +299,7 @@ export const CollapsedKanbanColumn = memo<CollapsedKanbanColumnProps>(
           >
             {label}
           </span>
-          <span className={styles.collapsedCount}>{total}</span>
+          <span className={cn('text-muted-foreground', styles.collapsedCount)}>{total}</span>
         </button>
       </div>
     );
@@ -394,7 +392,9 @@ const KanbanColumn = memo<KanbanColumnProps>(
                 <div className="text-sm font-medium">{label}</div>
               </>
             )}
-            {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}
+            {headerVariant !== 'loading' && (
+              <span className={cn('text-muted-foreground', styles.count)}>{total}</span>
+            )}
           </div>
           <div className={cx(styles.headerActions, 'kanban-col-action')}>
             {onHide && (

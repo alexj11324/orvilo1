@@ -774,6 +774,86 @@ describe('hetero exec command', () => {
     );
   });
 
+  it.each(['allow', 'cancel'] as const)(
+    'delivers server-ingest OpenCode permissions without builtin MCP tools (%s)',
+    async (decision) => {
+      vi.stubEnv('ORVILO_BUILTIN_TOOLS', '');
+      let answer: unknown;
+      mockSpawnAgent.mockImplementation(async (options) => {
+        const bridge = options.askUserBridge;
+        if (bridge) {
+          const pending = bridge.pending({
+            arguments: { questions: [{ question: 'Allow native write?' }] },
+            interactionKind: 'permission',
+            toolCallId: 'native-write-permission',
+          });
+          if (decision === 'allow') {
+            bridge.resolve('native-write-permission', {
+              resolutionRequestId: 'native-write-resolution',
+              result: { 'Allow native write?': 'once' },
+            });
+          } else {
+            bridge.cancel('native-write-permission');
+          }
+          answer = await pending;
+        }
+        return createFakeHandle();
+      });
+
+      await runCmd([
+        'hetero',
+        'exec',
+        '--type',
+        'opencode',
+        '--prompt',
+        'do thing',
+        '--topic',
+        'topic-native-permission',
+        '--operation-id',
+        'op-native-permission',
+        '--render',
+        'none',
+      ]);
+
+      expect(mockSpawnAgent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentType: 'opencode',
+          askUserBridge: expect.objectContaining({ pending: expect.any(Function) }),
+          mcpServers: undefined,
+        }),
+      );
+      expect(answer).toEqual(
+        decision === 'allow'
+          ? { result: { 'Allow native write?': 'once' } }
+          : { cancelled: true, cancelReason: 'user_cancelled' },
+      );
+      const events = mockHeteroIngestMutate.mock.calls.flatMap(([input]) => input.events);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          operationId: 'op-native-permission',
+          type: 'agent_intervention_request',
+          data: expect.objectContaining({
+            interactionKind: 'permission',
+            provider: 'opencode',
+            toolCallId: 'native-write-permission',
+          }),
+        }),
+      );
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: 'agent_intervention_response',
+          data: expect.objectContaining({
+            toolCallId: 'native-write-permission',
+            ...(decision === 'allow'
+              ? { resolutionRequestId: 'native-write-resolution' }
+              : { cancelled: true, cancelReason: 'user_cancelled' }),
+          }),
+        }),
+      );
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    },
+  );
+
   it('runs Pi with model, resume, and native args while ignoring effort and speed', async () => {
     mockSpawnAgent.mockReturnValue(createFakeHandle());
 

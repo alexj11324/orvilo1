@@ -9,6 +9,7 @@ import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
 import { getWorkTypeDescriptor, isSafeExternalUrl } from '@/features/Work/descriptors';
 import { useResourceDeletedPrompt } from '@/features/Work/useResourceDeletedPrompt';
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import VersionList from './VersionList';
 
@@ -107,7 +108,8 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
   return (
     <div className={cn('flex flex-col', styles.workCard)}>
       <div
-        className={cn('flex items-center gap-2', styles.header)}
+        {...clickableProps()}
+        className={cn(cn('flex items-center gap-2', styles.header), CLICKABLE_FOCUS_RING)}
         onClick={() => setExpanded((value) => !value)}
       >
         <ToggleIcon className={styles.toggle} size={16} />

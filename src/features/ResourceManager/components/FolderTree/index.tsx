@@ -1,12 +1,14 @@
 'use client';
 
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   folderHeader: css`
@@ -85,10 +87,14 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
     return (
       <div className="flex flex-col gap-0.5">
         <div
+          {...clickableProps()}
           style={{ paddingInlineStart: level * 16 + 8 }}
-          className={cx(
-            'flex flex-row items-center',
-            cx(styles.folderHeader, isActive && styles.folderHeaderActive),
+          className={cn(
+            cx(
+              'flex flex-row items-center',
+              cx(styles.folderHeader, isActive && styles.folderHeaderActive),
+            ),
+            CLICKABLE_FOCUS_RING,
           )}
           onClick={handleClick}
         >

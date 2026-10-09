@@ -1,11 +1,13 @@
 'use client';
 
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { type ComponentProps, memo } from 'react';
 
 import ThemeButton from '@/features/User/UserPanel/ThemeButton';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { type UserAvatarProps } from './UserAvatar';
 import UserAvatar from './UserAvatar';
@@ -24,7 +26,11 @@ const UserInfo = memo<UserInfoProps>(({ avatarProps, onClick, ...rest }) => {
 
   return (
     <div className="flex items-center gap-3 justify-between py-3 px-3" {...rest}>
-      <div className="flex items-center gap-2.5" onClick={onClick}>
+      <div
+        {...clickableProps()}
+        className={cn('flex items-center gap-2.5', CLICKABLE_FOCUS_RING)}
+        onClick={onClick}
+      >
         <UserAvatar background={cssVar.colorFill} size={36} {...(avatarProps as any)} />
         <div className="flex flex-col flex-1">
           <div className="font-bold" style={{ lineHeight: 1.4 }}>

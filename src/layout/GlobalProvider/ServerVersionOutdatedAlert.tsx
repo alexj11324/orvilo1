@@ -12,6 +12,7 @@ import { CURRENT_VERSION } from '@/const/version';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { useGlobalStore } from '@/store/global';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   closeButton: css`
@@ -103,7 +104,12 @@ const ServerVersionOutdatedAlert = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content} style={cssVariables}>
-        <div className={styles.closeButton} onClick={() => setDismissed(true)}>
+        <div
+          {...clickableProps()}
+          aria-label={t('close')}
+          className={cn(styles.closeButton, CLICKABLE_FOCUS_RING)}
+          onClick={() => setDismissed(true)}
+        >
           <X />
         </div>
 

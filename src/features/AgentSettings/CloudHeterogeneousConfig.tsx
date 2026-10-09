@@ -3,6 +3,7 @@
 import { Github } from '@lobehub/icons';
 import { type HeterogeneousProviderConfig, type OwnCredSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle2, KeyRound, X, XIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +19,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient, lambdaQuery } from '@/libs/trpc/client';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 // Fixed cred key for Claude Code OAuth token — never changes
 const CLAUDE_TOKEN_CRED_KEY = 'CLAUDE_CODE_OAUTH_TOKEN';
@@ -164,7 +166,8 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
         </div>
         {existingCred && !editing && (
           <span
-            className={styles.manageLink}
+            {...clickableProps()}
+            className={cn(styles.manageLink, CLICKABLE_FOCUS_RING)}
             onClick={() => {
               if (!canEdit) return;
 
@@ -373,7 +376,11 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
                   {t('heterogeneousStatus.cloud.githubLabel')}
                 </span>
               </div>
-              <span className={styles.manageLink} onClick={() => navigate('/settings/credential')}>
+              <span
+                {...clickableProps()}
+                className={cn(styles.manageLink, CLICKABLE_FOCUS_RING)}
+                onClick={() => navigate('/settings/credential')}
+              >
                 {t('heterogeneousStatus.cloud.manageCredentials')}
               </span>
             </div>

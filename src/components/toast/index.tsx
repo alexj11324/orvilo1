@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import { type ExternalToast, toast as sonnerToast } from 'sonner';
 
+import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 
 import type {
@@ -117,9 +118,16 @@ const issue = (options: ToastOptions): ToastInstance => {
           ) : null}
           <div className="flex gap-2">
             {actions.map((action: ToastAction, i: number) => (
-              <button key={i} type="button" {...action.props} onClick={action.onClick}>
+              <Button
+                key={i}
+                size="sm"
+                type="button"
+                variant="outline"
+                {...action.props}
+                onClick={action.onClick}
+              >
                 {action.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

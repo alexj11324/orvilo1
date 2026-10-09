@@ -1,9 +1,11 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import path from 'path-browserify-esm';
 import React from 'react';
 
 import FileIcon from '@/components/FileIcon';
 import { localFileService } from '@/services/electron/localFileService';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css }) => ({
   container: css`
@@ -47,7 +49,8 @@ export const LocalFolder = ({ path: pathname, size = 22 }: LocalFolderProps) => 
 
   return (
     <div
-      className={cx('flex flex-row items-center gap-1', styles.container)}
+      {...clickableProps()}
+      className={cn(cx('flex flex-row items-center gap-1', styles.container), CLICKABLE_FOCUS_RING)}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       onClick={handleClick}
     >

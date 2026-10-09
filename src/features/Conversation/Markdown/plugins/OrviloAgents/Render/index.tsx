@@ -8,6 +8,7 @@ import { memo, useCallback } from 'react';
 
 import Avatar from '@/components/Avatar';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { type MarkdownElementProps } from '../../type';
 
@@ -74,7 +75,11 @@ const Render = memo<OrviloAgentsProps>(
     if (!identifier) return null;
 
     return (
-      <div className={cn('flex items-center gap-3', styles.card)} onClick={handleClick}>
+      <div
+        {...clickableProps()}
+        className={cn(cn('flex items-center gap-3', styles.card), CLICKABLE_FOCUS_RING)}
+        onClick={handleClick}
+      >
         <Avatar
           avatar={avatar || '🤖'}
           background={backgroundColor}

@@ -3,6 +3,7 @@
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatTokenNumber } from '@orvilo/utils/format';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Trash2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDispla
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
 import { useRemoveWork } from '@/features/Work/useRemoveWork';
 import { useResourceDeletedPrompt } from '@/features/Work/useResourceDeletedPrompt';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { getWorkVersionTotalTokens } from '@/utils/workCumulativeUsage';
 import { formatWorkVersionCost } from '@/utils/workVersionCost';
 
@@ -217,11 +219,10 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
 
   return (
     <div
-      className={cx(
-        'work-preview-card',
-        'flex flex-col',
-        styles.card,
-        clickable && styles.clickable,
+      {...clickableProps(clickable)}
+      className={cn(
+        cx('work-preview-card', 'flex flex-col', styles.card, clickable && styles.clickable),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={
         clickable ? () => (resourceDeleted ? promptResourceDeleted(item) : onOpen(item)) : undefined

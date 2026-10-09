@@ -5,6 +5,7 @@ import React, { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 // Define styles using antd-style (moved from MCPManifestForm)
 const styles = createStaticStyles(({ css }) => ({
@@ -132,11 +133,15 @@ const MCPTypeSelect = ({ value, onChange }: MCPTypeSelectProps) => {
         const disabled = itemValue === 'stdio' && !isDesktop;
         return (
           <div
+            {...clickableProps(!disabled)}
             key={itemValue}
             style={{ flex: 1 }} // Make cards take equal width
             className={cn(
-              'flex flex-col gap-3',
-              cx(styles.container, isActive && styles.active, disabled && styles.disabled),
+              cn(
+                'flex flex-col gap-3',
+                cx(styles.container, isActive && styles.active, disabled && styles.disabled),
+              ),
+              CLICKABLE_FOCUS_RING,
             )}
             onClick={disabled ? undefined : () => handleSelect(itemValue)}
           >

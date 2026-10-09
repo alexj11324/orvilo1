@@ -9,6 +9,7 @@ import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { getWorkVersionTotalTokens } from '@/utils/workCumulativeUsage';
 import { formatWorkVersionCost } from '@/utils/workVersionCost';
 
@@ -206,11 +207,15 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
     if (variant === 'inline') {
       return (
         <div
-          className={cx(
-            'flex items-center gap-2.5',
-            styles.inline,
-            clickable && styles.inlineClickable,
-            className,
+          {...clickableProps(clickable)}
+          className={cn(
+            cx(
+              'flex items-center gap-2.5',
+              styles.inline,
+              clickable && styles.inlineClickable,
+              className,
+            ),
+            CLICKABLE_FOCUS_RING,
           )}
           onClick={clickable ? handleOpen : undefined}
         >
@@ -239,11 +244,10 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
 
     return (
       <div
-        className={cx(
-          'flex items-center gap-3',
-          styles.card,
-          clickable && styles.clickable,
-          className,
+        {...clickableProps(clickable)}
+        className={cn(
+          cx('flex items-center gap-3', styles.card, clickable && styles.clickable, className),
+          CLICKABLE_FOCUS_RING,
         )}
         onClick={clickable ? handleOpen : undefined}
       >

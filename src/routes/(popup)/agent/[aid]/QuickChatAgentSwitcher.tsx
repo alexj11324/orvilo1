@@ -3,6 +3,7 @@
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -21,6 +22,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const VISIBLE_LIMIT = 5;
 const AVATAR_SIZE = 30;
@@ -249,7 +251,8 @@ const QuickChatAgentSwitcher = memo(() => {
                 ) : (
                   filteredRemaining.map((item) => (
                     <div
-                      className={styles.popoverRow}
+                      {...clickableProps()}
+                      className={cn(styles.popoverRow, CLICKABLE_FOCUS_RING)}
                       key={item.id}
                       onClick={() => handleSelect(item)}
                     >

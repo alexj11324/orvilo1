@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import SelectCircle from '../SelectCircle';
 import type { ForwardTarget } from '../useForwardMessages';
@@ -129,10 +130,11 @@ export const TopicForwardContent = ({
               const selected = selectedIds.includes(agent.id);
               return (
                 <div
+                  {...clickableProps()}
                   key={agent.id}
                   className={cn(
-                    'flex items-center gap-2',
-                    cx(styles.row, selected && styles.selected),
+                    cn('flex items-center gap-2', cx(styles.row, selected && styles.selected)),
+                    CLICKABLE_FOCUS_RING,
                   )}
                   onClick={() =>
                     setSelectedIds((ids) =>

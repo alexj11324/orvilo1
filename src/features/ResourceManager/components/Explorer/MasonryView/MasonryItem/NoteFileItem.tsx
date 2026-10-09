@@ -1,4 +1,5 @@
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
 
 import ChunksBadge from '../../ListView/ListItem/ChunkTag';
@@ -150,8 +152,12 @@ const NoteFileItem = memo<NoteFileItemProps>(
           isSupportedForChunking && (
             <SimpleTooltip title={t('components:FileManager.actions.chunkingTooltip')}>
               <div
-                className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
+                {...clickableProps()}
                 style={{ cursor: 'pointer' }}
+                className={cn(
+                  cx('floatingChunkBadge', styles.floatingChunkBadge),
+                  CLICKABLE_FOCUS_RING,
+                )}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isCreatingFileParseTask) {

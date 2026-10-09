@@ -1,10 +1,12 @@
 import { type ChatFileItem } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import FileIcon from '@/components/FileIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { formatSize } from '@/utils/format';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -31,7 +33,8 @@ const FileItem = memo<ChatFileItem>(({ name, fileType, size, id }) => {
 
   return (
     <div
-      className={cx('flex flex-row items-center gap-2', styles.container)}
+      {...clickableProps()}
+      className={cn(cx('flex flex-row items-center gap-2', styles.container), CLICKABLE_FOCUS_RING)}
       onClick={() => {
         openFilePreview({ fileId: id });
       }}

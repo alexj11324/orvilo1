@@ -29,6 +29,7 @@ import { ComposioServerStatus, composioStoreSelectors } from '@/store/tool/slice
 import { orviloSkillStoreSelectors } from '@/store/tool/slices/orviloSkillStore/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type {
   PendingComposioTool,
@@ -231,7 +232,11 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
 
   return (
     <div
-      className={cn('flex items-center gap-3 justify-between', cx(styles.row))}
+      {...clickableProps()}
+      className={cn(
+        cn('flex items-center gap-3 justify-between', cx(styles.row)),
+        CLICKABLE_FOCUS_RING,
+      )}
       style={{
         cursor: 'pointer',
       }}
@@ -314,8 +319,12 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
 
   return (
     <div
-      className={cn('flex items-center gap-3 justify-between', cx(styles.row))}
+      {...clickableProps()}
       style={{ cursor: 'pointer' }}
+      className={cn(
+        cn('flex items-center gap-3 justify-between', cx(styles.row)),
+        CLICKABLE_FOCUS_RING,
+      )}
       onClick={handleAuthorize}
     >
       <div className="flex items-center gap-2">
@@ -376,7 +385,11 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
 
   return (
     <div
-      className={cn('flex items-center gap-3 justify-between', cx(styles.row))}
+      {...clickableProps()}
+      className={cn(
+        cn('flex items-center gap-3 justify-between', cx(styles.row)),
+        CLICKABLE_FOCUS_RING,
+      )}
       style={{
         cursor: 'pointer',
       }}

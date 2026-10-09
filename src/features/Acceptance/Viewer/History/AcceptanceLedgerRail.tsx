@@ -7,6 +7,8 @@ import { PanelRightOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+
 import { AcceptanceDrawer } from '../../AcceptanceDrawer';
 import ReportViewer from '../../Report/ReportViewer';
 import { resolveRoundParam } from '../../utils';
@@ -133,8 +135,12 @@ const AcceptanceLedgerRail = () => {
     <>
       {!focused && !expand && (
         <div
-          className={`flex flex-col items-center gap-[5px] ${styles.toggle}`}
+          {...clickableProps()}
           title={t('acceptance.ledger.expand')}
+          className={cn(
+            `flex flex-col items-center gap-[5px] ${styles.toggle}`,
+            CLICKABLE_FOCUS_RING,
+          )}
           onClick={() => onExpandChange(true)}
         >
           <PanelRightOpen size={14} />

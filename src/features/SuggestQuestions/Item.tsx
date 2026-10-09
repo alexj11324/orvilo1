@@ -1,9 +1,11 @@
 'use client';
 
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useCallback } from 'react';
 
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 interface ItemProps {
   description: string;
@@ -24,7 +26,11 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
 
   return (
     <div
-      className={`flex flex-col border${disabled ? '' : ' hover:bg-[var(--ant-color-fill-tertiary)]'}`}
+      {...clickableProps()}
+      className={cn(
+        `flex flex-col border${disabled ? '' : ' hover:bg-[var(--ant-color-fill-tertiary)]'}`,
+        CLICKABLE_FOCUS_RING,
+      )}
       style={{
         borderColor: cssVar.colorBorderSecondary,
         background: cssVar.colorBgContainer,

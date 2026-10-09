@@ -14,6 +14,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 type GenericItemType = {
   danger?: boolean;
@@ -260,7 +261,8 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
     return (
       <>
         <div
-          className={cn('flex items-center gap-1.5', styles.childItem)}
+          {...clickableProps()}
+          className={cn(cn('flex items-center gap-1.5', styles.childItem), CLICKABLE_FOCUS_RING)}
           style={{ paddingInlineStart }}
           onClick={() => onToggleFolder(node.path)}
         >
@@ -295,7 +297,8 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
 
   return (
     <div
-      className={cn('flex items-center gap-1.5', styles.childItem)}
+      {...clickableProps()}
+      className={cn(cn('flex items-center gap-1.5', styles.childItem), CLICKABLE_FOCUS_RING)}
       style={{ paddingInlineStart }}
       title={node.path}
       onClick={() => onOpenFile(node.path)}
@@ -380,7 +383,8 @@ const SkillRow = memo<SkillRowProps>(
     // vice versa) would drop `onContextMenu` / the ref on the way through.
     const nameNode = (
       <div
-        className="truncate min-w-0"
+        {...clickableProps(onOpenSkill)}
+        className={cn('truncate min-w-0', CLICKABLE_FOCUS_RING)}
         style={{ color: 'inherit', flex: 1, minWidth: 0 }}
         onClick={onOpenSkill ? () => onOpenSkill(item) : undefined}
       >
@@ -396,7 +400,9 @@ const SkillRow = memo<SkillRowProps>(
       >
         {hasFiles ? (
           <div
-            className="flex flex-col items-center justify-center"
+            {...clickableProps()}
+            aria-expanded={expanded}
+            className={cn('flex flex-col items-center justify-center', CLICKABLE_FOCUS_RING)}
             style={{ cursor: 'pointer', flexShrink: 0, height: 20, width: 20 }}
             onClick={(e) => {
               e.stopPropagation();

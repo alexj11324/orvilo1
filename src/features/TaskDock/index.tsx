@@ -1,4 +1,5 @@
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -13,6 +14,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import Item from './Item';
 import {
@@ -189,7 +191,11 @@ const TaskDock = memo(() => {
   return (
     <div className={`flex flex-col ${styles.container}`}>
       <div
-        className={`flex items-center gap-2.5 ${styles.head} ${expand ? styles.headDivider : ''}`}
+        {...clickableProps()}
+        className={cn(
+          `flex items-center gap-2.5 ${styles.head} ${expand ? styles.headDivider : ''}`,
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={() => setExpand(!expand)}
       >
         {icon}
@@ -209,7 +215,8 @@ const TaskDock = memo(() => {
         >
           {canCancel && (
             <div
-              className="text-muted-foreground"
+              {...clickableProps()}
+              className={cn('text-muted-foreground', CLICKABLE_FOCUS_RING)}
               style={{ cursor: 'pointer', flexShrink: 0, fontSize: 12 }}
               onClick={cancelAll}
             >

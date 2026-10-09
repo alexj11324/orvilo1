@@ -8,6 +8,7 @@ import { useIsDark } from '@/hooks/useIsDark';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, messageStateSelectors } from '@/store/chat/selectors';
 import { dotLoading } from '@/styles/loading';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { type MarkdownElementProps } from '../../type';
 import ArtifactIcon from './Icon';
@@ -84,10 +85,11 @@ const Render = memo<ArtifactProps>(({ identifier, title, type, language, childre
 
   return (
     <div
+      {...clickableProps()}
       style={{ width: '100%' }}
       className={cn(
-        'flex flex-col gap-4',
-        cx(styles.container, isDarkMode && styles.container_dark),
+        cn('flex flex-col gap-4', cx(styles.container, isDarkMode && styles.container_dark)),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={() => {
         const state = useChatStore.getState();

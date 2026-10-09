@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { memo } from 'react';
 
 import { Badge } from '@/components/reui/badge';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import CateTag from '../CateTag';
 import HashTags from '../HashTags';
@@ -44,7 +45,8 @@ const TimeLineCard = memo<TimeLineCardProps>(
   ({ title, titleAddon, cate, children, actions, onClick, capturedAt, hashTags }) => {
     return (
       <div
-        className={cn('flex flex-col gap-3 p-4', styles.timelineCard)}
+        {...clickableProps()}
+        className={cn(cn('flex flex-col gap-3 p-4', styles.timelineCard), CLICKABLE_FOCUS_RING)}
         style={{ cursor: 'pointer' }}
         onClick={onClick}
       >

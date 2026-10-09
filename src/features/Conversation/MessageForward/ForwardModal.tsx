@@ -18,6 +18,7 @@ import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { getForwardedMessageText } from '@/store/chat/slices/forward/helpers';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import {
   contextSelectors,
@@ -181,10 +182,11 @@ const ForwardModalContent = memo(() => {
               const checked = selectedIds.includes(agent.id);
               return (
                 <div
+                  {...clickableProps()}
                   key={agent.id}
                   className={cn(
-                    'flex items-center gap-2',
-                    cx(styles.row, checked && styles.rowSelected),
+                    cn('flex items-center gap-2', cx(styles.row, checked && styles.rowSelected)),
+                    CLICKABLE_FOCUS_RING,
                   )}
                   onClick={() => toggle(agent.id)}
                 >

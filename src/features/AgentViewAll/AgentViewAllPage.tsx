@@ -34,6 +34,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import AgentCard, { cardStyles } from './AgentCard';
 import AgentRow, { type AgentRowAuthor } from './AgentRow';
@@ -96,12 +97,16 @@ const groupHeaderStyles = createStaticStyles(({ css, cssVar }) => ({
 const GroupHeader = memo<GroupHeaderProps>(
   ({ avatar, collapsed, color, count, index, label, onToggle }) => (
     <div
+      {...clickableProps()}
       className={cn(
-        'flex items-center gap-2',
-        cx(
-          groupHeaderStyles.bar,
-          index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
+        cn(
+          'flex items-center gap-2',
+          cx(
+            groupHeaderStyles.bar,
+            index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
+          ),
         ),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={onToggle}
     >

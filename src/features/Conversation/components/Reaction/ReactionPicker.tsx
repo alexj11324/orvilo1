@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useConversationResourceAccess } from '../../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../../store';
@@ -107,11 +108,20 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
   ) : (
     <div className={cn('flex gap-1 flex-wrap', styles.pickerContainer)}>
       {QUICK_REACTIONS.map((emoji) => (
-        <div className={styles.emojiButton} key={emoji} onClick={() => handleSelect(emoji)}>
+        <div
+          {...clickableProps()}
+          className={cn(styles.emojiButton, CLICKABLE_FOCUS_RING)}
+          key={emoji}
+          onClick={() => handleSelect(emoji)}
+        >
           {emoji}
         </div>
       ))}
-      <div className={styles.moreButton} onClick={() => setShowFullPicker(true)}>
+      <div
+        {...clickableProps()}
+        className={cn(styles.moreButton, CLICKABLE_FOCUS_RING)}
+        onClick={() => setShowFullPicker(true)}
+      >
         <PlusIcon size={16} />
       </div>
     </div>

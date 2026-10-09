@@ -10,6 +10,7 @@ import { ConnectorSourceType } from '@/database/schemas';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { newOAuthAttempt, waitForOAuthSession } from '../oauthSession';
 
@@ -331,6 +332,8 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
         {/* Advanced settings */}
         <div>
           <div
+            {...clickableProps()}
+            className={CLICKABLE_FOCUS_RING}
             style={{
               alignItems: 'center',
               cursor: 'pointer',

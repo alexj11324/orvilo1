@@ -1,9 +1,11 @@
 import type { BriefArtifactDocument, BriefArtifacts } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon, FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import { openDocumentModal, preloadDocumentModal } from '@/features/DocumentModal/loader';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   iconWrap: css`
@@ -25,8 +27,12 @@ const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
 
   return (
     <div
-      className="flex items-center gap-3 py-[10px] px-3 cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]"
+      {...clickableProps()}
       style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}
+      className={cn(
+        'flex items-center gap-3 py-[10px] px-3 cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]',
+        CLICKABLE_FOCUS_RING,
+      )}
       onClick={() => void openDocumentModal(doc.id)}
       onFocus={preloadDocumentModal}
       onPointerEnter={preloadDocumentModal}

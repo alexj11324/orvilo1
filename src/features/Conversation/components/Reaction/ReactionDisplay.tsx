@@ -6,6 +6,7 @@ import { cn } from 'cn';
 import { memo } from 'react';
 
 import { usePermission } from '@/hooks/usePermission';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   active: css`
@@ -69,9 +70,13 @@ const ReactionDisplay = memo<ReactionDisplayProps>(({ reactions, onReactionClick
     <div className={cn('flex items-center', styles.container)}>
       {reactions.map((reaction) => (
         <div
-          className={cx(styles.reactionTag, isActive?.(reaction.emoji) && styles.active)}
+          {...clickableProps(canEdit)}
           key={reaction.emoji}
           style={{ cursor: canEdit ? undefined : 'default' }}
+          className={cn(
+            cx(styles.reactionTag, isActive?.(reaction.emoji) && styles.active),
+            CLICKABLE_FOCUS_RING,
+          )}
           onClick={canEdit ? () => onReactionClick?.(reaction.emoji) : undefined}
         >
           <span>{reaction.emoji}</span>

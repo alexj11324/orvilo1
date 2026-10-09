@@ -3,6 +3,7 @@
 import { Image } from '@lobehub/ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { BadgeCheck, Ban, MessageSquareX } from 'lucide-react';
 import { memo } from 'react';
@@ -11,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import AudioPlayer from '@/features/AudioPlayer';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { AnnotatedImage } from '../Evidence/Annotation';
 import { AttachmentThumbs } from '../Evidence/attachments';
@@ -231,7 +233,8 @@ export const IterationTimeline = memo<{
               {onRound ? (
                 <SimpleTooltip title={t('acceptance.history.jump', { round: step.roundIndex })}>
                   <div
-                    className="font-semibold"
+                    {...clickableProps()}
+                    className={cn('font-semibold', CLICKABLE_FOCUS_RING)}
                     style={{ cursor: 'pointer', fontSize: 12, lineHeight: '19px' }}
                     onClick={() => onRound(step.roundIndex)}
                   >

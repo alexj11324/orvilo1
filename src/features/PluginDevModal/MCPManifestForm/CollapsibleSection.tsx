@@ -1,7 +1,10 @@
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useState } from 'react';
+
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -50,7 +53,11 @@ const CollapsibleSection = ({
 
   return (
     <div className={styles.container}>
-      <div className={cx(styles.header)} onClick={() => setIsExpanded(!isExpanded)}>
+      <div
+        {...clickableProps()}
+        className={cn(cx(styles.header), CLICKABLE_FOCUS_RING)}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         <span className={styles.title}>{title}</span>
       </div>

@@ -1,4 +1,5 @@
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ClipboardCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -16,6 +17,7 @@ import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 import { COMPLETE_TASK_LIST_MAX_ITEMS } from '@/store/task/slices/list/action';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import AgentTaskItem from '../features/AgentTaskItem';
@@ -394,7 +396,12 @@ const TaskList = memo<TaskListProps>((props) => {
         <div className="text-muted-foreground">{t('taskList.hiddenCompleted.suffix')}</div>
       </div>
       {onShowHiddenCompleted && (
-        <div className="font-medium" style={{ cursor: 'pointer' }} onClick={onShowHiddenCompleted}>
+        <div
+          {...clickableProps()}
+          className={cn('font-medium', CLICKABLE_FOCUS_RING)}
+          style={{ cursor: 'pointer' }}
+          onClick={onShowHiddenCompleted}
+        >
           {t('taskList.hiddenCompleted.show')}
         </div>
       )}

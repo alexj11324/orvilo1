@@ -1,4 +1,5 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { GlobeOff, type LucideIcon, SparkleIcon } from 'lucide-react';
 import { createElement, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +10,7 @@ import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type SearchMode } from '@/types/search';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useEffectiveModel } from '../../hooks/useEffectiveModel';
@@ -70,10 +72,11 @@ const Item = memo<NetworkOption>(({ value, description, icon, label }) => {
 
   return (
     <div
+      {...clickableProps()}
       key={value}
-      className={cx(
-        'flex flex-row items-start gap-3',
-        cx(styles.option, mode === value && styles.active),
+      className={cn(
+        cx('flex flex-row items-start gap-3', cx(styles.option, mode === value && styles.active)),
+        CLICKABLE_FOCUS_RING,
       )}
       style={{
         cursor: canCreate ? undefined : 'not-allowed',

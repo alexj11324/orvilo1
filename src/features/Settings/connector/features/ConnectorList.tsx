@@ -10,6 +10,7 @@ import {
   resolveConnectorCatalogItem,
 } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import type React from 'react';
@@ -28,6 +29,7 @@ import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
 import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import AgentConnectorItem from './AgentConnectorItem';
 import ComposioSkillItem from './ComposioSkillItem';
@@ -302,7 +304,11 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
     const isCollapsed = collapsed.has(key);
     return (
       <>
-        <div className={styles.sectionHeader} onClick={() => toggleSection(key)}>
+        <div
+          {...clickableProps()}
+          className={cn(styles.sectionHeader, CLICKABLE_FOCUS_RING)}
+          onClick={() => toggleSection(key)}
+        >
           {isCollapsed ? <ChevronRightIcon size={10} /> : <ChevronDownIcon size={10} />}
           {label}
         </div>
@@ -361,11 +367,11 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
               key={preset.id}
               preset={preset}
               timedOut={preset.managedAuth === 'github-app' && githubTimedOut}
-              tokenSetup={
-                preset.managedAuth === 'github-app' && githubCapability === 'pat_available'
-              }
               providerConnected={
                 preset.managedAuth === 'github-app' ? githubGrantConnected : undefined
+              }
+              tokenSetup={
+                preset.managedAuth === 'github-app' && githubCapability === 'pat_available'
               }
               onSelect={() => connector && onSelect(connector.identifier, 'mcp-connector')}
               onAdd={() =>

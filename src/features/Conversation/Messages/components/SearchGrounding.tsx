@@ -11,6 +11,7 @@ import { Badge } from '@/components/reui/badge';
 import { useIsDark } from '@/hooks/useIsDark';
 import Image from '@/libs/next/Image';
 import { type GroundingSearch } from '@/types/search';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 // Resolve the favicon host defensively: some providers (e.g. OpenRouter built-in
 // web search) may emit citations with an empty/invalid url, and `new URL(undefined)`
@@ -153,7 +154,8 @@ const SearchGrounding = memo<GroundingSearch>(
         )}
       >
         <div
-          className="flex justify-between flex-1 gap-2"
+          {...clickableProps()}
+          className={cn('flex justify-between flex-1 gap-2', CLICKABLE_FOCUS_RING)}
           style={{ cursor: 'pointer' }}
           onClick={() => {
             setShowDetail(!showDetail);

@@ -1,4 +1,6 @@
-import type { TaskActivityType } from '@orvilo/types';
+import type { TaskActivityType, TaskDetailActivity } from '@orvilo/types';
+
+import { isCommentAnchorHash } from './commentActions';
 
 export type ActivityFeedFilter = 'all' | 'comments' | 'updates';
 
@@ -17,6 +19,23 @@ export const matchesActivityFilter = (
   return type !== 'comment';
 };
 
+export const isLinkedCommentActivity = (
+  activity: Pick<TaskDetailActivity, 'id' | 'type'>,
+  hash: string,
+): boolean =>
+  activity.type === 'comment' && !!activity.id && isCommentAnchorHash(hash, activity.id);
+
+/** A deep link reveals only its comment without changing the saved feed preference. */
+export const filterActivitiesForFeed = <T extends Pick<TaskDetailActivity, 'id' | 'type'>>(
+  activities: T[],
+  filter: ActivityFeedFilter,
+  hash: string,
+): T[] =>
+  activities.filter(
+    (activity) =>
+      matchesActivityFilter(activity.type, filter) || isLinkedCommentActivity(activity, hash),
+  );
+
 type FilterStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 export const activityFilterStorageKey = (userId: string | null | undefined) =>
@@ -28,10 +47,10 @@ const isActivityFeedFilter = (value: unknown): value is ActivityFeedFilter =>
 /** Storage can be missing, blocked or throw; every failure means "All". */
 export const readStoredActivityFilter = (
   userId: string | null | undefined,
-  storage: FilterStorage | undefined = globalThis.localStorage,
+  storage?: FilterStorage,
 ): ActivityFeedFilter => {
   try {
-    const stored = storage?.getItem(activityFilterStorageKey(userId));
+    const stored = (storage ?? globalThis.localStorage)?.getItem(activityFilterStorageKey(userId));
     return isActivityFeedFilter(stored) ? stored : 'all';
   } catch {
     return 'all';
@@ -41,10 +60,10 @@ export const readStoredActivityFilter = (
 export const writeStoredActivityFilter = (
   userId: string | null | undefined,
   filter: ActivityFeedFilter,
-  storage: FilterStorage | undefined = globalThis.localStorage,
+  storage?: FilterStorage,
 ): void => {
   try {
-    storage?.setItem(activityFilterStorageKey(userId), filter);
+    (storage ?? globalThis.localStorage)?.setItem(activityFilterStorageKey(userId), filter);
   } catch {
     // The choice just won't survive a reload.
   }

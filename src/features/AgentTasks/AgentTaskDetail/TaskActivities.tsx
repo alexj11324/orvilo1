@@ -17,8 +17,9 @@ import {
   UserRoundCog,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { createElement, memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
@@ -44,7 +45,8 @@ import { styles } from '../shared/style';
 import {
   ACTIVITY_FEED_FILTERS,
   type ActivityFeedFilter,
-  matchesActivityFilter,
+  filterActivitiesForFeed,
+  isLinkedCommentActivity,
   readStoredActivityFilter,
   writeStoredActivityFilter,
 } from './activityFeedFilter';
@@ -412,9 +414,16 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
   const viewerId = useUserStore(userProfileSelectors.userId);
+  const { hash } = useLocation();
   const [feedFilter, setFeedFilter] = useState<ActivityFeedFilter>(() =>
     readStoredActivityFilter(viewerId),
   );
+  const hasLinkedComment = activities.some((activity) => isLinkedCommentActivity(activity, hash));
+  useEffect(() => {
+    // The target card must be mounted before its scroll/highlight effect can run.
+    // Expand once for this link; a later manual collapse remains the user's choice.
+    if (hasLinkedComment) setIsExpanded(true);
+  }, [hasLinkedComment, hash]);
   const handleFilterChange = useCallback(
     (values: string[]) => {
       // A single-choice control: pressing the active item again must not clear it.
@@ -432,15 +441,14 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
 
   const items = useMemo(
     () =>
-      activities
-        .filter((act) => matchesActivityFilter(act.type, feedFilter))
+      filterActivitiesForFeed(activities, feedFilter, hash)
         .map((act, i) => ({
           activity: act,
           brief: act.type === 'brief' ? toBriefItem(act) : null,
           key: act.id ?? `activity-${i}`,
         }))
         .reverse(),
-    [activities, feedFilter],
+    [activities, feedFilter, hash],
   );
 
   const commentInput = activeTaskId ? (

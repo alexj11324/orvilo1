@@ -14,9 +14,9 @@ interface CommentPermissions {
 
 /**
  * Which items the comment menu offers. Edit and Delete belong to the comment's
- * author only (Plane's rule). The server does not enforce this — it lets any
- * writer change any comment — so the menu is the only guard; do not widen it
- * (e.g. to agents' comments) without a matching server rule.
+ * author only (Plane's rule). This narrows the UI affordance, not server
+ * authorization: the existing task-writer policy also permits editing agent
+ * notes. Server authorship enforcement is outside this menu's contract.
  */
 export const getCommentActions = (
   comment: Pick<TaskDetailActivity, 'author'>,

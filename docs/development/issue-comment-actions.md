@@ -12,15 +12,21 @@ Frontend behavior of comments on the Issue detail page
 
 **The server does not enforce authorship.** `task.updateComment` / `task.deleteComment`
 (`apps/server/src/routers/lambda/task.ts`) are `taskProcedureWrite` (scope `agent:update`) and the
-model (`packages/database/src/models/task.ts`, `updateComment` / `deleteComment`) only filters by
-workspace/task ownership, never by `authorUserId`. The menu is therefore a UI guard only; a
-server-side author check is tracked separately.
+model (`packages/database/src/models/task.ts`, `updateComment` / `deleteComment`) filters by
+workspace/task ownership, not by `authorUserId`. This is a pre-existing limitation, and the narrower
+menu is an affordance rather than an authorization barrier. The backend's existing contract also
+allows authorized human task writers to edit agent notes; this PR does not change that contract.
+Changing server authorship policy requires a separate decision covering those agent-note edits.
 
 ## Copy link and deep link
 
 "Copy link" copies `<issue link>#comment-<comment id>` (`useCommentCopyLink.ts`). Each card has
 `id="comment-<id>"`; when the URL hash matches, `CommentCard` scrolls it into view and rings it for
 two seconds.
+
+A valid comment fragment temporarily includes that specific comment even when the user's stored
+filter is Updates, and expands a collapsed activity feed. It does not write a new filter preference;
+removing the fragment restores ordinary filtering. Unknown fragments do not reveal other comments.
 
 ## Not done: "edited" marker
 
@@ -32,7 +38,7 @@ carries `time` = `createdAt`. `task_comments.updatedAt` exists but is not return
 
 All / Comments / Updates is a single-choice `ToggleGroup`. The choice is stored per user in
 `localStorage` under `orvilo:task-activity-filter:<userId>` (default All; storage errors are
-ignored).
+ignored, including browsers that throw when the `localStorage` property itself is accessed).
 
 ## Failed comment submit
 

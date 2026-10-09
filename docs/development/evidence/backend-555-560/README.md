@@ -1,122 +1,102 @@
 # Backend issues #555–#560 verification
 
-Verified implementation: `9fb49405192749aae2bcb56aee448d2a52db6337` on
-`fix/backend-issues-555-560`, 2026-10-09 UTC. This evidence commit changes documentation only.
+Final standalone implementation: `c1c1f4258d066a8500e0778ab79e177a3478bcb3`, based on
+canary `21ae95cb9d5424a803bb02a6aa7612f92766070d`, 2026-10-09 UTC. PR #585 does **not**
+include or depend on #491. Operation ownership extends canary's existing guard;
+Issue-menu models reuse its existing `getActiveWorkspaceMembershipRole` helper.
 
 ## Real Electron acceptance
 
-Electron **43.2.0**, the actual `apps/desktop` main/preload and Vite renderer, Xvfb;
-actual Next backend with PostgreSQL 17.11 and Redis. Two disposable users completed
-normal OAuth authorization, consent, handoff and PKCE exchange. Only the upstream
-Clerk identity fixture used the maintained E2E mock; no Issue, Agent, notification
-or permission API was mocked. Every database write targeted a disposable local DB.
+Electron **43.2.0**, actual rebuilt `apps/desktop` main/preload and Vite renderer,
+Xvfb, actual Next backend, PostgreSQL 17.11 and Redis. The two disposable users
+completed normal OAuth authorization, consent, handoff and PKCE exchange. Only
+upstream Clerk identity used the maintained E2E fixture; no business API was
+mocked. Every database write targeted the disposable local DB.
 
-- **#557:** Entered an unsent answer, collapsed the global approval overlay and
-  clicked **Dismiss reminder** on the selected Inbox card. The blue dot disappeared;
-  unread count became **0**, pending count remained **1**. The selected original
-  question and draft stayed mounted. Reload retained the same unanswered source
-  question and card. Actual database reads confirmed the plugin remained pending
-  and the operation remained running. [Before](inbox-before.png),
-  [after](inbox-dismissed.png), [after reload](inbox-question-retained.png),
-  [assertion log](electron-inbox.txt).
-- **#557 concurrency:** A later activity on the same episode lit the blue dot again;
-  a dismissal carrying the previous version returned false. Pending count remained
-  1. [Screenshot](inbox-new-activity.png), [log](electron-new-activity.txt).
-- **#555 / #556:** A second active member with an explicit Agent **Use** grant could
-  neither edit that Agent nor answer the owner's operation: both returned
-  `FORBIDDEN`, the latter with `Operation is outside the caller scope`.
-  [Results](electron-operation-owner.json). The Group Builder's explicit/default
-  coordinator boundary is separately covered by direct runtime regression tests;
-  this acceptance did not run an LLM-driven Group Builder conversation.
-- **#556:** Viewer template reads succeeded; copying was forbidden. After suspension,
-  template access was also forbidden. [Results](electron-membership.txt).
-- **#558:** The actual Task API returned `attentionReason: needs_input` and
-  `hasLiveExecutor: false`. A Done write failed against the completion trigger;
-  PostgreSQL reported `23514` / `tasks_done_requires_resolved_input`. The existing
-  task router presents this SQL rejection as `INTERNAL_SERVER_ERROR`, so the
-  refusal is verified but this path still uses a generic error message.
-- **#559:** The actual copy API retained an explicitly selected Agent assignee,
-  created a Todo Issue with no current topic, and copied both label bindings.
-  Database reads confirmed no operation or dispatch was created. A source bound to
-  an unavailable label returned `PRECONDITION_FAILED` with a clear message.
-  [API results](electron-issue-results.json).
-- **#560 limitation:** This OSS deployment refuses existing Agent share reads with
-  `FORBIDDEN`; the feature gate was preserved. The live Marketplace query returned
-  an empty catalog, so it did not prove runtime identity on a real market record.
-  Typed Codex/Claude Code values, legacy/default/unknown runtime normalization and
-  visitor-safe share metadata are covered by regression tests, not claimed as
-  live Electron acceptance.
+- **#557:** Selected the original pending Inbox question and entered an unsent
+  answer. **Dismiss reminder** cleared the blue dot; unread count became **0**,
+  pending count remained **1**. The original form and draft remained mounted.
+  Reload retained the same unanswered question/card. Read-only DB assertions
+  confirmed the source plugin remained `pending` and the original operation
+  remained `running`; dismissal did not settle or resume it.
+  [Dismissed](standalone-inbox-dismissed.png),
+  [question after reload](standalone-question-retained.png),
+  [assertions](standalone-inbox.txt).
+- **#556:** An active second member with an explicit Agent Use grant could not
+  answer the owner's operation: `FORBIDDEN`, `Operation is outside the caller
+scope`. An ordinary Agent edit was also refused, with canary's opaque
+  `NOT_FOUND`. [Results](standalone-member.json). Viewer template reads succeeded
+  while copying was forbidden; suspension then denied template reads too.
+  [Membership results](standalone-membership.txt).
+- **#559:** The actual copy dialog defaults **Assignees** to checked. Normal UI
+  submission retained both human and Agent assignees and both label bindings.
+  **Cancel issue**, then **Reopen issue**, persisted Todo at revision 3 with no
+  current topic. Database assertions confirmed **zero operations and zero
+  dispatches**. The omitted-option copy API independently retained the Agent.
+  [Dialog](standalone-copy-default.png), [reopened](standalone-reopened.png),
+  [assertions and database counts](standalone-copy-reopen.json).
+- **#558 / #559 API:** The standalone Electron client returned
+  `attentionReason: needs_input` and `hasLiveExecutor: false`. Done was rejected
+  by the completion trigger. Copying a source bound to an unavailable label
+  returned `PRECONDITION_FAILED`. [API results](standalone-api.json). The existing router presents the Done SQL
+  rejection as a generic `INTERNAL_SERVER_ERROR`; this is not claimed as a
+  polished error-message path.
+- **#555 limitation:** Explicit/default coordinator edit admission is covered by
+  the real server-runtime regression suite. Acceptance did not run an LLM-driven
+  Group Builder conversation; the ordinary Agent-edit denial is not a substitute
+  claim for that conversation.
+- **#560 limitation:** The OSS deployment refuses Agent share reads with
+  `FORBIDDEN`, and the Marketplace catalog was empty. Safe runtime identity and
+  Codex/Claude Code/legacy/default/unknown normalization are verified through
+  regression tests, not claimed as populated live market/share acceptance.
 
-PostgreSQL used all relevant migrations, including the real completion trigger
-and live-executor function. Two historical `pg_search`/BM25 index migrations were
-skipped because that extension is unavailable in this environment; this affects
-full-text search, which these acceptance cases do not exercise. No live vendor
-Agent process was launched; runtime state for the waiting-question scenarios was
-seeded relationally and all product reads/mutations used the real backend.
+PostgreSQL applied all relevant migrations, including the actual completion
+trigger and live-executor function. Two historical `pg_search`/BM25 index
+migrations were skipped because that extension is unavailable; full-text search
+was not exercised. No live vendor Agent process was launched. Waiting-runtime
+state was seeded relationally; all product reads and mutations used the real
+backend.
 
 ## Quality checks
 
-Each bug was reproduced before its fix and the corresponding regression passed
-with the fix. Targeted server and database runs passed. `bun run check --lint`
-passed, including the normal commit hooks. The final `bun run check --test` over
-12 affected test files had one pre-existing plugin lookup test hit its 5-second
-network timeout; the owning Discover suite passed **16 tests** on its isolated
-retry. The other affected suites passed in that unified run.
+The final standalone scoped check passed **294 tests in 13 files**, including the
+Agent router execution contracts. Scoped lint and normal commit hooks passed.
+Membership-read regressions failed before correction (3 failures) and passed
+with the shared boundary. Operation fixtures now create actual owned rows; the
+foreign-operation start test confirms no runtime dispatch occurs. Copy-default
+regressions failed before their change and passed afterward.
 
-Scoped `apps/server` TypeScript checking completed with existing cross-package
-configuration/dependency errors (desktop `@/modules/*` resolution, missing SPA
-ambient globals and Next's `RequestInit.next` augmentation). It is **not a clean
-typecheck**. The complete-repository CI typecheck remains required.
+WorkQuery/input tests separately passed **60 cases**. Independent light review
+of the earlier implementation found one introduced workflow-swimlane defect.
+Its regression failed before correction and passed afterward; the single
+independent follow-up confirmed resolution without new defects in the correction.
+The fix preserves actual workflow categories while projecting `needs_input`
+through attention. The later standalone membership adjustments have the targeted
+regression evidence above; no additional independent-pass claim is made.
 
-## Scope and confirmed product decisions
+Full CI remains a separate merge gate. Earlier scoped server typechecking on the
+integration branch reported cross-package configuration/dependency errors; it was
+not recorded as a clean typecheck.
 
-Local prerequisites: PRs #491, #536, #544, #545 and #550, not yet merged into canary
-when integrated. Do not apply the implementation commit without those prerequisites.
-The #558 backend transplant records source
-`8a5b9eeb5ccc1c36f4667beae90509280e61bb35` from `codex/issue-ui-corrections`;
-only selected backend behavior was transplanted, not the entire prototype.
+## Decisions and provenance
 
-For uncertain behavior, consulted Plane
-`bab49bb978ccb56af1d78dec6c6d54dfe8d03c1c` and Multica
-`5063fc90794f94a2b117cdf6db29ca2b96d9b5f9`.
-The Inbox dismissal rule comes from the user's explicit blue-dot-only clarification,
-with Astra review; neither reference was presented as evidence for dismissing a
-pending Agent question through archive/delete/cancel.
+The user explicitly defined **Ignore** as clearing only the Inbox blue dot and
+confirmed that copying retains assignees by default without starting execution,
+while reopening returns to Todo. Neither reference was presented as evidence for
+archiving/deleting/canceling a pending Agent question. Astra reviewed the dismissal
+semantics.
 
-The user confirmed #559's defaults on 2026-10-09: copying retains both human and
-Agent assignees unless explicitly deselected, without starting execution; reopening
-returns to Todo. Commit `0c3ace0c72534e410866c4afb192242336e6ed1c` applies the copy
-default in both client and service. The updated regression failed before the change
-and passed afterward; both owning suites passed **52 tests**, including reopening
-completed/canceled Issues through the shared workflow command.
+Consulted Plane `bab49bb978ccb56af1d78dec6c6d54dfe8d03c1c` and Multica
+`5063fc90794f94a2b117cdf6db29ca2b96d9b5f9` for uncertain behavior. The selected #558
+backend transplant comes from `8a5b9eeb5ccc1c36f4667beae90509280e61bb35` on
+`codex/issue-ui-corrections`; the prototype's broader workflow admission was not
+imported.
 
-## Refreshed candidate
-
-PR #585 integrates current canary and #491 head
-`6973e700011dcbe960c3b08ab11c62af4617ded0`. PRs #536, #544, #545 and #550 are now
-merged; #491 remains an open dependency. Its outstanding review/acceptance work is
-not represented as passed by this evidence.
-
-At `90d6b38da2b2efcdd1f3702a289bd8478a9c0a95`, the six-issue scoped check passed
-**273 tests in 12 files**. A separate WorkQuery/unresolved-input run passed **60
-tests**. Independent light review identified one introduced workflow-swimlane
-regression; the fix preserves canonical workflow categories while projecting
-`needs_input` through attention. The regression failed before the fix and passed
-after it. The single independent follow-up verified the finding resolved with no
-new defects in the correction. Scoped lint and normal commit hooks passed.
-
-Fresh real Electron acceptance at the same `90d6b38da` revision passed: the copy
-dialog checked **Assignees** by default; normal UI submission retained both human
-and Agent assignees and both labels. Clicking **Cancel issue**, then **Reopen
-issue**, persisted Todo with no current topic. The omitted-option copy API also
-retained the Agent. Read-only database assertions confirmed **zero operations and
-zero dispatches** for both copies. The script waits for server persistence rather
-than treating an optimistic UI update as completion.
-
-- [Default-copy dialog](copy-default-dialog.png)
-- [Reopened Issue](copy-reopened.png)
-- [Assertions and database counts](electron-copy-reopen.json)
-
-The earlier screenshots above prove only their recorded revision. The new proof
-uses the actual rebuilt Electron main/preload, renderer and local PostgreSQL backend;
-no business API was mocked.
+Earlier artifacts without the `standalone-` prefix are historical. Inbox/API
+artifacts were produced at `9fb49405192749aae2bcb56aee448d2a52db6337`; the earlier
+copy-dialog/reopen artifacts were produced at
+`90d6b38da2b2efcdd1f3702a289bd8478a9c0a95`. Those branches integrated #491 and are
+retained as provenance, not proof of the final standalone permission boundary.
+The historical new-activity test confirmed a later event relights the blue dot
+and stale dismissal returns false; the same behavior is covered by current
+notification regressions.

@@ -89,9 +89,9 @@ exposed as `role="button"` with Enter / Space handling, because buttons cannot n
 
 ## Round 3 follow-ups
 
-- Workspace menu: the "Workspace settings" row renders its desktop shortcut through the
-  shared `Hotkey` component, which resolves `mod` / `comma` to the platform glyphs (⌘ and `,`
-  on macOS, Ctrl elsewhere) instead of printing the raw key names.
+- Workspace menu: the "Workspace settings" row renders its desktop shortcut through local
+  `Kbd` / `KbdGroup` primitives. The pure `hotkeyDisplayKeys` helper resolves `mod` / `comma`
+  to the platform glyphs (⌘ and `,` on macOS, Ctrl elsewhere) instead of printing raw tokens.
 - Favourites: dnd-kit's `tabindex="0"` (and `role`) on the sortable `li` are dropped via
   `withoutRowTabStop`, so each row keeps one tab stop, the link with its focus ring.
   Keyboard reordering is the row menu's Move up / Move down items.

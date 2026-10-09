@@ -1,4 +1,3 @@
-import { Hotkey } from '@lobehub/ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import { cn } from 'cn';
@@ -11,6 +10,7 @@ import useBusinessMenuItems from '@/business/client/features/User/useBusinessMen
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import type { ItemType, MenuProps } from '@/components/Menu';
 import { Badge } from '@/components/reui/badge';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { DEFAULT_DESKTOP_HOTKEY_CONFIG } from '@/const/desktop';
 import { OFFICIAL_URL } from '@/const/url';
 import DataImporter from '@/features/DataImporter';
@@ -20,6 +20,8 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { hotkeyDisplayKeys } from '@/utils/hotkeyDisplay';
+import { isMacOS } from '@/utils/platform';
 
 import { useNewVersion } from './useNewVersion';
 
@@ -70,8 +72,11 @@ export const useMenu = () => {
   const settings: MenuProps['items'] = [
     {
       extra: isDesktop ? (
-        // Hotkey resolves `mod`/`comma` to the platform glyphs (⌘ and , on macOS, Ctrl on others).
-        <Hotkey compact keys={DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings} variant="borderless" />
+        <KbdGroup>
+          {hotkeyDisplayKeys(DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings, isMacOS()).map((key) => (
+            <Kbd key={key}>{key}</Kbd>
+          ))}
+        </KbdGroup>
       ) : undefined,
       icon: <Settings2 />,
       key: 'setting',

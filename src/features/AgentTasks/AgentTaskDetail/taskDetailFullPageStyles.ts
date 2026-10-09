@@ -1,34 +1,21 @@
 import { createStaticStyles } from 'antd-style';
 
-/** Geometry for the routed issue page; split and Portal keep their own width. */
+/**
+ * Geometry for the routed issue page; split and Portal keep their own width.
+ * The main/rail switch lives in one place — the `task-detail` container query
+ * in `taskDetailLayoutStyles` — so the page only sets gutters and caps the
+ * content width instead of redefining the breakpoint.
+ */
 export const taskDetailFullPageStyles = createStaticStyles(({ css }) => ({
   document: css`
     width: 100%;
     margin-inline: 0;
-    padding-inline: 14px 24px;
+    padding-inline: 24px;
 
     [data-task-detail-header] {
+      max-width: 1120px;
+      margin-inline: auto;
       padding-block-start: 5px;
-    }
-
-    /* Keep a readable main column until the rail fits beside it. */
-    @container work-surface (width < 1136px) {
-      [data-task-detail-header] {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      [data-task-detail-side] {
-        grid-column: auto;
-        grid-row: auto;
-      }
-    }
-
-    @container work-surface (width >= 1136px) {
-      padding-inline: 5.75% 17.4%;
-
-      [data-task-detail-header] {
-        column-gap: 5.6%;
-      }
     }
   `,
 }));

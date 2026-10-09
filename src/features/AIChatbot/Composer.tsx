@@ -98,6 +98,7 @@ export default function Composer({
 
   return (
     <div
+      data-testid="chat-input"
       ref={slashMenuRef}
       style={{ display: hidden ? 'none' : undefined }}
       className={cn(

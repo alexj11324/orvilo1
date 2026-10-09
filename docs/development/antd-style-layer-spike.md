@@ -1,8 +1,10 @@
 # Spike: put all antd-style output in `@layer antd-style`
 
-Status: spike, draft PR. **Nothing here was verified in a running app** (no dev server, no Electron).
-Verified: the unit test of the wrapper against a real antd-style/emotion instance, and a static
-scan of the source tree. Based on `fix/antd-global-style-layer` (PR #565, adds `@layer antd`).
+Status: rollout infrastructure. The default switch is **off**: runtime and production
+precompile retain the existing scoped-style precedence. The broad switch-on rollout is
+separate from the active global-reset correction in PR #565. The wrapper and build-time
+evaluator retain their existing real Emotion tests; native evidence and its bounds are
+recorded on the PR before merge.
 
 ## Problem
 
@@ -41,7 +43,8 @@ fixed page by page.
    `@layer antd-style{...}` rule. Impure callbacks and the dev server use the runtime patch from point 2.
    `cx()` merges re-serialize the raw registered styles and insert through `cache.insert`, so they are layered too.
 4. `src/app/globals.css`: `@layer theme, base, antd, components, antd-style, utilities;`.
-5. Single switch: `ANTD_STYLE_LAYER_ENABLED` in `layerEmotionCache.ts`, read by both paths.
+5. Single switch: `ANTD_STYLE_LAYER_ENABLED` in `layerEmotionCache.ts`, read by both paths;
+   it defaults to `false` so the reported overlapping call sites retain their precedence.
 
 Why this and not the alternatives:
 

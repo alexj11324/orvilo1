@@ -1,26 +1,11 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
 import type { ModalInstance } from '@/components/Modal';
 import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
-
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    h3 {
-      margin: 0;
-      font-weight: bold;
-    }
-
-    p {
-      margin: 0;
-    }
-  `,
-}));
 
 interface GuideModalContentProps {
   cancelText?: ReactNode;
@@ -47,7 +32,7 @@ const GuideModalContent = memo<GuideModalContentProps>(
     };
 
     return (
-      <div className={cn('flex', styles.body)}>
+      <div className="flex [&_h3]:m-0 [&_h3]:font-bold [&_p]:m-0">
         {cover}
         <div className={'flex flex-col gap-1 p-4'}>
           <h3>{title}</h3>

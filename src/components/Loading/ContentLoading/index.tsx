@@ -1,32 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 100%;
-    height: 100%;
-    min-height: 96px;
-  `,
-  spinner: css`
-    width: 28px;
-    height: 28px;
-    border: 2px solid ${cssVar.colorFillSecondary};
-    border-block-start-color: ${cssVar.colorTextSecondary};
-    border-radius: 50%;
-
-    animation: content-loading-spin 0.8s linear infinite;
-
-    @keyframes content-loading-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  `,
-}));
-
 /**
  * Loading state for a content region whose chrome is already on screen.
  *
@@ -37,8 +8,12 @@ const styles = createStaticStyles(({ css }) => ({
  * conversation. `BrandTextLoading` stays for full-page boundaries.
  */
 const ContentLoading = () => (
-  <div className={styles.container}>
-    <span aria-label={'Loading'} className={styles.spinner} role={'status'} />
+  <div className="flex size-full min-h-24 items-center justify-center">
+    <span
+      aria-label={'Loading'}
+      className="size-7 animate-spin rounded-full border-2 border-selected [animation-duration:800ms] [border-block-start-color:var(--muted-foreground)]"
+      role={'status'}
+    />
   </div>
 );
 

@@ -2,6 +2,8 @@ import { HtmlPreview } from '@lobehub/ui';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 
+import { WebPreview, WebPreviewBody } from '@/components/ai-elements/web-preview';
+
 import { applyHtmlPreviewBaseUrl } from './applyBaseUrl';
 
 const hideHtmlPreviewActions = () => null;
@@ -24,22 +26,26 @@ const InlineHtmlPreview = memo<InlineHtmlPreviewProps>(
     );
 
     return (
-      <HtmlPreview
-        actionsRender={hideHtmlPreviewActions}
-        animated={animated}
-        className={className}
-        copyable={false}
-        downloadable={false}
-        shadow={false}
-        style={{ height, minHeight: 0, overflow: 'hidden', width, ...style }}
-        variant={'borderless'}
-        styles={{
-          content: { height: '100%' },
-          iframe: { height: '100%' },
-        }}
-      >
-        {previewContent}
-      </HtmlPreview>
+      <WebPreview className="min-h-0 border-0 rounded-none" style={{ height, width, ...style }}>
+        <WebPreviewBody>
+          <HtmlPreview
+            actionsRender={hideHtmlPreviewActions}
+            animated={animated}
+            className={className}
+            copyable={false}
+            downloadable={false}
+            shadow={false}
+            style={{ height, minHeight: 0, overflow: 'hidden', width, ...style }}
+            variant={'borderless'}
+            styles={{
+              content: { height: '100%' },
+              iframe: { height: '100%' },
+            }}
+          >
+            {previewContent}
+          </HtmlPreview>
+        </WebPreviewBody>
+      </WebPreview>
     );
   },
 );

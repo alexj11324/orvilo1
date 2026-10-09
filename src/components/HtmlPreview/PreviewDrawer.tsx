@@ -1,25 +1,29 @@
-import { HtmlPreview } from '@lobehub/ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { extractHtmlTitle } from '@orvilo/html-artifact';
 import { exportFile } from '@orvilo/utils/client';
 import { createStaticStyles } from 'antd-style';
-import { Code2, Download, Eye } from 'lucide-react';
+import { Code2, Download, Eye, RotateCw } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  WebPreview,
+  WebPreviewNavigation,
+  WebPreviewNavigationButton,
+} from '@/components/ai-elements/web-preview';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { isDesktop } from '@/const/version';
 
+import InlineHtmlPreview from './InlinePreview';
+
 const styles = createStaticStyles(({ css }) => ({
   container: css`
     height: 100%;
   `,
 }));
-
-const hideHtmlPreviewActions = () => null;
 
 interface HtmlPreviewDrawerProps {
   content: string;
@@ -29,6 +33,7 @@ interface HtmlPreviewDrawerProps {
 
 const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose }) => {
   const { t } = useTranslation('components');
+  const [revision, setRevision] = useState(0);
   const [mode, setMode] = useState<'preview' | 'code'>('preview');
 
   const sanitizeFileName = useCallback((name: string) => {
@@ -87,17 +92,21 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
         <div style={{ height: '100%' }}>
           {mode === 'preview' ? (
             <div className={styles.container}>
-              <HtmlPreview
-                actionsRender={hideHtmlPreviewActions}
-                copyable={false}
-                downloadable={false}
-                style={{ height: '100%' }}
-                styles={{ iframe: { height: '100%' } }}
-                title={t('HtmlPreview.iframeTitle')}
-                variant={'borderless'}
-              >
-                {content}
-              </HtmlPreview>
+              <WebPreview>
+                <WebPreviewNavigation>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                    {extractHtmlTitle(content) || t('HtmlPreview.title')}
+                  </span>
+                  <WebPreviewNavigationButton
+                    aria-label={t('refresh', { ns: 'common' })}
+                    tooltip={t('refresh', { ns: 'common' })}
+                    onClick={() => setRevision((value) => value + 1)}
+                  >
+                    <RotateCw className="size-4" />
+                  </WebPreviewNavigationButton>
+                </WebPreviewNavigation>
+                <InlineHtmlPreview content={content} key={revision} />
+              </WebPreview>
             </div>
           ) : (
             <div className={styles.container}>

@@ -1,0 +1,92 @@
+import { describe, expect, it } from 'vitest';
+
+import { parseErrorStack, parseGitCommits, parseTestReport } from './structuredOutput';
+
+const report = {
+  numFailedTests: 1,
+  numPassedTests: 1,
+  numPendingTests: 1,
+  numTotalTests: 3,
+  testResults: [
+    {
+      name: '/work/chat.test.ts',
+      assertionResults: [
+        { fullName: 'sends messages', status: 'passed', duration: 12 },
+        {
+          fullName: 'retries on failure',
+          status: 'failed',
+          failureMessages: ['Expected 200, received 500'],
+        },
+        { fullName: 'uploads audio', status: 'pending' },
+      ],
+    },
+  ],
+};
+
+describe('structured command output', () => {
+  it('renders complete Jest/Vitest reports without losing failed or skipped cases', () => {
+    const result = parseTestReport(JSON.stringify(report));
+    expect(result?.summary).toEqual({ passed: 1, failed: 1, skipped: 1, total: 3 });
+    expect(result?.suites[0].tests[1].errors).toEqual(['Expected 200, received 500']);
+    expect(result?.suites[0].tests[2].status).toBe('skipped');
+  });
+  it('does not label incomplete, malformed or inconsistent reports as passing', () => {
+    expect(parseTestReport('1 test passed')).toBeUndefined();
+    expect(parseTestReport(JSON.stringify(report).slice(0, -3))).toBeUndefined();
+    expect(parseTestReport(JSON.stringify({ ...report, numTotalTests: 5 }))).toBeUndefined();
+    expect(parseTestReport(JSON.stringify({ ...report, numFailedTests: 0 }))).toBeUndefined();
+    expect(parseTestReport(JSON.stringify({ ...report, testResults: [] }))).toBeUndefined();
+  });
+  it('accepts empty reports and explicit todo counters without inventing tests', () => {
+    expect(
+      parseTestReport(
+        JSON.stringify({
+          ...report,
+          numFailedTests: 0,
+          numPassedTests: 0,
+          numPendingTests: 0,
+          numTotalTests: 0,
+          testResults: [],
+        }),
+      )?.summary.total,
+    ).toBe(0);
+    expect(
+      parseTestReport(JSON.stringify({ ...report, numPendingTests: 0, numTodoTests: 1 }))?.summary
+        .skipped,
+    ).toBe(1);
+  });
+  const hash = 'a'.repeat(40);
+  const log = `commit ${hash}\nAuthor: Developer <dev@example.com>\nDate:   Fri Oct 9 10:00:00 2026 +0000\n\n    Improve chat\n    \n    Preserve draft state.\n`;
+  it('reads standard git log/show commit metadata and the complete message', () => {
+    const commits = parseGitCommits('git -C /work log -1', log);
+    expect(commits?.[0]).toMatchObject({
+      hash,
+      author: 'Developer <dev@example.com>',
+      message: 'Improve chat\n\nPreserve draft state.',
+    });
+    expect(parseGitCommits('git show HEAD', log + '\ndiff --git a/a b/a\n')?.[0].hash).toBe(hash);
+    expect(
+      parseGitCommits('git log -2', log + '\n' + log.replace(hash, 'b'.repeat(40))),
+    ).toHaveLength(2);
+  });
+  it('keeps unsupported git formats, truncated headers and unrelated output raw', () => {
+    expect(parseGitCommits('echo test', log)).toBeUndefined();
+    expect(parseGitCommits('git log --oneline', 'abcdef1 Improve chat')).toBeUndefined();
+    expect(parseGitCommits('git log -1', log.replace('Author:', 'Unknown:'))).toBeUndefined();
+    expect(
+      parseGitCommits('git log -1', log.replace('Fri Oct 9 10:00:00 2026 +0000', 'invalid')),
+    ).toBeUndefined();
+  });
+  it('recognizes V8 errors in ANSI output and leaves other output untouched', () => {
+    expect(
+      parseErrorStack(
+        '\u001B[31mTypeError: missing value\u001B[0m\n    at send (/work/chat.ts:12:3)',
+      ),
+    ).toBe('TypeError: missing value\n    at send (/work/chat.ts:12:3)');
+    expect(parseErrorStack('Error: missing value')).toBeUndefined();
+    expect(parseErrorStack('all tests passed\n    at send (/work/chat.ts:12:3)')).toBeUndefined();
+    expect(
+      parseErrorStack('Traceback (most recent call last):\n  File "main.py", line 2'),
+    ).toBeUndefined();
+  });
+});

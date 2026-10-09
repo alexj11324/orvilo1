@@ -16,7 +16,8 @@
   "dependencies": {
     "@orvilo/tool-runtime": "workspace:*",
     "@orvilo/utils": "workspace:*",
-    "anser": "^2.3.5"
+    "anser": "^2.3.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@orvilo/types": "workspace:*"

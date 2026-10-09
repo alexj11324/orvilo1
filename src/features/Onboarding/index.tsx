@@ -113,7 +113,7 @@ function OnboardingSetup() {
         },
       });
       await ensureFirstAgentInWorkspace(agentId, workspace.id, { executionTarget, boundDeviceId });
-      const selectedId = useUserStore.getState().onboarding?.setup?.orchestratorAgentId ?? agentId;
+      const selectedId = useUserStore.getState().onboarding?.setup?.orchestratorAgentId;
       await state.updateOnboarding({
         setup: { ...useUserStore.getState().onboarding?.setup, orchestratorAgentId: selectedId },
       });
@@ -274,19 +274,10 @@ function OnboardingSetup() {
             <ConfiguredOrchestratorSelector
               disabled={busy}
               value={orchestratorAgentId}
+              visibility="public"
               workspaceId={workspace.id}
               onSelect={(id) => void selectOrchestrator(id)}
               onUnavailable={() => setOrchestratorReady(false)}
-              onCreated={async (id) => {
-                const saved = await getOnboardingAgentConfig(id, workspace.id);
-                const { executionTarget, boundDeviceId } = resolveOnboardingAgentHost(
-                  saved?.agencyConfig,
-                );
-                await ensureFirstAgentInWorkspace(id, workspace.id, {
-                  executionTarget,
-                  boundDeviceId,
-                });
-              }}
             />
             <Button
               disabled={busy || !orchestratorReady}
@@ -302,7 +293,7 @@ function OnboardingSetup() {
             {t(busy ? 'setup.agent.verifying' : 'setup.agent.enter')}
           </Button>
         ) : (
-          <CreateAgentPanel lockVisibility onCreated={completeAgent} />
+          <CreateAgentPanel lockVisibility workspaceId={null} onCreated={completeAgent} />
         )}
         {workspace && error !== undefined && (
           <div className="flex justify-center gap-2">

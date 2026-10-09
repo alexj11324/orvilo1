@@ -40,6 +40,8 @@ const SettingsContent = () => {
       <ConfiguredOrchestratorSelector
         disabled={pending || preference.loading}
         value={selection ?? preference.agentId}
+        visibility={preference.workspaceId ? 'public' : 'private'}
+        workspaceId={preference.workspaceId}
         onUnavailable={() => setReady(false)}
         onSelect={(id) => {
           setSelection(id);

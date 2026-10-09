@@ -86,19 +86,42 @@ describe('selected onboarding Orchestrator', () => {
   });
 });
 
-it('checks a workspace-private Agent on its personal device and saves the workspace choice', async () => {
-  api.runtime.mockResolvedValue({
-    agencyConfig: {
-      executionTarget: 'device',
-      boundDeviceId: 'personal-device',
-      heterogeneousProvider: { type: 'codex' },
-    },
+it('rejects a private first Agent, then finishes with an explicitly selected public source', async () => {
+  const privateAgent = { id: 'first-private', visibility: 'private' };
+  api.runtime.mockImplementation(async ({ agentId, visibility }) => {
+    if (agentId === privateAgent.id && visibility === 'public')
+      throw new Error('ORCHESTRATOR_SOURCE_PRIVATE');
+    return {
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'public-device',
+        heterogeneousProvider: { type: 'codex' },
+      },
+    };
   });
-  api.devices.mockResolvedValue([{ deviceId: 'personal-device', online: true, scope: 'personal' }]);
+  api.devices.mockResolvedValue([
+    { deviceId: 'public-device', online: true, scope: 'workspace', visibility: 'public' },
+  ]);
   api.scan.mockResolvedValue({ agents: { codex: { available: true } } });
-  await verifyOnboardingOrchestrator('workspace-private-agent', 'workspace-one');
-  expect(api.scan).toHaveBeenLastCalledWith({ deviceId: 'personal-device' }, null);
-  expect(api.preference).toHaveBeenLastCalledWith({
-    orchestratorAgentId: 'workspace-private-agent',
-  });
+  const finish = vi.fn();
+  const navigate = vi.fn();
+  await expect(
+    finishOnboardingAndNavigate(
+      finish,
+      navigate,
+      () => verifyOnboardingOrchestrator(privateAgent.id, 'workspace-one'),
+      privateAgent.id,
+    ),
+  ).rejects.toThrow('ORCHESTRATOR_SOURCE_PRIVATE');
+  expect(finish).not.toHaveBeenCalled();
+  expect(api.preference).not.toHaveBeenCalled();
+  await finishOnboardingAndNavigate(
+    finish,
+    navigate,
+    () => verifyOnboardingOrchestrator('public-source', 'workspace-one'),
+    privateAgent.id,
+  );
+  expect(api.preference).toHaveBeenCalledWith({ orchestratorAgentId: 'public-source' });
+  expect(finish).toHaveBeenCalledOnce();
+  expect(privateAgent.visibility).toBe('private');
 });

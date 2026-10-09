@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   electronListPermissions: vi.fn(),
   remoteListPermissions: vi.fn(),
   remoteListModels: vi.fn(),
+  scopedModels: vi.fn(),
 }));
 
 // The Electron IPC leg is the desktop-local transport — the test stands in
@@ -17,6 +18,13 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
 }));
 
 vi.mock('@/libs/trpc/client', () => ({
+  createWorkspaceLambdaClient: (scope: string | null) => ({
+    device: {
+      listHeterogeneousAgentModels: {
+        query: async (params: unknown) => mocks.scopedModels(scope, params),
+      },
+    },
+  }),
   lambdaClient: {
     device: {
       listHeterogeneousAgentModels: { query: mocks.remoteListModels },
@@ -97,4 +105,18 @@ describe('heterogeneousAgentCatalogService', () => {
     });
     expect(mocks.electronListModels).not.toHaveBeenCalled();
   });
+});
+
+it('discovers models on the public source target workspace instead of the active scope', async () => {
+  mocks.scopedModels.mockImplementation(async (scope) => ({
+    models: [{ id: scope }],
+    status: 'success',
+    updatedAt: 1,
+  }));
+  await expect(
+    heterogeneousAgentCatalogService.listModels(
+      { deviceId: 'public-device', type: 'opencode' },
+      'new-workspace',
+    ),
+  ).resolves.toMatchObject({ models: [{ id: 'new-workspace' }] });
 });

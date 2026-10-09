@@ -5,7 +5,7 @@ import type {
   ListHeterogeneousAgentPermissionsParams,
 } from '@orvilo/types';
 
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 import { heterogeneousAgentService as electronHeterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
@@ -40,13 +40,15 @@ class HeterogeneousAgentCatalogService {
       : electronHeterogeneousAgentService.listPermissions(params);
   }
 
-  async listModels({
-    deviceId,
-    ...params
-  }: ListModelsParams): Promise<HeterogeneousAgentModelCatalog> {
+  async listModels(
+    { deviceId, ...params }: ListModelsParams,
+    workspaceId?: string | null,
+  ): Promise<HeterogeneousAgentModelCatalog> {
     requireLocalExecutionTransport(deviceId, 'listModels', await resolveLocalExecutionIdentity());
+    const client =
+      workspaceId === undefined ? lambdaClient : createWorkspaceLambdaClient(workspaceId);
     return deviceId
-      ? lambdaClient.device.listHeterogeneousAgentModels.query({ deviceId, ...params })
+      ? client.device.listHeterogeneousAgentModels.query({ deviceId, ...params })
       : electronHeterogeneousAgentService.listModels(params);
   }
 }

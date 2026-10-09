@@ -132,7 +132,9 @@ const ConfiguredOrchestratorSelector = ({
       )}
       {creating ? (
         <CreateAgentPanel
+          lockVisibility
           visibility={visibility}
+          workspaceId={workspaceId}
           onCancel={() => setCreating(false)}
           onCreated={async (id) => {
             await onCreated?.(id);

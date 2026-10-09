@@ -23,9 +23,10 @@ export const eligibleExecutionDevices = (
           : true),
   );
 
-export const useExecutionHost = (visibility?: 'private' | 'public') => {
-  const workspaceId = useActiveWorkspaceId();
-  const { data: devices, error, mutate } = useDeviceList();
+export const useExecutionHost = (visibility?: 'private' | 'public', scope?: string | null) => {
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = scope === undefined ? activeWorkspaceId : scope;
+  const { data: devices, error, mutate } = useDeviceList(scope);
   const [localDeviceId, setLocalDeviceId] = useState<string>();
   const [identityChecked, setIdentityChecked] = useState(false);
   const [selectedId, setSelectedId] = useState<string>();

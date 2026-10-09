@@ -1,7 +1,7 @@
 import { type AgentItem, type OrviloAgentConfig } from '@orvilo/types';
 import { type PartialDeep } from 'type-fest';
 
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
 export const AVAILABLE_AGENTS_CONTEXT_LIMIT = 10;
 export const AVAILABLE_AGENTS_CONTEXT_QUERY_LIMIT = AVAILABLE_AGENTS_CONTEXT_LIMIT + 2;
@@ -89,6 +89,8 @@ export interface CreateAgentParams {
    * default to `'public'`.
    */
   visibility?: 'private' | 'public';
+  /** Explicit creation scope; omitted preserves the active workspace. */
+  workspaceId?: string | null;
 }
 
 export interface CreateAgentResult {
@@ -160,7 +162,11 @@ class AgentService {
   createAgent = async (params: CreateAgentParams): Promise<CreateAgentResult> => {
     const normalizedConfig = normalizeMarketAgentModel(params.config);
 
-    return lambdaClient.agent.createAgent.mutate({
+    const client =
+      params.workspaceId === undefined
+        ? lambdaClient
+        : createWorkspaceLambdaClient(params.workspaceId);
+    return client.agent.createAgent.mutate({
       config: normalizedConfig as any,
       groupId: params.groupId,
       visibility: params.visibility,

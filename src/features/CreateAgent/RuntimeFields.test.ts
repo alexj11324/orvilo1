@@ -1,13 +1,24 @@
+import type { DeviceListItem } from '@orvilo/types';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AgentScanState } from '@/features/ConnectAgent/useAgentScan';
+import type { CreateAgentParams } from '@/services/agent';
+import { deviceService } from '@/services/device';
 
+import CreateAgentPanel from './CreateAgentPanel';
 import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
+import type * as ExecutionHostModule from './useExecutionHost';
 
 const state = vi.hoisted(() => ({
-  host: { deviceId: 'local-device', isLocal: true, loading: false },
+  host: { deviceId: 'local-device', isLocal: true, loading: false } as {
+    deviceId: string;
+    isLocal: boolean;
+    loading: boolean;
+    device?: DeviceListItem;
+  },
+  create: vi.fn(),
   scan: vi.fn().mockResolvedValue(undefined),
   reset: vi.fn(),
   scanState: { agents: { codex: { available: true } }, status: 'success' } as AgentScanState,
@@ -15,7 +26,13 @@ const state = vi.hoisted(() => ({
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => undefined,
 }));
-vi.mock('./useExecutionHost', () => ({ useExecutionHost: () => ({ devices: [], ...state.host }) }));
+vi.mock('./useExecutionHost', async (importOriginal) => ({
+  ...(await importOriginal<typeof ExecutionHostModule>()),
+  useExecutionHost: () => ({
+    devices: state.host.device ? [state.host.device] : [],
+    ...state.host,
+  }),
+}));
 vi.mock('@/features/ConnectAgent/useAgentScan', () => ({
   useAgentScan: () => ({ scan: state.scan, reset: state.reset, state: state.scanState }),
 }));
@@ -31,7 +48,16 @@ vi.mock('@/features/AgentOnboarding/availability', () => ({ isBuiltinAgentUsable
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => vi.fn(),
 }));
+vi.mock('@/store/agent', () => ({
+  useAgentStore: (select: (store: { createAgent: typeof state.create }) => unknown) =>
+    select({ createAgent: state.create }),
+}));
 vi.mock('@/services/agentOnboarding', () => ({
+  createOnboardingAgentOnce: async (
+    _checkpoint: unknown,
+    params: CreateAgentParams,
+    create: typeof state.create,
+  ) => create(params),
   firstPrimeAgentConfig: vi.fn(),
   prepareFirstAgentProvider: vi.fn(),
 }));
@@ -106,3 +132,78 @@ describe('shared Agent runtime form', () => {
     expect(result.current.ready).toBe(false);
   });
 });
+
+it('creates a locked public source in the new workspace using its public device', async () => {
+  const device = {
+    channels: [],
+    deviceId: 'public-device',
+    registered: true,
+    online: true,
+    scope: 'workspace',
+    visibility: 'public',
+  } as DeviceListItem;
+  state.host = { deviceId: device.deviceId, isLocal: false, loading: false, device };
+  vi.mocked(deviceService.listDevices).mockImplementation(async (scope) =>
+    scope === 'new-workspace' ? [device] : [],
+  );
+  state.create.mockImplementation(async (params) => ({
+    agentId: `${params.workspaceId}/${params.visibility}`,
+  }));
+  const onCreated = vi.fn();
+  render(
+    createElement(CreateAgentPanel, {
+      lockVisibility: true,
+      visibility: 'public',
+      workspaceId: 'new-workspace',
+      initialType: 'codex',
+      onCreated,
+    }),
+  );
+  const create = screen.getByText('createAgent.create').closest('button')!;
+  await waitFor(() => expect(create.disabled).toBe(false));
+  fireEvent.submit(create.closest('form')!);
+  await waitFor(() => expect(onCreated).toHaveBeenCalledWith('new-workspace/public', undefined));
+});
+
+it.each([
+  ['private', 'public'],
+  ['public', 'private'],
+] as const)(
+  'updates a locked %s destination to %s without losing the draft',
+  async (initial, next) => {
+    const device = {
+      channels: [],
+      deviceId: 'public-device',
+      registered: true,
+      online: true,
+      scope: 'workspace',
+      visibility: 'public',
+    } as DeviceListItem;
+    state.host = { deviceId: device.deviceId, isLocal: false, loading: false, device };
+    vi.mocked(deviceService.listDevices).mockResolvedValue([device]);
+    state.create.mockImplementation(async (params) => ({
+      agentId: `${params.config.name}/${params.visibility}`,
+    }));
+    const onCreated = vi.fn();
+    const checkpoint = { requestId: 'retained-create-intent' };
+    const props = {
+      lockVisibility: true,
+      workspaceId: 'new-workspace',
+      initialType: 'codex' as const,
+      creationCheckpoint: checkpoint,
+      onCreated,
+    };
+    const view = render(createElement(CreateAgentPanel, { ...props, visibility: initial }));
+    const name = screen.getByRole('textbox', { name: 'createAgent.name' });
+    fireEvent.change(name, { target: { value: 'My retained draft' } });
+    view.rerender(createElement(CreateAgentPanel, { ...props, visibility: next }));
+    expect(screen.getByRole('textbox', { name: 'createAgent.name' })).toBe(name);
+    expect(name).toHaveProperty('value', 'My retained draft');
+    const create = screen.getByText('createAgent.create').closest('button')!;
+    await waitFor(() => expect(create.disabled).toBe(false));
+    fireEvent.submit(create.closest('form')!);
+    await waitFor(() =>
+      expect(onCreated).toHaveBeenCalledWith(`My retained draft/${next}`, undefined),
+    );
+  },
+);

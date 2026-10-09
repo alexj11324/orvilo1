@@ -1,6 +1,6 @@
 import type { DeviceListItem } from '@orvilo/types';
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { eligibleExecutionDevices, useExecutionHost } from './useExecutionHost';
 
@@ -42,15 +42,23 @@ const rows = vi.hoisted(() => [
     visibility: 'public',
   },
 ]);
+const scope = vi.hoisted(() => ({ active: 'workspace' as string | undefined }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
-  useActiveWorkspaceId: () => 'workspace',
+  useActiveWorkspaceId: () => scope.active,
 }));
 vi.mock('@/features/DeviceManager', () => ({
-  useDeviceList: () => ({ data: rows, mutate: vi.fn() }),
+  useDeviceList: (workspaceId?: string | null) => ({
+    data: workspaceId === 'new-workspace' ? [{ ...rows[1], deviceId: 'new-workspace-host' }] : rows,
+    mutate: vi.fn(),
+  }),
 }));
 vi.mock('@/services/localExecutionIdentity', () => ({
   resolveLocalExecutionIdentity: async () => ({ localDeviceId: 'this-mac' }),
 }));
+
+beforeEach(() => {
+  scope.active = 'workspace';
+});
 
 describe('creation execution host visibility', () => {
   it('offers public workspace Agents only registered, online, public workspace devices', () => {
@@ -69,4 +77,19 @@ describe('creation execution host visibility', () => {
     expect(result.current.deviceId).toBe('team-mac');
     expect(result.current.isLocal).toBe(false);
   });
+});
+
+it.each(['other-workspace', undefined])(
+  'selects a public target-workspace host with active scope %s',
+  async (active) => {
+    scope.active = active;
+    const { result } = renderHook(() => useExecutionHost('public', 'new-workspace'));
+    await waitFor(() => expect(result.current.deviceId).toBe('new-workspace-host'));
+    expect(result.current.isLocal).toBe(false);
+  },
+);
+it('keeps explicit personal first-Agent creation local even with an active workspace', async () => {
+  const { result } = renderHook(() => useExecutionHost('private', null));
+  await waitFor(() => expect(result.current.deviceId).toBe('this-mac'));
+  expect(result.current.isLocal).toBe(true);
 });

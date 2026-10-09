@@ -42,7 +42,8 @@ describe('service model "goal" row says everything it drives', () => {
     expect(defaultSetting['systemAgent.goal.title']).toBe('Planning & acceptance');
     expect(locale('en-US')['systemAgent.goal.title']).toBe('Planning & acceptance');
     expect(locale('zh-CN')['systemAgent.goal.title']).toBe('规划与验收');
-    expect(locale('en-US')['systemAgent.goal.modelDesc']).toContain('last resort');
+    // The row is a fallback, not the model these flows normally run on.
+    expect(locale('en-US')['systemAgent.goal.modelDesc']).toMatch(/last fallback/i);
     expect(read('src/features/ServiceModel/ModelAssignmentsForm.tsx')).toContain(
       "t('systemAgent.goal.modelDesc')",
     );

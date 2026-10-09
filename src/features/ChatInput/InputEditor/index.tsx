@@ -19,9 +19,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
-import {
-  userProfileSelectors,
-} from '@/store/user/selectors';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { useAgentId } from '../hooks/useAgentId';
 import { useChatInputDraft } from '../hooks/useChatInputDraft';

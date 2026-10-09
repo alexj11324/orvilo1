@@ -277,9 +277,9 @@ describe('controls removed because nothing read them (2026/10/09) stay removed',
     ).toBe(false);
     expect(read('src/spa/router/sharedMainAreaLeaves.tsx')).toContain(
       `redirectElement('../imports/linear'), path: 'linear'`,
-      );
-    });
+    );
   });
+});
 
 describe('the chat-era service-model features (2026/10/09) stay retired', () => {
   // Same shape as above: the failure mode is a file or a registration coming

@@ -42,10 +42,7 @@ type LoadingKey = 'defaultAgent' | UserServiceModelConfigKey;
 
 type SavingGroup = 'assignments' | 'memory';
 
-const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [
-  { key: 'expertise' },
-  { key: 'goal' },
-];
+const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [{ key: 'expertise' }, { key: 'goal' }];
 
 const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [
   { contextLimit: true, key: 'memoryAnalysisAgentConfig' },

@@ -4,22 +4,9 @@ import { SettingsTabs } from '@/store/global/initialState';
 
 import {
   SETTINGS_SEARCH_ITEMS,
-  type SettingsSearchContext,
   TAB_SEARCH_EN_KEYWORDS,
   TAB_SEARCH_KEYWORDS_KEYS,
 } from './items';
-
-const webContext: SettingsSearchContext = {
-  disableEmailPassword: false,
-  enableBusinessFeatures: true,
-  enableComposio: true,
-  enableGatewayMode: true,
-  hasEmail: true,
-  hideDocs: false,
-  isDesktop: false,
-  isLogin: true,
-  isWindows: false,
-};
 
 describe('settings search index', () => {
   it('indexes the inbox notification channel', () => {

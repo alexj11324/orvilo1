@@ -116,7 +116,7 @@ describe('AgentSettings Content', () => {
     );
     expect(screen.getByTestId('agent-settings-content')).toHaveAttribute(
       'data-tab',
-      ChatSettingsTabs.SelfIteration,
+      ChatSettingsTabs.Rules,
     );
   });
 

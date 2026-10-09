@@ -66,6 +66,61 @@ export const reduceIssuePeekKey = (
   return { openPageId: currentId };
 };
 
+/** One slot of the rendered order: a group header or a navigable row. */
+export interface IssuePeekOrderEntry {
+  /** Header: the collapse key (`data-work-group-header`). Row: the row key. */
+  key: string;
+  kind: 'header' | 'row';
+}
+
+/**
+ * J / K from a focused group header: the first visible row after that header
+ * (`next`) or the last visible row before it (`previous`). `null` when the
+ * header is unknown or there is no such row, so the key is left alone.
+ */
+export const reduceIssuePeekHeaderKey = (
+  {
+    headerKey,
+    order,
+    peekId,
+  }: { headerKey: string; order: readonly IssuePeekOrderEntry[]; peekId: string | null },
+  key: IssuePeekKey,
+): IssuePeekKeyResult | null => {
+  if (key !== 'next' && key !== 'previous') return null;
+  const at = order.findIndex((entry) => entry.kind === 'header' && entry.key === headerKey);
+  if (at < 0) return null;
+  const candidates = key === 'next' ? order.slice(at + 1) : order.slice(0, at).reverse();
+  const target = candidates.find((entry) => entry.kind === 'row')?.key;
+  if (target === undefined) return null;
+  return peekId === null ? { focusId: target } : { focusId: target, peekId: target };
+};
+
+/**
+ * The row key the keyboard is "on" when the peek is open. Navigation state is
+ * the ROW key, never the Issue id: an Issue listed in two sections must not
+ * snap back to its first copy. Order of trust: the focused row if it shows the
+ * peeked Issue, then the row the keyboard last moved to / focus last sat on,
+ * then (nothing better known) the first listed copy.
+ */
+export const resolvePeekRowKey = ({
+  focusedKey,
+  ids,
+  lastKey,
+  peekId,
+  toId,
+}: {
+  focusedKey: string | null;
+  ids: readonly string[];
+  lastKey: string | null;
+  peekId: string | null;
+  toId: (rowKey: string) => string;
+}): string | null => {
+  if (peekId === null) return null;
+  if (focusedKey && toId(focusedKey) === peekId) return focusedKey;
+  if (lastKey && ids.includes(lastKey) && toId(lastKey) === peekId) return lastKey;
+  return ids.find((rowKey) => toId(rowKey) === peekId) ?? peekId;
+};
+
 interface KeyEventLike {
   altKey: boolean;
   ctrlKey: boolean;

@@ -1,5 +1,7 @@
 import { WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 
+import type { IssuePeekOrderEntry } from '@/features/WorkSurface/issuePeekKeyboard';
+
 import { workQueryHierarchyRows } from './workQueryHierarchy';
 import type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -332,19 +334,28 @@ export const flattenWorkQueryFlatItems = (
 export const workQueryVirtualPeekRows = (
   windowItems: readonly WorkQueryVirtualItem[],
   taskById: ReadonlyMap<string, WorkQueryResultTask>,
-): { idOf: Map<string, string>; ids: string[]; indexOf: Map<string, number> } => {
+): {
+  idOf: Map<string, string>;
+  ids: string[];
+  indexOf: Map<string, number>;
+  /** Headers (collapse key) and rows (row key) in render order. */
+  order: IssuePeekOrderEntry[];
+} => {
   const ids: string[] = [];
+  const order: IssuePeekOrderEntry[] = [];
   const idOf = new Map<string, string>();
   const indexOf = new Map<string, number>();
   windowItems.forEach((item, index) => {
+    if (item.kind === 'header') order.push({ key: item.collapseKey, kind: 'header' });
     if (item.kind !== 'row' || item.parentContext || !item.taskId) return;
     const identifier = taskById.get(item.taskId)?.identifier;
     if (!identifier || indexOf.has(item.key)) return;
+    order.push({ key: item.key, kind: 'row' });
     ids.push(item.key);
     idOf.set(item.key, identifier);
     indexOf.set(item.key, index);
   });
-  return { idOf, ids, indexOf };
+  return { idOf, ids, indexOf, order };
 };
 
 /**

@@ -392,7 +392,10 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const timeNode = time ? (
     <div
       className="text-right font-mono text-xs text-muted-foreground"
-      style={{ whiteSpace: 'nowrap', width: 48 }}
+      // A fixed 48px box let a longer date ("12月 31日", "Dec 31, 2025") run past
+      // the row's right edge; a minimum keeps the column and lets the box grow
+      // toward the title instead.
+      style={{ minWidth: 48, whiteSpace: 'nowrap' }}
     >
       {time}
     </div>

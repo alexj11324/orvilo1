@@ -226,6 +226,7 @@ const WorkQueryVirtualList = ({
   useIssuePeekKeyboard({
     scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
     enabled: Boolean(peekKeys),
+    headerOrder: peekRows.order,
     idOf: (rowKey) => peekRows.idOf.get(rowKey) ?? rowKey,
     ids: peekRows.ids,
     onOpenPage: peekKeys?.onOpen,

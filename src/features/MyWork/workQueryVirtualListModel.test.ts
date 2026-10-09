@@ -223,6 +223,19 @@ describe('workQueryVirtualPeekRows', () => {
     expect(indexOf.get('y:row:a')).toBe(4);
   });
 
+  it('orders group headers (by collapse key) between the rows they own', () => {
+    const headerOf = (collapseKey: string) => ({ collapseKey, kind: 'header' }) as never;
+    const { order } = workQueryVirtualPeekRows(
+      [headerOf('g1'), rowItem('a', 'g1:row:a'), headerOf('g2'), rowItem('a', 'ctx', true)],
+      taskById,
+    );
+    expect(order).toEqual([
+      { key: 'g1', kind: 'header' },
+      { key: 'g1:row:a', kind: 'row' },
+      { key: 'g2', kind: 'header' },
+    ]);
+  });
+
   it('contributes no rows for a collapsed section', () => {
     const { items } = flattenWorkQueryVirtualItems({
       allTasks: [],

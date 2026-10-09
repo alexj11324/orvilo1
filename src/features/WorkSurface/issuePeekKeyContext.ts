@@ -59,9 +59,16 @@ const OVERLAY_SELECTOR = [
 export const isOpenIssueOverlay = (element: Element): boolean =>
   !element.closest('[data-closed]') && isIssueElementVisible(element);
 
+export const ISSUE_GROUP_HEADER_ATTRIBUTE = 'data-work-group-header';
+
 export interface IssueKeyScope {
   /** The key came from the row list or the page body, not the peek pane. */
   fromList: boolean;
+  /**
+   * Collapse key of the focused group header (the header button or something
+   * inside it), else `null`. J / K from a header jump to the nearest row.
+   */
+  headerKey: string | null;
   /**
    * The target is a real control (button / link / menu trigger) — Space and
    * Enter keep their native meaning there.
@@ -105,16 +112,28 @@ export const resolveIssueKeyScope = (
   const atRoot = !element || element === body || element === doc.documentElement;
   const row = element?.closest(`[${ISSUE_ROW_ATTRIBUTE}]`) ?? null;
   const inPane = Boolean(element?.closest(`[${ISSUE_PEEK_PANE_ATTRIBUTE}]`));
-  if (!atRoot && !row && !inPane) return null;
+  const headerKey =
+    element
+      ?.closest(`[${ISSUE_GROUP_HEADER_ATTRIBUTE}]`)
+      ?.getAttribute(ISSUE_GROUP_HEADER_ATTRIBUTE) ?? null;
+  if (!atRoot && !row && !inPane && headerKey === null) return null;
 
   return {
-    fromList: atRoot || Boolean(row),
+    fromList: atRoot || Boolean(row) || headerKey !== null,
+    headerKey,
     onControl: Boolean(element) && !atRoot && isInteractiveRowClick(element),
-    rowId: row
-      ? (row.closest(`[${ISSUE_SLOT_ATTRIBUTE}]`)?.getAttribute(ISSUE_SLOT_ATTRIBUTE) ??
-        row.getAttribute(ISSUE_ROW_ATTRIBUTE))
-      : null,
+    rowId: issueRowKeyOf(element),
   };
+};
+
+/** Row key of the row element (or something inside it): its slot key, else the identifier. */
+export const issueRowKeyOf = (element: Element | null): string | null => {
+  const row = element?.closest(`[${ISSUE_ROW_ATTRIBUTE}]`) ?? null;
+  if (!row) return null;
+  return (
+    row.closest(`[${ISSUE_SLOT_ATTRIBUTE}]`)?.getAttribute(ISSUE_SLOT_ATTRIBUTE) ??
+    row.getAttribute(ISSUE_ROW_ATTRIBUTE)
+  );
 };
 
 /**

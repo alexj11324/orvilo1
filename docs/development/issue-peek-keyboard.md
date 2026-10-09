@@ -165,15 +165,59 @@ wrong rows (earlier rows missing, a row of the collapsed group in their slot) an
 
 ## Project Issues layout and Tab
 
-- The project Issues peek pane is a 400px column only while the surface is wider
-  than 900px; below that it overlays the list (`@container work-surface`), the
-  same rule My issues and Team issues use. The project page's right rail narrows
-  the surface, so a side-by-side column used to leave the list \~95px.
+- The project Issues peek pane is a 400px column. While it is open the project
+  layout hides its right-hand 属性 (properties) panel (`ProjectPanelPeekContext`:
+  the Issues tab calls `useSuppressProjectPanel(peekOpen)`, `ProjectLayout`
+  derives `visible = viewport && section && !suppressed`). The panel stays mounted
+  (`hidden`), its own state and the user's setup are untouched, and it returns
+  when the peek closes. Measured at 1200x800 the surface goes from \~498px to
+  \~933px, so list + peek sit side by side with a \~530px list. Only when the
+  surface is still under 900px (`@container work-surface`) does the pane overlay
+  the list (My issues / Team issues rule). The pane is `z-index: 10` above an
+  `isolate` list wrapper, so a focused row's ring cannot paint over it.
+- The row's date box is `min-width: 48px` (was a fixed `width: 48px`), so a long
+  date no longer runs past the row's right edge.
 - Composers (`CreateTaskInlineEntry`, `CommentInput`) pass `tabMovesFocus` to
   `EditorCanvas`: Tab / Shift+Tab leave the editor instead of inserting a tab
-  character (the list plugin's Tab handler was the trap). Inside a list item Tab
-  still indents; Ctrl / Alt / Meta+Tab are untouched. Enter / Cmd+Enter are not
-  changed. Pure rule: `tabLeavesEditor` in `registerTabFocusEscape.ts`.
+  character (the list plugin's Tab handler was the trap). Ctrl / Alt / Meta+Tab
+  are untouched. Enter / Cmd+Enter are not changed. Pure rule: `tabLeavesEditor`
+  in `registerTabFocusEscape.ts` (a caret in a list item does not claim Tab; the
+  handler runs at `COMMAND_PRIORITY_HIGH`, so returning `false` lets the list
+  plugin's `COMMAND_PRIORITY_EDITOR` handler run). That handler
+  (`@lobehub/editor` `plugins/list/plugin/registry.js:18-23`) indents only when
+  `$indentOverTab` is true (caret at the start of the block); anywhere else in
+  the item it inserts a tab character. So "Tab indents inside a list" holds for a
+  caret at the start of the item only.
+- The Issue DESCRIPTION editor (`TaskInstruction`) does NOT pass `tabMovesFocus`
+  and this branch does not touch it, so its Tab behaviour is the library's and is
+  identical on `origin/canary`: `STATIC_PLUGINS` registers `ReactListPlugin` via
+  `createChatInputRichPlugins` (`InternalEditor.tsx`), whose Tab handler inserts a
+  literal tab at a mid-item caret and indents a plain paragraph by 40px when the
+  caret is at its start. Not changed here.
+
+## Duplicate rows, headers
+
+- **Navigation state is the row key.** With the peek open and focus not on a row
+  (focus lost on a layout remount, or inside the pane) the hook used to resolve
+  the peeked Issue id back to its FIRST listed row, so J from the second copy of
+  an Issue continued from the first copy. `resolvePeekRowKey` now trusts the
+  focused row, then the row key the keyboard / focus last sat on (`focusin` and
+  every move are recorded per surface, so it survives list remounts), and only
+  then the first copy.
+- Which rows count: the server's attention axis puts each Issue in exactly one
+  group (`attentionGroupExpr` CASE), so two groups showing the same Issue come
+  from a multi-valued axis (labels) or from a muted parent-context repeat. A
+  muted repeat (`opacity-50`, `data-issue-context`) is deliberately not a row J
+  visits (`workQueryVirtualPeekRows` skips `parentContext`); a full-opacity copy
+  is visited.
+- **J / K from a group header.** A focused group header button used to be outside
+  the keyboard scope. `resolveIssueKeyScope` now reports `headerKey`
+  (`data-work-group-header`), and `reduceIssuePeekHeaderKey` moves to the first
+  row after the header (J) or the last row before it (K), over the `order` that
+  `workQueryVirtualPeekRows` emits (headers and rows in render order; collapsed
+  groups contribute no rows). An open peek follows. Space / Enter on the header
+  keep toggling the group. Only `WorkQueryVirtualList` headers carry the
+  attribute; the plain `TaskList`'s group labels are unchanged.
 
 ## Collapse focus ownership
 

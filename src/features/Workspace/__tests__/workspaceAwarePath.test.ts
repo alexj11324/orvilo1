@@ -97,7 +97,6 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/usage', 'acme')).toBe('/acme/settings/usage');
     expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
-    expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/acme/settings/labels');
     expect(buildWorkspaceAwarePath('/settings/credential', 'acme')).toBe(
       '/acme/settings/credential',
     );
@@ -152,6 +151,9 @@ describe('buildWorkspaceAwarePath', () => {
     );
     // The workspace Storage page was retired; personal Storage must stay reachable.
     expect(buildWorkspaceAwarePath('/settings/storage', 'acme')).toBe('/settings/storage');
+    // Agent labels were removed; the retired personal tab must not be rewritten
+    // onto the workspace alias route.
+    expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/settings/labels');
   });
 
   it('prefixes the `/settings` index — both personal and workspace have a meaningful redirect', () => {

@@ -485,12 +485,6 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
     skeleton: 'list',
   },
   {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/labels'),
-    name: 'Labels',
-    path: 'labels',
-    skeleton: 'list',
-  },
-  {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/devices'),
     name: 'Devices',
     path: 'devices',

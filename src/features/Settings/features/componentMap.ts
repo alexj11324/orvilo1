@@ -53,9 +53,6 @@ export const componentMap = {
   [SettingsTabs.Devices]: dynamic(() => import('../devices'), {
     loading: loading('Settings > Devices'),
   }),
-  [SettingsTabs.Labels]: dynamic(() => import('../labels'), {
-    loading: loading('Settings > Labels'),
-  }),
   // Profile related tabs
   [SettingsTabs.Profile]: dynamic(() => import('../profile'), {
     loading: () => createElement(SettingsProfileSkeleton),
@@ -71,9 +68,6 @@ export const componentMap = {
   }),
   [SettingsTabs.Creds]: dynamic(() => import('../creds'), {
     loading: loading('Settings > Creds'),
-  }),
-  [SettingsTabs.Security]: dynamic(() => import('../security'), {
-    loading: loading('Settings > Security'),
   }),
   [SettingsTabs.Connector]: dynamic(() => import('../connector'), {
     loading: loading('Settings > Connector'),

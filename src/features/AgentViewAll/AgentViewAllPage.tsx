@@ -26,7 +26,6 @@ import NavHeader from '@/features/NavHeader';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
-import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
@@ -192,7 +191,6 @@ const AgentViewAllPage = memo(() => {
     [updateSystemStatus, viewOptions],
   );
 
-  useFetchAgentLabels();
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   useFetchWorkspaceUserPreference();
 
@@ -249,14 +247,8 @@ const AgentViewAllPage = memo(() => {
     [workspaceItems, privateItems],
   );
 
-  // Label grouping works on every tab (labels exist in personal mode too);
-  // author grouping only makes sense where the author column shows.
-  const groupBy =
-    showAuthor || viewOptions.groupBy === 'label'
-      ? viewOptions.groupBy
-      : viewOptions.groupBy === 'author'
-        ? 'none'
-        : viewOptions.groupBy;
+  // Author grouping only makes sense where the author column shows.
+  const groupBy = showAuthor ? viewOptions.groupBy : 'none';
   const orderBy =
     !showAuthor && viewOptions.orderBy === 'author' ? 'updatedAt' : viewOptions.orderBy;
   const effectiveViewOptions = useMemo(
@@ -314,46 +306,6 @@ const AgentViewAllPage = memo(() => {
           (userId && authorByUserId.get(userId)?.name) || t('agentViewAll.groupBy.unknownAuthor'),
       }));
       return groups.sort((a, b) => a.label.localeCompare(b.label));
-    }
-
-    if (groupBy === 'label') {
-      // Label sections: an agent carrying several labels appears once per
-      // label (mirrors Linear); unlabeled items collect in a trailing bucket.
-      const buckets = new Map<
-        string,
-        { color?: string | null; items: SidebarAgentItem[]; label: string }
-      >();
-      const unlabeled: SidebarAgentItem[] = [];
-      for (const item of filteredItems) {
-        const itemLabels = item.labels ?? [];
-        if (itemLabels.length === 0) {
-          unlabeled.push(item);
-          continue;
-        }
-        for (const label of itemLabels) {
-          const bucket = buckets.get(label.id);
-          if (bucket) bucket.items.push(item);
-          else buckets.set(label.id, { color: label.color, items: [item], label: label.name });
-        }
-      }
-      const groups = [...buckets.entries()]
-        .map(([labelId, bucket]) => ({
-          avatar: null as string | null,
-          color: bucket.color,
-          items: bucket.items,
-          key: `label:${labelId}`,
-          label: bucket.label,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label));
-      if (unlabeled.length > 0)
-        groups.push({
-          avatar: null,
-          color: undefined,
-          items: unlabeled,
-          key: 'label:none',
-          label: t('agentViewAll.groupBy.noLabel'),
-        });
-      return groups;
     }
 
     return null;

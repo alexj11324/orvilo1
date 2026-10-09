@@ -14,7 +14,6 @@ import {
   Map,
   PaletteIcon,
   Sparkles,
-  TagIcon,
   UserCircle,
 } from 'lucide-react';
 import { useMemo } from 'react';
@@ -138,7 +137,6 @@ export const useCategory = (): CategoryGroup[] => {
     ].filter((item): item is CategoryItem => Boolean(item));
 
     const tools: CategoryItem[] = [
-      makeItem({ icon: TagIcon, key: SettingsTabs.Labels, label: t('setting:tab.labels') }),
       makeItem({ icon: McpIcon, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
     ].filter((item): item is CategoryItem => Boolean(item));
 

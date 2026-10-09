@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 
 import Actions from './Actions';
@@ -25,8 +24,6 @@ interface AgentProps {
 const Agent = memo<AgentProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const { isRevalidating } = useFetchAgentList();
-  // Keep the label registry warm so the per-item "Labels" submenu opens populated.
-  useFetchAgentLabels();
   const titleKey = 'navPanel.agent';
 
   const { openConfigGroupModal } = useAgentModal();

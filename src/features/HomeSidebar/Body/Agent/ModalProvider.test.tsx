@@ -39,10 +39,6 @@ vi.mock('@/features/HomeSidebar/hooks/useCreateModal', () => ({
   },
 }));
 
-vi.mock('@/features/WorkspaceSetting/Labels/LabelFormModal', () => ({
-  openLabelFormModal: vi.fn(),
-}));
-
 vi.mock('@/store/agent', () => ({
   useAgentStore: (selector: (state: { inboxAgentId: string }) => unknown) =>
     selector({ inboxAgentId: 'inbox-agent' }),

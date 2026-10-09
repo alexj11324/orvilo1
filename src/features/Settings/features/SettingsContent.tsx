@@ -23,7 +23,6 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Credits,
   SettingsTabs.Devices,
   SettingsTabs.Hotkey,
-  SettingsTabs.Labels,
   SettingsTabs.Memory,
   SettingsTabs.Notification,
   SettingsTabs.Orchestrator,
@@ -65,7 +64,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     [SettingsTabs.Credits]: t('subscription:tab.credits'),
     [SettingsTabs.Devices]: t('setting:devices.title'),
     [SettingsTabs.Hotkey]: t('setting:tab.hotkey'),
-    [SettingsTabs.Labels]: t('setting:tab.labels'),
     [SettingsTabs.Memory]: t('setting:tab.memory'),
     [SettingsTabs.Notification]: t('setting:tab.notification'),
     [SettingsTabs.Orchestrator]: t('setting:tab.orchestrator'),
@@ -112,7 +110,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
         SettingsTabs.Stats,
         SettingsTabs.Usage,
         SettingsTabs.Creds,
-        SettingsTabs.Security,
         ...(enableBusinessFeatures
           ? [SettingsTabs.Plans, SettingsTabs.Credits, SettingsTabs.Billing]
           : []),

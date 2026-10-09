@@ -1,4 +1,4 @@
-export type AgentGroupBy = 'author' | 'label' | 'none';
+export type AgentGroupBy = 'author' | 'none';
 export type AgentOrderBy = 'author' | 'title' | 'updatedAt';
 export type AgentOrderDirection = 'asc' | 'desc';
 export type AgentListViewMode = 'card' | 'list';
@@ -25,7 +25,7 @@ export const DEFAULT_AGENT_LIST_VIEW_OPTIONS: AgentListViewOptions = {
   orderDirection: 'desc',
 };
 
-const AGENT_GROUP_BY_SET = new Set<AgentGroupBy>(['author', 'label', 'none']);
+const AGENT_GROUP_BY_SET = new Set<AgentGroupBy>(['author', 'none']);
 const AGENT_ORDER_BY_SET = new Set<AgentOrderBy>(['author', 'title', 'updatedAt']);
 const AGENT_ORDER_DIRECTION_SET = new Set<AgentOrderDirection>(['asc', 'desc']);
 

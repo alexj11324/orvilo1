@@ -76,3 +76,13 @@ Labs 里每个开关的默认值都是开（`DEFAULT_PREFERENCE.lab`），页面
 - `workspaceSetting.linear.*` 文案：`LinearImport` 仍共用大量键且存在模板拼接键，无法证明旧页独有，保留。
 - 存储页 `useTransferAgentsFormItem`：位于 `src/business/client/hooks`，是业务 overlay 注入点，保留。
 - `agentMeta`、`topicAutoSummary`、记忆相关行仍在调查，未触碰。
+## 2026/10/09：移除 Agent 标签与空 Security 标签页
+
+Owner 决定：删除 Agent 标签功能和空的 Security 设置标签页。只做前端删除，不重组、不改名。
+
+- **Agent 标签**：标签只装饰 Agent 列表，Issue 指派、编排、执行都不读它。删除个人与工作区设置页（`src/features/Settings/labels`、`src/features/WorkspaceSetting/Labels`、工作区路由叶子）、两处侧栏入口、`WorkspaceSettingsTabs.Labels`、Agent 条目菜单的标签子菜单、Agent 列表页的标签胶囊与「按标签分组」、`useFetchAgentLabels`、home store 的 label slice 与 `agentLabelKeys`、客户端 `agentLabelService`，以及仅这些界面使用的 en-US /zh-CN/default locale key。
+- **Security 标签页**：`SettingsTabs.Security` 只是 `<Navigate to="/settings">`，没有侧栏入口。删除组件、组件映射与 `mobile` 参数分支。侧栏的 “Security & access” 分组（凭证与 API Key）是另一回事，保留。
+- **旧链接**：`SettingsTabs.Labels` / `SettingsTabs.Security` 枚举成员保留（注册表按枚举全量登记），状态改为 `retired` 并 alias 到设置首页 `Profile`；工作区 `/:slug/settings/labels` 通过 `WORKSPACE_SETTINGS_ALIASES` 重定向到设置首页，并像 `storage` 一样从 `WORKSPACE_SETTINGS_TABS` 去掉，避免个人链接被改写到工作区路径。持久化的 Agent 列表 `groupBy: 'label'` 会被 `normalizeAgentListViewOptions` 归一为 `none`。
+- **保留**：服务端 `apps/server/src/routers/lambda/agentLabel.ts`、DB 模型与 schema、`SidebarAgentItem.labels` 类型字段（后端清理另开 Issue）；Issue 标签（`taskLabel`、`ProjectLabelPicker`、`TaskLabelSelector`）和 `members.agentLabel`（“Agent” 文案）与此无关。
+- **防回潮**：`retiredSettingsSurfaces.test.ts` 断言两页、工作区镜像、客户端 store /service/hook 不存在，组件映射与侧栏不再引用，注册表别名仍在。
+- **验证**：`bun run check`；未在 Electron 与 Vercel 预览验证（后续进行）。

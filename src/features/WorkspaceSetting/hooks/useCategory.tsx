@@ -18,7 +18,6 @@ import {
   MonitorSmartphoneIcon,
   PaletteIcon,
   Sparkles,
-  TagIcon,
   Users,
 } from 'lucide-react';
 import { useMemo } from 'react';
@@ -206,13 +205,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
             // The workspace skill settings page was retired with the platform's
             // skill marketplace; the route survives only as a redirect to this
             // settings root (see `WORKSPACE_SETTINGS_ALIASES`).
-            // Label registry is readable by everyone; the page itself keeps
-            // management actions behind the admin gate (disabled, not hidden).
-            {
-              icon: TagIcon,
-              key: WorkspaceSettingsTabs.Labels,
-              label: t('workspaceSetting.tab.labels'),
-            },
             {
               icon: McpIcon,
               key: WorkspaceSettingsTabs.Connector,

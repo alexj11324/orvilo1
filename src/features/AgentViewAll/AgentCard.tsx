@@ -21,7 +21,6 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import AgentAvatar from './AgentAvatar';
 import { type AgentRowAuthor, formatUpdatedAt } from './AgentRow';
 import ItemActions from './ItemActions';
-import LabelTags from './LabelTags';
 
 // Card layout: icon + title + trailing state on one row, a two-line
 // description below, hover lift on the whole card.
@@ -171,11 +170,6 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
               <div className={cn('text-[12px]', 'text-muted-foreground', cardStyles.description)}>
                 {description}
               </div>
-              {item.labels?.length ? (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <LabelTags labels={item.labels} />
-                </div>
-              ) : null}
               <div
                 className="flex items-center gap-2 justify-between"
                 style={{ marginBlockStart: 'auto' }}

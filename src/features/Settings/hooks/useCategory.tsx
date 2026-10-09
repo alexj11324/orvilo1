@@ -20,7 +20,6 @@ import {
   MonitorSmartphoneIcon,
   PaletteIcon,
   Sparkles,
-  TagIcon,
   TerminalSquare,
   User,
 } from 'lucide-react';
@@ -174,18 +173,13 @@ export const useCategory = () => {
       },
 
       // 工具与连接器 — the platform's own skill marketplace was retired, so the
-      // group no longer carries a Skill row. Connector and Labels stay.
+      // group no longer carries a Skill row. Connector stays.
       {
         items: [
           {
             icon: McpIcon,
             key: SettingsTabs.Connector,
             label: t('tab.connector'),
-          },
-          {
-            icon: TagIcon,
-            key: SettingsTabs.Labels,
-            label: t('tab.labels'),
           },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Tools,

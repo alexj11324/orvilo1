@@ -123,6 +123,60 @@ describe('the Referral shell settings page (HS-52) stays retired', () => {
   });
 });
 
+describe('the Agent labels and Security settings pages stay retired', () => {
+  it('ships neither page, nor the workspace labels mirror', () => {
+    for (const retired of [
+      'src/features/Settings/labels',
+      'src/features/Settings/security',
+      'src/features/WorkspaceSetting/Labels',
+      'src/routes/(main)/[workspaceSlug]/settings/labels',
+    ]) {
+      expect(exists(retired), `${retired} is back`).toBe(false);
+    }
+  });
+
+  it('registers neither page in either component map', () => {
+    for (const file of [
+      'src/features/Settings/features/componentMap.ts',
+      'src/features/Settings/features/componentMap.desktop.ts',
+    ]) {
+      const source = read(file);
+
+      expect(source, `${file} still maps Labels`).not.toContain('SettingsTabs.Labels');
+      expect(source, `${file} still maps Security`).not.toContain('SettingsTabs.Security');
+    }
+  });
+
+  it('keeps the workspace labels route and tab out of the workspace shell', () => {
+    expect(read('src/spa/router/sharedMainAreaLeaves.tsx')).not.toContain('settings/labels');
+    expect(read('src/types/workspaceSettings.ts')).not.toContain(`'labels'`);
+    expect(read('src/features/Workspace/workspaceAwarePath.ts')).not.toContain(`'labels'`);
+  });
+
+  it('keeps the agent label client store, service and fetch hook gone', () => {
+    for (const retired of [
+      'src/store/home/slices/label',
+      'src/services/agentLabel',
+      'src/hooks/useFetchAgentLabels.ts',
+      'src/features/AgentViewAll/LabelTags.tsx',
+    ]) {
+      expect(exists(retired), `${retired} is back`).toBe(false);
+    }
+  });
+
+  it('lets the old URLs redirect to the settings root instead of rendering', () => {
+    const registry = read('packages/app-config/src/routes/settings.ts');
+
+    expect(registry).toMatch(
+      /\[SettingsTabs\.Labels\]: \{ aliasOf: SettingsTabs\.Profile, status: 'retired' \}/,
+    );
+    expect(registry).toMatch(
+      /\[SettingsTabs\.Security\]: \{ aliasOf: SettingsTabs\.Profile, status: 'retired' \}/,
+    );
+    expect(registry).toContain(`{ alias: 'labels', target: 'root' }`);
+  });
+});
+
 describe('a retired settings tab leaves no way to reach it', () => {
   // Deleting the page is the easy half. Every *entry point* into it ships its
   // own wiring, and each one survived the first pass independently: the search
@@ -132,7 +186,7 @@ describe('a retired settings tab leaves no way to reach it', () => {
   //
   // These assert on the wiring files as text, because the failure mode is a
   // *registration* coming back, not a behaviour changing.
-  const RETIRED_TABS = ['Labs', 'OAuthApps', 'Referral', 'Skill'] as const;
+  const RETIRED_TABS = ['Labels', 'Labs', 'OAuthApps', 'Referral', 'Security', 'Skill'] as const;
 
   it('keeps no search-index wiring for a retired tab', () => {
     const items = read('src/features/SettingsSearch/items.ts');

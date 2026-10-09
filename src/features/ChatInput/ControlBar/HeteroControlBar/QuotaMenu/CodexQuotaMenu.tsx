@@ -6,7 +6,7 @@ import type {
   CodexRateLimitResetCredit,
 } from '@orvilo/electron-client-ipc';
 import { uuid } from '@orvilo/utils';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -36,71 +36,19 @@ const isConnectionError = (quota: CodexQuotaSnapshot) =>
     quota.error ?? '',
   );
 
-const styles = createStaticStyles(({ css }) => ({
-  credit: css`
-    min-width: 0;
-    padding-block: 8px;
-    padding-inline: 10px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  creditCollapse: css`
-    width: 100%;
-  `,
-  creditExpiry: css`
-    flex: none;
-    text-align: end;
-    white-space: nowrap;
-  `,
-  creditIndex: css`
-    flex: 0 0 20px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  creditList: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  creditTitle: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  feedback: css`
-    padding: 8px;
-    border: 1px solid ${cssVar.colorInfoBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorInfoText};
-
-    background: ${cssVar.colorInfoBg};
-
-    &[data-kind='error'] {
-      border-color: ${cssVar.colorErrorBorder};
-      color: ${cssVar.colorErrorText};
-      background: ${cssVar.colorErrorBg};
-    }
-
-    &[data-kind='success'] {
-      border-color: ${cssVar.colorSuccessBorder};
-      color: ${cssVar.colorSuccessText};
-      background: ${cssVar.colorSuccessBg};
-    }
-  `,
-  resetCredits: css`
-    padding-block-start: 8px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  credit:
+    'min-w-0 py-2 px-2.5 [&:not(:last-child)]:[border-block-end:1px_solid_var(--ant-color-border-secondary)]',
+  creditCollapse: 'w-full',
+  creditExpiry: 'flex-none text-end whitespace-nowrap',
+  creditIndex: '[flex:0_0_20px] tabular-nums text-[var(--ant-color-text-tertiary)] text-center',
+  creditList:
+    'overflow-hidden border border-solid border-sidebar-border rounded-(--radius-card) bg-[var(--ant-color-fill-quaternary)] bg-none',
+  creditTitle: 'overflow-hidden flex-1 min-w-0 text-ellipsis whitespace-nowrap',
+  feedback:
+    "p-2 border border-solid border-[var(--ant-color-info-border)] rounded-(--radius-card) text-[var(--ant-color-info-text)] bg-[var(--ant-color-info-bg)] bg-none [&[data-kind='error']]:border-[var(--ant-color-error-border)] [&[data-kind='error']]:text-[var(--ant-color-error-text)] [&[data-kind='error']]:bg-[var(--ant-color-error-bg)] [&[data-kind='error']]:bg-none [&[data-kind='success']]:border-[var(--ant-color-success-border)] [&[data-kind='success']]:text-[var(--ant-color-success-text)] [&[data-kind='success']]:bg-[var(--ant-color-success-bg)] [&[data-kind='success']]:bg-none",
+  resetCredits: 'pbs-2 [border-block-start:1px_solid_var(--ant-color-border-secondary)]',
+};
 
 const createErrorSnapshot = (error: unknown): CodexQuotaSnapshot => ({
   error: error instanceof Error ? error.message : String(error),
@@ -326,7 +274,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
 
       if (!resetCredits) {
         return (
-          <div className={cx('flex flex-col gap-1', styles.resetCredits)}>
+          <div className={cn('flex flex-col gap-1', styles.resetCredits)}>
             <div className="flex flex-row items-center gap-1">
               <span className="anticon" role="img">
                 <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
@@ -351,7 +299,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
       }));
 
       return (
-        <div className={cx('flex flex-col', styles.resetCredits)}>
+        <div className={cn('flex flex-col', styles.resetCredits)}>
           <Accordion className={styles.creditCollapse} defaultValue={[]}>
             <AccordionItem
               disabled={!(resetCreditCount > 0 || !!resetFeedback)}
@@ -379,7 +327,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
               <AccordionContent>
                 <div className="flex flex-col gap-2">
                   {resetCreditItems.length > 0 && (
-                    <div className={cx('flex flex-col', styles.creditList)}>
+                    <div className={cn('flex flex-col', styles.creditList)}>
                       {resetCreditItems.map(({ credit, index }) => {
                         const fallbackExpiry = index === 1 ? resetCredits.nextExpiresAt : undefined;
                         const expiresAt = credit ? credit.expiresAt : fallbackExpiry;
@@ -387,7 +335,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
 
                         return (
                           <div
-                            className={cx('flex flex-row items-center gap-2', styles.credit)}
+                            className={cn('flex flex-row items-center gap-2', styles.credit)}
                             key={credit?.id ?? `reset-credit-${index}`}
                           >
                             <div className={styles.creditIndex} style={{ fontSize: 12 }}>

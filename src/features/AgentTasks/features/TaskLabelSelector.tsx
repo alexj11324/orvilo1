@@ -231,7 +231,9 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
 
     return (
       <Popover>
-        <PopoverTrigger {...pickerTriggerRender(children, control)} />
+        <PopoverTrigger
+          {...pickerTriggerRender(children, control, undefined, t('taskDetail.labels.title'))}
+        />
         <PopoverContent
           align="start"
           className="w-65 gap-0 p-0"

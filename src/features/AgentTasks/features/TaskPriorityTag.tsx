@@ -166,12 +166,19 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     const triggerNode =
       children ||
       (loading ? (
-        <span className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}>
+        <span
+          aria-label={t('taskDetail.property.priority')}
+          className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}
+        >
           <Spinner style={{ height: size, width: size }} />
         </span>
       ) : (
         <span
           data-row-control={'priority'}
+          aria-label={t('taskDetail.fieldValue', {
+            field: t('taskDetail.property.priority'),
+            value: levelLabel(currentLevel),
+          })}
           className={cn(
             isUrgent ? styles.triggerUrgent : styles.trigger,
             PICKER_TRIGGER_FOCUS_CLASS,

@@ -1735,6 +1735,8 @@ export default {
   'taskDetail.commentSendFailed': 'Could not post the comment. Your draft is kept.',
   'taskDetail.commentPlaceholder':
     'Leave a comment, or @ a teammate — comments also guide the next run...',
+  'taskDetail.fieldValue': '{{field}}: {{value}}',
+  'taskDetail.sendComment': 'Send comment',
   'taskDetail.runCollapse': 'Collapse run',
   'taskDetail.runVerify.checklist': 'Acceptance checks',
   'taskDetail.runVerify.errored': 'Verification errored',

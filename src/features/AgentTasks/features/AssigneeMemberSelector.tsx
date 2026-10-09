@@ -265,7 +265,9 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger {...pickerTriggerRender(children, control, currentTriggerStyle)} />
+        <PopoverTrigger
+          {...pickerTriggerRender(children, control, currentTriggerStyle, t('taskDetail.assignee'))}
+        />
         <PopoverContent
           align="start"
           className="w-65 gap-0 p-0"

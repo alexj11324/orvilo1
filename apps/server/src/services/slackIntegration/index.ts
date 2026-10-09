@@ -5,6 +5,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { SlackIntegrationModel } from '@/database/models/slackIntegration';
 import { hasActiveWorkspaceMembership, hasWorkspaceAdminAccess } from '@/database/models/workspace';
+import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { agents, slackUserConnections, workspaceSlackInstallations } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -28,6 +29,15 @@ export class SlackIntegrationService {
     );
     if (!allowed)
       throw new TRPCError({ code: 'FORBIDDEN', message: 'Slack workspace access denied' });
+  }
+  private async assertLockedMember(workspaceId: string, userId: string, admin: boolean) {
+    const member = await new WorkspaceMemberModel(this.db, userId).getMemberForUpdate(
+      workspaceId,
+      userId,
+    );
+    if (!member)
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Slack workspace access denied' });
+    await this.assertMember(workspaceId, userId, admin);
   }
   async getInstallationByTeamId(teamId: string) {
     const [row] = await this.db
@@ -228,6 +238,12 @@ export class SlackIntegrationService {
           ? { id: payload.installationId, tokenRevision: payload.tokenRevision }
           : null;
       const locked = await writeModel.lockInstallation(expected);
+      const writeService = new SlackIntegrationService(tx as OrviloDatabase);
+      await writeService.assertLockedMember(
+        payload.workspaceId,
+        payload.userId,
+        payload.mode === 'workspace',
+      );
       const installation = installInput
         ? await writeModel.upsertInstallation(installInput, expected)
         : locked;
@@ -288,6 +304,11 @@ export class SlackIntegrationService {
         agentId: input.agentId,
       },
       { id: installation.id, tokenRevision: installation.tokenRevision },
+      async (tx) => {
+        const writeService = new SlackIntegrationService(tx as OrviloDatabase);
+        await writeService.assertLockedMember(input.workspaceId, input.userId, true);
+        await writeService.assertAgent(input.workspaceId, input.userId, input.agentId);
+      },
     );
   }
 }

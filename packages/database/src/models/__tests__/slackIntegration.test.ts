@@ -66,6 +66,29 @@ afterEach(async () => {
 });
 
 describe('SlackIntegrationModel', () => {
+  it('rejects an archived agent before writing its channel binding', async () => {
+    await install(model, input);
+    await db.update(agents).set({ deletedAt: new Date() }).where(eq(agents.id, 'slack-agent'));
+    await expect(
+      bind(model, { agentId: 'slack-agent', slackChannelId: 'C1', slackChannelName: 'general' }),
+    ).rejects.toThrow('Agent');
+    expect(await model.bindings()).toEqual([]);
+  });
+
+  it('rolls back a channel binding when final transaction authorization rejects', async () => {
+    const installation = await install(model, input);
+    await expect(
+      model.saveBinding(
+        { agentId: 'slack-agent', slackChannelId: 'C1', slackChannelName: 'general' },
+        installation!,
+        async () => {
+          throw new Error('access denied');
+        },
+      ),
+    ).rejects.toThrow('access denied');
+    expect(await model.bindings()).toEqual([]);
+  });
+
   it('returns empty workspace state and rejects writes without an installation', async () => {
     expect(await model.installation()).toBeUndefined();
     expect(await model.connection('slack-user')).toBeUndefined();

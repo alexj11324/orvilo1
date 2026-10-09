@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import {
   agents,
@@ -175,6 +175,7 @@ export class SlackIntegrationModel {
       slackChannelName: string;
     },
     expected: SlackInstallationVersion,
+    authorize?: (tx: Transaction) => Promise<void>,
   ) =>
     this.db.transaction(async (tx) => {
       const model = new SlackIntegrationModel(tx, this.workspaceId);
@@ -183,9 +184,17 @@ export class SlackIntegrationModel {
       const [agent] = await tx
         .select({ id: agents.id })
         .from(agents)
-        .where(and(eq(agents.id, input.agentId), eq(agents.workspaceId, this.workspaceId)))
-        .limit(1);
+        .where(
+          and(
+            eq(agents.id, input.agentId),
+            eq(agents.workspaceId, this.workspaceId),
+            isNull(agents.deletedAt),
+          ),
+        )
+        .limit(1)
+        .for('update');
       if (!agent) throw new Error('Agent not found in workspace');
+      await authorize?.(tx);
       const [row] = await tx
         .insert(slackChannelBindings)
         .values({ ...input, installationId: installation.id })

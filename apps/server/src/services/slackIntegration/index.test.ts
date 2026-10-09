@@ -13,10 +13,20 @@ const mocks = vi.hoisted(() => ({
   exchange: vi.fn(),
   api: vi.fn(),
   state: vi.fn(),
+  memberLock: vi.fn(),
+  agentUse: vi.fn(),
+  encrypt: vi.fn(),
+  saveBinding: vi.fn(),
+  bindingWrite: vi.fn(),
 }));
 vi.mock('@/database/models/workspace', () => ({
   hasActiveWorkspaceMembership: mocks.membership,
   hasWorkspaceAdminAccess: mocks.admin,
+}));
+vi.mock('@/database/models/workspaceMember', () => ({
+  WorkspaceMemberModel: class {
+    getMemberForUpdate = mocks.memberLock;
+  },
 }));
 vi.mock('@/database/models/slackIntegration', () => ({
   SlackIntegrationModel: class {
@@ -24,15 +34,16 @@ vi.mock('@/database/models/slackIntegration', () => ({
     connectUser = mocks.connect;
     upsertInstallation = mocks.upsert;
     lockInstallation = mocks.lock;
+    saveBinding = mocks.saveBinding;
   },
 }));
 vi.mock('@/server/modules/KeyVaultsEncrypt', () => ({
   KeyVaultsGateKeeper: {
-    initWithEnvKey: async () => ({ encrypt: async (token: string) => `cipher:${token}` }),
+    initWithEnvKey: async () => ({ encrypt: mocks.encrypt }),
   },
 }));
 vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
-  assertCanUseWorkspaceAgent: vi.fn(),
+  assertCanUseWorkspaceAgent: mocks.agentUse,
 }));
 vi.mock('./oauthState', () => ({ saveState: mocks.state }));
 vi.mock('./oauth', async (importOriginal) => ({
@@ -44,8 +55,12 @@ vi.mock('./oauth', async (importOriginal) => ({
     redirectUri: 'https://orvilo.test/oauth/slack/callback',
   }),
 }));
+const transaction = {
+  select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ id: 'agent' }] }) }) }),
+};
 const service = createSlackIntegrationService({
-  transaction: async (callback: (tx: unknown) => unknown) => callback({}),
+  ...transaction,
+  transaction: async (callback: (tx: unknown) => unknown) => callback(transaction),
 } as never);
 const payload = {
   attempt: 'attempt1234567890',
@@ -64,7 +79,14 @@ const grant = {
   scope: SLACK_BOT_SCOPES.join(','),
 };
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.resetAllMocks();
+  mocks.memberLock.mockResolvedValue({ role: 'admin' });
+  mocks.encrypt.mockImplementation(async (token: string) => `cipher:${token}`);
+  mocks.saveBinding.mockImplementation(async (input, _expected, authorize) => {
+    await authorize?.(transaction);
+    return mocks.bindingWrite(input);
+  });
   mocks.membership.mockResolvedValue(true);
   mocks.admin.mockResolvedValue(true);
   mocks.installation.mockResolvedValue(undefined);
@@ -162,4 +184,76 @@ it('rejects an initial OAuth attempt after another grant is installed', async ()
     'Slack installation changed',
   );
   expect(mocks.upsert).not.toHaveBeenCalled();
+});
+
+describe('Slack final write authorization', () => {
+  it.each(['bot authentication', 'vault encryption'])(
+    'rejects admin demotion during %s',
+    async (stage) => {
+      if (stage === 'bot authentication') {
+        mocks.api.mockImplementation(async (method, token) => {
+          if (method === 'users.info') return { user: { id: 'U1', team_id: 'T1' } };
+          if (token === 'bot-token') mocks.admin.mockResolvedValue(false);
+          return { team_id: 'T1', user_id: token === 'bot-token' ? 'B1' : 'U1' };
+        });
+      } else {
+        mocks.encrypt.mockImplementation(async (token) => {
+          mocks.admin.mockResolvedValue(false);
+          return `cipher:${token}`;
+        });
+      }
+      await expect(service.completeOAuth(payload, 'code')).rejects.toThrow('access denied');
+      expect(mocks.upsert).not.toHaveBeenCalled();
+      expect(mocks.connect).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects personal membership removal while acquiring the installation lock', async () => {
+    mocks.installation.mockResolvedValue({
+      id: 'install',
+      tokenRevision: 'revision-a',
+      slackTeamId: 'T1',
+    });
+    mocks.lock.mockImplementation(async () => {
+      mocks.membership.mockResolvedValue(false);
+      return { id: 'install' };
+    });
+    await expect(
+      service.completeOAuth(
+        {
+          ...payload,
+          mode: 'personal',
+          teamId: 'T1',
+          installationId: 'install',
+          tokenRevision: 'revision-a',
+        },
+        'code',
+      ),
+    ).rejects.toThrow('access denied');
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it.each(['admin', 'agent use', 'membership'])(
+    'rejects late %s revocation before saving a channel binding',
+    async (revoked) => {
+      mocks.installation.mockResolvedValue({ id: 'install', tokenRevision: 'revision-a' });
+      vi.spyOn(service, 'getBotToken').mockResolvedValueOnce('bot-token');
+      mocks.api.mockImplementation(async () => {
+        if (revoked === 'admin') mocks.admin.mockResolvedValue(false);
+        if (revoked === 'agent use')
+          mocks.agentUse.mockRejectedValue(new Error('Agent use denied'));
+        if (revoked === 'membership') mocks.memberLock.mockResolvedValue(undefined);
+        return { channel: { id: 'C1', name: 'general' } };
+      });
+      await expect(
+        service.saveBinding({
+          workspaceId: 'workspace',
+          userId: 'user',
+          agentId: 'agent',
+          slackChannelId: 'C1',
+        }),
+      ).rejects.toThrow(revoked === 'agent use' ? 'Agent use denied' : 'access denied');
+      expect(mocks.bindingWrite).not.toHaveBeenCalled();
+    },
+  );
 });

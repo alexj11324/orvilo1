@@ -1329,6 +1329,7 @@
   "settingTTS.voice.desc": "Select a voice for the current agent, different TTS services support different voices",
   "settingTTS.voice.preview": "Voice Preview",
   "settingTTS.voice.title": "Text-to-Speech Voice",
+  "settingsSearch.clear": "Clear search",
   "settingsSearch.empty": "No settings found for \"{{keyword}}\"",
   "settingsSearch.placeholder": "Search settings...",
   "settingsSearch.tabKeywords.about": "about, version, changelog, feedback, help",

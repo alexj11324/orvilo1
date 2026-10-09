@@ -5,6 +5,7 @@ import { type FC, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { FormPassword } from '@/components/FormInput';
 import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,11 +97,10 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                     rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
-                    <Input
+                    <FormPassword
                       autoComplete="new-password"
                       disabled={!canManageCredentials}
                       placeholder={t('creds.form.valuePlaceholder')}
-                      type="password"
                     />
                   </Form.Item>
                   {fields.length > 1 && (

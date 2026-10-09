@@ -1,7 +1,6 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { Info } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
 import { Badge } from '@/components/reui/badge';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Alert, AlertTitle } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
@@ -20,14 +19,6 @@ import { useUserStore } from '@/store/user';
 import { labPreferSelectors, preferenceSelectors } from '@/store/user/selectors';
 
 import { LAB_FEATURES, type LabFeatureItem, type LabStage } from './features';
-
-const styles = createStaticStyles(({ css }) => ({
-  labItem: css`
-    .ant-form-item-row {
-      align-items: center !important;
-    }
-  `,
-}));
 
 const StageTag = memo<{ stage: LabStage }>(({ stage }) => {
   const { t } = useTranslation('labs');
@@ -75,13 +66,7 @@ const LabsForm = memo(() => {
           onRetry={() => refreshUserState()}
         />
       );
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+    return <SettingsSectionSkeleton />;
   }
 
   const checkedByFlag = Object.fromEntries(
@@ -97,7 +82,7 @@ const LabsForm = memo(() => {
         onCheckedChange={(next: boolean) => updateLab({ [flag]: next })}
       />
     ),
-    className: styles.labItem,
+    className: '[&_.ant-form-item-row]:items-center',
     desc: tLabs(`features.${i18nKey}.desc`),
     label: (
       <SettingsSearchAnchor id={`labs-${flag}`}>

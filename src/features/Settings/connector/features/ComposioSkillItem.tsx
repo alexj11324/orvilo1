@@ -193,7 +193,16 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
     // users can tell what is connected instead of hitting a blank detail panel.
     const renderNavExtra = () => {
       if (isConnecting || isWaitingAuth) {
-        return <Button loading size="sm" variant="ghost" />;
+        return (
+          <Button
+            aria-busy
+            disabled
+            loading
+            aria-label={t('tools.composio.connect', { defaultValue: 'Connect' })}
+            size="icon-sm"
+            variant="ghost"
+          />
+        );
       }
       if (isConnected) {
         return (

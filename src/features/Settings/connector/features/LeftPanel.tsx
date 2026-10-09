@@ -113,8 +113,12 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
           >
             {/* Single action: add a custom OAuth connector. */}
             <Button
-              size="sm"
+              size="icon-sm"
               variant="outline"
+              aria-label={t('connector.add.title', {
+                defaultValue: 'Add Custom Connector',
+                ns: 'tool',
+              })}
               title={t('connector.add.title', {
                 defaultValue: 'Add Custom Connector',
                 ns: 'tool',

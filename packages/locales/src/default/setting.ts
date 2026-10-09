@@ -1440,6 +1440,7 @@ export default {
     'Always on for Orvilo AI while Self-Iteration is available.',
   'settingSelfIteration.enabled.title': 'Enable Self-Iteration',
   'settingSelfIteration.title': 'Self-Iteration',
+  'settingsSearch.clear': 'Clear search',
   'settingsSearch.empty': 'No settings found for "{{keyword}}"',
   'settingsSearch.placeholder': 'Search settings...',
   'settingsSearch.tabKeywords.about': 'about, version, changelog, feedback, help',

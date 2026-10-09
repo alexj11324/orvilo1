@@ -27,7 +27,13 @@ export const createOnboardingAgentOnce = async (
   createAgent: (params: CreateAgentParams) => Promise<CreateAgentResult>,
 ): Promise<CreateAgentResult & { config?: CreateAgentParams['config'] }> => {
   if (checkpoint.attempted) {
-    const list = await homeService.getSidebarAgentList();
+    const client =
+      params.workspaceId === undefined
+        ? undefined
+        : createWorkspaceLambdaClient(params.workspaceId);
+    const list = client
+      ? await client.home.getSidebarAgentList.query()
+      : await homeService.getSidebarAgentList();
     const rows = [
       ...list.pinned,
       ...list.ungrouped,
@@ -37,7 +43,11 @@ export const createOnboardingAgentOnce = async (
       ...list.privateGroups.flatMap((group) => group.items),
     ];
     const configurations = await Promise.all(
-      rows.map((row) => agentService.getAgentConfigById(row.id)),
+      rows.map((row) =>
+        client
+          ? client.agent.getAgentConfigById.query({ agentId: row.id })
+          : agentService.getAgentConfigById(row.id),
+      ),
     );
     const existing = configurations.find(
       (config) =>

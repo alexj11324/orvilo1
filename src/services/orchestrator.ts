@@ -29,7 +29,7 @@ export const verifyOnboardingOrchestrator = async (agentId: string, workspaceId:
   const runtime = await client.agent.getAgentRuntimeForCreation.query({
     agentId,
     purpose: 'orchestrator',
-    visibility: 'private',
+    visibility: 'public',
   });
   const config = runtime.agencyConfig;
   const provider = config?.heterogeneousProvider;

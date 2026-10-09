@@ -84,10 +84,30 @@ it('lets an authenticated user with no profile name set up a workspace without c
 });
 
 vi.mock('@/features/Orchestrator/ConfiguredOrchestratorSelector', () => ({
-  default: ({ value }: { value?: string }) => <div>Orchestrator choice: {value}</div>,
+  default: ({
+    value,
+    visibility,
+    workspaceId,
+    onSelect,
+  }: {
+    value?: string;
+    visibility?: string;
+    workspaceId?: string;
+    onSelect: (id: string) => void;
+  }) => (
+    <div>
+      <span>Orchestrator choice: {value}</span>
+      <button
+        disabled={visibility !== 'public' || workspaceId !== 'new-workspace'}
+        onClick={() => onSelect('public-source')}
+      >
+        Select public source
+      </button>
+    </div>
+  ),
 }));
 
-it('keeps the first saved Agent as the Orchestrator choice and does not finish after Agent setup', async () => {
+it('preserves the private first Agent and requires explicit public source selection before finishing', async () => {
   render(<OnboardingPage />);
   fireEvent.change(document.querySelector('#onboarding-workspace')!, {
     target: { value: 'My workspace' },
@@ -98,9 +118,16 @@ it('keeps the first saved Agent as the Orchestrator choice and does not finish a
   fireEvent.click(document.querySelector<HTMLButtonElement>('button[type="submit"]')!);
   await waitFor(() => expect(screen.getByText('Configure Agent')).toBeTruthy());
   fireEvent.click(screen.getByText('Configure Agent'));
-  await waitFor(() =>
-    expect(screen.getByText('Orchestrator choice: first-saved-agent')).toBeTruthy(),
-  );
+  await waitFor(() => expect(screen.getByText('Orchestrator choice:')).toBeTruthy());
   expect(api.ensure).toHaveBeenCalledTimes(1);
   expect(api.finish).not.toHaveBeenCalled();
+  expect(screen.getByText('setup.orchestrator.finish').closest('button')?.disabled).toBe(true);
+  fireEvent.click(screen.getByText('Select public source'));
+  await waitFor(() => expect(screen.getByText('Orchestrator choice: public-source')).toBeTruthy());
+  await waitFor(() =>
+    expect(screen.getByText('setup.orchestrator.finish').closest('button')?.disabled).toBe(false),
+  );
+  fireEvent.click(screen.getByText('setup.orchestrator.finish'));
+  await waitFor(() => expect(api.finish).toHaveBeenCalledOnce());
+  expect(api.ensure).toHaveBeenCalledTimes(1);
 });

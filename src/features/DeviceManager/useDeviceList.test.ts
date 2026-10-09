@@ -4,14 +4,22 @@ import { createElement, type PropsWithChildren } from 'react';
 import { SWRConfig } from 'swr';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useAgentDeviceCandidates } from './useDeviceList';
+import { useAgentDeviceCandidates, useDeviceList } from './useDeviceList';
 
-const state = vi.hoisted(() => ({ workspaceId: 'workspace-a', query: vi.fn() }));
+const state = vi.hoisted(() => ({
+  workspaceId: 'workspace-a' as string | undefined,
+  query: vi.fn(),
+}));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => state.workspaceId,
 }));
 vi.mock('@/store/user', () => ({ useUserStore: () => true }));
-vi.mock('@/services/device', () => ({ deviceService: { listAgentCandidates: state.query } }));
+vi.mock('@/services/device', () => ({
+  deviceService: {
+    listAgentCandidates: state.query,
+    listDevices: async (scope?: string | null) => [{ deviceId: scope ?? state.workspaceId }],
+  },
+}));
 
 const wrapper = ({ children }: PropsWithChildren) =>
   createElement(
@@ -69,3 +77,17 @@ describe('Agent device candidate cache', () => {
     expect(state.query).not.toHaveBeenCalled();
   });
 });
+
+it.each(['workspace-a', undefined])(
+  'pins device discovery to the new workspace with active scope %s',
+  async (active) => {
+    state.workspaceId = active;
+    const { result, rerender } = renderHook(({ scope }) => useDeviceList(scope), {
+      initialProps: { scope: 'new-workspace' },
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.data?.[0].deviceId).toBe('new-workspace'));
+    rerender({ scope: 'next-workspace' });
+    await waitFor(() => expect(result.current.data?.[0].deviceId).toBe('next-workspace'));
+  },
+);

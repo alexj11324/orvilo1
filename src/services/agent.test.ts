@@ -2,10 +2,27 @@ import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { agentService } from './agent';
+import { deviceService } from './device';
 
-const api = vi.hoisted(() => ({ config: vi.fn() }));
+const api = vi.hoisted(() => ({ config: vi.fn(), create: vi.fn() }));
 vi.mock('@/libs/trpc/client', () => ({
-  lambdaClient: { agent: { getAgentConfigById: { query: api.config } } },
+  lambdaClient: {
+    agent: {
+      getAgentConfigById: { query: api.config },
+      createAgent: {
+        mutate: () => {
+          throw new Error('wrong active scope');
+        },
+      },
+    },
+  },
+  createWorkspaceLambdaClient: (scope: string | null) => ({
+    agent: { createAgent: { mutate: (body: unknown) => api.create(scope, body) } },
+    device: {
+      listDevices: { query: async () => [{ deviceId: scope }] },
+      scanAgents: { query: async () => ({ agents: { codex: { available: true } }, scope }) },
+    },
+  }),
 }));
 
 beforeEach(() => {
@@ -61,4 +78,26 @@ describe('full agent configuration consumer boundary', () => {
     api.config.mockRejectedValue(error);
     await expect(agentService.getAgentFullConfigById('agent-1')).rejects.toBe(error);
   });
+});
+
+it('creates a public source in the requested workspace regardless of active scope', async () => {
+  api.create.mockImplementation(async (scope, body) => ({
+    agentId: `${scope}/${body.visibility}`,
+  }));
+  await expect(
+    agentService.createAgent({
+      workspaceId: 'new-workspace',
+      visibility: 'public',
+      config: { name: 'Public source' },
+    }),
+  ).resolves.toEqual({ agentId: 'new-workspace/public' });
+});
+
+it('uses target-workspace device discovery and scanning for public source preflight', async () => {
+  await expect(deviceService.listDevices('new-workspace')).resolves.toEqual([
+    { deviceId: 'new-workspace' },
+  ]);
+  await expect(
+    deviceService.scanAgents({ deviceId: 'public-device' }, 'new-workspace'),
+  ).resolves.toMatchObject({ scope: 'new-workspace', agents: { codex: { available: true } } });
 });

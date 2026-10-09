@@ -12,6 +12,7 @@ import { agentDeviceCandidatesKey, DEVICE_LIST_SWR_KEY } from './const';
 const isDeviceQueryReady = (isLogin: boolean | undefined) => isLogin || isDesktop;
 
 /**
+ * Optional explicit scope pins creation flows before the active workspace changes.
  * Workspace-aware device list. ALWAYS use this (not
  * `lambdaQuery.device.listDevices.useQuery`) for any surface that lists or
  * resolves devices: `useClientDataSWR` augments the cache key with the active
@@ -27,11 +28,15 @@ const isDeviceQueryReady = (isLogin: boolean | undefined) => isLogin || isDeskto
  * Refresh: `refreshDeviceList()` (`./const`) revalidates every workspace
  * context's entry; the returned `mutate` revalidates just the active one.
  */
-export const useDeviceList = (): SWRResponse<DeviceListItem[]> => {
+export const useDeviceList = (workspaceId?: string | null): SWRResponse<DeviceListItem[]> => {
   const isLogin = useUserStore(authSelectors.isLogin);
   return useClientDataSWR<DeviceListItem[]>(
-    isDeviceQueryReady(isLogin) ? [DEVICE_LIST_SWR_KEY] : null,
-    () => deviceService.listDevices(),
+    isDeviceQueryReady(isLogin)
+      ? workspaceId === undefined
+        ? [DEVICE_LIST_SWR_KEY]
+        : [DEVICE_LIST_SWR_KEY, 'scope', workspaceId]
+      : null,
+    () => deviceService.listDevices(workspaceId),
   );
 };
 

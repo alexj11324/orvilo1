@@ -1,11 +1,17 @@
+import type { DeviceListItem } from '@orvilo/types';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { deviceService } from '@/services/device';
 
 import {
   buildConnectAgentConfig,
   buildPlatformAgencyConfig,
   getConnectableProvider,
 } from './providers';
-import { scanLocal } from './useAgentScan';
+import { scanLocal, useAgentScan } from './useAgentScan';
+
+vi.mock('@/services/device', () => ({ deviceService: { scanAgents: vi.fn() } }));
 
 const detectHeterogeneousAgentCommand = vi.hoisted(() => vi.fn());
 
@@ -181,4 +187,18 @@ describe('buildConnectAgentConfig selector picks', () => {
     expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('model');
     expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('effort');
   });
+});
+
+it('scans the explicit workspace public host instead of the active workspace', async () => {
+  vi.mocked(deviceService.scanAgents).mockImplementation(async (_params, scope) => ({
+    agents: { codex: { available: scope === 'new-workspace' } },
+  }));
+  const { result } = renderHook(() => useAgentScan('new-workspace'));
+  await act(async () => {
+    await result.current.scan({
+      kind: 'device',
+      device: { deviceId: 'public-device', scope: 'workspace' } as DeviceListItem,
+    });
+  });
+  expect(result.current.state.agents?.codex?.available).toBe(true);
 });

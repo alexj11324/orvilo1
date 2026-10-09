@@ -34,6 +34,7 @@ export interface CreateAgentPanelProps {
   onCancel?: () => void;
   onCreated?: (agentId: string, config?: CreateAgentParams['config']) => void | Promise<void>;
   visibility?: 'private' | 'public';
+  workspaceId?: string | null;
 }
 
 const CreateAgentPanel = ({
@@ -44,14 +45,20 @@ const CreateAgentPanel = ({
   lockVisibility,
   onCancel,
   onCreated,
-  visibility = 'private',
+  visibility: initialVisibility = 'private',
+  workspaceId: scope,
 }: CreateAgentPanelProps) => {
   const { t } = useTranslation(['chat', 'common']);
-  const workspaceId = useActiveWorkspaceId();
-  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(
-    lockVisibility ? 'private' : visibility,
-  );
-  const form = useAgentRuntimeForm({ builtinOnly, initialType, visibility: selectedVisibility });
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = scope === undefined ? activeWorkspaceId : scope;
+  const [visibility, setSelectedVisibility] = useState<'private' | 'public'>(initialVisibility);
+  const selectedVisibility = lockVisibility ? initialVisibility : visibility;
+  const form = useAgentRuntimeForm({
+    builtinOnly,
+    initialType,
+    visibility: selectedVisibility,
+    workspaceId: scope,
+  });
   const createAgent = useAgentStore((s) => s.createAgent);
   const [name, setName] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
@@ -83,6 +90,7 @@ const CreateAgentPanel = ({
             config: { ...runtime, name: name.trim(), title: name.trim() },
             groupId,
             visibility: selectedVisibility,
+            workspaceId: scope,
           };
         }
         saved.current = await createOnboardingAgentOnce(
@@ -135,7 +143,9 @@ const CreateAgentPanel = ({
             <label className="flex flex-col gap-2">
               {t('createAgent.visibility.label')}
               {lockVisibility ? (
-                <span className="text-muted-foreground">{t('createAgent.visibility.private')}</span>
+                <span className="text-muted-foreground">
+                  {t(`createAgent.visibility.${selectedVisibility}`)}
+                </span>
               ) : (
                 <Select
                   disabled={locked || !!groupId}

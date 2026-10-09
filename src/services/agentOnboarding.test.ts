@@ -258,3 +258,37 @@ describe('first agent API setup', () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 });
+
+it('resumes a public-source create in its target workspace after a lost response', async () => {
+  const checkpoint = { requestId: 'public-intent' };
+  const create = vi.fn().mockImplementation(async (params) => {
+    api.listWorkspace.mockResolvedValue({
+      pinned: [],
+      groups: [],
+      ungrouped: [{ id: 'public-source' }],
+      privatePinned: [],
+      privateUngrouped: [],
+      privateGroups: [],
+    });
+    api.config.mockResolvedValue({
+      ...params.config,
+      id: 'public-source',
+      workspaceId: 'new-workspace',
+      visibility: 'public',
+    });
+    throw new Error('response lost');
+  });
+  const params = {
+    workspaceId: 'new-workspace',
+    visibility: 'public' as const,
+    config: firstPrimeAgentConfig('model', 'public-device'),
+  };
+  await expect(createOnboardingAgentOnce(checkpoint, params, create)).rejects.toThrow(
+    'response lost',
+  );
+  api.sidebar.mockRejectedValue(new Error('wrong active scope'));
+  const resumed = await createOnboardingAgentOnce(checkpoint, params, create);
+  expect(resumed.agentId).toBe('public-source');
+  expect(resumed.config?.visibility).toBe('public');
+  expect(create).toHaveBeenCalledOnce();
+});

@@ -53,37 +53,43 @@ export const scanLocal = async (): Promise<HeterogeneousAgentScanMap> => {
   return Object.fromEntries(entries);
 };
 
-export const useAgentScan = () => {
+export const useAgentScan = (workspaceId?: string | null) => {
   const [state, setState] = useState<AgentScanState>(IDLE);
   const seqRef = useRef(0);
 
-  const scan = useCallback(async (target: ScanTarget) => {
-    const seq = ++seqRef.current;
-    setState({ agents: null, status: 'scanning' });
+  const scan = useCallback(
+    async (target: ScanTarget) => {
+      const seq = ++seqRef.current;
+      setState({ agents: null, status: 'scanning' });
 
-    try {
-      let agents: HeterogeneousAgentScanMap;
-      if (target.kind === 'local') {
-        agents = await scanLocal();
-      } else {
-        const result = await deviceService.scanAgents({ deviceId: target.device.deviceId });
-        if (result.error) {
-          if (seq === seqRef.current)
-            setState({ agents: null, error: result.error, status: 'error' });
-          return;
+      try {
+        let agents: HeterogeneousAgentScanMap;
+        if (target.kind === 'local') {
+          agents = await scanLocal();
+        } else {
+          const result = await deviceService.scanAgents(
+            { deviceId: target.device.deviceId },
+            workspaceId !== undefined && target.device.scope === 'personal' ? null : workspaceId,
+          );
+          if (result.error) {
+            if (seq === seqRef.current)
+              setState({ agents: null, error: result.error, status: 'error' });
+            return;
+          }
+          agents = result.agents;
         }
-        agents = result.agents;
+        if (seq === seqRef.current) setState({ agents, status: 'success' });
+      } catch (error) {
+        if (seq === seqRef.current)
+          setState({
+            agents: null,
+            error: error instanceof Error ? error.message : String(error),
+            status: 'error',
+          });
       }
-      if (seq === seqRef.current) setState({ agents, status: 'success' });
-    } catch (error) {
-      if (seq === seqRef.current)
-        setState({
-          agents: null,
-          error: error instanceof Error ? error.message : String(error),
-          status: 'error',
-        });
-    }
-  }, []);
+    },
+    [workspaceId],
+  );
 
   const reset = useCallback(() => {
     seqRef.current += 1;

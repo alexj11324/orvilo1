@@ -34,11 +34,13 @@ export const useAgentModelOptions = ({
   enabled,
   isLocal,
   provider,
+  workspaceId,
 }: {
   deviceId?: string;
   enabled: boolean;
   isLocal: boolean;
   provider?: ConnectableProvider;
+  workspaceId?: string | null;
 }): AgentModelOptions => {
   const capability = selectorCapabilityFor(provider?.type).model;
   const supported = enabled && !!capability;
@@ -50,16 +52,20 @@ export const useAgentModelOptions = ({
           provider.type,
           isLocal ? 'local' : (deviceId ?? ''),
           provider.command ?? '',
+          workspaceId,
         ]
       : null,
     async () => {
-      const result = await heterogeneousAgentCatalogService.listModels({
-        command: provider?.command,
-        deviceId: isLocal ? undefined : deviceId,
-        type: provider!.type as Parameters<
-          typeof heterogeneousAgentCatalogService.listModels
-        >[0]['type'],
-      });
+      const result = await heterogeneousAgentCatalogService.listModels(
+        {
+          command: provider?.command,
+          deviceId: isLocal ? undefined : deviceId,
+          type: provider!.type as Parameters<
+            typeof heterogeneousAgentCatalogService.listModels
+          >[0]['type'],
+        },
+        workspaceId,
+      );
       if (result.status === 'error') {
         const error = new Error(result.error.message);
         error.name = result.error.code;

@@ -1,4 +1,4 @@
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
 type DeviceClient = typeof lambdaClient.device;
 
@@ -8,8 +8,10 @@ type DeviceClient = typeof lambdaClient.device;
  */
 class DeviceService {
   /** All devices the user has registered (incl. offline) + live gateway sessions. */
-  listDevices() {
-    return lambdaClient.device.listDevices.query();
+  listDevices(workspaceId?: string | null) {
+    const client =
+      workspaceId === undefined ? lambdaClient : createWorkspaceLambdaClient(workspaceId);
+    return client.device.listDevices.query();
   }
 
   /** Authoritative installed-runtime candidates for the stored Agent. */
@@ -47,8 +49,13 @@ class DeviceService {
   }
 
   /** Scan a device for every known heterogeneous agent type in one pass. */
-  scanAgents(input: Parameters<DeviceClient['scanAgents']['query']>[0]) {
-    return lambdaClient.device.scanAgents.query(input);
+  scanAgents(
+    input: Parameters<DeviceClient['scanAgents']['query']>[0],
+    workspaceId?: string | null,
+  ) {
+    const client =
+      workspaceId === undefined ? lambdaClient : createWorkspaceLambdaClient(workspaceId);
+    return client.device.scanAgents.query(input);
   }
 }
 

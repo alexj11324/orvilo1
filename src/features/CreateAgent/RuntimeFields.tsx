@@ -51,16 +51,19 @@ import { eligibleExecutionDevices, useExecutionHost } from './useExecutionHost';
 export interface RuntimeRequest {
   builtinOnly?: boolean;
   visibility?: 'private' | 'public';
+  workspaceId?: string | null;
 }
 
 export const useAgentRuntimeForm = ({
   builtinOnly,
   visibility = 'private',
   initialType,
+  workspaceId: scope,
 }: RuntimeRequest & { initialType?: HeterogeneousAgentType }) => {
-  const workspaceId = useActiveWorkspaceId();
-  const host = useExecutionHost(visibility);
-  const { scan, reset, state } = useAgentScan();
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const workspaceId = scope === undefined ? activeWorkspaceId : scope;
+  const host = useExecutionHost(visibility, scope);
+  const { scan, reset, state } = useAgentScan(scope);
   const providerFetch = useFetchProviderBindings();
   const bindings = useProviderBindingStore((s) => s.bindings).filter((binding) =>
     isBuiltinAgentUsable([binding]),
@@ -87,6 +90,7 @@ export const useAgentRuntimeForm = ({
     enabled: !!host.deviceId && hasModelStep(provider?.type),
     isLocal: host.isLocal,
     provider,
+    workspaceId: scope !== undefined && host.device?.scope === 'personal' ? null : scope,
   });
   const efforts = effortOptionsFor(provider?.type, model);
   const rescan = () => {
@@ -141,7 +145,7 @@ export const useAgentRuntimeForm = ({
   const prepare = async (): Promise<Partial<OrviloAgentConfig>> => {
     if (!ready || !host.deviceId) throw new Error('FIRST_AGENT_REQUIRED');
     if (!host.isLocal || choice === BUILTIN_AGENT_KEY) {
-      const devices = await deviceService.listDevices();
+      const devices = await deviceService.listDevices(scope);
       if (
         !eligibleExecutionDevices(devices, workspaceId ?? undefined, visibility).some(
           (device) => device.deviceId === host.deviceId,

@@ -9,11 +9,12 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePermission } from '@/hooks/usePermission';
 import { useToolStore } from '@/store/tool';
 import { type OrviloSkillServer } from '@/store/tool/slices/orviloSkillStore/types';
 import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
+
+import ConnectorRow from './ConnectorRow';
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 15_000;
@@ -177,9 +178,9 @@ const OrviloSkillItem = memo<OrviloSkillItemProps>(({ provider, server, isSelect
   const isConnected = server?.status === OrviloSkillStatus.CONNECTED;
 
   // Compact connect/status control for the list row: connected → green check;
-  // otherwise a Connect button that opens the OAuth flow inline, so users can
-  // tell what is connected and aren't left staring at a blank detail panel
-  // wondering if it's a bug.
+  // otherwise a Connect button that opens the OAuth flow inline. The row itself
+  // always selects, and the detail pane of a not-connected connector explains
+  // the state and repeats the Connect action.
   const renderNavExtra = () => {
     if (isConnecting || isWaitingAuth) {
       return <Button loading size="sm" variant="ghost" />;
@@ -231,16 +232,13 @@ const OrviloSkillItem = memo<OrviloSkillItemProps>(({ provider, server, isSelect
   };
 
   return (
-    <NavItem
+    <ConnectorRow
+      action={renderNavExtra()}
       active={isSelected}
-      extra={renderNavExtra()}
-      icon={renderNavIcon}
+      icon={renderNavIcon()}
+      muted={!isConnected}
       title={provider.label}
-      titleColor={!isConnected ? cssVar.colorTextDescription : undefined}
-      // Only connected connectors open the detail panel. When disconnected,
-      // the row is inert and the only affordance is the inline Connect button —
-      // otherwise clicking opens a blank detail panel that reads as a bug.
-      onClick={isConnected ? onSelect : undefined}
+      onSelect={onSelect}
     />
   );
 });

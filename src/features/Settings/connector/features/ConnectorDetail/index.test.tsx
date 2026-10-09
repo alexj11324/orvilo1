@@ -70,6 +70,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@orvilo/const', () => ({
   COMPOSIO_APP_TYPES: [],
   isDesktop: false,
+  getComposioAppByIdentifier: () => undefined,
   getOrviloSkillProviderById: (identifier: string) =>
     identifier === 'notion'
       ? {
@@ -95,6 +96,7 @@ vi.mock('react-i18next', () => ({
           'This connector still uses the legacy plugin format. Configure it to finish upgrading, then manage its tool permissions here.',
         'tools.noConfigurablePermissions':
           'This skill does not expose configurable tool permissions.',
+        'tools.notConnected.desc': 'Not connected yet.',
       };
 
       if (translations[key]) return translations[key];
@@ -199,6 +201,15 @@ vi.mock('@/store/user/selectors', () => ({
   },
 }));
 
+const presetActions = {
+  addPreset: vi.fn(),
+  closeForm: vi.fn(),
+  githubConnecting: false,
+  githubTimedOut: false,
+  openForm: vi.fn(),
+  showForm: false,
+};
+
 const connectedNotionServer = () => ({
   identifier: 'notion',
   isConnected: true,
@@ -230,7 +241,7 @@ describe('SkillDetail', () => {
       },
     ];
 
-    render(<SkillDetail identifier="my-mcp" type="mcp-connector" />);
+    render(<SkillDetail identifier="my-mcp" presetActions={presetActions} type="mcp-connector" />);
 
     expect(await screen.findByRole('button', { name: 'Configure' })).toBeEnabled();
     expect(
@@ -246,7 +257,9 @@ describe('SkillDetail', () => {
   it('shows a disconnect action for a connected Orvilo connector without configurable tools', async () => {
     mocks.toolState.orviloSkillServers = [connectedNotionServer()];
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     expect(
       await screen.findByText('This skill does not expose configurable tool permissions.'),
@@ -271,7 +284,9 @@ describe('SkillDetail', () => {
       },
     ];
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     expect(await screen.findByTestId('connector-detail')).toHaveTextContent('connector-1');
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
@@ -310,7 +325,9 @@ describe('SkillDetail', () => {
     });
     mocks.toolState.revokeOrviloSkill.mockResolvedValue(undefined);
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
 
@@ -321,7 +338,7 @@ describe('SkillDetail', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('returns to the no-permissions state after a successful disconnect', async () => {
+  it('returns to the not-connected pane after a successful disconnect', async () => {
     const user = userEvent.setup();
     const server = {
       ...connectedNotionServer(),
@@ -342,15 +359,14 @@ describe('SkillDetail', () => {
       server.status = OrviloSkillStatus.NOT_CONNECTED;
     });
 
-    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
+    render(
+      <SkillDetail identifier="notion" presetActions={presetActions} type="orvilo-connector" />,
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
 
-    await waitFor(() =>
-      expect(
-        screen.getByText('This skill does not expose configurable tool permissions.'),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('Not connected yet.')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument();
   });
 });

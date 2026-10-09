@@ -1416,7 +1416,7 @@
     },
     {
       "rule": "isdesktop-census",
-      "importer": "src/features/Settings/connector/features/McpPresetItem.tsx",
+      "importer": "src/features/Settings/connector/features/useMcpPresetConnect.ts",
       "scope": "direct",
       "owner": "wd-05",
       "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",

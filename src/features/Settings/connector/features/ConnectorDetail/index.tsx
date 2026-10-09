@@ -1,6 +1,6 @@
 'use client';
 
-import { getOrviloSkillProviderById } from '@orvilo/const';
+import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -16,25 +16,25 @@ import { ConnectorDetail, CustomConnectorModal } from '@/features/Connectors';
 import { useSkillConnect } from '@/features/Connectors/useSkillConnect';
 import { usePermission } from '@/hooks/usePermission';
 import { useToolStore } from '@/store/tool';
-import { orviloSkillStoreSelectors } from '@/store/tool/selectors';
+import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
+import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
 import { connectorSelectors } from '@/store/tool/slices/connector';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 import { pluginSelectors } from '@/store/tool/slices/plugin/selectors';
 
+import { type ConnectorDetailType, fromMcpPresetSelectionId } from '../connectorSelection';
+import { type ConnectorPresetActions } from '../useConnectorPresetActions';
 import { getNoPermissionsTitle } from './localization';
+import NotConnectedDetail from './NotConnectedDetail';
 
 // Lazy so `ConnectorDetail`'s static import graph stays free of the
 // agent-navigation chain (`useNavigateToAgent` → chat store).
 const AgentConnectorUsage = lazy(() => import('../AgentConnectorUsage'));
+// Lazy for the same reason: the preset Connect flow pulls the workspace, host and OAuth modules.
+const PresetConnectButton = lazy(() => import('./PresetConnectButton'));
+const McpPresetDetail = lazy(() => import('./McpPresetDetail'));
 
-/**
- * The kinds of entry the Connector settings master-detail panel can render.
- *
- * Every member is a connector: a thing that grants an agent API-level
- * permissions. Prompt/agent skills are deliberately absent — they were part of
- * the retired platform skill-management product chain.
- */
-export type ConnectorDetailType =
-  'agent-connector' | 'builtin' | 'orvilo-connector' | 'mcp-connector' | 'plugin';
+export type { ConnectorDetailType };
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   noPermissions: css`
@@ -60,23 +60,26 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface ConnectorDetailProps {
   identifier: string;
   onDelete?: () => void;
+  presetActions: ConnectorPresetActions;
   type: ConnectorDetailType;
 }
 
 interface OrviloConnectorActionProps {
+  catalog?: 'composio' | 'orvilo';
   identifier: string;
   label: string;
   onDisconnected?: () => void;
 }
 
+/** Connect / Disconnect for an OAuth catalog connector (Orvilo or Composio). */
 const OrviloConnectorAction = memo<OrviloConnectorActionProps>(
-  ({ identifier, label, onDisconnected }) => {
+  ({ catalog = 'orvilo', identifier, label, onDisconnected }) => {
     const { t } = useTranslation('setting');
     const { allowed: canCreate } = usePermission('create_content');
     const { allowed: canEdit } = usePermission('edit_own_content');
     const { handleConnect, handleDisconnect, isConnected, isConnecting } = useSkillConnect({
       identifier,
-      type: 'orvilo',
+      type: catalog,
     });
 
     const handleConfirmDisconnect = useCallback(() => {
@@ -141,206 +144,259 @@ OrviloConnectorAction.displayName = 'OrviloConnectorAction';
  * - 'agent-connector': an agent-owned connector, resolved from the agent-bound
  *   pool by id (agent connectors can share a slug with a base connector)
  */
-const ConnectorDetailPanel = memo<ConnectorDetailProps>(({ identifier, type, onDelete }) => {
-  const { t: ts } = useTranslation('setting');
+const ConnectorDetailBody = memo<ConnectorDetailProps>(
+  ({ identifier, type, onDelete, presetActions }) => {
+    const { t: ts } = useTranslation('setting');
 
-  const [syncing, setSyncing] = useState(false);
-  const [noManifest, setNoManifest] = useState(false);
-  const [migrateOpen, setMigrateOpen] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [noManifest, setNoManifest] = useState(false);
+    const [migrateOpen, setMigrateOpen] = useState(false);
 
-  const { allowed: canCreate } = usePermission('create_content');
-  const { allowed: canEdit } = usePermission('edit_own_content');
+    const { allowed: canCreate } = usePermission('create_content');
+    const { allowed: canEdit } = usePermission('edit_own_content');
 
-  const syncBuiltinTool = useToolStore((s) => s.syncBuiltinTool);
-  const syncPluginTools = useToolStore((s) => s.syncPluginTools);
-  const syncToolsFromClient = useToolStore((s) => s.syncToolsFromClient);
-  const fetchConnectors = useToolStore((s) => s.fetchConnectors);
-  const connector = useToolStore(connectorSelectors.connectorByIdentifier(identifier));
-  // For agent connectors the `identifier` slot carries the connector id; resolve
-  // the row from the agent-bound pool to show its owning-agent usage block.
-  const agentBoundConnector = useToolStore((s) =>
-    type === 'agent-connector'
-      ? (s.agentBoundConnectors ?? []).find((c) => c.id === identifier)
-      : undefined,
-  );
-
-  // Legacy `user_installed_plugins` custom MCP that was never migrated to a
-  // connector. Such a row has no `user_connectors` entry, so the panel falls
-  // into the "no configurable permissions" empty state. We offer to upgrade it
-  // in place via the connector migration flow instead of leaving a dead end.
-  const legacyPlugin = useToolStore(pluginSelectors.getCustomPluginById(identifier), isEqual);
-  const canMigrateLegacy =
-    (type === 'mcp-connector' || type === 'plugin') && Boolean(legacyPlugin?.customParams?.mcp);
-
-  // For orvilo-connector: get the server's tool list from the store
-  const orviloServer = useToolStore(orviloSkillStoreSelectors.getServerByIdentifier(identifier));
-  const orviloProvider =
-    type === 'orvilo-connector' ? getOrviloSkillProviderById(identifier) : undefined;
-  const orviloLabel =
-    type === 'orvilo-connector'
-      ? orviloProvider?.label || orviloServer?.name || identifier
-      : identifier;
-
-  const noPermissionsTitle = getNoPermissionsTitle(identifier, type, ts);
-
-  const renderOrviloConnectorAction = (onDisconnected?: () => void) => {
-    if (type !== 'orvilo-connector') return undefined;
-
-    return (
-      <OrviloConnectorAction
-        identifier={identifier}
-        label={orviloLabel}
-        onDisconnected={onDisconnected}
-      />
+    const syncBuiltinTool = useToolStore((s) => s.syncBuiltinTool);
+    const syncPluginTools = useToolStore((s) => s.syncPluginTools);
+    const syncToolsFromClient = useToolStore((s) => s.syncToolsFromClient);
+    const fetchConnectors = useToolStore((s) => s.fetchConnectors);
+    const connector = useToolStore(connectorSelectors.connectorByIdentifier(identifier));
+    // For agent connectors the `identifier` slot carries the connector id; resolve
+    // the row from the agent-bound pool to show its owning-agent usage block.
+    const agentBoundConnector = useToolStore((s) =>
+      type === 'agent-connector'
+        ? (s.agentBoundConnectors ?? []).find((c) => c.id === identifier)
+        : undefined,
     );
-  };
 
-  useEffect(() => {
-    setNoManifest(false);
-    const ensureConnector = async () => {
-      setSyncing(true);
-      try {
-        if (type === 'builtin') {
-          await syncBuiltinTool(identifier);
-        } else if (type === 'orvilo-connector') {
-          // Use tools from the orvilo skill server (already fetched via OAuth flow)
-          const tools = (orviloServer?.tools ?? []).map((t) => ({
-            description: t.description,
-            inputSchema: t.inputSchema as Record<string, unknown>,
-            toolName: t.name,
-          }));
-          if (tools.length === 0) {
-            setNoManifest(true);
-          } else {
-            await syncToolsFromClient({
-              identifier,
-              name: orviloServer?.name || identifier,
-              sourceType: 'marketplace',
-              tools,
-            });
-          }
-        } else if (type === 'plugin') {
-          await syncPluginTools(identifier);
-        } else {
-          await fetchConnectors();
-        }
-      } catch {
-        setNoManifest(true);
-      } finally {
-        setSyncing(false);
-      }
+    // Legacy `user_installed_plugins` custom MCP that was never migrated to a
+    // connector. Such a row has no `user_connectors` entry, so the panel falls
+    // into the "no configurable permissions" empty state. We offer to upgrade it
+    // in place via the connector migration flow instead of leaving a dead end.
+    const legacyPlugin = useToolStore(pluginSelectors.getCustomPluginById(identifier), isEqual);
+    const canMigrateLegacy =
+      (type === 'mcp-connector' || type === 'plugin') && Boolean(legacyPlugin?.customParams?.mcp);
+
+    // For orvilo-connector: get the server's tool list from the store
+    const orviloServer = useToolStore(orviloSkillStoreSelectors.getServerByIdentifier(identifier));
+    const orviloProvider =
+      type === 'orvilo-connector' ? getOrviloSkillProviderById(identifier) : undefined;
+    const orviloLabel =
+      type === 'orvilo-connector'
+        ? orviloProvider?.label || orviloServer?.name || identifier
+        : identifier;
+
+    const composioServer = useToolStore(composioStoreSelectors.getServerByIdentifier(identifier));
+    const catalogConnected =
+      orviloServer?.status === OrviloSkillStatus.CONNECTED ||
+      composioServer?.status === ComposioServerStatus.ACTIVE;
+
+    const noPermissionsTitle = getNoPermissionsTitle(identifier, type, ts);
+
+    const renderOrviloConnectorAction = (onDisconnected?: () => void) => {
+      if (type !== 'orvilo-connector') return undefined;
+
+      return (
+        <OrviloConnectorAction
+          identifier={identifier}
+          label={orviloLabel}
+          onDisconnected={onDisconnected}
+        />
+      );
     };
 
-    ensureConnector();
-  }, [
-    fetchConnectors,
-    identifier,
-    orviloServer?.name,
-    orviloServer?.tools,
-    syncBuiltinTool,
-    syncPluginTools,
-    syncToolsFromClient,
-    type,
-  ]);
+    useEffect(() => {
+      setNoManifest(false);
+      const ensureConnector = async () => {
+        setSyncing(true);
+        try {
+          if (type === 'builtin') {
+            await syncBuiltinTool(identifier);
+          } else if (type === 'orvilo-connector') {
+            // Use tools from the orvilo skill server (already fetched via OAuth flow)
+            const tools = (orviloServer?.tools ?? []).map((t) => ({
+              description: t.description,
+              inputSchema: t.inputSchema as Record<string, unknown>,
+              toolName: t.name,
+            }));
+            if (tools.length === 0) {
+              setNoManifest(true);
+            } else {
+              await syncToolsFromClient({
+                identifier,
+                name: orviloServer?.name || identifier,
+                sourceType: 'marketplace',
+                tools,
+              });
+            }
+          } else if (type === 'plugin') {
+            await syncPluginTools(identifier);
+          } else {
+            await fetchConnectors();
+          }
+        } catch {
+          setNoManifest(true);
+        } finally {
+          setSyncing(false);
+        }
+      };
 
-  // Agent-owned connector (unified settings): the `identifier` slot
-  // carries the connector id (not the slug — agent connectors can share a slug
-  // with a base connector). Reuse the same ConnectorDetail as base connectors so
-  // tool-permission editing, sync and delete behave identically; it resolves the
-  // row from the agent-bound pool via the id-aware connector selectors.
-  if (type === 'agent-connector') {
-    const usageAgentId = agentBoundConnector?.agentId;
+      ensureConnector();
+    }, [
+      fetchConnectors,
+      identifier,
+      orviloServer?.name,
+      orviloServer?.tools,
+      syncBuiltinTool,
+      syncPluginTools,
+      syncToolsFromClient,
+      type,
+    ]);
+
+    // Agent-owned connector (unified settings): the `identifier` slot
+    // carries the connector id (not the slug — agent connectors can share a slug
+    // with a base connector). Reuse the same ConnectorDetail as base connectors so
+    // tool-permission editing, sync and delete behave identically; it resolves the
+    // row from the agent-bound pool via the id-aware connector selectors.
+    if (type === 'agent-connector') {
+      const usageAgentId = agentBoundConnector?.agentId;
+      return (
+        <ConnectorDetail
+          connectorId={identifier}
+          agentTitle={agentDisplayName({
+            name: agentBoundConnector?.agentName,
+            title: agentBoundConnector?.agentTitle,
+          })}
+          middleSlot={
+            usageAgentId ? (
+              <Suspense fallback={null}>
+                <AgentConnectorUsage
+                  agentId={usageAgentId}
+                  agentTitle={agentDisplayName({
+                    name: agentBoundConnector?.agentName,
+                    title: agentBoundConnector?.agentTitle,
+                  })}
+                />
+              </Suspense>
+            ) : undefined
+          }
+          onDelete={onDelete}
+        />
+      );
+    }
+
+    // Connector types: builtin tool / plugin / mcp-connector / orvilo-connector
+    if (syncing) {
+      return (
+        <div className="p-6">
+          <div aria-busy="true" className="flex flex-col gap-3">
+            {Array.from({ length: 6 }, (_, index) => (
+              <Skeleton className="h-4 w-full" key={index} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const composioApp =
+      type === 'plugin' && !connector ? getComposioAppByIdentifier(identifier) : undefined;
+    const isCatalogEntry = type === 'orvilo-connector' || Boolean(composioApp);
+
+    // A catalog connector that is listed but not connected: explain and offer Connect
+    // (never Disconnect / Delete — there is nothing to revoke or remove yet).
+    if ((noManifest || !connector) && isCatalogEntry && !catalogConnected && !canMigrateLegacy) {
+      const catalog = type === 'orvilo-connector' ? 'orvilo' : 'composio';
+      const label = type === 'orvilo-connector' ? orviloLabel : (composioApp?.label ?? identifier);
+      return (
+        <NotConnectedDetail
+          action={<OrviloConnectorAction catalog={catalog} identifier={identifier} label={label} />}
+          title={label}
+        />
+      );
+    }
+
+    if (noManifest || !connector) {
+      return (
+        <div className={styles.noPermissions}>
+          <div className={styles.noPermissionsHeader}>
+            <div className={styles.noPermissionsTitle}>
+              {type === 'orvilo-connector' ? orviloLabel : noPermissionsTitle}
+            </div>
+            {canMigrateLegacy ? (
+              <Button
+                disabled={!canCreate || !canEdit}
+                size="sm"
+                variant="default"
+                onClick={() => {
+                  if (!canCreate || !canEdit) return;
+                  setMigrateOpen(true);
+                }}
+              >
+                <Wrench size={14} />
+                {ts('tools.legacyConnector.configure')}
+              </Button>
+            ) : (
+              renderOrviloConnectorAction()
+            )}
+          </div>
+          {canMigrateLegacy
+            ? ts('tools.legacyConnector.upgradeDesc')
+            : ts('tools.noConfigurablePermissions')}
+          {canMigrateLegacy && legacyPlugin && (
+            <CustomConnectorModal
+              legacyPlugin={legacyPlugin}
+              open={migrateOpen}
+              onClose={() => setMigrateOpen(false)}
+              onEditSuccess={async () => {
+                setMigrateOpen(false);
+                setNoManifest(false);
+                // The migration created a `user_connectors` row keyed by the same
+                // identifier; refresh so this panel resolves it and swaps to the
+                // permission editor.
+                await fetchConnectors();
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const matchedPreset =
+      type === 'mcp-connector'
+        ? matchMcpPresetByConnector(connector, visibleMcpPresets)
+        : undefined;
+
     return (
       <ConnectorDetail
-        connectorId={identifier}
-        agentTitle={agentDisplayName({
-          name: agentBoundConnector?.agentName,
-          title: agentBoundConnector?.agentTitle,
-        })}
-        middleSlot={
-          usageAgentId ? (
-            <Suspense fallback={null}>
-              <AgentConnectorUsage
-                agentId={usageAgentId}
-                agentTitle={agentDisplayName({
-                  name: agentBoundConnector?.agentName,
-                  title: agentBoundConnector?.agentTitle,
-                })}
-              />
-            </Suspense>
+        connectorId={connector.id}
+        lifecycleActions={renderOrviloConnectorAction(() => setNoManifest(true))}
+        connectAction={
+          matchedPreset ? (
+            <PresetConnectButton
+              connector={connector}
+              preset={matchedPreset}
+              presetActions={presetActions}
+            />
           ) : undefined
         }
         onDelete={onDelete}
       />
     );
-  }
+  },
+);
 
-  // Connector types: builtin tool / plugin / mcp-connector / orvilo-connector
-  if (syncing) {
+ConnectorDetailBody.displayName = 'ConnectorDetailBody';
+
+const ConnectorDetailPanel = memo<ConnectorDetailProps>((props) => {
+  const presetId =
+    props.type === 'mcp-preset' ? fromMcpPresetSelectionId(props.identifier) : undefined;
+  if (presetId) {
     return (
-      <div className="p-6">
-        <div aria-busy="true" className="flex flex-col gap-3">
-          {Array.from({ length: 6 }, (_, index) => (
-            <Skeleton className="h-4 w-full" key={index} />
-          ))}
-        </div>
-      </div>
+      <Suspense fallback={null}>
+        <McpPresetDetail presetActions={props.presetActions} presetId={presetId} />
+      </Suspense>
     );
   }
-
-  if (noManifest || !connector) {
-    return (
-      <div className={styles.noPermissions}>
-        <div className={styles.noPermissionsHeader}>
-          <div className={styles.noPermissionsTitle}>
-            {type === 'orvilo-connector' ? orviloLabel : noPermissionsTitle}
-          </div>
-          {canMigrateLegacy ? (
-            <Button
-              disabled={!canCreate || !canEdit}
-              size="sm"
-              variant="default"
-              onClick={() => {
-                if (!canCreate || !canEdit) return;
-                setMigrateOpen(true);
-              }}
-            >
-              <Wrench size={14} />
-              {ts('tools.legacyConnector.configure')}
-            </Button>
-          ) : (
-            renderOrviloConnectorAction()
-          )}
-        </div>
-        {canMigrateLegacy
-          ? ts('tools.legacyConnector.upgradeDesc')
-          : ts('tools.noConfigurablePermissions')}
-        {canMigrateLegacy && legacyPlugin && (
-          <CustomConnectorModal
-            legacyPlugin={legacyPlugin}
-            open={migrateOpen}
-            onClose={() => setMigrateOpen(false)}
-            onEditSuccess={async () => {
-              setMigrateOpen(false);
-              setNoManifest(false);
-              // The migration created a `user_connectors` row keyed by the same
-              // identifier; refresh so this panel resolves it and swaps to the
-              // permission editor.
-              await fetchConnectors();
-            }}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <ConnectorDetail
-      connectorId={connector.id}
-      lifecycleActions={renderOrviloConnectorAction(() => setNoManifest(true))}
-      onDelete={onDelete}
-    />
-  );
+  return <ConnectorDetailBody {...props} />;
 });
 
 ConnectorDetailPanel.displayName = 'ConnectorDetailPanel';

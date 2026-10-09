@@ -41,7 +41,6 @@ import {
 } from '../store';
 import TodoProgress from '../TodoProgress';
 import InputCompletionErrorAlert from './InputCompletionErrorAlert';
-import OpStatusTray from './OpStatusTray';
 import QueueTray from './QueueTray';
 import { sendVoiceMessage } from './sendVoiceMessage';
 import {
@@ -295,15 +294,8 @@ const ChatInput = memo<ChatInputProps>(
     );
 
     // Detect whether TodoProgress will render (mirrors its own gating) so we
-    // can square the top corners of OpStatusTray when it sits flush below.
+    // can square the top corners of GoalTray when it sits flush below.
     const hasTodos = (selectCurrentTurnTodosFromMessages(dbMessages)?.items.length ?? 0) > 0;
-
-    // Detect whether OpStatusTray will render (mirrors its own `!startTime`
-    // gate) so GoalTray — which sits flush below it — can square its top corners
-    // and merge with the status strip instead of showing a seam.
-    const hasOpStatus = useChatStore(
-      (s) => operationSelectors.getVisibleAgentRuntimeStartTimeByContext(context)(s) !== undefined,
-    );
 
     // Pre-topic "armed goal" state (topic Goal lab). `armedAt` is only ever set
     // by the lab-gated "+" → Goal entry, so its presence already implies the
@@ -505,10 +497,7 @@ const ChatInput = memo<ChatInputProps>(
             <InputCompletionErrorAlert />
             {!disableQueue && hasQueuedMessages && <QueueTray />}
             <TodoProgress topAttached={!disableQueue && hasQueuedMessages} />
-            <OpStatusTray topAttached={(!disableQueue && hasQueuedMessages) || hasTodos} />
-            <GoalTray
-              topAttached={(!disableQueue && hasQueuedMessages) || hasTodos || hasOpStatus}
-            />
+            <GoalTray topAttached={(!disableQueue && hasQueuedMessages) || hasTodos} />
           </div>
           {/* Append the armed-goal chip to every composer's action bar. While armed,
               the next message becomes the goal and the placeholder explains that state. */}

@@ -58,12 +58,14 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     connectGateway,
     disconnectGateway,
     setGatewayConnectionStatus,
+    setGatewayLocalState,
     useFetchGatewayStatus,
   ] = useElectronStore((s) => [
     s.gatewayConnectionStatus,
     s.connectGateway,
     s.disconnectGateway,
     s.setGatewayConnectionStatus,
+    s.setGatewayLocalState,
     s.useFetchGatewayStatus,
   ]);
 
@@ -72,8 +74,9 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
   const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   const { data: devices, error: deviceListError, isLoading: isDeviceListLoading } = useDeviceList();
 
-  useWatchBroadcast('gatewayConnectionStatusChanged', ({ status }) => {
+  useWatchBroadcast('gatewayConnectionStatusChanged', ({ localState, status }) => {
     setGatewayConnectionStatus(status);
+    setGatewayLocalState(localState);
   });
 
   const isConnected = gatewayStatus === 'connected';

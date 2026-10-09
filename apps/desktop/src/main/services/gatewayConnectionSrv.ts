@@ -17,7 +17,7 @@ import type {
   ToolCallResponseMessage,
 } from '@orvilo/device-gateway-client';
 import type { IdentitySource } from '@orvilo/device-identity';
-import type { GatewayConnectionStatus } from '@orvilo/electron-client-ipc';
+import type { GatewayConnectionStatus, GatewayLocalState } from '@orvilo/electron-client-ipc';
 import { app, powerSaveBlocker } from 'electron';
 
 import { isDev } from '@/const/env';
@@ -25,6 +25,7 @@ import { getDesktopEnv } from '@/env';
 import { createLogger } from '@/utils/logger';
 import { getDesktopUserAgent } from '@/utils/user-agent';
 
+import { createOutcome, type RecordedOutcome, resolveLocalState } from './gatewayLocalState';
 import { ServiceModule } from './index';
 
 const logger = createLogger('services:GatewayConnectionSrv');
@@ -134,6 +135,8 @@ interface WorkspaceDeviceChecker {
 export default class GatewayConnectionService extends ServiceModule {
   private client: GatewayClient | null = null;
   private status: GatewayConnectionStatus = 'disconnected';
+  /** Last auto-connect / connect / register outcome; see `gatewayLocalState.ts`. */
+  private localOutcome: RecordedOutcome | undefined;
   private deviceId: string | null = null;
   private powerSaveBlockerId: number | null = null;
 
@@ -285,6 +288,17 @@ export default class GatewayConnectionService extends ServiceModule {
     return this.status;
   }
 
+  /** User-facing explanation of the current connection (see `gatewayLocalState.ts`). */
+  getLocalState(): GatewayLocalState {
+    return resolveLocalState({ recorded: this.localOutcome, status: this.status }, Date.now());
+  }
+
+  /** Record why connect did or did not proceed, and tell every window. */
+  recordLocalOutcome(outcome: RecordedOutcome) {
+    this.localOutcome = outcome;
+    this.broadcastStatus();
+  }
+
   async getDeviceInfo() {
     const token = await this.tokenProvider?.();
     const userId = token ? this.extractUserIdFromToken(token) : null;
@@ -329,9 +343,48 @@ export default class GatewayConnectionService extends ServiceModule {
 
   async connect(): Promise<{ error?: string; success: boolean }> {
     if (this.status === 'connected' || this.status === 'connecting') {
+      // The socket is up but the server never accepted the registration, so
+      // this is the user's "Retry": redo only the registration.
+      if (this.localOutcome?.phase === 'registerFailed') await this.retryRegistration();
       return { success: true };
     }
-    return this.doConnect();
+    try {
+      return await this.doConnect();
+    } catch (err) {
+      this.recordLocalOutcome(
+        createOutcome('gatewayUnreachable', Date.now(), (err as Error).message),
+      );
+      throw err;
+    }
+  }
+
+  private async retryRegistration() {
+    const token = await this.tokenProvider?.();
+    const userId = token ? this.extractUserIdFromToken(token) : null;
+    if (userId) await this.registerThisDevice(userId);
+  }
+
+  /**
+   * Resolve this device's identity and register it with the server registry,
+   * recording the outcome. Failure is non-fatal for the socket but never silent.
+   */
+  private async registerThisDevice(userId: string) {
+    this.recordLocalOutcome(createOutcome('registering', Date.now()));
+    const identity = await this.resolveDeviceIdentity(userId);
+    try {
+      await this.deviceRegistrar?.({
+        deviceId: identity.deviceId,
+        hostname: os.hostname(),
+        identitySource: identity.identitySource,
+        platform: process.platform,
+      });
+      this.recordLocalOutcome(createOutcome('connecting', Date.now()));
+    } catch (err) {
+      const reason = (err as Error).message;
+      logger.warn(`Device registration failed (non-fatal): ${reason}`);
+      this.recordLocalOutcome(createOutcome('registerFailed', Date.now(), reason));
+    }
+    return identity;
   }
 
   async disconnect(): Promise<{ success: boolean }> {
@@ -364,6 +417,7 @@ export default class GatewayConnectionService extends ServiceModule {
     const token = await this.tokenProvider();
     if (!token) {
       logger.warn('Cannot connect: no access token');
+      this.recordLocalOutcome(createOutcome('signInRequired', Date.now()));
       return { error: 'No access token available', success: false };
     }
 
@@ -376,16 +430,15 @@ export default class GatewayConnectionService extends ServiceModule {
     // gateway reports it online.
     let deviceId = this.getDeviceId();
     if (userId) {
-      const identity = await this.resolveDeviceIdentity(userId);
-      deviceId = identity.deviceId;
-      await this.deviceRegistrar?.({
-        deviceId: identity.deviceId,
-        hostname: os.hostname(),
-        identitySource: identity.identitySource,
-        platform: process.platform,
-      }).catch((err) => {
-        logger.warn(`Device registration failed (non-fatal): ${(err as Error).message}`);
-      });
+      deviceId = (await this.registerThisDevice(userId)).deviceId;
+    } else {
+      this.recordLocalOutcome(
+        createOutcome(
+          'registerFailed',
+          Date.now(),
+          'Access token has no user id, so this device was not registered',
+        ),
+      );
     }
 
     const { GatewayClient } = await import('@orvilo/device-gateway-client');
@@ -658,6 +711,7 @@ export default class GatewayConnectionService extends ServiceModule {
     if (!this.tokenRefresher) {
       logger.error('No token refresher configured, cannot handle auth_expired');
       this.setStatus('disconnected');
+      this.recordLocalOutcome(createOutcome('signInRequired', Date.now()));
       return;
     }
 
@@ -670,6 +724,7 @@ export default class GatewayConnectionService extends ServiceModule {
     } else {
       logger.error('Token refresh failed:', result.error);
       this.setStatus('disconnected');
+      this.recordLocalOutcome(createOutcome('signInRequired', Date.now(), result.error));
     }
   }
 
@@ -876,7 +931,14 @@ export default class GatewayConnectionService extends ServiceModule {
       this.stopPowerSaveBlocker();
     }
 
-    this.app.browserManager.broadcastToAllWindows('gatewayConnectionStatusChanged', { status });
+    this.broadcastStatus();
+  }
+
+  private broadcastStatus() {
+    this.app.browserManager.broadcastToAllWindows('gatewayConnectionStatusChanged', {
+      localState: this.getLocalState(),
+      status: this.status,
+    });
   }
 
   // ─── Gateway URL ───

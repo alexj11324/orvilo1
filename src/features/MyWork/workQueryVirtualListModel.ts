@@ -320,3 +320,25 @@ export const flattenWorkQueryFlatItems = (
     orderedIds: items.flatMap((item) => (item.taskId && !item.parentContext ? [item.taskId] : [])),
   };
 };
+
+/**
+ * Issue identifiers of the rows a virtual window renders, in order, plus each
+ * row's index in the window — what keyboard navigation walks (`ids`) and what
+ * it scrolls to when the next row is not mounted (`indexOf`). Muted
+ * parent-context repeats are skipped: they are not rows a user moves through.
+ */
+export const workQueryVirtualRowIdentifiers = (
+  windowItems: readonly WorkQueryVirtualItem[],
+  taskById: ReadonlyMap<string, WorkQueryResultTask>,
+): { ids: string[]; indexOf: Map<string, number> } => {
+  const ids: string[] = [];
+  const indexOf = new Map<string, number>();
+  windowItems.forEach((item, index) => {
+    if (item.kind !== 'row' || item.parentContext || !item.taskId) return;
+    const identifier = taskById.get(item.taskId)?.identifier;
+    if (!identifier || indexOf.has(identifier)) return;
+    ids.push(identifier);
+    indexOf.set(identifier, index);
+  });
+  return { ids, indexOf };
+};

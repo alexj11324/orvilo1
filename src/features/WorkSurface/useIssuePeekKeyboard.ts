@@ -1,0 +1,126 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+
+import { issuePeekKeyFromEvent, reduceIssuePeekKey } from './issuePeekKeyboard';
+import { findIssueRowElement, resolveIssueKeyScope } from './issuePeekKeyContext';
+
+export interface UseIssuePeekKeyboardOptions {
+  /** Off when the list has no peek (board layout, no project scope...). */
+  enabled?: boolean;
+  /** Visible Issue identifiers in render order. */
+  ids: readonly string[];
+  /** Full Issue page for the row. Absent: Enter keeps the row's own navigation. */
+  onOpenPage?: (id: string) => void;
+  /** Open / follow (`id`) or close (`null`) the peek. The host owns arming. */
+  onPeek: (id: string | null) => void;
+  /** The Issue shown in the peek pane, or `null` when it is closed. */
+  peekId: string | null;
+  /**
+   * Scroll a virtualized list so the row mounts. Called while the row to
+   * focus is not in the DOM yet.
+   */
+  reveal?: (id: string) => void;
+}
+
+const MAX_FOCUS_FRAMES = 40;
+const REVEAL_EVERY_FRAMES = 8;
+
+/**
+ * Focus restoration outlives the hook instance on purpose: opening or closing
+ * the peek can move the list under a different wrapper (My issues swaps its
+ * layout), which remounts the list and the hook with it. The newest request
+ * wins; the mounted list's `reveal` is looked up at call time.
+ */
+let focusRequest = 0;
+let mountedReveal: ((id: string) => void) | undefined;
+
+const focusIssueRow = (id: string) => {
+  const request = ++focusRequest;
+  let frame = 0;
+  // Start on the next frame: the state change that opened / closed the peek
+  // commits first, and the row we would focus now may be about to be replaced.
+  const attempt = () => {
+    if (request !== focusRequest) return;
+    const row = findIssueRowElement(id);
+    if (row) {
+      row.focus({ preventScroll: true });
+      row.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (frame % REVEAL_EVERY_FRAMES === 0) mountedReveal?.(id);
+    if (++frame < MAX_FOCUS_FRAMES) requestAnimationFrame(attempt);
+  };
+  requestAnimationFrame(attempt);
+};
+
+/**
+ * Linear's keyboard peek for an Issue list: Space toggles the peek, J/K and
+ * the arrow keys move through the visible rows (the open peek follows), Enter
+ * opens the full page, Esc closes the peek and puts focus back on its row.
+ *
+ * One `keydown` listener in the capture phase on `document`, not
+ * `react-hotkeys-hook`: a focused row is `role="button"` and activates itself
+ * on Space / Enter in a React handler, which would run before a bubbling
+ * document listener and navigate away instead of peeking. Capturing first lets
+ * us claim the key (`stopPropagation`) only when the shortcut really applies;
+ * `resolveIssueKeyScope` yields to typing, open overlays and real controls.
+ * Page-local keys, so they are deliberately not in the rebindable registry
+ * (same as the Inbox list keys).
+ */
+export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void => {
+  const latest = useRef(options);
+  latest.current = options;
+  const { enabled = true } = options;
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const reveal = (id: string) => latest.current.reveal?.(id);
+    mountedReveal = reveal;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return;
+      const key = issuePeekKeyFromEvent(event);
+      if (!key) return;
+      const scope = resolveIssueKeyScope(event.target);
+      if (!scope) return;
+      const { ids, onOpenPage, onPeek, peekId } = latest.current;
+
+      // Space / Enter on a button or link keeps its native meaning; the arrow
+      // keys scroll the peek pane, so only J / K drive the list from there.
+      if ((key === 'togglePeek' || key === 'openPage') && scope.onControl) return;
+      if (
+        (key === 'next' || key === 'previous') &&
+        !scope.fromList &&
+        event.key.startsWith('Arrow')
+      ) {
+        return;
+      }
+      if (key === 'openPage' && !onOpenPage) return;
+      // A held key must not toggle, open or close repeatedly.
+      if (event.repeat && (key === 'togglePeek' || key === 'openPage' || key === 'closePeek')) {
+        return;
+      }
+
+      const result = reduceIssuePeekKey({ currentId: scope.rowId ?? peekId, ids, peekId }, key);
+      if (!result) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (result.peekId !== undefined) onPeek(result.peekId);
+      if (result.openPageId) onOpenPage?.(result.openPageId);
+      // Focus stays on (or returns to) the list: the peek never takes it, so
+      // J / K keep working, and closing hands it back to the peeked row.
+      const focusId = result.focusId ?? result.peekId ?? (result.peekId === null ? peekId : null);
+      if (focusId) focusIssueRow(focusId);
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      if (mountedReveal === reveal) mountedReveal = undefined;
+      document.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [enabled]);
+};

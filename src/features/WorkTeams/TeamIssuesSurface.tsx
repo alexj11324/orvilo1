@@ -668,6 +668,12 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           onRetryLoadMore={retryLoadMore}
           onRetryLoadMoreGroup={retryLoadMoreGroup}
           onSelectTask={(task) => setSelected(task)}
+          onPeekTask={(task) => {
+            // Space on a row arms "Open details" and peeks it; Esc / Space on
+            // the peeked row closes the pane (the header's close button).
+            if (task) setDetailsOpen(true);
+            setSelected(task);
+          }}
         />
       </>
     );
@@ -782,7 +788,11 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
                   {results}
                 </div>
               </div>
-              <aside aria-label={t('myWork.issueDetails')} className={styles.detailPane}>
+              <aside
+                aria-label={t('myWork.issueDetails')}
+                className={styles.detailPane}
+                data-issue-peek-pane=""
+              >
                 <MyWorkIssuePane
                   identifier={selected.identifier}
                   onClose={() => setSelected(null)}

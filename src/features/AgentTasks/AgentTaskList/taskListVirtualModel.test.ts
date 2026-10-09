@@ -5,6 +5,7 @@ import {
   flattenTaskListEntries,
   taskGroupCollapseKey,
   type TaskListGroupEntry,
+  taskListRowIdentifiers,
   taskSubGroupCollapseKey,
 } from './taskListVirtualModel';
 
@@ -18,6 +19,24 @@ const entry = (
   rows: TaskRow[],
   subGroups: TaskListGroupEntry['subGroups'] = [],
 ): TaskListGroupEntry => ({ count: rows.length, meta: meta(key), rows, subGroups });
+
+describe('taskListRowIdentifiers', () => {
+  it('walks visible rows in order and skips collapsed groups and context repeats', () => {
+    const items = flattenTaskListEntries(
+      [
+        entry('running', [row('T-1'), row('T-9', 0, true), row('T-2')]),
+        entry('backlog', [row('T-3')]),
+        entry('done', [row('T-4')]),
+      ],
+      { collapsed: new Set([taskGroupCollapseKey('backlog')]), grouped: true },
+    );
+    const { ids, indexOf } = taskListRowIdentifiers(items);
+    expect(ids).toEqual(['T-1', 'T-2', 'T-4']);
+    // Window index counts group headers too — it is what Virtuoso scrolls to.
+    expect(indexOf.get('T-1')).toBe(1);
+    expect(indexOf.get('T-2')).toBe(3);
+  });
+});
 
 describe('flattenTaskListEntries', () => {
   it('lays out header + rows per group and marks the divider between top-level tasks', () => {

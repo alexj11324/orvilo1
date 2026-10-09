@@ -7,6 +7,7 @@ import {
   indexWorkQueryVirtualTasks,
   nestWorkQueryListGroups,
   stickyVirtualSections,
+  workQueryVirtualRowIdentifiers,
 } from './workQueryVirtualListModel';
 
 const task = (id: string) => ({ id, identifier: id, parentTaskId: null }) as never;
@@ -177,6 +178,40 @@ describe('stickyVirtualSections', () => {
     ]);
     expect(sections?.items.every((item) => item.kind !== 'header')).toBe(true);
     expect(sections?.groupCounts).toEqual([1, 2]);
+  });
+});
+
+describe('workQueryVirtualRowIdentifiers', () => {
+  const rowItem = (taskId: string, parentContext = false) =>
+    ({ kind: 'row', parentContext, taskId }) as never;
+  const header = { kind: 'header' } as never;
+  const taskById = new Map([
+    ['a', { id: 'a', identifier: 'T-1' }],
+    ['b', { id: 'b', identifier: 'T-2' }],
+  ]) as never;
+
+  it('lists row identifiers in window order with their window index', () => {
+    const { ids, indexOf } = workQueryVirtualRowIdentifiers(
+      [header, rowItem('a'), header, rowItem('b')],
+      taskById,
+    );
+    expect(ids).toEqual(['T-1', 'T-2']);
+    expect(indexOf.get('T-1')).toBe(1);
+    expect(indexOf.get('T-2')).toBe(3);
+  });
+
+  it('skips parent-context repeats, load-more rows and unresolved tasks', () => {
+    const { ids } = workQueryVirtualRowIdentifiers(
+      [rowItem('a', true), { kind: 'loadMore' } as never, rowItem('missing'), rowItem('b')],
+      taskById,
+    );
+    expect(ids).toEqual(['T-2']);
+  });
+
+  it('keeps only the first occurrence of an Issue', () => {
+    const { ids, indexOf } = workQueryVirtualRowIdentifiers([rowItem('a'), rowItem('a')], taskById);
+    expect(ids).toEqual(['T-1']);
+    expect(indexOf.get('T-1')).toBe(0);
   });
 });
 

@@ -2,9 +2,9 @@ import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Components } from 'react-virtuoso';
+import type { Components, VirtuosoHandle } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
@@ -13,6 +13,7 @@ import { Accordion, AccordionItem, AccordionTrigger } from '@/components/ui/acco
 import { Separator } from '@/components/ui/separator';
 import { isInteractiveRowClick } from '@/features/MyWork/myWorkDisplay';
 import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
+import { useIssuePeekKeyboard } from '@/features/WorkSurface/useIssuePeekKeyboard';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 import { COMPLETE_TASK_LIST_MAX_ITEMS } from '@/store/task/slices/list/action';
@@ -33,7 +34,7 @@ import {
 import TaskGroupLabel from './TaskGroupLabel';
 import TaskItemSkeleton from './TaskItemSkeleton';
 import type { TaskListGroupEntry, TaskListVirtualItem } from './taskListVirtualModel';
-import { flattenTaskListEntries } from './taskListVirtualModel';
+import { flattenTaskListEntries, taskListRowIdentifiers } from './taskListVirtualModel';
 import TaskRowIndent from './TaskRowIndent';
 import { useClosestScrollParent } from './useClosestScrollParent';
 
@@ -61,6 +62,12 @@ interface TaskListProps {
   milestones?: readonly TaskMilestoneRef[];
   /** Double-click escape to the full task page while peek mode is armed. */
   onOpenTask?: (task: TaskListItem) => void;
+  /**
+   * Keyboard peek: Space opens / follows (`task`) or closes (`null`) the host's
+   * peek pane, which the host arms. Supplying this binds Space / J / K / Enter /
+   * Esc — see `useIssuePeekKeyboard`.
+   */
+  onPeekTask?: (task: TaskListItem | null) => void;
   onRetry?: () => void;
   /**
    * Peek mode (the issues surface's "Open details"): with `peekOnSelect`,
@@ -175,6 +182,7 @@ const TaskList = memo<TaskListProps>((props) => {
     items,
     milestones,
     onOpenTask,
+    onPeekTask,
     onRetry,
     onSelectTask,
     onShowHiddenCompleted,
@@ -297,6 +305,34 @@ const TaskList = memo<TaskListProps>((props) => {
 
   const peekArmed = Boolean(peekOnSelect && onSelectTask);
 
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const peekRows = useMemo(() => taskListRowIdentifiers(virtualItems), [virtualItems]);
+  const revealRow = useCallback(
+    (identifier: string) => {
+      const index = peekRows.indexOf.get(identifier);
+      if (index !== undefined) virtuosoRef.current?.scrollToIndex({ align: 'center', index });
+    },
+    [peekRows],
+  );
+  const taskByIdentifier = (identifier: string) =>
+    tasks.find((task) => task.identifier === identifier);
+  useIssuePeekKeyboard({
+    enabled: Boolean(onPeekTask),
+    ids: peekRows.ids,
+    onOpenPage: onOpenTask
+      ? (identifier) => {
+          const task = taskByIdentifier(identifier);
+          if (task) onOpenTask(task);
+        }
+      : undefined,
+    onPeek: (identifier) => {
+      const task = identifier === null ? null : taskByIdentifier(identifier);
+      if (task !== undefined) onPeekTask?.(task);
+    },
+    peekId: peekArmed ? (selectedIdentifier ?? null) : null,
+    reveal: revealRow,
+  });
+
   const renderItem = useCallback(
     (_index: number, item: TaskListVirtualItem) => {
       if (item.kind !== 'row') return <TaskGroupHeader item={item} onToggle={toggleCollapsed} />;
@@ -312,6 +348,7 @@ const TaskList = memo<TaskListProps>((props) => {
         // Matches the 2px row gap the former Block wrapper gave the list.
         <div
           aria-current={selected ? 'true' : undefined}
+          data-issue-context={item.row.isParentContext || undefined}
           style={{
             borderRadius: 6,
             paddingBlock: 1,
@@ -445,6 +482,7 @@ const TaskList = memo<TaskListProps>((props) => {
             defaultItemHeight={DEFAULT_ROW_HEIGHT}
             increaseViewportBy={{ bottom: 600, top: 600 }}
             itemContent={renderItem}
+            ref={virtuosoRef}
             context={{
               footer: (
                 <>

@@ -42,10 +42,19 @@ export const ROW_INTERACTIVE_SELECTOR = [
   '[data-row-interactive]',
 ].join(', ');
 
-export const isInteractiveRowClick = (target: unknown): boolean =>
-  typeof Element !== 'undefined' &&
-  target instanceof Element &&
-  Boolean(target.closest(ROW_INTERACTIVE_SELECTOR));
+/**
+ * Attribute on a list row's own focusable root (`AgentTaskItem`). That root is
+ * `role="button"` so it is keyboard-operable, which would make every click
+ * inside the row "interactive" — the nearest match is the row itself, so it
+ * is not counted. A real control inside the row is still the nearest match.
+ */
+export const ISSUE_ROW_ATTRIBUTE = 'data-issue-row';
+
+export const isInteractiveRowClick = (target: unknown): boolean => {
+  if (typeof Element === 'undefined' || !(target instanceof Element)) return false;
+  const hit = target.closest(ROW_INTERACTIVE_SELECTOR);
+  return Boolean(hit) && !hit!.hasAttribute(ISSUE_ROW_ATTRIBUTE);
+};
 
 export interface PeekRowTriggerOptions<T> {
   /**

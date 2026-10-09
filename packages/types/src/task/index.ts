@@ -934,6 +934,8 @@ export interface TaskItem {
   editorData: unknown;
   error: string | null;
   executionGeneration: number;
+  /** Producer activity on the current fenced run; a pending question is not live execution. */
+  hasLiveExecutor?: boolean;
   heartbeatInterval: number | null;
   heartbeatTimeout: number | null;
   id: string;
@@ -946,6 +948,7 @@ export interface TaskItem {
   name: string | null;
   orchestrationOwner: TaskOrchestrationOwner;
   parentTaskId: string | null;
+  parkedReason?: string | null;
   policyRevision: number;
   /**
    * Kanban board ordering key (fractional indexing): lower renders earlier in

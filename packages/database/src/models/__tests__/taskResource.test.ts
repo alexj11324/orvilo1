@@ -39,6 +39,23 @@ const create = (visibility: 'public' | 'private' = 'public') =>
     workflowCategory: 'todo',
   });
 describe('TaskResourceModel', () => {
+  it('enforces live membership and viewer write restrictions in the model', async () => {
+    const task = await create();
+    const link = await model.add(task.id, { kind: 'link', url: 'https://example.com/keep' });
+    await db
+      .update(workspaceMembers)
+      .set({ role: 'viewer' })
+      .where(eq(workspaceMembers.userId, readerId));
+    expect(await reader.list(task.id)).toHaveLength(1);
+    await expect(
+      reader.add(task.id, { kind: 'link', url: 'https://example.com/denied' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(reader.remove(task.id, link.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, readerId));
+    await expect(reader.list(task.id)).rejects.toThrow('Task not found');
+    await expect(reader.remove(task.id, link.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(await model.list(task.id)).toHaveLength(1);
+  });
   it('persists links and independent PR resources across reload and scopes deletion', async () => {
     const task = await create();
     const link = await model.add(task.id, {

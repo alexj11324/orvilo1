@@ -2,7 +2,11 @@ import {
   AGENT_SHARE_DEFAULT_MAX_TOPICS_PER_VISITOR,
   AGENT_SHARE_DEFAULT_MAX_TURNS_PER_TOPIC,
 } from '@orvilo/const';
-import { type SharedAgentData, type SharedTopicData } from '@orvilo/types';
+import {
+  normalizeAgentRuntimeType,
+  type SharedAgentData,
+  type SharedTopicData,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { z } from 'zod';
@@ -79,6 +83,7 @@ export const shareRouter = router({
           description: share.agentDescription,
           name: share.agentName,
           openingQuestions: share.agentOpeningQuestions ?? [],
+          runtimeType: normalizeAgentRuntimeType(share.agentRuntimeType),
           tags: share.agentTags ?? [],
           title: share.agentTitle,
         },

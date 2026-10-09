@@ -139,6 +139,24 @@ describe('NotificationModel (integration)', () => {
       },
     });
     expect(await model.listFeed()).toHaveLength(1);
+    await expect(model.dismissObserved(row.id, row.activityVersion)).resolves.toBe(true);
+    await model.syncNativeInterventions(['native-question']);
+    expect(await model.listFeed()).toHaveLength(1);
+    await expect(model.findFeedRowById(row.id)).resolves.toMatchObject({
+      isRead: true,
+      isArchived: false,
+      resolvedAt: null,
+      metadata: { nativeIntervention: { operationId: 'native-op' } },
+    });
+    const [question] = await serverDB
+      .select()
+      .from(messagePlugins)
+      .where(eq(messagePlugins.id, 'native-question'));
+    expect(question.intervention).toMatchObject({ operationId: 'native-op', status: 'pending' });
+    await expect(model.getFeedSummary()).resolves.toMatchObject({
+      pendingActionCount: 1,
+      unreadBadgeCount: 0,
+    });
     await expect(
       new NotificationModel(serverDB, otherUserId).syncNativeInterventions(['native-question']),
     ).resolves.toEqual([]);
@@ -155,7 +173,7 @@ describe('NotificationModel (integration)', () => {
     expect((await model.listFeed())[0].resolvedAt).not.toBeNull();
   });
 
-  it('deletes only the observed notification and prevents its pending source from recreating it', async () => {
+  it('dismisses only the observed reminder while preserving the pending action and its card', async () => {
     const model = new NotificationModel(serverDB, userId);
     const pending = [
       {
@@ -174,8 +192,29 @@ describe('NotificationModel (integration)', () => {
     expect(await model.listFeed()).toHaveLength(1);
     await expect(model.dismissObserved(row.id, 1)).resolves.toBe(true);
     await model.ensureActionCards(pending);
-    await expect(model.listFeed()).resolves.toEqual([]);
-    await expect(model.findFeedRowById(row.id)).resolves.toBeNull();
+    await expect(model.findFeedRowById(row.id)).resolves.toMatchObject({
+      activityVersion: 1,
+      isArchived: false,
+      isRead: true,
+      readVersion: 1,
+      resolvedAt: null,
+    });
+    expect(await model.listFeed()).toHaveLength(1);
+    await expect(model.listFeed({ filter: 'unread' })).resolves.toEqual([]);
+    await expect(model.getFeedSummary()).resolves.toMatchObject({
+      pendingActionCount: 1,
+      unreadBadgeCount: 0,
+    });
+    // Repeating dismissal is harmless; a later event must still light the reminder.
+    await expect(model.dismissObserved(row.id, 1)).resolves.toBe(true);
+    await model.bumpEpisode(serverDB, {
+      episodeKey: row.episodeKey!,
+      feedRevision: 2,
+      recipientUserId: userId,
+      title: 'New activity',
+    });
+    await expect(model.dismissObserved(row.id, 1)).resolves.toBe(false);
+    await expect(model.getUnreadCount()).resolves.toBe(1);
   });
 
   describe('create', () => {
@@ -398,7 +437,7 @@ describe('NotificationModel (integration)', () => {
       });
     });
 
-    it('keeps a read but unresolved action on the badge with feedSummary', async () => {
+    it('counts a read unresolved action as pending without an unread badge', async () => {
       const model = new NotificationModel(serverDB, userId);
       const action = await model.create(
         baseNotification({
@@ -413,10 +452,10 @@ describe('NotificationModel (integration)', () => {
 
       await model.markAsRead([action!.id]);
 
-      expect(await model.getUnreadCount()).toBe(1);
+      expect(await model.getUnreadCount()).toBe(0);
       await expect(model.getFeedSummary()).resolves.toMatchObject({
         pendingActionCount: 1,
-        unreadBadgeCount: 1,
+        unreadBadgeCount: 0,
         unreadUpdateCount: 0,
       });
     });

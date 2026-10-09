@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
+
 import { hasServerRuntime } from '..';
 import { groupAgentBuilderRuntime } from '../groupAgentBuilder';
 
@@ -104,6 +106,7 @@ const groupCtx = { agentId: 'source', editingGroupId: 'cg_1' } as never;
 describe('groupAgentBuilderRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(assertCanPerformResourceAction).mockReset().mockResolvedValue(undefined);
     mockInheritRuntime.mockReset();
     mockCreateGroupWithSupervisor.mockReset();
     mockInheritRuntime.mockResolvedValue({
@@ -294,9 +297,30 @@ describe('groupAgentBuilderRuntime', () => {
   });
 
   describe('updateConfig', () => {
-    // The delegated `AgentBuilder.updateConfig` write is scoped by visibility
-    // alone, so an unchecked caller-supplied id would let a group edit
-    // reconfigure any workspace agent the caller can merely see.
+    it.each([true, false])(
+      'requires independent Agent edit access (explicit target: %s)',
+      async (explicit) => {
+        vi.mocked(assertCanPerformResourceAction).mockImplementation(async (params) => {
+          if (params.resourceType === 'agent') throw new Error('Agent edit denied');
+        });
+        await expect(
+          createRuntime('ws_1').updateConfig(
+            { ...(explicit ? { agentId: 'agt_sup' } : {}), model: 'gpt-5' },
+            groupCtx,
+          ),
+        ).rejects.toThrow('Agent edit denied');
+        expect(mockBuilderUpdateConfig).not.toHaveBeenCalled();
+        expect(assertCanPerformResourceAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: 'edit',
+            resourceId: 'agt_sup',
+            resourceType: 'agent',
+            workspaceId: 'ws_1',
+          }),
+        );
+      },
+    );
+    // Group roster membership is required in addition to independent Agent edit permission.
     it('rejects a caller-supplied agent that is not on the roster', async () => {
       const result = await createRuntime('ws_1').updateConfig(
         { agentId: 'agt_outsider', model: 'gpt-5' },

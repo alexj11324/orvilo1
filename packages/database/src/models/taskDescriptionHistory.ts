@@ -49,6 +49,7 @@ export class TaskDescriptionHistoryModel {
 
   async restore(taskId: string, historyId: string, expectedDomainRevision: number) {
     const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
+    await taskModel.assertWorkspaceAccess(true);
     const task = await taskModel.resolve(taskId);
     if (!task || task.isDeleted) throw new Error('Task not found');
     const [version] = await this.db

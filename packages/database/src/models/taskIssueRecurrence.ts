@@ -47,6 +47,7 @@ export class TaskIssueRecurrenceModel {
       nextOccurrenceAt: Date;
     },
   ) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     const task = await this.source(taskId);
     const [row] = await this.db
       .insert(taskIssueRecurrences)
@@ -78,6 +79,7 @@ export class TaskIssueRecurrenceModel {
   }
 
   async setEnabled(taskId: string, enabled: boolean) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     const task = await this.source(taskId);
     const [row] = await this.db
       .update(taskIssueRecurrences)
@@ -89,6 +91,7 @@ export class TaskIssueRecurrenceModel {
   }
 
   async remove(taskId: string) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     const task = await this.source(taskId);
     const rows = await this.db
       .delete(taskIssueRecurrences)

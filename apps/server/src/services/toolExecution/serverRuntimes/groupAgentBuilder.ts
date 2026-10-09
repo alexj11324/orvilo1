@@ -662,13 +662,7 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
         const groupId = resolveGroupId(ctx);
         const { agentId: paramAgentId, ...rest } = params;
 
-        // A caller-supplied id has to be confirmed against this group's roster
-        // first. The delegated `AgentBuilder.updateConfig` write is scoped by
-        // visibility alone, so without this check a tool call naming any agent
-        // the caller can merely *see* would reconfigure it from inside a group
-        // edit. The supervisor fallback below needs no check — it is read off
-        // the roster itself. (The tool contract documents `agentId` as optional
-        // and "defaults to the supervisor agent".)
+        // Membership chooses the target; it does not grant Agent Manage.
         if (paramAgentId) {
           if (!groupId) return noGroupContext();
 
@@ -695,6 +689,17 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
         }
 
         if (groupId) await assertGroupEditable(groupId);
+
+        if (workspaceId) {
+          await assertCanPerformResourceAction({
+            action: 'edit',
+            db: serverDB,
+            resourceId: agentId,
+            resourceType: 'agent',
+            userId,
+            workspaceId,
+          });
+        }
 
         return builder.updateConfig(rest, withEditingAgent(ctx, agentId));
       },

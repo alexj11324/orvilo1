@@ -28,6 +28,7 @@ export class TaskResourceModel {
   }
 
   async add(taskId: string, input: { kind: TaskResourceKind; title?: string; url: string }) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     const task = await this.resolve(taskId);
     const url = new URL(input.url);
     if (
@@ -63,6 +64,7 @@ export class TaskResourceModel {
   }
 
   async remove(taskId: string, resourceId: string) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     const task = await this.resolve(taskId);
     const rows = await this.db
       .delete(taskResources)

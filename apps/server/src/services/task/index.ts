@@ -463,7 +463,7 @@ export class TaskService {
       /** Canonical Issue Status written atomically with the legacy `status`. */
       workflow?: Pick<
         TaskStatusTransitionExtra,
-        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId' | 'parkedReason'
       >;
     },
     /**
@@ -489,7 +489,7 @@ export class TaskService {
       status: TaskStatus;
       workflow?: Pick<
         TaskStatusTransitionExtra,
-        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId' | 'parkedReason'
       >;
     },
     actor: undefined,
@@ -510,7 +510,7 @@ export class TaskService {
       status: TaskStatus;
       workflow?: Pick<
         TaskStatusTransitionExtra,
-        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId' | 'parkedReason'
       >;
     },
     actor?: { agentId?: string | null; userId?: string | null },

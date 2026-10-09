@@ -292,9 +292,8 @@ export const notificationRouter = router({
     }),
 
   unreadCount: notificationReadProcedure.query(async ({ ctx }) => {
-    // Same union as the sidebar badge / Inbox header after source repair:
-    // unread updates plus unresolved actions, including live transfers that
-    // never got a projection row.
+    // Repair source cards before counting unread reminders. Pending actions
+    // remain separately visible even after their reminder is dismissed.
     await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
     const summary = await ctx.notificationModel.getFeedSummary();
     return summary.unreadBadgeCount;

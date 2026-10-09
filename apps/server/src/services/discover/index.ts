@@ -31,6 +31,7 @@ import {
   CacheTag,
   McpCategory,
   McpSorts,
+  normalizeAgentRuntimeType,
 } from '@orvilo/types';
 import dayjs from 'dayjs';
 import debug from 'debug';
@@ -206,7 +207,13 @@ export class DiscoverService {
       log('legacyGetAssistantListRaw: no valid list found, returning empty array');
       return [];
     }
-    const result = list.map(({ meta, ...item }) => ({ ...item, ...meta }));
+    const result = list.map(({ meta, ...item }) => ({
+      ...item,
+      ...meta,
+      runtimeType: normalizeAgentRuntimeType(
+        item.config?.agencyConfig?.heterogeneousProvider?.type,
+      ),
+    }));
     log('legacyGetAssistantListRaw: returning %d items', result.length);
     return result;
   };
@@ -236,6 +243,9 @@ export class DiscoverService {
     });
     const result = {
       ...assistant,
+      runtimeType: normalizeAgentRuntimeType(
+        assistant.config?.agencyConfig?.heterogeneousProvider?.type,
+      ),
       related: list.items.filter((item) => item.identifier !== assistant.identifier).slice(0, 6),
     };
     log(
@@ -379,6 +389,11 @@ export class DiscoverService {
         avatar: data.avatar || normalizedAuthor.name || '',
         category: (data as any).category || 'general',
         config: data.config || {},
+        runtimeType: normalizeAgentRuntimeType(
+          (data as any).runtimeType ??
+            (data as any).agencyConfig?.heterogeneousProvider?.type ??
+            (data.config as any)?.agencyConfig?.heterogeneousProvider?.type,
+        ),
         createdAt: (data as any).createdAt,
         currentVersion: data.version,
         description: (data as any).description || data.summary,
@@ -524,6 +539,11 @@ export class DiscoverService {
           avatar: item.avatar || normalizedAuthor.name || '',
           category: item.category || 'general',
           config: item.config || {},
+          runtimeType: normalizeAgentRuntimeType(
+            item.runtimeType ??
+              item.agencyConfig?.heterogeneousProvider?.type ??
+              item.config?.agencyConfig?.heterogeneousProvider?.type,
+          ),
           createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
           description: item.description || item.summary || '',
           forkCount: item.forkCount,
@@ -689,6 +709,11 @@ export class DiscoverService {
           avatar: item.avatar || '',
           category: item.category,
           config: {} as any,
+          runtimeType: normalizeAgentRuntimeType(
+            item.runtimeType ??
+              item.agencyConfig?.heterogeneousProvider?.type ??
+              item.config?.agencyConfig?.heterogeneousProvider?.type,
+          ),
           createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
           description: item.description || '',
           homepage: discoverUrl('assistant', item.identifier),

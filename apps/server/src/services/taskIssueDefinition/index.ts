@@ -8,6 +8,7 @@ import { TaskLabelModel } from '@/database/models/taskLabel';
 import { TeamModel } from '@/database/models/team';
 import { tasks } from '@/database/schemas/task';
 import { taskIssueTemplates } from '@/database/schemas/taskIssueTemplate';
+import { taskLabelBindings } from '@/database/schemas/taskLabel';
 import type { OrviloDatabase } from '@/database/type';
 import { lockTaskDependencyGraph } from '@/database/utils/taskDependencyLock';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
@@ -42,6 +43,7 @@ export class TaskIssueDefinitionService {
   }
 
   private async lockSource(id: string, expectedDomainRevision: number) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     await lockTaskDependencyGraph(this.db, this.userId, this.workspaceId);
     const source = await this.source(id);
     const [locked] = await this.db
@@ -75,10 +77,22 @@ export class TaskIssueDefinitionService {
   private async definition(
     task: TaskItem,
     copyAssignees = false,
+    copyLabels = true,
   ): Promise<TaskIssueTemplateDefinition> {
-    const labels = await new TaskLabelModel(this.db, this.userId, this.workspaceId).listForTask(
-      task.id,
-    );
+    const labels = copyLabels
+      ? await new TaskLabelModel(this.db, this.userId, this.workspaceId).listForTask(task.id)
+      : [];
+    if (copyLabels) {
+      const bindings = await this.db
+        .select({ labelId: taskLabelBindings.labelId })
+        .from(taskLabelBindings)
+        .where(eq(taskLabelBindings.taskId, task.id));
+      if (bindings.length !== labels.length)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'One or more issue labels are unavailable',
+        });
+    }
     return {
       description: task.description,
       editorData: task.editorData,
@@ -104,6 +118,7 @@ export class TaskIssueDefinitionService {
       dueDate?: string | null;
     },
   ) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     if (
       definition.teamId &&
       this.workspaceId &&
@@ -153,8 +168,11 @@ export class TaskIssueDefinitionService {
       const originals = input.includeSubIssues ? await service.completeSubtree(source) : [source];
       const copies = new Map<string, string>();
       for (const original of originals) {
-        const definition = await service.definition(original, input.copyAssignees === true);
-        if (input.copyLabels === false) definition.labelIds = [];
+        const definition = await service.definition(
+          original,
+          input.copyAssignees === true,
+          input.copyLabels !== false,
+        );
         if (input.copyProject === false) definition.projectId = null;
         if (input.copyTeam === false) definition.teamId = null;
         const created = await service.createFromDefinition(definition, {
@@ -213,6 +231,7 @@ export class TaskIssueDefinitionService {
   }
 
   async markDuplicate(input: { id: string; targetId: string; expectedDomainRevision: number }) {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
     const source = await this.source(input.id);
     const target = await this.source(input.targetId);
     if (source.id === target.id || target.duplicateOfTaskId)
@@ -356,6 +375,7 @@ export class TaskIssueDefinitionService {
   }
 
   async templates() {
+    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess();
     const rows = await this.db
       .select()
       .from(taskIssueTemplates)

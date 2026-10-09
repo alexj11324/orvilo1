@@ -1,4 +1,5 @@
 import type { ShareVisibility } from '../topic';
+import type { HeterogeneousAgentType } from './heterogeneousAgent';
 
 /**
  * The share's own rules, restated for the visitor BEFORE they invest in a
@@ -29,6 +30,7 @@ export interface SharedAgentStats {
 export interface SharedAgentData {
   agentId: string;
   agentMeta: {
+    runtimeType: HeterogeneousAgentType;
     avatar: string | null;
     backgroundColor: string | null;
     description: string | null;

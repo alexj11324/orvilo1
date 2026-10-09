@@ -1,5 +1,6 @@
 import type {
   MyWorkMode,
+  TaskAttentionReason,
   TaskDispatchPhase,
   TaskLabelSummary,
   TaskStatus,
@@ -66,11 +67,13 @@ import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamRead
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
 import {
+  hasLiveTaskExecutor,
   latestDispatchPhase,
   legacyStatusExpr,
   predicateForLegacyStatus,
   predicateForLegacyStatuses,
   TASK_OPEN_WORKFLOW,
+  taskAttentionReasonExpr,
 } from './taskExecutionSql';
 import { TaskLabelModel, toTaskLabelSummary } from './taskLabel';
 import { TeamModel } from './team';
@@ -993,6 +996,7 @@ const attentionGroupExpr = (ctx: {
   workspaceId?: string;
 }): SQL<string> =>
   sql<string>`CASE
+  WHEN ${taskAttentionReasonExpr} = 'needs_input' THEN 'needs_input'
   WHEN ${TASK_OPEN_WORKFLOW} AND ${tasks.priority} = 1 THEN 'urgent'
   WHEN ${TASK_OPEN_WORKFLOW} AND EXISTS (
     SELECT 1
@@ -1040,7 +1044,7 @@ const axisExpr = (
       return legacyStatusExpr;
     }
     case 'workflowCategory': {
-      return sql`${tasks.workflowCategory}`;
+      return sql`CASE WHEN ${taskAttentionReasonExpr} = 'needs_input' THEN 'needs_input' ELSE ${tasks.workflowCategory} END`;
     }
     case 'priority': {
       return sql`coalesce(${tasks.priority}::text, '0')`;
@@ -1065,9 +1069,10 @@ const axisExpr = (
 
 /** Finite axes keep their empty buckets. Assignee and project only return keys that exist. */
 const finiteBoardKeys = (axis: string): readonly string[] | undefined => {
-  if (axis === 'attention') return ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
+  if (axis === 'attention')
+    return ['needs_input', 'urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
   if (axis === 'status') return WORK_QUERY_STATUS_COLUMNS;
-  if (axis === 'workflowCategory') return WORK_QUERY_WORKFLOW_COLUMNS;
+  if (axis === 'workflowCategory') return ['needs_input', ...WORK_QUERY_WORKFLOW_COLUMNS];
   if (axis === 'priority') return WORK_QUERY_PRIORITY_KEYS;
   return undefined;
 };
@@ -1355,23 +1360,36 @@ export class WorkQueryModel {
       // rows, never the stored `tasks.status` value.
       status: statusById.get(row.id)?.status ?? 'backlog',
       dispatchPhase: statusById.get(row.id)?.dispatchPhase ?? null,
+      hasLiveExecutor: statusById.get(row.id)?.hasLiveExecutor ?? false,
+      attentionReason: statusById.get(row.id)?.attentionReason ?? 'none',
+      parkedReason: statusById.get(row.id)?.parkedReason ?? null,
     }));
   };
 
   private derivedTaskStatusByIds = async (ids: string[]) => {
     if (ids.length === 0)
-      return new Map<string, { status: TaskStatus; dispatchPhase: TaskDispatchPhase | null }>();
+      return new Map<
+        string,
+        {
+          status: TaskStatus;
+          dispatchPhase: TaskDispatchPhase | null;
+          hasLiveExecutor: boolean;
+          attentionReason: TaskAttentionReason;
+          parkedReason: string | null;
+        }
+      >();
     const rows = await this.db
       .select({
         id: tasks.id,
         status: sql<TaskStatus>`${legacyStatusExpr}`,
         dispatchPhase: sql<TaskDispatchPhase | null>`${latestDispatchPhase}`,
+        hasLiveExecutor: sql<boolean>`${hasLiveTaskExecutor}`,
+        attentionReason: taskAttentionReasonExpr,
+        parkedReason: sql<string | null>`${tasks.context} #>> '{execution,parked,reason}'`,
       })
       .from(tasks)
       .where(and(inArray(tasks.id, ids), this.ownership()));
-    return new Map(
-      rows.map((row) => [row.id, { status: row.status, dispatchPhase: row.dispatchPhase }]),
-    );
+    return new Map(rows.map(({ id, ...state }) => [id, state]));
   };
 
   private compileCtx = (

@@ -93,5 +93,40 @@
     "name": "chain-of-thought",
     "registry": "https://elements.ai-sdk.dev/api/registry/chain-of-thought.json",
     "sha256": "5ccfddc925c98161c2508f63632380bb9976bfe95ffede4b9332451dcb6f0b70"
+  },
+  {
+    "name": "audio-player",
+    "registry": "https://elements.ai-sdk.dev/api/registry/audio-player.json",
+    "sha256": "6e062ff256ce07cb7fc14c425576061e28932a0f0be5722252b25345d581478d"
+  },
+  {
+    "name": "web-preview",
+    "registry": "https://elements.ai-sdk.dev/api/registry/web-preview.json",
+    "sha256": "026d9450b55ae67b25447c290f3f76784598afd0eb5c764b2339eab3d50ba24f"
+  },
+  {
+    "name": "file-tree",
+    "registry": "https://elements.ai-sdk.dev/api/registry/file-tree.json",
+    "sha256": "df8b9be8407e5a23bc6ca181cbdbea582daa2be36e5c22774bd651e0855632c7"
+  },
+  {
+    "name": "agent",
+    "registry": "https://elements.ai-sdk.dev/api/registry/agent.json",
+    "sha256": "f0742c2070a59d58814943d1724bc1e01f8976dd1004921a5027b29b7ae6cee1"
+  },
+  {
+    "name": "test-results",
+    "registry": "https://elements.ai-sdk.dev/api/registry/test-results.json",
+    "sha256": "db9b8ef2b898bf8c74bc92673ed6b32b1885bd52f791a9c23770e21881cd20a7"
+  },
+  {
+    "name": "stack-trace",
+    "registry": "https://elements.ai-sdk.dev/api/registry/stack-trace.json",
+    "sha256": "9dd7d0896bd5bc6bb8434bcaca45dda2cc37574836150cc4bcfd21aef646d2d3"
+  },
+  {
+    "name": "commit",
+    "registry": "https://elements.ai-sdk.dev/api/registry/commit.json",
+    "sha256": "95cc59a93caff07b3f3eb21e77de7f3577857986531c8039c8f454f675d006e3"
   }
 ]

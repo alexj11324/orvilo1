@@ -233,3 +233,13 @@ Existing non-React DOM regressions exercise sibling panes, independently pending
 owners, a hidden retained pane, and replacement-list/delayed-header restoration.
 They cover the focus helper; fresh Electron grouped-list acceptance remains
 pending for the current revision.
+
+## Sticky header keyboard order
+
+The grouped virtualizer moves headers out of its body row array. Header J/K
+navigation therefore reads the pre-section render snapshot, including collapsed
+headers and lanes. Row keys and reveal indexes still come from the body array
+that `GroupedVirtuoso.itemContent` renders. Existing model regressions run the
+flatten → sticky sections → keyboard rows → header reducer pipeline for open
+groups, collapsed groups and collapsed lanes. They do not replace Electron
+acceptance of focused sticky headers in the integrated candidate.

@@ -213,8 +213,8 @@ const WorkQueryVirtualList = ({
 
   const virtuosoRef = useRef<GroupedVirtuosoHandle | VirtuosoHandle>(null);
   const peekRows = useMemo(
-    () => workQueryVirtualPeekRows(windowItems, taskById),
-    [windowItems, taskById],
+    () => workQueryVirtualPeekRows(windowItems, taskById, items),
+    [windowItems, taskById, items],
   );
   const revealRow = useCallback(
     (rowKey: string) => {

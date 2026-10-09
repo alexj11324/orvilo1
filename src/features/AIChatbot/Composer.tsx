@@ -98,12 +98,9 @@ export default function Composer({
 
   return (
     <div
+      className={cn('relative w-full', expand && 'fixed inset-4 z-50 flex w-auto flex-col bg-card')}
       ref={slashMenuRef}
       style={{ display: hidden ? 'none' : undefined }}
-      className={cn(
-        'relative w-full',
-        expand && 'fixed inset-4 z-50 flex w-auto flex-col bg-background',
-      )}
       onDragOver={(event) => {
         skillDrop.onDragOver(event);
         topicDrop.onDragOver(event);
@@ -128,7 +125,7 @@ export default function Composer({
             },
           }}
           groupClassName={cn(
-            'h-auto flex-col rounded-[8px] border-border bg-background shadow-xs has-disabled:bg-background has-disabled:opacity-100 dark:bg-background dark:has-disabled:bg-background',
+            'h-auto flex-col rounded-[8px] border-border bg-card shadow-xs has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
             expand && 'min-h-0 flex-1',
           )}
         >

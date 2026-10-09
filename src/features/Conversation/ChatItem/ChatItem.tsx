@@ -95,8 +95,10 @@ const ChatItem = memo<ChatItemProps>(
             <Title avatar={avatar} showTitle={showTitle} time={time} titleAddon={titleAddon} />
           </div>
         )}
-        {chatbotSurface && (headerAddon || titleAddon) && (
+        {chatbotSurface && (showAvatar || headerAddon || titleAddon) && (
           <div className={cn('flex items-center gap-2', isUser && 'self-end')}>
+            {showAvatar &&
+              (customAvatarRender ? customAvatarRender(avatar, avatarContent) : avatarContent)}
             {headerAddon}
             {titleAddon}
           </div>

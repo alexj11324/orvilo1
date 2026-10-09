@@ -46,7 +46,7 @@ import {
   parseGitCommits,
   parseTestReport,
   resolveStackFilePath,
-} from './structuredOutput';
+} from './parseStructuredOutput';
 
 interface StructuredOutputProps {
   view: ReturnType<typeof useStructuredOutput>;

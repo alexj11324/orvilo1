@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { ToolOutput } from '@/components/ai-elements/tool';
 
-import { parseOpenCodeGlob } from './glob';
+import { parseOpenCodeGlob } from './parseGlob';
 
 const ListFiles = LocalSystemRenders.listFiles;
 export const OpenCodeGlob = (props: BuiltinRenderProps) => {

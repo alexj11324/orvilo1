@@ -5,7 +5,7 @@ import {
   parseGitCommits,
   parseTestReport,
   resolveStackFilePath,
-} from './structuredOutput';
+} from './parseStructuredOutput';
 
 const report = {
   numFailedTests: 1,

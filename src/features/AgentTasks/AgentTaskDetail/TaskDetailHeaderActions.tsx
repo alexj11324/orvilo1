@@ -165,7 +165,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
   const copy = useTaskCopyActions();
   const task = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const taskUuid = task?.id;
-  // Links/PRs are addressed by identifier, not the database id (see issueResourceRef).
+  // Links/PRs use the exact database id, including legacy ids (see issueResourceRef).
   const resourceRef = issueResourceRef(task);
   const domainRevision = task?.domainRevision;
   const isClosed = task?.workflowCategory === 'canceled' || task?.workflowCategory === 'done';

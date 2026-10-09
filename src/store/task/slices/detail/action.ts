@@ -220,7 +220,7 @@ export class TaskDetailSliceActionImpl {
       throw error;
     }
     // Post-success refresh failing is not the comment failing: it is saved.
-    await this.internal_refreshTaskDetail(taskId);
+    await this.internal_refreshTaskDetail(taskId).catch(() => {});
     return result;
   };
 

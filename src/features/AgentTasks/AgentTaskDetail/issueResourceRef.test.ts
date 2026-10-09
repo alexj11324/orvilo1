@@ -8,8 +8,10 @@ describe('issueResourceRef', () => {
     expect(issueResourceRef({ id: 'task_abc123', identifier: 'PARITY-8' })).toBe('task_abc123');
   });
 
-  it('falls back to the identifier for ids TaskModel.resolve would not treat as ids', () => {
-    expect(issueResourceRef({ id: 'taskparitymine0002', identifier: 'PMI-2' })).toBe('PMI-2');
+  it('addresses legacy rows by exact id even when their identifier is shared', () => {
+    expect(issueResourceRef({ id: 'taskparitymine0002', identifier: 'PMI-2' })).toBe(
+      'taskparitymine0002',
+    );
   });
 
   it('uses the database id when no identifier is loaded', () => {

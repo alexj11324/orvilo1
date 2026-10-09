@@ -621,9 +621,10 @@ describe('TaskDetailHeaderActions', () => {
 
       act(() => child('remove', 'remove-link-resource-1')?.onClick?.());
 
-      // The fixture id has no `task_` prefix, so the server could not resolve
-      // it as an id: the link is addressed by identifier (see issueResourceRef).
-      await waitFor(() => expect(mocks.removeLink).toHaveBeenCalledWith('T-1', 'resource-1'));
+      // Legacy ids now resolve directly, so removal uses the exact row id.
+      await waitFor(() =>
+        expect(mocks.removeLink).toHaveBeenCalledWith('task-uuid-1', 'resource-1'),
+      );
       await waitFor(() => expect(mocks.resourceRefresh).toHaveBeenCalledTimes(1));
     });
 

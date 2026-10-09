@@ -3,12 +3,7 @@ import { createStaticStyles } from 'antd-style';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { memo, useEffect, useState } from 'react';
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
 import { ScrollBar } from '@/components/ui/scroll-area';
 import MarkdownMessage from '@/features/Conversation/Markdown';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
@@ -57,49 +52,50 @@ const Thinking = memo<ThinkingProps>((props) => {
   }, [thinking]);
 
   return (
-    <Accordion
-      multiple
-      className="gap-2"
-      value={showDetail ? ['thinking'] : []}
-      onValueChange={(keys) => setShowDetail(keys.length > 0)}
+    <Reasoning
+      className="mb-0"
+      duration={duration === undefined ? undefined : duration / 1000}
+      isStreaming={thinking}
+      open={showDetail}
+      style={props.style}
+      onOpenChange={setShowDetail}
     >
-      <AccordionItem value="thinking">
-        <AccordionTrigger
-          className="hover:no-underline"
-          style={{ paddingBlock: 4, paddingInline: 4 }}
-        >
-          <Title duration={duration} showDetail={showDetail} thinking={thinking} />
-        </AccordionTrigger>
-        <AccordionContent>
-          {
-            <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
-              <ScrollAreaPrimitive.Viewport
-                className={styles.contentScroll}
-                ref={ref as RefObject<HTMLDivElement>}
-                onScroll={handleScroll}
-              >
-                {typeof content === 'string' ? (
-                  <MarkdownMessage
-                    animated={thinkingAnimated}
-                    citations={citations}
-                    variant={'chat'}
-                    style={{
-                      overflow: 'unset',
-                    }}
-                  >
-                    {content}
-                  </MarkdownMessage>
-                ) : (
-                  content
-                )}
-              </ScrollAreaPrimitive.Viewport>
-              <ScrollBar />
-              <ScrollAreaPrimitive.Corner />
-            </ScrollAreaPrimitive.Root>
-          }
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+      <ReasoningTrigger
+        className="hover:no-underline"
+        style={{ paddingBlock: 4, paddingInline: 4 }}
+      >
+        <Title duration={duration} showDetail={showDetail} thinking={thinking} />
+      </ReasoningTrigger>
+      <ReasoningContent className="mt-2">
+        {
+          <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
+            <ScrollAreaPrimitive.Viewport
+              className={styles.contentScroll}
+              ref={ref as RefObject<HTMLDivElement>}
+              onScroll={handleScroll}
+            >
+              {typeof content === 'string' ? (
+                <MarkdownMessage
+                  animated={thinkingAnimated}
+                  citations={citations}
+                  streaming={thinking}
+                  variant={'chat'}
+                  style={{
+                    overflow: 'unset',
+                  }}
+                >
+                  {content}
+                </MarkdownMessage>
+              ) : (
+                content
+              )}
+            </ScrollAreaPrimitive.Viewport>
+            <ScrollBar />
+            <ScrollAreaPrimitive.Corner />
+          </ScrollAreaPrimitive.Root>
+        }
+      </ReasoningContent>
+    </Reasoning>
   );
 });
 

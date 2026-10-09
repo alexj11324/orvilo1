@@ -2,16 +2,23 @@
 
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import { ChevronDown, ChevronRight, PencilIcon, PlusIcon, TargetIcon } from 'lucide-react';
-import { createElement, memo, useEffect, useState } from 'react';
+import { PencilIcon, PlusIcon, TargetIcon } from 'lucide-react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import {
+  Plan,
+  PlanAction,
+  PlanContent,
+  PlanHeader,
+  PlanTitle,
+  PlanTrigger,
+} from '@/components/ai-elements/plan';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useConversationStore } from '../../store';
 import { pickArmedMessage } from './armedMessage';
@@ -26,38 +33,17 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 4px;
     padding-inline: 8px;
   `,
-  container: css`
-    border: 1px solid ${cssVar.colorFillSecondary};
-    border-block-end: none;
-    border-start-start-radius: 12px;
-    border-start-end-radius: 12px;
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  containerTopAttached: css`
-    border-start-start-radius: 0;
-    border-start-end-radius: 0;
-  `,
   goalRow: css`
     padding-block: 6px 8px;
     padding-inline: 12px;
 
-    &:hover .verify-tray-goal-edit {
+    &:hover .verify-tray-goal-edit,
+    &:focus-within .verify-tray-goal-edit {
       opacity: 1;
     }
   `,
   goalText: css`
     color: ${cssVar.colorTextSecondary};
-  `,
-  head: css`
-    cursor: pointer;
-    user-select: none;
-    padding-block: 6px;
-    padding-inline: 12px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
   `,
   rowEdit: css`
     opacity: 0;
@@ -141,25 +127,15 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
     });
 
   return (
-    <div
-      className={cn(
-        'flex flex-col',
-        cx(styles.container, topAttached && styles.containerTopAttached),
-      )}
+    <Plan
+      className={cn('gap-2 rounded-b-none', topAttached && 'rounded-t-none')}
+      open={open}
+      onOpenChange={setOpen}
     >
-      <div
-        {...clickableProps()}
-        className={cn(
-          cn('flex items-center gap-2 justify-between', styles.head),
-          CLICKABLE_FOCUS_RING,
-        )}
-        onClick={() => setOpen(!open)}
-      >
+      <PlanHeader className="items-center gap-2">
         <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
           <TargetIcon color={cssVar.colorTextSecondary} size={14} />
-          <div className="font-semibold text-[12px]" style={{ flexShrink: 0 }}>
-            {t('acceptance.tray.goalLabel')}
-          </div>
+          <PlanTitle className="shrink-0 text-sm">{t('acceptance.tray.goalLabel')}</PlanTitle>
           {/* The goal sentence rides inline only while collapsed; expanded, the
               "Goal" section below owns it, so showing it here too is redundant. */}
           {!open && <span className={styles.summary}>{goal}</span>}
@@ -169,63 +145,56 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
             </div>
           )}
         </div>
-        {createElement(open ? ChevronDown : ChevronRight, {
-          color: cssVar.colorTextQuaternary,
-          size: 14,
-        })}
-      </div>
-
-      {open && (
-        <>
-          <div className={cn('flex flex-col gap-1', styles.goalRow)}>
-            <div className="flex items-center gap-2 justify-between">
-              <div className={styles.secLabel}>{t('acceptance.tray.goalSection')}</div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span style={{ display: 'inline-flex' }}>
-                        <ActionIcon
-                          aria-label={t('edit', { ns: 'common' })}
-                          className={cx('verify-tray-goal-edit', styles.rowEdit)}
-                          icon={PencilIcon}
-                          size={'small'}
-                          onClick={openEditGoal}
-                        />
-                      </span>
-                    }
-                  />
-                  <TooltipContent>{t('acceptance.tray.goalModal.editTitle')}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className={cn('text-sm', styles.goalText)}>{goal}</div>
+        <PlanAction>
+          <PlanTrigger />
+        </PlanAction>
+      </PlanHeader>
+      <PlanContent className="px-0">
+        <div className={cn('flex flex-col gap-1', styles.goalRow)}>
+          <div className="flex items-center gap-2 justify-between">
+            <div className={styles.secLabel}>{t('acceptance.tray.goalSection')}</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <ActionIcon
+                        aria-label={t('edit', { ns: 'common' })}
+                        className={cx('verify-tray-goal-edit', styles.rowEdit)}
+                        icon={PencilIcon}
+                        size={'small'}
+                        onClick={openEditGoal}
+                      />
+                    </span>
+                  }
+                />
+                <TooltipContent>{t('acceptance.tray.goalModal.editTitle')}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
+          <div className={cn('text-sm', styles.goalText)}>{goal}</div>
+        </div>
 
-          {checks.length > 0 && (
-            <div
-              className={cn('flex flex-col gap-0.5', styles.goalRow)}
-              style={{ paddingBlock: 0 }}
-            >
-              <div className={styles.secLabel}>{t('acceptance.tray.trackSection')}</div>
-            </div>
-          )}
-          {checks.map((check) => (
-            <CheckItem
-              check={check}
-              key={check.id}
-              onRemove={() => removeCheck(check.id)}
-              onUpdate={(patch) => updateCheck(check.id, patch)}
-            />
-          ))}
-          <div className={cn('flex', styles.addRow)}>
-            <Button size="sm" variant="ghost" onClick={openAddCheck}>
-              <PlusIcon data-icon="inline-start" /> {t('acceptance.tray.addCheck')}
-            </Button>
+        {checks.length > 0 && (
+          <div className={cn('flex flex-col gap-0.5', styles.goalRow)} style={{ paddingBlock: 0 }}>
+            <div className={styles.secLabel}>{t('acceptance.tray.trackSection')}</div>
           </div>
-        </>
-      )}
-    </div>
+        )}
+        {checks.map((check) => (
+          <CheckItem
+            check={check}
+            key={check.id}
+            onRemove={() => removeCheck(check.id)}
+            onUpdate={(patch) => updateCheck(check.id, patch)}
+          />
+        ))}
+        <div className={cn('flex', styles.addRow)}>
+          <Button size="sm" variant="ghost" onClick={openAddCheck}>
+            <PlusIcon data-icon="inline-start" /> {t('acceptance.tray.addCheck')}
+          </Button>
+        </div>
+      </PlanContent>
+    </Plan>
   );
 });
 

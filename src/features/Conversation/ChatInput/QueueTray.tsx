@@ -6,7 +6,20 @@ import { ArrowUp, ListEnd, Pencil, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
+import {
+  Queue,
+  QueueItem,
+  QueueItemAction,
+  QueueItemActions,
+  QueueItemAttachment,
+  QueueItemContent,
+  QueueItemIndicator,
+  QueueList,
+  QueueSection,
+  QueueSectionContent,
+  QueueSectionLabel,
+  QueueSectionTrigger,
+} from '@/components/ai-elements/queue';
 import FileIcon from '@/components/FileIcon';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useChatStore } from '@/store/chat';
@@ -26,12 +39,6 @@ import { createQueueSendNowGate } from './utils';
 const PREVIEW_SIZE = 28;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    border: 1px solid ${cssVar.colorFillSecondary};
-    border-block-end: none;
-    border-radius: 12px 12px 0 0;
-    background: ${cssVar.colorBgElevated};
-  `,
   fileChip: css`
     overflow: hidden;
     flex-shrink: 0;
@@ -51,10 +58,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     overflow: hidden;
     text-overflow: ellipsis;
   `,
-  icon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
   imageThumb: css`
     flex-shrink: 0;
 
@@ -71,21 +74,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       height: 28px !important;
       object-fit: cover;
     }
-  `,
-  item: css`
-    padding-block: 6px 4px;
-    padding-inline: 12px 8px;
-  `,
-  itemDivider: css`
-    border-block-start: 1px solid ${cssVar.colorFillTertiary};
-  `,
-  text: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    line-height: 1.4;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   `,
 }));
 
@@ -239,52 +227,61 @@ const QueueTray = memo(() => {
   if (!canUseResource) return null;
 
   return (
-    <div className={cn('flex flex-col gap-0', styles.container)}>
-      {queuedMessages.map((msg, index) => {
-        const previews = msg.filesPreview ?? [];
-        return (
-          <div
-            key={msg.id}
-            className={cn(
-              'flex items-center gap-2',
-              index > 0 ? `${styles.item} ${styles.itemDivider}` : styles.item,
-            )}
-          >
-            <ListEnd className={styles.icon} size={14} />
-            <div className="flex items-center flex-1 gap-2" style={{ overflow: 'hidden' }}>
-              {previews.length > 0 && (
-                <div className="flex gap-1" style={{ flex: 'none' }}>
-                  {previews.map((file) => (
-                    <QueuedFilePreview file={file} key={file.id} />
-                  ))}
+    <Queue data-testid="conversation-message-queue">
+      <QueueSection>
+        <QueueSectionTrigger>
+          <QueueSectionLabel
+            count={queuedMessages.length}
+            icon={<ListEnd className="size-4" />}
+            label={t('inputQueue.title')}
+          />
+        </QueueSectionTrigger>
+        <QueueSectionContent>
+          <QueueList>
+            {queuedMessages.map((msg) => (
+              <QueueItem key={msg.id}>
+                <div className="flex items-start gap-2">
+                  <QueueItemIndicator />
+                  <QueueItemContent className="min-w-0 flex-1" title={msg.content}>
+                    {msg.content}
+                  </QueueItemContent>
+                  <QueueItemActions>
+                    <QueueItemAction
+                      aria-label={t('inputQueue.edit')}
+                      title={t('inputQueue.edit')}
+                      onClick={() => handleEdit(msg)}
+                    >
+                      <Pencil className="size-3.5" />
+                    </QueueItemAction>
+                    <QueueItemAction
+                      aria-label={t('inputQueue.sendNow')}
+                      title={t('inputQueue.sendNow')}
+                      onClick={() => handleSendNow(msg)}
+                    >
+                      <ArrowUp className="size-3.5" />
+                    </QueueItemAction>
+                    <QueueItemAction
+                      aria-label={t('inputQueue.delete')}
+                      title={t('inputQueue.delete')}
+                      onClick={() => removeQueuedMessage(contextKey, msg.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </QueueItemAction>
+                  </QueueItemActions>
                 </div>
-              )}
-              {msg.content && (
-                <div className={cn('flex flex-col flex-1', styles.text)}>{msg.content}</div>
-              )}
-            </div>
-            <ActionIcon
-              icon={Pencil}
-              size="small"
-              title={t('inputQueue.edit')}
-              onClick={() => handleEdit(msg)}
-            />
-            <ActionIcon
-              icon={ArrowUp}
-              size="small"
-              title={t('inputQueue.sendNow')}
-              onClick={() => handleSendNow(msg)}
-            />
-            <ActionIcon
-              icon={Trash2}
-              size="small"
-              title={t('inputQueue.delete')}
-              onClick={() => removeQueuedMessage(contextKey, msg.id)}
-            />
-          </div>
-        );
-      })}
-    </div>
+                {!!msg.filesPreview?.length && (
+                  <QueueItemAttachment>
+                    {msg.filesPreview.map((file) => (
+                      <QueuedFilePreview file={file} key={file.id} />
+                    ))}
+                  </QueueItemAttachment>
+                )}
+              </QueueItem>
+            ))}
+          </QueueList>
+        </QueueSectionContent>
+      </QueueSection>
+    </Queue>
   );
 });
 

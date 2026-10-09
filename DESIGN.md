@@ -248,3 +248,15 @@ owned by Orvilo. This scoped exception also permits `thinking-orbs` in the two
 conversation status components despite the inherited ESLint preference for
 LobeHub Spin. It does not authorize replacing unrelated spinners or user avatars.
 Evidence and state contract: `docs/research/thinking-orbs/implementation.md`.
+
+### AI Elements conversation presentation
+
+For `feat/orbs-chat`, the user selected AI Elements as the first choice for
+matching chat surfaces, with ReUI Code Block for code. Reuse upstream component
+structure and spacing within the conversation and composer; map their colors to
+existing semantic theme tokens and their triggers to local Base UI primitives.
+This supersedes the earlier experiment's requirement to retain the old input
+layout. Keep the chosen Orbs, Beam and Bot accents, real domain state, permission
+guards, editor behavior and specialized preview engines. The removed composer
+operation ticker and four-square Tools shortcut stay removed; Skills use `/`.
+Source provenance and behavior coverage: `docs/research/thinking-orbs/ai-elements-migration.md`.

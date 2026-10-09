@@ -15,9 +15,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     margin-block-end: 12px;
   `,
   content: css`
-    /* ChatInput's maxHeight owns the vertical scrolling; an overflow:auto here
-      never scrolls itself but still severs position:sticky inside intervention
-      bodies from that real scroll container. */
+    /* The Confirmation body owns scrolling; preserve sticky children within it. */
     overflow-y: visible;
     flex: 1;
     min-height: 0;

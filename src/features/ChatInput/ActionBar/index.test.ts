@@ -12,9 +12,18 @@ const tokenMocks = vi.hoisted(() => ({
   useTokenBreakdown: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/chat', () => ({
-  TokenTag: ({ value }: { value: number }) =>
-    createElement('div', { 'data-testid': 'token-tag' }, value),
+vi.mock('@/components/ai-elements/context', () => ({
+  Context: ({ usedTokens, children }: { usedTokens: number; children: ReactNode }) =>
+    createElement(
+      'div',
+      {},
+      createElement('span', { 'data-testid': 'token-tag' }, usedTokens),
+      children,
+    ),
+  ContextTrigger: () => null,
+  ContextContent: ({ children }: { children: ReactNode }) => createElement('div', {}, children),
+  ContextContentHeader: () => null,
+  ContextContentBody: ({ children }: { children: ReactNode }) => createElement('div', {}, children),
 }));
 
 vi.mock('@/store/user', () => ({

@@ -1,9 +1,13 @@
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { FileLock2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Attachment,
+  AttachmentInfo,
+  AttachmentPreview,
+} from '@/components/ai-elements/attachments';
 import FileIcon from '@/components/FileIcon';
 import { useChatStore } from '@/store/chat';
 import { type ChatFileItem } from '@/types/index';
@@ -19,14 +23,7 @@ const InaccessibleFileItem = memo(() => {
   const { t } = useTranslation('chat');
 
   return (
-    <div
-      className="flex items-center gap-3 py-2"
-      style={{
-        paddingInline: '12px 16px',
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
-      }}
-    >
+    <div className="flex items-center gap-3 rounded-lg border p-3">
       <FileLock2Icon size={32} style={{ opacity: 0.45 }} />
       <div className="flex flex-col" style={{ overflow: 'hidden' }}>
         <div className="truncate text-muted-foreground">{t('inaccessibleFile.name')}</div>
@@ -42,26 +39,20 @@ const FileItem = memo<ChatFileItem>(({ id, fileType, size, name, inaccessible })
   if (inaccessible) return <InaccessibleFileItem />;
 
   return (
-    <div
+    <Attachment
       {...clickableProps()}
-      className={cn('flex items-center gap-3 py-2', CLICKABLE_FOCUS_RING)}
-      key={id}
-      style={{
-        cursor: 'pointer',
-        paddingInline: '12px 16px',
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
-      }}
-      onClick={() => {
-        openFilePreview({ fileId: id });
-      }}
+      className={cn('cursor-pointer', CLICKABLE_FOCUS_RING)}
+      data={{ type: 'file', id, filename: name, mediaType: fileType, url: '' }}
+      onClick={() => openFilePreview({ fileId: id })}
     >
-      <FileIcon fileName={name} fileType={fileType} size={32} />
-      <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-        <div className="truncate">{name}</div>
-        <div className="text-[12px] text-muted-foreground">{formatSize(size)}</div>
+      <AttachmentPreview
+        fallbackIcon={<FileIcon fileName={name} fileType={fileType} size={28} />}
+      />
+      <div className="min-w-0 flex-1">
+        <AttachmentInfo />
+        <div className="text-xs text-muted-foreground">{formatSize(size)}</div>
       </div>
-    </div>
+    </Attachment>
   );
 });
 export default FileItem;

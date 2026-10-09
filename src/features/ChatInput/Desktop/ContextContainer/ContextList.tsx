@@ -1,6 +1,7 @@
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
+import { Attachments } from '@/components/ai-elements/attachments';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { fileChatSelectors, useFileStore } from '@/store/file';
@@ -39,7 +40,7 @@ const ContextList = memo(() => {
 
   return (
     <ScrollArea className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}>
-      <div className="flex flex-row gap-1 px-0 flex-wrap" style={{ paddingBlockStart: 8 }}>
+      <Attachments className="pt-2" variant="inline">
         {selectionList.map((item) =>
           item.source === 'element' ? (
             <ElementItem key={item.id} {...item} />
@@ -50,7 +51,7 @@ const ContextList = memo(() => {
         {inputFilesList.map((item) => (
           <ContextItem key={item.id} {...item} />
         ))}
-      </div>
+      </Attachments>
     </ScrollArea>
   );
 });

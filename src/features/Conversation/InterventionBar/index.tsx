@@ -1,5 +1,6 @@
-import { ChatInput } from '@lobehub/editor/react';
 import { memo, useCallback, useMemo, useState } from 'react';
+
+import { Confirmation, ConfirmationRequest } from '@/components/ai-elements/confirmation';
 
 import { useConversationResourceAccess } from '../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../store';
@@ -71,33 +72,35 @@ const InterventionBar = memo<InterventionBarProps>(({ interventions }) => {
   const canApproveBatch = canApproveInterventionBatch(batch);
 
   return (
-    <ChatInput
+    <Confirmation
       data-pending-hotkey-scope
-      className={styles.container}
-      footer={<div className={styles.actions} ref={setActionsPortalTarget} />}
-      // The card's action row — Stop sits beside Submit inside `ApprovalActions`
-      // and the whole row portals in here.
-      maxHeight={'50vh' as any}
-      resize={false}
+      approval={{ id: activeIntervention.toolCallId }}
+      className="mb-3 gap-0 overflow-hidden p-0"
+      state="approval-requested"
     >
-      {hasMultipleCards && (
-        <InterventionTabBar
-          activeIndex={activeIndex}
-          interventions={interventions}
-          approveAll={
-            canUseResource && canApproveBatch
-              ? { count: batch.length, loading: approveAllLoading, onApprove: handleApproveAll }
-              : undefined
-          }
-          onTabChange={handleTabChange}
-        />
-      )}
-      <InterventionContent
-        actionsPortalTarget={actionsPortalTarget}
-        intervention={activeIntervention}
-        key={activeIntervention.toolCallId}
-      />
-    </ChatInput>
+      <ConfirmationRequest>
+        <div className="max-h-[50vh] min-h-0 overflow-y-auto">
+          {hasMultipleCards && (
+            <InterventionTabBar
+              activeIndex={activeIndex}
+              interventions={interventions}
+              approveAll={
+                canUseResource && canApproveBatch
+                  ? { count: batch.length, loading: approveAllLoading, onApprove: handleApproveAll }
+                  : undefined
+              }
+              onTabChange={handleTabChange}
+            />
+          )}
+          <InterventionContent
+            actionsPortalTarget={actionsPortalTarget}
+            intervention={activeIntervention}
+            key={activeIntervention.toolCallId}
+          />
+        </div>
+        <div className={styles.actions} ref={setActionsPortalTarget} />
+      </ConfirmationRequest>
+    </Confirmation>
   );
 });
 

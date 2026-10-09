@@ -6,7 +6,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { ConfirmationAction } from '@/components/ai-elements/confirmation';
 
 import { useConversationResourceAccess } from '../../../../../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../../../../../store';
@@ -369,7 +369,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
         </div>
 
         <div className={styles.footer}>
-          <Button
+          <ConfirmationAction
             disabled={loading || isMessageCreating}
             loading={stopping}
             size="default"
@@ -377,8 +377,8 @@ const ApprovalActions = memo<ApprovalActionsProps>(
             onClick={handleStop}
           >
             <CircleStop data-icon="inline-start" /> {t('tool.intervention.stop')}
-          </Button>
-          <Button
+          </ConfirmationAction>
+          <ConfirmationAction
             className={styles.submitButton}
             disabled={isMessageCreating}
             loading={loading}
@@ -390,7 +390,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
             <span className={styles.shortcutHint}>
               <CornerDownLeft size={12} />
             </span>
-          </Button>
+          </ConfirmationAction>
         </div>
       </div>
     );

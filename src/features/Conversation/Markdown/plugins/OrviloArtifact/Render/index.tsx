@@ -1,54 +1,20 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Artifact,
+  ArtifactDescription,
+  ArtifactHeader,
+  ArtifactTitle,
+} from '@/components/ai-elements/artifact';
 import { Spinner } from '@/components/ui/spinner';
-import { useIsDark } from '@/hooks/useIsDark';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, messageStateSelectors } from '@/store/chat/selectors';
-import { dotLoading } from '@/styles/loading';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { type MarkdownElementProps } from '../../type';
 import ArtifactIcon from './Icon';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  avatar: css`
-    border-inline-end: 1px solid ${cssVar.colorSplit};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  container: css`
-    cursor: pointer;
-
-    margin-block-start: 12px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 8px;
-
-    color: ${cssVar.colorText};
-
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  container_dark: css`
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  desc: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    text-overflow: ellipsis;
-  `,
-}));
 
 interface ArtifactProps extends MarkdownElementProps {
   identifier: string;
@@ -59,7 +25,6 @@ interface ArtifactProps extends MarkdownElementProps {
 
 const Render = memo<ArtifactProps>(({ identifier, title, type, language, children, id }) => {
   const { t } = useTranslation('chat');
-  const isDarkMode = useIsDark();
 
   const hasChildren = !!children;
   const str = ((children as string) || '').toString?.();
@@ -80,15 +45,15 @@ const Render = memo<ArtifactProps>(({ identifier, title, type, language, childre
   useEffect(() => {
     if (!hasChildren || !isGenerating) return;
 
-    openArtifactUI();
-  }, [isGenerating, hasChildren, str, identifier, title, type, id, language]);
+    openArtifact({ id, identifier, language, title, type });
+  }, [isGenerating, hasChildren, str, identifier, title, type, id, language, openArtifact]);
 
   return (
-    <div
+    <Artifact
       {...clickableProps()}
       style={{ width: '100%' }}
       className={cn(
-        cn('flex flex-col gap-4', cx(styles.container, isDarkMode && styles.container_dark)),
+        'mt-3 w-full cursor-pointer transition-colors hover:bg-muted/50',
         CLICKABLE_FOCUS_RING,
       )}
       onClick={() => {
@@ -102,37 +67,25 @@ const Render = memo<ArtifactProps>(({ identifier, title, type, language, childre
         }
       }}
     >
-      <div className="flex items-center flex-1">
-        <div
-          className={cn('flex items-center justify-center', styles.avatar)}
-          style={{ height: 64, width: 64 }}
-        >
+      <ArtifactHeader className="justify-start gap-3 border-b-0">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
           <ArtifactIcon type={type} />
         </div>
-        <div className="flex flex-col gap-1 py-2 px-3">
-          {!title && isGenerating ? (
-            <div className={cn('flex', cx(dotLoading))}>{t('artifact.generating')}</div>
-          ) : (
-            <div className={cn('flex flex-col', cx(styles.title))}>
-              {title || t('artifact.unknownTitle')}
-            </div>
-          )}
+        <div className="min-w-0 space-y-1">
+          <ArtifactTitle className="truncate">
+            {!title && isGenerating
+              ? t('artifact.generating')
+              : title || t('artifact.unknownTitle')}
+          </ArtifactTitle>
           {hasChildren && (
-            <div className={cn('flex', styles.desc)}>
-              {identifier} ·&nbsp;
-              <div className="flex gap-0.5">
-                {!isArtifactTagClosed && (
-                  <div>
-                    <Spinner />
-                  </div>
-                )}
-                {str?.length}
-              </div>
-            </div>
+            <ArtifactDescription className="flex items-center gap-1 text-xs">
+              <span className="truncate">{identifier}</span> ·{!isArtifactTagClosed && <Spinner />}
+              <span>{str?.length}</span>
+            </ArtifactDescription>
           )}
         </div>
-      </div>
-    </div>
+      </ArtifactHeader>
+    </Artifact>
   );
 });
 

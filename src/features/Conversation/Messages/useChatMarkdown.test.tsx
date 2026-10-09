@@ -67,5 +67,18 @@ describe('useChatMarkdown (assistant / grouped message pipeline)', () => {
 
     expect(result.current.markdownProps.animated).toBe(false);
     expect(result.current.markdownProps.enableStream).toBe(false);
+    expect(result.current.markdownProps.streaming).toBe(false);
+  });
+
+  it('tracks code streaming without requiring the text fade-in animation', () => {
+    const { result, rerender } = renderHook(
+      ({ generating }) => useChatMarkdown({ id: 'a5', isGenerating: generating }),
+      { initialProps: { generating: true } },
+    );
+
+    expect(result.current.markdownProps.animated).toBe(false);
+    expect(result.current.markdownProps.streaming).toBe(true);
+    rerender({ generating: false });
+    expect(result.current.markdownProps.streaming).toBe(false);
   });
 });

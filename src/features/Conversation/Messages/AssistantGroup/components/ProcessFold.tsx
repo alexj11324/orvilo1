@@ -1,111 +1,35 @@
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
-import { ChevronRight } from 'lucide-react';
-import { memo, type ReactNode, useMemo, useState } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Separator } from '@/components/ui/separator';
-
-const PROCESS_KEY = 'process';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  title: css`
-    min-width: 0;
-    color: ${cssVar.colorTextTertiary};
-    transition: color 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-}));
-
-/**
- * The Accordion's borderless header paints a hover fill that bleeds outward
- * through a negative inline margin, and `message-body`'s `overflow: hidden`
- * clips that into cut corners. Stripping the header chrome leaves a bare text
- * row sitting on the answer's baseline, with hover reading as the text
- * brightening instead. Inline styles are deliberate — they outrank the
- * package's `:hover` background rule without an `!important`.
- */
-const HEADER_STYLE = { background: 'transparent', margin: 0 } as const;
-/** `font: inherit` drops the trigger's built-in 500 weight so the summary row
- *  reads as plain body text instead of a heading. */
-const TRIGGER_STYLE = { font: 'inherit', padding: 0 } as const;
-/** The stripped header has no padding of its own, so the expanded process would
- *  otherwise start flush against it. */
-const CONTENT_STYLE = { paddingBlockStart: 8 } as const;
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+} from '@/components/ai-elements/chain-of-thought';
 
 interface ProcessFoldProps {
-  /** Rendered process (reasoning + tools + intermediate prose); shown only when expanded. */
   children: ReactNode;
-  /** Whether the process starts expanded. */
   defaultExpanded?: boolean;
-  /** Formatted turn duration, e.g. "3m 37s". Hidden when absent. */
   durationText?: string;
-  /** Number of steps in the turn = count of assistant (call_llm) messages. */
   stepCount: number;
 }
 
-/**
- * Codex-style "已处理 {duration}" header that folds a finished turn's *process*
- * (reasoning + tool calls + intermediate narration) into one persistent,
- * toggleable row. The turn's final answer is rendered separately and stays
- * visible regardless of this state. Purely a view affordance — never persisted.
- */
+/** The process alone collapses; the persisted final answer remains outside. */
 const ProcessFold = memo<ProcessFoldProps>(
   ({ children, durationText, stepCount, defaultExpanded = false }) => {
     const { t } = useTranslation('chat');
-    const [expanded, setExpanded] = useState(defaultExpanded);
-    const value = useMemo(() => (expanded ? [PROCESS_KEY] : []), [expanded]);
-
-    const title = (
-      <div className={cn('flex items-center gap-1.5', styles.title)}>
-        <div style={{ color: 'inherit', minWidth: 0 }}>
+    return (
+      <ChainOfThought defaultOpen={defaultExpanded}>
+        <ChainOfThoughtHeader>
           {durationText
             ? t('turnProcess.ranFor', { count: stepCount, duration: durationText })
             : t('turnProcess.done', { count: stepCount })}
-        </div>
-        <ChevronRight
-          size={14}
-          style={{
-            flex: 'none',
-            transform: expanded ? 'rotate(90deg)' : undefined,
-            transition: 'transform 200ms',
-          }}
-        />
-      </div>
-    );
-
-    return (
-      <>
-        <Accordion
-          multiple
-          value={value}
-          onValueChange={(next) => setExpanded(next.includes(PROCESS_KEY))}
-        >
-          <AccordionItem style={HEADER_STYLE} value={PROCESS_KEY}>
-            <AccordionTrigger
-              className="hover:no-underline [&_[data-slot=accordion-trigger-icon]]:hidden"
-              style={TRIGGER_STYLE}
-            >
-              {title}
-            </AccordionTrigger>
-            <AccordionContent style={CONTENT_STYLE}>{children}</AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        <Separator style={{ marginBlock: 0 }} />
-      </>
+        </ChainOfThoughtHeader>
+        <ChainOfThoughtContent>{children}</ChainOfThoughtContent>
+      </ChainOfThought>
     );
   },
 );
 
 ProcessFold.displayName = 'ProcessFold';
-
 export default ProcessFold;

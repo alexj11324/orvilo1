@@ -1,7 +1,9 @@
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { ChatInputActions } from '@lobehub/editor/react';
-import { memo, useMemo } from 'react';
+import { type Key, memo, type ReactNode, useMemo } from 'react';
 
+import { PromptInputTools } from '@/components/ai-elements/prompt-input';
+import { Separator } from '@/components/ui/separator';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
@@ -14,6 +16,8 @@ import { useChatInputStore } from '../store';
 import { type DropdownPlacement } from './context';
 import { ActionBarContext } from './context';
 import { filterChatOnlyActions } from './filterChatOnlyActions';
+
+type ActionItem = { children?: ReactNode; key?: Key; wrapper?: (node: ReactNode) => ReactNode };
 
 const mapActionToItem = (actionKey: ActionKey) => {
   const Render = actionMap[actionKey];
@@ -87,21 +91,40 @@ const ActionToolbar = memo<ActionToolbarProps>(
 
     return (
       <ActionBarContext value={contextValue}>
-        <ChatInputActions
-          autoCollapse={!disableCollapse}
-          collapseOffset={mobile ? 48 : 80}
-          defaultGroupCollapse={!disableCollapse}
-          groupCollapse={disableCollapse ? false : !expandInputActionbar}
-          items={items}
-          style={{ paddingLeft: 6 }}
-          onGroupCollapseChange={
-            disableCollapse
-              ? undefined
-              : (v) => {
-                  toggleExpandInputActionbar(!v);
-                }
-          }
-        />
+        {!mobile && disableCollapse ? (
+          <PromptInputTools>
+            {items?.map((item, index) =>
+              item.type === 'divider' ? (
+                <Separator className="mx-1 h-4" key={`divider-${index}`} orientation="vertical" />
+              ) : item.type === 'collapse' ||
+                item.type === 'dropdown' ||
+                !(item as ActionItem).children ? (
+                <ChatInputActions items={[item]} key={`extra-${index}`} />
+              ) : (
+                <div className="flex shrink-0 items-center" key={(item as ActionItem).key}>
+                  {(item as ActionItem).wrapper?.((item as ActionItem).children) ??
+                    (item as ActionItem).children}
+                </div>
+              ),
+            )}
+          </PromptInputTools>
+        ) : (
+          <ChatInputActions
+            autoCollapse={!disableCollapse}
+            collapseOffset={mobile ? 48 : 80}
+            defaultGroupCollapse={!disableCollapse}
+            groupCollapse={disableCollapse ? false : !expandInputActionbar}
+            items={items}
+            style={{ paddingLeft: 6 }}
+            onGroupCollapseChange={
+              disableCollapse
+                ? undefined
+                : (v) => {
+                    toggleExpandInputActionbar(!v);
+                  }
+            }
+          />
+        )}
       </ActionBarContext>
     );
   },

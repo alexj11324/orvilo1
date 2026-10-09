@@ -2,13 +2,13 @@
 
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import { ChevronDown, ChevronRight, CircleDashed, PencilIcon } from 'lucide-react';
-import { createElement, memo, useState } from 'react';
+import { CircleDashed, PencilIcon } from 'lucide-react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Task, TaskContent, TaskTrigger } from '@/components/ai-elements/task';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { openCheckEditModal } from './EditModal';
 import type { TrayCheck } from './types';
@@ -34,7 +34,8 @@ const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillQuaternary};
     }
 
-    &:hover .verify-tray-row-edit {
+    &:hover .verify-tray-row-edit,
+    &:focus-within .verify-tray-row-edit {
       opacity: 1;
     }
   `,
@@ -61,18 +62,13 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={cn('flex flex-col gap-2', styles.row)}>
-      <div
-        className={cn('flex items-center gap-2 justify-between', styles.head)}
-        onClick={() => setOpen(!open)}
-      >
-        <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
+    <Task className={cn('flex flex-col gap-2', styles.row)} open={open} onOpenChange={setOpen}>
+      <div className={cn('flex items-center gap-2 justify-between', styles.head)}>
+        <TaskTrigger className="min-w-0 flex-1" title={check.name}>
           {/* Draft item has no verdict yet — a neutral glyph, not a false pass/fail. */}
           <CircleDashed color={cssVar.colorTextQuaternary} size={14} />
-          <div {...clickableProps()} className={cn('truncate text-sm', CLICKABLE_FOCUS_RING)}>
-            {check.name}
-          </div>
-        </div>
+          <span className="truncate text-sm">{check.name}</span>
+        </TaskTrigger>
         <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
           <TooltipProvider>
             <Tooltip>
@@ -95,22 +91,18 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
               <TooltipContent>{t('acceptance.tray.editModal.editTitle')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          {createElement(open ? ChevronDown : ChevronRight, {
-            color: cssVar.colorTextQuaternary,
-            size: 14,
-          })}
         </div>
       </div>
 
-      {open && (
+      <TaskContent>
         <div className={cn('flex flex-col', styles.detail)} style={{ gap: 5 }}>
           <div className={styles.secLabel}>{t('acceptance.tray.section.method')}</div>
           <div className={cn('text-[12px]', styles.method)}>
             {check.method || t('acceptance.tray.section.methodEmpty')}
           </div>
         </div>
-      )}
-    </div>
+      </TaskContent>
+    </Task>
   );
 });
 

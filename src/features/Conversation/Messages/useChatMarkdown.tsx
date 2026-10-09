@@ -7,6 +7,7 @@ import { HtmlPreviewDrawer } from '@/components/HtmlPreview';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
+import { type MarkdownMessageProps } from '../Markdown';
 import { type MarkdownElement, markdownElements } from '../Markdown/plugins';
 
 // Honor each plugin's declared `scope`: this hook renders assistant / grouped
@@ -37,7 +38,7 @@ export const useChatMarkdown = ({
   enableStream = true,
 }: UseChatMarkdownOptions): {
   drawer: ReactNode;
-  markdownProps: Partial<MarkdownProps>;
+  markdownProps: Partial<MarkdownMessageProps>;
 } => {
   const { transitionMode } = useUserStore(userGeneralSettingsSelectors.config);
   const animated = enableStream && transitionMode === 'fadeIn' && isGenerating;
@@ -69,11 +70,12 @@ export const useChatMarkdown = ({
         enableCustomFootnotes: true,
         enableHtmlPreview: true,
         enableStream,
+        streaming: enableStream && isGenerating,
         rehypePlugins,
         remarkPlugins,
         showFootnotes: !citations?.length || citations.every((item) => item.title !== item.url),
-      }) satisfies Partial<MarkdownProps>,
-    [animated, citations, components, enableStream],
+      }) satisfies Partial<MarkdownMessageProps>,
+    [animated, citations, components, enableStream, isGenerating],
   );
 
   const drawer = useMemo(

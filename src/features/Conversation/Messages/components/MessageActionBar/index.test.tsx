@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import type { UIChatMessage } from '@orvilo/types';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MessageActionBar } from './index';
@@ -12,39 +12,33 @@ const permissionMock = vi.hoisted(() => ({
 }));
 const actionMocks = vi.hoisted(() => ({
   commentsAvailable: true,
+  regenerating: false,
+  onRegenerate: vi.fn(),
   onCopyMessageId: vi.fn(),
 }));
-/** Last `menu` prop handed to ActionIconGroup, so submenu wiring is assertable. */
+/** Menu adapter callback dispatch remains assertable through presentation changes. */
 const rendered = vi.hoisted(() => ({ menu: undefined as any }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIconGroup: ({
-    items,
-    menu,
-    style,
-    variant,
-  }: {
-    items: { key?: string }[];
-    menu?: { key?: string; type?: string }[];
-    style?: React.CSSProperties;
-    variant?: string;
-  }) => (
-    (rendered.menu = menu),
-    (
+vi.mock('@/components/ai-elements/message', () => ({
+  MessageActions: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  MessageAction: ({ children, tooltip, label, ...props }: any) => (
+    <button aria-label={label || tooltip} {...props}>
+      {children}
+    </button>
+  ),
+}));
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ items, children }: any) => {
+    rendered.menu = typeof items === 'function' ? items() : items;
+    return (
       <div
-        data-has-menu={String(!!menu)}
-        data-items={items.map((item) => item.key).join(',')}
-        data-menu={menu?.map((item) => item.key || item.type).join(',') ?? ''}
-        data-testid="action-group"
-        data-variant={variant}
-        style={style}
-      />
-    )
-  ),
-  Block: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="action-container">{children}</div>
-  ),
+        data-menu={rendered.menu.map((item: any) => item.key || item.type).join(',')}
+        data-testid="action-menu"
+      >
+        {children}
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -68,7 +62,12 @@ vi.mock('./useBuildActions', () => ({
     },
     del: { key: 'del', label: 'Delete' },
     edit: { key: 'edit', label: 'Edit' },
-    regenerate: { key: 'regenerate', label: 'Regenerate' },
+    regenerate: {
+      key: 'regenerate',
+      label: 'Regenerate',
+      disabled: actionMocks.regenerating,
+      handleClick: actionMocks.onRegenerate,
+    },
   }),
 }));
 
@@ -88,11 +87,9 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    const container = screen.getByTestId('action-group').parentElement!;
+    const container = screen.getByRole('toolbar');
     expect(container).toContainElement(screen.getByRole('button', { name: 'Reaction' }));
-    const actionGroup = screen.getByTestId('action-group');
-    expect(actionGroup).toHaveAttribute('data-variant', 'borderless');
-    expect(actionGroup).toHaveStyle({ background: 'transparent', borderRadius: '0' });
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
   });
 
   it('keeps read-only comments available to workspace viewers', () => {
@@ -111,9 +108,10 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    const group = screen.getByTestId('action-group');
-    expect(group).toHaveAttribute('data-items', 'copy,comments');
-    expect(group).toHaveAttribute('data-menu', '');
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Comments' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+    expect(screen.queryByTestId('action-menu')).toBeNull();
   });
 
   it('promotes the zero-comment entry from the menu to the action bar', () => {
@@ -132,9 +130,10 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    const group = screen.getByTestId('action-group');
-    expect(group).toHaveAttribute('data-items', 'copy,comments');
-    expect(group).toHaveAttribute('data-menu', '');
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Comments' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+    expect(screen.queryByTestId('action-menu')).toBeNull();
   });
 
   it('keeps the direct action absent when the message already has comments', () => {
@@ -153,9 +152,9 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    const group = screen.getByTestId('action-group');
-    expect(group).toHaveAttribute('data-items', 'copy');
-    expect(group).toHaveAttribute('data-menu', '');
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Comments' })).toBeNull();
+    expect(screen.queryByTestId('action-menu')).toBeNull();
   });
 
   it('collapses a menu whose every action opted out instead of passing []', () => {
@@ -177,7 +176,7 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    expect(screen.getByTestId('action-group')).toHaveAttribute('data-has-menu', 'false');
+    expect(screen.queryByTestId('action-menu')).toBeNull();
   });
 
   it('drops dangling dividers when the group behind one opted out', () => {
@@ -199,12 +198,10 @@ describe('MessageActionBar', () => {
       />,
     );
 
-    expect(screen.getByTestId('action-group')).toHaveAttribute('data-menu', 'edit,divider,del');
+    expect(screen.getByTestId('action-menu')).toHaveAttribute('data-menu', 'edit,divider,del');
   });
 
-  // The menu never invokes an item that has no `onClick` of its own, and
-  // ActionIconGroup only attaches one to top-level items. Without this wiring a
-  // submenu entry closes the menu and silently does nothing.
+  // Each nested menu action must keep its own callback after adaptation.
   it('lets a submenu child dispatch itself', () => {
     permissionMock.canEdit = true;
     actionMocks.onCopyMessageId.mockClear();
@@ -225,5 +222,27 @@ describe('MessageActionBar', () => {
     expect(child.key).toBe('copyMessageId');
     child.onClick();
     expect(actionMocks.onCopyMessageId).toHaveBeenCalledTimes(1);
+  });
+  it('keeps an in-flight retry disabled and dispatches the action when available', () => {
+    permissionMock.canEdit = true;
+    actionMocks.regenerating = true;
+    actionMocks.onRegenerate.mockClear();
+    const props = {
+      bar: ['regenerate'] as const,
+      ctx: {
+        data: { content: 'hello', role: 'assistant' } as UIChatMessage,
+        id: 'message-1',
+        role: 'assistant' as const,
+      },
+    };
+    const { rerender } = render(<MessageActionBar bar={[...props.bar]} ctx={props.ctx} />);
+    const retry = screen.getByRole('button', { name: 'Regenerate' });
+    expect(retry).toBeDisabled();
+    fireEvent.click(retry);
+    expect(actionMocks.onRegenerate).not.toHaveBeenCalled();
+    actionMocks.regenerating = false;
+    rerender(<MessageActionBar bar={[...props.bar]} ctx={props.ctx} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate' }));
+    expect(actionMocks.onRegenerate).toHaveBeenCalledTimes(1);
   });
 });

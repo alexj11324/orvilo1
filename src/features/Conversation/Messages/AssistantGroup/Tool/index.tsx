@@ -4,14 +4,8 @@ import { LOADING_FLAT } from '@orvilo/const';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 
+import { Tool as ToolShell, ToolContent, ToolHeader } from '@/components/ai-elements/tool';
 import SafeBoundary from '@/components/ErrorBoundary';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import dynamic from '@/libs/next/dynamic';
 import { useChatStore } from '@/store/chat';
@@ -125,7 +119,7 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
 
   useEffect(() => {
     if (needExpand) {
-      const timer = setTimeout(() => handleExpand(true), 100);
+      const timer = setTimeout(() => setShowToolRender(true), 100);
       return () => clearTimeout(timer);
     }
   }, [needExpand]);
@@ -135,92 +129,92 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
   const isToolDetailExpand = forceShowStreamingRender || showToolRender || showDebug;
 
   return (
-    <Accordion
-      multiple
-      value={isToolDetailExpand ? [id] : []}
-      onValueChange={(value) => handleExpand(value.includes(id))}
-    >
-      <AccordionItem value={id}>
-        <div className="flex items-center">
-          <div className="min-w-0 flex-1">
-            <AccordionTrigger
-              style={{ paddingBlock: 4, paddingInline: 4 }}
-              className={
-                isAlwaysExpand
-                  ? 'hover:no-underline [&_[data-slot=accordion-trigger-icon]]:hidden'
-                  : 'hover:no-underline'
-              }
-            >
-              {
-                <Inspectors
-                  apiName={apiName}
-                  arguments={requestArgs}
-                  identifier={identifier}
-                  intervention={intervention}
-                  isArgumentsStreaming={isArgumentsStreaming}
-                  isExpanded={isToolDetailExpand}
-                  isToolCalling={isToolCalling}
-                  result={result}
-                  toolCallId={id}
-                  toolCallStartTime={toolCallStartTime}
-                />
-              }
-            </AccordionTrigger>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {!disableEditing && (
-              <Actions
-                assistantMessageId={assistantMessageId}
-                canToggleCustomToolRender={canToggleCustomToolRender}
+    <ToolShell className="mb-0" open={isToolDetailExpand} onOpenChange={handleExpand}>
+      <div className="flex items-center">
+        <div className="min-w-0 flex-1">
+          <ToolHeader
+            hideChevron={isAlwaysExpand}
+            toolName={apiName}
+            type="dynamic-tool"
+            state={
+              isPending
+                ? 'approval-requested'
+                : isReject || isAbort
+                  ? 'output-denied'
+                  : hasError
+                    ? 'output-error'
+                    : isArgumentsStreaming
+                      ? 'input-streaming'
+                      : isToolCalling
+                        ? 'input-available'
+                        : 'output-available'
+            }
+          >
+            {
+              <Inspectors
+                apiName={apiName}
+                arguments={requestArgs}
                 identifier={identifier}
-                setShowCustomToolRender={setShowCustomToolRender}
-                setShowDebug={setShowDebug}
-                showCustomToolRender={showCustomToolRender}
-                showDebug={showDebug}
+                intervention={intervention}
+                isArgumentsStreaming={isArgumentsStreaming}
+                isExpanded={isToolDetailExpand}
+                isToolCalling={isToolCalling}
+                result={result}
+                toolCallId={id}
+                toolCallStartTime={toolCallStartTime}
+              />
+            }
+          </ToolHeader>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {!disableEditing && (
+            <Actions
+              assistantMessageId={assistantMessageId}
+              canToggleCustomToolRender={canToggleCustomToolRender}
+              identifier={identifier}
+              setShowCustomToolRender={setShowCustomToolRender}
+              setShowDebug={setShowDebug}
+              showCustomToolRender={showCustomToolRender}
+              showDebug={showDebug}
+            />
+          )}
+        </div>
+      </div>
+      <ToolContent className="pt-0">
+        {
+          <div className="flex flex-col gap-2 py-2">
+            {showDebug && (
+              <Debug
+                apiName={apiName}
+                identifier={identifier}
+                intervention={intervention}
+                requestArgs={requestArgs}
+                result={result}
+                toolCallId={id}
+                type={type}
               />
             )}
-          </div>
-        </div>
-        <AccordionContent>
-          {
-            <div className="flex flex-col gap-2 py-2">
-              {showDebug && (
-                <Debug
-                  apiName={apiName}
-                  identifier={identifier}
-                  intervention={intervention}
-                  requestArgs={requestArgs}
-                  result={result}
-                  toolCallId={id}
-                  type={type}
-                />
-              )}
-              <SafeBoundary alertTitle={`${identifier} / ${apiName}`} variant="alert">
-                <Detail
-                  apiName={apiName}
-                  arguments={requestArgs}
-                  disableEditing={disableEditing}
-                  identifier={identifier}
-                  intervention={intervention}
-                  isArgumentsStreaming={isArgumentsStreaming}
-                  isToolCalling={isToolCalling}
-                  messageId={assistantMessageId}
-                  result={result}
-                  showCustomToolRender={showCustomToolRender}
-                  toolCallId={id}
-                  toolMessageId={toolMessageId}
-                  type={type}
-                />
-              </SafeBoundary>
-              <Separator
-                className={'bg-transparent border-t border-dashed'}
-                style={{ marginBottom: 0, marginTop: 8 }}
+            <SafeBoundary alertTitle={`${identifier} / ${apiName}`} variant="alert">
+              <Detail
+                apiName={apiName}
+                arguments={requestArgs}
+                disableEditing={disableEditing}
+                identifier={identifier}
+                intervention={intervention}
+                isArgumentsStreaming={isArgumentsStreaming}
+                isToolCalling={isToolCalling}
+                messageId={assistantMessageId}
+                result={result}
+                showCustomToolRender={showCustomToolRender}
+                toolCallId={id}
+                toolMessageId={toolMessageId}
+                type={type}
               />
-            </div>
-          }
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+            </SafeBoundary>
+          </div>
+        }
+      </ToolContent>
+    </ToolShell>
   );
 });
 

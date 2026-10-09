@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { MessageContent as AIMessageContent } from '@/components/ai-elements/message';
 import type { ModalInstance } from '@/components/Modal';
 import {
   dataSelectors,
@@ -19,12 +20,6 @@ export const MSG_CONTENT_CLASSNAME = 'msg_content_flag';
 
 export const styles = createStaticStyles(({ css, cssVar }) => {
   return {
-    bubble: css`
-      padding-block: 8px;
-      padding-inline: 12px;
-      border-radius: ${cssVar.borderRadiusLG};
-      background-color: ${cssVar.colorFillTertiary};
-    `,
     disabled: css`
       user-select: ${'none'};
       color: ${cssVar.colorTextSecondary};
@@ -130,22 +125,16 @@ const MessageContent = memo<MessageContentProps>(
     }, [editing]);
 
     return (
-      <div
+      <AIMessageContent
         className={cn(
-          'flex flex-col gap-4',
-          cx(
-            MSG_CONTENT_CLASSNAME,
-            styles.message,
-            variant === 'bubble' && styles.bubble,
-            disabled && styles.disabled,
-            className,
-          ),
+          variant !== 'bubble' && 'w-full',
+          cx(MSG_CONTENT_CLASSNAME, styles.message, disabled && styles.disabled, className),
         )}
         onDoubleClick={onDoubleClick}
       >
         {children || message}
         {messageExtra}
-      </div>
+      </AIMessageContent>
     );
   },
 );

@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
 import ActionIcon from '@/components/ActionIcon';
-import ClosableBadge from '@/components/ClosableBadge';
+import { Attachment, AttachmentRemove } from '@/components/ai-elements/attachments';
 import { Spinner } from '@/components/ui/spinner';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useFileStore } from '@/store/file';
 import { type UploadFileItem } from '@/types/files/upload';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import UploadDetail from '../../../components/UploadDetail';
 import { SimpleTooltip } from '../../../SimpleTooltip';
@@ -71,7 +72,7 @@ const styles = createStaticStyles(({ css }) => ({
 type FileItemProps = UploadFileItem;
 
 const ContextItem = memo<FileItemProps>((props) => {
-  const { error, errorCode, file, id, status, tasks, uploadState } = props;
+  const { error, errorCode, file, id, previewUrl, status, tasks, uploadState } = props;
   const { t } = useTranslation(['chat', 'common']);
   const removeChatUploadFile = useFileStore((s) => s.removeChatUploadFile);
   const retryChatUploadFile = useFileStore((s) => s.retryChatUploadFile);
@@ -106,17 +107,18 @@ const ContextItem = memo<FileItemProps>((props) => {
   );
 
   return (
-    <ClosableBadge
+    <Attachment
       aria-busy={busy}
-      className={styles.chip}
-      closeLabel={t('close', { ns: 'common' })}
-      size={'lg'}
-      variant="secondary"
-      onClick={canPreview ? handleClick : undefined}
-      onClose={handleClose}
+      className={cx(styles.chip, 'max-w-full')}
+      data={{ type: 'file', id, filename: file.name, mediaType: file.type, url: previewUrl ?? '' }}
+      onRemove={handleClose}
     >
       <SimpleTooltip title={detail}>
-        <div className={cx('flex flex-row items-center', styles.content)}>
+        <div
+          {...clickableProps(canPreview)}
+          className={cx('flex flex-row items-center', styles.content, CLICKABLE_FOCUS_RING)}
+          onClick={canPreview ? handleClick : undefined}
+        >
           <div className={cx('flex flex-col', styles.thumbnail)}>
             <Content {...props} />
           </div>
@@ -203,7 +205,8 @@ const ContextItem = memo<FileItemProps>((props) => {
           )}
         </div>
       )}
-    </ClosableBadge>
+      <AttachmentRemove label={t('close', { ns: 'common' })} />
+    </Attachment>
   );
 });
 

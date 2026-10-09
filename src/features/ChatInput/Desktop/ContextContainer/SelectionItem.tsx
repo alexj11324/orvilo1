@@ -4,7 +4,7 @@ import { Code2Icon, TextIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ClosableBadge from '@/components/ClosableBadge';
+import { Attachment, AttachmentRemove } from '@/components/ai-elements/attachments';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
 
@@ -151,11 +151,15 @@ const SelectionItem = memo<ChatContextContent>(
     }, [content, filePath, isCodeSelection, lineRange, preview, title]);
 
     return (
-      <ClosableBadge
-        closeLabel={t('close')}
-        size={'lg'}
-        variant="secondary"
-        onClose={() => {
+      <Attachment
+        data={{
+          type: 'source-document',
+          id,
+          sourceId: id,
+          mediaType: isCodeSelection ? 'text/plain' : 'text/html',
+          title: displayText,
+        }}
+        onRemove={() => {
           if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
         }}
       >
@@ -167,7 +171,8 @@ const SelectionItem = memo<ChatContextContent>(
         <SimpleTooltip title={tooltip}>
           <span className={styles.name}>{displayText}</span>
         </SimpleTooltip>
-      </ClosableBadge>
+        <AttachmentRemove label={t('close')} />
+      </Attachment>
     );
   },
 );

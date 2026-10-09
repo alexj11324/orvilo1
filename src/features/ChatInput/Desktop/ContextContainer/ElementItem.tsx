@@ -4,7 +4,7 @@ import { SquareDashedMousePointer } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ClosableBadge from '@/components/ClosableBadge';
+import { Attachment, AttachmentRemove } from '@/components/ai-elements/attachments';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
 
@@ -91,11 +91,15 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
   );
 
   return (
-    <ClosableBadge
-      closeLabel={t('close')}
-      size={'lg'}
-      variant="secondary"
-      onClose={() => {
+    <Attachment
+      data={{
+        type: 'source-document',
+        id,
+        sourceId: id,
+        mediaType: 'text/html',
+        title: preview || element.tag,
+      }}
+      onRemove={() => {
         if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
       }}
     >
@@ -106,7 +110,8 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
           <span className={styles.name}>{preview}</span>
         </span>
       </SimpleTooltip>
-    </ClosableBadge>
+      <AttachmentRemove label={t('close')} />
+    </Attachment>
   );
 });
 

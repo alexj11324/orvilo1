@@ -5,6 +5,8 @@ import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import { Message } from '@/components/ai-elements/message';
+
 import FollowUpChips from '../FollowUp/FollowUpChips';
 import { contextSelectors, useConversationStore } from '../store';
 import Actions from './components/Actions';
@@ -69,15 +71,12 @@ const ChatItem = memo<ChatItemProps>(
     );
 
     return (
-      <div
+      <Message
+        from={isUser ? 'user' : 'assistant'}
         {...rest}
+        className={cn('py-4', cx('message-wrapper', styles.container, className))}
         data-message-id={id}
-        className={cn(
-          'flex flex-col gap-2 py-2',
-          cx('message-wrapper', styles.container, className),
-        )}
         style={{
-          paddingInlineStart: isUser ? 36 : 0,
           ...style,
         }}
       >
@@ -138,7 +137,7 @@ const ChatItem = memo<ChatItemProps>(
             {afterActions}
           </div>
         )}
-      </div>
+      </Message>
     );
   },
 );

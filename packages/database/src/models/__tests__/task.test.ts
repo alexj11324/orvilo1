@@ -3851,10 +3851,6 @@ describe('TaskModel', () => {
     });
 
     it('pins a creator-private draft on a private-team issue without publishing it', async () => {
-      await serverDB.insert(workspaceMembers).values([
-        { role: 'owner', userId, workspaceId: wsId },
-        { role: 'member', userId: userId2, workspaceId: wsId },
-      ]);
       const alice = new TaskModel(serverDB, userId, wsId);
       const secret = await alice.create({
         instruction: 'Private-team document notes',

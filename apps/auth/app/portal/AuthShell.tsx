@@ -2,7 +2,6 @@ import type { PropsWithChildren } from 'react';
 
 import { usePortalMessages } from './messagesContext';
 
-/** The accounts portal mirrors the shadcn authentication example. */
 export const AuthShell = ({ children }: PropsWithChildren) => {
   const messages = usePortalMessages();
 
@@ -17,7 +16,6 @@ export const AuthShell = ({ children }: PropsWithChildren) => {
           <img alt="" data-testid="orvilo-mark" height="28" src="/icons/icon.svg" width="28" />
           <span>{messages.brand}</span>
         </div>
-        <blockquote className="accounts-brand-quote">{messages.quote}</blockquote>
       </aside>
       <section
         className="accounts-auth-form-panel accounts-auth-form-panel--right"

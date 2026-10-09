@@ -1,6 +1,7 @@
 const ONBOARDING_PATH = '/onboarding';
 const CALLBACK_STORAGE_KEY = 'onboarding-callback-url';
-export const POST_ONBOARDING_HOME_TASK_URL = '/?onboarding=task';
+/** Finishing onboarding lands on the home route, which opens the Issue list. */
+export const POST_ONBOARDING_HOME_URL = '/';
 
 /**
  * Only same-site relative paths are allowed as post-onboarding redirect
@@ -115,4 +116,4 @@ export const consumeOnboardingCallbackUrl = (): string | undefined => {
 };
 
 export const resolvePostOnboardingTargetUrl = (): string =>
-  consumeOnboardingCallbackUrl() || POST_ONBOARDING_HOME_TASK_URL;
+  consumeOnboardingCallbackUrl() || POST_ONBOARDING_HOME_URL;

@@ -113,15 +113,6 @@
   flex: none;
 }
 
-.accounts-brand-quote {
-  max-width: 34rem;
-  margin: 48px 0 0;
-  color: var(--muted-foreground);
-  font-size: clamp(1rem, 1.6vw, 1.25rem);
-  line-height: 1.45;
-  text-wrap: balance;
-}
-
 .accounts-auth-login-label {
   position: absolute;
   top: 40px;

@@ -51,7 +51,7 @@ const AuthRequiredModalContent = memo<AuthRequiredModalContentProps>(
       onActionReady({ signIn });
     }, [onActionReady, signIn]);
 
-    return <p style={{ margin: 0 }}>{t('authModal.description')}</p>;
+    return <p className="m-0">{t('authModal.description')}</p>;
   },
 );
 

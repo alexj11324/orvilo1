@@ -66,11 +66,6 @@ interface CreateTaskInlineEntryProps {
   parentTaskId?: string;
   placeholder?: string;
   projectId?: string;
-  /**
-   * `hero` adapts the entry for the empty-tasks landing: hides collapse,
-   * enlarges the editor area, and forces autoFocus.
-   */
-  variant?: 'default' | 'hero';
 }
 
 const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
@@ -83,9 +78,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     parentTaskId,
     placeholder,
     projectId,
-    variant = 'default',
   } = props;
-  const isHero = variant === 'hero';
   const { t } = useTranslation('chat');
   const { allowed: canCreateTask, reason } = usePermission('create_content');
 
@@ -170,8 +163,8 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
 
   useEffect(() => {
     if (!canCreateTask) return;
-    if (autoFocus || isHero) editor?.focus?.();
-  }, [autoFocus, canCreateTask, editor, isHero]);
+    if (autoFocus) editor?.focus?.();
+  }, [autoFocus, canCreateTask, editor]);
 
   // Hydrate the editor with the current scope's saved draft. Re-runs whenever
   // the scope key changes (not just on mount): it first resets to this scope's
@@ -579,7 +572,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         }}
         onKeyDownCapture={handleKeyDown}
       >
-        {!isHero && !isReviewing && (
+        {!isReviewing && (
           <ActionIcon
             icon={ChevronUp}
             size={'small'}
@@ -606,12 +599,12 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
           className="flex flex-col"
           style={{
             display: isReviewing ? 'none' : undefined,
-            fontSize: isHero ? 16 : 14,
+            fontSize: 14,
             // Cap the editor so a long draft scrolls inside the box instead of
             // growing the composer until it pushes the task list below the fold.
-            maxHeight: isHero ? 360 : 200,
+            maxHeight: 200,
             overflowY: 'auto',
-            padding: isHero ? '12px 16px 0' : '8px 40px 0 16px',
+            padding: '8px 40px 0 16px',
           }}
         >
           <EditorCanvas
@@ -620,8 +613,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             floatingToolbar={false}
             placeholder={placeholder ?? t('createTask.instructionPlaceholder')}
             style={{
-              fontSize: isHero ? 16 : 14,
-              minHeight: isHero ? 80 : undefined,
+              fontSize: 14,
               paddingBottom: 12,
             }}
             onContentChange={handleContentChange}

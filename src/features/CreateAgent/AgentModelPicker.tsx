@@ -17,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 export interface AgentModelPickerProps {
   disabled?: boolean;
   error?: unknown;
+  id?: string;
   loading?: boolean;
   onChange: (value: string) => void;
   onRetry?: () => void;
@@ -28,6 +29,7 @@ export interface AgentModelPickerProps {
 export const AgentModelPicker = ({
   disabled,
   error,
+  id,
   loading,
   onChange,
   onRetry,
@@ -50,7 +52,12 @@ export const AgentModelPicker = ({
     >
       <ComboboxTrigger
         render={
-          <Button className="w-full justify-between font-normal" size={size} variant="outline" />
+          <Button
+            className="w-full justify-between font-normal"
+            id={id}
+            size={size}
+            variant="outline"
+          />
         }
       >
         <span className="truncate">

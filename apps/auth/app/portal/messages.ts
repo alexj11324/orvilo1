@@ -32,8 +32,6 @@ export const en = {
   passwordError: 'That password is incorrect. Please try again.',
   passwordTitle: 'Enter your password',
   preparing: 'Preparing sign-in…',
-  quote:
-    '"This library has saved me countless hours of work and helped me deliver stunning designs to my clients faster than ever before." — Sofia Davis',
   resend: 'Resend code',
   retry: 'Try again',
   startFailed: 'Google sign-in could not be started. Please try again.',
@@ -80,7 +78,6 @@ const zhHans: PortalMessages = {
   passwordError: '密码不正确，请重试。',
   passwordTitle: '输入密码',
   preparing: '正在准备登录…',
-  quote: '"这个库为我节省了无数工作时间，也帮助我更快地为客户交付出色的设计。"——Sofia Davis',
   resend: '重新发送验证码',
   retry: '重试',
   startFailed: '无法启动 Google 登录，请重试。',

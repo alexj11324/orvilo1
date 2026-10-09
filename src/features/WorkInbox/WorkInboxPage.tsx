@@ -46,7 +46,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
-import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurfaceSplit } from '@/features/WorkSurface';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -109,6 +108,9 @@ import { INBOX_LIST_HOTKEY_OPTIONS, useInboxListKeyboard } from './useInboxListK
 // inbox list does not pay for it until a task-backed card is actually opened.
 const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
+);
+const LazyIssuePeekActions = lazy(() =>
+  import('@/features/AgentTasks').then((module) => ({ default: module.IssuePeekActions })),
 );
 
 /**
@@ -1147,11 +1149,12 @@ const WorkInboxPage = memo(() => {
             className="flex flex-row"
             style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
           >
-            <WorkFavoriteButton
-              targetId={selectedIssueIdentifier}
-              targetType="task"
-              variant={'icon'}
-            />
+            <Suspense fallback={null}>
+              <LazyIssuePeekActions
+                taskId={selectedIssueTaskId}
+                onDeleted={() => writeInboxParams({ detail: null, item: null })}
+              />
+            </Suspense>
             {selectedOpenTarget ? (
               <Button
                 aria-label={t('inbox.open')}

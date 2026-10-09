@@ -606,9 +606,18 @@ const TaskVerifyConfig = memo(() => {
                 {t('verifyConfig.generate')}
               </Button>
               <DropdownMenu items={addMenuItems} placement={'bottomRight'}>
-                <ActionIcon icon={MoreHorizontal} size={'small'} />
+                <ActionIcon
+                  aria-label={t('more', { ns: 'common' })}
+                  icon={MoreHorizontal}
+                  size={'small'}
+                />
               </DropdownMenu>
-              <ActionIcon icon={ChevronUp} size={'small'} onClick={() => setExpanded(false)} />
+              <ActionIcon
+                aria-label={t('taskDetail.collapseReply', { ns: 'chat' })}
+                icon={ChevronUp}
+                size={'small'}
+                onClick={() => setExpanded(false)}
+              />
             </div>
           </div>
           <div className={cn(styles.subtitle)}>

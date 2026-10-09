@@ -22,6 +22,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
+import { PICKER_TRIGGER_FOCUS_CLASS } from './pickerTriggerStyles';
 import { SimpleTooltip } from './SimpleTooltip';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
 import { useTaskPriorityChange } from './useTaskPriorityChange';
@@ -165,13 +166,16 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     const triggerNode =
       children ||
       (loading ? (
-        <span className={styles.trigger}>
+        <span className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}>
           <Spinner style={{ height: size, width: size }} />
         </span>
       ) : (
         <span
-          className={isUrgent ? styles.triggerUrgent : styles.trigger}
           data-row-control={'priority'}
+          className={cn(
+            isUrgent ? styles.triggerUrgent : styles.trigger,
+            PICKER_TRIGGER_FOCUS_CLASS,
+          )}
         >
           <SimpleTooltip
             title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}

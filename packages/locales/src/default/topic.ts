@@ -1,6 +1,7 @@
 export default {
   'actions.addNewTopic': 'Start New Topic',
   'actions.addNewTopicInProject': 'Start new topic in {{directory}}',
+  'actions.recentTopics': 'Recent topics',
   'actions.autoRename': 'Smart Rename',
   'actions.showTopics': 'Topics',
   'actions.diagnose': 'Check Message Chain',
@@ -97,6 +98,7 @@ export default {
   'filter.sort': 'Sort by',
   'filter.sortBy.createdAt': 'Created time',
   'filter.sortBy.updatedAt': 'Updated time',
+  'filter.title': 'Filter topics',
   'groupTitle.byProject.noProject': 'No directory',
   'groupTitle.byStatus.active': 'Active',
   'groupTitle.byStatus.archived': 'Archived',

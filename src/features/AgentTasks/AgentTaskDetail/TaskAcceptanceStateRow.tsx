@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useAcceptanceBySubject } from '@/features/Acceptance';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { PRESSABLE_FOCUS_CLASS, pressableProps } from '../shared/pressableProps';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector } from './TaskDetailScope';
@@ -112,12 +113,12 @@ const TaskAcceptanceStateRow = memo(() => {
 
   return (
     <div
-      className={`flex items-center gap-2 ${styles.propertyItem}`}
+      className={`flex items-center gap-2 ${styles.propertyItem} ${PRESSABLE_FOCUS_CLASS}`}
       style={{ cursor: 'pointer' }}
       // The label may be truncated below, so the hover title carries it in
       // full ahead of the "click to review" hint.
       title={`${label} · ${t('taskDetail.acceptanceState.hint')}`}
-      onClick={() => openAcceptanceInPanel(acceptance.id)}
+      {...pressableProps(() => openAcceptanceInPanel(acceptance.id))}
     >
       <meta.icon
         className={'spin' in meta && meta.spin ? 'animate-spin' : undefined}

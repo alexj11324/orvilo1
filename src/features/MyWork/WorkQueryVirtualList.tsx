@@ -29,6 +29,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { useClosestScrollParent } from '@/features/AgentTasks/AgentTaskList/useClosestScrollParent';
+import {
+  requestIssueGroupHeaderFocus,
+  restoreIssueGroupHeaderFocus,
+} from '@/features/WorkSurface/issuePeekKeyContext';
 import { useIssuePeekKeyboard } from '@/features/WorkSurface/useIssuePeekKeyboard';
 
 import type { WorkQueryGroupPage, WorkQueryResultTask } from './workQueryPaging';
@@ -47,14 +51,6 @@ import {
 const DEFAULT_ROW_HEIGHT = 44;
 
 const noopPeek = () => {};
-
-/**
- * Group header to focus once the list is back. Closing the peek re-parents the
- * list (MyWorkPage swaps its split layout for the plain one), so the instance
- * that collapsed the group is gone before the header can be focused; the key
- * outlives it here and the new instance consumes it.
- */
-let pendingHeaderFocus: string | null = null;
 
 const StickyGroup = ({ children, style, ...rest }: GroupProps) => (
   <div {...rest} className="z-2 bg-background" style={style}>
@@ -195,7 +191,8 @@ const WorkQueryVirtualList = ({
       : collapsedKeys.filter((item) => item !== key);
     // The peek must never stay open on a row this collapse just hid.
     if (collapsing && peekKeys && groupHidesIssue(windowItems, taskById, key, peekKeys.peekId)) {
-      pendingHeaderFocus = key;
+      const owner = anchorNode?.closest<HTMLElement>('[data-work-surface]');
+      if (owner) requestIssueGroupHeaderFocus(owner, key);
       peekKeys.onPeek(null);
     }
     if (onCollapsedGroupsChange) onCollapsedGroupsChange([...next]);
@@ -205,13 +202,13 @@ const WorkQueryVirtualList = ({
   // Runs after every render: the header only exists once the (re-mounted)
   // virtualizer has laid out, which can be a render or two after the toggle.
   useEffect(() => {
-    if (pendingHeaderFocus === null || !anchorNode) return;
-    const header = [...anchorNode.querySelectorAll<HTMLElement>('[data-work-group-header]')].find(
-      (element) => element.dataset.workGroupHeader === pendingHeaderFocus,
-    );
-    if (!header) return;
-    pendingHeaderFocus = null;
-    header.focus();
+    if (!anchorNode) return;
+    const restore = () => restoreIssueGroupHeaderFocus(anchorNode);
+    restore();
+    // Virtualizer children can mount the header without re-rendering this list.
+    const observer = new MutationObserver(restore);
+    observer.observe(anchorNode, { childList: true, subtree: true });
+    return () => observer.disconnect();
   });
 
   const virtuosoRef = useRef<GroupedVirtuosoHandle | VirtuosoHandle>(null);

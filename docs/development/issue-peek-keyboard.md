@@ -174,3 +174,18 @@ wrong rows (earlier rows missing, a row of the collapsed group in their slot) an
   character (the list plugin's Tab handler was the trap). Inside a list item Tab
   still indents; Ctrl / Alt / Meta+Tab are untouched. Enter / Cmd+Enter are not
   changed. Pure rule: `tabLeavesEditor` in `registerTabFocusEscape.ts`.
+
+## Collapse focus ownership
+
+Collapsing the group containing the peeked Issue closes that peek. The pending
+header focus is keyed by its stable WorkSurface element, so list remounts retain
+it and another split or retained pane with the same collapse key cannot consume
+it. Restoration requires a visible header in that same owner, and the intent is
+consumed only after focus succeeds. The list also observes child mounts so a
+virtualizer's later header render can complete restoration without a parent
+render. Observation disconnects when the list unmounts.
+
+Existing non-React DOM regressions exercise sibling panes, independently pending
+owners, a hidden retained pane, and replacement-list/delayed-header restoration.
+They cover the focus helper; fresh Electron grouped-list acceptance remains
+pending for the current revision.

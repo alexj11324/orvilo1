@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { issuePeekKeyFromEvent, reduceIssuePeekKey } from './issuePeekKeyboard';
+import { requestIssueGroupHeaderFocus, restoreIssueGroupHeaderFocus } from './issuePeekKeyContext';
 
 const ids = ['T-1', 'T-2', 'T-3'];
 
@@ -123,5 +124,73 @@ describe('issuePeekKeyFromEvent', () => {
     expect(press('Enter', { alt: true })).toBeNull();
     expect(press(' ', { shift: true })).toBeNull();
     expect(press('Escape', { meta: true })).toBeNull();
+  });
+});
+
+describe('collapsed group focus ownership', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+  const surface = () => {
+    const owner = document.createElement('div');
+    owner.dataset.workSurface = '';
+    const list = document.createElement('div');
+    owner.append(list);
+    document.body.append(owner);
+    return { owner, list };
+  };
+  const header = (list: HTMLElement) => {
+    const button = document.createElement('button');
+    button.dataset.workGroupHeader = 'todo';
+    list.append(button);
+    return button;
+  };
+
+  it('does not let a sibling pane consume the same collapse key', () => {
+    const left = surface();
+    const right = surface();
+    header(left.list);
+    requestIssueGroupHeaderFocus(right.owner, 'todo');
+    expect(restoreIssueGroupHeaderFocus(left.list)).toBe(false);
+    const target = header(right.list);
+    expect(restoreIssueGroupHeaderFocus(right.list)).toBe(true);
+    expect(document.activeElement).toBe(target);
+  });
+
+  it('keeps an intent through list remount and delayed header creation', () => {
+    const { owner, list } = surface();
+    requestIssueGroupHeaderFocus(owner, 'todo');
+    list.remove();
+    const replacement = document.createElement('div');
+    owner.append(replacement);
+    expect(restoreIssueGroupHeaderFocus(replacement)).toBe(false);
+    const target = header(replacement);
+    expect(restoreIssueGroupHeaderFocus(replacement)).toBe(true);
+    expect(document.activeElement).toBe(target);
+    expect(restoreIssueGroupHeaderFocus(replacement)).toBe(false);
+  });
+
+  it('does not consume an intent while the owning retained pane is hidden', () => {
+    const { owner, list } = surface();
+    const target = header(list);
+    owner.hidden = true;
+    requestIssueGroupHeaderFocus(owner, 'todo');
+    expect(restoreIssueGroupHeaderFocus(list)).toBe(false);
+    owner.hidden = false;
+    expect(restoreIssueGroupHeaderFocus(list)).toBe(true);
+    expect(document.activeElement).toBe(target);
+  });
+
+  it('keeps each surface latest intent independent', () => {
+    const left = surface();
+    const right = surface();
+    const leftHeader = header(left.list);
+    const rightHeader = header(right.list);
+    requestIssueGroupHeaderFocus(left.owner, 'todo');
+    requestIssueGroupHeaderFocus(right.owner, 'todo');
+    expect(restoreIssueGroupHeaderFocus(left.list)).toBe(true);
+    expect(document.activeElement).toBe(leftHeader);
+    expect(restoreIssueGroupHeaderFocus(right.list)).toBe(true);
+    expect(document.activeElement).toBe(rightHeader);
   });
 });

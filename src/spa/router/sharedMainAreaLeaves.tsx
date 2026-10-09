@@ -14,6 +14,7 @@ import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
 import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { taskDraftsRouteMeta } from '@/features/TaskDrafts/routeMeta';
 import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
+import { integrationsRouteMeta } from '@/features/WorkspaceSetting/Integrations/routeMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import type { RouteMeta } from '@/spa/router/routeMeta';
@@ -372,6 +373,20 @@ export interface SharedWorkspaceSettingsLeaf extends SharedRouteLeaf {
 }
 
 export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
+  {
+    load: () => import('@/routes/(main)/[workspaceSlug]/settings/integrations'),
+    meta: integrationsRouteMeta,
+    name: 'Integrations',
+    path: 'integrations',
+    skeleton: 'list',
+  },
+  {
+    load: () => import('@/routes/(main)/[workspaceSlug]/settings/integrations/slack'),
+    meta: integrationsRouteMeta,
+    name: 'Slack Integration',
+    path: 'integrations/slack',
+    skeleton: 'detail',
+  },
   {
     fullBleed: true,
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/provider'),

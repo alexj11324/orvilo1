@@ -80,6 +80,7 @@ export * from './mcpEvents';
 export * from './openai/chat';
 export * from './openai/plugin';
 export * from './providerBinding';
+export * from './slackIntegration';
 export * from './subscription';
 export * from './trace';
 export * from './understanding';

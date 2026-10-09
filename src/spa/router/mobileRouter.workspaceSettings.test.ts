@@ -39,6 +39,8 @@ describe('mobile workspace settings routes', () => {
     'credential',
     'apikey',
     'connector',
+    'integrations',
+    'integrations/slack',
     'imports',
     'imports/linear',
   ])('resolves /<slug>/settings/%s on mobile instead of bouncing home', (tab) => {

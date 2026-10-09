@@ -4,6 +4,7 @@ import {
   BellIcon,
   Brain,
   Building2,
+  Cable,
   ChartColumnBigIcon,
   Coins,
   CreditCard,
@@ -130,6 +131,11 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Users,
               key: WorkspaceSettingsTabs.Members,
               label: t('workspaceSetting.tab.members'),
+            },
+            {
+              icon: Cable,
+              key: WorkspaceSettingsTabs.Integrations,
+              label: t('workspaceSetting.tab.integrations'),
             },
             {
               icon: MonitorSmartphoneIcon,

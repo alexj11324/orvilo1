@@ -16,6 +16,7 @@ vi.mock('../handlers/mcpEvents', () => ({ mcpEventsWebhook: vi.fn() }));
 vi.mock('../handlers/casdoor', () => ({ casdoorWebhook: vi.fn() }));
 vi.mock('../handlers/logto', () => ({ logtoWebhook: vi.fn() }));
 vi.mock('../handlers/linear', () => ({ linearWebhook: vi.fn() }));
+vi.mock('../handlers/slack', () => ({ slackWebhook: vi.fn() }));
 vi.mock('../handlers/memoryExtraction', () => ({ memoryExtractionWebhook: vi.fn() }));
 vi.mock('../handlers/memoryExtractionBenchmarkLocomo', () => ({
   memoryExtractionBenchmarkLocomo: vi.fn(),
@@ -42,6 +43,7 @@ describe('webhooks hono routes', () => {
       '/api/webhooks/memory-extraction/benchmark-locomo',
       '/api/webhooks/memory-user-memory/persona/update-writing',
       '/api/webhooks/memory-user-memory/pipelines/extract/chat-topic/cancel',
+      '/api/webhooks/slack',
     ]);
   });
 });

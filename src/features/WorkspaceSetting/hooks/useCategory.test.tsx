@@ -126,6 +126,13 @@ describe('workspace settings useCategory', () => {
     ]);
   });
 
+  it('keeps integrations distinct from Connector and visible to members', () => {
+    mocks.canManageWorkspace = false;
+    const keys = getItemKeys();
+    expect(keys).toContain(WorkspaceSettingsTabs.Integrations);
+    expect(keys).toContain(WorkspaceSettingsTabs.Connector);
+  });
+
   it('hides OAuth Apps by default', () => {
     expect(getItemKeys()).not.toContain(WorkspaceSettingsTabs.OAuthApps);
   });

@@ -62,6 +62,7 @@ ENV NODE_OPTIONS="--max-old-space-size=8192"
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY .npmrc ./
 COPY packages ./packages
 # workspace manifests must exist before pnpm i so --filter can resolve them

@@ -1044,7 +1044,7 @@ const axisExpr = (
       return legacyStatusExpr;
     }
     case 'workflowCategory': {
-      return sql`CASE WHEN ${taskAttentionReasonExpr} = 'needs_input' THEN 'needs_input' ELSE ${tasks.workflowCategory} END`;
+      return sql`${tasks.workflowCategory}`;
     }
     case 'priority': {
       return sql`coalesce(${tasks.priority}::text, '0')`;
@@ -1072,7 +1072,7 @@ const finiteBoardKeys = (axis: string): readonly string[] | undefined => {
   if (axis === 'attention')
     return ['needs_input', 'urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
   if (axis === 'status') return WORK_QUERY_STATUS_COLUMNS;
-  if (axis === 'workflowCategory') return ['needs_input', ...WORK_QUERY_WORKFLOW_COLUMNS];
+  if (axis === 'workflowCategory') return [...WORK_QUERY_WORKFLOW_COLUMNS];
   if (axis === 'priority') return WORK_QUERY_PRIORITY_KEYS;
   return undefined;
 };

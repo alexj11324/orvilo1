@@ -184,7 +184,7 @@ describe('current-run required input', () => {
     expect((await model.findById(run.taskId))?.workflowCategory).toBe('done');
   });
 
-  it('projects unmet input into default task and work-query board lanes instead of dependency blocking', async () => {
+  it('projects unmet input as attention while retaining canonical workflow columns and swimlanes', async () => {
     const run = await currentRun();
     await question(run, 'timed_out', 'rejected');
     expect(await model.findById(run.taskId)).toMatchObject({
@@ -204,9 +204,28 @@ describe('current-run required input', () => {
     const board = await new WorkQueryModel(db, userId).queryTasks({
       query: { entityType: 'task', schemaVersion: 1, layout: 'board', groupBy: 'workflowCategory' },
     });
+    expect(board.groups?.find((group) => group.key === 'todo')?.tasks.map((row) => row.id)).toEqual(
+      [run.taskId],
+    );
+    expect(board.groups?.some((group) => group.key === 'needs_input')).toBe(false);
+    const attention = await new WorkQueryModel(db, userId).queryTasks({
+      query: { entityType: 'task', schemaVersion: 1, layout: 'board', groupBy: 'attention' },
+    });
     expect(
-      board.groups?.find((group) => group.key === 'needs_input')?.tasks.map((row) => row.id),
+      attention.groups?.find((group) => group.key === 'needs_input')?.tasks.map((row) => row.id),
     ).toEqual([run.taskId]);
+    const lanes = await new WorkQueryModel(db, userId).queryTasks({
+      query: {
+        entityType: 'task',
+        schemaVersion: 1,
+        layout: 'board',
+        groupBy: 'priority',
+        subGroupBy: 'workflowCategory',
+      },
+    });
+    const cell = lanes.groups?.find((group) => group.tasks.some((row) => row.id === run.taskId));
+    expect(cell?.key.split('\u001F')[1]).toBe('todo');
+    expect(cell?.tasks.find((row) => row.id === run.taskId)?.attentionReason).toBe('needs_input');
   });
 
   it('generic heterogeneous questions require producer acknowledgement, not only resolved text', async () => {

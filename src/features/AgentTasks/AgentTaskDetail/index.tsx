@@ -1,5 +1,6 @@
 export { default as AgentScopedTaskDetailPage } from './AgentScopedTaskDetailPage';
 export { default as IssueContent } from './IssueContent';
+export { default as IssuePeekActions } from './IssuePeekActions';
 export { default as RoutedTaskDetailPage } from './RoutedTaskDetailPage';
 export { default as TaskDetailPage } from './TaskDetailPage';
 export { TaskDetailScope, useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';

@@ -4,18 +4,16 @@ import { Link } from 'react-router';
 
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
-import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { buttonVariants } from '@/components/ui/button';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
-import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
 
 import Breadcrumb from '../shared/Breadcrumb';
 import IssueContent from './IssueContent';
+import IssueSaveStatus from './IssueSaveStatus';
 import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
 import TaskDetailRunPauseAction from './TaskDetailRunPauseAction';
@@ -30,7 +28,6 @@ interface TaskDetailPageProps {
 
 const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelToggle = true }) => {
   const { t } = useTranslation('chat');
-  const saveStatus = useTaskStore((s) => taskDetailSelectors.taskSaveStatusFor(s, taskId));
   const [showTaskAgentPanel, toggleTaskAgentPanel] = useGlobalStore((s) => [
     systemStatusSelectors.showTaskAgentPanel(s),
     s.toggleTaskAgentPanel,
@@ -90,9 +87,7 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
                 same overflow menu, so the header's
                 right side keeps task execution and the agent-panel toggle. */}
               <TaskDetailHeaderActions />
-              {saveStatus === 'saving' || saveStatus === 'failed' ? (
-                <AutoSaveHint saveStatus={saveStatus} />
-              ) : undefined}
+              <IssueSaveStatus key={taskId} taskId={taskId} />
             </>
           }
           right={

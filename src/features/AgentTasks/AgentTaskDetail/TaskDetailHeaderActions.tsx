@@ -159,7 +159,7 @@ const useTaskRemoveMenuItems = (taskId: string | undefined, disabled: boolean) =
  * attached-resource commands go through `taskMenu`; each carries the issue's
  * observed `domainRevision`, so they stay disabled until the detail has one.
  */
-const TaskDetailHeaderActions = () => {
+const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
   const { t } = useTranslation(['chat', 'common', 'topic']);
 
   const navigate = useWorkspaceAwareNavigate();
@@ -572,7 +572,9 @@ const TaskDetailHeaderActions = () => {
           okText: t('taskDetail.deleteConfirm.ok'),
           onOk: async () => {
             await deleteTask(taskId);
-            navigate('/tasks');
+            // A peek host closes its own pane; the full page goes back to the list.
+            if (onDeleted) onDeleted();
+            else navigate('/tasks');
           },
           title: t('taskDetail.deleteConfirm.title'),
         });

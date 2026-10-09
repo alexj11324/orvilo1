@@ -47,6 +47,7 @@ const HotkeySetting = memo(() => {
   const updateHotkey = async (id: DesktopHotkeyItem['id'], value: string) => {
     // The main process only knows other global shortcuts, not the in-app ones.
     if (value && conflictsOf(id).includes(value)) {
+      form.setFieldValue(id, hotkeys[id] ?? '');
       toast.error(t('hotkey.errors.CONFLICT', { ns: 'setting' }));
       return;
     }

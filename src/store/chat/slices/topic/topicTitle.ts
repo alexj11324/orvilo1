@@ -8,11 +8,15 @@ export interface TopicTitleAgent {
 }
 
 /**
- * The built-in agent also carries a runtime type (`orvilo`); only any other
- * type means an external CLI/ACP runtime with its own auth and model.
+ * The built-in agent also carries a runtime provider, with type `orvilo`.
+ * Fails closed: a provider that is present but is not positively `orvilo`
+ * (another type, or no type at all) is external, so its conversation is never
+ * sent to an Orvilo cloud model. Only a missing provider (legacy built-in
+ * agent) or `orvilo` counts as built-in.
  */
-export const isExternalAgentRuntime = (runtimeType?: string | null): boolean =>
-  !!runtimeType && runtimeType !== 'orvilo';
+export const isExternalAgentRuntime = (
+  runtimeProvider?: { type?: string | null } | null,
+): boolean => !!runtimeProvider && runtimeProvider.type !== 'orvilo';
 
 export interface TopicTitleModel {
   model: string;

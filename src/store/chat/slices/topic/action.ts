@@ -387,8 +387,10 @@ export class ChatTopicActionImpl {
 
     // The agent that owns the conversation names it. Heterogeneous, unknown or
     // model-less agents never call an Orvilo cloud model: the title is sliced
-    // from the first user message instead.
-    const agentId = topic.agentId ?? this.#get().activeAgentId;
+    // from the first user message instead. Only the topic's own recorded agent
+    // counts: falling back to whichever agent is active could send this
+    // conversation to another agent's provider.
+    const agentId = topic.agentId;
     const agentState = getAgentStoreState();
     const agentConfig = agentId
       ? agentSelectors.getAgentConfigById(agentId)(agentState)
@@ -398,8 +400,7 @@ export class ChatTopicActionImpl {
       agentId
         ? {
             heterogeneous: isExternalAgentRuntime(
-              agentByIdSelectors.getAgencyConfigById(agentId)(agentState)?.heterogeneousProvider
-                ?.type,
+              agentByIdSelectors.getAgencyConfigById(agentId)(agentState)?.heterogeneousProvider,
             ),
             model: agentConfig?.model,
             provider: agentConfig?.provider,

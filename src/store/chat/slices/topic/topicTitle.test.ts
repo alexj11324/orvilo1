@@ -8,15 +8,21 @@ import {
 } from './topicTitle';
 
 describe('isExternalAgentRuntime', () => {
-  it('treats the built-in orvilo runtime and a missing type as not external', () => {
-    expect(isExternalAgentRuntime('orvilo')).toBe(false);
+  it('treats the built-in orvilo runtime and a missing provider as not external', () => {
+    expect(isExternalAgentRuntime({ type: 'orvilo' })).toBe(false);
     expect(isExternalAgentRuntime(undefined)).toBe(false);
     expect(isExternalAgentRuntime(null)).toBe(false);
   });
 
   it('treats any CLI/ACP runtime as external', () => {
-    expect(isExternalAgentRuntime('claude-code')).toBe(true);
-    expect(isExternalAgentRuntime('codex')).toBe(true);
+    expect(isExternalAgentRuntime({ type: 'claude-code' })).toBe(true);
+    expect(isExternalAgentRuntime({ type: 'codex' })).toBe(true);
+  });
+
+  it('fails closed for a provider without a recognisable type', () => {
+    expect(isExternalAgentRuntime({})).toBe(true);
+    expect(isExternalAgentRuntime({ type: null })).toBe(true);
+    expect(isExternalAgentRuntime({ type: '' })).toBe(true);
   });
 });
 

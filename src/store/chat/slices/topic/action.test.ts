@@ -3140,7 +3140,7 @@ describe('topic action', () => {
         },
         { content: LOADING_FLAT, id: 'message-2', role: 'assistant' },
       ] as UIChatMessage[];
-      const topics = [{ id: topicId, title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3180,7 +3180,7 @@ describe('topic action', () => {
         },
         { content: LOADING_FLAT, id: 'message-2', role: 'assistant' },
       ] as UIChatMessage[];
-      const topics = [{ id: topicId, title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3237,7 +3237,7 @@ describe('topic action', () => {
           role: 'assistantGroup',
         },
       ] as UIChatMessage[];
-      const topics = [{ id: topicId, title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3271,7 +3271,7 @@ describe('topic action', () => {
     it('should deduplicate concurrent title requests for the same topic', async () => {
       const topicId = 'topic-1';
       const messages = [{ content: 'Hello', id: 'message-1', role: 'user' }] as UIChatMessage[];
-      const topics = [{ id: topicId, title: 'Default Topic' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: 'Default Topic' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3315,7 +3315,7 @@ describe('topic action', () => {
     it('should show a loading placeholder when auto-summarizing a topic without a title', async () => {
       const topicId = 'topic-1';
       const messages = [{ id: 'message-1', content: 'Hello' }] as UIChatMessage[];
-      const topics = [{ id: 'topic-1', title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: 'topic-1', title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
       await act(async () => {
         useChatStore.setState({
@@ -3357,7 +3357,7 @@ describe('topic action', () => {
       const topicId = 'topic-1';
       const messages = [{ id: 'message-1', content: 'Hello' }] as UIChatMessage[];
       const optimisticTitle = '阅读下面的材料，根据要求写作。';
-      const topics = [{ id: topicId, title: optimisticTitle }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: optimisticTitle }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
       await act(async () => {
         useChatStore.setState({
@@ -3397,8 +3397,8 @@ describe('topic action', () => {
       const topicId = 'topic-1';
       const messages = [{ id: 'message-1', content: 'Hello' }] as UIChatMessage[];
 
-      const seedTopic = async (title: string) => {
-        const topics = [{ id: topicId, title }] as ChatTopic[];
+      const seedTopic = async (title: string, agentId: string | null = 'test') => {
+        const topics = [{ agentId, id: topicId, title }] as ChatTopic[];
         const { result } = renderHook(() => useChatStore());
 
         await act(async () => {
@@ -3529,6 +3529,51 @@ describe('topic action', () => {
           expect.anything(),
         );
         expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: '简单问候' });
+      });
+
+      it('never borrows the active agent model for a topic with no recorded owner', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+              model: 'deepseek-v4-flash',
+              provider: 'deepseek',
+            } as any,
+          },
+        });
+        const result = await seedTopic('', null);
+        const updateTopicSpy = vi
+          .spyOn(result.current, 'internal_updateTopic')
+          .mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON');
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).not.toHaveBeenCalled();
+        expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: expect.any(String) });
+      });
+
+      it('never calls a cloud model for an agent whose runtime provider has no type', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: {} },
+              model: 'deepseek-v4-flash',
+              provider: 'deepseek',
+            } as any,
+          },
+        });
+        const result = await seedTopic('');
+        vi.spyOn(result.current, 'internal_updateTopic').mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON');
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).not.toHaveBeenCalled();
       });
 
       it('never calls a cloud model for a heterogeneous agent', async () => {

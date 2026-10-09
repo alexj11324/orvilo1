@@ -41,6 +41,28 @@ const row = (overrides: Partial<NotificationItem> = {}): NotificationItem =>
   }) as NotificationItem;
 
 describe('toFeedCard', () => {
+  it('opens the original native question with its Issue and never offers generic approve/decline', () => {
+    const nativeIntervention = {
+      agentId: 'agent-1',
+      messageId: 'original-message',
+      operationId: 'original-op',
+      toolCallId: 'original-call',
+      topicId: 'original-topic',
+    };
+    const card = toFeedCard(
+      row({
+        actionKind: 'acp_intervention',
+        actionRequestId: 'original-message',
+        kind: 'action',
+        metadata: { nativeIntervention },
+        type: 'native_intervention',
+      }),
+    );
+    expect(card.nativeIntervention).toEqual(nativeIntervention);
+    expect(card.safeNavigation).toEqual({ kind: 'task', taskId: 't1' });
+    expect(card.decisionVerbs).toEqual([]);
+    expect(card.availableActions).toEqual(['dismiss', 'open', 'snooze']);
+  });
   it('keeps decide available only for unresolved action cards', () => {
     const update = toFeedCard(row());
     expect(update.availableActions).not.toContain('decide');

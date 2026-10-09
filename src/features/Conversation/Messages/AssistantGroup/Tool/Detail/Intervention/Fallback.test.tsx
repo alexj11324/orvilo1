@@ -16,6 +16,8 @@ const {
   rejectAndContinueToolCall,
   stopPendingApprovalForCard,
   submitHeteroIntervention,
+  toastError,
+  interactionAction,
   access,
 } = vi.hoisted(() => ({
   access: { canUseResource: true },
@@ -23,6 +25,8 @@ const {
   rejectAndContinueToolCall: vi.fn(),
   stopPendingApprovalForCard: vi.fn(),
   submitHeteroIntervention: vi.fn(),
+  toastError: vi.fn(),
+  interactionAction: { current: undefined as BuiltinInterventionProps['onInteractionAction'] },
 }));
 
 const metaMap: Record<string, { avatar?: string; title?: string }> = {
@@ -31,21 +35,39 @@ const metaMap: Record<string, { avatar?: string; title?: string }> = {
   'search': { title: 'Web Search' },
 };
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { count?: number; defaultValue?: string }) =>
-      (
-        ({
-          'builtins.orvilo-activator.apiName.activateTools': 'Activate Tools',
-          'builtins.orvilo-activator.title': 'Tools & Skills Activator',
-          'edit': 'Edit',
-        }) as Record<string, string>
-      )[key] ||
-      (key === 'tool.intervention.viewParameters'
-        ? `View parameters (${options?.count ?? 0})`
-        : options?.defaultValue || key),
-  }),
-}));
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: common } = await import('../../../../../../../../locales/en-US/common.json');
+  const { default: notification } =
+    await import('../../../../../../../../locales/en-US/notification.json');
+  const i18n = createInstance();
+  await i18n.init({
+    fallbackLng: false,
+    lng: 'en-US',
+    ns: ['common', 'notification'],
+    resources: { 'en-US': { common, notification } },
+  });
+
+  return {
+    useTranslation: (namespace: string | string[]) => ({
+      t: (key: string, options?: { count?: number; defaultValue?: string; ns?: string }) =>
+        key === 'inbox.question.replyFailed'
+          ? i18n.getFixedT('en-US', namespace)(key, options)
+          : (
+              {
+                'builtins.orvilo-activator.apiName.activateTools': 'Activate Tools',
+                'builtins.orvilo-activator.title': 'Tools & Skills Activator',
+                'edit': 'Edit',
+              } as Record<string, string>
+            )[key] ||
+            (key === 'tool.intervention.viewParameters'
+              ? `View parameters (${options?.count ?? 0})`
+              : options?.defaultValue || key),
+    }),
+  };
+});
+
+vi.mock('@/components/toast', () => ({ toast: { error: toastError } }));
 
 vi.mock('@orvilo/builtin-tools/streamings', () => ({ getBuiltinStreaming: () => undefined }));
 vi.mock('@/components/ai-elements/tool', () => ({
@@ -64,20 +86,23 @@ vi.mock('@orvilo/builtin-tools/interventions', () => ({
   getBuiltinIntervention: (identifier?: string, apiName?: string) => {
     if (identifier !== 'devin' || apiName !== 'askUserQuestion') return;
 
-    return ({ onInteractionAction }: BuiltinInterventionProps) => (
-      <button
-        data-testid="devin-permission-option"
-        type="button"
-        onClick={() =>
-          void onInteractionAction?.({
-            payload: { 'Allow Devin to continue?': 'allow-once' },
-            type: 'submit',
-          })
-        }
-      >
-        Allow once
-      </button>
-    );
+    return ({ onInteractionAction }: BuiltinInterventionProps) => {
+      interactionAction.current = onInteractionAction;
+      return (
+        <button
+          data-testid="devin-permission-option"
+          type="button"
+          onClick={() =>
+            void onInteractionAction?.({
+              payload: { 'Allow Devin to continue?': 'allow-once' },
+              type: 'submit',
+            })
+          }
+        >
+          Allow once
+        </button>
+      );
+    };
   },
 }));
 
@@ -215,6 +240,28 @@ describe('FallbackIntervention', () => {
 });
 
 describe('heterogeneous custom intervention', () => {
+  it('keeps the notification error copy when a permission reply fails', async () => {
+    const error = new Error('Agent session disconnected');
+    submitHeteroIntervention.mockRejectedValueOnce(error);
+    render(
+      <Intervention
+        apiName="askUserQuestion"
+        id="message-devin-permission"
+        identifier="devin"
+        requestArgs="{}"
+        toolCallId="devin-permission-1"
+      />,
+    );
+
+    expect(interactionAction.current).toBeTypeOf('function');
+    await expect(
+      interactionAction.current!({ payload: { answer: 'allow-once' }, type: 'submit' }),
+    ).rejects.toThrow('Agent session disconnected');
+    expect(toastError).toHaveBeenCalledWith(
+      'Could not send this reply to the original Agent session. Your answer is kept; refresh the question and try again.',
+    );
+  });
+
   it('routes a Devin permission option ID through submitHeteroIntervention', async () => {
     render(
       <Intervention

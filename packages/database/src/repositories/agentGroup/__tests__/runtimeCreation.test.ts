@@ -74,106 +74,32 @@ const seedPrime = async () => {
   return source;
 };
 
+/** Legacy fixture: prior versions persisted an owned virtual coordinator. */
+const seedLegacyGroup = async (
+  params: { title: string },
+  memberIds: string[] = [],
+  config = runtime,
+) => {
+  const [coordinator] = await db
+    .insert(agents)
+    .values({ ...config, userId, virtual: true })
+    .returning();
+  const [group] = await db
+    .insert(chatGroups)
+    .values({ ...params, userId })
+    .returning();
+  await db.insert(chatGroupsAgents).values(
+    [coordinator.id, ...memberIds].map((agentId) => ({
+      agentId,
+      chatGroupId: group.id,
+      userId,
+      role: agentId === coordinator.id ? 'supervisor' : 'participant',
+    })),
+  );
+  return { group, supervisorAgentId: coordinator.id };
+};
+
 describe('resource-owned runtime creation', () => {
-  it('rejects group creation before writing without an admitted actor Prime', async () => {
-    await expect(repo.createGroupWithSupervisor({ title: 'New group' })).rejects.toThrow(
-      'ORCHESTRATOR_SETUP_REQUIRED',
-    );
-    expect(await db.select().from(agents)).toHaveLength(0);
-    expect(await db.select().from(chatGroups)).toHaveLength(0);
-  });
-
-  it('inherits the actor Prime for group creation and lazy supervisor repair', async () => {
-    await seedPrime();
-    const created = await repo.createGroupWithSupervisor({ title: 'New group' });
-    const [supervisor] = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.id, created.supervisorAgentId));
-    expect(supervisor).toMatchObject(runtime);
-    const [legacy] = await db
-      .insert(chatGroups)
-      .values({ userId, title: 'Missing supervisor', visibility: 'private' })
-      .returning();
-    const repaired = await repo.findByIdWithAgents(legacy.id);
-    expect(repaired?.agents[0]).toMatchObject({ ...runtime, visibility: 'private' });
-  });
-
-  it('creates an owned ACP coordinator without changing the selected source Agent', async () => {
-    await seedPrime();
-    const model = new AgentModel(db, userId);
-    const config = {
-      agencyConfig: {
-        boundDeviceId: 'resource-host',
-        executionTarget: 'local' as const,
-        heterogeneousProvider: {
-          command: 'opencode',
-          model: 'mimo-free',
-          type: 'opencode' as const,
-        },
-      },
-    };
-    const source = await model.create({ ...config, title: 'My OpenCode' });
-    const [before] = await db.select().from(agents).where(eq(agents.id, source.id));
-    const group = await repo.createGroupWithSupervisor(
-      { title: 'ACP group', visibility: 'private' },
-      [],
-      { ...config, params: { orchestratorSourceAgentId: source.id } },
-    );
-    expect(group.supervisorAgentId).not.toBe(source.id);
-    const [supervisor] = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.id, group.supervisorAgentId));
-    expect(supervisor.agencyConfig).toMatchObject(config.agencyConfig);
-    expect(supervisor.params).toMatchObject({ orchestratorSourceAgentId: source.id });
-    expect((await db.select().from(agents).where(eq(agents.id, source.id)))[0]).toEqual(before);
-  });
-
-  it('rejects a supplied runtime with an unavailable source before creating resources', async () => {
-    await seedPrime();
-    await expect(
-      repo.createGroupWithSupervisor({ title: 'Forged source' }, [], {
-        ...runtime,
-        params: { orchestratorSourceAgentId: 'missing-source' },
-      }),
-    ).rejects.toThrow('Agent not found');
-    expect(await db.select().from(chatGroups)).toHaveLength(0);
-    expect(await db.select().from(agents)).toHaveLength(1);
-  });
-
-  it('preserves a validated selected snapshot including its explicit model override', async () => {
-    await seedPrime();
-    const source = await new AgentModel(db, userId).create({
-      agencyConfig: {
-        boundDeviceId: 'resource-host',
-        executionTarget: 'local',
-        heterogeneousProvider: { type: 'opencode', model: 'source-model' },
-      },
-    });
-    const selected = {
-      agencyConfig: {
-        boundDeviceId: 'resource-host',
-        executionTarget: 'local' as const,
-        heterogeneousProvider: { type: 'opencode' as const, model: 'chosen-model' },
-      },
-      model: 'chosen-model',
-      provider: 'chosen-provider',
-      params: { orchestratorSourceAgentId: source.id },
-    };
-    const group = await repo.createGroupWithSupervisor(
-      { title: 'Selected snapshot', visibility: 'private' },
-      [],
-      { params: selected.params },
-      selected,
-    );
-    const [coordinator] = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.id, group.supervisorAgentId));
-    expect(coordinator).toMatchObject(selected);
-  });
-
   it('preserves runtime on supervisor and owned-member duplicates', async () => {
     await seedPrime();
     const member = await new AgentModel(db, userId).create({
@@ -181,7 +107,7 @@ describe('resource-owned runtime creation', () => {
       virtual: true,
       title: 'Member',
     });
-    const group = await repo.createGroupWithSupervisor({ title: 'Original' }, [member.id], runtime);
+    const group = await seedLegacyGroup({ title: 'Original' }, [member.id], runtime);
     const duplicate = await repo.duplicate(group.group.id);
     const detail = await repo.findByIdWithAgents(duplicate!.groupId);
     expect(detail?.agents).toHaveLength(2);
@@ -207,7 +133,7 @@ describe('resource-owned runtime creation', () => {
       .insert(agents)
       .values({ userId, virtual: true, title: 'Legacy member' })
       .returning();
-    const group = await repo.createGroupWithSupervisor({ title: 'Original' }, [legacy.id], runtime);
+    const group = await seedLegacyGroup({ title: 'Original' }, [legacy.id], runtime);
     await expect(repo.duplicate(group.group.id)).rejects.toThrow('AGENT_RUNTIME_REQUIRED');
     expect(await db.select().from(chatGroups)).toHaveLength(1);
     expect(await db.select().from(agents)).toHaveLength(3);
@@ -215,7 +141,7 @@ describe('resource-owned runtime creation', () => {
 
   it('requires target-scope host authority for copies and rolls back the group', async () => {
     await seedPrime();
-    const group = await repo.createGroupWithSupervisor({ title: 'Original' }, [], runtime);
+    const group = await seedLegacyGroup({ title: 'Original' }, [], runtime);
     await db
       .insert(workspaces)
       .values({ id: workspaceId, primaryOwnerId: userId, name: 'Target', slug: workspaceId });
@@ -228,7 +154,7 @@ describe('resource-owned runtime creation', () => {
   it('leaves owned and referenced members in place when a transfer clone lacks target authority', async () => {
     await seedPrime();
     const member = await new AgentModel(db, userId).create({ ...runtime, title: 'Referenced' });
-    const group = await repo.createGroupWithSupervisor({ title: 'Original' }, [member.id], runtime);
+    const group = await seedLegacyGroup({ title: 'Original' }, [member.id], runtime);
     await db.insert(workspaces).values({
       id: workspaceId,
       primaryOwnerId: userId,
@@ -248,7 +174,7 @@ describe('resource-owned runtime creation', () => {
       .insert(chatGroups)
       .values({ userId, title: 'Unconfigured' })
       .returning();
-    await expect(repo.findByIdWithAgents(group.id)).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
+    expect((await repo.findByIdWithAgents(group.id))?.supervisorAgentId).toBeUndefined();
     expect(await db.select().from(agents)).toHaveLength(0);
   });
 
@@ -258,9 +184,7 @@ describe('resource-owned runtime creation', () => {
       .insert(chatGroups)
       .values({ userId, title: 'Removed supervisor' })
       .returning();
-    await expect(repo.findByIdWithAgents(group.id, undefined, false)).rejects.toThrow(
-      'ORCHESTRATOR_SETUP_REQUIRED',
-    );
+    expect((await repo.findByIdWithAgents(group.id))?.supervisorAgentId).toBeUndefined();
     expect(await db.select().from(agents)).toHaveLength(1);
   });
 

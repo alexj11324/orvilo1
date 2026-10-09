@@ -7,9 +7,6 @@ export default {
   'features.agentSelfIteration.desc':
     'Allow the agent to reflect, build self-awareness, and continuously iterate through ongoing attempts and interactions.',
   'features.agentSelfIteration.title': 'Agent Self-iteration',
-  'features.artifactDeployment.desc':
-    'Publish artifacts to a hosted URL and manage releases from the conversation sidebar',
-  'features.artifactDeployment.title': 'Artifact Deployments',
   'features.assistantMessageGroup.desc':
     'Group agent messages and their tool call results together for display',
   'features.assistantMessageGroup.title': 'Agent Message Grouping',
@@ -37,10 +34,10 @@ export default {
     'Show OAuth app management in personal and workspace settings. This feature is hidden by default.',
   'features.oauthApps.title': 'OAuth Apps',
   'features.projects.desc':
-    'Organize long-running goals into dedicated workspaces with their own agents, knowledge bases, and tasks.',
+    'Organize long-running goals into dedicated workspaces with their own agents, knowledge bases, and issues.',
   'features.projects.title': 'Project Workspaces',
   'features.taskVerify.desc':
-    'Add an Acceptance section to the task detail: describe acceptance in one sentence and let AI generate editable verify criteria.',
+    'Add an Acceptance section to the issue detail: describe acceptance in one sentence and let AI generate editable verify criteria.',
   'features.taskVerify.title': 'Acceptance',
   'features.selfLearning.desc':
     'Show what each agent has learned from real practice — its rule base, which rules actually get used, and which layers are still blank.',

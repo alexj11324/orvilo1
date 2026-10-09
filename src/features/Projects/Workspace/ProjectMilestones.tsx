@@ -2,7 +2,7 @@
 
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { CalendarIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { createElement, memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,12 +31,15 @@ import {
   scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
 import { projectIssueProgress } from '@/features/Projects/projectIssueProgress';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
+import { formatProjectDate, PROJECT_DAY_FORMAT } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+
+import { ProjectDateInput } from './ProjectPlanningFields';
+import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
 type Milestone = NonNullable<ProjectDetail['milestones']>[number];
 type ProjectTask = NonNullable<ProjectDetail['tasks']>[number];
@@ -138,20 +141,6 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 12px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 8px;
-  `,
-  datePicker: css`
-    width: 118px;
-    height: 28px;
-    border-color: transparent;
-    border-radius: 9999px;
-
-    font-size: 13px;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
   `,
   description: css`
     white-space: pre-wrap;
@@ -295,7 +284,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
         <DatePicker
           allowClear
           aria-label={t('create.milestone.date')}
-          format="MMM D, YYYY"
+          format="YYYY/MM/DD"
           placeholder={t('create.milestone.date')}
           prefix={<CalendarIcon size={13} />}
           size="small"
@@ -345,6 +334,55 @@ interface ProjectMilestonesProps {
  * hover-only `Set target date`, `⋯` and a left-edge drag strip, a `+ Milestone`
  * button underneath, and a pinned `No milestone` row for unassigned issues.
  */
+/** Milestone target date: the same ghost property pill as the project dates. */
+function MilestoneDateControl({
+  className,
+  disabled,
+  onChange,
+  value,
+}: {
+  className?: string;
+  disabled: boolean;
+  onChange: (date: string | null) => void;
+  value?: string | null;
+}) {
+  const { t } = useTranslation('project');
+  const [open, setOpen] = useState(false);
+  const title = t('overview.milestoneChooseDate');
+  const commit = (picked: Dayjs | null) => {
+    setOpen(false);
+    onChange(picked ? picked.format('YYYY-MM-DD') : null);
+  };
+  return (
+    <DatePicker
+      aria-label={title}
+      className={cn(PROPERTY_CONTROL_CLASS, 'min-w-0 shrink', className)}
+      disabled={disabled}
+      format={PROJECT_DAY_FORMAT}
+      open={open}
+      placeholder={t('overview.milestoneSetDate')}
+      prefix={<CalendarIcon aria-hidden size={16} />}
+      suffixIcon={null}
+      value={value ? dayjs(value) : null}
+      variant="ghost"
+      panelRender={(panel) => (
+        <>
+          <ProjectDateInput
+            disabled={disabled}
+            precision="day"
+            stored={{ date: value ?? null, precision: 'day' }}
+            title={title}
+            onCommit={commit}
+          />
+          {panel}
+        </>
+      )}
+      onChange={(value) => commit(Array.isArray(value) ? (value[0] ?? null) : value)}
+      onOpenChange={setOpen}
+    />
+  );
+}
+
 const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
   const { t } = useTranslation(['project', 'common']);
   const project = detail.project;
@@ -516,23 +554,13 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                   {/* A set date stays on the card; only the empty "Set target
                       date" affordance waits for hover, matching the reference's
                       hover-only `Choose date` button. */}
-                  <DatePicker
-                    allowClear
-                    aria-label={t('overview.milestoneChooseDate')}
+                  <MilestoneDateControl
                     disabled={saving}
-                    format="MMM D"
-                    placeholder={t('overview.milestoneSetDate')}
-                    prefix={<CalendarIcon size={13} />}
-                    size="small"
-                    suffixIcon={null}
-                    value={milestone.date ? dayjs(milestone.date) : null}
-                    className={cx(
-                      styles.datePicker,
-                      !milestone.date && cx(HOVER_CONTROLS_CLASS, styles.hiddenControl),
-                    )}
-                    onChange={(value) => {
-                      const picked = Array.isArray(value) ? value[0] : value;
-                      const date = picked ? picked.format('YYYY-MM-DD') : null;
+                    value={milestone.date}
+                    className={
+                      !milestone.date ? cx(HOVER_CONTROLS_CLASS, styles.hiddenControl) : undefined
+                    }
+                    onChange={(date) => {
                       if (date === (milestone.date ?? null)) return;
                       void runMutation(
                         () => updateMilestone(project.id, milestone.id, { date }),

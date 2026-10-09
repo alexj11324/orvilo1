@@ -19,6 +19,7 @@ import type { WorkQueryGroupPage, WorkQueryResultTask } from './workQueryPaging'
 import {
   flattenWorkQueryFlatItems,
   flattenWorkQueryVirtualItems,
+  indexWorkQueryVirtualTasks,
   nestWorkQueryListGroups,
   stickyVirtualSections,
   type WorkQueryVirtualItem,
@@ -96,12 +97,11 @@ const WorkQueryVirtualList = ({
   const [sessionCollapsed, setSessionCollapsed] = useState<readonly string[]>([]);
   const collapsedKeys = collapsedGroups ?? sessionCollapsed;
   const collapsed = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
-  const taskById = useMemo(() => {
-    const map = new Map<string, WorkQueryResultTask>();
-    for (const task of allTasks) map.set(task.id, task);
-    for (const task of tasks) map.set(task.id, task);
-    return map;
-  }, [allTasks, tasks]);
+  const taskById = useMemo(
+    () =>
+      indexWorkQueryVirtualTasks([allTasks, tasks, ...(groups ?? []).map((group) => group.tasks)]),
+    [allTasks, groups, tasks],
+  );
 
   const toggleCollapsed = (key: string) => {
     const next = collapsed.has(key)

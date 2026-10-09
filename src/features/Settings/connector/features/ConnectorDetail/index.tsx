@@ -278,7 +278,7 @@ const ConnectorDetailPanel = memo<ConnectorDetailProps>(({ identifier, type, onD
   // Connector types: builtin tool / plugin / mcp-connector / orvilo-connector
   if (syncing) {
     return (
-      <div style={{ padding: 24 }}>
+      <div className="p-6">
         <div aria-busy="true" className="flex flex-col gap-3">
           {Array.from({ length: 6 }, (_, index) => (
             <Skeleton className="h-4 w-full" key={index} />

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
-import { Skeleton } from '@/components/ui/skeleton';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { HOTKEYS_REGISTRATION } from '@/const/hotkeys';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -18,8 +18,14 @@ import { settingsSelectors } from '@/store/user/selectors';
 import { type HotkeyItem } from '@/types/hotkey';
 
 import { hotkeyFormStyles } from './styles';
+import { getHotkeyConflicts, getVisibleHotkeys } from './visibleHotkeys';
 
-const HotkeySetting = memo(() => {
+interface HotkeySettingProps {
+  /** Whether the Electron-only shortcuts apply on this surface. */
+  desktop: boolean;
+}
+
+const HotkeySetting = memo<HotkeySettingProps>(({ desktop }) => {
   const { t } = useTranslation(['setting', 'hotkey']);
   const [form] = Form.useForm();
 
@@ -27,14 +33,7 @@ const HotkeySetting = memo(() => {
   const [setSettings, isUserStateInit] = useUserStore((s) => [s.setSettings, s.isUserStateInit]);
   const { status: saveStatus, lastSavedAt, save, retry } = useSaveState();
 
-  if (!isUserStateInit)
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+  if (!isUserStateInit) return <SettingsSectionSkeleton />;
 
   const clearHotkeyBinding = (id: HotkeyItem['id']) => {
     if (!hotkey[id]) return;
@@ -44,12 +43,7 @@ const HotkeySetting = memo(() => {
   };
 
   const mapHotkeyItem = (item: HotkeyItem) => {
-    const hotkeyConflicts = Object.entries(hotkey)
-      .map(([key, value]) => {
-        if (key === item.id) return false;
-        return value;
-      })
-      .filter(Boolean) as string[];
+    const hotkeyConflicts = getHotkeyConflicts(hotkey, item.id, HOTKEYS_REGISTRATION);
 
     return {
       children: (
@@ -69,9 +63,9 @@ const HotkeySetting = memo(() => {
   };
 
   const conversation: FormGroupItemType = {
-    children: HOTKEYS_REGISTRATION.filter(
-      (item) => item.group === HotkeyGroupEnum.Conversation,
-    ).map((item) => mapHotkeyItem(item)),
+    children: getVisibleHotkeys(HOTKEYS_REGISTRATION, HotkeyGroupEnum.Conversation, desktop).map(
+      (item) => mapHotkeyItem(item),
+    ),
     extra:
       saveStatus === 'idle' ? undefined : (
         <AutoSaveHint lastUpdatedTime={lastSavedAt} saveStatus={saveStatus} onRetry={retry} />

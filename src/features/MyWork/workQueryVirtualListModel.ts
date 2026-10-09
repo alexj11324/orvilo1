@@ -86,6 +86,21 @@ export const nestWorkQueryListGroups = <T>(
     .filter((parent) => parent.total > 0 || parent.tasks.length > 0);
 };
 
+/**
+ * Lookup for the rows a virtual list renders. The list's items are built from
+ * the grouped pages, so those pages' tasks must be resolvable even when the
+ * flat `tasks` / `allTasks` lists do not carry them: right after a tab switch
+ * the grouping preference can still be unresolved while the grouped response
+ * is already in, and a missing task renders a zero-height row.
+ */
+export const indexWorkQueryVirtualTasks = (
+  sources: readonly (readonly WorkQueryResultTask[])[],
+): Map<string, WorkQueryResultTask> => {
+  const index = new Map<string, WorkQueryResultTask>();
+  for (const tasks of sources) for (const task of tasks) index.set(task.id, task);
+  return index;
+};
+
 export type WorkQueryVirtualKind = 'header' | 'loadMore' | 'row';
 
 export interface WorkQueryVirtualItem {

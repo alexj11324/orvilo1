@@ -1,5 +1,4 @@
 export default {
-  'setup.step.orchestrator': 'Orchestrator',
   'setup.orchestrator.title': 'Choose your Orchestrator',
   'setup.orchestrator.description':
     'Your Orchestrator coordinates groups and projects. Use the Agent you just created or choose another configured Agent.',
@@ -109,15 +108,15 @@ export default {
   'flow.steps.profile.tagline': 'Tagline',
   'flow.steps.profile.tellUsMore': 'Tell us more about you',
   'flow.steps.profile.title': 'Your profile',
-  'flow.steps.starterTasks.addTasks_one': 'Add {{count}} task',
-  'flow.steps.starterTasks.addTasks_other': 'Add {{count}} tasks',
-  'flow.steps.starterTasks.createError': 'Could not add these tasks. Please try again.',
+  'flow.steps.starterTasks.addTasks_one': 'Add {{count}} issue',
+  'flow.steps.starterTasks.addTasks_other': 'Add {{count}} issues',
+  'flow.steps.starterTasks.createError': 'Could not add these issues. Please try again.',
   'flow.steps.starterTasks.play': 'Play',
   'flow.steps.starterTasks.quote': "I'll suggest automations that might ",
   'flow.steps.starterTasks.quoteHighlight': 'save you time.',
-  'flow.steps.starterTasks.sectionLabel': 'Suggested starter tasks',
+  'flow.steps.starterTasks.sectionLabel': 'Suggested starter issues',
   'flow.steps.starterTasks.subline':
-    'Assign clear tasks to your CAO, then track its progress as it completes each one.',
+    'Assign clear issues to your CAO, then track its progress as it completes each one.',
   'flow.steps.starterTasks.title': 'See exactly how we get things done.',
   'interests.area.business': 'Business & Strategy',
   'interests.area.coding': 'Programming & Development',
@@ -341,8 +340,9 @@ export default {
   'reui.workspace.successTitle': '{{name}} is ready',
 
   'setup.steps': 'Setup steps',
-  'setup.step.workspace': '1 Workspace',
-  'setup.step.agent': '2 Agent',
+  'setup.stepName.workspace': 'Workspace',
+  'setup.stepName.agent': 'Agent',
+  'setup.stepName.orchestrator': 'Orchestrator',
   'setup.workspace.title': 'Set up your workspace',
   'setup.workspace.description': 'Choose a workspace name and address for your work.',
   'setup.agent.title': 'Create your first Agent',
@@ -352,4 +352,20 @@ export default {
   'setup.account': 'Account settings',
   'setup.provider': 'Provider settings',
   'setup.devices': 'Device settings',
+  'setup.accountMenu': 'Account menu for {{name}}',
+  'setup.wrongEmail': 'Wrong email? Sign out',
+  'setup.skip': 'Skip for now',
+  'setup.workspace.continueWith': 'Continue with {{name}}',
+  'setup.workspace.resumeDescription':
+    'You already created this workspace. Continue to set up your first Agent.',
+  'setup.error.workspace.title': 'Couldn’t create your workspace',
+  'setup.error.workspace.description':
+    'Check the name and URL, then try again. If the URL is already taken, choose another one.',
+  'setup.error.agent.title': 'Couldn’t set up your Agent',
+  'setup.error.agent.description':
+    'Check your provider and device settings, then try again. Your progress is saved.',
+  'setup.error.selection.title': 'Couldn’t save your choice',
+  'setup.error.selection.description': 'Try again, or choose a different Agent.',
+  'setup.error.finish.title': 'Couldn’t finish setup',
+  'setup.error.finish.description': 'Your progress is saved. Try again in a moment.',
 };

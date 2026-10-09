@@ -128,6 +128,7 @@ const pick = <T extends Record<string, any>>(source: T, keys: readonly string[])
 };
 
 const AGENT_PROFILE_KEYS = [
+  'heterogeneousType',
   'avatar',
   'backgroundColor',
   'createdAt',

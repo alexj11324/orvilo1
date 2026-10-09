@@ -193,7 +193,16 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
     // users can tell what is connected instead of hitting a blank detail panel.
     const renderNavExtra = () => {
       if (isConnecting || isWaitingAuth) {
-        return <Button loading size="sm" variant="ghost" />;
+        return (
+          <Button
+            aria-busy
+            disabled
+            loading
+            aria-label={t('tools.composio.connect', { defaultValue: 'Connect' })}
+            size="icon-sm"
+            variant="ghost"
+          />
+        );
       }
       if (isConnected) {
         return (
@@ -201,18 +210,10 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
             <TooltipTrigger
               render={
                 <span className="inline-flex min-w-0">
-                  <div
-                    className={'flex min-w-0'}
-                    style={{
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 20,
-                    }}
-                  >
+                  <div className="flex w-5 min-w-0 flex-col items-center justify-center">
                     {createElement(CircleCheck, {
                       size: 16,
-                      style: { color: cssVar.colorSuccess },
+                      className: 'text-success',
                     })}
                   </div>
                 </span>

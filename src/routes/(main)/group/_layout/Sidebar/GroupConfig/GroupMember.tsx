@@ -7,7 +7,6 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
@@ -58,7 +57,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
   const addAgentsToGroup = useAgentGroupStore((s) => s.addAgentsToGroup);
   const removeAgentFromGroup = useAgentGroupStore((s) => s.removeAgentFromGroup);
 
-  const groupMembers = useAgentGroupStore(agentGroupSelectors.getGroupMembers(groupId || ''));
+  const groupMembers = useAgentGroupStore(agentGroupSelectors.getGroupAgents(groupId || ''));
 
   const activeTab = useMemo(
     () => new URLSearchParams(location.search).get('tab'),
@@ -120,9 +119,8 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
                 onDoubleClick={() => handleMemberDoubleClick(item.id)}
               >
                 <GroupMemberItem
-                  avatar={item.avatar || DEFAULT_AVATAR}
-                  background={item.backgroundColor ?? undefined}
-                  isExternal={!item.virtual}
+                  isCoordinator={item.isSupervisor}
+                  runtimeType={item.heterogeneousType}
                   title={agentDisplayName(item, t('defaultSession', { ns: 'common' }))}
                   actions={
                     <ActionIcon

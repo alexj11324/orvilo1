@@ -31,27 +31,30 @@ const genGlobalStyle = ({ token }: { prefixCls: string; token: Theme }) => css`
     isolation: isolate;
   }
 
-  * {
-    scrollbar-color: ${token.colorFill} transparent;
-    scrollbar-width: thin;
+  /* Resets live in @layer base so Tailwind/ReUI utilities and antd (layer antd) can override them. */
+  @layer base {
+    * {
+      scrollbar-color: ${token.colorFill} transparent;
+      scrollbar-width: thin;
 
-    ::-webkit-scrollbar {
-      width: 0.75em;
-      height: 0.75em;
-    }
+      ::-webkit-scrollbar {
+        width: 0.75em;
+        height: 0.75em;
+      }
 
-    ::-webkit-scrollbar-thumb {
-      border-radius: 10px;
-    }
+      ::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+      }
 
-    :hover::-webkit-scrollbar-thumb {
-      border: 3px solid transparent;
-      background-color: ${token.colorText};
-      background-clip: content-box;
-    }
+      :hover::-webkit-scrollbar-thumb {
+        border: 3px solid transparent;
+        background-color: ${token.colorText};
+        background-clip: content-box;
+      }
 
-    ::-webkit-scrollbar-track {
-      background-color: transparent;
+      ::-webkit-scrollbar-track {
+        background-color: transparent;
+      }
     }
   }
 

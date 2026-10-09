@@ -23,19 +23,6 @@ export interface GroupMemberConfig {
   title?: string | null;
 }
 
-export interface SupervisorConfig {
-  agencyConfig?: OrviloAgentAgencyConfig;
-  avatar?: string;
-  backgroundColor?: string;
-  description?: string;
-  model?: string;
-  params?: any;
-  provider?: string;
-  systemRole?: string;
-  tags?: string[];
-  title?: string;
-}
-
 class ChatGroupService {
   /**
    * Get a group by forkedFromIdentifier stored in config
@@ -46,11 +33,10 @@ class ChatGroupService {
   };
 
   /**
-   * Create a group with a supervisor agent.
-   * The supervisor agent is automatically created as a virtual agent.
+   * Create a Group that references existing members and one of them as coordinator.
    */
   createGroup = (
-    params: Omit<NewChatGroup, 'userId'> & { supervisorConfig?: SupervisorConfig },
+    params: Omit<NewChatGroup, 'userId'> & { agentIds: string[]; coordinatorAgentId: string },
   ): Promise<{ group: ChatGroupItem; supervisorAgentId: string }> => {
     return lambdaClient.group.createGroup.mutate({
       ...params,
@@ -59,14 +45,12 @@ class ChatGroupService {
   };
 
   /**
-   * Create a group with virtual member agents in one request.
-   * This is the recommended way to create a group from a template.
-   * Returns groupId, supervisorAgentId, and member agentIds.
+   * Create a Group from existing member IDs; no Agent configuration is copied.
    */
   createGroupWithMembers = (
     groupConfig: Omit<NewChatGroup, 'userId'>,
-    members: GroupMemberConfig[],
-    supervisorConfig?: SupervisorConfig,
+    members: string[],
+    coordinatorAgentId: string,
   ): Promise<{ agentIds: string[]; groupId: string; supervisorAgentId: string }> => {
     return lambdaClient.group.createGroupWithMembers.mutate({
       groupConfig: {
@@ -74,7 +58,7 @@ class ChatGroupService {
         config: groupConfig.config as any,
       },
       members,
-      supervisorConfig,
+      coordinatorAgentId,
     });
   };
 
@@ -152,7 +136,7 @@ class ChatGroupService {
   duplicateGroup = (
     groupId: string,
     newTitle?: string,
-  ): Promise<{ groupId: string; supervisorAgentId: string } | null> => {
+  ): Promise<{ groupId: string; supervisorAgentId?: string } | null> => {
     return lambdaClient.group.duplicateGroup.mutate({ groupId, newTitle });
   };
 

@@ -1,6 +1,9 @@
 import { lambdaClient } from '@/libs/trpc/client';
 
 class NotificationService {
+  dismiss = (id: string, expectedVersion: number) => {
+    return lambdaClient.notification.dismiss.mutate({ expectedVersion, id });
+  };
   list = (
     params: {
       category?: string;

@@ -233,6 +233,7 @@ const TabItem = memo<TabItemProps>(
 
     const face = (
       <m.div
+        aria-label={meta.title}
         data-active={isActive ? 'true' : undefined}
         data-tier={tier}
         ref={setNodeRef}
@@ -268,6 +269,7 @@ const TabItem = memo<TabItemProps>(
         {closable && (
           <ActionIcon
             data-tab-close
+            aria-label={t('tab.closeCurrentTab')}
             className={styles.closeIcon}
             icon={X}
             inert={closeInert}

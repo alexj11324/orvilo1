@@ -1,15 +1,16 @@
-import { copyToClipboard, Flexbox } from '@lobehub/ui';
-import { ActionIcon, confirmModal, Switch, Tag, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { confirmModal, toast } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { LucidePencil, TrashIcon } from 'lucide-react';
 import { type AiProviderModelListItem } from 'model-bank';
 import { AiModelSourceEnum } from 'model-bank/aiModel';
-import React, { memo, use, useState } from 'react';
+import { memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { ModelInfoTags } from '@/components/ModelSelect';
 import NewModelBadge from '@/components/ModelSelect/NewModelBadge';
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -21,42 +22,8 @@ import {
 } from '@/utils/pricing';
 
 import { createModelConfigModal } from './ModelConfigModal';
+import ModelIdChip from './ModelIdChip';
 import { ProviderSettingsContext } from './ProviderSettingsContext';
-
-const styles = createStaticStyles(({ css, cx }) => {
-  return {
-    config: cx(
-      'model-item-config',
-      css`
-        opacity: 0;
-        transition: all 100ms ease-in-out;
-      `,
-    ),
-    container: css`
-      position: relative;
-      border-radius: ${cssVar.borderRadiusLG}px;
-      transition: all 200ms ease-in-out;
-
-      &:hover {
-        background-color: ${cssVar.colorFillTertiary};
-
-        .model-item-config {
-          opacity: 1;
-        }
-      }
-    `,
-    desc: css`
-      flex: 1;
-      min-width: 0;
-
-      span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    `,
-  };
-});
 
 interface ModelItemProps extends AiProviderModelListItem {
   enabled: boolean;
@@ -155,30 +122,20 @@ const ModelItem = memo<ModelItemProps>(
       ...formatPricing(),
     ].filter(Boolean) as string[];
 
-    const copyModelId = async () => {
-      await copyToClipboard(id);
-      toast.success(t('copySuccess', { ns: 'common' }));
-    };
-
     const isMobile = useIsMobile();
 
     const NewTag = <NewModelBadge releasedAt={releasedAt} />;
 
-    const ModelIdTag = (
-      <Tag style={{ cursor: 'pointer', marginRight: 0 }} onClick={copyModelId}>
-        {id}
-      </Tag>
-    );
+    const ModelIdTag = <ModelIdChip id={id} />;
 
     const canToggle = modelEditable || type !== 'embedding';
 
     const EnableSwitch = canToggle ? (
       <Switch
+        aria-label={displayName || id}
         checked={checked}
-        disabled={!canManageProvider}
-        loading={isModelLoading}
-        size={'small'}
-        onChange={async (e) => {
+        disabled={!canManageProvider || isModelLoading}
+        onCheckedChange={async (e) => {
           if (!canManageProvider) return;
           setChecked(e);
           await toggleModelEnabled({ enabled: e, id, source, type });
@@ -188,8 +145,14 @@ const ModelItem = memo<ModelItemProps>(
 
     const Actions =
       modelEditable &&
-      ((style?: React.CSSProperties) => (
-        <Flexbox horizontal className={styles.config} style={style}>
+      ((alwaysVisible?: boolean) => (
+        <div
+          className={cn(
+            'flex items-center transition-opacity',
+            !alwaysVisible &&
+              'opacity-0 group-focus-within/model:opacity-100 group-hover/model:opacity-100',
+          )}
+        >
           <ActionIcon
             disabled={!canManageProvider}
             icon={LucidePencil}
@@ -227,89 +190,58 @@ const ModelItem = memo<ModelItemProps>(
               }}
             />
           )}
-        </Flexbox>
+        </div>
       ));
 
     const dom = isMobile ? (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={12}
-        justify={'space-between'}
-        padding={'12px 6px'}
-        width={'100%'}
-      >
-        <Flexbox horizontal align={'center'} flex={1} gap={16} style={{ minWidth: 0 }}>
+      <div className="flex w-full items-center justify-between gap-3 px-1.5 py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
           <ModelIcon model={id} size={32} />
-          <Flexbox flex={1} gap={4} style={{ minWidth: 0 }}>
-            <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
               {displayName || id}
-              <Flexbox horizontal align={'center'} gap={8}>
-                <ModelInfoTags
-                  placement={'top'}
-                  {...abilities}
-                  contextWindowTokens={contextWindowTokens}
-                />
-              </Flexbox>
-            </Flexbox>
-            <div>
+              <ModelInfoTags
+                placement={'top'}
+                {...abilities}
+                contextWindowTokens={contextWindowTokens}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               {ModelIdTag}
               {NewTag}
             </div>
-          </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={4}>
-          {Actions && Actions({ opacity: 1 })}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {Actions && Actions(true)}
           {EnableSwitch}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     ) : (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.container}
-        gap={24}
-        justify={'space-between'}
-        padding={12}
-        width={'100%'}
-      >
-        <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
+      <div className="group/model flex min-h-11 w-full items-center justify-between gap-6 border-t border-border px-4 py-1.5 transition-colors first:border-t-0 hover:bg-accent">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <ModelIcon model={id} size={32} />
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-            <Flexbox horizontal align={'center'} gap={8}>
-              {displayName || id}
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate font-medium">{displayName || id}</span>
               {ModelIdTag}
               {NewTag}
               {Actions && Actions()}
-            </Flexbox>
-            <Flexbox horizontal align={'baseline'} gap={8}>
-              {content.length > 0 && (
-                <Text style={{ color: cssVar.colorTextSecondary, fontSize: 12, marginBottom: 0 }}>
-                  {content.join(' · ')}
-                </Text>
-              )}
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={8}>
+            </div>
+            {content.length > 0 && (
+              <div className="truncate text-xs text-muted-foreground">{content.join(' · ')}</div>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-none items-center gap-3">
           <ModelInfoTags
             placement={'top'}
             {...abilities}
             contextWindowTokens={contextWindowTokens}
           />
-          {/*{removed && (*/}
-          {/*  <Tooltip*/}
-          {/*    overlayStyle={{ maxWidth: 300 }}*/}
-          {/*    placement={'top'}*/}
-          {/*    style={{ pointerEvents: 'none' }}*/}
-          {/*    title={t('ModelSelect.removed')}*/}
-          {/*  >*/}
-          {/*    <ActionIcon icon={Recycle} style={{ color: theme.colorWarning }} />*/}
-          {/*  </Tooltip>*/}
-          {/*)}*/}
           {EnableSwitch}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
 
     return dom;

@@ -146,7 +146,7 @@ export const buildTimelineAxis = (
     const cellEnd = next.isAfter(range.end) ? range.end : next;
     months.push({
       key: cursor.format('YYYY-MM'),
-      label: cursor.format('MMM YYYY'),
+      label: cursor.format('YYYY/MM'),
       offset: cellStart.diff(range.start, 'day') * dayWidth,
       width: cellEnd.diff(cellStart, 'day') * dayWidth,
     });

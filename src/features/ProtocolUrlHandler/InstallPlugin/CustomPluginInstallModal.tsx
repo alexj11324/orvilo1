@@ -10,6 +10,7 @@ import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
 import { toast } from '@/components/toast';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -220,14 +221,16 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
                 <AlertTitle>{t('protocolInstall.messages.connectionTestFailed')}</AlertTitle>
                 <AlertDescription>{testState.error}</AlertDescription>
                 <AlertAction>
-                  <button
+                  <Button
                     aria-label={t('common:close')}
                     className="text-muted-foreground"
+                    size="icon-xs"
                     type="button"
+                    variant="ghost"
                     onClick={() => setErrorDismissed(true)}
                   >
                     <X size={16} />
-                  </button>
+                  </Button>
                 </AlertAction>
               </Alert>
             )}

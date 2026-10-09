@@ -13,6 +13,7 @@ import urlJoin from 'url-join';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import Loading from '@/components/Loading/BrandTextLoading';
 import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
@@ -166,13 +167,15 @@ const LessonDetail = memo(() => {
                   {domainError && (
                     <div className="text-destructive" style={{ fontSize: 12.5 }}>
                       {t('rules.detail.domainUnavailable')} ·{' '}
-                      <button
-                        className="text-info"
-                        type={'button'}
+                      <Button
+                        className="h-auto p-0 text-info"
+                        size="sm"
+                        type="button"
+                        variant="link"
                         onClick={() => void mutateDomain()}
                       >
                         {t('rules.detail.retry')}
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>

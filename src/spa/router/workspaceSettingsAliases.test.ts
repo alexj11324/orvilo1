@@ -48,6 +48,8 @@ describe('workspace settings legacy aliases', () => {
 
     expect(aliases).toContain('creds');
     expect(aliases).toContain('stats');
+    // The retired workspace Storage page keeps answering old bookmarks.
+    expect(aliases).toContain('storage');
     // Live restored tabs must stay alias-free or the redirect would shadow them.
     expect(aliases).not.toContain('provider');
     expect(aliases).not.toContain('service-model');

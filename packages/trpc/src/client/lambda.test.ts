@@ -112,6 +112,45 @@ describe('lambdaClient large-input query transport', () => {
   );
 });
 
+describe('lambdaClient oversized query input', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('location', new URL('http://localhost/tasks'));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  // Regression: an Issue list query carrying a long id filter was not on the
+  // allow-list, overflowed the batched GET URL and failed client-side with
+  // "Input is too big for a single dispatch". Size, not procedure name, decides.
+  it('sends any query whose input exceeds the GET budget as a POST request', async () => {
+    fetchMock.mockResolvedValueOnce(okTrpcResponse(null));
+
+    await expect(
+      lambdaClient.task.detail.query({
+        id: Array.from({ length: 400 }, (_, i) => `task_${String(i).padStart(16, '0')}`).join(','),
+      } as never),
+    ).resolves.toBeNull();
+
+    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    expect(init.method).toBe('POST');
+  });
+
+  it('keeps small queries on GET', async () => {
+    fetchMock.mockResolvedValueOnce(okTrpcResponse(null));
+
+    await lambdaClient.task.detail.query({ id: 'task_small' } as never);
+
+    const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+    expect(init.method ?? 'GET').toBe('GET');
+  });
+});
+
 describe('lambdaClient unreadable response handling', () => {
   const fetchMock = vi.fn();
 

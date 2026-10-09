@@ -15,8 +15,7 @@ import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath
  * send a workspace URL to the personal `/tasks`.
  *
  * The query is carried across. Root-path links arrive with parameters attached —
- * `?onboarding=task` is how the post-onboarding entry asks for the board, and an
- * auth callback or invitation can sanitize down to `/` — and dropping them here
+ * an auth callback or invitation can sanitize down to `/` — and dropping them here
  * would let the landing redirect silently steal a deep link.
  *
  * Electron uses the same element for its `createHomeElement`: each tab owns a

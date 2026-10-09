@@ -138,11 +138,13 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Hotkeys are a desktop concept; the mobile shell has nothing to bind.
   [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
 
-  // Desktop notifications are a local capability, so the row is offered on
+  // Desktop notifications are a local capability, so the page is served on
   // Electron regardless of whether the deployment ships the business pages
-  // that host the rest of the notification settings.
+  // that host the rest of the notification settings. Without either, the Web
+  // component is a blank business placeholder, so the URL answers not-found
+  // instead of an empty pane.
   [SettingsTabs.Notification]: {
-    offered: ({ enableBusinessFeatures, isDesktop }) => enableBusinessFeatures || isDesktop,
+    gate: ({ enableBusinessFeatures, isDesktop }) => enableBusinessFeatures || isDesktop,
     scope: 'user',
     status: 'enabled',
   },
@@ -316,4 +318,7 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   // the same not-found the personal sidebar answers (see
   // `SettingsTabs.Skill` / `SettingsTabs.OAuthApps` in `SETTINGS_CAPABILITIES`).
   { alias: 'stats', target: 'statistics' },
+  // The workspace Storage page held only permanently disabled "coming soon"
+  // controls, so it was retired. Old bookmarks land on the settings index.
+  { alias: 'storage', target: 'root' },
 ];

@@ -1,20 +1,11 @@
-import { Tooltip } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import InstantSwitch from '@/components/InstantSwitch';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermission } from '@/hooks/usePermission';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
-
-const styles = createStaticStyles(({ css }) => ({
-  switchLoading: css`
-    width: 44px !important;
-    min-width: 44px !important;
-    height: 22px !important;
-    border-radius: 12px !important;
-  `,
-}));
 
 interface SwitchProps {
   Component?: FC<{ id: string }>;
@@ -22,6 +13,7 @@ interface SwitchProps {
 }
 
 const Switch = ({ id, Component }: SwitchProps) => {
+  const { t } = useTranslation('modelProvider');
   const [toggleProviderEnabled, enabled, isLoading] = useAiInfraStore((s) => [
     s.toggleProviderEnabled,
     aiProviderSelectors.isProviderEnabled(id)(s),
@@ -29,13 +21,14 @@ const Switch = ({ id, Component }: SwitchProps) => {
   ]);
   const { allowed: canManageProvider, reason } = usePermission('manage_provider_key');
 
-  if (isLoading) return <Skeleton className={styles.switchLoading} height={36} />;
+  if (isLoading) return <Skeleton className="h-[18px] w-8 rounded-full" />;
 
   // slot for cloud
   if (Component) return <Component id={id} />;
 
   const switchNode = (
     <InstantSwitch
+      aria-label={t('list.title.enabled')}
       disabled={!canManageProvider}
       enabled={enabled}
       onChange={async (enabled) => {
@@ -45,7 +38,14 @@ const Switch = ({ id, Component }: SwitchProps) => {
     />
   );
 
-  return canManageProvider ? switchNode : <Tooltip title={reason}>{switchNode}</Tooltip>;
+  if (canManageProvider) return switchNode;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex" />}>{switchNode}</TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
+  );
 };
 
 export default Switch;

@@ -6,7 +6,7 @@ import {
   consumeOnboardingCallbackUrl,
   isSafeRedirectPath,
   peekOnboardingCallbackUrl,
-  POST_ONBOARDING_HOME_TASK_URL,
+  POST_ONBOARDING_HOME_URL,
   resolvePostOnboardingTargetUrl,
   stashOnboardingCallbackUrl,
   toAbsoluteAuthCallbackUrl,
@@ -130,7 +130,7 @@ describe('resolvePostOnboardingTargetUrl', () => {
   });
 
   it('should mark the home entry for task mode when no callbackUrl exists', () => {
-    expect(resolvePostOnboardingTargetUrl()).toBe(POST_ONBOARDING_HOME_TASK_URL);
+    expect(resolvePostOnboardingTargetUrl()).toBe(POST_ONBOARDING_HOME_URL);
   });
 });
 

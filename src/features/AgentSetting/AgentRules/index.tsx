@@ -67,27 +67,45 @@ const AgentRules = memo(() => {
           onRetry={() => mutate()}
         >
           <div
-            className="flex flex-col p-0"
+            className="flex flex-col overflow-hidden p-0"
             style={{
               border: `1px solid ${cssVar.colorBorder}`,
               borderRadius: cssVar.borderRadiusLG,
             }}
           >
-            {domains.map((domain) => (
-              <div className={styles.row} key={domain.id}>
-                <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-                  <div className="font-medium">{domain.title}</div>
-                  {/* Scope and size, in counts — the same facts the rules page leads with. */}
-                  <div className="text-[12px] text-muted-foreground">
-                    {t('agentRules.domainMeta', {
-                      habits: domain.lessons.length,
-                      runs: domain.runCount,
-                    })}
+            {domains.map((domain) => {
+              const content = (
+                <>
+                  <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
+                    <div className="font-medium">{domain.title}</div>
+                    {/* Scope and size, in counts — the same facts the rules page leads with. */}
+                    <div className="text-[12px] text-muted-foreground">
+                      {t('agentRules.domainMeta', {
+                        habits: domain.lessons.length,
+                        runs: domain.runCount,
+                      })}
+                    </div>
                   </div>
+                  {openPath && <ChevronRightIcon size={14} style={{ opacity: 0.4 }} />}
+                </>
+              );
+
+              // The chevron promises navigation, so the whole row goes to the same
+              // rules page as the "open" button below (keyboard reachable).
+              return openPath ? (
+                <Link
+                  className={`${styles.row} outline-none transition-colors hover:bg-accent focus-visible:bg-accent`}
+                  key={domain.id}
+                  to={openPath}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div className={styles.row} key={domain.id}>
+                  {content}
                 </div>
-                <ChevronRightIcon size={14} style={{ opacity: 0.4 }} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </AsyncBoundary>
         <div className="flex items-center gap-2 justify-between flex-wrap">

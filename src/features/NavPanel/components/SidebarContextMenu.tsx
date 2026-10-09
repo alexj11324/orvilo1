@@ -14,8 +14,21 @@ import { renderSidebarMenuItems } from './SidebarDropdownMenu';
 type SidebarContextMenuItems =
   SidebarMenuItems | NativeContextMenuItem[] | (() => SidebarMenuItems | NativeContextMenuItem[]);
 
+/**
+ * Builds the context-menu trigger element around `inner` (the real row element,
+ * e.g. the router link). Hand it to a sidebar primitive's `render` prop so the
+ * primitive owns the DOM node and keeps its `data-slot` / `data-sidebar` /
+ * `data-active` attributes: `<SidebarMenuButton render={trigger(<a … />)} />`.
+ */
+export type SidebarContextMenuTrigger = (inner: ReactElement) => ReactElement;
+
 export interface SidebarContextMenuProps {
-  children: ReactElement;
+  /**
+   * An element is cloned by the trigger, which stamps its own
+   * `data-slot="context-menu-trigger"` over the child's slot. Pass a function to
+   * compose the trigger inside a sidebar primitive instead.
+   */
+  children: ReactElement | ((trigger: SidebarContextMenuTrigger) => ReactElement);
   items: SidebarContextMenuItems;
   /**
    * Called once the context menu actually opens — for the native popup on
@@ -82,13 +95,21 @@ export default function SidebarContextMenu({
         onMenuOpen?.(() => setOpen(false));
       }}
     >
-      <ContextMenuTrigger render={children} />
+      {typeof children === 'function' ? (
+        children(renderContextMenuTrigger)
+      ) : (
+        <ContextMenuTrigger render={children} />
+      )}
       <ContextMenuContent>
         {renderSidebarMenuItems(resolvedItems, [], 'context')}
       </ContextMenuContent>
     </ContextMenu>
   );
 }
+
+const renderContextMenuTrigger: SidebarContextMenuTrigger = (inner) => (
+  <ContextMenuTrigger render={inner} />
+);
 
 export interface SidebarContextMenuPopupProps {
   /**

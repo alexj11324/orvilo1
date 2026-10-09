@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,20 +25,20 @@ const SearchResult = memo((props: { onProviderSelect?: (key: string) => void }) 
         provider.name?.toLowerCase().includes(keyword) ||
         provider.description?.toLowerCase().includes(keyword),
     );
-  }, [searchKeyword]);
+  }, [aiProviderList, searchKeyword]);
 
   return (
-    <Flexbox gap={4} padding={'0 12px'}>
+    <div className="flex flex-col px-2 pb-8">
       {searchKeyword && filteredProviders.length === 0 ? (
-        <Flexbox align="center" justify="center" padding={16}>
+        <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
           {t('menu.notFound')}
-        </Flexbox>
+        </div>
       ) : (
         filteredProviders.map((item) => (
           <ProviderItem {...item} key={item.id} onClick={onProviderSelect} />
         ))
       )}
-    </Flexbox>
+    </div>
   );
 });
 

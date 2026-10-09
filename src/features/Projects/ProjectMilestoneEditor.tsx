@@ -130,7 +130,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
           />
           <DatePicker
             aria-label={t('create.milestone.date')}
-            format="MMM D"
+            format="YYYY/MM/DD"
             placeholder={t('create.milestone.date')}
             prefix={<CalendarIcon size={13} />}
             size="small"

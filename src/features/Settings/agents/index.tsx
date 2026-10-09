@@ -4,6 +4,7 @@ import { memo, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { AgentSetupPrompt } from '@/features/AgentOnboarding';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -81,6 +82,7 @@ const AgentSettingsIndex = memo(() => {
             </div>
           </div>
         </div>
+        <AgentSetupPrompt />
         <AgentSettingsList
           error={error}
           onRetry={() => mutate()}

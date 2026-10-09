@@ -32,9 +32,6 @@ const Members = memo<MembersProps>(({ itemKey }) => {
   const membersCount = useAgentGroupStore(
     agentGroupSelectors.getGroupAgentCount(activeGroupId || ''),
   );
-  const memberCount = useAgentGroupStore(
-    agentGroupSelectors.getGroupMemberCount(activeGroupId || ''),
-  );
   const { isRevalidating } = useInitGroupConfig();
 
   const handleAddMember = (e: MouseEvent) => {
@@ -64,7 +61,7 @@ const Members = memo<MembersProps>(({ itemKey }) => {
         <div className="flex shrink-0 items-center">
           <div className="flex items-center gap-1">
             {isRevalidating && <ActionIcon loading icon={Loader2Icon} size={'small'} />}
-            {memberCount > 1 && (
+            {membersCount > 1 && (
               <ActionIcon
                 disabled={!canEdit}
                 icon={ArrowUpDown}

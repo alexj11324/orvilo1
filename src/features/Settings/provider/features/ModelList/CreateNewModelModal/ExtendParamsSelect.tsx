@@ -1,6 +1,6 @@
 import { Flexbox, Popover } from '@lobehub/ui';
 import { Select, Switch, Tag, Text } from '@lobehub/ui/base-ui';
-import { Space, theme } from 'antd';
+import { theme } from 'antd';
 import { type ExtendParamsType } from 'model-bank';
 import { memo, type ReactNode, type SyntheticEvent, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -661,7 +661,7 @@ const ExtendParamsSelect = memo<ExtendParamsSelectProps>(({ value, onChange }) =
         onChange={(val) => handleChange(val as ExtendParamsType[])}
       />
       {value && value.length > 0 && (
-        <Space wrap size={[8, 8]}>
+        <div className="flex flex-wrap gap-2">
           {value.map((key) => {
             const def = definitionMap.get(key);
             if (!def) return null;
@@ -685,7 +685,7 @@ const ExtendParamsSelect = memo<ExtendParamsSelectProps>(({ value, onChange }) =
               </Popover>
             );
           })}
-        </Space>
+        </div>
       )}
     </Flexbox>
   );

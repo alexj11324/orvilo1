@@ -5,8 +5,8 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { toast } from '@/components/toast';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { DESKTOP_HOTKEYS_REGISTRATION } from '@/const/desktopGlobalShortcuts';
 import { FORM_STYLE } from '@/const/layoutTokens';
@@ -34,14 +34,7 @@ const HotkeySetting = memo(() => {
 
   const [loading, setLoading] = useState(false);
 
-  if (!isHotkeysInit)
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+  if (!isHotkeysInit) return <SettingsSectionSkeleton />;
 
   const updateHotkey = async (id: DesktopHotkeyItem['id'], value: string) => {
     setLoading(true);

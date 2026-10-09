@@ -11,6 +11,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { SidebarContextMenuPopup } from '@/features/NavPanel/components/SidebarContextMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -322,25 +323,21 @@ const TaskSubtasks = memo(() => {
         <>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div
-                className="flex items-center gap-2"
-                style={{
-                  cursor: 'pointer',
-                  paddingBlock: 4,
-                  paddingInline: 8,
-                  width: 'fit-content',
-                }}
+              <Button
+                aria-expanded={isExpanded}
+                className="gap-2 text-sm font-medium text-muted-foreground"
+                size="sm"
+                type="button"
+                variant="ghost"
                 onClick={() => setIsExpanded((prev) => !prev)}
               >
                 <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
-                <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
-                  {t('taskDetail.subtasks')}
-                </div>
+                <span>{t('taskDetail.subtasks')}</span>
                 <AccordionArrowIcon
                   isOpen={isExpanded}
                   style={{ color: cssVar.colorTextDescription }}
                 />
-              </div>
+              </Button>
               <TaskSubtaskProgressTag
                 currentIdentifier={taskId}
                 subtasks={subtasks}
@@ -405,17 +402,17 @@ const TaskSubtasks = memo(() => {
         </>
       ) : (
         <>
-          <div
-            className="flex cursor-pointer items-center gap-2"
-            style={{ paddingBlock: 4, paddingInline: 8, width: 'fit-content' }}
+          <Button
+            className="w-fit gap-2 text-sm font-medium text-muted-foreground"
+            size="sm"
             title={canEditTask ? undefined : reason}
+            type="button"
+            variant="ghost"
             onClick={toggleCreating}
           >
             <Plus color={cssVar.colorTextDescription} size={16} />
-            <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
-              {t('taskDetail.addSubtask')}
-            </div>
-          </div>
+            <span>{t('taskDetail.addSubtask')}</span>
+          </Button>
           {isCreating && (
             <CreateTaskInlineEntry
               autoFocus

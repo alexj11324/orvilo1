@@ -1,9 +1,7 @@
 'use client';
 
-import { Flexbox, Grid } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
@@ -15,13 +13,36 @@ const loadingArr = Array.from({ length: 12 })
   .fill('-')
   .map((item, index) => `${index}x${item}`);
 
+const GRID_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3';
+
 type ListProps = {
   onProviderSelect: (provider: string) => void;
 };
 
+const Section = ({
+  children,
+  count,
+  title,
+}: {
+  children: ReactNode;
+  count?: number;
+  title: string;
+}) => (
+  <section className="mt-6 first:mt-0">
+    <div className="mb-2 flex items-baseline gap-2">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {count !== undefined && (
+        <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+      )}
+    </div>
+    <div className={GRID_CLASS}>{children}</div>
+  </section>
+);
+
 const List = memo((props: ListProps) => {
   const { onProviderSelect } = props;
   const { t } = useTranslation('modelProvider');
+  const { t: tSetting } = useTranslation('setting');
   const enabledList = useAiInfraStore(aiProviderSelectors.enabledAiProviderList, isEqual);
   const disabledList = useAiInfraStore(aiProviderSelectors.disabledAiProviderList, isEqual);
   const disabledCustomList = useAiInfraStore(
@@ -35,14 +56,17 @@ const List = memo((props: ListProps) => {
   const useFetchAiProviderList = useAiInfraStore((s) => s.useFetchAiProviderList);
   const { error, mutate } = useFetchAiProviderList();
 
+  const header = (
+    <header className="mb-4">
+      <h1 className="text-xl leading-7 font-semibold">{tSetting('tab.provider')}</h1>
+      <p className="mt-0.5 text-sm text-muted-foreground">{t('list.header.desc')}</p>
+    </header>
+  );
+
   const skeleton = (
-    <Flexbox gap={24} paddingBlock={'0 16px'}>
-      <Flexbox horizontal align={'center'} gap={4}>
-        <Text strong style={{ fontSize: 16 }}>
-          {t('list.title.enabled')}
-        </Text>
-      </Flexbox>
-      <Grid gap={16} rows={3}>
+    <div>
+      {header}
+      <Section title={t('list.title.enabled')}>
         {loadingArr.map((item) => (
           <Card
             loading
@@ -53,8 +77,8 @@ const List = memo((props: ListProps) => {
             onProviderSelect={onProviderSelect}
           />
         ))}
-      </Grid>
-    </Flexbox>
+      </Section>
+    </div>
   );
 
   return (
@@ -66,47 +90,26 @@ const List = memo((props: ListProps) => {
       loading={skeleton}
       onRetry={() => mutate()}
     >
-      <Flexbox gap={24}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Text strong style={{ fontSize: 18 }}>
-            {t('list.title.enabled')}
-          </Text>
-          <Tag>{enabledList.length}</Tag>
-        </Flexbox>
-        <Grid gap={16} rows={3}>
+      <div>
+        {header}
+        <Section count={enabledList.length} title={t('list.title.enabled')}>
           {enabledList.map((item) => (
             <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
           ))}
-        </Grid>
-      </Flexbox>
-      {disabledCustomList.length > 0 && (
-        <Flexbox gap={24}>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Text strong style={{ fontSize: 18 }}>
-              {t('list.title.custom')}
-            </Text>
-            <Tag>{disabledCustomList.length}</Tag>
-          </Flexbox>
-          <Grid gap={16} rows={3}>
+        </Section>
+        {disabledCustomList.length > 0 && (
+          <Section count={disabledCustomList.length} title={t('list.title.custom')}>
             {disabledCustomList.map((item) => (
               <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
             ))}
-          </Grid>
-        </Flexbox>
-      )}
-      <Flexbox gap={24}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Text strong style={{ fontSize: 18 }}>
-            {t('list.title.disabled')}
-          </Text>
-          <Tag>{disabledList.length}</Tag>
-        </Flexbox>
-        <Grid gap={16} rows={3}>
+          </Section>
+        )}
+        <Section count={disabledList.length} title={t('list.title.disabled')}>
           {disabledList.map((item) => (
             <Card {...item} key={item.id} onProviderSelect={onProviderSelect} />
           ))}
-        </Grid>
-      </Flexbox>
+        </Section>
+      </div>
     </AsyncBoundary>
   );
 });

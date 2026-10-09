@@ -21,17 +21,14 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { toast } from '@/components/toast';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
-import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -45,9 +42,11 @@ import AllFavoritesDrawer from './AllFavoritesDrawer';
 import { hasMoreFavorites, visibleFavoriteRows } from './favoriteOverflow';
 import { favoriteKey, favoriteReorderMove } from './favoriteReorder';
 import { SortableFavoriteRow } from './FavoriteRow';
+import SectionHeader from './SectionHeader';
 
 interface WorkFavoritesProps {
-  itemKey: string;
+  /** Kept for call-site symmetry with the other sections. */
+  itemKey?: string;
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
 }
@@ -62,7 +61,7 @@ const cancelDropClick = (event: MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
 };
-const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey, open = true, onOpenChange }) => {
+const WorkFavorites = memo<WorkFavoritesProps>(({ open = true, onOpenChange }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const favoritePageSize = useGlobalStore(systemStatusSelectors.favoritePageSize);
@@ -178,97 +177,79 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey, open = true, onOpenCh
   // has no pins — an empty panel is the correct shape, not a missing group.
   // Hiding the whole section is the user's call via Customize sidebar.
   return (
-    <SidebarGroup className="group/section group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel
-        className="focus-visible:ring-sidebar-ring w-full cursor-pointer gap-0.5 whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none"
-        render={
-          <button
-            aria-controls={`sidebar-section-${itemKey}`}
-            aria-expanded={open}
-            onClick={() => onOpenChange?.(!open)}
-          />
-        }
-      >
+    <Collapsible
+      open={open}
+      render={<SidebarGroup className="group/section group-data-[collapsible=icon]:hidden" />}
+      onOpenChange={(next) => onOpenChange?.(next)}
+    >
+      <SectionHeader moreLabel={t('navPanel.more')} moreMenu={dropdownMenu}>
         {t('tab.favorites')}
-        <SidebarCollapseIcon open={open} />
-      </SidebarGroupLabel>
-      <SidebarDropdownMenu items={dropdownMenu}>
-        <SidebarGroupAction
-          aria-label={t('navPanel.more')}
-          className="opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100"
-        >
-          <MoreHorizontalIcon />
-        </SidebarGroupAction>
-      </SidebarDropdownMenu>
-      {open && (
-        <SidebarGroupContent id={`sidebar-section-${itemKey}`}>
-          <SidebarMenu className="gap-0.25">
-            {isLoading && !hasSettled ? (
-              <SidebarMenuItem aria-busy data-testid={'work-favorites-loading'}>
-                <SkeletonList rows={2} />
-              </SidebarMenuItem>
-            ) : error && !hasSettled ? (
-              <SidebarMenuItem>
-                <AsyncError
-                  error={error}
-                  retrying={isValidating}
-                  variant="inline"
-                  onRetry={refresh}
-                />
-              </SidebarMenuItem>
-            ) : (
-              <>
-                <DndContext
-                  collisionDetection={closestCenter}
-                  sensors={sensors}
-                  onDragCancel={releaseClickSuppression}
-                  onDragEnd={handleDragEnd}
-                  onDragStart={handleDragStart}
-                >
-                  <SortableContext items={visibleKeys} strategy={verticalListSortingStrategy}>
-                    <div role="list">
-                      {visibleItems.map((item, index) => (
-                        <SortableFavoriteRow
-                          index={index}
-                          item={item}
-                          itemCount={items.length}
-                          key={favoriteKey(item)}
-                          suppressClickRef={suppressClickRef}
-                          onMove={moveByDirection}
-                          onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-                {items.length === 0 && (
-                  <SidebarMenuItem className="px-2 py-1 text-xs text-muted-foreground">
-                    {t('favorites.empty')}
-                  </SidebarMenuItem>
-                )}
-                {error ? (
-                  <SidebarMenuItem>
-                    <AsyncError
-                      error={error}
-                      retrying={isValidating}
-                      title={t('favorites.refreshFailed')}
-                      variant="inline"
-                      onRetry={refresh}
+      </SectionHeader>
+      <CollapsibleContent render={<SidebarGroupContent />}>
+        <SidebarMenu className="gap-0.25">
+          {isLoading && !hasSettled ? (
+            <SidebarMenuItem aria-busy data-testid={'work-favorites-loading'}>
+              <SkeletonList rows={2} />
+            </SidebarMenuItem>
+          ) : error && !hasSettled ? (
+            <SidebarMenuItem>
+              <AsyncError
+                error={error}
+                retrying={isValidating}
+                variant="inline"
+                onRetry={refresh}
+              />
+            </SidebarMenuItem>
+          ) : (
+            <>
+              <DndContext
+                collisionDetection={closestCenter}
+                sensors={sensors}
+                onDragCancel={releaseClickSuppression}
+                onDragEnd={handleDragEnd}
+                onDragStart={handleDragStart}
+              >
+                <SortableContext items={visibleKeys} strategy={verticalListSortingStrategy}>
+                  {visibleItems.map((item, index) => (
+                    <SortableFavoriteRow
+                      index={index}
+                      item={item}
+                      itemCount={items.length}
+                      key={favoriteKey(item)}
+                      suppressClickRef={suppressClickRef}
+                      onMove={moveByDirection}
+                      onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
                     />
-                  </SidebarMenuItem>
-                ) : null}
-                {hasMore && (
-                  <SidebarNavItem
-                    icon={MoreHorizontalIcon}
-                    title={t('more')}
-                    onClick={() => setDrawerOpen(true)}
+                  ))}
+                </SortableContext>
+              </DndContext>
+              {items.length === 0 && (
+                <SidebarMenuItem className="px-2 py-1 text-xs text-muted-foreground">
+                  {t('favorites.empty')}
+                </SidebarMenuItem>
+              )}
+              {error ? (
+                <SidebarMenuItem>
+                  <AsyncError
+                    error={error}
+                    retrying={isValidating}
+                    title={t('favorites.refreshFailed')}
+                    variant="inline"
+                    onRetry={refresh}
                   />
-                )}
-              </>
-            )}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      )}
+                </SidebarMenuItem>
+              ) : null}
+              {hasMore && (
+                <SidebarNavItem
+                  icon={MoreHorizontalIcon}
+                  title={t('more')}
+                  onClick={() => setDrawerOpen(true)}
+                />
+              )}
+            </>
+          )}
+        </SidebarMenu>
+      </CollapsibleContent>
       <AllFavoritesDrawer
         items={items}
         open={drawerOpen}
@@ -276,7 +257,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey, open = true, onOpenCh
         onMove={moveByDirection}
         onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
       />
-    </SidebarGroup>
+    </Collapsible>
   );
 });
 

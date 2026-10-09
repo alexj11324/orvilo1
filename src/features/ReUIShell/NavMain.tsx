@@ -59,7 +59,7 @@ export function NavMain() {
 
   return (
     <>
-      <div className="py-2">
+      <div className="pb-2">
         <SearchForm />
       </div>
       <Body />

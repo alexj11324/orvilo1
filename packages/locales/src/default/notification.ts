@@ -1,4 +1,9 @@
 export default {
+  'inbox.delete': 'Delete notification',
+  'inbox.toast.deleted': 'Notification deleted',
+  'inbox.question.unavailable': 'This Agent question is no longer available.',
+  'inbox.question.replyFailed':
+    'Could not send this reply to the original Agent session. Your answer is kept; refresh the question and try again.',
   'agent_cron_job_completed': 'Your scheduled task "{{jobName}}" completed successfully.',
   'agent_cron_job_completed_title': 'Scheduled task completed',
   'agent_cron_job_failed':
@@ -83,7 +88,7 @@ export default {
   'inbox.detailEmptyTitle': 'No notification selected',
   'inbox.detailEmptyDescription': 'Select a notification to view its details.',
   'inbox.empty': 'No notifications yet',
-  'inbox.emptyAll': 'Updates for your subscribed tasks will appear here',
+  'inbox.emptyAll': 'Updates for your subscribed issues will appear here',
   'inbox.emptyMentions': 'Mentions for your tasks will appear here',
   'inbox.displayOptions': 'Display options',
   'inbox.filters': 'Inbox filters',
@@ -174,12 +179,12 @@ export default {
   'subscription_renewed':
     'Your {{plan}} subscription has renewed and your subscription credits were reset for the new billing cycle.',
   'subscription_renewed_title': 'Subscription renewed',
-  'task_assigned': '{{actorLabel}} assigned you the task "{{taskTitle}}".',
-  'task_assigned_title': "You've been assigned a task",
-  'task_comment_activity': '{{actorLabel}} commented on the task "{{taskTitle}}".',
-  'task_comment_activity_title': 'New comment on your task',
-  'task_comment_mentioned': '{{actorLabel}} mentioned you in a comment on task "{{taskTitle}}".',
-  'task_comment_mentioned_title': 'You were mentioned in a task comment',
+  'task_assigned': '{{actorLabel}} assigned you the issue "{{taskTitle}}".',
+  'task_assigned_title': "You've been assigned an issue",
+  'task_comment_activity': '{{actorLabel}} commented on the issue "{{taskTitle}}".',
+  'task_comment_activity_title': 'New comment on your issue',
+  'task_comment_mentioned': '{{actorLabel}} mentioned you in a comment on issue "{{taskTitle}}".',
+  'task_comment_mentioned_title': 'You were mentioned in an issue comment',
   'topic_comment_activity': '{{actorLabel}} commented in a topic you participate in.',
   'topic_comment_activity_message': '{{actorLabel}} commented on your message.',
   'topic_comment_activity_message_title': 'New comment on your message',

@@ -98,7 +98,6 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
     expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/acme/settings/labels');
-    expect(buildWorkspaceAwarePath('/settings/storage', 'acme')).toBe('/acme/settings/storage');
     expect(buildWorkspaceAwarePath('/settings/credential', 'acme')).toBe(
       '/acme/settings/credential',
     );
@@ -152,6 +151,8 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/system-tools', 'acme')).toBe(
       '/settings/system-tools',
     );
+    // The workspace Storage page was retired; personal Storage must stay reachable.
+    expect(buildWorkspaceAwarePath('/settings/storage', 'acme')).toBe('/settings/storage');
   });
 
   it('prefixes the `/settings` index — both personal and workspace have a meaningful redirect', () => {

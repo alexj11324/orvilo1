@@ -1,13 +1,14 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
+import { toast } from '@/components/toast';
 import {
   Select,
   SelectContent,
@@ -15,10 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
+import { runWithRollback } from '@/features/Settings/features/runWithRollback';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { getHostPort, hostResultOr } from '@/platform';
@@ -27,14 +28,6 @@ import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
 
 type UpdateChannelValue = 'canary' | 'stable';
-
-const styles = createStaticStyles(({ css }) => ({
-  labItem: css`
-    .ant-form-item-row {
-      align-items: center !important;
-    }
-  `,
-}));
 
 const Page = memo(() => {
   const { t } = useTranslation('setting');
@@ -65,10 +58,18 @@ const Page = memo(() => {
       .catch(() => {});
   }, []);
 
-  const handleChannelChange = useCallback((value: UpdateChannelValue) => {
-    setChannel(value);
-    void getHostPort().updater.setUpdateChannel(value);
-  }, []);
+  const handleChannelChange = useCallback(
+    (value: UpdateChannelValue) => {
+      const previous = channel;
+      setChannel(value);
+      void runWithRollback(
+        () => getHostPort().updater.setUpdateChannel(value),
+        () => setChannel(previous),
+        () => toast.error(t('tab.advanced.updateChannel.saveFailed')),
+      );
+    },
+    [channel, t],
+  );
 
   const handleGatewayModeChange = useCallback(
     (checked: boolean) => {
@@ -90,13 +91,7 @@ const Page = memo(() => {
           onRetry={() => refreshUserState()}
         />
       );
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+    return <SettingsSectionSkeleton />;
   }
 
   const advancedGroup: FormGroupItemType = {
@@ -123,7 +118,7 @@ const Page = memo(() => {
                   onCheckedChange={handleGatewayModeChange}
                 />
               ),
-              className: styles.labItem,
+              className: '[&_.ant-form-item-row]:items-center',
               desc: t('tab.advanced.gatewayMode.desc'),
               label: (
                 <SettingsSearchAnchor id={'advanced-gateway-mode'}>

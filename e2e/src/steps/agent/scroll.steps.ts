@@ -255,10 +255,10 @@ async function fetchLatestUserMessageId(
   try {
     const res = await client.query(
       `select id from messages
-       where role = 'user' and content = $1
+       where role = 'user' and content = $1 and user_id = $3
          and created_at >= to_timestamp($2 / 1000.0) - interval '15 seconds'
        order by created_at desc limit 1`,
-      [prompt, sentAt],
+      [prompt, sentAt, TEST_USER.id],
     );
     return res.rows[0]?.id;
   } catch {

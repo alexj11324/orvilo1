@@ -1,10 +1,15 @@
 'use client';
 
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, XIcon } from 'lucide-react';
 import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -56,15 +61,37 @@ const SearchSection = memo<PropsWithChildren>(({ children }) => {
               <SearchIcon aria-hidden />
             </SidebarMenuButton>
           ) : (
-            <Input
-              aria-label={t('settingsSearch.placeholder')}
-              className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-[var(--sidebar-muted)]"
-              placeholder={t('settingsSearch.placeholder')}
-              ref={inputRef}
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+            <InputGroup className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
+              <InputGroupInput
+                aria-label={t('settingsSearch.placeholder')}
+                className="placeholder:text-[var(--sidebar-muted)]"
+                placeholder={t('settingsSearch.placeholder')}
+                ref={inputRef}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && query) {
+                    event.stopPropagation();
+                    setQuery('');
+                  }
+                }}
+              />
+              {query && (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    aria-label={t('settingsSearch.clear')}
+                    size="icon-xs"
+                    onClick={() => {
+                      setQuery('');
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    <XIcon />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              )}
+            </InputGroup>
           )}
         </SidebarGroupContent>
       </SidebarGroup>

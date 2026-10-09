@@ -1,14 +1,14 @@
-import { Center, Flexbox, TooltipGroup } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { ArrowDownUpIcon, ToggleLeft } from 'lucide-react';
 import { use, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiModelSelectors } from '@/store/aiInfra/selectors';
 
+import GroupHeader from '../GroupHeader';
 import ModelItem from '../ModelItem';
 import { ProviderSettingsContext } from '../ProviderSettingsContext';
 import SortModelModal from '../SortModelModal';
@@ -43,15 +43,16 @@ const EnabledModelList = ({ activeTab }: EnabledModelListProps) => {
   );
 
   const isCurrentTabEmpty = filteredModels.length === 0;
+  const emptyText = (text: string) => (
+    <div className="flex items-center justify-center p-3 text-xs text-muted-foreground">{text}</div>
+  );
+
   return (
     <>
-      <Flexbox horizontal justify={'space-between'}>
-        <Text style={{ fontSize: 12, marginTop: 8 }} type={'secondary'}>
-          {t('providerModels.list.enabled')}
-        </Text>
-        {!isEmpty && (
-          <TooltipGroup>
-            <Flexbox horizontal>
+      <GroupHeader
+        actions={
+          !isEmpty && (
+            <>
               {togglableModels.length > 0 && (
                 <ActionIcon
                   disabled={!canManageProvider}
@@ -83,44 +84,32 @@ const EnabledModelList = ({ activeTab }: EnabledModelListProps) => {
                   setOpen(true);
                 }}
               />
-            </Flexbox>
-          </TooltipGroup>
-        )}
-        {open && (
-          <SortModelModal
-            defaultItems={enabledModels}
-            open={open}
-            onCancel={() => {
-              setOpen(false);
-            }}
-          />
-        )}
-      </Flexbox>
+            </>
+          )
+        }
+      >
+        {t('providerModels.list.enabled')}
+      </GroupHeader>
+      {open && (
+        <SortModelModal
+          defaultItems={enabledModels}
+          open={open}
+          onCancel={() => {
+            setOpen(false);
+          }}
+        />
+      )}
 
-      {isEmpty ? (
-        <Center padding={12}>
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
-            {t('providerModels.list.enabledEmpty')}
-          </Text>
-        </Center>
-      ) : isCurrentTabEmpty ? (
-        <Center padding={12}>
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
-            {t('providerModels.list.noModelsInCategory')}
-          </Text>
-        </Center>
-      ) : (
-        <TooltipGroup>
-          <Flexbox gap={2}>
-            {filteredModels.map(({ displayName, id, ...res }) => {
+      {isEmpty
+        ? emptyText(t('providerModels.list.enabledEmpty'))
+        : isCurrentTabEmpty
+          ? emptyText(t('providerModels.list.noModelsInCategory'))
+          : filteredModels.map(({ displayName, id, ...res }) => {
               const label = displayName || id;
               return (
                 <ModelItem displayName={label as string} id={id as string} key={id} {...res} />
               );
             })}
-          </Flexbox>
-        </TooltipGroup>
-      )}
     </>
   );
 };

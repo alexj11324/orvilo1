@@ -127,11 +127,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     flex: 1;
     flex-wrap: wrap;
     gap: 4px;
-
-    /* Stretch, not center: the picker triggers are the row's direct children
-       and centre their own content, so they fill the 28px row and the whole
-       row height is clickable instead of just the content box. */
-    align-items: stretch;
+    align-items: center;
 
     min-width: 0;
     min-height: 28px;
@@ -141,9 +137,17 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     line-height: 1.4;
     color: ${cssVar.colorText};
     letter-spacing: 0.13px;
-
+  `,
+  /**
+   * Hit area for a real property row: the picker triggers are the value's
+   * direct children and centre their own content, so stretching them makes the
+   * whole 28px row clickable instead of just the content box. Not applied to
+   * the skeleton, whose fixed-height bars must stay centred.
+   */
+  propertyValueHit: css`
     > * {
       align-items: center;
+      align-self: stretch;
     }
   `,
   propertyPlaceholder: css`

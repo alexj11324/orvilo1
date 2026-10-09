@@ -1,4 +1,5 @@
 import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import { cn } from 'cn';
 import { format, parseISO } from 'date-fns';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
@@ -48,7 +49,7 @@ const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
  */
 const PropertyRow = ({ children, label }: { children: ReactNode; label: string }) => (
   <div aria-label={label} className={styles.propertyRow} role="group" title={label}>
-    <div className={styles.propertyValue}>{children}</div>
+    <div className={cn(styles.propertyValue, styles.propertyValueHit)}>{children}</div>
   </div>
 );
 

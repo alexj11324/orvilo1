@@ -27,7 +27,7 @@ export function SearchForm(props: ComponentProps<'form'>) {
         <SidebarGroupContent className="relative">
           <Button
             aria-label={t('tab.search')}
-            className="h-8 w-full justify-start border-none bg-sidebar-accent text-sidebar-foreground pl-7 font-normal transition-[width] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring active:not-aria-[haspopup]:translate-y-0 in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:pl-4! "
+            className="h-8 w-full justify-start border-none bg-sidebar-accent text-sidebar-foreground pl-7 font-normal transition-[width] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:pl-4! "
             id="search"
             type="button"
             variant="outline"
@@ -39,7 +39,10 @@ export function SearchForm(props: ComponentProps<'form'>) {
             aria-hidden="true"
             className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none"
           />
-          <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 bg-sidebar-border text-sidebar-foreground in-data-[state=collapsed]:hidden">
+          <Kbd
+            className="absolute top-1/2 right-2 -translate-y-1/2 in-data-[state=collapsed]:hidden"
+            variant="raised"
+          >
             {isMacOS() ? '⌘K' : 'Ctrl K'}
           </Kbd>
         </SidebarGroupContent>

@@ -621,6 +621,7 @@ describe('TaskDetailHeaderActions', () => {
 
       act(() => child('remove', 'remove-link-resource-1')?.onClick?.());
 
+      // Legacy ids now resolve directly, so removal uses the exact row id.
       await waitFor(() =>
         expect(mocks.removeLink).toHaveBeenCalledWith('task-uuid-1', 'resource-1'),
       );

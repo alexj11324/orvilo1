@@ -2,7 +2,6 @@ import type { TaskStatus } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -10,7 +9,7 @@ import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
-import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { RAIL_CONTROL_CLASS, RAIL_PLACEHOLDER_CLASS } from './railControl';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TaskDetailAssignee = memo(() => {
@@ -24,27 +23,29 @@ const TaskDetailAssignee = memo(() => {
 
   if (!taskId) return null;
 
-  const chip = (
-    <div className="flex min-w-0 max-w-full cursor-pointer items-center gap-1.5">
-      {assigneeAgentId ? (
-        <>
-          <AssigneeAvatar agentId={assigneeAgentId} size={16} />
-          <span className="truncate">{assigneeMeta?.title}</span>
-        </>
-      ) : (
-        <>
-          <UnassignedAssigneeIcon kind={'agent'} size={16} />
-          <span className={styles.propertyPlaceholder}>{t('createTask.assignee')}</span>
-        </>
-      )}
-    </div>
+  const value = assigneeAgentId ? (
+    <>
+      <AssigneeAvatar agentId={assigneeAgentId} size={16} />
+      <span className="truncate">{assigneeMeta?.title}</span>
+    </>
+  ) : (
+    <>
+      <UnassignedAssigneeIcon kind={'agent'} size={16} />
+      <span className={RAIL_PLACEHOLDER_CLASS}>{t('createTask.assignee')}</span>
+    </>
   );
 
+  // The trigger is the picker's own Button. The unassigned hint is its native
+  // title, not a Tooltip trigger nested inside the popover trigger.
   return (
     <AssigneeAgentSelector
       currentAgentId={assigneeAgentId}
       taskIdentifier={taskId}
       taskVisibility={visibility}
+      control={{
+        className: RAIL_CONTROL_CLASS,
+        title: assigneeAgentId ? undefined : t('taskList.unassignedAgentHint'),
+      }}
       onHandoff={
         // A running task's agent is its incumbent executor — changing it is
         // an execution-ownership handoff (confirmed in the selector), not a
@@ -52,16 +53,7 @@ const TaskDetailAssignee = memo(() => {
         status === 'running' ? (agentId) => handoffTask(taskId, agentId) : undefined
       }
     >
-      {assigneeAgentId ? (
-        chip
-      ) : (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger render={chip} />
-            <TooltipContent>{t('taskList.unassignedAgentHint')}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
+      {value}
     </AssigneeAgentSelector>
   );
 });

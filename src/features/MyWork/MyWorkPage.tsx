@@ -1129,6 +1129,15 @@ const MyWorkPage = memo(() => {
             setBuilder(EMPTY_FILTER_BUILDER);
             if (noProject || delegated) writeParams({ delegated: false, noProject: false });
           }}
+          onPeekTask={(task) => {
+            // Space on a row arms "Open details" and peeks it; Esc / Space on
+            // the peeked row closes the pane (the header's close button).
+            if (task) {
+              setDetailsOpen(true);
+              clearBulk();
+            }
+            setSelected(task);
+          }}
           onSelectTask={(task) => {
             // A plain click picks one issue for the peek — the multi-select
             // set is a bulk-action target, so it releases here.
@@ -1210,7 +1219,11 @@ const MyWorkPage = memo(() => {
                 {bulkBar}
               </div>
             </div>
-            <aside aria-label={t('myWork.issueDetails')} className={styles.detailPane}>
+            <aside
+              aria-label={t('myWork.issueDetails')}
+              className={styles.detailPane}
+              data-issue-peek-pane=""
+            >
               <MyWorkIssuePane
                 identifier={selected.identifier}
                 onClose={() => setSelected(null)}

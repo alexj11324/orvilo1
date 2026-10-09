@@ -1,5 +1,6 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +27,8 @@ import {
   taskStatusChoiceIsCurrent,
 } from '../AgentTaskList/kanbanBoardModel';
 import { renderMenuExtra } from './menuExtra';
+import { PICKER_TRIGGER_FOCUS_CLASS } from './pickerTriggerStyles';
+import { READ_ONLY_BUTTON_WRAPPER_CLASS, readOnlyPickerTrigger } from './readOnlyPickerTrigger';
 import { SimpleTooltip } from './SimpleTooltip';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
@@ -87,6 +90,8 @@ interface IssueStatusPickerProps {
    * state, Linear-style; otherwise the category's canonical glyph.
    */
   glyph?: StatusVisual & { label: ReactNode };
+  /** Set when `children` is a native button (a real Button as the trigger). */
+  nativeButton?: boolean;
   /**
    * Picked a board column — receives the column plus the write a board drop
    * would commit. Callers on board surfaces route it through the board move
@@ -119,6 +124,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
     children,
     disableDropdown,
     glyph,
+    nativeButton = false,
     onChange,
     size = 16,
     taskIdentifier,
@@ -233,17 +239,28 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
 
     const defaultVisual = WORKFLOW_CATEGORY_VISUALS[workflowCategory ?? 'backlog'];
     const TriggerIcon = (glyph ?? defaultVisual).icon;
+    const currentStatusLabel =
+      typeof glyph?.label === 'string'
+        ? glyph.label
+        : (t(COLUMN_I18N_KEYS[workflowCategory ?? 'backlog'] as never) as string);
     const triggerNode =
       children ||
       (loading ? (
-        <span className={styles.trigger}>
+        <span
+          aria-label={t('taskDetail.property.state')}
+          className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}
+        >
           <Spinner className="text-muted-foreground" style={{ height: size, width: size }} />
         </span>
       ) : (
-        <span className={styles.trigger}>
-          <SimpleTooltip
-            title={glyph?.label ?? t(COLUMN_I18N_KEYS[workflowCategory ?? 'backlog'] as never)}
-          >
+        <span
+          className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}
+          aria-label={t('taskDetail.fieldValue', {
+            field: t('taskDetail.property.state'),
+            value: currentStatusLabel,
+          })}
+        >
+          <SimpleTooltip title={glyph?.label ?? currentStatusLabel}>
             <TriggerIcon color={(glyph ?? defaultVisual).color} size={size} />
           </SimpleTooltip>
         </span>
@@ -254,8 +271,11 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
     if (!canEditTask)
       return (
         <SimpleTooltip title={reason}>
-          <span className={styles.triggerDisabled} onClick={(e) => e.stopPropagation()}>
-            {triggerNode}
+          <span
+            className={nativeButton ? READ_ONLY_BUTTON_WRAPPER_CLASS : styles.triggerDisabled}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {readOnlyPickerTrigger(triggerNode, nativeButton)}
           </span>
         </SimpleTooltip>
       );
@@ -263,7 +283,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
     let pickIndex = 0;
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger nativeButton={false} render={triggerNode as ReactElement} />
+        <DropdownMenuTrigger nativeButton={nativeButton} render={triggerNode as ReactElement} />
         <DropdownMenuContent className="min-w-52">
           <Input
             autoFocus

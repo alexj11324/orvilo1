@@ -38,6 +38,7 @@ import {
   getProjectDatePickerMode,
   parseTypedProjectDay,
   PROJECT_DATE_PRECISIONS,
+  snapProjectDateToPrecision,
 } from '../projectPlanningDate';
 import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
@@ -375,74 +376,73 @@ export function ProjectDateInput({
   );
 }
 
-export function ProjectDateField({
+export interface ProjectDatePillValue {
+  date: string | null | undefined;
+  precision: ProjectDatePrecision | null | undefined;
+}
+
+/**
+ * The one project date control: a 28px property pill whose popover holds the
+ * typed input, the precision tabs and the period picker. It is stateless about
+ * persistence, so the overview/side panel (saved through the store) and the
+ * create dialog (local form state) render the same control.
+ */
+export function ProjectDatePill({
+  disabled,
   kind,
-  project,
+  onCommit,
+  value,
 }: {
+  disabled?: boolean;
   kind: 'startDate' | 'targetDate';
-  project: ProjectDetail['project'];
+  onCommit: (next: { date: string | null; precision: ProjectDatePrecision | null }) => void;
+  value: ProjectDatePillValue;
 }) {
   const { t } = useTranslation('project');
-  const { save, saving } = usePlanningMutation(project.id);
-  const precisionField = kind === 'startDate' ? 'startDatePrecision' : 'targetDatePrecision';
-  const storedPrecision = project[precisionField] ?? 'day';
+  const storedPrecision = value.precision ?? 'day';
   const [precision, setPrecision] = useState<ProjectDatePrecision>(storedPrecision);
   const [open, setOpen] = useState(false);
   const isStart = kind === 'startDate';
   const title = t(`create.${kind}`);
   const commit = (picked: Dayjs | null) => {
-    let date = picked;
-    if (date && precision !== 'day') {
-      const month =
-        precision === 'year'
-          ? 0
-          : precision === 'halfYear'
-            ? Math.floor(date.month() / 6) * 6
-            : precision === 'quarter'
-              ? Math.floor(date.month() / 3) * 3
-              : date.month();
-      date = date.date(1).month(month);
-    }
+    const date = picked ? snapProjectDateToPrecision(picked, precision) : null;
     setOpen(false);
-    void save({
-      [kind]: date?.format('YYYY-MM-DD') ?? null,
-      [precisionField]: date ? precision : null,
-    });
+    onCommit({ date: date?.format('YYYY-MM-DD') ?? null, precision: date ? precision : null });
   };
   return (
     <DatePicker
       aria-label={title}
       className={cn(PROPERTY_CONTROL_CLASS, 'min-w-0 shrink')}
-      disabled={saving}
+      disabled={disabled}
       format={(date) => formatProjectDate(date.format('YYYY-MM-DD'), storedPrecision)}
       open={open}
       picker={getProjectDatePickerMode(precision)}
       placeholder={t(isStart ? 'create.start' : 'create.target')}
       prefix={<CalendarIcon aria-hidden size={16} />}
       suffixIcon={null}
-      tooltip={t(project[kind] ? `create.change.${kind}` : `create.add.${kind}`)}
-      value={project[kind] ? dayjs(project[kind]) : null}
+      tooltip={t(value.date ? `create.change.${kind}` : `create.add.${kind}`)}
+      value={value.date ? dayjs(value.date) : null}
       variant="ghost"
       panelRender={(panel) => (
         <>
           <ProjectDateInput
-            disabled={saving}
+            disabled={!!disabled}
             precision={precision}
-            stored={{ date: project[kind] ?? null, precision: storedPrecision }}
+            stored={{ date: value.date ?? null, precision: storedPrecision }}
             title={title}
             onCommit={commit}
           />
           <Tabs
             value={precision}
-            onValueChange={(value) => {
-              if (PROJECT_DATE_PRECISIONS.includes(value as ProjectDatePrecision))
-                setPrecision(value as ProjectDatePrecision);
+            onValueChange={(next) => {
+              if (PROJECT_DATE_PRECISIONS.includes(next as ProjectDatePrecision))
+                setPrecision(next as ProjectDatePrecision);
             }}
           >
             <TabsList>
-              {PROJECT_DATE_PRECISIONS.map((value) => (
-                <TabsTrigger key={value} value={value}>
-                  {t(`create.datePrecision.${value}`)}
+              {PROJECT_DATE_PRECISIONS.map((item) => (
+                <TabsTrigger key={item} value={item}>
+                  {t(`create.datePrecision.${item}`)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -450,11 +450,30 @@ export function ProjectDateField({
           {panel}
         </>
       )}
-      onChange={(value) => commit(Array.isArray(value) ? (value[0] ?? null) : value)}
+      onChange={(next) => commit(Array.isArray(next) ? (next[0] ?? null) : next)}
       onOpenChange={(next) => {
         setOpen(next);
         if (next) setPrecision(storedPrecision);
       }}
+    />
+  );
+}
+
+export function ProjectDateField({
+  kind,
+  project,
+}: {
+  kind: 'startDate' | 'targetDate';
+  project: ProjectDetail['project'];
+}) {
+  const { save, saving } = usePlanningMutation(project.id);
+  const precisionField = kind === 'startDate' ? 'startDatePrecision' : 'targetDatePrecision';
+  return (
+    <ProjectDatePill
+      disabled={saving}
+      kind={kind}
+      value={{ date: project[kind], precision: project[precisionField] }}
+      onCommit={({ date, precision }) => void save({ [kind]: date, [precisionField]: precision })}
     />
   );
 }

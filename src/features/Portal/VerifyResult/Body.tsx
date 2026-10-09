@@ -1,5 +1,6 @@
 import { Markdown } from '@lobehub/ui';
 import type { VerifierType } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ListTree } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -139,7 +140,7 @@ const Body = () => {
     { key: t('detail.method'), value: t(methodKey(item.verifierType) as any) },
     result?.completedAt && {
       key: t('detail.checkedAt'),
-      value: new Date(result.completedAt).toLocaleString(),
+      value: formatAbsoluteDateTime(result.completedAt),
     },
     duration && { key: t('detail.duration'), value: duration },
     tracing?.model && {

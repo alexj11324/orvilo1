@@ -691,7 +691,8 @@ jobs:
 
     services:
       postgres:
-        image: paradedb/paradedb:latest
+        # Pin the image validated by CI; latest introduced an FTS LIMIT regression.
+        image: paradedb/paradedb@sha256:52fc9c95fdfd462201168d1d82334ed61f85cbd921957cab083ec39800a217ac
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
@@ -724,8 +725,9 @@ jobs:
       # SIGHUP-reloadable; `options` can't pass postgres args (they'd be docker
       # args). Same tuning as e2e.yml's "Tune test Postgres for CI" step.
       - name: Tune test Postgres for CI
+        env:
+          CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
           # One -c per statement: a multi-statement -c wraps everything in an
           # implicit transaction and ALTER SYSTEM rejects transaction blocks.
           docker exec "$CONTAINER" psql -U postgres -d postgres \

@@ -11,6 +11,10 @@ const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
 );
 
+const LazyIssuePeekActions = lazy(() =>
+  import('@/features/AgentTasks').then((module) => ({ default: module.IssuePeekActions })),
+);
+
 const styles = createStaticStyles(({ css }) => ({
   /**
    * Sticky inside the pane's own scroll host — the header stays put while
@@ -53,7 +57,13 @@ const MyWorkIssuePane = memo<MyWorkIssuePaneProps>(({ identifier, onClose, onOpe
     <>
       <div className={styles.paneHeader}>
         <span className="text-sm font-medium">{identifier}</span>
-        <div className="flex flex-row" style={{ justifyContent: 'flex-end', gap: 4, flex: 1 }}>
+        <div
+          className="flex flex-row"
+          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
+        >
+          <Suspense fallback={null}>
+            <LazyIssuePeekActions taskId={identifier} onDeleted={onClose} />
+          </Suspense>
           <Button
             aria-label={t('myWork.openFullPage')}
             size="icon"

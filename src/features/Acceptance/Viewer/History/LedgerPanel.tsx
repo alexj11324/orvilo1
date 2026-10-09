@@ -1,7 +1,7 @@
 'use client';
 
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import dayjs from 'dayjs';
 import {
   CheckCircle2,
   ChevronRight,
@@ -214,7 +214,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
                 </div>
                 <div className="flex flex-col flex-1" />
                 <div className="text-[12px] text-muted-foreground">
-                  {hydrated ? dayjs(round.run.createdAt).format('MM-DD HH:mm') : null}
+                  {hydrated ? formatAbsoluteDateTime(round.run.createdAt) : null}
                 </div>
                 {openable && (
                   <ChevronRight

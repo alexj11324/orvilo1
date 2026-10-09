@@ -1,6 +1,6 @@
 'use client';
 
-import dayjs from 'dayjs';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -73,9 +73,7 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
     accepted: {
       statusText: t('acceptance.banner.accepted', {
         time:
-          hydrated && acceptance.completedAt
-            ? dayjs(acceptance.completedAt).format('YYYY-MM-DD HH:mm')
-            : '',
+          hydrated && acceptance.completedAt ? formatAbsoluteDateTime(acceptance.completedAt) : '',
       }),
       subText: `${countsText} · ${t('acceptance.banner.acceptedHint', { count: rounds.length })}`,
     },

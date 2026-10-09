@@ -1,5 +1,4 @@
 import type { WorkingDirGitState } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { GitBranchIcon, GitForkIcon, GitPullRequest, RotateCcwIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,39 +15,13 @@ import { gitChipStyles } from './gitChipStyles';
 import { resolveStaleSnapshot } from './staleSnapshot';
 import { useSwitchWorktree } from './useSwitchWorktree';
 
-const styles = createStaticStyles(({ css }) => ({
-  action: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  explanation: css`
-    max-width: 320px;
-    padding-block: 6px 8px;
-    padding-inline: 10px;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  path: css`
-    display: block;
-
-    margin-block-start: 2px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextTertiary};
-    word-break: break-all;
-  `,
-  popup: css`
-    padding: 0;
-  `,
-  triggerLabel: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  action: 'flex gap-2 items-center',
+  explanation: 'max-w-80 pbs-1.5 pbe-2 px-2.5 text-[12px] leading-[1.5] text-muted-foreground',
+  path: 'block mbs-0.5 font-mono text-[var(--ant-color-text-tertiary)] break-all',
+  popup: 'p-0',
+  triggerLabel: 'overflow-hidden text-ellipsis whitespace-nowrap',
+};
 
 interface StaleGitSnapshotProps {
   agentId: string;

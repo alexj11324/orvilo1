@@ -86,7 +86,7 @@ export default {
   'screen5.badge': 'Sign in',
   'screen5.description':
     'Sign in to sync Agents, Groups, settings, and Context across all devices.',
-  'screen5.entry.title': 'Back to building.',
+  'screen5.entry.title': "Let's build",
   'screen5.entry.description': 'Sign in to bring your workspace, Agents, and issues together.',
   'screen5.entry.serverTitle': 'Connect your Orvilo server',
   'screen5.entry.browserHint':
@@ -104,7 +104,7 @@ export default {
   'screen5.methods.selfhost.description': 'Connect to your own Orvilo server instance',
   'screen5.methods.selfhost.name': 'Self-hosted Instance',
   'screen5.navigation.next': 'Get Started',
-  'screen5.selfhost.endpointPlaceholder': 'Enter your server URL (e.g., https://your-server.com)',
+  'screen5.selfhost.endpointPlaceholder': 'https://your-server.com',
   'screen5.status.cloud.title': 'Connected to Orvilo Cloud',
   'screen5.status.description':
     'Agents, Groups, settings, and Context are syncing across all your devices.',

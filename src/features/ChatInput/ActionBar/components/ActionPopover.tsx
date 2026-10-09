@@ -42,6 +42,8 @@ export interface ActionPopoverProps {
   content?: ReactNode;
   disabled?: boolean;
   extra?: ReactNode;
+  /** Accessible name of the trigger wrapper (the wrapped control's own title). */
+  label?: string;
   loading?: boolean;
   maxHeight?: number | string;
   maxWidth?: number | string;
@@ -77,6 +79,7 @@ const ActionPopover = memo<ActionPopoverProps>(
     placement,
     loading,
     extra,
+    label,
     content,
     trigger,
     mouseEnterDelay,
@@ -154,10 +157,22 @@ const ActionPopover = memo<ActionPopoverProps>(
           disabled={disabled}
           nativeButton={false}
           openOnHover={openOnHover && !disabled}
-          render={<span className="inline-flex">{children}</span>}
+          render={
+            <span aria-label={label} className="inline-flex">
+              {children}
+            </span>
+          }
         />
       ),
-      [openOnHover, disabled, mouseEnterDelay, mouseLeaveDelay, children, resolvedClassNames],
+      [
+        openOnHover,
+        disabled,
+        label,
+        mouseEnterDelay,
+        mouseLeaveDelay,
+        children,
+        resolvedClassNames,
+      ],
     );
 
     return (

@@ -1,22 +1,15 @@
 'use client';
 
-import {
-  getMcpPresetConnectorIdentifier,
-  MCP_PRESET_CONNECTORS,
-  type McpPresetConnector,
-} from '@orvilo/const';
-import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Grid2x2Plus } from 'lucide-react';
-import { createElement, memo, useCallback, useState } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { CustomConnectorModal } from '@/features/Connectors';
 
-import { type ConnectorDetailType } from './ConnectorDetail';
 import ConnectorList from './ConnectorList';
-import { useGitHubMcpConnect } from './useGitHubMcpConnect';
+import { type ConnectorDetailType } from './connectorSelection';
+import { type ConnectorPresetActions } from './useConnectorPresetActions';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   body: css`
@@ -47,106 +40,52 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-/**
- * Seed the connector form from a hosted-MCP preset: identifier, endpoint and
- * auth method pre-filled, everything still user-editable before save.
- */
-const presetToPluginValue = (preset: McpPresetConnector): OrviloToolCustomPlugin => ({
-  customParams: {
-    description: preset.description,
-    mcp: {
-      auth: { type: preset.authType },
-      type: 'http',
-      url: preset.url,
-    },
-  },
-  identifier: getMcpPresetConnectorIdentifier(preset),
-  type: 'customPlugin',
-});
-
 interface LeftPanelProps {
   onSelect: (identifier: string, type: ConnectorDetailType) => void;
+  presetActions: ConnectorPresetActions;
   selectedIdentifier?: string;
 }
 
-const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
+const LeftPanel = memo<LeftPanelProps>(({ onSelect, presetActions, selectedIdentifier }) => {
   const { t } = useTranslation('setting');
-  const [presetPlugin, setPresetPlugin] = useState<OrviloToolCustomPlugin | undefined>(undefined);
-  const [showAddConnector, setShowAddConnector] = useState(false);
-  const selectGitHub = useCallback(
-    (identifier: string) => onSelect(identifier, 'mcp-connector'),
-    [onSelect],
-  );
-  const openPresetForm = useCallback((preset: McpPresetConnector) => {
-    setPresetPlugin(presetToPluginValue(preset));
-    setShowAddConnector(true);
-  }, []);
-  const githubPreset = MCP_PRESET_CONNECTORS.find((preset) => preset.id === 'github');
-  const {
-    capability: githubCapability,
-    connect: connectGitHub,
-    connecting: githubConnecting,
-    grantConnected: githubGrantConnected,
-    timedOut: githubTimedOut,
-  } = useGitHubMcpConnect(
-    selectGitHub,
-    githubPreset ? () => openPresetForm(githubPreset) : undefined,
-  );
-
-  const closeModal = () => {
-    setShowAddConnector(false);
-    setPresetPlugin(undefined);
-  };
 
   return (
-    <>
-      <div className={styles.root}>
-        <div className={styles.header}>
-          <span className="text-sm font-semibold">{t('skillView.connectors', 'Connectors')}</span>
+    <div className={styles.root}>
+      <div className={styles.header}>
+        <span className="text-sm font-semibold">{t('skillView.connectors', 'Connectors')}</span>
 
-          <div className="flex min-w-0 flex-row gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {/* Single action: add a custom OAuth connector. */}
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label={t('connector.add.title', {
-                defaultValue: 'Add Custom Connector',
-                ns: 'tool',
-              })}
-              title={t('connector.add.title', {
-                defaultValue: 'Add Custom Connector',
-                ns: 'tool',
-              })}
-              onClick={() => setShowAddConnector(true)}
-            >
-              {createElement(Grid2x2Plus)}
-            </Button>
-          </div>
-        </div>
-
-        <div className={styles.body}>
-          <ConnectorList
-            githubConnecting={githubConnecting}
-            githubGrantConnected={githubGrantConnected}
-            githubTimedOut={githubTimedOut}
-            selectedIdentifier={selectedIdentifier}
-            githubCapability={
-              githubCapability === 'app_oauth_configured' ? undefined : githubCapability
-            }
-            onConnectGitHub={() => void connectGitHub()}
-            onSelect={onSelect}
-            onAddPreset={(preset) => {
-              openPresetForm(preset);
-            }}
-          />
+        <div className="flex min-w-0 flex-row gap-1.5">
+          {/* Single action: add a custom OAuth connector. */}
+          <Button
+            size="icon-sm"
+            variant="outline"
+            aria-label={t('connector.add.title', {
+              defaultValue: 'Add Custom Connector',
+              ns: 'tool',
+            })}
+            title={t('connector.add.title', {
+              defaultValue: 'Add Custom Connector',
+              ns: 'tool',
+            })}
+            onClick={presetActions.openForm}
+          >
+            {createElement(Grid2x2Plus)}
+          </Button>
         </div>
       </div>
-      <CustomConnectorModal
-        open={showAddConnector}
-        presetPlugin={presetPlugin}
-        onClose={closeModal}
-      />
-    </>
+
+      <div className={styles.body}>
+        <ConnectorList
+          githubCapability={presetActions.githubCapability}
+          githubConnecting={presetActions.githubConnecting}
+          githubGrantConnected={presetActions.githubGrantConnected}
+          githubTimedOut={presetActions.githubTimedOut}
+          selectedIdentifier={selectedIdentifier}
+          onAddPreset={presetActions.addPreset}
+          onSelect={onSelect}
+        />
+      </div>
+    </div>
   );
 });
 

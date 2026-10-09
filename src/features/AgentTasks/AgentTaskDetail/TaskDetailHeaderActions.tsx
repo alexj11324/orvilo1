@@ -1,7 +1,6 @@
 import {
   CopyIcon,
   CopyPlusIcon,
-  FilePlusIcon,
   GitBranchIcon,
   GitPullRequestIcon,
   HistoryIcon,
@@ -47,6 +46,7 @@ import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 import { renderMenuCheck } from '../features/menuExtra';
 import { useIssueStatusMove } from '../features/useIssueStatusMove';
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
+import { issueResourceRef } from './issueResourceRef';
 import { relationKindOf } from './relationGroups';
 import { openTaskDescriptionHistoryModal } from './TaskDescriptionHistoryModal';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -56,6 +56,7 @@ import {
 } from './TaskIssueDefinitionModal';
 import { type MarkIssueRelationKind, openTaskIssueRelationModal } from './TaskIssueRelationModal';
 import { openTaskPropertiesSetupModal } from './TaskPropertiesSetupModal';
+import { ISSUE_RESOURCE_KINDS } from './useIssueDetailActions';
 import { useTaskCopyActions } from './useTaskCopyActions';
 import { useTaskIssueDates } from './useTaskIssueDates';
 
@@ -76,11 +77,6 @@ const MARK_AS_KINDS = [
   'duplicateOf',
 ] as const;
 const CONVERT_KINDS = ['project', 'template', 'recurring'] as const;
-const RESOURCE_KINDS = [
-  ['link', LinkIcon],
-  ['pull_request', GitPullRequestIcon],
-  ['document', FilePlusIcon],
-] as const;
 
 /**
  * One entry per thing this issue is linked to — its parent, each direct
@@ -159,7 +155,7 @@ const useTaskRemoveMenuItems = (taskId: string | undefined, disabled: boolean) =
  * attached-resource commands go through `taskMenu`; each carries the issue's
  * observed `domainRevision`, so they stay disabled until the detail has one.
  */
-const TaskDetailHeaderActions = () => {
+const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
   const { t } = useTranslation(['chat', 'common', 'topic']);
 
   const navigate = useWorkspaceAwareNavigate();
@@ -169,6 +165,8 @@ const TaskDetailHeaderActions = () => {
   const copy = useTaskCopyActions();
   const task = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const taskUuid = task?.id;
+  // Links/PRs use the exact database id, including legacy ids (see issueResourceRef).
+  const resourceRef = issueResourceRef(task);
   const domainRevision = task?.domainRevision;
   const isClosed = task?.workflowCategory === 'canceled' || task?.workflowCategory === 'done';
 
@@ -194,8 +192,8 @@ const TaskDetailHeaderActions = () => {
     projectService.teams(),
   );
   const { data: resources, mutate: refreshResources } = useClientDataSWR(
-    open && taskUuid ? ['issue-resources', taskUuid] : null,
-    () => taskMenuService.links(taskUuid!),
+    open && resourceRef ? ['issue-resources', resourceRef] : null,
+    () => taskMenuService.links(resourceRef!),
   );
   const { data: recurrence, mutate: refreshRecurrence } = useClientDataSWR(
     open && taskUuid ? ['task:recurrence', taskUuid] : null,
@@ -352,7 +350,7 @@ const TaskDetailHeaderActions = () => {
       label: link.title ?? link.url,
       onClick: () =>
         void apply(async () => {
-          await taskMenuService.removeLink(taskUuid!, link.id);
+          await taskMenuService.removeLink(resourceRef!, link.id);
           await refresh();
         }),
     });
@@ -444,13 +442,14 @@ const TaskDetailHeaderActions = () => {
       },
     },
     dueDateItem,
-    ...RESOURCE_KINDS.map(([kind, Icon]) => ({
+    ...ISSUE_RESOURCE_KINDS.map(([kind, Icon]) => ({
       disabled: !editable,
       icon: <Icon />,
       key: `add-${kind}`,
       label: t(`taskDetail.menu.add.${kind}`),
       onClick: () => {
-        if (editable) openTaskIssueResourceModal({ kind, onChanged: refresh, taskId: taskUuid! });
+        if (editable)
+          openTaskIssueResourceModal({ kind, onChanged: refresh, taskId: resourceRef! });
       },
     })),
     { type: 'divider' },
@@ -572,7 +571,9 @@ const TaskDetailHeaderActions = () => {
           okText: t('taskDetail.deleteConfirm.ok'),
           onOk: async () => {
             await deleteTask(taskId);
-            navigate('/tasks');
+            // A peek host closes its own pane; the full page goes back to the list.
+            if (onDeleted) onDeleted();
+            else navigate('/tasks');
           },
           title: t('taskDetail.deleteConfirm.title'),
         });

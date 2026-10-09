@@ -120,7 +120,7 @@ const FileItem = memo<FileItemProps>(
           <div className={styles.title}>{name}</div>
           {showTime ? (
             createdTime && (
-              <div className={styles.time}>{dayjs(createdTime).format('MMM DD hh:mm')}</div>
+              <div className={styles.time}>{dayjs(createdTime).format('YYYY/MM/DD HH:mm')}</div>
             )
           ) : parentDir ? (
             <div className={styles.dir}>{parentDir}</div>

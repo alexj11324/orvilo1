@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -23,127 +23,25 @@ import { usePermission } from '@/hooks/usePermission';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 
-const styles = createStaticStyles(({ css }) => ({
-  activeOption: css`
-    &&,
-    &&:hover {
-      background: var(--muted);
-    }
-  `,
-  agentTooltip: css`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 160px;
-  `,
-  agentTooltipCap: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  agentTooltipTitle: css`
-    margin-block-end: 2px;
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  button: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  buttonOpen: css`
-    &&,
-    &&:hover {
-      color: var(--foreground);
-      background: var(--muted);
-    }
-  `,
-  buttonDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.5;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: transparent;
-    }
-  `,
-  option: css`
-    cursor: pointer;
-
-    justify-content: flex-start;
-
-    width: 100%;
-    height: auto;
-    padding-block: 10px;
-    padding-inline: 8px;
-    border-radius: calc(var(--radius) - 2px);
-
-    text-align: start;
-    white-space: normal;
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  optionDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.55;
-
-    &:hover {
-      background: transparent;
-    }
-  `,
-  optionDesc: css`
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextDescription};
-  `,
-  optionIcon: css`
-    flex-shrink: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorBgElevated};
-  `,
-  optionTitle: css`
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-  popoverPopup: css`
-    /* The popup pads its option rows by 4px, so its corner must be one step larger
-       than the rows' radius (borderRadius 8 → borderRadiusLG 12 = 8 + 4) to wrap them
-       concentrically instead of looking tighter than them. &&& outranks the base
-       popup style's border-radius. */
-    &&& {
-      border-radius: ${cssVar.borderRadiusLG};
-    }
-  `,
-}));
+const styles = {
+  activeOption: 'bg-muted bg-none hover:bg-muted hover:bg-none',
+  agentTooltip: 'flex flex-col gap-1 min-w-40',
+  agentTooltipCap: 'flex gap-1.5 items-center text-[12px] text-muted-foreground',
+  agentTooltipTitle: 'mbe-0.5 text-[12px] font-semibold text-foreground',
+  button:
+    'cursor-pointer flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-muted-foreground whitespace-nowrap [transition:all_0.2s] hover:text-foreground hover:bg-accent hover:bg-none',
+  buttonOpen: 'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
+  buttonDisabled:
+    'cursor-not-allowed opacity-50 hover:text-muted-foreground hover:bg-transparent hover:bg-none',
+  option:
+    'cursor-pointer justify-start w-full h-auto py-2.5 px-2 rounded-[calc(var(--radius)_-_2px)] text-start whitespace-normal [transition:background-color_0.2s] hover:bg-selected hover:bg-none',
+  optionDisabled: 'cursor-not-allowed opacity-55 hover:bg-transparent hover:bg-none',
+  optionDesc: 'text-[12px] leading-[1.4] text-[var(--ant-color-text-description)]',
+  optionIcon:
+    'shrink-0 border border-solid border-sidebar-border rounded-(--radius-card) bg-popover bg-none',
+  optionTitle: 'text-[14px] font-medium leading-[1.4] text-foreground',
+  popoverPopup: 'rounded-(--radius-overlay)',
+};
 
 const AGENT_CAPS = [
   { icon: WrenchIcon, key: 'tools' },
@@ -219,18 +117,18 @@ const ModeSelector = memo(() => {
         aria-current={currentMode === 'agent' ? 'true' : undefined}
         disabled={!canSelectAgentMode}
         variant="ghost"
-        className={cx(
+        className={cn(
           'flex flex-row items-center gap-3',
-          cx(
+          cn(
             styles.option,
-            currentMode === 'agent' && styles.activeOption,
             !canSelectAgentMode && styles.optionDisabled,
+            currentMode === 'agent' && styles.activeOption,
           ),
         )}
         onClick={() => handleSelect('agent')}
       >
         <div
-          className={cx(
+          className={cn(
             'flex flex-col items-center h-[32px] justify-center w-[32px]',
             styles.optionIcon,
           )}
@@ -249,14 +147,14 @@ const ModeSelector = memo(() => {
       <Button
         aria-current={currentMode === 'chat' ? 'true' : undefined}
         variant="ghost"
-        className={cx(
+        className={cn(
           'flex flex-row items-center gap-3',
-          cx(styles.option, currentMode === 'chat' && styles.activeOption),
+          cn(styles.option, currentMode === 'chat' && styles.activeOption),
         )}
         onClick={() => handleSelect('chat')}
       >
         <div
-          className={cx(
+          className={cn(
             'flex flex-col items-center h-[32px] justify-center w-[32px]',
             styles.optionIcon,
           )}
@@ -276,7 +174,7 @@ const ModeSelector = memo(() => {
 
   const button = (
     <div
-      className={cx(
+      className={cn(
         styles.button,
         open && !disabled && styles.buttonOpen,
         disabled && styles.buttonDisabled,
@@ -308,15 +206,8 @@ const ModeSelector = memo(() => {
       </PopoverTrigger>
       <PopoverContent
         align={'start'}
-        className={cx('w-auto', styles.popoverPopup)}
+        className={cn('w-auto border border-solid border-sidebar-border p-1', styles.popoverPopup)}
         side={'top'}
-        style={{
-          // Match the inner viewport's corner to the enlarged popup radius so
-          // its border corners don't poke through the rounded popup.
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadiusLG,
-          padding: 4,
-        }}
       >
         {popoverContent}
       </PopoverContent>

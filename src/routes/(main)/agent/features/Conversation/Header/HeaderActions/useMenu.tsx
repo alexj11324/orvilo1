@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import {
   Clock3Icon,
   Copy,
@@ -187,15 +188,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
     if (!authorInfo?.fullName || !topicId) return undefined;
 
     const updatedAt = activeTopic?.updatedAt;
-    const formattedDate = updatedAt
-      ? new Date(updatedAt).toLocaleString(undefined, {
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        })
-      : '';
+    const formattedDate = updatedAt ? formatAbsoluteDateTime(updatedAt) : '';
     const updatedAtLabel = formattedDate
       ? t('info.updatedAt', { ns: 'topic', time: formattedDate })
       : undefined;

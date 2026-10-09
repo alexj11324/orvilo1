@@ -53,5 +53,5 @@ export const useClosestScrollParent = () => {
     return () => cancelAnimationFrame(frame);
   }, [node]);
 
-  return { ref, scrollParent, unresolved };
+  return { node, ref, scrollParent, unresolved };
 };

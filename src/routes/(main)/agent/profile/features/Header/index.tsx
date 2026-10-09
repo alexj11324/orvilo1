@@ -106,8 +106,7 @@ const buildAgentProfileMarkdown = (params: {
 
 const Header = memo(() => {
   const { t: tCommon } = useTranslation('common');
-  const { i18n, t } = useTranslation(['setting', 'chat', 'file', 'common', 'agent']);
-  const dateLocale = i18n?.resolvedLanguage || i18n?.language;
+  const { t } = useTranslation(['setting', 'chat', 'file', 'common', 'agent']);
   const navigate = useWorkspaceAwareNavigate();
   const location = useLocation();
 
@@ -342,7 +341,7 @@ const Header = memo(() => {
                     createdAt
                       ? t('createdAt', {
                           ns: 'common',
-                          time: formatPageEditorInfoTime(createdAt, dateLocale),
+                          time: formatPageEditorInfoTime(createdAt),
                         })
                       : '',
                   ]
@@ -360,7 +359,6 @@ const Header = memo(() => {
     canConfigure,
     canManage,
     createdAt,
-    dateLocale,
     handleExportMarkdown,
     handleDelete,
     isInbox,

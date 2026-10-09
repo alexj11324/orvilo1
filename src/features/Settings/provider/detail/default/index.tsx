@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { useAiInfraStore } from '@/store/aiInfra';
@@ -23,10 +22,10 @@ const ProviderDetail = memo<ProviderDetailProps>(({ showConfig = true, ...card }
 
   return (
     // No block padding of its own — SettingContainer already insets the page.
-    <Flexbox gap={24}>
+    <div className="flex flex-col gap-6">
       {showConfig && <ProviderConfig {...card} />}
       <ModelList id={card.id} {...card.settings} />
-    </Flexbox>
+    </div>
   );
 });
 

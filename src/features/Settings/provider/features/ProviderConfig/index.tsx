@@ -1,23 +1,18 @@
 'use client';
 
-import { type FormGroupItemType, type FormItemProps } from '@lobehub/ui';
-import { Center, Flexbox, Form, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { Avatar, Skeleton, Switch } from '@lobehub/ui/base-ui';
-import { BRANDING_PROVIDER } from '@orvilo/business-const';
-import { AES_GCM_URL, BASE_PROVIDER_DOC_URL, FORM_STYLE } from '@orvilo/const';
+import { AES_GCM_URL } from '@orvilo/const';
 import { useDebounceFn } from 'ahooks';
-import { Form as AntdForm } from 'antd';
-import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
-import { InfoIcon, LockIcon } from 'lucide-react';
+import { cn } from 'cn';
+import { LockIcon } from 'lucide-react';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useLayoutEffect, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import urlJoin from 'url-join';
 
 import { FormInput, FormPassword } from '@/components/FormInput';
-import { ProviderCombine, ProviderIcon } from '@/components/OrviloIcons';
-import { SkeletonInput, SkeletonSwitch } from '@/components/Skeleton';
+import Form, { type FormItemProps } from '@/components/GroupForm';
+import { SkeletonInput } from '@/components/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -33,72 +28,16 @@ import { KeyVaultsConfigKey, LLMProviderApiTokenKey, LLMProviderBaseUrlKey } fro
 import { isResponsesApiSupportedSdkType } from '../providerSettings';
 import { type CheckErrorRender } from './Checker';
 import Checker from './Checker';
-import EnableSwitch from './EnableSwitch';
+import CredentialsPanel, { type CredentialItem } from './CredentialsPanel';
+import FormSwitch from './FormSwitch';
 import OAuthDeviceFlowAuth from './OAuthDeviceFlowAuth';
-import UpdateProviderInfo from './UpdateProviderInfo';
+import ProviderHeader, {
+  ProviderHeaderActions,
+  ProviderIdentity,
+  type ProviderStatus,
+} from './ProviderHeader';
 
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  aceGcm: css`
-    padding-block: 0 !important;
-    .${prefixCls}-form-item-label {
-      display: none;
-    }
-    .${prefixCls}-form-item-control {
-      width: 100%;
-
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-      text-align: center;
-
-      opacity: 0.66;
-
-      transition: opacity 0.2s ${cssVar.motionEaseInOut};
-
-      &:hover {
-        opacity: 1;
-      }
-    }
-  `,
-  form: css`
-    /* The group header is the first thing on the page, so its own top padding
-       reads as dead space under the nav bar. The page inset is enough. */
-    .${prefixCls}-collapse-header {
-      padding-block-start: 0 !important;
-    }
-    .${prefixCls}-form-item-control:has(.${prefixCls}-input,.${prefixCls}-select) {
-      flex: none;
-    }
-    ${responsive.sm} {
-      width: 100%;
-      min-width: unset !important;
-    }
-    .${prefixCls}-select-selection-overflow-item {
-      font-size: 12px;
-    }
-  `,
-  help: css`
-    border-radius: 50%;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextDescription};
-
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFill};
-    }
-  `,
-  switchLoading: css`
-    width: 44px !important;
-    min-width: 44px !important;
-    height: 22px !important;
-    border-radius: 12px !important;
-  `,
-}));
+const SwitchSkeleton = () => <Skeleton className="h-[18px] w-8 rounded-full" />;
 
 export interface ProviderConfigProps extends Omit<AiProviderDetailItem, 'enabled' | 'source'> {
   apiKeyItems?: FormItemProps[];
@@ -131,6 +70,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
     className,
     checkErrorRender,
     canDeactivate = true,
+    description,
     name,
     showAceGcm = true,
     extra,
@@ -149,6 +89,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
       supportResponsesApi,
     } = settings || {};
     const { t } = useTranslation('modelProvider');
+    const { t: tProviders } = useTranslation('providers');
     const [form] = Form.useForm();
     const { allowed: canManageProvider } = usePermission('manage_provider_key');
 
@@ -182,14 +123,14 @@ const ProviderConfig = memo<ProviderConfigProps>(
 
     // Watch form values in real-time to show/hide switches immediately
     // Watch nested form values for endpoints
-    const formBaseURL = AntdForm.useWatch(['keyVaults', 'baseURL'], form);
-    const formEndpoint = AntdForm.useWatch(['keyVaults', 'endpoint'], form);
+    const formBaseURL = Form.useWatch(['keyVaults', 'baseURL'], form);
+    const formEndpoint = Form.useWatch(['keyVaults', 'endpoint'], form);
     // Watch all possible credential fields for different providers
-    const formApiKey = AntdForm.useWatch(['keyVaults', 'apiKey'], form);
-    const formAccessKeyId = AntdForm.useWatch(['keyVaults', 'accessKeyId'], form);
-    const formSecretAccessKey = AntdForm.useWatch(['keyVaults', 'secretAccessKey'], form);
-    const formUsername = AntdForm.useWatch(['keyVaults', 'username'], form);
-    const formPassword = AntdForm.useWatch(['keyVaults', 'password'], form);
+    const formApiKey = Form.useWatch(['keyVaults', 'apiKey'], form);
+    const formAccessKeyId = Form.useWatch(['keyVaults', 'accessKeyId'], form);
+    const formSecretAccessKey = Form.useWatch(['keyVaults', 'secretAccessKey'], form);
+    const formUsername = Form.useWatch(['keyVaults', 'username'], form);
+    const formPassword = Form.useWatch(['keyVaults', 'password'], form);
 
     // Check if provider has endpoint and apiKey based on runtime config
     // Fallback to data.keyVaults if runtime config is not yet loaded
@@ -307,30 +248,6 @@ const ProviderConfig = memo<ProviderConfigProps>(
             },
           ]);
 
-    const aceGcmItem: FormItemProps = {
-      children: (
-        <>
-          <Icon icon={LockIcon} style={{ marginRight: 4 }} />
-          <Trans
-            i18nKey="providerModels.config.aesGcm"
-            ns={'modelProvider'}
-            components={[
-              <span key="0" />,
-              <a
-                href={AES_GCM_URL}
-                key="1"
-                rel="noreferrer"
-                style={{ marginInline: 4 }}
-                target="_blank"
-              />,
-            ]}
-          />
-        </>
-      ),
-      className: styles.aceGcm,
-      minWidth: undefined,
-    };
-
     const showEndpoint = !!proxyUrl || isCustom;
 
     const endpointItem = showEndpoint
@@ -377,11 +294,11 @@ const ProviderConfig = memo<ProviderConfigProps>(
 
     const clientFetchItem = showClientFetch
       ? {
-          children: isLoading ? <SkeletonSwitch /> : <Switch loading={configUpdating} />,
+          children: isLoading ? <SwitchSkeleton /> : <FormSwitch loading={configUpdating} />,
           desc: t('providerModels.config.fetchOnClient.desc'),
           label: t('providerModels.config.fetchOnClient.title'),
-          minWidth: undefined,
           name: 'fetchOnClient',
+          valuePropName: 'checked',
         }
       : undefined;
 
@@ -393,18 +310,20 @@ const ProviderConfig = memo<ProviderConfigProps>(
       endpointItem,
       showResponsesApiSwitch
         ? {
-            children: isLoading ? <Skeleton height={36} /> : <Switch loading={configUpdating} />,
+            children: isLoading ? <SwitchSkeleton /> : <FormSwitch loading={configUpdating} />,
             desc: t('providerModels.config.responsesApi.desc'),
             label: t('providerModels.config.responsesApi.title'),
-            minWidth: undefined,
             name: ['config', 'enableResponseApi'],
+            valuePropName: 'checked',
           }
         : undefined,
       clientFetchItem,
       showChecker
         ? {
-            children: isLoading ? (
-              <Skeleton height={36} />
+            node: isLoading ? (
+              <div className="border-t border-border bg-accent px-4 py-3">
+                <Skeleton className="h-9 w-full" />
+              </div>
             ) : (
               <Checker
                 checkErrorRender={checkErrorRender}
@@ -430,106 +349,46 @@ const ProviderConfig = memo<ProviderConfigProps>(
                 }}
               />
             ),
-            desc: t('providerModels.config.checker.desc'),
-            label: t('providerModels.config.checker.title'),
           }
         : undefined,
-      showAceGcm && aceGcmItem,
-    ].filter(Boolean) as FormItemProps[];
+    ].filter(Boolean) as CredentialItem[];
 
     const logoUrl = data?.logo ?? logo;
 
-    // Header components - shared between OAuth card and Form
-    const headerTitle = (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
-        style={{
-          height: 24,
-          maxHeight: 24,
-          // OAuth providers keep full-colour branding while off: the enable
-          // switch sits right beside them, so dimming only adds noise
-          ...(enabled || isOAuthProvider
-            ? {}
-            : { filter: 'grayscale(100%)', maxHeight: 24, opacity: 0.66 }),
-        }}
-      >
-        {isCustom ? (
-          <Flexbox horizontal align={'center'} gap={8}>
-            {logoUrl ? (
-              <Avatar avatar={logoUrl} shape={'circle'} size={32} title={name || id} />
-            ) : (
-              <ProviderCombine provider={'not-exist-provider'} size={24} />
-            )}
-            {name}
-          </Flexbox>
-        ) : (
-          <>
-            {title ??
-              // OAuth providers sell a subscription plan rather than the vendor
-              // platform, so the plan name reads truer than the vendor wordmark
-              // the combined logo would render (e.g. ChatGPT vs. OpenAI).
-              (isOAuthProvider ? (
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <ProviderIcon
-                    provider={id}
-                    shape={'square'}
-                    size={24}
-                    style={{ borderRadius: 6 }}
-                    type={'avatar'}
-                  />
-                  {name}
-                </Flexbox>
-              ) : (
-                <ProviderCombine provider={id} size={24} />
-              ))}
-            <Tooltip title={t('providerModels.config.helpDoc')}>
-              <a
-                href={urlJoin(BASE_PROVIDER_DOC_URL, id)}
-                rel="noreferrer"
-                target="_blank"
-                onClick={stopPropagation}
-              >
-                <Center className={styles.help} height={20} width={20}>
-                  ?
-                </Center>
-              </a>
-            </Tooltip>
-          </>
-        )}
-      </Flexbox>
+    // "Not configured" is only claimed when nothing the provider could be
+    // configured with is present; the connectivity result is not persisted, so
+    // no connected/failed state is shown.
+    const isConfigured =
+      isProviderApiKeyNotEmpty || isProviderEndpointNotEmpty || isOAuthAuthenticated;
+    const status: ProviderStatus = enabled
+      ? 'enabled'
+      : isConfigured
+        ? 'disabled'
+        : 'notConfigured';
+
+    const descriptionText = isCustom
+      ? description
+      : description && tProviders(`${id}.description`, { defaultValue: description });
+
+    const identity = (
+      <ProviderIdentity
+        enabled={enabled}
+        id={id}
+        isCustom={isCustom}
+        isOAuthProvider={isOAuthProvider}
+        logoUrl={logoUrl}
+        name={name}
+        title={title}
+      />
     );
 
-    const headerExtra = (
-      <Flexbox horizontal align={'center'} gap={8}>
-        {extra}
-        {isCustom && <UpdateProviderInfo />}
-        {canDeactivate && !(enableBusinessFeatures && id === BRANDING_PROVIDER) && (
-          <>
-            {/* OAuth providers pair the switch with a connect action, so the
-                built-in notice would crowd the row */}
-            {!isCustom && !isOAuthProvider && (
-              <Tooltip title={t('providerModels.config.builtinNotice')}>
-                <Icon
-                  color={cssVar.colorTextTertiary}
-                  icon={InfoIcon}
-                  size={16}
-                  onClick={stopPropagation}
-                />
-              </Tooltip>
-            )}
-            <EnableSwitch id={id} key={id} />
-          </>
-        )}
-      </Flexbox>
-    );
-
-    const model: FormGroupItemType = {
-      children: configItems,
-      defaultActive: true,
-      extra: isOAuthProvider ? undefined : headerExtra,
-      title: isOAuthProvider ? '' : headerTitle,
+    const headerProps = {
+      canDeactivate,
+      enableBusinessFeatures,
+      extra,
+      id,
+      isCustom,
+      isOAuthProvider,
     };
 
     // For OAuth providers, only show Form when authenticated
@@ -537,35 +396,66 @@ const ProviderConfig = memo<ProviderConfigProps>(
 
     return (
       <>
-        {isOAuthProvider && (
+        {isOAuthProvider ? (
           <OAuthDeviceFlowAuth
             // when the provider cannot be deactivated there is no switch to
             // gate on, so the connect action stays available
             enabled={!canDeactivate || enabled}
-            extra={headerExtra}
+            extra={<ProviderHeaderActions {...headerProps} withHelpDoc />}
             providerId={id}
-            title={headerTitle}
+            title={identity}
             onAuthChange={handleOAuthChange}
+          />
+        ) : (
+          <ProviderHeader
+            {...headerProps}
+            description={descriptionText}
+            enabled={enabled}
+            identity={identity}
+            status={status}
           />
         )}
         {shouldShowForm && (
-          <Form
-            className={cx(styles.form, className)}
-            disabled={!canManageProvider}
-            form={form}
-            items={[model]}
-            variant={'borderless'}
-            onValuesChange={(_, values) => {
-              if (!canManageProvider) return;
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold">
+              {t('providerModels.config.credentials.title')}
+            </h2>
+            <Form
+              className={cn('w-full', className)}
+              disabled={!canManageProvider}
+              form={form}
+              onValuesChange={(_, values) => {
+                if (!canManageProvider) return;
 
-              cancelDebouncedHandleValueChange();
-              const baseURL = values.keyVaults?.baseURL;
-              if (baseURL && !AiProviderBaseURLSchema.safeParse(baseURL).success) return;
+                cancelDebouncedHandleValueChange();
+                const baseURL = values.keyVaults?.baseURL;
+                if (baseURL && !AiProviderBaseURLSchema.safeParse(baseURL).success) return;
 
-              debouncedHandleValueChange(id, normalizeValues(values));
-            }}
-            {...FORM_STYLE}
-          />
+                debouncedHandleValueChange(id, normalizeValues(values));
+              }}
+            >
+              <CredentialsPanel items={configItems} />
+              {showAceGcm && (
+                <p className="flex items-center justify-center gap-1 text-center text-xs text-muted-foreground opacity-70 transition-opacity hover:opacity-100">
+                  <LockIcon className="size-3" />
+                  <Trans
+                    i18nKey="providerModels.config.aesGcm"
+                    ns={'modelProvider'}
+                    components={[
+                      <span key="0" />,
+                      <a
+                        className="mx-1 underline underline-offset-2"
+                        href={AES_GCM_URL}
+                        key="1"
+                        rel="noreferrer"
+                        target="_blank"
+                      />,
+                    ]}
+                  />
+                </p>
+              )}
+            </Form>
+          </section>
         )}
       </>
     );

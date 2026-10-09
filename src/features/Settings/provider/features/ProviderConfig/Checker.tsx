@@ -1,29 +1,27 @@
 'use client';
 
-import { CheckCircleFilled } from '@ant-design/icons';
-import { Flexbox, Highlighter, Icon } from '@lobehub/ui';
-import { Alert, Button, Select } from '@lobehub/ui/base-ui';
+import { Highlighter } from '@lobehub/ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { TraceNameMap } from '@orvilo/types';
 import { isRecord, pickTrimmedString } from '@orvilo/utils/object';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { Loader2Icon } from 'lucide-react';
+import { CheckIcon, CircleAlertIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Badge } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
 import { chatService } from '@/services/chat';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { getRuntimeErrorMessage } from '@/utils/locale/runtimeErrorMessage';
 
-const styles = createStaticStyles(({ css }) => ({
-  popup: css`
-    width: 380px;
-  `,
-}));
+import { FieldRow } from './CredentialsPanel';
+
 const Error = memo<{ error: ChatMessageError }>(({ error }) => {
   const { t } = useTranslation(['error', 'modelRuntime']);
   const providerName = useProviderName(error.body?.provider);
@@ -34,25 +32,17 @@ const Error = memo<{ error: ChatMessageError }>(({ error }) => {
     pickTrimmedString(error.message) ?? bodyMessage ?? t('response.UnknownChatFetchError');
 
   return (
-    <Flexbox gap={8} style={{ maxWidth: 600, width: '100%' }}>
-      <Alert
-        showIcon
-        title={getRuntimeErrorMessage(t, error.type, { provider: providerName }, fallbackMessage)}
-        type={'error'}
-        extra={
-          <Flexbox paddingBlock={8} paddingInline={16}>
-            <Highlighter
-              actionIconSize={'small'}
-              language={'json'}
-              variant={'borderless'}
-              wrap={true}
-            >
-              {JSON.stringify(error.body || error, null, 2)}
-            </Highlighter>
-          </Flexbox>
-        }
-      />
-    </Flexbox>
+    <Alert className="w-full max-w-[600px]" variant="destructive">
+      <CircleAlertIcon />
+      <AlertTitle className="line-clamp-none">
+        {getRuntimeErrorMessage(t, error.type, { provider: providerName }, fallbackMessage)}
+      </AlertTitle>
+      <AlertDescription className="w-full pt-2">
+        <Highlighter actionIconSize={'small'} language={'json'} variant={'borderless'} wrap={true}>
+          {JSON.stringify(error.body || error, null, 2)}
+        </Highlighter>
+      </AlertDescription>
+    </Alert>
   );
 });
 
@@ -73,6 +63,7 @@ interface ConnectionCheckerProps {
 const Checker = memo<ConnectionCheckerProps>(
   ({ model, provider, checkErrorRender: CheckErrorRender, onBeforeCheck, onAfterCheck }) => {
     const { t } = useTranslation('setting');
+    const { t: tProvider } = useTranslation('modelProvider');
     const { allowed: canManageProvider } = usePermission('manage_provider_key');
 
     const [isProviderConfigUpdating, updateAiProviderConfig] = useAiInfraStore((s) => [
@@ -178,79 +169,67 @@ const Checker = memo<ConnectionCheckerProps>(
     );
 
     return (
-      <Flexbox gap={8}>
-        <Flexbox horizontal gap={8}>
-          <Select
-            virtual
-            disabled={!canManageProvider}
-            listItemHeight={36}
-            options={sortedModels.map((id) => ({ label: id, value: id }))}
-            popupClassName={cx(styles.popup)}
-            suffixIcon={isProviderConfigUpdating && <Icon spin icon={Loader2Icon} />}
-            value={checkModel}
-            optionRender={({ value }) => {
-              return (
-                <Flexbox horizontal align={'center'} gap={6}>
-                  <ModelIcon model={value as string} size={20} />
-                  {value}
-                </Flexbox>
-              );
-            }}
-            style={{
-              flex: 1,
-              overflow: 'hidden',
-            }}
-            onSelect={async (value) => {
-              if (!canManageProvider) return;
+      <FieldRow
+        className="bg-accent"
+        desc={tProvider('providerModels.config.checker.desc')}
+        footer={error ? errorContent : undefined}
+        label={tProvider('providerModels.config.checker.title')}
+      >
+        {pass && (
+          <Badge variant="success-light">
+            <CheckIcon />
+            {t('llm.checker.pass')}
+          </Badge>
+        )}
+        <Select
+          showSearch
+          aria-label={tProvider('providerModels.config.checker.title')}
+          className="w-[180px] min-w-0"
+          disabled={!canManageProvider}
+          loading={isProviderConfigUpdating}
+          options={sortedModels.map((id) => ({ label: id, value: id }))}
+          size="sm"
+          value={checkModel}
+          optionRender={({ value }) => (
+            <span className="flex items-center gap-1.5">
+              <ModelIcon model={value as string} size={20} />
+              {value}
+            </span>
+          )}
+          onChange={async (value) => {
+            if (!canManageProvider || typeof value !== 'string') return;
 
-              // Update local state
-              setCheckModel(value);
-              setPass(false);
-              setError(undefined);
+            // Update local state
+            setCheckModel(value);
+            setPass(false);
+            setError(undefined);
 
-              // Persist the selected model to provider config
-              // This allows the model to be retained after page refresh
-              await updateAiProviderConfig(provider, { checkModel: value });
-            }}
-          />
-          <Button
-            disabled={!canManageProvider || isProviderConfigUpdating}
-            loading={loading}
-            icon={
-              pass ? (
-                <CheckCircleFilled
-                  style={{
-                    color: cssVar.colorSuccess,
-                  }}
-                />
-              ) : undefined
+            // Persist the selected model to provider config
+            // This allows the model to be retained after page refresh
+            await updateAiProviderConfig(provider, { checkModel: value });
+          }}
+        />
+        <Button
+          disabled={!canManageProvider || isProviderConfigUpdating}
+          loading={loading}
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            if (!canManageProvider) return;
+
+            try {
+              const shouldCheck = await onBeforeCheck();
+              if (!shouldCheck) return;
+
+              await checkConnection();
+            } finally {
+              await onAfterCheck();
             }
-            style={
-              pass
-                ? {
-                    borderColor: cssVar.colorSuccess,
-                    color: cssVar.colorSuccess,
-                  }
-                : undefined
-            }
-            onClick={async () => {
-              if (!canManageProvider) return;
-
-              try {
-                const shouldCheck = await onBeforeCheck();
-                if (!shouldCheck) return;
-
-                await checkConnection();
-              } finally {
-                await onAfterCheck();
-              }
-            }}
-          >
-            {pass ? t('llm.checker.pass') : t('llm.checker.button')}
-          </Button>
-        </Flexbox>
-        {error && errorContent}
-      </Flexbox>
+          }}
+        >
+          {t('llm.checker.button')}
+        </Button>
+      </FieldRow>
     );
   },
 );

@@ -44,3 +44,8 @@ are unchanged.
 zh-CN writes triage as 分诊 (sidebar, list, filters, kanban column, workflow category). 分流 was
 used by `taskList.filter.groups.triage`, `taskList.filter.notInTriage` and
 `taskList.kanban.triage`, and is not used anywhere now.
+
+## Command palette follow-up
+
+- The "My issues" palette entry no longer has its own copy (`cmdk.myWork`, "我的工作" / "My Work"). The route in `packages/app-config/src/routes/index.ts` now uses the sidebar key `tab.myWork` ("我的 Issue" / "My issues"), so the two cannot drift. Other locales still carry the unused `cmdk.myWork` until the daily i18n workflow prunes them.
+- The footer entry `cmdk.submitIssue` opens the product's GitHub issue chooser (`FEEDBACK` in `packages/const/src/url.ts`). It does not create an Issue entity in the app, and "提交问题" read as if it did, so it is now "反馈问题" (en-US "Report a problem").

@@ -23,7 +23,7 @@ cleanup() {
   rm -f -- "$state/build.log"
   if [[ "$host_runtime_created" == true ]]; then
     ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
-      "if test \"\$(sudo cat /run/orvilo-qa-permission/owner.id 2>/dev/null)\" = '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'; then sudo rm -f /run/orvilo-qa-permission/*.env /run/orvilo-qa-permission/hatchet-token; fi" || status=1
+      "if test \"\$(sudo cat /run/orvilo-qa-permission/owner.id 2>/dev/null)\" = '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'; then sudo rm -f /run/orvilo-qa-permission/compose.env /run/orvilo-qa-permission/app.env /run/orvilo-qa-permission/agent-gateway.env /run/orvilo-qa-permission/device-gateway.env /run/orvilo-qa-permission/collaboration.env /run/orvilo-qa-permission/hatchet-token; fi" || status=1
   fi
   exit "$status"
 }
@@ -70,7 +70,7 @@ CLOUDFLARE_API_TOKEN="$CLOUDFLARE_DNS_API_TOKEN" cf dns records create --zone "$
 # Both auth source and QA-only config were built in this same harness CI run.
 (cd apps/auth/cf && node_modules/.bin/cf deploy --prebuilt)
 curl -fsS --max-time 20 https://qa-permission.aspectlylabs.com/api/version > "$state/version.json"
-curl -fsS --max-time 20 https://accounts-qa-permission.aspectlylabs.com/healthz >/dev/null
+curl -fsS --retry 10 --retry-all-errors --retry-delay 3 --retry-max-time 60 --max-time 5 https://accounts-qa-permission.aspectlylabs.com/healthz >/dev/null
 curl -fsS --max-time 20 https://qa-permission.aspectlylabs.com/_qa/device-gateway/health >/dev/null
 ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
   'sudo cat /var/lib/orvilo1-qa-permission-20261008/activation-receipt.json' > "$state/activation-receipt.json"

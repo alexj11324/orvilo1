@@ -191,20 +191,31 @@ test('workflow QA excludes every original production job and retains original no
 import re, subprocess, sys, types, yaml
 workflow = yaml.safe_load(open(sys.argv[1]))
 base = yaml.safe_load(subprocess.check_output(['git', 'show', '${candidateSha}:.github/workflows/deploy-orvilo1.yml']))
-def evaluate(expression, event, qa, build, deploy, retag, result):
+def evaluate(expression, event, qa, build, deploy, retag, result, diagnose=False, ref='refs/heads/codex/permission-qa-harness'):
     expression = expression.replace('&&', ' and ').replace('||', ' or ')
     expression = re.sub(r'!(?!=)', 'not ', expression)
-    context = dict(github=types.SimpleNamespace(event_name=event), inputs=types.SimpleNamespace(qa_permission=qa, build=build, deploy=deploy, retag_main_from=retag), needs=types.SimpleNamespace(build=types.SimpleNamespace(result=result)), always=lambda: True)
+    context = dict(github=types.SimpleNamespace(event_name=event, ref=ref), inputs=types.SimpleNamespace(qa_permission=qa, qa_diagnose=diagnose, build=build, deploy=deploy, retag_main_from=retag), needs=types.SimpleNamespace(build=types.SimpleNamespace(result=result)), always=lambda: True)
     return bool(eval(expression, {'__builtins__': {}}, context))
 for name in ['build', 'promote', 'retag-main', 'deploy']:
     for build in [False, True]:
         for deploy in [False, True]:
             for retag in ['', 'a' * 40]:
                 assert not evaluate(workflow['jobs'][name]['if'], 'workflow_dispatch', True, build, deploy, retag, 'success'), name
+                for qa in [False, True]:
+                    assert not evaluate(workflow['jobs'][name]['if'], 'workflow_dispatch', qa, build, deploy, retag, 'success', True), name
                 for event in ['push', 'workflow_dispatch']:
                     for result in ['success', 'skipped', 'failure']:
                         args = (event, False, build, deploy, retag, result)
                         assert evaluate(workflow['jobs'][name]['if'], *args) == evaluate(base['jobs'][name]['if'], *args), name
+for qa in [False, True]:
+    for diagnose in [False, True]:
+        args = ('workflow_dispatch', qa, False, False, '', 'success', diagnose)
+        assert evaluate(workflow['jobs']['qa-diagnose']['if'], *args) == (qa and diagnose)
+        for name in ['qa-gateways', 'qa-deploy']:
+            assert evaluate(workflow['jobs'][name]['if'], *args) == (qa and not diagnose), name
+for ref in ['refs/heads/canary', 'refs/heads/main']:
+    assert not evaluate(workflow['jobs']['qa-diagnose']['if'], 'workflow_dispatch', True, False, False, '', 'success', True, ref)
+assert workflow[True]['workflow_dispatch']['inputs']['qa_diagnose']['default'] is False
 print('QA exclusion and original production admission verified')
 `;
   const { stdout } = await run('python3', [
@@ -270,4 +281,53 @@ test('advertised collaboration endpoint maps directly to the maintained upgrade 
   assert.equal(upstream.host, '127.0.0.1:13212');
   assert.equal(upstream.searchParams.get('room'), 'task:qa-room');
   assert.equal(upstream.searchParams.get('token'), 'opaque-qa-ticket');
+});
+
+test('both run-owned remote cleanup commands work in zsh with absent files and preserve foreign ownership', async () => {
+  const run = promisify(execFile);
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'orvilo-qa-cleanup-'));
+  try {
+    await writeFile(path.join(directory, 'sudo'), '#!/bin/bash\nexec "$@"\n', { mode: 0o700 });
+    await writeFile(path.join(directory, 'ssh'), '#!/bin/bash\nexec zsh -c "${!#}"\n', {
+      mode: 0o700,
+    });
+    const sources = [
+      await readFile(path.join(qaDirectory, 'qa-ci.sh'), 'utf8'),
+      await readFile(
+        path.resolve(qaDirectory, '../../.github/workflows/deploy-orvilo1.yml'),
+        'utf8',
+      ),
+    ];
+    for (const source of sources) {
+      const command = source
+        .split('\n')
+        .find((line) => line.includes('"if test') && line.includes('owner.id'));
+      assert.ok(command);
+      const sandbox = command
+        .trim()
+        .replace(/ \|\| status=1$/, '')
+        .replaceAll('/run/orvilo-qa-permission', directory);
+      await writeFile(path.join(directory, 'owner.id'), '37769202201-1\n');
+      await run(
+        'bash',
+        ['-c', `GITHUB_RUN_ID=37769202201 GITHUB_RUN_ATTEMPT=1\nssh ignored ${sandbox}`],
+        {
+          env: { ...process.env, PATH: `${directory}:${process.env.PATH}` },
+        },
+      );
+      await writeFile(path.join(directory, 'app.env'), 'fixture');
+      await writeFile(path.join(directory, 'owner.id'), 'different-owner\n');
+      await run(
+        'bash',
+        ['-c', `GITHUB_RUN_ID=37769202201 GITHUB_RUN_ATTEMPT=1\nssh ignored ${sandbox}`],
+        {
+          env: { ...process.env, PATH: `${directory}:${process.env.PATH}` },
+        },
+      );
+      assert.equal(await readFile(path.join(directory, 'app.env'), 'utf8'), 'fixture');
+      await rm(path.join(directory, 'app.env'));
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

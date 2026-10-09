@@ -17,6 +17,7 @@ export const toolingPaths = [
   'docker-compose/qa-permission/nginx.conf',
   'docker-compose/qa-permission/prepare-env.mjs',
   'docker-compose/qa-permission/qa-ci.sh',
+  'docker-compose/qa-permission/qa-diagnose.sh',
 ];
 
 export function admit({ ref, workflowSha, candidate, image, build, deploy, retag, changedPaths }) {

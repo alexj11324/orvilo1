@@ -30,6 +30,10 @@ on:
         description: 'Deploy only the isolated permission QA target (QA harness ref only)'
         type: boolean
         default: false
+      qa_diagnose:
+        description: 'Read only fixed permission QA host metadata (never deploy or clean up)'
+        type: boolean
+        default: false
       qa_candidate_build_run:
         description: 'Successful exact product-candidate build-only run ID (QA only)'
         type: string
@@ -50,7 +54,7 @@ env:
 
 jobs:
   retag-main:
-    if: github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.retag_main_from != ''
+    if: (github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.retag_main_from != '') && !inputs.qa_diagnose
     runs-on: ubuntu-latest
     # 与 promote 串行：手动修标签不能和自动提升交错写同一批浮动标签。
     concurrency:
@@ -94,7 +98,7 @@ jobs:
     # 的镜像内容必然相同，而一次 Next.js 生产构建要十几分钟。
     # 例外：workflow_dispatch 显式勾 build，用于给没有 push 构建产物的
     # 分支（验收部署等）产出 sha-<commit> 镜像。
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.build && inputs.retag_main_from == '')
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.build && inputs.retag_main_from == '')) && !inputs.qa_diagnose
     # 部署目标是 aarch64，这里用 GitHub 的 arm64 runner 原生构建，
     # 不走 QEMU —— 那会让一次 Next.js 生产构建慢到不可接受。
     runs-on: ubuntu-24.04-arm
@@ -154,7 +158,7 @@ jobs:
   promote:
     # 把 :canary / :main 浮动标签提升到刚构建的 sha 镜像——但只在该 commit
     # 的 Required Quality Gate 变绿之后。门禁失败/取消/超时都不会动标签。
-    if: github.event_name == 'push'
+    if: (github.event_name == 'push') && !inputs.qa_diagnose
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -203,7 +207,7 @@ jobs:
     # build 未勾选时它会被 skipped —— 部署已有镜像仍要允许；只有 build
     # 真跑了且失败时才不该部署。always() 让 skipped 不阻塞本 job。
     needs: build
-    if: always() && github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.deploy && inputs.retag_main_from == '' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    if: (always() && github.event_name == 'workflow_dispatch' && !inputs.qa_permission && inputs.deploy && inputs.retag_main_from == '' && (needs.build.result == 'success' || needs.build.result == 'skipped')) && !inputs.qa_diagnose
     runs-on: ubuntu-latest
     environment: production
     # 生产部署串行：两次手动 deploy 不能交错 pull/up 同一批容器。
@@ -384,7 +388,7 @@ jobs:
 
 
   qa-gateways:
-    if: github.event_name == 'workflow_dispatch' && inputs.qa_permission
+    if: github.event_name == 'workflow_dispatch' && inputs.qa_permission && !inputs.qa_diagnose
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 40
     outputs:
@@ -444,7 +448,7 @@ jobs:
 
   qa-deploy:
     needs: qa-gateways
-    if: github.event_name == 'workflow_dispatch' && inputs.qa_permission
+    if: github.event_name == 'workflow_dispatch' && inputs.qa_permission && !inputs.qa_diagnose
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: qa-permission-20261008
@@ -519,6 +523,43 @@ jobs:
           rm -rf -- "$RUNNER_TEMP/qa-env-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           if [ -f ~/.ssh/deploy_key ]; then
             ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
-              "if test \"\$(sudo cat /run/orvilo-qa-permission/owner.id 2>/dev/null)\" = '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'; then sudo rm -f /run/orvilo-qa-permission/*.env /run/orvilo-qa-permission/hatchet-token; fi"
+              "if test \"\$(sudo cat /run/orvilo-qa-permission/owner.id 2>/dev/null)\" = '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'; then sudo rm -f /run/orvilo-qa-permission/compose.env /run/orvilo-qa-permission/app.env /run/orvilo-qa-permission/agent-gateway.env /run/orvilo-qa-permission/device-gateway.env /run/orvilo-qa-permission/collaboration.env /run/orvilo-qa-permission/hatchet-token; fi"
             rm -f ~/.ssh/deploy_key
           fi
+
+  qa-diagnose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/permission-qa-harness' && inputs.qa_permission && inputs.qa_diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    environment: qa-permission-20261008
+    env:
+      SSH_HOST: ${{ secrets.ORACLE_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Configure the authorized pinned SSH identity
+        env:
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?}" "${SSH_KNOWN_HOSTS:?}" "${SSH_HOST:?}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+      - name: Collect only fixed target read-only metadata
+        run: bash docker-compose/qa-permission/qa-diagnose.sh | tee "$RUNNER_TEMP/qa-diagnosis.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: permission-qa-diagnosis-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qa-diagnosis.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove the runner SSH identity
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

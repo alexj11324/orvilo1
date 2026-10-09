@@ -300,7 +300,14 @@ const ProviderConfig = memo<ProviderConfigProps>(
 
     const clientFetchItem = showClientFetch
       ? {
-          children: isLoading ? <SwitchSkeleton /> : <FormSwitch loading={configUpdating} />,
+          children: isLoading ? (
+            <SwitchSkeleton />
+          ) : (
+            <FormSwitch
+              aria-label={t('providerModels.config.fetchOnClient.title')}
+              loading={configUpdating}
+            />
+          ),
           desc: t('providerModels.config.fetchOnClient.desc'),
           label: t('providerModels.config.fetchOnClient.title'),
           name: 'fetchOnClient',
@@ -316,7 +323,14 @@ const ProviderConfig = memo<ProviderConfigProps>(
       endpointItem,
       showResponsesApiSwitch
         ? {
-            children: isLoading ? <SwitchSkeleton /> : <FormSwitch loading={configUpdating} />,
+            children: isLoading ? (
+              <SwitchSkeleton />
+            ) : (
+              <FormSwitch
+                aria-label={t('providerModels.config.responsesApi.title')}
+                loading={configUpdating}
+              />
+            ),
             desc: t('providerModels.config.responsesApi.desc'),
             label: t('providerModels.config.responsesApi.title'),
             name: ['config', 'enableResponseApi'],

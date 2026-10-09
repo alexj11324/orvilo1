@@ -81,3 +81,7 @@ when off and none of those exist. A persisted "connection failed" still has no s
 - The credentials section has no "stored only under your account" subtitle. Whether provider keys are per-user or
   per-workspace depends on scope, so the claim is not made. The existing AES-GCM notice stays under the panel.
 - The result of a passing check is a badge next to the select; the button keeps its "Check" label.
+
+### Form switch names
+
+Client request mode and Responses API controls pass their existing localized row titles as aria-label to FormSwitch. The CredentialsPanel visual row label is a separate div, so it does not name the embedded switch automatically. The true-parent rebase preserves the current save-error toast and its locale keys. Native computed-name verification remains required before claiming product acceptance.

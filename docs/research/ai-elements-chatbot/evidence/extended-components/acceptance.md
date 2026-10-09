@@ -2,6 +2,8 @@
 
 Date: 2026-10-09.
 
+Follow-up: [real Step5 execution, file actions and native approval acceptance](live/acceptance.md) supersedes the missing-provider limitation below. This document retains the earlier synthetic gallery scope.
+
 ## Revisions and environment
 
 - Feature source: `8dfcd5ddd` on `feat/chatbot-ai-elements-more`.

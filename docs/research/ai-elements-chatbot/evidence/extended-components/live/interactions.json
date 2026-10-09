@@ -1,0 +1,10 @@
+{
+  "codeShown": true,
+  "commitClipboard": "8b4fe3d4010cec63f4ceb4d8a231eeb08c6d22e1",
+  "iframeCount": 1,
+  "previewFrameText": "Component Integration Verification Report\n\nWorkspace /tmp/orvilo-elements-live · source: .vitest/json/output.json (prior actual run) · success: false\n\nTest suites\nMetric\tCount\nTotal suites\t1\nPassed suites\t0\nFailed suites\t1\nPending suites\t0\nTests\nMetric\tCount\nTotal tests\t3\nPassed tests\t1\nFailed tests\t1\nPending tests\t1\nTodo tests\t0\nSnapshots\nMetric\tCount\nAdded\t0\nMatched\t0\nUnmatched\t0\nUpdated\t0\nUnchecked\t0\nFailure\tfalse\nTest results\nTest\tStatus\tDuration (ms)\nadds two numbers\tpassed\t2.11\nintentional acceptance failure\tfailed\t16.95\nintentionally skipped acceptance case\tskipped\t—\nFailure message\nAssertionError: expected 5 to be 6 // Object.is equality\n    at /tmp/orvilo-elements-live/example.test.js:4:64\nRepo state\ncommit 8b4fe3d4010cec63f4ceb4d8a231eeb08c6d22e1\nAuthor: Acceptance Test <acceptance@example.com>\nDate:   Fri Oct 9 10:51:25 2026 +0000\n\n    test: add real execution acceptance cases\nIntentional Node error (not fixed)\nTypeError: Real execution acceptance error\n    at acceptanceFailure (/tmp/orvilo-elements-live/error.cjs:1:38)\n    at Object.<anonymous> (/tmp/orvilo-elements-live/error.cjs:2:1)\n\nNode.js v24.19.0\nComponent under verification\nsrc/example.js:\nexport const sum = (a, b) => a + b;",
+  "stackClipboardMatches": true,
+  "stackExpanded": true,
+  "suiteCollapsed": "false",
+  "suiteExpanded": "true"
+}

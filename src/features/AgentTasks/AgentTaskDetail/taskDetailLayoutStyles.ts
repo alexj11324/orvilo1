@@ -122,38 +122,6 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     align-items: flex-start;
     min-width: 0;
   `,
-  propertyLabel: css`
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    width: 120px;
-    height: 28px;
-
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-    letter-spacing: 0.13px;
-  `,
-  propertyMark: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-
-    color: currentcolor;
-  `,
-  propertyStateMark: css`
-    width: 14px;
-    height: 14px;
-    border: 1.5px solid currentcolor;
-    border-radius: 50%;
-  `,
   propertyValue: css`
     display: flex;
     flex: 1;

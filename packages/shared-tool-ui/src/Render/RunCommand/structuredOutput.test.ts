@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseErrorStack, parseGitCommits, parseTestReport } from './structuredOutput';
+import {
+  parseErrorStack,
+  parseGitCommits,
+  parseTestReport,
+  resolveStackFilePath,
+} from './structuredOutput';
 
 const report = {
   numFailedTests: 1,
@@ -122,4 +127,23 @@ it('extracts actual Node stderr with source context and runtime footer', () => {
   const text =
     '/repo/error.cjs:1\nthrow new TypeError("boom");\n^\n\nTypeError: boom\n    at run (/repo/error.cjs:1:7)\n\nNode.js v24.19.0';
   expect(parseErrorStack(text)).toBe('TypeError: boom\n    at run (/repo/error.cjs:1:7)');
+});
+
+describe('stack frame filesystem targets', () => {
+  it('resolves absolute paths and encoded local file URLs', () => {
+    expect(resolveStackFilePath('/repo/error.js')).toBe('/repo/error.js');
+    expect(resolveStackFilePath('file:///repo/my%20file.js')).toBe('/repo/my file.js');
+    expect(resolveStackFilePath('file:///C:/repo/error.js')).toBe('C:/repo/error.js');
+  });
+  it('does not offer runtime pseudo-files, remote URLs or ambiguous paths', () => {
+    for (const path of [
+      'node:internal/main',
+      'https://host/app.js',
+      'file://host/app.js',
+      'file:///%ZZ',
+      'app.js',
+    ]) {
+      expect(resolveStackFilePath(path)).toBeUndefined();
+    }
+  });
 });

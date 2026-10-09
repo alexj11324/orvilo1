@@ -32,6 +32,7 @@ interface ParsedStackTrace {
 }
 
 interface StackTraceContextValue {
+  canOpenFilePath?: (filePath: string) => boolean;
   isOpen: boolean;
   onFilePathClick?: (filePath: string, line?: number, column?: number) => void;
   raw: string;
@@ -143,6 +144,7 @@ export type StackTraceProps = ComponentProps<'div'> & {
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   onFilePathClick?: (filePath: string, line?: number, column?: number) => void;
+  canOpenFilePath?: (filePath: string) => boolean;
 };
 
 export const StackTrace = memo(
@@ -153,6 +155,7 @@ export const StackTrace = memo(
     defaultOpen = false,
     onOpenChange,
     onFilePathClick,
+    canOpenFilePath,
     children,
     ...props
   }: StackTraceProps) => {
@@ -168,11 +171,12 @@ export const StackTrace = memo(
       () => ({
         isOpen,
         onFilePathClick,
+        canOpenFilePath,
         raw: trace,
         setIsOpen,
         trace: parsedTrace,
       }),
-      [parsedTrace, trace, isOpen, setIsOpen, onFilePathClick],
+      [parsedTrace, trace, isOpen, setIsOpen, onFilePathClick, canOpenFilePath],
     );
 
     return (
@@ -417,7 +421,7 @@ FilePathButton.displayName = 'FilePathButton';
 
 export const StackTraceFrames = memo(
   ({ className, showInternalFrames = true, ...props }: StackTraceFramesProps) => {
-    const { trace, onFilePathClick } = useStackTrace();
+    const { trace, onFilePathClick, canOpenFilePath } = useStackTrace();
 
     const framesToShow = showInternalFrames
       ? trace.frames
@@ -442,7 +446,12 @@ export const StackTraceFrames = memo(
             {frame.filePath && (
               <>
                 <span className="text-muted-foreground">(</span>
-                <FilePathButton frame={frame} onFilePathClick={onFilePathClick} />
+                <FilePathButton
+                  frame={frame}
+                  onFilePathClick={
+                    canOpenFilePath?.(frame.filePath) === false ? undefined : onFilePathClick
+                  }
+                />
                 <span className="text-muted-foreground">)</span>
               </>
             )}

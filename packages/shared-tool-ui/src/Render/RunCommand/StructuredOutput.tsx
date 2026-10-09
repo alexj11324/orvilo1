@@ -40,7 +40,13 @@ import {
   TestSuiteName,
 } from '@/components/ai-elements/test-results';
 
-import { parseErrorStack, parseGitCommits, parseTestReport } from './structuredOutput';
+import { useToolRenderCapabilities } from '../../context';
+import {
+  parseErrorStack,
+  parseGitCommits,
+  parseTestReport,
+  resolveStackFilePath,
+} from './structuredOutput';
 
 interface StructuredOutputProps {
   view: ReturnType<typeof useStructuredOutput>;
@@ -60,6 +66,7 @@ export function useStructuredOutput(command: string, output: string) {
 export function StructuredOutput({ view }: StructuredOutputProps) {
   const { t } = useTranslation('chat');
   const { tests, commits, stack } = view;
+  const { openFile, canOpenFile } = useToolRenderCapabilities();
   if (tests)
     return (
       <TestResults data-ai-element="test-results" summary={tests.summary}>
@@ -129,7 +136,18 @@ export function StructuredOutput({ view }: StructuredOutputProps) {
     );
   if (stack)
     return (
-      <StackTrace data-ai-element="stack-trace" trace={stack}>
+      <StackTrace
+        data-ai-element="stack-trace"
+        trace={stack}
+        canOpenFilePath={(path) => {
+          const file = resolveStackFilePath(path);
+          return !!file && !!openFile && (canOpenFile?.(file) ?? true);
+        }}
+        onFilePathClick={(path) => {
+          const file = resolveStackFilePath(path);
+          if (file && (canOpenFile?.(file) ?? true)) openFile?.(file);
+        }}
+      >
         <StackTraceHeader>
           <StackTraceError>
             <StackTraceErrorType />

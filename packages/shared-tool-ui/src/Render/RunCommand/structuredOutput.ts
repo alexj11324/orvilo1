@@ -134,3 +134,18 @@ export function parseErrorStack(output: string) {
   if (end === start + 1) return;
   return lines.slice(start, end).join('\n');
 }
+
+/** Runtime pseudo-files and web URLs cannot be opened through the execution filesystem. */
+export function resolveStackFilePath(path: string): string | undefined {
+  if (path.startsWith('file://')) {
+    try {
+      const url = new URL(path);
+      if (url.hostname && url.hostname !== 'localhost') return;
+      const decoded = decodeURIComponent(url.pathname);
+      return /^\/[A-Z]:\//i.test(decoded) ? decoded.slice(1) : decoded;
+    } catch {
+      return;
+    }
+  }
+  return path.startsWith('/') || /^[A-Z]:[/\\]/i.test(path) ? path : undefined;
+}

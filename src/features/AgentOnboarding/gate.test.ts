@@ -14,6 +14,10 @@ describe('shouldCoverAppForAgentSetup', () => {
     expect(shouldCoverAppForAgentSetup(base)).toBe(true);
   });
 
+  it('does not cover the app while authentication is unresolved', () => {
+    expect(shouldCoverAppForAgentSetup({ ...base, isLogin: undefined })).toBe(false);
+  });
+
   it('never covers the app once onboarding is finished, including after a skip', () => {
     expect(shouldCoverAppForAgentSetup({ ...base, onboardingFinished: true })).toBe(false);
   });

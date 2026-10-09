@@ -6,9 +6,9 @@
  * missing Agent is surfaced inline instead, as in Multica and Plane.
  */
 export const shouldCoverAppForAgentSetup = (input: {
-  isLogin: boolean;
+  isLogin: boolean | undefined;
   onboardingFinished: boolean;
   onOnboardingPath: boolean;
   onSetupPath: boolean;
 }): boolean =>
-  input.isLogin && !input.onboardingFinished && !input.onOnboardingPath && !input.onSetupPath;
+  !!input.isLogin && !input.onboardingFinished && !input.onOnboardingPath && !input.onSetupPath;

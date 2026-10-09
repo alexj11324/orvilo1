@@ -26,3 +26,8 @@ Frontend-only cleanup of the sign-in portal and the `/onboarding` flow, from the
 - Dead code and dead locale keys (`onboarding-2` block, unused `onboarding` and `desktop-onboarding` keys) are a separate cleanup.
 - Slug conflict on the `Workspace URL` field needs a distinct backend error code, so the frontend cannot map it yet.
 - `<a><Button>` nesting on the OAuth result pages and `zh-CN` Issue wording are already covered by #551 and #552.
+
+The first-Agent gate also handles an unresolved authentication selector as false,
+so it remains uncovered before the user state resolves. The existing gate
+regression fails against the prior implementation (undefined instead of false)
+and passes after; this also resolves the CI boolean-or-undefined type mismatch.

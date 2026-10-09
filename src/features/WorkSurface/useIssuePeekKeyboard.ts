@@ -3,7 +3,11 @@
 import { useEffect, useRef } from 'react';
 
 import { issuePeekKeyFromEvent, reduceIssuePeekKey } from './issuePeekKeyboard';
-import { findIssueRowElement, resolveIssueKeyScope } from './issuePeekKeyContext';
+import {
+  findIssueRowElement,
+  isIssueElementVisible,
+  resolveIssueKeyScope,
+} from './issuePeekKeyContext';
 
 export interface UseIssuePeekKeyboardOptions {
   /** Off when the list has no peek (board layout, no project scope...). */
@@ -21,6 +25,8 @@ export interface UseIssuePeekKeyboardOptions {
    * focus is not in the DOM yet.
    */
   reveal?: (id: string) => void;
+  /** Stable owning surface, shared by its list and peek across layout remounts. */
+  scopeRoot: HTMLElement | null;
 }
 
 const MAX_FOCUS_FRAMES = 40;
@@ -30,25 +36,39 @@ const REVEAL_EVERY_FRAMES = 8;
  * Focus restoration outlives the hook instance on purpose: opening or closing
  * the peek can move the list under a different wrapper (My issues swaps its
  * layout), which remounts the list and the hook with it. The newest request
- * wins; the mounted list's `reveal` is looked up at call time.
+ * wins within its stable surface; that surface's mounted list `reveal` is
+ * looked up at call time. Other split panes cannot replace the request.
  */
-let focusRequest = 0;
-let mountedReveal: ((id: string) => void) | undefined;
+interface SurfaceFocusState {
+  request: number;
+  reveal?: (id: string) => void;
+}
+const surfaceFocus = new WeakMap<HTMLElement, SurfaceFocusState>();
 
-const focusIssueRow = (id: string) => {
-  const request = ++focusRequest;
+const focusStateFor = (root: HTMLElement): SurfaceFocusState => {
+  let state = surfaceFocus.get(root);
+  if (!state) {
+    state = { request: 0 };
+    surfaceFocus.set(root, state);
+  }
+  return state;
+};
+
+const focusIssueRow = (id: string, root: HTMLElement) => {
+  const state = focusStateFor(root);
+  const request = ++state.request;
   let frame = 0;
   // Start on the next frame: the state change that opened / closed the peek
   // commits first, and the row we would focus now may be about to be replaced.
   const attempt = () => {
-    if (request !== focusRequest) return;
-    const row = findIssueRowElement(id);
+    if (request !== state.request || !isIssueElementVisible(root)) return;
+    const row = findIssueRowElement(id, root);
     if (row) {
       row.focus({ preventScroll: true });
       row.scrollIntoView({ block: 'nearest' });
       return;
     }
-    if (frame % REVEAL_EVERY_FRAMES === 0) mountedReveal?.(id);
+    if (frame % REVEAL_EVERY_FRAMES === 0) state.reveal?.(id);
     if (++frame < MAX_FOCUS_FRAMES) requestAnimationFrame(attempt);
   };
   requestAnimationFrame(attempt);
@@ -71,19 +91,20 @@ const focusIssueRow = (id: string) => {
 export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void => {
   const latest = useRef(options);
   latest.current = options;
-  const { enabled = true } = options;
+  const { enabled = true, scopeRoot } = options;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !scopeRoot) return;
 
     const reveal = (id: string) => latest.current.reveal?.(id);
-    mountedReveal = reveal;
+    const state = focusStateFor(scopeRoot);
+    state.reveal = reveal;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;
       const key = issuePeekKeyFromEvent(event);
       if (!key) return;
-      const scope = resolveIssueKeyScope(event.target);
+      const scope = resolveIssueKeyScope(event.target, scopeRoot);
       if (!scope) return;
       const { ids, onOpenPage, onPeek, peekId } = latest.current;
 
@@ -114,13 +135,13 @@ export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void
       // Focus stays on (or returns to) the list: the peek never takes it, so
       // J / K keep working, and closing hands it back to the peeked row.
       const focusId = result.focusId ?? result.peekId ?? (result.peekId === null ? peekId : null);
-      if (focusId) focusIssueRow(focusId);
+      if (focusId) focusIssueRow(focusId, scopeRoot);
     };
 
     document.addEventListener('keydown', onKeyDown, true);
     return () => {
-      if (mountedReveal === reveal) mountedReveal = undefined;
+      if (state.reveal === reveal) state.reveal = undefined;
       document.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [enabled]);
+  }, [enabled, scopeRoot]);
 };

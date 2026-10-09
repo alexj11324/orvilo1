@@ -92,6 +92,18 @@ panel is the view's details, not an Issue peek.
 
 ## Known limits
 
+Keyboard ownership is scoped to the list's stable `WorkSurface` root, including
+its peek pane. Opening details may remount the list beneath that same root, so
+pending focus restoration uses the replacement list's reveal callback. Split
+panes keep independent focus requests and reveal callbacks; a retained hidden
+tab, its duplicate rows, or its hidden overlays cannot claim another pane's
+keys or focus. Visible modal/menu guards still own the keyboard.
+
+Verification of that boundary includes two visible lists with identical Issue
+identifiers, a retained hidden duplicate list, and virtual-row reveal after a
+layout remount. Electron acceptance is still required against the packaged
+revision; DOM regression tests do not establish native split-view acceptance.
+
 - Project issues with Open details armed but nothing selected: `Esc` does not
   close the empty pane (there is no peeked Issue); use the header close button.
 - `J` / `K` while that empty pane is open move focus only; the pane starts

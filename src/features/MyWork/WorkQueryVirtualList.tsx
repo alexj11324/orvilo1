@@ -127,7 +127,7 @@ const WorkQueryVirtualList = ({
   tasks,
 }: WorkQueryVirtualListProps) => {
   const { t } = useTranslation(['common', 'chat']);
-  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
+  const { node: anchorNode, ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
   const [sessionCollapsed, setSessionCollapsed] = useState<readonly string[]>([]);
   const collapsedKeys = collapsedGroups ?? sessionCollapsed;
   const collapsed = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
@@ -195,6 +195,7 @@ const WorkQueryVirtualList = ({
     [peekRows],
   );
   useIssuePeekKeyboard({
+    scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
     enabled: Boolean(peekKeys),
     ids: peekRows.ids,
     onOpenPage: peekKeys?.onOpen,

@@ -301,7 +301,7 @@ const TaskList = memo<TaskListProps>((props) => {
   // The page scrolls in an ancestor (`WorkSurfaceCollection`'s scroll host), with the
   // inline composer above this list. Windowing against that ancestor keeps the
   // page layout intact instead of nesting a second scroller.
-  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
+  const { node: anchorNode, ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
 
   const peekArmed = Boolean(peekOnSelect && onSelectTask);
 
@@ -317,6 +317,7 @@ const TaskList = memo<TaskListProps>((props) => {
   const taskByIdentifier = (identifier: string) =>
     tasks.find((task) => task.identifier === identifier);
   useIssuePeekKeyboard({
+    scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
     enabled: Boolean(onPeekTask),
     ids: peekRows.ids,
     onOpenPage: onOpenTask

@@ -1,8 +1,8 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveIssueKeyScope } from './issuePeekKeyContext';
-import { useIssuePeekKeyboard } from './useIssuePeekKeyboard';
+import { findIssueRowElement, resolveIssueKeyScope } from './issuePeekKeyContext';
+import { useIssuePeekKeyboard, type UseIssuePeekKeyboardOptions } from './useIssuePeekKeyboard';
 
 const mount = (html: string) => {
   const host = document.createElement('div');
@@ -98,8 +98,75 @@ describe('useIssuePeekKeyboard', () => {
     document.body.innerHTML = '';
   });
 
-  const setup = (peekId: string | null = null, extra: { enabled?: boolean } = {}) =>
-    renderHook(() => useIssuePeekKeyboard({ ids: IDS, onOpenPage, onPeek, peekId, ...extra }));
+  const setup = (peekId: string | null = null, extra: Partial<UseIssuePeekKeyboardOptions> = {}) =>
+    renderHook(() =>
+      useIssuePeekKeyboard({
+        ids: IDS,
+        onOpenPage,
+        onPeek,
+        peekId,
+        scopeRoot: document.body,
+        ...extra,
+      }),
+    );
+
+  it.each(['j', 'Escape'])('only the owning visible split pane handles %s', async (key) => {
+    const left = mount(`${rowsHtml}<aside data-issue-peek-pane><button>left</button></aside>`);
+    const right = mount(`${rowsHtml}<aside data-issue-peek-pane><button>right</button></aside>`);
+    const leftPeek = vi.fn();
+    const rightPeek = vi.fn();
+    setup('T-1', { onPeek: leftPeek, scopeRoot: left });
+    setup('T-2', { onPeek: rightPeek, scopeRoot: right });
+    press(right.querySelector('aside button')!, key);
+    expect(leftPeek).not.toHaveBeenCalled();
+    expect(rightPeek).toHaveBeenCalledWith(key === 'j' ? 'T-3' : null);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        right.querySelector(`[data-issue-row="${key === 'j' ? 'T-3' : 'T-2'}"]`),
+      ),
+    );
+  });
+
+  it('ignores a retained hidden tab with duplicate identifiers for keys and focus', async () => {
+    const hidden = mount(rowsHtml);
+    hidden.style.display = 'none';
+    const visible = mount(rowsHtml);
+    const hiddenPeek = vi.fn();
+    setup('T-1', { onPeek: hiddenPeek, scopeRoot: hidden });
+    setup('T-1', { scopeRoot: visible });
+    press(visible.querySelector('[data-issue-row="T-1"]')!, 'j');
+    expect(hiddenPeek).not.toHaveBeenCalled();
+    expect(onPeek).toHaveBeenCalledWith('T-2');
+    await waitFor(() =>
+      expect(document.activeElement).toBe(visible.querySelector('[data-issue-row="T-2"]')),
+    );
+    expect(findIssueRowElement('T-2')).toBe(visible.querySelector('[data-issue-row="T-2"]'));
+  });
+
+  it('reveals a virtual row using its owning list even when another list mounted last', async () => {
+    const left = mount('<div data-issue-row="T-1" role="button" tabindex="0"></div>');
+    const right = mount('<div data-issue-row="T-1" role="button" tabindex="0"></div>');
+    const revealLeft = vi.fn(() =>
+      left.insertAdjacentHTML(
+        'beforeend',
+        '<div data-issue-row="T-2" role="button" tabindex="0"></div>',
+      ),
+    );
+    const revealRight = vi.fn(() =>
+      right.insertAdjacentHTML(
+        'beforeend',
+        '<div data-issue-row="T-2" role="button" tabindex="0"></div>',
+      ),
+    );
+    setup('T-1', { reveal: revealLeft, scopeRoot: left });
+    setup('T-1', { reveal: revealRight, scopeRoot: right });
+    press(left.querySelector('[data-issue-row]')!, 'j');
+    await waitFor(() =>
+      expect(document.activeElement).toBe(left.querySelector('[data-issue-row="T-2"]')),
+    );
+    expect(revealLeft).toHaveBeenCalledWith('T-2');
+    expect(revealRight).not.toHaveBeenCalled();
+  });
 
   it('Space on a focused row toggles the peek and stops the row from navigating', () => {
     const host = mount(rowsHtml);
@@ -114,7 +181,7 @@ describe('useIssuePeekKeyboard', () => {
 
   it('opening the peek leaves focus on the list, even if the list remounts', async () => {
     const host = mount(rowsHtml);
-    const { unmount } = setup();
+    const { unmount } = setup(null, { scopeRoot: host });
     press(host.querySelector('[data-issue-row="T-2"]')!, ' ');
     // The host re-parents the list when the pane opens: old row gone, new one in.
     unmount();
@@ -122,6 +189,29 @@ describe('useIssuePeekKeyboard', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(host.querySelector('[data-issue-row="T-2"]')),
     );
+  });
+
+  it('uses the replacement list reveal after remount without borrowing another pane', async () => {
+    const root = mount('<div data-issue-row="T-1" role="button" tabindex="0"></div>');
+    const { unmount } = setup(null, { scopeRoot: root });
+    press(root.querySelector('[data-issue-row]')!, 'j');
+    unmount();
+    root.innerHTML = '';
+    const replacementReveal = vi.fn(() =>
+      root.insertAdjacentHTML(
+        'beforeend',
+        '<div data-issue-row="T-2" role="button" tabindex="0"></div>',
+      ),
+    );
+    setup(null, { reveal: replacementReveal, scopeRoot: root });
+    const otherRoot = mount(rowsHtml);
+    const otherReveal = vi.fn();
+    setup(null, { reveal: otherReveal, scopeRoot: otherRoot });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(root.querySelector('[data-issue-row="T-2"]')),
+    );
+    expect(replacementReveal).toHaveBeenCalledWith('T-2');
+    expect(otherReveal).not.toHaveBeenCalled();
   });
 
   it('Space on the peeked row closes it', () => {
@@ -239,7 +329,9 @@ describe('useIssuePeekKeyboard', () => {
 
   it('lets Enter fall through to the row when the host has no full-page handler', () => {
     const host = mount(rowsHtml);
-    renderHook(() => useIssuePeekKeyboard({ ids: IDS, onPeek, peekId: null }));
+    renderHook(() =>
+      useIssuePeekKeyboard({ ids: IDS, onPeek, peekId: null, scopeRoot: document.body }),
+    );
     expect(press(host.querySelector('[data-issue-row="T-1"]')!, 'Enter').defaultPrevented).toBe(
       false,
     );

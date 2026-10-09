@@ -1,0 +1,18 @@
+{
+  "assistantChunkCount": 2,
+  "assistantText": "STEP5_ELECTRON_CONNECTED",
+  "fixtureResponseUsed": false,
+  "metadata": {
+    "agentType": "opencode",
+    "cwd": "/workspace/orvilo-real-model/apps/desktop",
+    "resume": null,
+    "topicId": "tpc_48yTMHJzsHLR",
+    "operationId": "op_1791539246307_agt_acceptance_cli_tpc_48yTMHJzsHLR_TxNxCXXu",
+    "startedAt": "2026-10-09T09:47:27.108Z"
+  },
+  "openCodeVersion": "1.18.35",
+  "selectedModels": ["opencode/step-5-preview-free"],
+  "sourceCommit": "fd0b7c8e15f6fc66a3376f6340c91f57c4b1cbff",
+  "stopReasons": ["end_turn"],
+  "transport": "real Electron -> local device gateway -> embedded CLI -> OpenCode ACP -> real provider"
+}

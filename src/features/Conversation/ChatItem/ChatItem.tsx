@@ -77,7 +77,7 @@ const ChatItem = memo<ChatItemProps>(
         data-message-id={id}
         style={style}
       >
-        {(showAvatar || showTitle || headerAddon) && (
+        {(showAvatar || showTitle || headerAddon || time !== undefined) && (
           <div
             className={cn('message-header flex items-center gap-2', isUser && 'flex-row-reverse')}
           >

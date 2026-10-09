@@ -1,0 +1,12 @@
+{
+  "active": {
+    "canvases": [42, 20],
+    "beam": true,
+    "draft": "Status-row removal fixture draft retained.",
+    "focus": true,
+    "sameEditor": true,
+    "trayNodes": 0,
+    "body": "Chat\nChat\nE\nE2E Test User's workspace\nToggle Sidebar\nIssues\nSearch\nTopics\n4\nToday\n[Draft]\nSynthetic regular agent composer fixture\n[Draft]\nLibraries.dev synthetic operation fixture\n00:00\nReply in Markdown with a heading Assistant UI acce...\n[Draft]\nAssistant UI fixture history\nET\nE2E Test User\nE\nE2E Test User's workspace\nLibraries.dev synthetic operation fixture\n😀\nE2E Test User\n8 minutes ago\n\nSynthetic UI operation fixture: animation, focus and state transitions only; no live model response.\n\nAssistant UI fixture\n8 minutes ago\nGenerating...\n\nStatus-row removal fixture draft retained.\n\nAssistant UI fixture\nAgent\nNo device\nManual\nSkills\nDocuments\nChat history\nAgent Mock\nFeature Flags\nRender Gallery\nTab Routers\n/ws-usere2etestu/chat/tpc_orbs_fixture\n50 FPS\nCLS 0.016\nR1.3G · J482.2M\nCPU 14.3%\nGPU 3.8% · 76M\n1/2"
+  },
+  "errors": []
+}

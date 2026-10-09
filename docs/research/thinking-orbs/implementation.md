@@ -78,3 +78,13 @@ experiment: default avatars use BotAvatar, custom avatars use the existing adapt
 This is a deliberate chat-only visual override of the new runtime-brand default.
 Scoped avatar/meta lint passed and 12 useAgentMeta tests passed. Independent
 bounded postmerge Electron recheck is attached separately.
+
+## User-requested composer simplification
+
+Removed the conversation composer's rotating operation status/time tray and its
+layout-only subscription; message activity remains. Removed the redundant Blocks
+tool selector from heterogeneous and group composer action lists. Slash Skill
+selection remains unchanged. Scoped lint and 4 existing action configuration tests
+passed. Actual Electron verified both removals, slash menu keyboard invocation
+and insertion of the agent-browser skill without sending a message. See
+`evidence/composer-removal-acceptance.md` for final screenshots and source revision.

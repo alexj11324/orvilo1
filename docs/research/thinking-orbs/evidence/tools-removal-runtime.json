@@ -1,0 +1,25 @@
+{
+  "keyboardSlashMenu": "Send in new topic\nCompact context\nagent-browser\nBrowser automation CLI for AI agents. Use for web and Electron tasks: navigation, form filling, clicking, screenshots, scraping, login flows, end-to-end testing. When a page requires sign-in, open a visible browser and let the user log in. For JS-rendered or anti-bot pages that return an empty body or verification screen, prefer this over manual Chrome scripting or bypass attempts.\nartifacts\nCreate directly viewable web pages, browser games, SVG graphics or animations, and React components. Prefer this skill for visual works, including requests to show the result directly or preview it. Use files only when the user explicitly requests a download; HTML/SVG specify the implementation format, not download intent. Do not add a downloadable file or sandbox preparation to a self-contained preview request. Use inline preview only when the user explicitly asks to display inside the chat message or code block, or rejects a separate Artifact panel; respond with a complete HTML code block (wrap SVG inside it) without activation. Answer code snippets and explanations directly without loading this skill.\norvilo\nManage the Orvilo platform via the `orvilo` CLI — INCLUDING modifying THIS agent's own configuration. ACTIVATE this skill whenever the user asks you to: change your system prompt / instructions / persona, enable or disable tools / plugins / skills, switch model or provider, attach knowledge bases or files, edit the opening message, rename the topic, OR operate on any other platform resource (agents, topics, memory, documents, search, content generation, plugin management, bot integrations, evals, usage stats). ALSO ACTIVATE when the user asks to connect, link, or set up a messaging platform bot — including Discord, Telegram, Slack, Feishu (飞书), Lark, QQ, or WeChat (微信) — or uses phrases like '帮我链接 Discord', 'connect my Slack', '接入飞书', '配置 QQ 机器人', 'link WeChat'. Without activation you cannot persist any change — you can only describe what you would do.",
+  "result": {
+    "agent": "agt_acceptance_cli",
+    "blocksIcons": 0,
+    "buttons": [
+      {
+        "label": "Formatting and scheduling",
+        "text": ""
+      },
+      {
+        "label": "OpenCode acceptance",
+        "text": "OpenCode acceptance"
+      },
+      {
+        "label": null,
+        "text": ""
+      }
+    ],
+    "trayNodes": 0,
+    "draft": "Tools icon and status-row removal fixture draft."
+  },
+  "selectionEditor": "agent-browser\n\n",
+  "slash": "Chat\nChat\nE\nE2E Test User's workspace\nToggle Sidebar\nIssues\nSearch\nTopics\n4\nToday\n[Draft]\nSynthetic regular agent composer fixture\n[Draft]\nLibraries.dev synthetic operation fixture\nReply in Markdown with a heading Assistant UI acce...\n[Draft]\nAssistant UI fixture history\nET\nE2E Test User\nE\nE2E Test User's workspace\nAssistant UI fixture history\n😀\nE2E Test User\n42 minutes ago\n\nShow a Markdown example. Edited in Electron.\n\nOpenCode acceptance\n42 minutes ago\nAssistant UI acceptance fixture\n\nThis persisted response is synthetic test history for checking rendering and message actions.\n\nMarkdown lists\ninline code\nAssistant UI\nJavaScript\nconsole.log(\"hello\");\nFeature\tStatus\nRendering\tReady\n\n/\n\nOpenCode acceptance\nWorkspace Devices\nWorking Directory\nPermissions\nDesktop\nThis device · /home/agent/Desktop\nFiles\nSkills\nChat history\nAgent Mock\nFeature Flags\nRender Gallery\nTab Routers\n/ws-usere2etestu/chat/tpc_acceptance_history\n48 FPS\nCLS 0.022\nR1.3G · J489.2M\nCPU 9.7%\nGPU 4.5% · 82M\n1/2"
+}

@@ -76,16 +76,17 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
     return (
       <div>
         <div className={styles.groupHeader}>
-          <button
+          <Button
             aria-expanded={expanded}
-            className="flex flex-1 items-center gap-1.5 rounded-sm text-start text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-auto flex-1 justify-start gap-1.5 rounded-sm p-0 text-start text-sm font-medium hover:bg-transparent"
             type="button"
+            variant="ghost"
             onClick={() => setExpanded((e) => !e)}
           >
             {expanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
             {label}
             <span className={styles.badge}>{tools.length}</span>
-          </button>
+          </Button>
 
           {!disabled && (
             <DropdownMenu items={batchItems}>

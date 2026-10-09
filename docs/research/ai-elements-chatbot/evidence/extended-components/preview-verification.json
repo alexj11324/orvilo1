@@ -1,0 +1,15 @@
+{
+  "errors": [],
+  "expanded": {
+    "width": 1438,
+    "height": 812,
+    "sandbox": "allow-scripts allow-forms allow-modals"
+  },
+  "info": {
+    "sandbox": "allow-scripts allow-forms allow-modals",
+    "width": 733,
+    "height": 349
+  },
+  "refreshed": true,
+  "sourceToggle": true
+}

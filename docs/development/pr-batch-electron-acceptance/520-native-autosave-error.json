@@ -1,0 +1,8 @@
+{
+  "hits": 1,
+  "prRevision": "cbc6819dc3867f5e0a0363b15ac41b19d4b5a89f",
+  "rendererRevision": "1a6404cc9",
+  "transportFixture": "Actual Electron renderer fetch rejects only the provider autosave mutation with HTTP 500; no change sent to the backend",
+  "unhandled": [],
+  "visibleError": "Native acceptance autosave rejected"
+}

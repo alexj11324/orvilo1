@@ -163,10 +163,9 @@ export class ChatTopicActionImpl {
 
   #summarizingTopicTitleIds = new Set<string>();
   /**
-   * Who last wrote each topic's title in this session. In memory on purpose:
-   * the server's metadata schema does not store a title source yet (see
-   * `ChatTopicMetadata.titleSource`), so after a reload `canAgentRetitleTopic`
-   * falls back to its heuristic.
+   * Who last wrote each topic's title in this session. Mirrors the persisted
+   * `metadata.titleSource` and also covers topics not in the loaded lists;
+   * `canAgentRetitleTopic` falls back to a heuristic when neither is known.
    */
   #topicTitleOrigins = new Map<string, TopicTitleOrigin>();
 
@@ -379,6 +378,25 @@ export class ChatTopicActionImpl {
     }
   };
 
+  /**
+   * Write a topic title and record who wrote it. The source is persisted in
+   * `metadata.titleSource` (only when it differs from what is stored, with an
+   * unset source counting as `auto`), BEFORE the title, so a hand rename is
+   * protected from the first moment. A failed marker write is logged, not fatal.
+   */
+  #writeTopicTitle = async (id: string, title: string, origin: TopicTitleOrigin): Promise<void> => {
+    this.#topicTitleOrigins.set(id, origin);
+    const stored = topicSelectors.getTopicById(id)(this.#get())?.metadata?.titleSource;
+    if ((stored ?? 'auto') !== origin) {
+      await this.#get()
+        .updateTopicMetadata(id, { titleSource: origin })
+        .catch((error: unknown) => {
+          console.error('[topicTitle] failed to persist the title source:', error);
+        });
+    }
+    await this.#get().internal_updateTopic(id, { title });
+  };
+
   summaryTopicTitle = async (topicId: string, messages: UIChatMessage[]): Promise<void> => {
     const { internal_updateTopicTitleInSummary } = this.#get();
     const topic = topicSelectors.getTopicById(topicId)(this.#get());
@@ -424,11 +442,11 @@ export class ChatTopicActionImpl {
 
     if (titleSource.kind !== 'model') {
       try {
-        this.#topicTitleOrigins.set(topicId, 'auto');
-        await this.#get().internal_updateTopic(topicId, {
-          title:
-            titleSource.kind === 'agent' ? titleSource.title : sliceTopicTitle(messagesForTitle),
-        });
+        await this.#writeTopicTitle(
+          topicId,
+          titleSource.kind === 'agent' ? titleSource.title : sliceTopicTitle(messagesForTitle),
+          'auto',
+        );
       } finally {
         this.#summarizingTopicTitleIds.delete(topicId);
       }
@@ -475,15 +493,13 @@ export class ChatTopicActionImpl {
       // otherwise stay in the sidebar forever.
       if (!title) return restorePreviousTitle();
 
-      this.#topicTitleOrigins.set(topicId, 'auto');
-      await this.#get().internal_updateTopic(topicId, { title });
+      await this.#writeTopicTitle(topicId, title, 'auto');
     } catch (error) {
       console.error('[summaryTopicTitle] failed to generate a title:', error);
       // Never leave the topic untitled: fall back to the deterministic slice.
-      this.#topicTitleOrigins.set(topicId, 'auto');
-      await this.#get()
-        .internal_updateTopic(topicId, { title: sliceTopicTitle(messagesForTitle) })
-        .catch(() => restorePreviousTitle());
+      await this.#writeTopicTitle(topicId, sliceTopicTitle(messagesForTitle), 'auto').catch(() =>
+        restorePreviousTitle(),
+      );
     } finally {
       this.#summarizingTopicTitleIds.delete(topicId);
     }
@@ -654,8 +670,7 @@ export class ChatTopicActionImpl {
 
   updateTopicTitle = async (id: string, title: string): Promise<void> => {
     // A hand-set title outranks everything automatic, including agent titles.
-    this.#topicTitleOrigins.set(id, 'user');
-    await this.#get().internal_updateTopic(id, { title });
+    await this.#writeTopicTitle(id, title, 'user');
   };
 
   /**
@@ -685,11 +700,16 @@ export class ChatTopicActionImpl {
     });
     if (!allowed) return;
 
-    this.#topicTitleOrigins.set(topicId, 'agent');
-    if (source.title === topic.title) return;
-
     try {
-      await this.#get().internal_updateTopic(topicId, { title: source.title });
+      // Unchanged title: still record the source, but skip the title write.
+      if (source.title === topic.title) {
+        this.#topicTitleOrigins.set(topicId, 'agent');
+        if (topic.metadata?.titleSource !== 'agent') {
+          await this.#get().updateTopicMetadata(topicId, { titleSource: 'agent' });
+        }
+        return;
+      }
+      await this.#writeTopicTitle(topicId, source.title, 'agent');
     } catch (error) {
       if (previousOrigin) this.#topicTitleOrigins.set(topicId, previousOrigin);
       else this.#topicTitleOrigins.delete(topicId);

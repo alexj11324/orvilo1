@@ -414,11 +414,10 @@ export interface ChatTopicMetadata {
     reservedAt: string;
   } | null;
   /**
-   * Who last set `topics.title`. Reserved: `chatTopicMetadataUpdateSchema`
-   * does not accept this key yet, so the server strips it and nothing reads it
-   * from the database. The client tracks the same value in memory
-   * (`canAgentRetitleTopic`); once the schema lists the key, a persisted value
-   * takes over after a reload.
+   * Who last set `topics.title`: the user by hand, the external agent (ACP
+   * `session_info_update`), or Orvilo (model / first-message slice). Absent on
+   * topics titled before this existed; `canAgentRetitleTopic` then falls back
+   * to a heuristic.
    */
   titleSource?: TopicTitleOrigin;
   userMemoryExtractRunState?: TopicUserMemoryExtractRunState;
@@ -649,6 +648,7 @@ export const chatTopicMetadataUpdateSchema = z.object({
     })
     .optional(),
   provider: z.string().optional(),
+  titleSource: z.enum(['user', 'agent', 'auto']).optional(),
   lastSettledOperationId: z.string().optional(),
   reasoningConfig: AiModelReasoningConfigSchema.optional(),
   repos: z.array(z.string()).optional(),

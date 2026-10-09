@@ -420,6 +420,10 @@ export default class HeterogeneousAgentCtr {
   }
 
   private sessions = new Map<string, AgentSession>();
+  private lingeringAcpSessions = new Set<{
+    acpSession: { close: () => void; titleLingering: boolean };
+    agentSessionId?: string;
+  }>();
   /** Device-gateway CLI wrappers keyed by their server operation id. */
   private orviloHeteroExecTasks = new Map<string, OrviloHeteroExecTask>();
   /**
@@ -1197,6 +1201,9 @@ export default class HeterogeneousAgentCtr {
    */
   async sendPrompt(params: SendPromptParams): Promise<void> {
     const session = this.sessions.get(params.sessionId);
+    // A new turn on the same native session must not race a bridge still
+    // waiting for the previous turn's title.
+    if (session?.agentSessionId) this.closeLingeringAcpSessions(session.agentSessionId);
     if (session) session.cancelledByUs = false;
     return this.sendPromptImpl(params);
   }
@@ -2197,6 +2204,34 @@ export default class HeterogeneousAgentCtr {
    * Expects:
    * - `params.sessionId` identifies a session owned by this controller.
    */
+  /**
+   * Graceful close of a finished run's ACP session: it may stay alive for a
+   * bounded window to receive the title the agent generates after the turn.
+   * Tracked here because `stopSession` drops it from `sessions`, and quit /
+   * a new prompt for the same native session must still be able to kill it.
+   */
+  private releaseAcpSession(
+    session: AgentSession,
+    acpSession: { release: () => void; titleLingering: boolean },
+  ) {
+    acpSession.release();
+    for (const entry of this.lingeringAcpSessions) {
+      if (!entry.acpSession.titleLingering) this.lingeringAcpSessions.delete(entry);
+    }
+    if (acpSession.titleLingering) {
+      this.lingeringAcpSessions.add({ acpSession, agentSessionId: session.agentSessionId });
+    }
+  }
+
+  /** Forced stop of lingering sessions (all, or those of one native agent session). */
+  private closeLingeringAcpSessions(agentSessionId?: string) {
+    for (const entry of this.lingeringAcpSessions) {
+      if (agentSessionId !== undefined && entry.agentSessionId !== agentSessionId) continue;
+      entry.acpSession.close();
+      this.lingeringAcpSessions.delete(entry);
+    }
+  }
+
   async cancelSession(params: CancelSessionParams): Promise<void> {
     const session = this.sessions.get(params.sessionId);
     if (!session) return;
@@ -2230,32 +2265,32 @@ export default class HeterogeneousAgentCtr {
 
     if (session.devinAcpSession) {
       session.cancelledByUs = true;
-      session.devinAcpSession.close();
+      this.releaseAcpSession(session, session.devinAcpSession);
     }
 
     if (session.grokAcpSession) {
       session.cancelledByUs = true;
-      session.grokAcpSession.close();
+      this.releaseAcpSession(session, session.grokAcpSession);
     }
 
     if (session.cursorAcpSession) {
       session.cancelledByUs = true;
-      session.cursorAcpSession.close();
+      this.releaseAcpSession(session, session.cursorAcpSession);
     }
 
     if (session.droidAcpSession) {
       session.cancelledByUs = true;
-      session.droidAcpSession.close();
+      this.releaseAcpSession(session, session.droidAcpSession);
     }
 
     if (session.traeAcpSession) {
       session.cancelledByUs = true;
-      session.traeAcpSession.close();
+      this.releaseAcpSession(session, session.traeAcpSession);
     }
 
     if (session.standardAcpSession) {
       session.cancelledByUs = true;
-      session.standardAcpSession.close();
+      this.releaseAcpSession(session, session.standardAcpSession);
     }
 
     this.sessions.delete(params.sessionId);
@@ -2293,6 +2328,7 @@ export default class HeterogeneousAgentCtr {
    */
   afterAppReady() {
     electronApp.on('before-quit', () => {
+      this.closeLingeringAcpSessions();
       for (const [, session] of this.sessions) {
         if (session.devinAcpSession) {
           session.cancelledByUs = true;

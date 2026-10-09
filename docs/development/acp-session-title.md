@@ -27,8 +27,8 @@ bridge stdout -> AcpAgentSession.forwardSessionTitle (packages/heterogeneous-age
 
 - One parser, `parseAcpSessionTitle` (`adapters/acpCommon.ts`): only a non-blank string title
   counts; `null`, missing, blank, non-string and `_meta`-only updates (the bundled Prime agent
-  sends many) are ignored. The title is trimmed, whitespace-flattened, capped at 200 characters
-  and kept as plain text.
+  sends many) are ignored. See "Threat model" for how the text is sanitised (single line, invisible
+  characters stripped, 100 code points).
 - It is called once, in the shared `AcpAgentSession` base, so every ACP runtime (standard
   bridges, TRAE, Droid, Devin, Cursor, Grok) behaves the same. Replayed history (before the
   prompt starts, or `_meta.isReplay`) and repeats of the same title are ignored.
@@ -38,35 +38,83 @@ bridge stdout -> AcpAgentSession.forwardSessionTitle (packages/heterogeneous-age
   The title therefore never enters `onEvents`. The one-shot `spawnAgent` CLI path passes no
   `onSessionTitle`, so titles are dropped there.
 
-## Title source marker
+## Title source marker (persisted)
 
-`ChatTopicMetadata.titleSource` (`'user' | 'agent' | 'auto'`) is typed but **not persisted**:
-`chatTopicMetadataUpdateSchema` in `packages/types/src/topic/topic.ts` is a plain `z.object`, so
-`topic.updateTopicMetadata` strips the key. Until it lists the key, the client keeps the source
-in memory (`#topicTitleOrigins` in the topic slice). After a reload, `canAgentRetitleTopic` falls
-back to a heuristic: only an empty title, the loading/default placeholder, or the slice of the
-first user message may be replaced; anything else is treated as user-set. That also protects an
-earlier agent title after a reload.
+`topics.metadata` is a free-form `jsonb` column and `TopicModel.updateMetadata` shallow-merges the
+patch under a row lock, so writing `{ titleSource }` keeps every other metadata key. The key is
+listed in `chatTopicMetadataUpdateSchema` (`packages/types/src/topic/topic.ts`).
 
-Needs a backend change to persist the marker: add
-`titleSource: z.enum(['user', 'agent', 'auto']).optional()` to `chatTopicMetadataUpdateSchema`
-(`packages/types/src/topic/topic.ts`), then write it from `updateTopicTitle` /
-`applyAgentTopicTitle` through `updateTopicMetadata`. The client already reads a persisted value.
+`#writeTopicTitle` (topic slice) writes `metadata.titleSource` and then the title:
+`updateTopicTitle` -> `user`, `applyAgentTopicTitle` -> `agent`, model / slice paths -> `auto`.
+The marker is written before the title (a hand rename is protected from the first moment) and only
+when it differs from the stored one, an unset value counting as `auto`, so ordinary automatic
+titling costs no extra request. A failed marker write is logged and the title is still saved.
+The in-memory `#topicTitleOrigins` map mirrors it for topics outside the loaded lists.
 
-## Known gap: titles that arrive after the process is gone
+On load the marker is read back from `topic.metadata.titleSource`. Topics titled before this change
+have none; for those `canAgentRetitleTopic` keeps a heuristic: only an empty title, the
+loading/default placeholder, or the slice of the first user message may be replaced, anything else
+is treated as user-set.
 
-`claude-agent-acp` generates its title in the background about two seconds after the turn ends.
-Orvilo runs one bridge process per turn and closes it as soon as `session/prompt` resolves:
+## Title linger
 
-- `AcpAgentSession.run()` `finally` closes the client unless the cache keep-alive armed.
-- The renderer's `heterogeneousAgentExecutor` `finally` calls `stopSession`, and the main
-  process `stopSession` calls `close()` on the ACP session, which also disposes an armed
-  keep-alive.
-- `emitEvents` drops events while keep-alive is armed (the side channel does not depend on it).
+`claude-agent-acp` generates its first title in the background about two seconds after the turn
+ends (verified in its `src/session-titles.ts`: `onTurnEnd` publishes a stored `customTitle`
+immediately, otherwise starts a \~2s generation, at most once per session). Orvilo runs one bridge
+process per turn, so the process now lingers briefly (`AcpAgentSession`):
 
-So a title is delivered when the bridge reports it while the process is alive: during the turn,
-on later turns of a resumed session (the bridge republishes the stored title at turn end), and
-while a keep-alive holds the process. A first-turn title generated after the response is lost
-for one-shot runs; those topics keep the first-message slice. Delivering it needs a product
-decision: a bounded post-turn linger of the bridge process (touching the three close sites above
-and the renderer's `stopSession`), or accepting slice titles for first turns.
+- **When:** the prompt ended with `stopReason: 'end_turn'`, `onSessionTitle` is set, no title has
+  been delivered for this session yet, and no cache keep-alive is armed (a keep-alive already keeps
+  the process alive).
+- **How long:** until the first title arrives or `SESSION_TITLE_LINGER_MS` (5000 ms), then the
+  child closes exactly as before. The timer is `unref`'d and cleared on every exit path; the child
+  is closed even if the title callback throws.
+- **Never delays the UI:** the linger is a timer inside the `run()` `finally`, not an `await`, so
+  `run()` resolves, the result/terminal events are flushed, and `heteroAgentSessionComplete` is
+  broadcast first; the renderer marks the run finished and calls `stopSession` while the child is
+  still alive.
+- **Graceful vs forced:** `release()` (used by main `stopSession`) joins a pending linger, never
+  cuts it short or restarts it. `close()` is forced and kills at once; it is used by cancel /
+  `interrupt()`, the `before-quit` handler, and a new `sendPrompt` for the same native agent
+  session (`HeterogeneousAgentImpl.closeLingeringAcpSessions`, which tracks sessions that
+  `stopSession` already dropped from its map).
+- Failed, cancelled or aborted turns, and turns whose title already arrived, close immediately.
+
+## Threat model: the title is untrusted text
+
+The title is produced by an external agent that may have been steered by untrusted repository or
+web content, is stored as the topic title, shown in the UI, and can reach other agents' context.
+
+Mitigation in `parseAcpSessionTitle`: single line (all whitespace collapsed), C0/C1 controls,
+zero-width characters (U+200B-U+200D, U+2060, U+FEFF), bidi embedding/override/isolate characters
+(U+202A-U+202E, U+2066-U+2069) and lone surrogates removed before trimming and measuring, capped at
+100 code points without splitting a surrogate pair, and rejected (the slice title stays) when
+nothing printable remains. It stays a plain string. Sidebar rows render the title as a React text
+child (no `dangerouslySetInnerHTML` outside the SVG artifact and analytics snippets), so markup in
+a title is shown literally.
+
+What the parser cannot do is make a title safe to splice into a prompt. Client-side places where a
+topic title reaches model context:
+
+| Place                                                                                                                                                                                                                                      | Delimited as data?                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts:516-518` builds `<refer_topic name="${topicTitle}" .../>` into the user message                                                                                   | No: raw interpolation into an attribute, `"` and `/>` are not escaped |
+| `src/features/ChatInput/InputEditor/index.tsx:449` and `ReferTopic/ReferTopicPlugin.ts:66` serialise the same tag from the title                                                                                                           | No: same raw interpolation                                            |
+| `packages/context-engine/src/providers/TopicReferenceContextInjector.ts:60,76` writes `title="${item.topicTitle}"` into `<referred_topics>` / `<pending_topics>` (title comes from `resolveTopicReferences.ts:89`, the live `topic.title`) | No: raw attribute, not escaped                                        |
+| `packages/memory-user-memory/src/providers/chatTopic.ts:98` `x('topic_title', title)`                                                                                                                                                      | Yes: built with `xast-util-to-xml`, which escapes                     |
+
+The first three are reported, not changed here: the title can carry a `"` followed by arbitrary
+attribute-looking text. Escaping `&`, `<`, `>` and `"` where the tag is built is the follow-up.
+Server prompts were not reviewed.
+
+## Verification by reading source
+
+- Verified by reading source: `claude-agent-acp` (`src/session-titles.ts`): publishes
+  `session_info_update` at turn end, republishes a stored title on resumed turns, generates one
+  title per session in the background, falls back to the raw first prompt.
+- Expected from the ACP spec only (not read): `codex-acp` mapping `thread/name/updated` to
+  `session_info_update`, and the other bridges (TRAE, Droid, Devin, Cursor, Grok). The parser is
+  protocol-level, so they work if they follow the spec.
+
+The one-shot `spawnAgent` / `orvilo hetero exec` path passes no `onSessionTitle` and so neither lingers nor
+receives titles; delivering them there would need a new field on `aiAgent.heteroIngest` (server change).

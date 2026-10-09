@@ -46,6 +46,39 @@ describe('parseAcpSessionTitle', () => {
     expect(long).toHaveLength(MAX_ACP_SESSION_TITLE_LENGTH);
   });
 
+  it('strips control, zero-width and bidi characters before trimming', () => {
+    expect(parseAcpSessionTitle(infoUpdate({ title: '\u0007\u0000Fix\u001B[31m bug\u0085' }))).toBe(
+      'Fix [31m bug',
+    );
+    expect(parseAcpSessionTitle(infoUpdate({ title: '\u200B\u200C\u200D\u2060\uFEFF Hi' }))).toBe(
+      'Hi',
+    );
+    expect(parseAcpSessionTitle(infoUpdate({ title: 'abc\u202Edef\u2066ghi\u2069' }))).toBe(
+      'abc def ghi',
+    );
+  });
+
+  it('rejects a title with nothing printable left', () => {
+    expect(
+      parseAcpSessionTitle(infoUpdate({ title: '\u200B\u202E\u0000\uFEFF \n' })),
+    ).toBeUndefined();
+  });
+
+  it('caps at 100 characters on a code point boundary', () => {
+    expect(MAX_ACP_SESSION_TITLE_LENGTH).toBe(100);
+    const emoji = parseAcpSessionTitle(infoUpdate({ title: '😀'.repeat(150) }))!;
+    expect([...emoji]).toHaveLength(100);
+    expect(emoji).toBe('😀'.repeat(100));
+    // a surrogate pair straddling the UTF-16 cut is kept whole or dropped, never split
+    const straddle = parseAcpSessionTitle(infoUpdate({ title: `${'a'.repeat(99)}😀tail` }))!;
+    expect(straddle).toBe(`${'a'.repeat(99)}😀`);
+    expect(straddle).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+  });
+
+  it('drops lone surrogates', () => {
+    expect(parseAcpSessionTitle(infoUpdate({ title: 'a\uD83Db\uDE00c' }))).toBe('abc');
+  });
+
   it('keeps markup as plain text', () => {
     expect(parseAcpSessionTitle(infoUpdate({ title: '<img src=x onerror=alert(1)>' }))).toBe(
       '<img src=x onerror=alert(1)>',

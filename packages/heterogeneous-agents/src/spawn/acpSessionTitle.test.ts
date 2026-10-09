@@ -5,6 +5,7 @@ import { PassThrough } from 'node:stream';
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { SESSION_TITLE_LINGER_MS } from './acpAgentSession';
 import { createStandardAcpSession } from './standardAcpAgents';
 import type { StandardAcpSessionOptions } from './standardAcpSession';
 
@@ -36,6 +37,7 @@ const update = (body: Record<string, unknown>, params: Record<string, unknown> =
 const createAcpProcess = (script: {
   beforePromptResult?: (send: Send) => void;
   onSessionNew?: (send: Send) => void;
+  stopReason?: string;
 }) => {
   const child = new EventEmitter() as ChildProcess;
   const stdout = new PassThrough();
@@ -75,7 +77,7 @@ const createAcpProcess = (script: {
             }
             case 'session/prompt': {
               script.beforePromptResult?.(send);
-              send({ id: message.id, result: { stopReason: 'end_turn' } });
+              send({ id: message.id, result: { stopReason: script.stopReason ?? 'end_turn' } });
               return;
             }
           }
@@ -126,6 +128,7 @@ const keepaliveOptions = {
 };
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   spawnMock.mockReset();
 });
@@ -233,5 +236,140 @@ describe('AcpAgentSession onSessionTitle', () => {
 
     await createStandardAcpSession('claude-code', options).run();
     expect(JSON.stringify(events)).not.toContain('Nobody listens');
+  });
+});
+
+describe('AcpAgentSession title linger', () => {
+  const setup = (script: Parameters<typeof createAcpProcess>[0] = {}, overrides = {}) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const fake = createAcpProcess(script);
+    spawnMock.mockReturnValue(fake.child);
+    const onSessionTitle = vi.fn();
+    const { options } = createOptions({ onSessionTitle, ...overrides });
+    const session = createStandardAcpSession('claude-code', options);
+    return { fake, onSessionTitle, session };
+  };
+
+  it('keeps the child alive after the turn, without delaying run()', async () => {
+    const { fake, session } = setup();
+
+    await session.run();
+
+    expect(session.titleLingering).toBe(true);
+    expect(fake.child.kill).not.toHaveBeenCalled();
+  });
+
+  it('delivers a title that arrives during the linger, then closes', async () => {
+    const { fake, onSessionTitle, session } = setup();
+    await session.run();
+
+    fake.send(update({ sessionUpdate: 'session_info_update', title: 'Generated later' }));
+    await vi.waitFor(() => expect(onSessionTitle).toHaveBeenCalledWith('Generated later'));
+
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+    expect(session.titleLingering).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('closes at the cap when no title arrives', async () => {
+    const { fake, session } = setup();
+    await session.run();
+
+    vi.advanceTimersByTime(SESSION_TITLE_LINGER_MS - 1);
+    expect(fake.child.kill).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+    expect(session.titleLingering).toBe(false);
+  });
+
+  it('does not linger when a title was already delivered during the turn', async () => {
+    const { fake, session } = setup({
+      beforePromptResult: (send) => {
+        send(update({ sessionUpdate: 'session_info_update', title: 'Already here' }));
+      },
+    });
+
+    await session.run();
+
+    expect(session.titleLingering).toBe(false);
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not linger after a cancelled turn', async () => {
+    const { fake, session } = setup({ stopReason: 'cancelled' });
+
+    await session.run();
+
+    expect(session.titleLingering).toBe(false);
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not linger without a title consumer', async () => {
+    const { fake, session } = setup({}, { onSessionTitle: undefined });
+
+    await session.run();
+
+    expect(session.titleLingering).toBe(false);
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('a forced close during the linger kills immediately and clears the timer', async () => {
+    const { fake, session } = setup();
+    await session.run();
+
+    session.close();
+    session.close();
+
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(session.titleLingering).toBe(false);
+  });
+
+  it('interrupt during the linger kills immediately', async () => {
+    const { fake, session } = setup();
+    await session.run();
+
+    await session.interrupt();
+
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+    // (the remaining timer is interrupt()'s own exit-grace race, not the linger)
+    expect(session.titleLingering).toBe(false);
+  });
+
+  it('release joins the pending linger instead of cutting it short or restarting it', async () => {
+    const { fake, session } = setup();
+    await session.run();
+
+    session.release();
+    session.release();
+
+    expect(fake.child.kill).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(1);
+
+    vi.advanceTimersByTime(SESSION_TITLE_LINGER_MS);
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('release closes at once when there is nothing to wait for', async () => {
+    const { fake, session } = setup({ stopReason: 'cancelled' });
+    await session.run();
+    session.release();
+
+    expect(fake.child.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the child even when the title callback throws', async () => {
+    const { fake, onSessionTitle, session } = setup();
+    onSessionTitle.mockImplementation(() => {
+      throw new Error('boom');
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await session.run();
+
+    fake.send(update({ sessionUpdate: 'session_info_update', title: 'Title' }));
+    await vi.waitFor(() => expect(fake.child.kill).toHaveBeenCalledTimes(1));
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

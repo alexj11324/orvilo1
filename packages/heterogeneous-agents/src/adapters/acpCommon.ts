@@ -81,7 +81,18 @@ export const acpEventIdOf = (raw: unknown): string | undefined => {
 };
 
 /** Longest session title forwarded from an agent; longer text is cut. */
-export const MAX_ACP_SESSION_TITLE_LENGTH = 200;
+export const MAX_ACP_SESSION_TITLE_LENGTH = 100;
+
+/**
+ * C0/C1 controls, zero-width characters (U+200B-U+200D, U+2060, U+FEFF) and
+ * bidi embedding/override/isolate characters (U+202A-U+202E, U+2066-U+2069).
+ */
+/* eslint-disable no-control-regex */
+const INVISIBLE_TITLE_CHARS =
+  /[\u0000-\u001F\u007F-\u009F\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/g;
+/* eslint-enable no-control-regex */
+
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 
 /**
  * Title carried by an ACP `session_info_update` (`sessionUpdate` payload).
@@ -97,8 +108,17 @@ export const parseAcpSessionTitle = (update: unknown): string | undefined => {
   if (record?.sessionUpdate !== 'session_info_update') return undefined;
   if (typeof record.title !== 'string') return undefined;
 
-  const title = record.title.replaceAll(/\s+/g, ' ').trim().slice(0, MAX_ACP_SESSION_TITLE_LENGTH);
-  return title.trim() || undefined;
+  // Strip invisible / direction-changing characters first (they would survive
+  // whitespace collapsing and could hide or reorder text), then flatten
+  // whitespace, then cap by code points so no surrogate pair is split.
+  const printable = record.title
+    .replaceAll(INVISIBLE_TITLE_CHARS, ' ')
+    .replaceAll(LONE_SURROGATE, '');
+  const title = [...printable.replaceAll(/\s+/g, ' ').trim()]
+    .slice(0, MAX_ACP_SESSION_TITLE_LENGTH)
+    .join('')
+    .trim();
+  return title || undefined;
 };
 
 /**

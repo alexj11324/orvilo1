@@ -55,6 +55,13 @@ export const selectAcpPermissionOption = (
   return undefined;
 };
 
+/**
+ * How long a finished turn's bridge process is kept alive for the title it
+ * generates in the background (claude-agent-acp: ~2s after turn end). The wait
+ * ends earlier when a title arrives.
+ */
+export const SESSION_TITLE_LINGER_MS = 5000;
+
 /** Options shared by every ACP agent session, independent of the vendor. */
 export interface AcpAgentSessionOptions {
   args: string[];
@@ -127,6 +134,8 @@ export abstract class AcpAgentSession<
   private readonly transport: HeterogeneousAgentRuntimeStatus['transport'];
   private hostClosed = false;
   private lastSessionTitle?: string;
+  private titleLingerTimer?: ReturnType<typeof setTimeout>;
+  private interruptRequested = false;
   /** Set once `session/prompt` is about to be sent; earlier updates are `session/load` replay. */
   private promptStarted = false;
   private lastStatus?: HeterogeneousAgentRuntimeStatus['state'];
@@ -185,6 +194,7 @@ export abstract class AcpAgentSession<
 
   /** Run one full prompt turn. Resolves silently when the host closed the session mid-run. */
   async run(): Promise<void> {
+    let completedNormally = false;
     this.emitStatus('starting');
     try {
       await this.prepareRun?.();
@@ -199,6 +209,7 @@ export abstract class AcpAgentSession<
         await this.buildPromptParams(sessionId),
         false,
       );
+      completedNormally = isRecord(result) && result.stopReason === 'end_turn';
       await this.settlePrompt(result);
       if (this.hostClosed) return;
       await this.emitEvents(await this.pipeline.flush());
@@ -220,8 +231,11 @@ export abstract class AcpAgentSession<
       // An armed keeper owns the child from here on — it disposes the client
       // itself when the scheduler disarms.
       if (!this.keepaliveArmed) {
-        this.client.close();
-        this.emitStatus('closed');
+        if (completedNormally && this.shouldLingerForTitle()) this.beginTitleLinger();
+        else {
+          this.client.close();
+          this.emitStatus('closed');
+        }
       }
     }
   }
@@ -238,6 +252,11 @@ export abstract class AcpAgentSession<
    * survived SIGKILL and the caller should surface the cancel as unconfirmed.
    */
   async interrupt(): Promise<boolean> {
+    this.interruptRequested = true;
+    if (this.titleLingering) {
+      this.close();
+      return this.waitForExit(this.cancelGraceMs);
+    }
     if (this.cacheKeepalive) {
       // No turn is in flight while the keeper holds the child — skip
       // session/cancel and go straight to the kill escalation.
@@ -275,9 +294,57 @@ export abstract class AcpAgentSession<
   close(signal: NodeJS.Signals = 'SIGTERM'): void {
     if (this.hostClosed) return;
     this.hostClosed = true;
+    this.clearTitleLinger();
     this.cacheKeepalive?.dispose('closed');
     this.onHostClose?.();
     this.client.close(signal);
+    this.emitStatus('closed');
+  }
+
+  /** True while a finished turn's process is kept alive only to wait for the session title. */
+  get titleLingering(): boolean {
+    return this.titleLingerTimer !== undefined;
+  }
+
+  /**
+   * Graceful close for a session whose turn is over. If the bridge is still
+   * waiting for its title this joins the pending linger (no new timer, no
+   * early cut); otherwise it closes like {@link close}. Forced stops (cancel,
+   * app quit, a new prompt for the same session) call {@link close} instead,
+   * which always kills immediately.
+   */
+  release(): void {
+    if (this.titleLingering) return;
+    this.close();
+  }
+
+  private shouldLingerForTitle(): boolean {
+    return (
+      !!this.options.onSessionTitle &&
+      this.lastSessionTitle === undefined &&
+      !this.hostClosed &&
+      !this.interruptRequested
+    );
+  }
+
+  /** Keep the child alive for up to {@link SESSION_TITLE_LINGER_MS}; never delays `run()` settling. */
+  private beginTitleLinger(): void {
+    this.titleLingerTimer = setTimeout(() => this.endTitleLinger(), SESSION_TITLE_LINGER_MS);
+    this.titleLingerTimer.unref?.();
+  }
+
+  private clearTitleLinger(): void {
+    if (this.titleLingerTimer === undefined) return;
+    clearTimeout(this.titleLingerTimer);
+    this.titleLingerTimer = undefined;
+  }
+
+  /** The linger is over (title arrived or cap hit): close exactly as a finished turn would. */
+  private endTitleLinger(): void {
+    if (!this.titleLingering) return;
+    this.clearTitleLinger();
+    this.hostClosed = true;
+    this.client.close();
     this.emitStatus('closed');
   }
 
@@ -399,6 +466,8 @@ export abstract class AcpAgentSession<
       this.options.onSessionTitle(title);
     } catch (error) {
       console.error('[acp] onSessionTitle failed:', error);
+    } finally {
+      this.endTitleLinger();
     }
   }
 

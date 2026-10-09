@@ -122,4 +122,55 @@ describe('applyAgentTopicTitle', () => {
 
     expect(topicService.updateTopic).not.toHaveBeenCalled();
   });
+
+  describe('persisted title source', () => {
+    it('stores `user` before the title on a manual rename', async () => {
+      seedTopic('p1', 'Old');
+      const order: string[] = [];
+      vi.mocked(topicService.updateTopicMetadata).mockImplementation(async () => {
+        order.push('metadata');
+      });
+      vi.mocked(topicService.updateTopic).mockImplementation(async () => {
+        order.push('title');
+      });
+
+      await useChatStore.getState().updateTopicTitle('p1', 'Mine');
+
+      expect(topicService.updateTopicMetadata).toHaveBeenCalledWith('p1', { titleSource: 'user' });
+      expect(order).toEqual(['metadata', 'title']);
+      expect(useChatStore.getState().topicDetailMap.p1.metadata?.titleSource).toBe('user');
+    });
+
+    it('stores `agent` with the agent title and keeps other metadata keys', async () => {
+      seedTopic('p2', sliceTopicTitle(messages), { metadata: { heteroSessionId: 'hs-1' } });
+
+      await useChatStore.getState().applyAgentTopicTitle('p2', 'Agent title', messages);
+
+      // Only the delta is sent; the server merges it into the stored metadata.
+      expect(topicService.updateTopicMetadata).toHaveBeenCalledWith('p2', { titleSource: 'agent' });
+      expect(useChatStore.getState().topicDetailMap.p2.metadata).toMatchObject({
+        heteroSessionId: 'hs-1',
+        titleSource: 'agent',
+      });
+    });
+
+    it('does not write the marker again when it is already stored', async () => {
+      seedTopic('p3', 'Earlier', { metadata: { titleSource: 'agent' } });
+
+      await useChatStore.getState().applyAgentTopicTitle('p3', 'Later', messages);
+
+      expect(topicService.updateTopicMetadata).not.toHaveBeenCalled();
+      expect(titleOf('p3')).toBe('Later');
+    });
+
+    it('still saves the title when persisting the marker fails', async () => {
+      seedTopic('p5', 'Old');
+      vi.mocked(topicService.updateTopicMetadata).mockRejectedValueOnce(new Error('offline'));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await useChatStore.getState().updateTopicTitle('p5', 'Mine');
+
+      expect(topicService.updateTopic).toHaveBeenCalledWith('p5', { title: 'Mine' });
+    });
+  });
 });

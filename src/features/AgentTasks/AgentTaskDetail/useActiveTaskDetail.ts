@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 
-import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { useAgentStore } from '@/store/agent';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
+
+import { isTaskNotFound } from './isTaskNotFound';
 
 export interface ActiveTaskDetailState {
   /** A transient fetch failure (network / 500) with no cached detail — distinct from a resolved not-found. Render a reload state, not a 404. */
@@ -74,7 +75,7 @@ export const useActiveTaskDetail = (taskId?: string): ActiveTaskDetailState => {
   // carries an HTTP status instead. Only the former is a real 404 (a dead-end);
   // a transient failure must offer Reload, not tell the user the task was deleted.
   const settledWithoutDetail = !!taskError && !hasTaskDetail;
-  const isResolvedNotFound = normalizeAsyncError(taskError).code === 'TASK_NOT_FOUND';
+  const isResolvedNotFound = isTaskNotFound(taskError);
   const isNotFound = settledWithoutDetail && isResolvedNotFound;
   const fetchError = settledWithoutDetail && !isResolvedNotFound ? taskError : undefined;
   // Anything that isn't "we have the detail", "confirmed gone", or "errored" is

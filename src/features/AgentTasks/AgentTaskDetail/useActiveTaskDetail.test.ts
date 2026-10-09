@@ -124,6 +124,18 @@ describe('useActiveTaskDetail', () => {
     expect(result.current.isInitialLoading).toBe(false);
   });
 
+  it('reports not-found when task.detail rejects with the tRPC NOT_FOUND for a deleted Issue', () => {
+    const trpcNotFound = Object.assign(new Error('Task not found'), {
+      data: { code: 'NOT_FOUND', httpStatus: 404 },
+    });
+    mocks.taskState = buildTaskState({ detail: false, taskError: trpcNotFound });
+
+    const { result } = renderHook(() => useActiveTaskDetail('T-194'));
+
+    expect(result.current.isNotFound).toBe(true);
+    expect(result.current.error).toBeUndefined();
+  });
+
   it('clears the shared slot on unmount only while it still points at this task', () => {
     const { unmount } = renderHook(() => useActiveTaskDetail('T-194'));
 

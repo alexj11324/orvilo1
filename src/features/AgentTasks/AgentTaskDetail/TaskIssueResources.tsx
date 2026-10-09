@@ -11,6 +11,7 @@ import { taskMenuService } from '@/services/taskMenu';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { trpcErrorMessage } from '@/utils/trpcError';
 
+import { issueResourceRef } from './issueResourceRef';
 import { useTaskDetailSelector } from './TaskDetailScope';
 
 /**
@@ -20,7 +21,7 @@ import { useTaskDetailSelector } from './TaskDetailScope';
  */
 const TaskIssueResources = () => {
   const { t } = useTranslation('chat');
-  const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
+  const taskId = issueResourceRef(useTaskDetailSelector(taskDetailSelectors.taskDetail));
   const { allowed: editable } = usePermission('create_content');
   const [removing, setRemoving] = useState<string>();
   const [failure, setFailure] = useState<string>();

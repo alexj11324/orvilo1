@@ -8,6 +8,7 @@ import {
   CheckCheckIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
+  FileXIcon,
   InboxIcon,
   ListFilterIcon,
   MoreVerticalIcon,
@@ -1271,7 +1272,31 @@ const WorkInboxPage = memo(() => {
               </div>
             }
           >
-            <LazyIssueContent taskId={selectedIssueTaskId} />
+            <LazyIssueContent
+              taskId={selectedIssueTaskId}
+              notFound={
+                // The Issue behind this notification was deleted. The notification's own
+                // text stays readable above; the pane offers a calm explanation and a way
+                // to clear the row, not a generic load failure with a Retry that cannot work.
+                <div
+                  className="flex flex-col items-center gap-2 px-4 py-8 text-center"
+                  role="status"
+                >
+                  <FileXIcon aria-hidden className="size-8 shrink-0 text-muted-foreground" />
+                  <p className="text-sm font-medium">{t('inbox.targetDeleted.title')}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('inbox.targetDeleted.description')}
+                  </p>
+                  {displayOption !== 'archived' &&
+                  (selected.availableActions.includes('dismiss') ||
+                    selected.availableActions.includes('archive')) ? (
+                    <Button variant="outline" onClick={() => void toggleArchiveCard(selected)}>
+                      {t('inbox.dismiss')}
+                    </Button>
+                  ) : null}
+                </div>
+              }
+            />
           </Suspense>
         </div>
       </>

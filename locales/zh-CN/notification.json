@@ -124,6 +124,8 @@
   "inbox.submitInput": "发送回复",
   "inbox.tab.all": "全部",
   "inbox.tab.mentions": "提及",
+  "inbox.targetDeleted.description": "此通知指向的 Issue 已不存在。上方的通知内容仍会保留，方便你查阅。",
+  "inbox.targetDeleted.title": "该 Issue 已被删除",
   "inbox.title": "通知",
   "inbox.toast.archived": "已归档",
   "inbox.toast.dismissed": "已忽略提醒",

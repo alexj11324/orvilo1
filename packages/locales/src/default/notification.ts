@@ -77,6 +77,9 @@ export default {
     'The original request did not confirm the outcome. Refresh and try from the source, without repeating the action.',
   'inbox.tab.all': 'All',
   'inbox.tab.mentions': 'Mentions',
+  'inbox.targetDeleted.description':
+    'The Issue this notification points to no longer exists. The notification above is kept so you can still read it.',
+  'inbox.targetDeleted.title': 'This Issue was deleted',
   'inbox.filterType.assigned': 'Assigned to me',
   'inbox.filterType.created': 'Created by me',
   'inbox.filterType.subscribed': 'Subscribed by me',

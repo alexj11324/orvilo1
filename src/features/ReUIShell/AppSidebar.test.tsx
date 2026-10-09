@@ -190,14 +190,6 @@ function ControlledDrawer() {
     </>
   );
 }
-function SearchShell() {
-  const [open, setOpen] = useState(false);
-  return (
-    <SidebarProvider open={open} onOpenChange={setOpen}>
-      <SearchSection>Categories</SearchSection>
-    </SidebarProvider>
-  );
-}
 
 describe('sidebar toggle ownership', () => {
   it('removes the redundant collapsed web sidebar trigger', () => {
@@ -281,19 +273,7 @@ describe('drawer provider compatibility', () => {
   });
 });
 
-describe('collapsed settings search', () => {
-  it('expands and focuses the search input using the keyboard', async () => {
-    const user = userEvent.setup();
-    render(<SearchShell />);
-    const trigger = screen.getByRole('button', { name: 'settingsSearch.placeholder' });
-    trigger.focus();
-    await user.keyboard('{Enter}');
-    const input = screen.getByRole('searchbox');
-    await waitFor(() => expect(document.activeElement).toBe(input));
-    await user.keyboard('privacy');
-    expect(input).toHaveValue('privacy');
-    expect(screen.getByText('Search results')).toBeTruthy();
-  });
+describe('settings search across collapse', () => {
   it('retains the query when collapsing and expanding', () => {
     const { rerender } = render(
       <SidebarProvider open>
@@ -306,7 +286,6 @@ describe('collapsed settings search', () => {
         <SearchSection>Categories</SearchSection>
       </SidebarProvider>,
     );
-    expect(screen.queryByText('Search results')).toBeNull();
     rerender(
       <SidebarProvider open>
         <SearchSection>Categories</SearchSection>
@@ -397,14 +376,14 @@ describe('workspace switcher header', () => {
       expect(screen.queryByText('Orvilo')).toBeNull();
     },
   );
-  it('keeps the switcher on the collapsed rail for every surface', () => {
+  it('keeps settings free of the shell header while collapsed, since no rail is left to host it', () => {
     route.key = 'workspace-settings';
     render(
       <SidebarProvider open={false}>
         <AppSidebar />
       </SidebarProvider>,
     );
-    expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
+    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeNull();
   });
   it('hides the shell header inside the settings mobile drawer', () => {
@@ -476,31 +455,6 @@ describe('workspace switcher header', () => {
 afterEach(() => clearNavPanelRegistry());
 
 describe('registered settings navigation composition', () => {
-  it('expands and focuses registered settings search from the collapsed rail', async () => {
-    route.key = 'settings';
-    registerNavPanelContent(
-      'settings',
-      Symbol('settings'),
-      <SearchSection>Settings categories</SearchSection>,
-    );
-    function RegisteredShell() {
-      const [open, setOpen] = useState(false);
-      return (
-        <SidebarProvider open={open} onOpenChange={setOpen}>
-          <NavMain />
-        </SidebarProvider>
-      );
-    }
-    const user = userEvent.setup();
-    render(<RegisteredShell />);
-    expect(screen.queryByText('Global search')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'settingsSearch.placeholder' }));
-    const input = screen.getByRole('searchbox');
-    await waitFor(() => expect(document.activeElement).toBe(input));
-    await user.keyboard('privacy');
-    expect(input).toHaveValue('privacy');
-  });
-
   it('retains the registered settings search query across collapse', () => {
     route.key = 'settings';
     registerNavPanelContent(
@@ -527,7 +481,7 @@ describe('registered settings navigation composition', () => {
     expect(screen.getByRole('searchbox')).toHaveValue('privacy');
   });
 
-  it('keeps nonsettings desktop panels on the global icon navigation when collapsed', () => {
+  it('keeps the route panel mounted while collapsed instead of swapping in an icon rail', () => {
     route.key = 'agent';
     registerNavPanelContent('agent', Symbol('agent'), <div>Agent topics</div>);
     render(
@@ -535,8 +489,8 @@ describe('registered settings navigation composition', () => {
         <NavMain />
       </SidebarProvider>,
     );
-    expect(screen.queryByText('Agent topics')).toBeNull();
-    expect(screen.getByText('Global navigation')).toBeTruthy();
+    expect(screen.getByText('Agent topics')).toBeTruthy();
+    expect(screen.queryByText('Global navigation')).toBeNull();
   });
 
   it('renders a full route panel in the narrow drawer despite collapsed desktop preference', () => {

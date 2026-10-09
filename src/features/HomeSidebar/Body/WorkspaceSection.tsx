@@ -152,7 +152,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
   return (
     <Collapsible
       open={open}
-      render={<SidebarGroup className="group/section group-data-[collapsible=icon]:hidden" />}
+      render={<SidebarGroup className="group/section" />}
       onOpenChange={(next) => onOpenChange?.(next)}
     >
       <SectionHeader

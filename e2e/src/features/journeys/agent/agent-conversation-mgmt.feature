@@ -9,7 +9,7 @@ Feature: Agent 对话管理用户体验链路
   @AGENT-CONV-001 @P0
   Scenario: 创建新对话
     Given 用户已有一个对话
-    When 用户点击新建对话按钮
+    When 用户通过命令菜单新建对话
     Then 应该创建一个新的空白对话
     And 页面应该显示欢迎界面
 

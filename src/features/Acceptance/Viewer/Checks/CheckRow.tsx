@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { hasRenderableEvidence, readVisualizationManifest } from '../../Report/visualization';
 import { VisualizationDeltaBadge, VisualizationRenderer } from '../../Report/VisualizationRenderer';
@@ -409,7 +410,8 @@ export const AcceptanceCheckRow = memo<{
                 render={
                   <span>
                     <span
-                      className={cx(styles.seqChip, styles.seqChipClickable)}
+                      {...clickableProps()}
+                      className={cx(styles.seqChip, styles.seqChipClickable, CLICKABLE_FOCUS_RING)}
                       onClick={(event) => {
                         event.stopPropagation();
                         void navigator.clipboard.writeText(`C${check.seq}`);
@@ -563,7 +565,8 @@ export const AcceptanceCheckRow = memo<{
                     render={
                       <span>
                         <span
-                          className={cx(styles.chip, styles.chipClickable)}
+                          {...clickableProps()}
+                          className={cx(styles.chip, styles.chipClickable, CLICKABLE_FOCUS_RING)}
                           onClick={(event) => {
                             event.stopPropagation();
                             onRound(check.introducedAtRound);
@@ -596,7 +599,8 @@ export const AcceptanceCheckRow = memo<{
                     render={
                       <span>
                         <span
-                          className={cx(styles.chip, styles.chipClickable)}
+                          {...clickableProps()}
+                          className={cx(styles.chip, styles.chipClickable, CLICKABLE_FOCUS_RING)}
                           onClick={(event) => {
                             event.stopPropagation();
                             onRound(check.resultRound!);
@@ -874,7 +878,8 @@ export const AcceptanceCheckRow = memo<{
             )}
             {hasHistory && (
               <span
-                className={styles.historyToggle}
+                {...clickableProps()}
+                className={cn(styles.historyToggle, CLICKABLE_FOCUS_RING)}
                 onClick={() => setHistoryOpen((open) => !open)}
               >
                 <ChevronRight

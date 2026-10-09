@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/reui/badge';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import type { TeamHomeMember } from './teamHomeMembersModel';
@@ -78,9 +79,15 @@ const TeamHomeMembers = memo<TeamHomeMembersProps>(({ error, isLoading, members,
 
   if (isLoading) {
     return (
-      <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+      <div aria-busy aria-label={t('teams.loading')} className={styles.list}>
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton className="h-10 w-full" key={index} />
+          <div className={styles.row} key={index}>
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+            <div className="flex flex-col flex-1 gap-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -89,14 +96,7 @@ const TeamHomeMembers = memo<TeamHomeMembersProps>(({ error, isLoading, members,
     return <AsyncError error={error} onRetry={onRetry} />;
   }
   if (members.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center flex-1 p-12">
-        <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-          <UsersIcon aria-hidden className="size-8" />
-          <p>{t('teams.membersEmpty')}</p>
-        </div>
-      </div>
-    );
+    return <SimpleEmpty description={t('teams.membersEmpty')} icon={UsersIcon} />;
   }
 
   return (

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/reui/badge';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { TAG_MARGIN_INLINE_END } from '../constants';
 
@@ -29,6 +30,8 @@ export const ReferTopicView = memo<ReferTopicViewProps>(({ topicId, fallbackTitl
 
   return (
     <span
+      {...clickableProps()}
+      className={CLICKABLE_FOCUS_RING}
       style={{
         cursor: topicId ? 'pointer' : 'default',
         display: 'inline-flex',

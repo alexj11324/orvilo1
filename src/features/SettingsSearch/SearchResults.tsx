@@ -1,11 +1,11 @@
 'use client';
 
 import { createStaticStyles } from 'antd-style';
-import { Loader2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SidebarMenu } from '@/components/ui/sidebar';
+import { Spinner } from '@/components/ui/spinner';
 import NavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { isModifierClick } from '@/utils/navigation';
@@ -57,7 +57,7 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
         {isIndexing ? (
           // A zero-result answer is not authoritative while the pinyin dict is
           // still loading — show a spinner instead of a false empty state.
-          <Loader2Icon className="animate-spin" color="var(--sidebar-muted)" />
+          <Spinner className="text-[var(--sidebar-muted)]" />
         ) : (
           <span className="text-xs text-[var(--sidebar-muted)]">
             {t('settingsSearch.empty', { keyword })}

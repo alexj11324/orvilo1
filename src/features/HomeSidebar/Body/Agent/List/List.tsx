@@ -1,7 +1,7 @@
 import { type SidebarAgentItem } from '@orvilo/types';
 import { MoreHorizontal } from 'lucide-react';
 import { type CSSProperties } from 'react';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NavItem from '@/features/NavPanel/components/NavItem';
@@ -11,7 +11,6 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { SessionDefaultGroup } from '@/types/session';
 
-import CreateAgentButton from '../CreateAgentButton';
 import GroupItem from './AgentGroupItem';
 import AgentItem from './AgentItem';
 import { useKeepSidebarListed } from './useAgentList';
@@ -26,11 +25,8 @@ interface SessionListProps {
 }
 
 const List = memo<SessionListProps>(
-  ({ onMoreClick, dataSource, groupId, itemStyle, itemClassName, visibility }) => {
+  ({ onMoreClick, dataSource, groupId, itemStyle, itemClassName }) => {
     const { t } = useTranslation('chat');
-
-    // Early return for empty state
-    const isEmpty = useMemo(() => dataSource.length === 0, [dataSource.length]);
 
     // Check if this is defaultList and if there are more agents
     const isDefaultList = groupId === SessionDefaultGroup.Default;
@@ -43,18 +39,7 @@ const List = memo<SessionListProps>(
     // hidden items alone never surface a dangling "More" row.
     const hasMore = isDefaultList && keep(ungroupedAgents).length > agentPageSize;
 
-    // Empty custom/default groups always show the Create button so the user can populate them.
-    // Non-empty lists only show it at the bottom of the default group; custom groups rely on
-    // the group header dropdown for further additions. When the default list overflows and we
-    // already render the "More" entry, hide the Create button to keep the footer compact —
-    // creation is still reachable from the group header dropdown.
-    const showCreateButton = isEmpty ? groupId !== undefined : isDefaultList && !hasMore;
-
-    if (isEmpty) {
-      return showCreateButton ? (
-        <CreateAgentButton className={itemClassName} groupId={groupId} visibility={visibility} />
-      ) : null;
-    }
+    if (dataSource.length === 0) return null;
 
     return (
       <div className="flex flex-col gap-[1px]">
@@ -71,9 +56,6 @@ const List = memo<SessionListProps>(
             title={t('input.more')}
             onClick={onMoreClick || openAllAgentsDrawer}
           />
-        )}
-        {showCreateButton && (
-          <CreateAgentButton className={itemClassName} groupId={groupId} visibility={visibility} />
         )}
       </div>
     );

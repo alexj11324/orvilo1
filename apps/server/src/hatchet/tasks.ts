@@ -18,6 +18,7 @@ import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/veri
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runMcpEventInboxSweep } from '@/server/services/mcpEvents/runtime';
+import { runTaskIssueRecurrenceSweep } from '@/server/services/taskIssueRecurrence/sweep';
 import { runTaskReminderSweep } from '@/server/services/taskReminder/sweep';
 import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
@@ -186,7 +187,13 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
   const taskReminderSweep = hatchet.task({
     name: HATCHET_TASK_NAMES.taskReminderSweep,
     executionTimeout: '5m',
-    fn: async () => runTaskReminderSweep(),
+    fn: async () => {
+      const [reminders, issueRecurrences] = await Promise.all([
+        runTaskReminderSweep(),
+        runTaskIssueRecurrenceSweep(),
+      ]);
+      return { ...reminders, issueRecurrences };
+    },
     onCrons: ['* * * * *'],
     retries: 3,
   });

@@ -1,9 +1,12 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { TargetIcon, TerminalIcon, WrenchIcon } from 'lucide-react';
 import type { FC, MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SimpleTooltip } from '../../SimpleTooltip';
 import { styles } from './style';
@@ -106,7 +109,11 @@ export const ActionMention = memo<ActionMentionProps>(
         }
       >
         <span
-          className={cx(styles.actionTag, styles[styleKey], isClickable && styles.clickable)}
+          {...clickableProps()}
+          className={cn(
+            cx(styles.actionTag, styles[styleKey], isClickable && styles.clickable),
+            CLICKABLE_FOCUS_RING,
+          )}
           onClick={handleClick}
         >
           <span className="anticon" role="img">

@@ -184,6 +184,7 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
               onClick={handleCancelCompression}
             />
             <ActionIcon
+              aria-label={t('toggle', { ns: 'common' })}
               icon={expanded ? ChevronUp : ChevronDown}
               size={'small'}
               onClick={() => toggleCompressedGroupExpanded(id)}

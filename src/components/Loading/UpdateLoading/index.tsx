@@ -1,6 +1,7 @@
-import { Loader2 } from 'lucide-react';
-import { createElement, type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { memo } from 'react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 interface UpdateLoadingProps {
   size?: number;
@@ -10,7 +11,7 @@ interface UpdateLoadingProps {
 const UpdateLoading = memo<UpdateLoadingProps>(({ size, style }) => {
   return (
     <div style={style}>
-      {createElement(Loader2, { className: 'animate-spin', size: size ?? 16 })}
+      <Spinner style={{ height: size ?? 16, width: size ?? 16 }} />
     </div>
   );
 });

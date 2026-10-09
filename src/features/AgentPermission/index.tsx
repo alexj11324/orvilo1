@@ -7,20 +7,11 @@ import AsyncBoundary from '@/components/AsyncBoundary';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
-import { StyleSheet } from '@/utils/styles';
 
 import PermissionForm from './PermissionForm';
-
-const styles = StyleSheet.create({
-  body: {
-    display: 'flex',
-    overflowY: 'auto',
-    position: 'relative',
-  },
-});
 
 const AgentPermission = memo(() => {
   const { t } = useTranslation('setting');
@@ -33,32 +24,30 @@ const AgentPermission = memo(() => {
   const retryAgentConfigFetch = useAgentStore((s) => s.retryAgentConfigFetch);
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <WorkSurface>
       <NavHeader
-        styles={{ left: { paddingInlineStart: 24 } }}
+        styles={{ left: { paddingInlineStart: 8 } }}
         left={
           activeAgentId ? (
             <AgentBreadcrumb agentId={activeAgentId} title={t('permission.page.title')} />
           ) : null
         }
       />
-      <div className="flex flex-col flex-1 w-full" style={{ ...styles.body }}>
-        <WideScreenContainer>
-          <div className="flex flex-col gap-4" style={{ paddingBlock: 16 }}>
-            <AsyncBoundary
-              data={isAgentConfigLoading ? undefined : true}
-              error={configError}
-              errorVariant={'page'}
-              isLoading={isAgentConfigLoading && !configError}
-              loading={<SurfaceSkeleton header={false} variant={'form'} />}
-              onRetry={() => retryAgentConfigFetch()}
-            >
-              <PermissionForm agentId={activeAgentId ?? ''} />
-            </AsyncBoundary>
-          </div>
-        </WideScreenContainer>
-      </div>
-    </div>
+      <WorkSurfaceDocument>
+        <div className="flex flex-col gap-4">
+          <AsyncBoundary
+            data={isAgentConfigLoading ? undefined : true}
+            error={configError}
+            errorVariant={'page'}
+            isLoading={isAgentConfigLoading && !configError}
+            loading={<SurfaceSkeleton header={false} variant={'form'} />}
+            onRetry={() => retryAgentConfigFetch()}
+          >
+            <PermissionForm agentId={activeAgentId ?? ''} />
+          </AsyncBoundary>
+        </div>
+      </WorkSurfaceDocument>
+    </WorkSurface>
   );
 });
 

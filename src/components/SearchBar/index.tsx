@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from 'cn';
-import { Loader2, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import {
   type ChangeEvent,
   type CSSProperties,
@@ -14,6 +14,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
+import { Spinner } from '@/components/ui/spinner';
 
 interface SearchBarProps {
   autoFocus?: boolean;
@@ -100,7 +101,7 @@ const SearchBar = memo<SearchBarProps>(
           }}
         />
         {loading ? (
-          <Loader2 className="absolute right-2 animate-spin text-muted-foreground" size={12} />
+          <Spinner className="absolute right-2 text-muted-foreground size-3" />
         ) : inputValue ? (
           <button
             aria-label="Clear search"

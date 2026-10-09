@@ -1,5 +1,6 @@
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ChevronRightIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
@@ -14,15 +15,15 @@ import { DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { SelectOptionItems } from '@/components/SelectOptions';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import { usePermission } from '@/hooks/usePermission';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
@@ -267,7 +268,7 @@ const AutomationDetailPage = memo(() => {
 
   if (error) {
     return (
-      <div className="flex flex-col flex-1 h-full">
+      <WorkSurface>
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4 } }}
@@ -275,13 +276,13 @@ const AutomationDetailPage = memo(() => {
         <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
         </div>
-      </div>
+      </WorkSurface>
     );
   }
 
   if (isNotFound) {
     return (
-      <div className="flex flex-col flex-1 h-full">
+      <WorkSurface>
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4 } }}
@@ -291,57 +292,58 @@ const AutomationDetailPage = memo(() => {
             desc={t('detail.not_found')}
             title={t('detail.not_found')}
             extra={
-              <WorkspaceLink to={'/automations'}>
-                <Button variant="outline">{t('page.back_to_automations')}</Button>
+              <WorkspaceLink
+                className={cn(buttonVariants({ variant: 'outline' }))}
+                to={'/automations'}
+              >
+                {t('page.back_to_automations')}
               </WorkspaceLink>
             }
           />
         </div>
-      </div>
+      </WorkSurface>
     );
   }
 
   return (
     <TaskDetailScope taskId={taskId}>
-      <div className="flex flex-col flex-1 h-full">
+      <WorkSurface>
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           right={<DetailHeaderActions />}
           styles={{ left: { paddingLeft: 4 } }}
         />
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
-          <WideScreenContainer>
-            {isInitialLoading ? (
-              <TaskDetailSkeleton chrome={'body'} />
-            ) : (
-              <div className="flex flex-col gap-2 py-4">
-                <TaskDetailTitleInput />
-                <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
-                  <AutomationStatusSwitch />
-                  <AgentChip />
-                  <ProjectSelect />
-                  <CreatedByLabel />
-                </div>
-                <Tabs value={tab} onValueChange={setTab}>
-                  <TabsList>
-                    <TabsTrigger value="settings">{t('settings.tab_settings')}</TabsTrigger>
-                    <TabsTrigger value="runs">{t('settings.tab_runs')}</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                {tab === 'settings' ? (
-                  <AutomationSettingsTab />
-                ) : (
-                  <>
-                    <AutomationRunList />
-                    <AutomationResults />
-                  </>
-                )}
+        <WorkSurfaceDocument>
+          {isInitialLoading ? (
+            <TaskDetailSkeleton chrome={'body'} />
+          ) : (
+            <div className="flex flex-col gap-2">
+              <TaskDetailTitleInput />
+              <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
+                <AutomationStatusSwitch />
+                <AgentChip />
+                <ProjectSelect />
+                <CreatedByLabel />
               </div>
-            )}
-          </WideScreenContainer>
-        </div>
+              <Tabs value={tab} onValueChange={setTab}>
+                <TabsList>
+                  <TabsTrigger value="settings">{t('settings.tab_settings')}</TabsTrigger>
+                  <TabsTrigger value="runs">{t('settings.tab_runs')}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {tab === 'settings' ? (
+                <AutomationSettingsTab />
+              ) : (
+                <>
+                  <AutomationRunList />
+                  <AutomationResults />
+                </>
+              )}
+            </div>
+          )}
+        </WorkSurfaceDocument>
         <TopicChatDrawer />
-      </div>
+      </WorkSurface>
     </TaskDetailScope>
   );
 });

@@ -1,12 +1,13 @@
 'use client';
 
 import dayjs from 'dayjs';
-import { CloudIcon, Loader2Icon, TriangleAlertIcon } from 'lucide-react';
+import { CloudIcon, TriangleAlertIcon } from 'lucide-react';
 import { createElement, type CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import { type SaveStatus } from '@/types/saveState';
 
 interface AutoSaveHintProps {
@@ -30,7 +31,7 @@ const AutoSaveHint = memo<AutoSaveHintProps>(({ style, saveStatus, lastUpdatedTi
   if (saveStatus === 'saving')
     return (
       <Badge style={style} variant="secondary">
-        {createElement(Loader2Icon, { size: 16 })}
+        <Spinner />
         {t('autoSave.saving')}
       </Badge>
     );

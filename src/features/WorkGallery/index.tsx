@@ -6,9 +6,9 @@ import { PackageOpenIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import SimpleEmpty from '@/components/SimpleEmpty';
 import { Button } from '@/components/ui/button';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { formatWorkVersionCost } from '@/utils/workVersionCost';
@@ -145,13 +145,7 @@ const AgentFilter = memo<AgentFilterProps>(({ active, agentId, onSelect }) => {
       variant="ghost"
       onClick={() => onSelect(agentId)}
     >
-      <Avatar
-        emojiScaleWithBackground
-        avatar={agent.avatar}
-        background={agent.backgroundColor}
-        shape={'square'}
-        size={20}
-      />
+      <AssigneeAvatar agentId={agentId} size={20} />
       {agent.title}
     </Button>
   );

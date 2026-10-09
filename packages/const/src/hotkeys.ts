@@ -120,13 +120,6 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
   },
   {
     group: HotkeyGroupEnum.Essential,
-    id: HotkeyEnum.GoToReviews,
-    keys: 'g>r',
-    nonEditable: true,
-    scopes: [HotkeyScopeEnum.Global],
-  },
-  {
-    group: HotkeyGroupEnum.Essential,
     id: HotkeyEnum.GoToDrafts,
     keys: 'g>d',
     nonEditable: true,

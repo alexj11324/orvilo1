@@ -1,4 +1,5 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   ChevronDownIcon,
   FolderIcon,
@@ -18,6 +19,7 @@ import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatIn
 import { useEffectiveAgentMode } from '@/features/ChatInput/hooks/useEffectiveAgentMode';
 import { useToggleAgentMode } from '@/features/ChatInput/hooks/useToggleAgentMode';
 import { usePermission } from '@/hooks/usePermission';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SimpleTooltip } from '../../SimpleTooltip';
 
@@ -196,13 +198,17 @@ const AgentMode = memo(() => {
   const popoverContent = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320, minWidth: 280 }}>
       <div
-        className={cx(
-          'flex flex-row items-center gap-3',
+        {...clickableProps()}
+        className={cn(
           cx(
-            styles.option,
-            currentMode === 'agent' && styles.activeOption,
-            !canSelectAgentMode && styles.optionDisabled,
+            'flex flex-row items-center gap-3',
+            cx(
+              styles.option,
+              currentMode === 'agent' && styles.activeOption,
+              !canSelectAgentMode && styles.optionDisabled,
+            ),
           ),
+          CLICKABLE_FOCUS_RING,
         )}
         onClick={() => handleSelect('agent')}
       >
@@ -223,9 +229,13 @@ const AgentMode = memo(() => {
       </div>
 
       <div
-        className={cx(
-          'flex flex-row items-center gap-3',
-          cx(styles.option, currentMode === 'chat' && styles.activeOption),
+        {...clickableProps()}
+        className={cn(
+          cx(
+            'flex flex-row items-center gap-3',
+            cx(styles.option, currentMode === 'chat' && styles.activeOption),
+          ),
+          CLICKABLE_FOCUS_RING,
         )}
         onClick={() => handleSelect('chat')}
       >

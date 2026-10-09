@@ -1,11 +1,12 @@
 'use client';
 
 // Highlighter is intentionally avoided: it pulls every shiki grammar (~10 MB) into the auth bundle
+import { cn } from 'cn';
 import { FrownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import {
   Empty,
   EmptyContent,
@@ -57,10 +58,12 @@ const FailedPage = () => {
       </EmptyHeader>
       <EmptyContent>
         {
-          <a href="/">
-            <Button className="w-full" size="lg" style={{ minWidth: 240 }}>
-              {t('error.backToHome')}
-            </Button>
+          <a
+            className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
+            href="/"
+            style={{ minWidth: 240 }}
+          >
+            {t('error.backToHome')}
           </a>
         }
       </EmptyContent>

@@ -1,12 +1,9 @@
 'use client';
 
-import { PlusIcon } from 'lucide-react';
 import { memo, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import { Button } from '@/components/ui/button';
-import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -70,10 +67,8 @@ AgentSettingsDetail.displayName = 'AgentSettingsDetail';
  */
 const AgentSettingsIndex = memo(() => {
   const { t } = useTranslation('setting');
-  const { t: tChat } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const { error, mutate } = useFetchAgentList();
-  const { createAgent, isMutatingAgent } = useCreateMenuItems();
 
   return (
     <SettingContainer maxWidth={640} paddingBlock={'24px 128px'} paddingInline={24}>
@@ -85,17 +80,6 @@ const AgentSettingsIndex = memo(() => {
               {t('agentsIndexHint')}
             </div>
           </div>
-          {/* Settings origin: one-click create stays on this surface — opens
-              the new agent's settings, never touches the chat default. */}
-          <Button
-            disabled={isMutatingAgent}
-            size="sm"
-            variant="outline"
-            onClick={() => void createAgent({ origin: 'settings' })}
-          >
-            <PlusIcon size={14} />
-            {tChat('newAgent')}
-          </Button>
         </div>
         <AgentSettingsList
           error={error}

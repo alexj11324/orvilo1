@@ -2,7 +2,7 @@
 
 import { type ComposioAppType } from '@orvilo/const';
 import { cssVar } from 'antd-style';
-import { CircleCheck, Loader2, SquareArrowOutUpRight } from 'lucide-react';
+import { CircleCheck, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -193,11 +193,7 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
     // users can tell what is connected instead of hitting a blank detail panel.
     const renderNavExtra = () => {
       if (isConnecting || isWaitingAuth) {
-        return (
-          <Button disabled size="sm" variant="ghost">
-            {createElement(Loader2, { className: 'animate-spin' })}
-          </Button>
-        );
+        return <Button loading size="sm" variant="ghost" />;
       }
       if (isConnected) {
         return (

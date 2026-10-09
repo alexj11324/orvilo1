@@ -5,8 +5,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
-import { Button } from '@/components/ui/button';
-import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import { buttonVariants } from '@/components/ui/button';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
@@ -44,12 +43,12 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   // offer Reload instead of the terminal "task was deleted" dead-end below.
   if (error) {
     return (
-      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
+      <div className="relative flex h-full min-h-0 flex-1 flex-col">
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
         </div>
       </div>
@@ -58,18 +57,18 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
 
   if (isNotFound) {
     return (
-      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
+      <div className="relative flex h-full min-h-0 flex-1 flex-col">
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <NotFound
             desc={t('taskDetail.notFound.desc')}
             title={t('taskDetail.notFound.title')}
             extra={
-              <Link to={'/tasks'}>
-                <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
+              <Link className={buttonVariants({ variant: 'default' })} to={'/tasks'}>
+                {t('taskDetail.notFound.backToTasks')}
               </Link>
             }
           />
@@ -80,21 +79,16 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
 
   return (
     <TaskDetailScope taskId={taskId}>
-      <WorkSurface style={{ position: 'relative' }}>
+      <WorkSurface className="relative">
         <NavHeader
           left={
             <>
               <Breadcrumb taskId={taskId} />
               {/* Reference: the star and overflow sit inline right after the
-                issue crumb; the copy buttons moved into the rail's round
-                action row (TaskRailActions), so the header's right side
-                keeps task execution and the agent-panel toggle. */}
-              <WorkFavoriteButton
-                icon={'star'}
-                targetId={taskId}
-                targetType="task"
-                variant="icon"
-              />
+                issue crumb — both rendered by TaskDetailHeaderActions so they
+                share one favourite identity. The copy actions live in the
+                same overflow menu, so the header's
+                right side keeps task execution and the agent-panel toggle. */}
               <TaskDetailHeaderActions />
               {saveStatus === 'saving' || saveStatus === 'failed' ? (
                 <AutoSaveHint saveStatus={saveStatus} />

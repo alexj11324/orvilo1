@@ -2,11 +2,12 @@
 import { SiDiscord } from '@icons-pack/react-simple-icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import AuthCard from '@/features/AuthCard';
 
 const normalizeErrorCode = (code?: string | null) =>
@@ -26,23 +27,25 @@ const AuthErrorPage = memo(() => {
       title={t('title')}
       footer={
         <div className="flex flex-col gap-3 justify-center flex-wrap">
-          <Link to="/signin">
-            <Button className="w-full" size="lg" variant="default">
-              {t('actions.retry')}
-            </Button>
+          <Link
+            className={cn(buttonVariants({ size: 'lg', variant: 'default' }), 'w-full')}
+            to="/signin"
+          >
+            {t('actions.retry')}
           </Link>
-          <a href={'/'}>
-            <Button className="w-full" size="lg">
-              {t('actions.home')}
-            </Button>
+          <a className={cn(buttonVariants({ size: 'lg' }), 'w-full')} href={'/'}>
+            {t('actions.home')}
           </a>
           {/* A deployment without a community server has nowhere to send the
               user — drop the action instead of rendering one that goes nowhere. */}
           {SOCIAL_URL.discord && (
-            <a href={SOCIAL_URL.discord} rel="noopener noreferrer" target="_blank">
-              <Button className="w-full" variant="ghost">
-                <SiDiscord fill={cssVar.colorText} /> {t('actions.discord')}
-              </Button>
+            <a
+              className={cn(buttonVariants({ variant: 'ghost' }), 'w-full')}
+              href={SOCIAL_URL.discord}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <SiDiscord fill={cssVar.colorText} /> {t('actions.discord')}
             </a>
           )}
         </div>

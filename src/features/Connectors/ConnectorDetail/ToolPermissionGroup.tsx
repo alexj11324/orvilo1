@@ -1,4 +1,5 @@
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +8,7 @@ import { DropdownMenu } from '@/components/ItemsMenu';
 import { Button } from '@/components/ui/button';
 import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import ToolPermissionRow from './ToolPermissionRow';
 
@@ -90,7 +92,11 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
 
     return (
       <div>
-        <div className={styles.groupHeader} onClick={() => setExpanded((e) => !e)}>
+        <div
+          {...clickableProps()}
+          className={cn(styles.groupHeader, CLICKABLE_FOCUS_RING)}
+          onClick={() => setExpanded((e) => !e)}
+        >
           <div className={styles.groupLabel}>
             {expanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
             {label}

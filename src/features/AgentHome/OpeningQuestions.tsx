@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +10,7 @@ import { useConversationStore } from '@/features/Conversation';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   card: css`
@@ -55,8 +57,12 @@ const OpeningQuestions = memo<OpeningQuestionsProps>(({ questions }) => {
         {questions.slice(0, 5).map((question) => {
           const card = (
             <div
-              className={`flex flex-col cursor-pointer ${cx(styles.card, !canUseResource && styles.cardDisabled)}`}
+              {...clickableProps(canUseResource)}
               key={question}
+              className={cn(
+                `flex flex-col cursor-pointer ${cx(styles.card, !canUseResource && styles.cardDisabled)}`,
+                CLICKABLE_FOCUS_RING,
+              )}
               style={{
                 paddingBlock: 8,
                 paddingInline: 12,

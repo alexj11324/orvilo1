@@ -5,7 +5,12 @@ import type { TabScope } from './TabBar/scope';
 // Derived from the navigation registry so every withdrawn surface is covered,
 // while retired-but-resolving prefixes (`/memory`, `/apps`) keep their stored
 // references: the tier marks a surface unlisted, not its URLs dead.
-const DEAD_PRODUCT_SEGMENTS = new Set([...DEAD_ROUTE_PREFIXES].map((prefix) => prefix.slice(1)));
+// Reviews is hidden from application entry points, including restored tabs.
+// Its direct-link route remains available for existing records.
+const DEAD_PRODUCT_SEGMENTS = new Set([
+  ...[...DEAD_ROUTE_PREFIXES].map((prefix) => prefix.slice(1)),
+  'reviews',
+]);
 
 export const isRetiredProductUrl = (url: string, scope: TabScope): boolean => {
   let pathname: string;

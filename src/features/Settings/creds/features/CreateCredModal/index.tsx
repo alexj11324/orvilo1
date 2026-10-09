@@ -11,7 +11,7 @@ export const createCreateCredModal = (props: CreateCredModalContentProps): Modal
   createModal({
     content: <CreateCredModalContent {...props} />,
     footer: null,
-    maskClosable: true,
+    maskClosable: false,
     styles: {
       content: { paddingBlock: 16, paddingInline: 24 },
     },

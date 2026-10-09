@@ -1,8 +1,8 @@
-import { Loader2 } from 'lucide-react';
 import { type CSSProperties, type ReactNode } from 'react';
 import { memo, useState } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@/components/ui/spinner';
 
 export interface CheckboxItemProps {
   checked?: boolean;
@@ -92,9 +92,7 @@ const CheckboxItem = memo<CheckboxItemProps>(
         </span>
         {loading ? (
           <div className="flex flex-col items-center justify-center w-[18px]">
-            <span className="anticon animate-spin" role="img">
-              <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-            </span>
+            <Spinner className="size-[1em]" />
           </div>
         ) : (
           <Checkbox

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { ChevronRight, InfoIcon, UsersIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,9 +20,9 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import type { PermissionResourceType } from '@/services/resourcePermission';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
@@ -79,11 +79,6 @@ const AccessFormGroups = ({ groups }: { groups: FormGroupItemType[] }) => (
 );
 
 const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    position: relative;
-    overflow-y: auto;
-    display: flex;
-  `,
   breadcrumb: css`
     ol {
       align-items: center;
@@ -212,9 +207,9 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
     }
 
     return (
-      <div className="flex flex-col h-[100%] w-[100%]">
+      <WorkSurface>
         <NavHeader
-          styles={{ left: { paddingInlineStart: 24 } }}
+          styles={{ left: { paddingInlineStart: 4 } }}
           left={
             <Breadcrumb className={styles.breadcrumb}>
               <BreadcrumbList>
@@ -252,28 +247,26 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
             </Breadcrumb>
           }
         />
-        <div className={cx('flex flex-col flex-1 w-[100%]', styles.body)}>
-          <WideScreenContainer>
-            <div className="flex flex-col gap-4 py-4">
-              {error && !isDenied ? (
-                <AsyncError error={error} variant={'inline'} onRetry={() => mutate()} />
-              ) : isLoading || isDenied ? (
-                <Loading debugId="ResourceAccessPage" />
-              ) : (
-                <>
-                  {isPrivate ? (
-                    <Alert style={{ width: '100%' }} variant="info">
-                      <InfoIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                      <AlertTitle>{copy.privateNotice}</AlertTitle>
-                    </Alert>
-                  ) : null}
-                  <AccessFormGroups groups={formGroups} />
-                </>
-              )}
-            </div>
-          </WideScreenContainer>
-        </div>
-      </div>
+        <WorkSurfaceDocument>
+          <div className="flex flex-col gap-4">
+            {error && !isDenied ? (
+              <AsyncError error={error} variant={'inline'} onRetry={() => mutate()} />
+            ) : isLoading || isDenied ? (
+              <Loading debugId="ResourceAccessPage" />
+            ) : (
+              <>
+                {isPrivate ? (
+                  <Alert style={{ width: '100%' }} variant="info">
+                    <InfoIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                    <AlertTitle>{copy.privateNotice}</AlertTitle>
+                  </Alert>
+                ) : null}
+                <AccessFormGroups groups={formGroups} />
+              </>
+            )}
+          </div>
+        </WorkSurfaceDocument>
+      </WorkSurface>
     );
   },
 );

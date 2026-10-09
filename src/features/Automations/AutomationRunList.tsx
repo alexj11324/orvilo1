@@ -1,5 +1,6 @@
 import type { TaskDetailActivity } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { BotMessageSquare, MessageSquareIcon } from 'lucide-react';
@@ -10,6 +11,7 @@ import ActionIcon from '@/components/ActionIcon';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors } from '@/store/task/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useTaskDetailSelector } from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import RunStatusBadge from './RunStatusBadge';
@@ -64,7 +66,7 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
   };
 
   return (
-    <div className={styles.row} onClick={open}>
+    <div {...clickableProps()} className={cn(styles.row, CLICKABLE_FOCUS_RING)} onClick={open}>
       <div className="truncate min-w-0 text-[13px] font-medium">
         {activity.title || t(`run_source.${runTriggerLabel(activity.trigger)}`)}
       </div>

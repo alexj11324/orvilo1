@@ -56,7 +56,7 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Blocking: resolve dependency contract',
     parentTaskId: null,
     priority: 2,
-    workflowCategory: 'in_progress',
+    workflowCategory: 'todo',
   },
   {
     id: 'taskparitymine0004',
@@ -64,7 +64,7 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Blocking: verify downstream acceptance',
     parentTaskId: 'taskparitymine0003',
     priority: 2,
-    workflowCategory: 'in_progress',
+    workflowCategory: 'todo',
   },
   {
     id: 'taskparitymine0005',

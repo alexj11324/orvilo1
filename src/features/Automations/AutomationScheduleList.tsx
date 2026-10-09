@@ -1,5 +1,6 @@
 import type { TaskListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -25,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { DropdownMenu } from '@/components/ItemsMenu';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import TablePagination from '@/components/TablePagination';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -35,9 +37,11 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { usePermission } from '@/hooks/usePermission';
 import { useMcpEventsStore } from '@/store/mcpEvents';
 import { useTaskStore } from '@/store/task';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import AssigneeUserAvatar from '../AgentTasks/features/AssigneeUserAvatar';
 import { useUserDisplayMeta } from '../AgentTasks/shared/useUserDisplayMeta';
+import { AutomationScheduleSkeleton } from './AutomationSkeleton';
 import AutomationStatusBadge from './AutomationStatusBadge';
 import {
   automationDetailPath,
@@ -160,7 +164,9 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
         />
       </div>
       <div className={styles.titleCell}>
-        <span className={styles.titleText}>{task.name || task.identifier}</span>
+        <span {...clickableProps()} className={cn(styles.titleText, CLICKABLE_FOCUS_RING)}>
+          {task.name || task.identifier}
+        </span>
       </div>
       <CreatedByCell userId={task.createdByUserId} />
       {eventStateUnavailable ? (
@@ -350,9 +356,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
         {error ? (
           <AsyncError error={error} onRetry={() => void onRefetch()} />
         ) : isLoading ? (
-          <div className="flex flex-col p-6">
-            <div className="text-muted-foreground">{t('page.loading')}</div>
-          </div>
+          <AutomationScheduleSkeleton />
         ) : isEmptyUnfiltered ? (
           emptyContent
         ) : (
@@ -409,9 +413,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
               <span />
             </div>
             {visibleTasks.length === 0 ? (
-              <div className="flex flex-col items-center py-12">
-                <div className="text-muted-foreground">{t('page.no_matches')}</div>
-              </div>
+              <SimpleEmpty description={t('page.no_matches')} />
             ) : (
               visibleTasks.map((task) => (
                 <AutomationRow

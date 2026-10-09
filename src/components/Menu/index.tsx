@@ -11,6 +11,7 @@ import {
 
 import { type ActionMenuItem, type MenuInfo } from '@/components/ItemsMenu';
 import { Separator } from '@/components/ui/separator';
+import { activateOnKey, CLICKABLE_FOCUS_RING } from '@/utils/clickableProps';
 
 export type ItemType = ActionMenuItem;
 export type MenuItemType = ActionMenuItem;
@@ -116,13 +117,16 @@ const renderItems = (
         aria-disabled={item.disabled || undefined}
         key={key}
         role="menuitem"
+        tabIndex={clickable ? 0 : -1}
         className={cx(
           styles.item,
+          CLICKABLE_FOCUS_RING,
           selected && styles.selected,
           item.danger && 'text-destructive-text',
           item.disabled && 'opacity-50 pointer-events-none',
           props.compact ? 'min-h-8 py-1' : undefined,
         )}
+        onKeyDown={clickable ? activateOnKey : undefined}
         onClick={(event: SyntheticEvent) => {
           if (!clickable) return;
           item.onClick?.({

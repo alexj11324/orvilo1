@@ -254,6 +254,7 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
           return {
             actions: (
               <ActionIcon
+                aria-label={t('remove', { ns: 'common' })}
                 icon={X}
                 size="small"
                 style={{ color: '#999' }}

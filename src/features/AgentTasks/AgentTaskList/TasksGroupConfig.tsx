@@ -182,6 +182,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               children: (
                 <div className="flex items-center gap-2">
                   <ActionIcon
+                    aria-label={t('sort', { ns: 'common' })}
                     size={'small'}
                     style={{ borderRadius: 9999 }}
                     icon={
@@ -344,6 +345,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               icon={Settings2Icon}
               size={DESKTOP_HEADER_ICON_SMALL_SIZE}
               style={{ borderRadius: 9999 }}
+              title={t('taskList.displayOptions')}
             />
           }
         />

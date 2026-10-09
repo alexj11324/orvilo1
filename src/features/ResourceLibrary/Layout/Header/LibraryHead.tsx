@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { DragEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -16,6 +17,7 @@ import { useDragActive } from '@/features/ResourceManager/DndContextWrapper';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { knowledgeBaseSelectors, useKnowledgeBaseStore } from '@/store/library';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { LibraryMenuEntry } from './libraryMenuItems';
 import { buildLibraryMenuItems } from './libraryMenuItems';
@@ -122,13 +124,14 @@ const Head = memo<{ id: string }>(({ id }) => {
 
   return (
     <div
+      {...clickableProps()}
       data-drop-target-id="root"
       data-is-folder="true"
       data-root-drop="true"
       style={{ minWidth: 32, overflow: 'hidden', cursor: 'pointer' }}
-      className={cx(
-        'flex flex-row items-center gap-2 p-0.5',
-        isDropZoneActive && styles.dropZoneActive,
+      className={cn(
+        cx('flex flex-row items-center gap-2 p-0.5', isDropZoneActive && styles.dropZoneActive),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={handleClick}
       onDragLeave={handleDragLeave}
@@ -155,6 +158,7 @@ const Head = memo<{ id: string }>(({ id }) => {
               {name}
             </div>
             <ActionIcon
+              aria-label={t('switch')}
               icon={ChevronsUpDownIcon}
               style={{ width: 24 }}
               size={{

@@ -48,6 +48,7 @@ import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
+import { usePermission } from '@/hooks/usePermission';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -442,8 +443,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
   const groupTitle = useCallback(
     (axis: string, key: string) => {
       if (axis === 'priority') {
-        const label =
-          MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        const label = MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
         return t(`chat:${label}` as never);
       }
       if (axis === 'project') {
@@ -518,6 +518,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
   /* ------------------------------ actions ------------------------------ */
 
   const [viewBuilderOpen, setViewBuilderOpen] = useState(false);
+  const { allowed: canCreateIssue } = usePermission('create_content');
 
   const openCreateModal = useCallback(
     (preset?: {
@@ -554,7 +555,9 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     [openCreateModal, serverGroupBy],
   );
   const listCreateInGroup =
-    display.grouping === 'priority' || display.grouping === 'assignee' || display.grouping === 'cycle'
+    display.grouping === 'priority' ||
+    display.grouping === 'assignee' ||
+    display.grouping === 'cycle'
       ? undefined
       : createInGroup;
 
@@ -691,6 +694,12 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
         right={
           <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
+            {canCreateIssue ? (
+              <Button size="sm" onClick={() => openCreateModal()}>
+                <PlusIcon aria-hidden className="size-4" />
+                {t('teams.newIssue')}
+              </Button>
+            ) : null}
           </div>
         }
       />

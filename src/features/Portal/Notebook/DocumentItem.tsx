@@ -10,6 +10,7 @@ import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
 import { useChatStore } from '@/store/chat';
 import { useNotebookStore } from '@/store/notebook';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -66,7 +67,11 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
   };
 
   return (
-    <div className={cx('flex flex-row gap-2', styles.container)} onClick={handleClick}>
+    <div
+      {...clickableProps()}
+      className={cn(cx('flex flex-row gap-2', styles.container), CLICKABLE_FOCUS_RING)}
+      onClick={handleClick}
+    >
       <FileTextIcon size={16} />
       <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
         <div className="flex flex-row items-center justify-between">

@@ -4,6 +4,7 @@ import {
   MARKDOWN_MIME_TYPES,
 } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,7 @@ import { showContextMenu } from '@/libs/contextMenu';
 import { type NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { getChunkTargetId, useFileStore } from '@/store/file';
 import { type FileListItem } from '@/types/files';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useFileItemClick } from '../../hooks/useFileItemClick';
 import DropdownMenu from '../../ItemDropdown/DropdownMenu';
@@ -410,15 +412,19 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
         )}
 
         <div
-          className={cx(
-            styles.content,
-            !isImage &&
-              !isMarkdown &&
-              !isPage &&
-              !isVideo &&
-              !isAudio &&
-              !isWebpage &&
-              styles.contentWithPadding,
+          {...clickableProps()}
+          className={cn(
+            cx(
+              styles.content,
+              !isImage &&
+                !isMarkdown &&
+                !isPage &&
+                !isVideo &&
+                !isAudio &&
+                !isWebpage &&
+                styles.contentWithPadding,
+            ),
+            CLICKABLE_FOCUS_RING,
           )}
           onClick={handleItemClick}
         >

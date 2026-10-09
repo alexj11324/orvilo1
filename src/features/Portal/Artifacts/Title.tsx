@@ -46,7 +46,12 @@ const Title = () => {
   return (
     <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
       <div className="flex flex-row items-center gap-1">
-        <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeArtifact()} />
+        <ActionIcon
+          aria-label={t('back', { ns: 'common' })}
+          icon={ArrowLeft}
+          size={'small'}
+          onClick={() => closeArtifact()}
+        />
         <div className={cn('text-muted-foreground', cx(oneLineEllipsis))}>{artifactTitle}</div>
       </div>
 

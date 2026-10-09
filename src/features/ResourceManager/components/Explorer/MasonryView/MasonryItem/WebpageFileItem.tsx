@@ -1,6 +1,7 @@
 import { createStaticStyles, cx } from 'antd-style';
 import { ExternalLinkIcon, GlobeIcon } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   domain: css`
@@ -115,6 +116,7 @@ interface WebpageFileItemProps {
  * on top, title and source domain below, with a direct link to the original.
  */
 const WebpageFileItem = memo<WebpageFileItemProps>(({ contentPreview, name, url }) => {
+  const { t } = useTranslation('common');
   const hostname = hostnameOf(url);
   const title = displayTitle(name);
 
@@ -136,7 +138,7 @@ const WebpageFileItem = memo<WebpageFileItemProps>(({ contentPreview, name, url 
           </div>
           {url && (
             <button
-              aria-label={'open source page'}
+              aria-label={t('openSourcePage', { ns: 'common' })}
               className={styles.openLink}
               type={'button'}
               onPointerDown={(event) => event.stopPropagation()}

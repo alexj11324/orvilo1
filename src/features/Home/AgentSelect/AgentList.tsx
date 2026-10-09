@@ -99,7 +99,7 @@ const AgentList = memo<AgentListProps>(
           )}
           onClick={() => onSelect(row.id)}
         >
-          <AgentRuntimeIcon size={24} type={row.heterogeneousType} />
+          <AgentRuntimeIcon size={24} type={row.heterogeneousType || 'orvilo'} />
           <div
             className={cx('truncate', isActive ? 'font-semibold' : 'font-medium')}
             style={{ flex: 1, color: isActive ? cssVar.colorText : cssVar.colorTextSecondary }}

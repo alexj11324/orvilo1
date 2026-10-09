@@ -1,6 +1,5 @@
 'use client';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -158,8 +157,12 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
         <Button type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
-        <Button disabled={createMutation.isPending || disabled} type="submit" variant="default">
-          {createMutation.isPending && <Loader2 className="animate-spin" />}
+        <Button
+          disabled={createMutation.isPending || disabled}
+          loading={createMutation.isPending}
+          type="submit"
+          variant="default"
+        >
           {t('creds.form.submit')}
         </Button>
       </div>

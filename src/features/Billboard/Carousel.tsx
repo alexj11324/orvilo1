@@ -9,7 +9,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Carousel,
   type CarouselApi,
@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSingleton } from '@/hooks/useSingleton';
 import { useAnalytics } from '@/libs/analytics/client';
 import type { GlobalBillboard, GlobalBillboardItem } from '@/types/serverConfig';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { resolveBillboardAction, runBillboardAction } from './actions';
 import { resolveBillboardItem } from './locale';
@@ -243,15 +244,13 @@ const ItemContent = memo<{
         ) : (
           item.linkUrl && (
             <a
-              className={styles.action}
+              className={cn(buttonVariants({ variant: 'default' }), styles.action, 'w-full')}
               href={item.linkUrl}
               rel="noopener noreferrer"
               target="_blank"
               onClick={handleLinkClick}
             >
-              <Button className="w-full" variant="default">
-                {resolved.linkLabel ?? t('billboard.learnMore')}
-              </Button>
+              {resolved.linkLabel ?? t('billboard.learnMore')}
             </a>
           )
         )}
@@ -266,6 +265,7 @@ const BILLBOARD_IMPRESSION_STORAGE_PREFIX = 'billboard:impression:';
 
 const BillboardCarousel = memo<BillboardCarouselProps>(
   ({ set, onClose, closing, exitTarget, onAnimationFinish, cardAttr }) => {
+    const { t: tCommon } = useTranslation('common');
     const [paused, setPaused] = useState(false);
     const [current, setCurrent] = useState(0);
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
@@ -353,7 +353,13 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
           if (closing) onAnimationFinish?.();
         }}
       >
-        <ActionIcon className={styles.closeButton} icon={X} size={14} onClick={onClose} />
+        <ActionIcon
+          aria-label={tCommon('close')}
+          className={styles.closeButton}
+          icon={X}
+          size={14}
+          onClick={onClose}
+        />
         {single ? (
           <ItemContent
             billboardSlug={set.slug}
@@ -390,8 +396,14 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
             <div className={cn('flex gap-1.5 justify-center', styles.dots)}>
               {set.items.map((item, idx) => (
                 <div
-                  className={`${styles.dot} ${current === idx ? styles.dotActive : ''}`}
+                  {...clickableProps()}
+                  aria-current={current === idx || undefined}
+                  aria-label={`${idx + 1} / ${set.items.length}`}
                   key={item.id}
+                  className={cn(
+                    `${styles.dot} ${current === idx ? styles.dotActive : ''}`,
+                    CLICKABLE_FOCUS_RING,
+                  )}
                   onClick={() => carouselApi?.scrollTo(idx)}
                 />
               ))}

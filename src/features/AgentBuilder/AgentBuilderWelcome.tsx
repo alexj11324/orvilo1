@@ -4,12 +4,9 @@ import { Markdown } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
-import { DEFAULT_INBOX_AVATAR } from '@/const/index';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import { type SuggestMode } from '@/features/SuggestQuestions';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import SuggestionChips from './SuggestionChips';
 
@@ -22,7 +19,6 @@ const AgentBuilderWelcome = memo<AgentBuilderWelcomeProps>(
   ({ disabled, mode = 'agentBuilder' }) => {
     const { t } = useTranslation('chat');
     const agentId = useConversationStore(conversationSelectors.agentId);
-    const agent = useAgentStore(agentByIdSelectors.getAgentConfigById(agentId));
 
     return (
       <>
@@ -35,7 +31,7 @@ const AgentBuilderWelcome = memo<AgentBuilderWelcomeProps>(
             paddingBottom: 16,
           }}
         >
-          <Avatar avatar={agent.avatar || DEFAULT_INBOX_AVATAR} shape={'square'} size={78} />
+          <AssigneeAvatar agentId={agentId} size={78} />
           <div className="text-[24px] font-bold">{t('agentBuilder.title')}</div>
           <Markdown fontSize={14} variant={'chat'}>
             {t('agentBuilder.welcome')}

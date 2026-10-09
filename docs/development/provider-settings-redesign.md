@@ -82,6 +82,10 @@ when off and none of those exist. A persisted "connection failed" still has no s
   per-workspace depends on scope, so the claim is not made. The existing AES-GCM notice stays under the panel.
 - The result of a passing check is a badge next to the select; the button keeps its "Check" label.
 
+### Form switch names
+
+Client request mode and Responses API controls pass their existing localized row titles as aria-label to FormSwitch. The CredentialsPanel visual row label is a separate div, so it does not name the embedded switch automatically. The true-parent rebase preserves the current save-error toast and its locale keys. Native computed-name verification remains required before claiming product acceptance.
+
 ## PR 3: models panel
 
 - `ModelList` is a section: heading (`ModelTitle`: title, "N enabled", clear-fetched action) above a `Frame` panel
@@ -101,3 +105,16 @@ when off and none of those exist. A persisted "connection failed" still has no s
   (one control), and price / release date stay as the secondary line under the name, not separate aligned columns.
 - The section heading no longer sticks to the top while scrolling (it sat above the page chrome in the old layout).
 - The "N enabled" summary shows enabled models only; the total is not known up front because disabled models page in.
+
+## Carried over from canary
+
+Canary changed these files while the redesign was in flight; the behaviour was re-applied to the new markup:
+
+- Card keyboard access and focus ring (`clickableProps`): the card is a real stretched `button`, so it is focusable, activates on Enter and Space, and shows the `Button` focus ring.
+- Rail "more" menu: accessible name `common:more` (the tooltip keeps the sort label).
+- Edit-info button: accessible name `common:settings`.
+- Autosave: a rejected `updateAiProviderConfig` shows an error toast (`providerModels.config.saveFailed`, or the error message) instead of an unhandled rejection.
+- Connectivity check busy indicator: the local `Spinner` (the new select uses `loading`).
+- Ollama close button name and OAuth card `Spinner` merged unchanged.
+- Toolbar buttons: the "more" menu is named `common:more`; the add-model button now has a visible "Add Model" label, which names it (the icon-only `common:addNew` label is no longer needed).
+- Model ID copy feedback: `ModelIdChip` keeps the copied toast and adds an inline check mark for two seconds.

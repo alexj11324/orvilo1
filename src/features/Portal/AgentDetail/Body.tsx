@@ -6,9 +6,9 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
-import Avatar from '@/components/Avatar';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
 import { AgentNotFound } from '@/features/AgentNotFound';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -50,13 +50,7 @@ const Body = memo(() => {
 
   return (
     <div className="flex flex-col items-center flex-1 gap-4 p-8" style={{ overflowY: 'auto' }}>
-      <Avatar
-        avatar={meta.avatar}
-        background={meta.backgroundColor}
-        name={displayName}
-        shape="square"
-        size={80}
-      />
+      <AssigneeAvatar agentId={agentId} size={80} />
       <div className="text-center text-[24px] font-bold">{displayName}</div>
       {meta.description && (
         <div className="text-center text-muted-foreground">{meta.description}</div>

@@ -26,7 +26,7 @@ const Loading = memo<{ rows?: number; viewMode?: ViewMode }>(({ viewMode, rows =
       <div className="flex flex-col gap-6 py-6" style={{ paddingLeft: 32 }}>
         {Array.from({ length: 3 }).map((_, i) => (
           <div className="flex flex-col gap-2" key={i}>
-            <Skeleton style={{ height: 22, marginBlock: 2, width: '30%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '30%' }} />
             <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
             <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
             <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
@@ -47,7 +47,7 @@ const Loading = memo<{ rows?: number; viewMode?: ViewMode }>(({ viewMode, rows =
     >
       {Array.from({ length: 6 }).map((_, i) => (
         <div className={cn('flex flex-col', styles.card)} key={i}>
-          <Skeleton style={{ height: 19, marginBlock: 2, width: '80%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '80%' }} />
           <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
           <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
           <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />

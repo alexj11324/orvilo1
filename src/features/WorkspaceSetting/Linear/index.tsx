@@ -17,7 +17,6 @@ import {
   Info,
   Link2,
   ListChecks,
-  Loader2,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
@@ -1193,10 +1192,10 @@ const LinearWorkspaceSettings = memo(() => {
             <Button
               aria-busy={action === 'connect'}
               disabled={!canManage || action === 'connect'}
+              loading={action === 'connect'}
               variant="outline"
               onClick={connect}
             >
-              {action === 'connect' && <Loader2 aria-hidden className="size-4 animate-spin" />}
               <Link2 aria-hidden size={16} />
               {t('workspaceSetting.linear.operations.reconnect')}
             </Button>
@@ -1270,13 +1269,11 @@ const LinearWorkspaceSettings = memo(() => {
                     <Button
                       aria-busy={action === 'retry'}
                       disabled={!canManage || action === 'retry'}
+                      loading={action === 'retry'}
                       size="sm"
                       variant="outline"
                       onClick={() => void retryRecoveryRow(row)}
                     >
-                      {action === 'retry' && (
-                        <Loader2 aria-hidden className="size-4 animate-spin" />
-                      )}
                       {t('workspaceSetting.linear.operations.retry')}
                     </Button>
                   </div>
@@ -1408,37 +1405,31 @@ const LinearWorkspaceSettings = memo(() => {
                         <Button
                           aria-busy={resolvingConflictId === link.id}
                           disabled={!canManage || resolvingConflictId === link.id}
+                          loading={resolvingConflictId === link.id}
                           size="sm"
                           variant="outline"
                           onClick={() => void resolveConflict(link, 'keep_local')}
                         >
-                          {resolvingConflictId === link.id && (
-                            <Loader2 aria-hidden className="size-4 animate-spin" />
-                          )}
                           {t('workspaceSetting.linear.conflicts.keepLocal')}
                         </Button>
                         <Button
                           aria-busy={resolvingConflictId === link.id}
                           disabled={!canManage || resolvingConflictId === link.id}
+                          loading={resolvingConflictId === link.id}
                           size="sm"
                           variant="outline"
                           onClick={() => void resolveConflict(link, 'keep_linear')}
                         >
-                          {resolvingConflictId === link.id && (
-                            <Loader2 aria-hidden className="size-4 animate-spin" />
-                          )}
                           {t('workspaceSetting.linear.conflicts.keepLinear')}
                         </Button>
                         <Button
                           aria-busy={resolvingConflictId === link.id}
                           disabled={!canManage || !mergeReady || resolvingConflictId === link.id}
+                          loading={resolvingConflictId === link.id}
                           size="sm"
                           variant="default"
                           onClick={() => void resolveConflict(link, 'merge')}
                         >
-                          {resolvingConflictId === link.id && (
-                            <Loader2 aria-hidden className="size-4 animate-spin" />
-                          )}
                           {t('workspaceSetting.linear.conflicts.merge')}
                         </Button>
                       </div>
@@ -1461,11 +1452,11 @@ const LinearWorkspaceSettings = memo(() => {
         <Button
           aria-busy={action === 'connect'}
           disabled={!canManage || action === 'connect'}
+          loading={action === 'connect'}
           title={!canManage ? reason : undefined}
           variant="outline"
           onClick={connect}
         >
-          {action === 'connect' && <Loader2 aria-hidden className="size-4 animate-spin" />}
           <Link2 aria-hidden size={16} />
           {isConnected
             ? t('workspaceSetting.linear.reconnect')
@@ -1496,10 +1487,10 @@ const LinearWorkspaceSettings = memo(() => {
                 <Button
                   aria-busy={action === 'load'}
                   disabled={action === 'load'}
+                  loading={action === 'load'}
                   variant="outline"
                   onClick={() => void loadCatalog()}
                 >
-                  {action === 'load' && <Loader2 aria-hidden className="size-4 animate-spin" />}
                   {t('workspaceSetting.linear.retryLoad')}
                 </Button>
               }
@@ -1594,14 +1585,13 @@ const LinearWorkspaceSettings = memo(() => {
           </span>
           <Button
             aria-busy={action === 'scopeImport' || importing}
+            loading={action === 'scopeImport' || importing}
             variant="default"
             disabled={
               !canManage || remoteTeams.length === 0 || action === 'scopeImport' || importing
             }
             onClick={() => void startWorkspaceImport()}
           >
-            {action === 'scopeImport' ||
-              (importing && <Loader2 aria-hidden className="size-4 animate-spin" />)}
             <Upload aria-hidden size={16} />
             {importing
               ? t('workspaceSetting.linear.workspaceImporting')
@@ -1870,6 +1860,7 @@ const LinearWorkspaceSettings = memo(() => {
       action={
         <Button
           aria-busy={action === 'binding'}
+          loading={action === 'binding'}
           variant="outline"
           disabled={
             !canManage ||
@@ -1880,7 +1871,6 @@ const LinearWorkspaceSettings = memo(() => {
           }
           onClick={() => void saveBinding()}
         >
-          {action === 'binding' && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {t('workspaceSetting.linear.saveBinding')}
         </Button>
       }
@@ -2095,10 +2085,10 @@ const LinearWorkspaceSettings = memo(() => {
           <Button
             aria-busy={action === 'import'}
             disabled={!canManage || !hasBinding || issueLinksLoading || action === 'import'}
+            loading={action === 'import'}
             variant="outline"
             onClick={() => void importProject()}
           >
-            {action === 'import' && <Loader2 aria-hidden className="size-4 animate-spin" />}
             <Upload aria-hidden size={16} />
             {t('workspaceSetting.linear.importProject')}
           </Button>
@@ -2216,10 +2206,10 @@ const LinearWorkspaceSettings = memo(() => {
         <Button
           aria-busy={action === 'sync'}
           disabled={!canManage || !hasBinding || action === 'sync'}
+          loading={action === 'sync'}
           variant="outline"
           onClick={() => void persistBinding({ action: 'sync', syncEnabled: !syncEnabled })}
         >
-          {action === 'sync' && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {syncEnabled
             ? t('workspaceSetting.linear.disableSync')
             : t('workspaceSetting.linear.enableSync')}
@@ -2253,6 +2243,7 @@ const LinearWorkspaceSettings = memo(() => {
           </span>
           <Button
             aria-busy={action === 'worker'}
+            loading={action === 'worker'}
             variant="outline"
             disabled={
               !canManage ||
@@ -2262,7 +2253,6 @@ const LinearWorkspaceSettings = memo(() => {
             }
             onClick={() => void runWorker()}
           >
-            {action === 'worker' && <Loader2 aria-hidden className="size-4 animate-spin" />}
             <RefreshCw aria-hidden size={16} />
             {t('workspaceSetting.linear.runWorker')}
           </Button>
@@ -2302,6 +2292,7 @@ const LinearWorkspaceSettings = memo(() => {
               </div>
               <Button
                 aria-busy={action === 'replanning'}
+                loading={action === 'replanning'}
                 variant="outline"
                 disabled={
                   !canManage ||
@@ -2310,7 +2301,6 @@ const LinearWorkspaceSettings = memo(() => {
                 }
                 onClick={() => void persistBinding({ action: 'replanning', replanningEnabled })}
               >
-                {action === 'replanning' && <Loader2 aria-hidden className="size-4 animate-spin" />}
                 {t('workspaceSetting.linear.saveReplanning')}
               </Button>
             </div>
@@ -2334,6 +2324,7 @@ const LinearWorkspaceSettings = memo(() => {
               </div>
               <Button
                 aria-busy={action === 'autoExecution'}
+                loading={action === 'autoExecution'}
                 variant="outline"
                 disabled={
                   !canManage ||
@@ -2344,9 +2335,6 @@ const LinearWorkspaceSettings = memo(() => {
                   void persistBinding({ action: 'autoExecution', autoExecutionEnabled })
                 }
               >
-                {action === 'autoExecution' && (
-                  <Loader2 aria-hidden className="size-4 animate-spin" />
-                )}
                 {t('workspaceSetting.linear.saveAutoExecution')}
               </Button>
             </div>
@@ -2389,6 +2377,7 @@ const LinearWorkspaceSettings = memo(() => {
                 )}
                 <Button
                   aria-busy={action === 'proposal'}
+                  loading={action === 'proposal'}
                   variant="outline"
                   disabled={
                     !canManage ||
@@ -2398,7 +2387,6 @@ const LinearWorkspaceSettings = memo(() => {
                   }
                   onClick={() => void applyProposal()}
                 >
-                  {action === 'proposal' && <Loader2 aria-hidden className="size-4 animate-spin" />}
                   {t('workspaceSetting.linear.applyProposal')}
                 </Button>
               </div>

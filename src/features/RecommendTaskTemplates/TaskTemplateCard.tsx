@@ -1,5 +1,6 @@
 import type { TaskTemplate } from '@orvilo/const';
 import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Clock, X } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,7 @@ import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
 import { homeType } from '@/features/Home/components/homeType';
 import { RECOMMENDATION_ICON_SIZE } from '@/features/Recommendations/iconSize';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { ConnectorAuthRow } from './ConnectorAuthRow';
 import { resolveTemplateIcon } from './resolveTemplateIcon';
@@ -118,11 +120,11 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     return (
       <div
+        {...clickableProps()}
         style={{ borderRadius: cssVar.borderRadiusLG, cursor: 'pointer' }}
-        className={cx(
-          briefStyles.card,
-          styles.card,
-          'rounded-md border bg-card flex flex-col gap-3 p-3',
+        className={cn(
+          cx(briefStyles.card, styles.card, 'rounded-md border bg-card flex flex-col gap-3 p-3'),
+          CLICKABLE_FOCUS_RING,
         )}
         onClick={handleOpenDetail}
       >

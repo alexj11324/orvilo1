@@ -1,6 +1,7 @@
 'use client';
 
 import { AES_GCM_URL } from '@orvilo/const';
+import { errorMessageFrom } from '@orvilo/utils/error';
 import { useDebounceFn } from 'ahooks';
 import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
@@ -12,6 +13,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { FormInput, FormPassword } from '@/components/FormInput';
 import Form, { type FormItemProps } from '@/components/GroupForm';
 import { SkeletonInput } from '@/components/Skeleton';
+import { toast } from '@/components/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
@@ -192,9 +194,13 @@ const ProviderConfig = memo<ProviderConfigProps>(
         // updateAiProviderConfig has already been triggered once during the connection test, so it should not be updated again
         if (isCheckingConnection.current) return;
 
-        updateAiProviderConfig(...params);
+        // Autosave runs from a debounce, so a rejection has nowhere to go but
+        // an unhandled promise — tell the user the change did not stick.
+        updateAiProviderConfig(...params).catch((error: unknown) => {
+          toast.error(errorMessageFrom(error) || t('providerModels.config.saveFailed'));
+        });
       },
-      [updateAiProviderConfig],
+      [t, updateAiProviderConfig],
     );
 
     const normalizeValues = useCallback(
@@ -294,7 +300,14 @@ const ProviderConfig = memo<ProviderConfigProps>(
 
     const clientFetchItem = showClientFetch
       ? {
-          children: isLoading ? <SwitchSkeleton /> : <FormSwitch loading={configUpdating} />,
+          children: isLoading ? (
+            <SwitchSkeleton />
+          ) : (
+            <FormSwitch
+              aria-label={t('providerModels.config.fetchOnClient.title')}
+              loading={configUpdating}
+            />
+          ),
           desc: t('providerModels.config.fetchOnClient.desc'),
           label: t('providerModels.config.fetchOnClient.title'),
           name: 'fetchOnClient',
@@ -310,7 +323,14 @@ const ProviderConfig = memo<ProviderConfigProps>(
       endpointItem,
       showResponsesApiSwitch
         ? {
-            children: isLoading ? <SwitchSkeleton /> : <FormSwitch loading={configUpdating} />,
+            children: isLoading ? (
+              <SwitchSkeleton />
+            ) : (
+              <FormSwitch
+                aria-label={t('providerModels.config.responsesApi.title')}
+                loading={configUpdating}
+              />
+            ),
             desc: t('providerModels.config.responsesApi.desc'),
             label: t('providerModels.config.responsesApi.title'),
             name: ['config', 'enableResponseApi'],

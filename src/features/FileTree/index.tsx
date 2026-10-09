@@ -2,6 +2,7 @@
 
 import type { SkillResourceTreeNode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight, File, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -11,6 +12,7 @@ import {
   renderSidebarMenuItems,
   type SidebarMenuItems,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   item: css`
@@ -167,9 +169,13 @@ const TreeNode = memo<{
 
     const nodeContent = (
       <div
-        className={`${styles.item} ${isSelected ? styles.itemSelected : ''}`}
+        {...clickableProps()}
         style={{ paddingInlineStart: 8 + depth * 16 }}
         title={node.path}
+        className={cn(
+          `${styles.item} ${isSelected ? styles.itemSelected : ''}`,
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={handleClick}
       >
         {isDir && createElement(isExpanded ? ChevronDown : ChevronRight, { size: 14 })}
@@ -293,8 +299,12 @@ const FileTree = memo<FileTreeProps>(
 
     const rootFileContent = rootFilePath && rootFileLabel && (
       <div
-        className={`${styles.item} ${isRootFileSelected ? styles.itemSelected : ''}`}
+        {...clickableProps()}
         style={{ paddingInlineStart: 8 }}
+        className={cn(
+          `${styles.item} ${isRootFileSelected ? styles.itemSelected : ''}`,
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={() => onSelectFile(rootFilePath)}
       >
         <span style={{ flexShrink: 0, width: 14 }} />

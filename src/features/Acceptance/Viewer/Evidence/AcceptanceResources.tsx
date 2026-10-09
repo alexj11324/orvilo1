@@ -2,12 +2,14 @@
 
 import { Image } from '@lobehub/ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { FileText, Film, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { checksForTurn } from '../turnChecks';
@@ -137,7 +139,8 @@ const AcceptanceResources = () => {
 
             return (
               <div
-                className={styles.item}
+                {...clickableProps(href)}
+                className={cn(styles.item, CLICKABLE_FOCUS_RING)}
                 key={evidence.id}
                 onClick={href ? () => window.open(href, '_blank', 'noreferrer') : undefined}
               >

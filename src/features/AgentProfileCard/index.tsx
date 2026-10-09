@@ -4,10 +4,10 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
-import Avatar from '@/components/Avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DEFAULT_AVATAR } from '@/const/meta';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   banner: css`
@@ -69,8 +69,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 export interface AgentProfileCardProps {
-  avatar?: string | null;
-  backgroundColor?: string | null;
+  agentId: string;
   children?: ReactNode;
   description?: string | null;
   headerAction?: ReactNode;
@@ -82,50 +81,37 @@ export interface AgentProfileCardProps {
 }
 
 const AgentProfileCard = memo<AgentProfileCardProps>(
-  ({
-    avatar,
-    backgroundColor,
-    description,
-    headerAction,
-    loading,
-    onHeaderClick,
-    title,
-    children,
-  }) => {
+  ({ agentId, description, headerAction, loading, onHeaderClick, title, children }) => {
     return (
       <div className={`flex flex-col ${styles.container}`}>
         <div
           className={`flex flex-col items-center justify-center ${styles.banner}`}
           style={{ background: cssVar.colorFillTertiary }}
         >
-          <Avatar
-            emojiScaleWithBackground
-            avatar={avatar || DEFAULT_AVATAR}
-            background={backgroundColor ?? undefined}
-            className={styles.bannerInner}
-            shape={'square'}
-            size={400}
-          />
+          <span className={styles.bannerInner}>
+            <AssigneeAvatar agentId={agentId} size={400} />
+          </span>
         </div>
 
         <div className={`flex flex-col gap-2 ${styles.header}`}>
-          <Avatar
-            emojiScaleWithBackground
-            avatar={avatar || DEFAULT_AVATAR}
-            background={backgroundColor ?? undefined}
+          <span
             className={onHeaderClick ? styles.clickableAvatar : undefined}
-            shape={'square'}
-            size={48}
             style={{ border: `2px solid ${cssVar.colorBgElevated}` }}
             onClick={onHeaderClick}
-          />
+          >
+            <AssigneeAvatar agentId={agentId} size={48} />
+          </span>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
               <div
+                {...clickableProps()}
                 className={cn(
-                  'truncate',
-                  'block',
-                  `${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`,
+                  cn(
+                    'truncate',
+                    'block',
+                    `${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`,
+                  ),
+                  CLICKABLE_FOCUS_RING,
                 )}
                 onClick={onHeaderClick}
               >

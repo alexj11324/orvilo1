@@ -1,4 +1,5 @@
 import { GITHUB, OFFICIAL_SITE } from '@orvilo/const/url';
+import type { MenuItemConstructorOptions } from 'electron';
 import { app, Menu, shell } from 'electron';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -104,6 +105,16 @@ describe('MacOSMenu', () => {
   });
 
   describe('buildAndSetAppMenu', () => {
+    it('owns Agent and Group creation on their pages, not the File menu', () => {
+      macOSMenu.buildAndSetAppMenu();
+      const template = vi.mocked(Menu.buildFromTemplate).mock.calls[0][0];
+      const file = template.find((item) => item.label === 'File');
+      const submenu = file?.submenu as MenuItemConstructorOptions[];
+      expect(submenu.some((item) => item.accelerator === 'Alt+Command+A')).toBe(false);
+      expect(submenu.some((item) => item.accelerator === 'Alt+Command+G')).toBe(false);
+      expect(submenu.some((item) => item.accelerator === 'Command+T')).toBe(true);
+    });
+
     it('should build and set application menu', () => {
       const menu = macOSMenu.buildAndSetAppMenu();
 

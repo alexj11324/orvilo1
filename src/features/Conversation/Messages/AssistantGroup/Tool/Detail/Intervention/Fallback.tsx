@@ -19,6 +19,7 @@ import { pluginHelpers, useToolStore } from '@/store/tool';
 import { toolSelectors } from '@/store/tool/selectors';
 import { useUserStore } from '@/store/user';
 import { toolInterventionSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { dataSelectors, useConversationStore } from '../../../../../store';
 import Arguments from '../Arguments';
@@ -211,7 +212,11 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
         {argCount > 0 && (
           <>
             <div
-              className={cn('flex items-center gap-1', styles.collapseHeader)}
+              {...clickableProps()}
+              className={cn(
+                cn('flex items-center gap-1', styles.collapseHeader),
+                CLICKABLE_FOCUS_RING,
+              )}
               onClick={() => setShowArgs(!showArgs)}
             >
               {createElement(showArgs ? ChevronDown : ChevronRight, { size: 14 })}

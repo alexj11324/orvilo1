@@ -143,7 +143,12 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
             </div>
             <div className="flex shrink-0 items-center">
               <SidebarDropdownMenu items={dropdownMenu}>
-                <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
+                <ActionIcon
+                  aria-label={t('more')}
+                  icon={MoreHorizontalIcon}
+                  size={'small'}
+                  style={{ flex: 'none' }}
+                />
               </SidebarDropdownMenu>
             </div>
           </div>

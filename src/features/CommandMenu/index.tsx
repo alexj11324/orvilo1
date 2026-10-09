@@ -6,7 +6,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useGlobalStore } from '@/store/global';
@@ -218,12 +218,7 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
                   value="send-to-agent"
                   onSelect={handleSendToSelectedAgent}
                 >
-                  <Avatar
-                    emojiScaleWithBackground
-                    avatar={selectedAgent.avatar}
-                    shape="square"
-                    size={20}
-                  />
+                  <AssigneeAvatar agentId={selectedAgent.id} size={20} />
                   <div className={styles.itemContent}>
                     <div className={styles.itemLabel}>
                       {t('cmdk.sendToAgent', { agent: selectedAgent.title } as any)}

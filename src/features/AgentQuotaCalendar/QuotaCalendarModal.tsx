@@ -984,12 +984,14 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
             </div>
             <div className="flex gap-0.5">
               <ActionIcon
+                aria-label={t('previous', { ns: 'common' })}
                 disabled={!isCalendarMonthAvailable(previousMonth, now)}
                 icon={ChevronLeftIcon}
                 size={'small'}
                 onClick={() => setMonth((m) => m.subtract(1, 'month'))}
               />
               <ActionIcon
+                aria-label={t('next', { ns: 'common' })}
                 disabled={!isCalendarMonthAvailable(nextMonth, now)}
                 icon={ChevronRightIcon}
                 size={'small'}

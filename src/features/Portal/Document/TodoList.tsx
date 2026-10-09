@@ -2,6 +2,7 @@
 
 import { AGENT_PLAN_FILE_TYPE } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronUp, ListTodo } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,7 @@ import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useNotebookStore } from '@/store/notebook';
 import { notebookSelectors } from '@/store/notebook/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 interface TodoItem {
   completed: boolean;
@@ -148,7 +150,10 @@ const TodoList = memo(() => {
     <div className={styles.root}>
       <div className={styles.container} onClick={toggleExpanded}>
         {/* Header */}
-        <div className="flex flex-row items-center gap-2 justify-between">
+        <div
+          {...clickableProps()}
+          className={cn('flex flex-row items-center gap-2 justify-between', CLICKABLE_FOCUS_RING)}
+        >
           <div className="flex flex-row items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
             <span
               className="anticon"

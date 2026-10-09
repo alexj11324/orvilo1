@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from 'cn';
 import { TriangleAlert, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +9,7 @@ import { Link } from 'react-router';
 import { useBusinessInputCompletionErrorAlert } from '@/business/client/hooks/useBusinessInputCompletionErrorAlert';
 import ActionIcon from '@/components/ActionIcon';
 import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { selectors, useChatInputStore } from '@/features/ChatInput/store';
 import type { InputCompletionError } from '@/features/ChatInput/store/initialState';
 
@@ -30,8 +31,8 @@ export const InputCompletionErrorAlertContent = memo<{
       <Button size="sm" variant="default" onClick={clearInputCompletionError}>
         {t('input.inputCompletionError.retry')}
       </Button>
-      <Link to={'/settings/agent'}>
-        <Button size="sm">{t('input.inputCompletionError.settings')}</Button>
+      <Link className={cn(buttonVariants({ size: 'sm' }))} to={'/settings/agent'}>
+        {t('input.inputCompletionError.settings')}
       </Link>
     </div>
   );

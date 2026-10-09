@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { baseName, dirKeyOf } from './utils';
 
@@ -103,7 +104,10 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
               >
                 <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
                   {leading}
-                  <div className="truncate block text-[13px]">
+                  <div
+                    {...clickableProps()}
+                    className={cn('truncate block text-[13px]', CLICKABLE_FOCUS_RING)}
+                  >
                     {baseName(group.workingDirectory)}
                   </div>
                 </div>
@@ -112,7 +116,12 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <ActionIcon icon={X} size="small" onClick={() => onSetPref(key, null)} />
+                          <ActionIcon
+                            aria-label={t('heteroImport.action.unwatch')}
+                            icon={X}
+                            size="small"
+                            onClick={() => onSetPref(key, null)}
+                          />
                         }
                       />
                       <TooltipContent>{t('heteroImport.action.unwatch')}</TooltipContent>
@@ -123,6 +132,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                         <TooltipTrigger
                           render={
                             <ActionIcon
+                              aria-label={t('heteroImport.action.watch')}
                               icon={Timer}
                               size="small"
                               onClick={() => onSetPref(key, 'watched')}
@@ -135,6 +145,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                         <TooltipTrigger
                           render={
                             <ActionIcon
+                              aria-label={t('heteroImport.action.ignore')}
                               icon={EyeOff}
                               size="small"
                               onClick={() => {
@@ -172,13 +183,17 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
     >
       <ScrollArea className={styles.sidebar}>
         <div
-          className={cx(
-            cx(styles.parent, scope === 'all' && styles.childActive),
-            'flex items-center justify-between',
+          {...clickableProps()}
+          className={cn(
+            cx(
+              cx(styles.parent, scope === 'all' && styles.childActive),
+              'flex items-center justify-between',
+            ),
+            CLICKABLE_FOCUS_RING,
           )}
           onClick={() => onScopeChange('all')}
         >
-          <div className={cn('text-[13px]', scope === 'all' ? 600 : 400)}>
+          <div className={cn('text-[13px]', scope === 'all' ? 'font-semibold' : 'font-normal')}>
             {t('heteroImport.allSessions')}
           </div>
           <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
@@ -187,7 +202,8 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
         {watched.length > 0 && (
           <div className="flex flex-col" style={{ marginBottom: 4 }}>
             <div
-              className={cx(styles.parent, 'flex items-center gap-1')}
+              {...clickableProps()}
+              className={cn(cx(styles.parent, 'flex items-center gap-1'), CLICKABLE_FOCUS_RING)}
               onClick={() =>
                 setCollapsed((prev) => {
                   const next = new Set(prev);
@@ -251,7 +267,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 />
                 <Brand size={15} />
                 <div
-                  className={cn('text-[13px]', scope === source ? 600 : 500)}
+                  className={cn('text-[13px]', scope === source ? 'font-semibold' : 'font-medium')}
                   style={{ flex: 1 }}
                 >
                   {AGENT_LABEL[source]}
@@ -275,7 +291,8 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
         {ignored.length > 0 && (
           <div className="flex flex-col" style={{ marginTop: 8 }}>
             <div
-              className={cx(styles.parent, 'flex items-center gap-1')}
+              {...clickableProps()}
+              className={cn(cx(styles.parent, 'flex items-center gap-1'), CLICKABLE_FOCUS_RING)}
               onClick={() => setShowIgnored((v) => !v)}
             >
               <ChevronRight
@@ -313,6 +330,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                                 <TooltipTrigger
                                   render={
                                     <ActionIcon
+                                      aria-label={t('heteroImport.action.restore')}
                                       icon={Eye}
                                       size="small"
                                       onClick={() => onSetPref(key, null)}

@@ -73,7 +73,13 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
       return (
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<ActionIcon disabled={!canEdit} icon={MoreVerticalIcon} />}
+            render={
+              <ActionIcon
+                aria-label={t('more', { ns: 'common' })}
+                disabled={!canEdit}
+                icon={MoreVerticalIcon}
+              />
+            }
           />
           <DropdownMenuContent align={'end'}>
             <DropdownMenuItem

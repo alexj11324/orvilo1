@@ -208,6 +208,7 @@
   "providerModels.config.oauth.title": "OAuth Authorization",
   "providerModels.config.responsesApi.desc": "Uses OpenAI's next-generation request format specification to unlock advanced features like chain-of-thought (supported by OpenAI models only)",
   "providerModels.config.responsesApi.title": "Use Responses API Specification",
+  "providerModels.config.saveFailed": "Failed to save the provider settings. Please try again.",
   "providerModels.config.status.notConfigured": "Not configured",
   "providerModels.config.waitingForMore": "More models are currently <1>planned for integration</1>, please stay tuned",
   "providerModels.createNew.title": "Create Custom AI Model",

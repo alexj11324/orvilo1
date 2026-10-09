@@ -1,12 +1,14 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css }) => ({
   apiDesc: css`
@@ -105,7 +107,11 @@ const ApiItem = memo<ApiItemProps>(({ api }) => {
   const params = Object.entries(api.parameters.properties || {});
   return (
     <div className="flex flex-col gap-2 p-4">
-      <div className={styles.apiHeader} onClick={() => setExpanded(!expanded)}>
+      <div
+        {...clickableProps()}
+        className={cn(styles.apiHeader, CLICKABLE_FOCUS_RING)}
+        onClick={() => setExpanded(!expanded)}
+      >
         <div className="flex flex-col gap-2">
           <div className={styles.apiTitle}>{api.name}</div>
           <div className={styles.apiDesc}>{api.description}</div>

@@ -1,5 +1,5 @@
 'use client';
-import { Loader2, Pencil, Trash } from 'lucide-react';
+import { Pencil, Trash } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -24,6 +24,7 @@ import {
 } from '@/const/apiKeyScope';
 import { type ApiKeyItem, type UpdateApiKeyParams } from '@/types/apiKey';
 
+import { isExpiryUnchanged } from './apiKeyExpiry';
 import ScopeSelector, { ScopeOverview } from './ApiKeyModal/ScopeSelector';
 import { ApiKeyDisplay, EditableCell } from './index';
 
@@ -78,6 +79,7 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
           </Button>
           <Button
             disabled={saving || scopeMissing}
+            loading={saving}
             type="button"
             variant="default"
             onClick={async () => {
@@ -95,7 +97,6 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
               }
             }}
           >
-            {saving && <Loader2 className="animate-spin" />}
             {t('apikey.detail.permissions.save')}
           </Button>
         </div>
@@ -232,7 +233,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                     type="date"
                     value={apiKey.expiresAt?.toLocaleString() || t('apikey.display.neverExpires')}
                     onSubmit={(expiresAt) => {
-                      if (!canEdit || expiresAt === apiKey.expiresAt) return;
+                      if (!canEdit || isExpiryUnchanged(expiresAt, apiKey.expiresAt)) return;
                       void onUpdate(apiKey.id, {
                         expiresAt: expiresAt ? new Date(expiresAt as string) : null,
                       });

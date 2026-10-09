@@ -1,6 +1,5 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from '@/components/ui/combobox';
+import { Spinner } from '@/components/ui/spinner';
 
 export interface AgentModelPickerProps {
   disabled?: boolean;
@@ -56,7 +56,7 @@ export const AgentModelPicker = ({
         <span className="truncate">
           {options.find((option) => option.value === value)?.label ?? t('createAgent.model.choose')}
         </span>
-        {loading && <Loader2 className="animate-spin" size={14} />}
+        {loading && <Spinner className="size-3.5" />}
       </ComboboxTrigger>
       <ComboboxContent className="w-(--anchor-width) min-w-(--anchor-width)">
         <ComboboxInput

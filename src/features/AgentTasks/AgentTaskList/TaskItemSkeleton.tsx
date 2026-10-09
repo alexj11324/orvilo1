@@ -55,7 +55,8 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
           <Skeleton style={{ minWidth: 200, height: 16, width: 200 }} />
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Skeleton className="rounded-full shrink-0" style={{ width: 'small', height: 'small' }} />
+          {/* The row's assignee avatar (AssigneeAvatar's default size). */}
+          <Skeleton className="rounded-full shrink-0" style={{ width: 18, height: 18 }} />
           <Skeleton style={{ minWidth: 40, height: 12, width: 40 }} />
         </div>
       </div>

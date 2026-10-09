@@ -1,15 +1,18 @@
-import { Loader2, SquareArrowOutUpRight } from 'lucide-react';
+import { cn } from 'cn';
+import { SquareArrowOutUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useToolStore } from '@/store/tool';
 import { orviloSkillStoreSelectors } from '@/store/tool/selectors';
 import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SKILL_ICON_GAP } from './constants';
 
@@ -245,9 +248,7 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
             className="flex flex-row items-center gap-1"
             onClick={(event) => event.stopPropagation()}
           >
-            <span className="anticon animate-spin" role="img">
-              <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-            </span>
+            <Spinner className="size-[1em]" />
           </div>
         );
       }
@@ -255,7 +256,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
       if (!server) {
         return (
           <div
-            className="flex flex-row items-center gap-1"
+            {...clickableProps()}
+            className={cn('flex flex-row items-center gap-1', CLICKABLE_FOCUS_RING)}
             style={{ cursor: canCreate && canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
             onClick={(e) => {
               e.stopPropagation();
@@ -274,11 +276,7 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
       switch (server.status) {
         case OrviloSkillStatus.CONNECTED: {
           if (isToggling) {
-            return (
-              <span className="anticon animate-spin" role="img">
-                <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-              </span>
-            );
+            return <Spinner className="size-[1em]" />;
           }
           return (
             <Checkbox
@@ -299,15 +297,14 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
                 className="flex flex-row items-center gap-1"
                 onClick={(event) => event.stopPropagation()}
               >
-                <span className="anticon animate-spin" role="img">
-                  <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                </span>
+                <Spinner className="size-[1em]" />
               </div>
             );
           }
           return (
             <div
-              className="flex flex-row items-center gap-1"
+              {...clickableProps()}
+              className={cn('flex flex-row items-center gap-1', CLICKABLE_FOCUS_RING)}
               style={{ cursor: canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
               onClick={async (e) => {
                 e.stopPropagation();
@@ -338,7 +335,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
         case OrviloSkillStatus.NOT_CONNECTED: {
           return (
             <div
-              className="flex flex-row items-center gap-1"
+              {...clickableProps()}
+              className={cn('flex flex-row items-center gap-1', CLICKABLE_FOCUS_RING)}
               style={{ cursor: canCreate && canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -373,7 +371,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
 
     return (
       <div
-        className="flex flex-row items-center gap-6 justify-between"
+        {...clickableProps()}
+        className={cn('flex flex-row items-center gap-6 justify-between', CLICKABLE_FOCUS_RING)}
         onClick={(e) => {
           e.stopPropagation();
           if (canEdit && server?.status === OrviloSkillStatus.CONNECTED) {

@@ -1,7 +1,6 @@
 'use client';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -83,10 +82,10 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
         </Button>
         <Button
           disabled={updateMutation.isPending || !canManageCredentials}
+          loading={updateMutation.isPending}
           type="submit"
           variant="default"
         >
-          {updateMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.save')}
         </Button>
       </div>

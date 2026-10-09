@@ -3,6 +3,7 @@ import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
@@ -14,6 +15,7 @@ import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 
 const Header = memo(() => {
+  const { t: tCommon } = useTranslation('common');
   const clearPortalStack = useChatStore((s) => s.clearPortalStack);
   const close = () => {
     useAgentGroupStore.setState({ activeThreadAgentId: '' });
@@ -42,7 +44,7 @@ const Header = memo(() => {
       }
       right={
         <div className="flex flex-row gap-1">
-          <ActionIcon icon={XIcon} size={'small'} onClick={close} />
+          <ActionIcon aria-label={tCommon('close')} icon={XIcon} size={'small'} onClick={close} />
         </div>
       }
       style={{

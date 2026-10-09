@@ -96,6 +96,27 @@ describe('requiredApiKeyScopeForTrpc', () => {
     });
   });
 
+  it.each([
+    ['taskMenu.links', 'query', 'agent:read'],
+    ['taskMenu.addLink', 'mutation', 'agent:write'],
+  ] as const)('scopes %s to the task domain', (path, type, scope) => {
+    const decision = requiredApiKeyScopeForTrpc(path, type);
+    expect(decision).toEqual({ scopes: [scope] });
+    if (!('scopes' in decision)) throw new Error('Expected scoped task menu procedure');
+
+    expect(decision.scopes.every((required) => hasApiKeyScope([scope], required))).toBe(true);
+    expect(decision.scopes.every((required) => hasApiKeyScope(['agent:write'], required))).toBe(
+      true,
+    );
+    expect(decision.scopes.every((required) => hasApiKeyScope([], required))).toBe(false);
+    expect(decision.scopes.every((required) => hasApiKeyScope(['file:write'], required))).toBe(
+      false,
+    );
+    expect(decision.scopes.every((required) => hasApiKeyScope(['agent:read'], required))).toBe(
+      type === 'query',
+    );
+  });
+
   it('uses a single tier for money-burning namespaces', () => {
     expect(requiredApiKeyScopeForTrpc('aiChat.outputJSON', 'mutation')).toEqual({
       scopes: ['model:invoke'],

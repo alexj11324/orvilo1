@@ -223,6 +223,7 @@ describe('contextEngineering', () => {
         {
           avatar: null,
           backgroundColor: null,
+          heterogeneousType: 'orvilo',
           description: null,
           id: 'agent-1',
           name: null,
@@ -231,6 +232,7 @@ describe('contextEngineering', () => {
         {
           avatar: null,
           backgroundColor: null,
+          heterogeneousType: 'orvilo',
           description: 'Helps with setup',
           id: 'agent-2',
           name: null,

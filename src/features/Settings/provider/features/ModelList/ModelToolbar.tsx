@@ -150,11 +150,7 @@ const ModelToolbar = memo<ModelToolbarProps>(
                 },
               ]}
             >
-              <Button
-                aria-label={t('providerModels.list.resetAll.title')}
-                size="icon-sm"
-                variant="ghost"
-              >
+              <Button aria-label={t('more', { ns: 'common' })} size="icon-sm" variant="ghost">
                 <EllipsisVertical />
               </Button>
             </SidebarDropdownMenu>

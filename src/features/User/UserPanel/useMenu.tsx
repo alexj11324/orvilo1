@@ -1,5 +1,6 @@
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
+import { cn } from 'cn';
 import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { memo } from 'react';
@@ -18,6 +19,7 @@ import { useNavLayout } from '@/hooks/useNavLayout';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useNewVersion } from './useNewVersion';
 
@@ -30,12 +32,20 @@ const NewVersionBadge = memo(
     const { t } = useTranslation('common');
     if (!showBadge)
       return (
-        <div className="flex flex-col flex-1" onClick={onClick}>
+        <div
+          {...clickableProps()}
+          className={cn('flex flex-col flex-1', CLICKABLE_FOCUS_RING)}
+          onClick={onClick}
+        >
           {children}
         </div>
       );
     return (
-      <div className="flex items-center flex-1 gap-2 w-full" onClick={onClick}>
+      <div
+        {...clickableProps()}
+        className={cn('flex items-center flex-1 gap-2 w-full', CLICKABLE_FOCUS_RING)}
+        onClick={onClick}
+      >
         {children}
         <Badge size="sm" style={{ borderRadius: 16, paddingInline: 8 }} variant="info">
           {t('upgradeVersion.hasNew')}

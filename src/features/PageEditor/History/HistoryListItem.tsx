@@ -14,6 +14,7 @@ import { Badge } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import type { DocumentHistorySaveSource } from '@/server/routers/lambda/_schema/documentHistory';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { formatHistoryAbsoluteTime, formatHistoryRowTime } from './formatHistoryDate';
 import { historyItemSelectors, useHistoryItemsStore } from './HistoryItemsProvider';
@@ -162,7 +163,8 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
 
   return (
     <div
-      className={cx(styles.row, item.isCurrent && styles.rowCurrent)}
+      {...clickableProps(!item.isCurrent)}
+      className={cn(cx(styles.row, item.isCurrent && styles.rowCurrent), CLICKABLE_FOCUS_RING)}
       onClick={item.isCurrent ? undefined : handleCompare}
     >
       <div className={cn('flex flex-col items-start gap-1', styles.rowMain)}>

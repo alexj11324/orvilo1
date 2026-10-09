@@ -7,6 +7,7 @@ import type { VListHandle } from 'virtua';
 import { VList } from 'virtua';
 import { useShallow } from 'zustand/react/shallow';
 
+import { useChatbotSurface } from '@/features/AIChatbot/context';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
@@ -54,6 +55,7 @@ interface VirtualizedListProps {
  */
 const VirtualizedList = memo<VirtualizedListProps>(
   ({ dataSource, footerSlot, headerSlot, itemContent, messageDeepLink }) => {
+    const chatbotSurface = useChatbotSurface();
     const storeApi = useConversationStoreApi();
     const dataSourceRef = useRef(dataSource);
     dataSourceRef.current = dataSource;
@@ -298,7 +300,7 @@ const VirtualizedList = memo<VirtualizedListProps>(
     // ChatInput's `marginTop: -12` (skipScrollMarginWithList) so the last
     // message lands exactly on the overlay's top edge.
     const overlayHeight = useConversationStore(inputSelectors.chatInputOverlayHeight);
-    const paddingBottom = Math.max(24, overlayHeight + 12);
+    const paddingBottom = chatbotSurface ? 0 : Math.max(24, overlayHeight + 12);
 
     const dataWithSlots = useMemo(
       () => [
@@ -352,14 +354,22 @@ const VirtualizedList = memo<VirtualizedListProps>(
           {(messageId, index): ReactElement => {
             if (messageId === CONVERSATION_HEADER_ID) {
               return (
-                <WideScreenContainer key={messageId} style={{ position: 'relative' }}>
+                <WideScreenContainer
+                  fullWidth={chatbotSurface}
+                  key={messageId}
+                  style={{ position: 'relative' }}
+                >
                   {headerSlot}
                 </WideScreenContainer>
               );
             }
             if (messageId === CONVERSATION_FOOTER_ID) {
               return (
-                <WideScreenContainer key={messageId} style={{ position: 'relative' }}>
+                <WideScreenContainer
+                  fullWidth={chatbotSurface}
+                  key={messageId}
+                  style={{ position: 'relative' }}
+                >
                   {footerSlot}
                 </WideScreenContainer>
               );
@@ -372,7 +382,11 @@ const VirtualizedList = memo<VirtualizedListProps>(
               // a 200ms transition.
               const shouldAnimate = !isScrollShrinking && spacerHeight === 0;
               return (
-                <WideScreenContainer key={messageId} style={{ position: 'relative' }}>
+                <WideScreenContainer
+                  fullWidth={chatbotSurface}
+                  key={messageId}
+                  style={{ position: 'relative' }}
+                >
                   <div
                     aria-hidden
                     ref={registerSpacerNode}
@@ -414,7 +428,7 @@ const VirtualizedList = memo<VirtualizedListProps>(
 
             return (
               <WideScreenContainer
-                fullWidth={isSelectionMode}
+                fullWidth={chatbotSurface || isSelectionMode}
                 key={messageId}
                 // ConversationContent owns the upstream 16px inset; virtual
                 // rows implement its 32px gap without creating another scroller.
@@ -431,14 +445,16 @@ const VirtualizedList = memo<VirtualizedListProps>(
           }}
         </VList>
         {/* BackBottom is placed outside VList so it remains visible regardless of scroll position */}
-        <WideScreenContainer style={{ position: 'relative' }}>
-          <BackBottom
-            atBottom={atBottom}
-            bottomOffset={overlayHeight}
-            visible={!atBottom}
-            onScrollToBottom={() => scrollToBottom(true)}
-          />
-        </WideScreenContainer>
+        {!chatbotSurface && (
+          <WideScreenContainer style={{ position: 'relative' }}>
+            <BackBottom
+              atBottom={atBottom}
+              bottomOffset={overlayHeight}
+              visible={!atBottom}
+              onScrollToBottom={() => scrollToBottom(true)}
+            />
+          </WideScreenContainer>
+        )}
       </div>
     );
   },

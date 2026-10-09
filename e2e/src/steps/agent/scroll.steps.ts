@@ -398,10 +398,7 @@ async function waitForAssistantMessageToSettle(
   world: CustomWorld,
   minLength: number,
 ): Promise<void> {
-  const assistantMessage = world.page
-    .locator('.message-wrapper')
-    .filter({ has: world.page.locator('text=Orvilo AI') })
-    .last();
+  const assistantMessage = world.page.locator('.message-wrapper.is-assistant').last();
 
   await expect(assistantMessage).toBeVisible({ timeout: 15_000 });
 
@@ -557,10 +554,7 @@ When('用户发送长文消息并等待回复完成', { timeout: 360_000 }, asyn
     .toHaveCount(2, { timeout: 15_000 })
     .catch(() => {});
 
-  const assistantMessage = this.page
-    .locator('.message-wrapper')
-    .filter({ has: this.page.locator('text=Orvilo AI') })
-    .last();
+  const assistantMessage = this.page.locator('.message-wrapper.is-assistant').last();
   await expect(assistantMessage).toBeVisible({ timeout: 15_000 });
 
   // Poll until text has grown past an obvious threshold, then plateaus.

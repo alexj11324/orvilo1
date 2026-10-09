@@ -5,6 +5,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ChatbotSurfaceContext } from '@/features/AIChatbot/context';
+
 import type * as errorAlertModule from '../../components/ErrorAlert';
 import ChatItem from '../ChatItem';
 import ErrorContent from './ErrorContent';
@@ -64,6 +66,23 @@ vi.mock('@/features/Conversation/store', () => ({
 }));
 
 describe('ChatItem metadata when personal sender details are hidden', () => {
+  it('keeps the official Chatbot surface free of the legacy metadata row', () => {
+    const view = render(
+      <ChatbotSurfaceContext value>
+        <ChatItem
+          avatar={{ title: 'Personal sender' }}
+          message="Personal message"
+          placement="right"
+          showAvatar={false}
+          showTitle={false}
+          time={Date.UTC(2026, 9, 9, 12)}
+        />
+      </ChatbotSurfaceContext>,
+    );
+    expect(view.queryByLabelText('published-date')).toBeNull();
+    expect(view.container.querySelector('.message-header')).toBeNull();
+  });
+
   it.each([Date.UTC(2026, 9, 9, 12), 1])('keeps the provided timestamp %s visible', (time) => {
     const view = render(
       <ChatItem

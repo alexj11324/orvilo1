@@ -18,26 +18,9 @@ import type { CustomWorld } from '../../support/world';
 
 // Helper function to find the assistant message wrapper
 async function findAssistantMessage(page: CustomWorld['page']) {
-  const messageWrappers = page.locator('.message-wrapper');
-  const wrapperCount = await messageWrappers.count();
-  console.log(`   📍 Found ${wrapperCount} message wrappers`);
-
-  // Find the assistant message by looking for the one with "Orvilo AI" or "AI" in title
-  for (let i = wrapperCount - 1; i >= 0; i--) {
-    const wrapper = messageWrappers.nth(i);
-    const titleText = await wrapper
-      .locator('.message-header')
-      .textContent()
-      .catch(() => '');
-
-    if (titleText?.includes('Orvilo AI') || titleText?.includes('AI')) {
-      console.log(`   📍 Found assistant message at index ${i}`);
-      return wrapper;
-    }
-  }
-
-  // Fallback: return the last message wrapper that's aligned left (assistant messages)
-  return messageWrappers.last();
+  // Message.from supplies this role marker even when the Chatbot surface
+  // intentionally omits its legacy sender metadata row.
+  return page.locator('.message-wrapper.is-assistant').last();
 }
 
 async function findVisibleMenuItem(page: CustomWorld['page'], name: RegExp) {

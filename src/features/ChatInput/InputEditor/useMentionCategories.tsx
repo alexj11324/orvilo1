@@ -6,8 +6,8 @@ import { Bot, Lock, MessageSquareText, Users, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import type { SidebarAgentItem } from '@/database/repositories/home';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
@@ -62,13 +62,7 @@ export const useMentionCategories = (): MentionCategory[] => {
       const secondary = [name ? title : undefined, description].filter(Boolean).join(' · ');
 
       return {
-        icon: (
-          <Avatar
-            avatar={typeof agent.avatar === 'string' ? agent.avatar : undefined}
-            background={agent.backgroundColor ?? undefined}
-            size={24}
-          />
-        ),
+        icon: <AssigneeAvatar agentId={agent.id} size={24} />,
         key: `agent-${agent.id}`,
         label: secondary ? (
           <div

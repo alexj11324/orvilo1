@@ -191,7 +191,7 @@ const ForwardModalContent = memo(() => {
                   onClick={() => toggle(agent.id)}
                 >
                   <SelectCircle checked={checked} />
-                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType} />
+                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType || 'orvilo'} />
                   <div className="truncate" style={{ flex: 1 }}>
                     {agentDisplayName(agent, t('untitledAgent'))}
                   </div>

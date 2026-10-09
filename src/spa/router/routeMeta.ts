@@ -51,6 +51,7 @@ export interface RouteHandle {
 }
 
 export interface ResolvedRouteMeta {
+  agentId?: string;
   avatar?: string;
   backgroundColor?: string;
   icon?: LucideIcon;

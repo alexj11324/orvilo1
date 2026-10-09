@@ -4,8 +4,8 @@ import { ArrowUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useNavigateToAgent } from '@/hooks/useNavigateToAgent';
 
 /**
@@ -14,10 +14,9 @@ import { useNavigateToAgent } from '@/hooks/useNavigateToAgent';
  * plus a one-click jump to go use that agent.
  */
 const AgentConnectorUsage = memo<{
-  agentAvatar?: string | null;
   agentId: string;
   agentTitle?: string | null;
-}>(({ agentId, agentTitle, agentAvatar }) => {
+}>(({ agentId, agentTitle }) => {
   const { t } = useTranslation('setting');
   const navigateToAgent = useNavigateToAgent();
 
@@ -39,7 +38,7 @@ const AgentConnectorUsage = memo<{
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}
       >
-        <Avatar avatar={agentAvatar || undefined} size={32} title={agentTitle || undefined} />
+        <AssigneeAvatar agentId={agentId} size={32} />
         <div className={'flex min-w-0'} style={{ flexDirection: 'column', overflow: 'hidden' }}>
           <span className={'text-muted-foreground'} style={{ fontSize: 12 }}>
             {t('agentConnectorUsage.label')}

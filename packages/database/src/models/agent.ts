@@ -11,6 +11,7 @@ import {
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
   resolveAgentAgencyConfig,
 } from '@orvilo/types';
+import { resolveAgentRuntimeType } from '@orvilo/utils/agentRuntimeIdentity';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -661,6 +662,7 @@ export class AgentModel {
       normalizeInboxAgentMeta(
         {
           ...row,
+          heterogeneousType: resolveAgentRuntimeType({ agencyConfig, model }),
           heteroType:
             agencyConfig?.heterogeneousProvider?.type ??
             (isHeterogeneousAgentModelId(model) ? model : undefined),

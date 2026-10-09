@@ -96,7 +96,7 @@ const AgentSettingsListRow = ({
       : t('settingAgent.list.noDevice'));
   return (
     <div className="flex items-center gap-3 border-b py-4 last:border-0">
-      <AgentRuntimeIcon size={32} type={provider?.type ?? row.heterogeneousType} />
+      <AgentRuntimeIcon size={32} type={provider?.type || row.heterogeneousType || 'orvilo'} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{agentDisplayName(config, row.title)}</div>
         <div className="mt-1 truncate text-xs text-muted-foreground">

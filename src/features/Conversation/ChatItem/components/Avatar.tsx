@@ -3,6 +3,7 @@ import { type CSSProperties, type MouseEventHandler } from 'react';
 import { memo } from 'react';
 
 import A from '@/components/Avatar';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 
 import { type ChatItemProps } from '../type';
 
@@ -19,6 +20,14 @@ export interface AvatarProps {
 const Avatar = memo<AvatarProps>(
   ({ loading, avatar, unoptimized, onClick, size = 28, style, alt }) => {
     const displayName = agentDisplayName(avatar);
+
+    if (avatar.agentId) {
+      return (
+        <div className="inline-flex" style={style} onClick={onClick}>
+          <AssigneeAvatar agentId={avatar.agentId} size={size} />
+        </div>
+      );
+    }
 
     return (
       <A

@@ -1,12 +1,11 @@
-import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import BriefCardArtifacts from '@/features/DailyBrief/BriefCardArtifacts';
 import BriefIcon from '@/features/DailyBrief/BriefIcon';
 import { type BriefItem } from '@/features/DailyBrief/types';
@@ -112,17 +111,12 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
         onClick={toggle}
       >
         <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
-          {brief.agent?.avatar ? (
-            <Avatar
-              avatar={brief.agent.avatar}
-              background={brief.agent.backgroundColor || cssVar.colorBgContainer}
-              shape={'circle'}
-              size={AVATAR_SIZE}
-              // Fade the whole row once read: the leading glyph dims with the title
-              // so a scanned item recedes as one, not just a lighter headline.
-              style={{ flex: 'none', opacity: read ? 0.5 : 1 }}
-              title={agentDisplayName(brief.agent)}
-            />
+          {brief.agent ? (
+            // Fade the whole row once read: the leading glyph dims with the title
+            // so a scanned item recedes as one, not just a lighter headline.
+            <span className="inline-flex flex-none" style={{ opacity: read ? 0.5 : 1 }}>
+              <AssigneeAvatar agentId={brief.agent.id} size={AVATAR_SIZE} />
+            </span>
           ) : (
             <BriefIcon muted={read} type={brief.type} />
           )}

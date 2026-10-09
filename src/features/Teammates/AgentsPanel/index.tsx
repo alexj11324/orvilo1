@@ -5,13 +5,13 @@ import { Bot, Check, Minus } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 
 import type { WorkspaceAgentSummary } from '../api/contract';
 import { useWorkspaceAgentsQuery } from '../api/hooks';
@@ -88,7 +88,7 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
   return (
     <div className={styles.row}>
       <div className={styles.cell}>
-        <Avatar avatar={agent.avatar} name={agent.name} size={32} title={agent.name} />
+        <AssigneeAvatar agentId={agent.id} size={32} />
         <div className="flex flex-col flex-1 gap-[0px]" style={{ minWidth: 0 }}>
           <span className={styles.name}>
             <Bot size={12} style={{ marginInlineEnd: 6 }} />

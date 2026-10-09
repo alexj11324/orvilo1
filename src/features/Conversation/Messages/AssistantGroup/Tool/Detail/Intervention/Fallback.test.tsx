@@ -3,6 +3,7 @@
  */
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { Namespace } from 'i18next';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,8 +50,8 @@ vi.mock('react-i18next', async () => {
   });
 
   return {
-    useTranslation: (namespace: string | string[]) => ({
-      t: (key: string, options?: { count?: number; defaultValue?: string; ns?: string }) =>
+    useTranslation: (namespace: Namespace) => ({
+      t: (key: string, options?: { count?: number; defaultValue?: string; ns?: Namespace }) =>
         key === 'inbox.question.replyFailed'
           ? i18n.getFixedT('en-US', namespace)(key, options)
           : (

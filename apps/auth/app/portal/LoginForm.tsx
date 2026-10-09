@@ -143,7 +143,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
             {messages.back}
           </Button>
         </LinkRow>
-        <div id="clerk-captcha" />
+        <div className="mx-auto w-fit" id="clerk-captcha" />
       </Step>
     );
   }
@@ -184,7 +184,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
             {messages.back}
           </Button>
         </LinkRow>
-        <div id="clerk-captcha" />
+        <div className="mx-auto w-fit" id="clerk-captcha" />
       </Step>
     );
   }
@@ -243,7 +243,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
         >
           {messages.emailButton}
         </Button>
-        <div id="clerk-captcha" />
+        <div className="mx-auto w-fit" id="clerk-captcha" />
       </Step>
     );
   }
@@ -293,7 +293,7 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
           {messages.back}
         </Button>
       </LinkRow>
-      <div id="clerk-captcha" />
+      <div className="mx-auto w-fit" id="clerk-captcha" />
     </Step>
   );
 };

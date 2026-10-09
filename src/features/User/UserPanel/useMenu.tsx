@@ -20,6 +20,8 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { hotkeyDisplayKeys } from '@/utils/hotkeyDisplay';
+import { isMacOS } from '@/utils/platform';
 
 import { useNewVersion } from './useNewVersion';
 
@@ -70,13 +72,13 @@ export const useMenu = () => {
   const settings: MenuProps['items'] = [
     {
       extra: isDesktop ? (
-        <div>
-          <KbdGroup>
-            {DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings.split('+').map((k) => (
-              <Kbd key={k}>{k}</Kbd>
-            ))}
-          </KbdGroup>
-        </div>
+        <KbdGroup>
+          {hotkeyDisplayKeys(DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings, isMacOS()).map((key) => (
+            <Kbd key={key} variant="raised">
+              {key}
+            </Kbd>
+          ))}
+        </KbdGroup>
       ) : undefined,
       icon: <Settings2 />,
       key: 'setting',

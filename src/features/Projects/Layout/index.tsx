@@ -6,6 +6,7 @@ import { Outlet, useLocation } from 'react-router';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 
 import { projectPathSection } from './navigation';
+import { ProjectPanelSuppressContext } from './ProjectPanelPeekContext';
 import ProjectSidePanel from './ProjectSidePanel';
 import { ProjectToolbarContext } from './ProjectToolbarContext';
 import ProjectTabsBar from './TabsBar';
@@ -38,30 +39,38 @@ const ProjectLayout = memo(() => {
   const { pathname } = useLocation();
   const panelViewport = usePanelViewport();
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
+  // The Issues peek takes the panel's place while it is open.
+  const [panelSuppressed, setPanelSuppressed] = useState(false);
   const showPanel = panelViewport && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
 
   return (
     <ProjectToolbarContext value={toolbar}>
-      <div className="flex flex-col" style={{ height: '100%', minWidth: 0 }}>
-        <ProjectTabsBar toolbarRef={setToolbar} />
-        <div
-          className="flex flex-row"
-          style={{ flex: 1, height: '100%', minHeight: 0, minWidth: 0 }}
-        >
+      <ProjectPanelSuppressContext value={setPanelSuppressed}>
+        <div className="flex flex-col" style={{ height: '100%', minWidth: 0 }}>
+          <ProjectTabsBar toolbarRef={setToolbar} />
           <div
-            className="flex flex-col"
+            className="flex flex-row"
             style={{ flex: 1, height: '100%', minHeight: 0, minWidth: 0 }}
           >
-            <Outlet />
+            <div
+              className="flex flex-col"
+              style={{ flex: 1, height: '100%', minHeight: 0, minWidth: 0 }}
+            >
+              <Outlet />
+            </div>
+            {showPanel && projectId && (
+              // `contents` keeps the panel as the flex child; `hidden` keeps it
+              // mounted so its section toggles survive the peek.
+              <div className={panelSuppressed ? 'hidden' : 'contents'}>
+                <ProjectSidePanel
+                  projectId={projectId}
+                  showActivity={projectPathSection(pathname) === 'overview'}
+                />
+              </div>
+            )}
           </div>
-          {showPanel && projectId && (
-            <ProjectSidePanel
-              projectId={projectId}
-              showActivity={projectPathSection(pathname) === 'overview'}
-            />
-          )}
         </div>
-      </div>
+      </ProjectPanelSuppressContext>
     </ProjectToolbarContext>
   );
 });

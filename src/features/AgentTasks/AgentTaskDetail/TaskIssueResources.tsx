@@ -1,27 +1,33 @@
-import { GitPullRequestIcon, LinkIcon, TrashIcon } from 'lucide-react';
+import { GitPullRequestIcon, LinkIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { Spinner } from '@/components/ui/spinner';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskMenuService } from '@/services/taskMenu';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { trpcErrorMessage } from '@/utils/trpcError';
 
+import { issueResourceRef } from './issueResourceRef';
 import { useTaskDetailSelector } from './TaskDetailScope';
+import TaskDetailSectionHeader from './TaskDetailSectionHeader';
+import { ISSUE_RESOURCE_KINDS, useIssueDetailActions } from './useIssueDetailActions';
 
 /**
- * Links and pull requests attached to the issue through the header menu.
- * Nothing renders until the issue has at least one — the section is not a
- * second "add" entry point.
+ * Links and pull requests attached to the issue. Nothing renders until the
+ * issue has at least one; adding happens from the row under the description or
+ * the "+" in this header once it is showing.
  */
 const TaskIssueResources = () => {
   const { t } = useTranslation('chat');
-  const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
+  const taskId = issueResourceRef(useTaskDetailSelector(taskDetailSelectors.taskDetail));
   const { allowed: editable } = usePermission('create_content');
+  const { addResource, capabilities } = useIssueDetailActions();
+  const [isExpanded, setIsExpanded] = useState(true);
   const [removing, setRemoving] = useState<string>();
   const [failure, setFailure] = useState<string>();
   const { data, error, isLoading, mutate } = useClientDataSWR<
@@ -48,8 +54,33 @@ const TaskIssueResources = () => {
   if (!error && !isLoading && !data?.data.length) return null;
   return (
     <section aria-label={t('taskDetail.resources.title')} className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium">{t('taskDetail.resources.title')}</h3>
-      {error ? (
+      <TaskDetailSectionHeader
+        count={data?.data.length}
+        icon={LinkIcon}
+        open={isExpanded}
+        title={t('taskDetail.resources.title')}
+        actions={
+          isExpanded && capabilities.canAddResource ? (
+            <SidebarDropdownMenu
+              items={ISSUE_RESOURCE_KINDS.map(([kind, Icon]) => ({
+                icon: <Icon />,
+                key: `add-${kind}`,
+                label: t(`taskDetail.menu.add.${kind}`),
+                onClick: () => addResource(kind),
+              }))}
+            >
+              <ActionIcon
+                aria-label={t('taskDetail.resources.add')}
+                icon={PlusIcon}
+                size="small"
+                title={t('taskDetail.resources.add')}
+              />
+            </SidebarDropdownMenu>
+          ) : undefined
+        }
+        onToggle={() => setIsExpanded((prev) => !prev)}
+      />
+      {!isExpanded ? null : error ? (
         <AsyncError
           description={trpcErrorMessage(error)}
           error={error}

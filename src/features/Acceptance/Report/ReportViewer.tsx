@@ -10,6 +10,7 @@ import type {
   VerifySurface,
   VerifyVerdict,
 } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import type { TFunction } from 'i18next';
@@ -1153,7 +1154,7 @@ const ReportPageState = memo<{
 const formatScopeDate = (value: string | undefined): string | undefined => {
   if (!value) return undefined;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? value : formatAbsoluteDateTime(date);
 };
 
 const safeWebUrl = (value: string | null | undefined): string | undefined => {

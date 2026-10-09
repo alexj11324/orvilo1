@@ -16,7 +16,8 @@ const Params = memo(() => {
   ]);
   const { t } = useTranslation('setting');
 
-  if (isLoading) return <ChatInputAction disabled icon={Settings2Icon} />;
+  if (isLoading)
+    return <ChatInputAction disabled icon={Settings2Icon} title={t('settingModel.params.title')} />;
 
   return (
     <ChatInputAction

@@ -61,6 +61,17 @@ const SearchBar = memo<SearchBarProps>(
     const inputValue = value ?? innerValue;
     const hotkey = shortKey.includes('+') ? shortKey : `mod+${shortKey}`;
 
+    const clear = () => {
+      setInnerValue('');
+      if (!inputRef.current) return;
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        globalThis.HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      nativeInputValueSetter?.call(inputRef.current, '');
+      inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
     useHotkeys(
       hotkey,
       () => {
@@ -77,6 +88,7 @@ const SearchBar = memo<SearchBarProps>(
       <div className={cn('relative flex items-center', className)} style={style}>
         <Search className="pointer-events-none absolute left-2.5 text-muted-foreground" size={14} />
         <Input
+          aria-label={placeholder ?? 'Type keywords...'}
           autoFocus={autoFocus}
           className="h-8 bg-secondary pr-7 pl-8"
           placeholder={placeholder ?? 'Type keywords...'}
@@ -97,6 +109,12 @@ const SearchBar = memo<SearchBarProps>(
           }}
           onKeyDown={(e) => {
             onKeyDown?.(e);
+            // Same as the settings sidebar search: Esc clears a non-empty query and
+            // stops there, so an enclosing dialog or panel does not also close.
+            if (e.key === 'Escape' && inputValue) {
+              e.stopPropagation();
+              clear();
+            }
             if (e.key === 'Enter') {
               onPressEnter?.(e);
               onSearch?.(inputValue);
@@ -113,16 +131,8 @@ const SearchBar = memo<SearchBarProps>(
             type="button"
             variant="ghost"
             onClick={() => {
-              const next = '';
-              setInnerValue(next);
-              if (inputRef.current) {
-                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                  globalThis.HTMLInputElement.prototype,
-                  'value',
-                )?.set;
-                nativeInputValueSetter?.call(inputRef.current, next);
-                inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
-              }
+              clear();
+              inputRef.current?.focus();
             }}
           >
             <X size={12} />

@@ -1875,6 +1875,7 @@ export class TaskService {
           files: files.length > 0 ? files : undefined,
           id: c.id,
           time: toISO(c.createdAt),
+          updatedAt: c.updatedAt ? toISO(c.updatedAt) : undefined,
           type: 'comment' as const,
         };
       }),

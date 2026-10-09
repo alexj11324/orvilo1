@@ -1,3 +1,4 @@
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { t } from 'i18next';
 import { type StateCreator } from 'zustand';
 
@@ -97,12 +98,7 @@ export const inputSlice: StateCreator<State & InputAction, [], [], InputAction> 
     toast.success(
       t('input.schedule.scheduled', {
         ns: 'chat',
-        time: new Date(scheduledSendAt).toLocaleString(undefined, {
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          month: '2-digit',
-        }),
+        time: formatAbsoluteDateTime(scheduledSendAt),
       }),
     );
 

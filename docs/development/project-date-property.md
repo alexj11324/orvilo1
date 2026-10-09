@@ -9,6 +9,13 @@ The project `Dates` property (start date → target date) is a normal property c
 - The row has no clear button. The popover has a title, a `YYYY/MM/DD` input (selected on open, with an inside clear button; Enter saves, invalid input stays open with `aria-invalid`), the precision tabs, and the calendar.
 - The calendar follows the app language (`calendarLocale.ts`, react-day-picker locales) and starts on Monday. This applies to every `DatePicker` call site.
 
+## Round 3 follow-ups
+
+- Half-year precision renders the two-cell H1 / H2 grid: `getProjectDatePickerMode('halfYear')` returns `'halfYear'`, which `DatePicker`'s `PeriodGrid` already supported. Picked days snap to the period start through `snapProjectDateToPrecision`.
+- `ProjectDatePill` is the single date control. The overview/side panel (`ProjectDateField`, saved through `usePlanningMutation`) and the create-project dialog (local form state via `value` / `onCommit`) both render it, so the dialog pills are the same 28px pill with the title + typed input + precision tabs popover.
+- An empty `variant="ghost"` `DatePicker` trigger is muted as a whole (`text-muted-foreground` on the button and the placeholder span).
+- Activity rows use `formatProjectActivityTime` (relative within a day, then `YYYY/MM/DD`) instead of the `common` `time.format*` month-name strings.
+
 ## Date format rule
 
 Under `src/features/Projects/**` dates are numeric and language independent: day `YYYY/MM/DD`, month `YYYY/MM`, quarter `YYYY Q3`, half-year `YYYY H2`, year `YYYY`. Use `formatProjectDay` / `formatProjectDate` from `projectPlanningDate.ts`; never `MMM D`.

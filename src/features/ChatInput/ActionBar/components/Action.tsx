@@ -51,6 +51,9 @@ const Action = memo<ActionProps>(
     const tooltipTitle = canUseChatInputAction ? title : reason;
     const iconNode = (
       <ActionIcon
+        // The accessible name must not depend on the tooltip: `showTooltip={false}`
+        // and mobile drop the tooltip title, which left these buttons unnamed.
+        aria-label={typeof title === 'string' ? title : undefined}
         disabled={blocked}
         icon={icon}
         loading={loading}
@@ -100,6 +103,7 @@ const Action = memo<ActionProps>(
     if (popover)
       return (
         <ActionPopover
+          label={typeof title === 'string' ? title : undefined}
           loading={loading}
           open={show}
           trigger={trigger}

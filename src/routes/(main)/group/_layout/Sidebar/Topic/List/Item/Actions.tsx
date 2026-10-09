@@ -51,7 +51,11 @@ const Actions = memo<ActionProps>(({ dropdownMenu, id, status }) => {
         />
       )}
       <SidebarDropdownMenu items={dropdownMenu} portalProps={dropdownPortalProps}>
-        <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
+        <ActionIcon
+          aria-label={t('more', { ns: 'common' })}
+          icon={MoreHorizontalIcon}
+          size={'small'}
+        />
       </SidebarDropdownMenu>
     </>
   );

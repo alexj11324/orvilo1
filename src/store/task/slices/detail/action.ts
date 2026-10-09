@@ -220,7 +220,7 @@ export class TaskDetailSliceActionImpl {
       throw error;
     }
     // Post-success refresh failing is not the comment failing: it is saved.
-    await this.internal_refreshTaskDetail(taskId);
+    await this.internal_refreshTaskDetail(taskId).catch(() => {});
     return result;
   };
 
@@ -641,6 +641,10 @@ export class TaskDetailSliceActionImpl {
       }
     }
 
+    // A rename or due-date edit changes only what list rows show, not the
+    // detail's derived rows — the list caches revalidate, the detail does not.
+    const rowOnlyChange = data.name !== undefined || data.dueDate !== undefined;
+
     if (
       assigneeAgentId !== undefined ||
       assigneeUserId !== undefined ||
@@ -656,6 +660,10 @@ export class TaskDetailSliceActionImpl {
       reviewerUserId !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
+    } else if (rowOnlyChange) {
+      await this.#get()
+        .refreshTaskList()
+        .catch(() => {});
     }
   };
 

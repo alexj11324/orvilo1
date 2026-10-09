@@ -7,7 +7,7 @@ import {
   useWatchBroadcast,
 } from '@orvilo/electron-client-ipc';
 import { resolveHeteroCliAgentType } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ActivityIcon, RadioTowerIcon, TimerResetIcon } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,84 +27,24 @@ import ApprovalMode from '../ApprovalMode';
 import { PermissionSelector } from './PermissionSelector';
 import { ClaudeCodeQuotaMenu, CodexQuotaMenu } from './QuotaMenu';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Pinned to the same 28px row as the plain ControlBar so the composer footer
-  // keeps its rhythm regardless of which chips render. `flex: none` matters:
-  // the bar sits in a column flex parent and would otherwise shrink to the
-  // (compact) chips' min-content height.
-  bar: css`
-    container: runtimebar / inline-size;
-    flex: none;
-
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 4px;
-  `,
-  fullAccessLabel: css`
-    @container runtimebar (width < 600px) {
-      display: none;
-    }
-  `,
-  sdkRuntime: css`
-    cursor: default;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorInfo};
-    white-space: nowrap;
-
-    background: color-mix(in srgb, ${cssVar.colorInfoBg} 55%, transparent);
-  `,
-  sdkRuntimeClosing: css`
-    color: ${cssVar.colorTextDescription};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  sdkRuntimeError: css`
-    color: ${cssVar.colorError};
-    background: color-mix(in srgb, ${cssVar.colorErrorBg} 55%, transparent);
-  `,
-  sdkRuntimeIdle: css`
-    color: ${cssVar.colorTextSecondary};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  sdkRuntimeMonitoring: css`
-    color: ${cssVar.colorWarning};
-    background: color-mix(in srgb, ${cssVar.colorWarningBg} 55%, transparent);
-  `,
-  sdkRuntimeStale: css`
-    color: ${cssVar.colorWarning};
-    background: color-mix(in srgb, ${cssVar.colorWarningBg} 55%, transparent);
-  `,
-  // Mirror RuntimeConfig: the workspace cluster shrinks then scrolls horizontally
-  // (hidden scrollbar) instead of wrapping each chip's text on narrow screens.
-  leftGroup: css`
-    scrollbar-width: none;
-    overflow: auto hidden;
-    flex: 1;
-    min-width: 0;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    @container runtimebar (width < 720px) {
-      [data-workspace-label] {
-        max-width: clamp(0px, calc(33.333cqw - 100px), 120px);
-      }
-    }
-  `,
-  rightGroup: css`
-    flex: none;
-  `,
-}));
+const styles = {
+  bar: '[container:runtimebar_/_inline-size] flex-none h-7 py-0 px-1',
+  fullAccessLabel: '[@container_runtimebar_(width_<_600px)]:hidden',
+  sdkRuntime:
+    'cursor-default flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-info whitespace-nowrap bg-[color-mix(in_srgb,_var(--ant-color-info-bg)_55%,_transparent)] bg-none',
+  sdkRuntimeClosing:
+    'text-[var(--ant-color-text-description)] bg-[var(--ant-color-fill-quaternary)] bg-none',
+  sdkRuntimeError:
+    'text-destructive bg-[color-mix(in_srgb,_var(--ant-color-error-bg)_55%,_transparent)] bg-none',
+  sdkRuntimeIdle: 'text-muted-foreground bg-[var(--ant-color-fill-quaternary)] bg-none',
+  sdkRuntimeMonitoring:
+    'text-warning bg-[color-mix(in_srgb,_var(--ant-color-warning-bg)_55%,_transparent)] bg-none',
+  sdkRuntimeStale:
+    'text-warning bg-[color-mix(in_srgb,_var(--ant-color-warning-bg)_55%,_transparent)] bg-none',
+  leftGroup:
+    '[scrollbar-width:none] overflow-x-auto overflow-y-hidden flex-1 min-w-0 [&::-webkit-scrollbar]:hidden [@container_runtimebar_(width_<_720px)]:[&_[data-workspace-label]]:max-w-[clamp(0px,_calc(33.333cqw_-_100px),_120px)]',
+  rightGroup: 'flex-none',
+};
 
 const visibleSdkRuntimeStates = new Set<HeterogeneousAgentRuntimeState>([
   'starting',
@@ -160,7 +100,7 @@ const HeteroControlBar = memo(() => {
   if (!canConfigureResource) {
     if (!agentId || isLoading) return null;
     return (
-      <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
+      <div className={cn('flex flex-row items-center justify-between', styles.bar)}>
         <HeteroDeviceSwitcher agentId={agentId} />
       </div>
     );
@@ -174,18 +114,18 @@ const HeteroControlBar = memo(() => {
   if (!isDesktop) {
     if (!agentId) return null;
     return (
-      <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
-        <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
+      <div className={cn('flex flex-row items-center justify-between', styles.bar)}>
+        <div className={cn('flex flex-row items-center gap-1', styles.leftGroup)}>
           <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
         </div>
-        <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
+        <div className={cn('flex flex-row items-center gap-1', styles.rightGroup)}>
           {heteroProvider?.type === 'orvilo' ? (
             <ApprovalMode />
           ) : (
             <PermissionSelector agentId={agentId} />
           )}
           {shouldShowClaudeQuota && quotaDeviceId && (
-            <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
+            <div className={cn('flex flex-row items-center gap-1', styles.rightGroup)}>
               <ClaudeCodeQuotaMenu
                 agentId={agentId}
                 deviceId={quotaDeviceId}
@@ -200,7 +140,7 @@ const HeteroControlBar = memo(() => {
 
   if (!agentId || isLoading) {
     return (
-      <div className={cx('flex flex-row items-center gap-1 justify-between', styles.bar)}>
+      <div className={cn('flex flex-row items-center gap-1 justify-between', styles.bar)}>
         <Skeleton style={{ height: 22, minWidth: 100, width: 100 }} />
         <Skeleton style={{ height: 22, minWidth: 80, width: 80 }} />
       </div>
@@ -241,7 +181,7 @@ const HeteroControlBar = memo(() => {
         state: tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`),
       })}
     >
-      <div className={cx(styles.sdkRuntime, sdkRuntimeClassName)}>
+      <div className={cn(styles.sdkRuntime, sdkRuntimeClassName)}>
         <span className="anticon" role="img">
           {createElement(sdkRuntimeIcon, { size: 14, width: 14, height: 14, fill: 'transparent' })}
         </span>
@@ -253,11 +193,11 @@ const HeteroControlBar = memo(() => {
   ) : null;
 
   return (
-    <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
-      <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
+    <div className={cn('flex flex-row items-center justify-between', styles.bar)}>
+      <div className={cn('flex flex-row items-center gap-1', styles.leftGroup)}>
         <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
       </div>
-      <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
+      <div className={cn('flex flex-row items-center gap-1', styles.rightGroup)}>
         {shouldShowCodexQuota && (
           <CodexQuotaMenu command={heteroProvider?.command} env={heteroProvider?.env} />
         )}

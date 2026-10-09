@@ -45,11 +45,13 @@ const styles = createStaticStyles(({ css }) => ({
       background-color: var(--selected);
     }
 
-    /* Same indicator as the primitive's focus-visible:ring-2 ring-sidebar-ring. */
+    /* Same ring as the Button primitive (focus-visible:ring-3 ring-ring/50): 3px at 50% of
+       --ring. Drawn inset because rows sit flush in accordion / scroll-area wrappers
+       (overflow: hidden) that would clip an outer ring. */
     &&:focus-visible {
       outline: 2px solid transparent;
       outline-offset: 2px;
-      box-shadow: 0 0 0 2px var(--sidebar-ring);
+      box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
     }
   `,
   container: css`

@@ -2127,26 +2127,30 @@ describe('TaskModel', () => {
       expect(afterProgress?.domainRevision).toBe((before?.domainRevision ?? 0) + 1);
 
       await model.updateComment(progress.id, 'Validation finished.', {
+        actor: { agentId: 'agt_progress', userId },
         mutation: { source: 'agent' },
       });
       expect((await model.findById(task.id))?.requirementRevision).toBe(
         before?.requirementRevision,
       );
 
-      await model.updateComment(progress.id, 'Human adds another requirement.');
-      expect((await model.findById(task.id))?.requirementRevision).toBe(
-        (before?.requirementRevision ?? 0) + 1,
-      );
-      await model.deleteComment(progress.id);
-      expect((await model.findById(task.id))?.requirementRevision).toBe(
-        (before?.requirementRevision ?? 0) + 2,
-      );
-      await model.addComment({
+      await expect(
+        model.updateComment(progress.id, 'Human changes Agent progress.'),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      const discussion = await model.addComment({
         authorUserId: userId,
-        content: 'Also support another case.',
+        content: 'Human adds another requirement.',
         taskId: task.id,
         userId,
       });
+      expect((await model.findById(task.id))?.requirementRevision).toBe(
+        (before?.requirementRevision ?? 0) + 1,
+      );
+      await model.updateComment(discussion.id, 'Human edits their requirement.');
+      expect((await model.findById(task.id))?.requirementRevision).toBe(
+        (before?.requirementRevision ?? 0) + 2,
+      );
+      await model.deleteComment(discussion.id);
       expect((await model.findById(task.id))?.requirementRevision).toBe(
         (before?.requirementRevision ?? 0) + 3,
       );
@@ -2573,6 +2577,37 @@ describe('TaskModel', () => {
   });
 
   describe('resolve', () => {
+    it('resolves an exact legacy database id before another row with the same identifier', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const generated = await model.create({ instruction: 'Generated row' });
+      const legacyId = generated.identifier;
+      await serverDB.insert(tasks).values({
+        id: legacyId,
+        identifier: 'LEGACY-2',
+        seq: 2,
+        createdByUserId: userId,
+        instruction: 'Exact legacy row',
+      });
+
+      expect((await model.resolve(legacyId))?.id).toBe(legacyId);
+      expect(await new TaskModel(serverDB, userId2).resolve(legacyId)).toBeNull();
+    });
+
+    it('resolves a non-prefixed database id without granting another user access', async () => {
+      const model = new TaskModel(serverDB, userId);
+      await serverDB.insert(tasks).values({
+        id: 'legacy-import-row',
+        identifier: 'LEGACY-1',
+        seq: 1,
+        createdByUserId: userId,
+        instruction: 'Legacy row',
+      });
+
+      expect((await model.resolve('legacy-import-row'))?.identifier).toBe('LEGACY-1');
+      expect(await new TaskModel(serverDB, userId2).resolve('legacy-import-row')).toBeNull();
+      expect((await model.resolve('legacy-1'))?.id).toBe('legacy-import-row');
+    });
+
     it('should resolve by task id when value starts with task_', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test' });
@@ -3093,6 +3128,108 @@ describe('TaskModel', () => {
 
       expect(ids).toContain(own.id);
       expect(ids).not.toContain(foreign.id);
+    });
+  });
+
+  describe('comment authorship', () => {
+    it('preserves the controlled managed-subject reconciliation path', async () => {
+      const workspaceId = 'comment-managed-workspace';
+      await serverDB
+        .insert(workspaces)
+        .values({ id: workspaceId, name: workspaceId, slug: workspaceId, primaryOwnerId: userId });
+      await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+      const managed = new TaskModel(serverDB, userId, workspaceId, { managedSubject: true });
+      const task = await managed.create({ instruction: 'Imported discussion' });
+      const comment = await managed.addComment({
+        authorUserId: null,
+        userId: null,
+        taskId: task.id,
+        content: 'Imported comment',
+      });
+      expect(
+        await managed.updateComment(comment.id, 'Provider update', {
+          mutation: { source: 'linear' },
+        }),
+      ).toMatchObject({ content: 'Provider update' });
+      expect(await managed.deleteComment(comment.id, { source: 'linear' })).toBe(true);
+    });
+
+    it('rejects another workspace author even when that caller owns the workspace', async () => {
+      const workspaceId = 'comment-authorship-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: workspaceId,
+        slug: workspaceId,
+        primaryOwnerId: userId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { workspaceId, userId, role: 'owner' },
+        { workspaceId, userId: userId2, role: 'member' },
+      ]);
+      const owner = new TaskModel(serverDB, userId, workspaceId);
+      const author = new TaskModel(serverDB, userId2, workspaceId);
+      const task = await owner.create({ instruction: 'Shared discussion' });
+      const comment = await author.addComment({
+        authorUserId: userId2,
+        userId: userId2,
+        taskId: task.id,
+        content: 'Original',
+      });
+      const before = await owner.findById(task.id);
+      await expect(owner.updateComment(comment.id, 'Not the author')).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(owner.deleteComment(comment.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(await owner.findCommentById(comment.id)).toMatchObject({ content: 'Original' });
+      expect((await owner.findById(task.id))?.domainRevision).toBe(before?.domainRevision);
+      expect(await author.updateComment(comment.id, 'Author edit')).toMatchObject({
+        content: 'Author edit',
+      });
+      expect(await author.deleteComment(comment.id)).toBe(true);
+    });
+
+    it('keeps the Agent principal distinct from its owning user and other Agents', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Agent comments' });
+      await createAgent('agt_author');
+      await createAgent('agt_other');
+      const agentComment = await model.addComment({
+        authorAgentId: 'agt_author',
+        userId,
+        taskId: task.id,
+        content: 'Agent original',
+      });
+      const userComment = await model.addComment({
+        authorUserId: userId,
+        userId,
+        taskId: task.id,
+        content: 'User original',
+      });
+      for (const actor of [{ userId }, { userId, agentId: 'agt_other' }]) {
+        await expect(
+          model.updateComment(agentComment.id, 'Wrong actor', { actor }),
+        ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        await expect(model.deleteComment(agentComment.id, {}, actor)).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+      }
+      const actor = { userId, agentId: 'agt_author' };
+      await expect(
+        model.updateComment(userComment.id, 'Owner fallback', { actor }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(model.deleteComment(userComment.id, {}, actor)).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      expect(
+        await model.updateComment(agentComment.id, 'Agent edit', {
+          actor,
+          mutation: { source: 'agent' },
+        }),
+      ).toMatchObject({ content: 'Agent edit' });
+      expect(await model.deleteComment(agentComment.id, { source: 'agent' }, actor)).toBe(true);
+      expect(await model.findCommentById(userComment.id)).toMatchObject({
+        content: 'User original',
+      });
     });
   });
 

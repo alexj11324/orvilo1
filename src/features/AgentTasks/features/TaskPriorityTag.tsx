@@ -22,6 +22,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
+import { PICKER_TRIGGER_FOCUS_CLASS } from './pickerTriggerStyles';
+import { READ_ONLY_BUTTON_WRAPPER_CLASS, readOnlyPickerTrigger } from './readOnlyPickerTrigger';
 import { SimpleTooltip } from './SimpleTooltip';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
 import { useTaskPriorityChange } from './useTaskPriorityChange';
@@ -165,13 +167,23 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     const triggerNode =
       children ||
       (loading ? (
-        <span className={styles.trigger}>
+        <span
+          aria-label={t('taskDetail.property.priority')}
+          className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}
+        >
           <Spinner style={{ height: size, width: size }} />
         </span>
       ) : (
         <span
-          className={isUrgent ? styles.triggerUrgent : styles.trigger}
           data-row-control={'priority'}
+          aria-label={t('taskDetail.fieldValue', {
+            field: t('taskDetail.property.priority'),
+            value: levelLabel(currentLevel),
+          })}
+          className={cn(
+            isUrgent ? styles.triggerUrgent : styles.trigger,
+            PICKER_TRIGGER_FOCUS_CLASS,
+          )}
         >
           <SimpleTooltip
             title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}
@@ -187,10 +199,14 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       return (
         <SimpleTooltip title={reason}>
           <span
-            className={cn(styles.triggerDisabled, 'inline-flex')}
+            className={
+              nativeButton
+                ? READ_ONLY_BUTTON_WRAPPER_CLASS
+                : cn(styles.triggerDisabled, 'inline-flex')
+            }
             onClick={(e) => e.stopPropagation()}
           >
-            {triggerNode}
+            {readOnlyPickerTrigger(triggerNode, nativeButton)}
           </span>
         </SimpleTooltip>
       );

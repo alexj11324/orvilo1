@@ -113,7 +113,13 @@ export const TaskBlockedNotice = () => {
   );
 };
 
-const TaskRelationFields = ({ taskId }: { taskId: string }) => {
+interface RelationFieldsProps {
+  /** Empty relation kinds stay hidden unless listed here. */
+  revealedKinds?: ReadonlySet<string>;
+  taskId: string;
+}
+
+const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const appOrigin = useAppOrigin();
@@ -245,13 +251,20 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
     <>
       {ISSUE_RELATION_KINDS.map((kind) => {
         const rows = grouped[kind];
+        // Empty groups stay out of the rail until added from "Add property".
+        if (rows.length === 0 && picker !== kind && !revealedKinds?.has(kind)) return null;
         const { Icon, className: markClass } = RELATION_MARKS[kind];
         return (
-          <div className="flex flex-col gap-0.5" data-relation-kind={kind} key={kind}>
-            <div className="flex min-h-7 items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex size-4 items-center justify-center">
-                <Icon className={markClass} size={16} />
-              </span>
+          <div
+            className={`flex flex-col gap-0.5 ${rows.length === 0 ? 'flex-none' : 'w-full'}`}
+            data-relation-kind={kind}
+            key={kind}
+          >
+            <div
+              className="flex h-7 items-center gap-2 whitespace-nowrap text-muted-foreground"
+              style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
+            >
+              <Icon className={markClass} size={16} />
               <span className="truncate">{t(`taskDetail.relations.${kind}`)}</span>
               <span className="flex-1" />
               {allowed && (
@@ -422,9 +435,11 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
   );
 };
 
-const TaskPrerequisites = () => {
+const TaskPrerequisites = ({ revealedKinds }: Pick<RelationFieldsProps, 'revealedKinds'>) => {
   const taskId = useTaskDetailTaskId();
-  return taskId ? <TaskRelationFields key={taskId} taskId={taskId} /> : null;
+  return taskId ? (
+    <TaskRelationFields key={taskId} revealedKinds={revealedKinds} taskId={taskId} />
+  ) : null;
 };
 
 export default TaskPrerequisites;

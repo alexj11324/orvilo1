@@ -69,7 +69,13 @@ const StatsSetting = memo<StatsSettingProps>(
           variant={'filled'}
           extra={
             <>
-              <DatePicker picker="month" value={dateRange} onChange={handleDateChange} />
+              <DatePicker
+                className="w-36 flex-none"
+                format="YYYY/MM"
+                picker="month"
+                value={dateRange}
+                onChange={handleDateChange}
+              />
               <Tabs
                 style={{ marginLeft: 8 }}
                 value={groupBy}

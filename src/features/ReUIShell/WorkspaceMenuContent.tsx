@@ -82,7 +82,10 @@ export function WorkspaceMenuContent() {
               <span className="truncate text-sm">{workspace.name}</span>
               {typeof workspace.memberCount === 'number' && (
                 <span className="truncate text-xs text-muted-foreground">
-                  {t('workspaceSetting.switcher.memberCount', { count: workspace.memberCount })}
+                  {t('workspaceSetting.switcher.memberCount', {
+                    count: workspace.memberCount,
+                    ns: 'setting',
+                  })}
                 </span>
               )}
             </span>
@@ -96,9 +99,11 @@ export function WorkspaceMenuContent() {
             <PlusIcon aria-hidden className="size-3.5" />
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm">{t('workspaceSetting.switcher.newWorkspace')}</span>
+            <span className="truncate text-sm">
+              {t('workspaceSetting.switcher.newWorkspace', { ns: 'setting' })}
+            </span>
             <span className="truncate text-xs text-muted-foreground">
-              {t('workspaceSetting.switcher.newWorkspaceDesc')}
+              {t('workspaceSetting.switcher.newWorkspaceDesc', { ns: 'setting' })}
             </span>
           </span>
         </DropdownMenuItem>

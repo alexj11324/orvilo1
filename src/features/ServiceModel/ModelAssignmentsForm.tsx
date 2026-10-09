@@ -184,6 +184,8 @@ const ModelAssignmentsForm = memo(() => {
           </Flexbox>
         </Tooltip>
       ),
+      // Only the planning row says more than its label: it also drives acceptance.
+      desc: key === 'goal' ? t('systemAgent.goal.modelDesc') : undefined,
       label: t(`systemAgent.${key}.title`),
     } satisfies FormItemProps;
   });

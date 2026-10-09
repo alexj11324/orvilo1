@@ -291,7 +291,7 @@
   "setup.error.selection.title": "无法保存你的选择",
   "setup.error.workspace.description": "请检查名称和地址后重试。如果地址已被占用，请换一个。",
   "setup.error.workspace.title": "无法创建工作区",
-  "setup.orchestrator.description": "协调 Agent 负责群组和项目协作。使用刚创建的 Agent，或选择其他已配置的 Agent。",
+  "setup.orchestrator.description": "协调 Agent 负责你的项目协作。使用刚创建的 Agent，或选择其他已配置的 Agent。",
   "setup.orchestrator.finish": "完成设置",
   "setup.orchestrator.title": "选择协调 Agent",
   "setup.provider": "提供商设置",

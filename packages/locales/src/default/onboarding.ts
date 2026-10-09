@@ -1,7 +1,7 @@
 export default {
   'setup.orchestrator.title': 'Choose your Orchestrator',
   'setup.orchestrator.description':
-    'Your Orchestrator coordinates groups and projects. Use the Agent you just created or choose another configured Agent.',
+    'Your Orchestrator coordinates your projects. Use the Agent you just created or choose another configured Agent.',
   'setup.orchestrator.finish': 'Finish setup',
 
   'agentPicker.allCategories': 'All',

@@ -75,7 +75,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   separator: css`
     flex: none;
-    color: ${cssVar.colorTextQuaternary};
   `,
   sidebar: css`
     overflow-y: auto;
@@ -454,7 +453,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               />
             ) : null}
             {team ? <span className="text-sm text-muted-foreground">{team.name}</span> : null}
-            <span aria-hidden className={styles.separator}>
+            <span aria-hidden className={cn('text-muted-foreground', styles.separator)}>
               ›
             </span>
             <span className="text-sm font-medium">{t('list.title', { ns: 'project' })}</span>

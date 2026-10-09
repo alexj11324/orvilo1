@@ -1,17 +1,11 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { DropdownItem } from '@/components/ItemsMenu';
 
-const styles = createStaticStyles(({ css }) => ({
-  // The packaged `extra` slot is styled for keyboard hints, so it defaults to the
-  // code font. This one carries a model name, which belongs in the UI font — and
-  // `inherit` cannot express that, since this span sits inside that slot.
-  value: css`
-    font-family: ${cssVar.fontFamily};
-  `,
-}));
+const styles = {
+  value: 'font-sans',
+};
 
 const checkIcon = (
   <span className="anticon" role="img">

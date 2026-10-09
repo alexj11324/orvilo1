@@ -1,4 +1,5 @@
 import type { GoalSpend } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -116,7 +117,7 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
               className={cn('text-[12px] text-muted-foreground', styles.mono)}
               style={{ flex: 'none' }}
             >
-              {dayjs(event.createdAt).format('MM-DD HH:mm')}
+              {formatAbsoluteDateTime(event.createdAt)}
             </div>
             <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
               <div className="text-[13px]">
@@ -472,9 +473,9 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
             {formatSpan(end.getTime() - startedAt.getTime())}
           </div>
           <div className="text-[12px] text-muted-foreground">
-            {dayjs(startedAt).format('MM-DD HH:mm')} →{' '}
+            {formatAbsoluteDateTime(startedAt)} →{' '}
             {completedAt
-              ? dayjs(completedAt).format('MM-DD HH:mm')
+              ? formatAbsoluteDateTime(completedAt)
               : t('goalProcess.metricDetail.duration.now')}
           </div>
         </div>
@@ -532,7 +533,7 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
       <div className="flex flex-col gap-0.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
         <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
-          {latest ? dayjs(latest).format('MM-DD HH:mm') : '—'}
+          {latest ? formatAbsoluteDateTime(latest) : '—'}
         </div>
       </div>
       {running.length > 0 && (

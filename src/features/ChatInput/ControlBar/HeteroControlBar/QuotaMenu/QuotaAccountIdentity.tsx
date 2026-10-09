@@ -1,7 +1,7 @@
 'use client';
 
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CalendarDaysIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,17 +9,10 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { openQuotaCalendarModal } from '@/features/AgentQuotaCalendar';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Divider faces the quota windows: below when on top, above when it trails.
-  bottom: css`
-    padding-block-start: 8px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  top: css`
-    padding-block-end: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  bottom: 'pbs-2 [border-block-start:1px_solid_var(--ant-color-border-secondary)]',
+  top: 'pbe-2 [border-block-end:1px_solid_var(--ant-color-border-secondary)]',
+};
 
 /**
  * Read-only account line in the quota panel: which provider identity these
@@ -41,7 +34,7 @@ const QuotaAccountIdentity = memo<{
 
   return (
     <div
-      className={cx(
+      className={cn(
         'flex flex-row items-center gap-2 justify-between',
         placement === 'top' ? styles.top : styles.bottom,
       )}

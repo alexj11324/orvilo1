@@ -155,6 +155,13 @@ export interface EditorCanvasProps {
   style?: CSSProperties;
 
   /**
+   * Opt-in (composers): Tab / Shift+Tab leave the editor instead of inserting a
+   * tab character, so the composer is not a keyboard trap. Inside a list item
+   * Tab keeps indenting.
+   */
+  tabMovesFocus?: boolean;
+
+  /**
    * Extra items to add to the floating toolbar (e.g., "Ask Copilot" button)
    */
   toolbarExtraItems?: ChatInputActionsProps['items'];

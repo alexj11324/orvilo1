@@ -32,6 +32,20 @@ The English source follows the same entity decision: where it names the Issue en
 surface, "Task(s)" is worded "Issue(s)" ("sub-task" becomes "sub-issue", "a task" becomes "an issue").
 Only values change in `packages/locales/src/default/*.ts` (mirrored in `locales/en-US/*.json`); i18n
 keys, identifiers, routes and tool/API names keep their `task` names. Scheduled tasks, goal nodes,
-agent run cards, Claude Code / Codex built-in tools, to-do lists and the task manager assistant keep
+agent run cards, Claude Code / Codex built-in tools and to-do lists keep "task". The task manager
+panel's own copy names Issues: `taskManager.welcome` and the composer placeholders
+`sendPlaceholderHeterogeneous` / `sendPlaceholderWithAgentAssignment` read "issue(s)" in en-US and
+"Issue" in zh-CN. `taskManager.agent` ("Task Agent") is the assistant's identity label and keeps
 "task". The marketing description `metadata.chat.description` and the unused `viewSwitcher.task` key
 are unchanged.
+
+## Triage
+
+zh-CN writes triage as 分诊 (sidebar, list, filters, kanban column, workflow category). 分流 was
+used by `taskList.filter.groups.triage`, `taskList.filter.notInTriage` and
+`taskList.kanban.triage`, and is not used anywhere now.
+
+## Command palette follow-up
+
+- The "My issues" palette entry no longer has its own copy (`cmdk.myWork`, "我的工作" / "My Work"). The route in `packages/app-config/src/routes/index.ts` now uses the sidebar key `tab.myWork` ("我的 Issue" / "My issues"), so the two cannot drift. Other locales still carry the unused `cmdk.myWork` until the daily i18n workflow prunes them.
+- The footer entry `cmdk.submitIssue` opens the product's GitHub issue chooser (`FEEDBACK` in `packages/const/src/url.ts`). It does not create an Issue entity in the app, and "提交问题" read as if it did, so it is now "反馈问题" (en-US "Report a problem").

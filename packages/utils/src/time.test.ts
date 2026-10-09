@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   daysAgo,
+  formatAbsoluteDate,
+  formatAbsoluteDateTime,
   formatActivityTime,
   getYYYYmmddHHMMss,
   hoursAgo,
@@ -302,21 +304,21 @@ describe('time utilities', () => {
       expect(result.text).toMatch(/hours? ago/);
       // title is rendered in local timezone — derive expected value the same
       // way so the assertion stays correct regardless of the runner's TZ.
-      expect(result.title).toBe(dayjs(input).format('YYYY-MM-DD HH:mm:ss'));
+      expect(result.title).toBe(dayjs(input).format('YYYY/MM/DD HH:mm:ss'));
     });
 
     it('switches to absolute date once the gap exceeds one day', () => {
       const result = formatActivityTime('2026-04-29T10:00:00Z', {
         now: '2026-05-01T10:00:00Z',
       });
-      expect(result.text).toBe('Apr 29');
+      expect(result.text).toBe('2026/04/29');
     });
 
     it('uses the cross-year format when the year differs', () => {
       const result = formatActivityTime('2025-12-30T10:00:00Z', {
         now: '2026-05-01T10:00:00Z',
       });
-      expect(result.text).toBe('Dec 30, 2025');
+      expect(result.text).toBe('2025/12/30');
     });
 
     it('honors custom locale format strings', () => {
@@ -328,9 +330,41 @@ describe('time utilities', () => {
       expect(result.text).toBe('4月29日');
     });
 
+    it('honors custom locale format strings when given', () => {
+      const result = formatActivityTime('2026-04-29T10:00:00Z', {
+        formatThisYear: 'M月D日',
+        now: '2026-05-01T10:00:00Z',
+      });
+      expect(result.text).toBe('4月29日');
+    });
+
     it('returns empty strings for missing or invalid input', () => {
       expect(formatActivityTime()).toEqual({ text: '', title: '' });
       expect(formatActivityTime('not a date')).toEqual({ text: '', title: '' });
+    });
+  });
+
+  describe('formatAbsoluteDate', () => {
+    it('formats the Unix epoch instead of treating numeric zero as missing', () => {
+      const epoch = dayjs(0);
+      expect(formatAbsoluteDate(0)).toBe(epoch.format('YYYY/MM/DD'));
+      expect(formatAbsoluteDateTime(0)).toBe(epoch.format('YYYY/MM/DD HH:mm'));
+    });
+
+    it('formats dates as YYYY/MM/DD without month names', () => {
+      expect(formatAbsoluteDate(new Date(2026, 8, 5))).toBe('2026/09/05');
+      expect(formatAbsoluteDate('2026-09-23T10:00:00')).toBe('2026/09/23');
+    });
+
+    it('adds the time of day for date-times', () => {
+      expect(formatAbsoluteDateTime(new Date(2026, 8, 5, 9, 7))).toBe('2026/09/05 09:07');
+    });
+
+    it('returns an empty string for missing or invalid input', () => {
+      expect(formatAbsoluteDate()).toBe('');
+      expect(formatAbsoluteDate(null)).toBe('');
+      expect(formatAbsoluteDate('nope')).toBe('');
+      expect(formatAbsoluteDateTime('nope')).toBe('');
     });
   });
 });

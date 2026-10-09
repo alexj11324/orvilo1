@@ -3,6 +3,8 @@
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useMemo } from 'react';
 
+import { teamGlyphFontSize, teamGlyphForeground } from './teamGlyph';
+
 /**
  * Linear-style team glyph: a rounded square in the team's accent color with the
  * key letter. When the team has no color a deterministic palette pick keeps the
@@ -40,7 +42,6 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: 4px;
 
     font-weight: 600;
-    color: #fff;
     text-transform: uppercase;
   `,
 }));
@@ -54,7 +55,9 @@ const TeamIdentity = memo<{ color?: string | null; id: string; letter?: string; 
         className={cx(styles.glyph)}
         style={{
           background,
-          fontSize: Math.round(size * 0.5625),
+          // Derived from the team color: white is unreadable on the light accents.
+          color: teamGlyphForeground(background),
+          fontSize: teamGlyphFontSize(size),
           height: size,
           width: size,
         }}

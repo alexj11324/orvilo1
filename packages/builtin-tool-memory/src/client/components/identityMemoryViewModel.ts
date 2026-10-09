@@ -38,7 +38,7 @@ const formatEpisodicDate = (value: unknown) => {
   const moment = dayjs(text);
   // Models emit free-form dates here often enough that an unparseable value has to
   // survive as-is rather than render "Invalid Date".
-  return moment.isValid() ? moment.format('YYYY-MM-DD') : text;
+  return moment.isValid() ? moment.format('YYYY/MM/DD') : text;
 };
 
 /**

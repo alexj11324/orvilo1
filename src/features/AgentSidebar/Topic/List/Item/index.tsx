@@ -6,8 +6,8 @@ import {
   getTopicMetadataWorkingDirectoryEffectivePath,
   getTopicMetadataWorkingDirectorySourcePath,
 } from '@orvilo/utils/client/topic';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, useTheme } from 'antd-style';
-import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
 import type { DragEvent, RefObject } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -415,7 +415,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
           <Tooltip>
             <TooltipTrigger render={<span>{icon}</span>} />
             <TooltipContent>
-              {t('scheduledStatusTip', { time: dayjs(runAt).format('MM-DD HH:mm') })}
+              {t('scheduledStatusTip', { time: formatAbsoluteDateTime(runAt) })}
             </TooltipContent>
           </Tooltip>
         ) : (

@@ -1,4 +1,5 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { MessageSquare } from 'lucide-react';
@@ -56,8 +57,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const formatRowTime = (updatedAt: Date | number) => {
   const time = dayjs(updatedAt);
   if (time.isSame(dayjs(), 'day')) return time.format('HH:mm');
-  if (time.isSame(dayjs(), 'year')) return time.format('MM-DD');
-  return time.format('YYYY-MM-DD');
+  return formatAbsoluteDate(time);
 };
 
 /** Status mark for the secondary line — never a model badge. */

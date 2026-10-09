@@ -40,6 +40,13 @@
 
 The retired workspace Storage URL remains a bookmark redirect to the workspace settings index. It is deliberately excluded from automatic workspace prefixing, so personal storage stays personal. The shared Web/Electron parity test now compares registered tabs against both live workspace tabs and declared legacy aliases; existing alias tests still assert their exact redirect destinations. The prior owning CI failed both parity cases for the additional `storage` redirect; the scoped shared-router and alias suites pass all 81 cases after this correction. Canonical Issue hotkey copy is preserved while dead delete actions are removed.
 
+## Round 3 follow-ups
+
+- **Hotkey conflicts across surfaces.** The Electron global shortcuts (Quick Composer, Quick Chat, Show App, App Settings) live in a separate store from the in-app shortcuts, and the Desktop rows passed no `hotkeyConflicts` at all, so recording ⌘K on the empty Quick Chat row was accepted while Command Palette uses ⌘K. `getHotkeyConflicts` takes an `external` list (matched by key combination only, because `showApp` exists on both sides) and `getDesktopHotkeyConflicts` feeds in-app bindings to the Desktop rows; Desktop also toasts the existing `hotkey.errors.CONFLICT` message before calling the main process. The in-app rows receive the desktop bindings when running in the desktop app. The retired-id rule is unchanged (stale ids never block).
+- **`navigateToChat` ("切换至默认会话") is kept**: `useNavigateToChatHotkey` registers a handler through `useRegisterGlobalHotkeys`.
+- zh-CN labels for Quick Chat / Quick Composer are translated.
+- Settings > About hides the "Get desktop app" section inside the desktop app.
+
 ## 2026/10/09 Service model: topic naming follows the agent
 
 - **Topic titles follow the conversation's agent.** `summaryTopicTitle` no longer reads `systemAgent.topic`. The model comes from the topic's agent (`topic.agentId`, else the active agent) via `resolveTopicTitleModel` (`src/store/chat/slices/topic/topicTitle.ts`). A built-in Orvilo agent with its own model/provider names the topic through the same `generateJSON` path as before; a heterogeneous (CLI/ACP) agent, a missing agent or a model-less agent never calls an Orvilo cloud model and gets `sliceTopicTitle` (first user message, plain text, 80 chars) instead. A failed generation falls back to the same slice. The dev-only fast path in `buildRunLifecycle.ts` reuses the helper. `summaryThreadTitle` uses `systemAgent.thread`, not `topic`, and is unchanged.

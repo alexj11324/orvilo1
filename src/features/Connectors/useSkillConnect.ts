@@ -37,6 +37,7 @@ export const useSkillConnect = ({ identifier, serverName, type }: UseSkillConnec
   // Composio hooks
   const userId = useUserStore(userProfileSelectors.userId);
   const createComposioConnection = useToolStore((s) => s.createComposioConnection);
+  const reauthorizeComposioConnection = useToolStore((s) => s.reauthorizeComposioConnection);
   const refreshComposioConnectionStatus = useToolStore((s) => s.refreshComposioConnectionStatus);
   const removeComposioConnection = useToolStore((s) => s.removeComposioConnection);
   const composioServer = useToolStore(composioStoreSelectors.getServerByIdentifier(identifier));
@@ -190,17 +191,19 @@ export const useSkillConnect = ({ identifier, serverName, type }: UseSkillConnec
   // Handle connect for Composio
   const handleComposioConnect = useCallback(async () => {
     if (!userId) return;
-    if (composioServer) return;
+    if (composioServer?.status === ComposioServerStatus.ACTIVE) return;
 
     const appType = COMPOSIO_APP_TYPES.find((t) => t.identifier === identifier);
 
     setIsConnecting(true);
     try {
-      const newServer = await createComposioConnection({
-        appSlug: appType?.appSlug ?? serverName ?? identifier,
-        identifier,
-        label: appType?.label ?? identifier,
-      });
+      const newServer = composioServer
+        ? await reauthorizeComposioConnection(composioServer.identifier)
+        : await createComposioConnection({
+            appSlug: appType?.appSlug ?? serverName ?? identifier,
+            identifier,
+            label: appType?.label ?? identifier,
+          });
 
       if (newServer) {
         if (newServer.status === ComposioServerStatus.ACTIVE) {
@@ -220,6 +223,7 @@ export const useSkillConnect = ({ identifier, serverName, type }: UseSkillConnec
     composioServer,
     identifier,
     createComposioConnection,
+    reauthorizeComposioConnection,
     refreshComposioConnectionStatus,
     openOAuthWindow,
   ]);

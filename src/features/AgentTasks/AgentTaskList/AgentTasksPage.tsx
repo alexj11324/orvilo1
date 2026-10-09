@@ -56,6 +56,7 @@ import {
   projectIssueWorkQuery,
 } from '@/features/Projects/Issues/projectIssueWorkQuery';
 import { useProjectIssuePages } from '@/features/Projects/Issues/useProjectIssuePages';
+import { useSuppressProjectPanel } from '@/features/Projects/Layout/ProjectPanelPeekContext';
 import { ProjectToolbarContext } from '@/features/Projects/Layout/ProjectToolbarContext';
 import {
   filterTasksByMilestone,
@@ -105,10 +106,18 @@ import TasksGroupConfig from './TasksGroupConfig';
 
 const styles = createStaticStyles(({ css }) => ({
   /**
-   * The project issues peek pane — same 400px / layout background contract
-   * the My issues detail pane holds.
+   * The project issues peek pane — same 400px column My issues and Team issues
+   * hold. While it is open the project layout hides its properties panel (see
+   * `useSuppressProjectPanel`), so the surface is wide enough for list + pane
+   * side by side. Only when the surface is still under 900px does it overlay
+   * the list instead of taking its width; the list then keeps the full width
+   * underneath. It sits above the list's stacking context (`isolate` on the
+   * list wrapper) so a focused row's ring can never paint over it.
    */
   detailPane: css`
+    position: relative;
+    z-index: 10;
+
     overflow-y: auto;
     flex: none;
 
@@ -117,6 +126,17 @@ const styles = createStaticStyles(({ css }) => ({
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
 
     background: ${cssVar.colorBgLayout};
+
+    @container work-surface (max-width: 900px) {
+      position: absolute;
+      z-index: 10;
+      inset-block: 0;
+      inset-inline-end: 0;
+
+      width: min(400px, calc(100% - 40px));
+
+      box-shadow: ${cssVar.boxShadowSecondary};
+    }
   `,
 }));
 
@@ -481,6 +501,21 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   // Peek only arms on the project issues list — board cards own their clicks.
   const peekEnabled = !!projectId && isOrdinaryCollection && ordinarySurface === 'list';
   const peekOnSelect = peekEnabled && detailsOpen;
+  // The peek takes the project's properties panel's place while it is open, so
+  // list + peek sit side by side instead of the peek covering the list.
+  useSuppressProjectPanel(peekOnSelect);
+  // Keyboard peek (Space / J / K / Esc): an Issue arms the pane and selects it;
+  // `null` closes the pane — the header close button's contract.
+  const peekTask = useMemo(
+    () =>
+      peekEnabled
+        ? (task: { identifier: string } | null) => {
+            if (task) setSelectedIdentifier(task.identifier);
+            setDetailsOpen(task !== null);
+          }
+        : undefined,
+    [peekEnabled],
+  );
   const openSelectedTaskPage = useCallback(() => {
     if (!selectedIdentifier) return;
     const task = storeTasks.find((item) => item.identifier === selectedIdentifier);
@@ -1027,116 +1062,120 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
             </div>
           ) : (
-            <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
-              <WorkSurfaceCollection className="flex flex-col gap-4">
-                {projectId && (
-                  <IssueFilterChips
-                    agentName={agentName}
-                    filters={issueFilters}
-                    labelName={labelName}
-                    memberName={memberName}
-                    onClearAll={() => updateIssueFilters([])}
-                    onRemove={(key) =>
-                      updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
-                    }
-                  />
-                )}
-                {!inlineCollapsed && (
-                  <CreateTaskInlineEntry
-                    agentId={agentId}
-                    lockAssignee={!!agentId}
-                    projectId={projectId}
-                  />
-                )}
-                {serverGroupedList ? (
-                  issueListPages.error && issueListGroups.length === 0 ? (
-                    <AsyncError
-                      error={issueListPages.error}
-                      variant={'block'}
-                      onRetry={() => issueListPages.refresh()}
+            <div className="relative flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+              <div className="isolate flex min-w-0 flex-1 flex-col" style={{ minHeight: 0 }}>
+                <WorkSurfaceCollection className="flex flex-col gap-4">
+                  {projectId && (
+                    <IssueFilterChips
+                      agentName={agentName}
+                      filters={issueFilters}
+                      labelName={labelName}
+                      memberName={memberName}
+                      onClearAll={() => updateIssueFilters([])}
+                      onRemove={(key) =>
+                        updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+                      }
                     />
+                  )}
+                  {!inlineCollapsed && (
+                    <CreateTaskInlineEntry
+                      agentId={agentId}
+                      lockAssignee={!!agentId}
+                      projectId={projectId}
+                    />
+                  )}
+                  {serverGroupedList ? (
+                    issueListPages.error && issueListGroups.length === 0 ? (
+                      <AsyncError
+                        error={issueListPages.error}
+                        variant={'block'}
+                        onRetry={() => issueListPages.refresh()}
+                      />
+                    ) : (
+                      <WorkQueryResults
+                        nestInGroups
+                        axisKeyRank={issueGroupRank}
+                        emptyLabel={t('taskList.empty')}
+                        flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
+                        groupBy={issueListQuery?.groupBy}
+                        groupIcon={issueGroupIcon}
+                        groupTitle={issueGroupTitle}
+                        groups={issueListGroups}
+                        layout={'list'}
+                        loadMoreGroupErrors={issueListGroupErrors}
+                        loadMoreLabel={t('topicComment.loadMore')}
+                        loadingLabel={t('taskList.filter.loading')}
+                        peekOnSelect={peekOnSelect}
+                        selectedTaskId={selectedIdentifier ?? undefined}
+                        subGroupBy={issueListQuery?.subGroupBy}
+                        tasks={issueListPages.tasks}
+                        total={issueListPages.total}
+                        loading={
+                          issueListPages.isLoading ||
+                          (!issueListPages.settled && !issueListPages.error)
+                        }
+                        milestoneFor={(task) =>
+                          viewOptions.showMilestone && task.projectMilestoneId
+                            ? projectMilestones?.find(
+                                (milestone) => milestone.id === task.projectMilestoneId,
+                              )
+                            : undefined
+                        }
+                        onPeekTask={peekTask}
+                        onRetryLoadMoreGroup={retryIssueListGroup}
+                        onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                        onLoadMoreGroup={(key) =>
+                          runIssueListGroup(key, () => issueListPages.loadMoreGroup(key))
+                        }
+                        onOpenTask={(task) =>
+                          navigate(taskDetailPath(task.identifier, undefined, task.name))
+                        }
+                      />
+                    )
                   ) : (
-                    <WorkQueryResults
-                      nestInGroups
-                      axisKeyRank={issueGroupRank}
-                      emptyLabel={t('taskList.empty')}
-                      flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
-                      groupBy={issueListQuery?.groupBy}
-                      groupIcon={issueGroupIcon}
-                      groupTitle={issueGroupTitle}
-                      groups={issueListGroups}
-                      layout={'list'}
-                      loadMoreGroupErrors={issueListGroupErrors}
-                      loadMoreLabel={t('topicComment.loadMore')}
-                      loadingLabel={t('taskList.filter.loading')}
+                    <TaskList
+                      error={issueListQuery ? issueListPages.error : error}
+                      items={filteredIssueTasks}
+                      milestones={projectId ? projectMilestones : undefined}
+                      options={viewOptions}
                       peekOnSelect={peekOnSelect}
-                      selectedTaskId={selectedIdentifier ?? undefined}
-                      subGroupBy={issueListQuery?.subGroupBy}
-                      tasks={issueListPages.tasks}
-                      total={issueListPages.total}
-                      loading={
-                        issueListPages.isLoading ||
-                        (!issueListPages.settled && !issueListPages.error)
+                      routeScope={routeScope}
+                      selectedIdentifier={selectedIdentifier ?? undefined}
+                      data={
+                        issueListQuery
+                          ? issueListPages.settled || undefined
+                          : isTaskListInit || undefined
                       }
-                      milestoneFor={(task) =>
-                        viewOptions.showMilestone && task.projectMilestoneId
-                          ? projectMilestones?.find(
-                              (milestone) => milestone.id === task.projectMilestoneId,
-                            )
-                          : undefined
+                      isLoading={
+                        issueListQuery
+                          ? issueListPages.isLoading ||
+                            (!issueListPages.settled && !issueListPages.error)
+                          : isLoading || (!isTaskListInit && !error)
                       }
-                      onRetryLoadMoreGroup={retryIssueListGroup}
+                      onPeekTask={peekTask}
+                      onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
                       onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                      onLoadMoreGroup={(key) =>
-                        runIssueListGroup(key, () => issueListPages.loadMoreGroup(key))
-                      }
+                      onShowHiddenCompleted={handleShowHiddenCompleted}
                       onOpenTask={(task) =>
                         navigate(taskDetailPath(task.identifier, undefined, task.name))
                       }
                     />
-                  )
-                ) : (
-                  <TaskList
-                    error={issueListQuery ? issueListPages.error : error}
-                    items={filteredIssueTasks}
-                    milestones={projectId ? projectMilestones : undefined}
-                    options={viewOptions}
-                    peekOnSelect={peekOnSelect}
-                    routeScope={routeScope}
-                    selectedIdentifier={selectedIdentifier ?? undefined}
-                    data={
-                      issueListQuery
-                        ? issueListPages.settled || undefined
-                        : isTaskListInit || undefined
-                    }
-                    isLoading={
-                      issueListQuery
-                        ? issueListPages.isLoading ||
-                          (!issueListPages.settled && !issueListPages.error)
-                        : isLoading || (!isTaskListInit && !error)
-                    }
-                    onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
-                    onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                    onShowHiddenCompleted={handleShowHiddenCompleted}
-                    onOpenTask={(task) =>
-                      navigate(taskDetailPath(task.identifier, undefined, task.name))
-                    }
-                  />
-                )}
-                {issueListQuery && !serverGroupedList && issueListPages.hasMore ? (
-                  <div className="flex justify-center py-2">
-                    <Button
-                      disabled={issueListPages.loadingMore}
-                      variant="outline"
-                      onClick={() => void issueListPages.loadMore()}
-                    >
-                      {t('topicComment.loadMore')}
-                    </Button>
-                  </div>
-                ) : null}
-              </WorkSurfaceCollection>
+                  )}
+                  {issueListQuery && !serverGroupedList && issueListPages.hasMore ? (
+                    <div className="flex justify-center py-2">
+                      <Button
+                        disabled={issueListPages.loadingMore}
+                        variant="outline"
+                        onClick={() => void issueListPages.loadMore()}
+                      >
+                        {t('topicComment.loadMore')}
+                      </Button>
+                    </div>
+                  ) : null}
+                </WorkSurfaceCollection>
+              </div>
               {peekOnSelect && (
-                <div className={styles.detailPane}>
+                <div className={styles.detailPane} data-issue-peek-pane="">
                   <IssueDetailPane
                     identifier={selectedIdentifier}
                     onClose={() => setDetailsOpen(false)}

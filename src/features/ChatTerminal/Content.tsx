@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CopyXIcon,
   PlusIcon,
@@ -28,57 +28,15 @@ import { useChatTerminalStore } from './store';
 
 const EMPTY_TABS: TerminalTab[] = [];
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-    height: 100%;
-    background: ${cssVar.colorBgContainer};
-  `,
-  indicator: css`
-    && {
-      border-radius: ${cssVar.borderRadius};
-      background: ${cssVar.colorFillSecondary};
-      box-shadow: none;
-    }
-  `,
-  tab: css`
-    && {
-      gap: 4px;
-      height: 24px;
-      padding-inline: 8px 4px;
-      font-weight: normal;
-    }
-
-    &&[data-active] {
-      color: ${cssVar.colorText};
-    }
-  `,
-  tabBar: css`
-    flex: none;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  tabList: css`
-    && {
-      gap: 4px;
-      padding: 0;
-      border-radius: 0;
-      background: none;
-    }
-  `,
-  tabs: css`
-    width: auto;
-  `,
-  view: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-height: 0;
-    padding-block: 4px 8px;
-    padding-inline: 12px;
-  `,
-}));
+const styles = {
+  container: 'overflow-hidden h-full bg-card bg-none',
+  indicator: 'rounded-(--radius-card) bg-selected bg-none shadow-none',
+  tab: 'gap-1 h-6 ps-2 pe-1 font-normal data-active:text-foreground',
+  tabBar: 'flex-none py-1 px-2 [border-block-end:1px_solid_var(--sidebar-border)]',
+  tabList: 'gap-1 p-0 rounded-none bg-transparent bg-none',
+  tabs: 'w-auto',
+  view: 'overflow-hidden flex-1 min-h-0 pbs-1 pbe-2 px-3',
+};
 
 const Content = memo(() => {
   const { t } = useTranslation('chat');
@@ -148,8 +106,8 @@ const Content = memo(() => {
   ];
 
   return (
-    <div className={cx(styles.container, 'flex flex-col')}>
-      <div className={cx(styles.tabBar, 'flex items-center gap-1')}>
+    <div className={cn(styles.container, 'flex flex-col')}>
+      <div className={cn(styles.tabBar, 'flex items-center gap-1')}>
         <Tabs
           className={styles.tabs}
           value={activeTab?.id ?? null}

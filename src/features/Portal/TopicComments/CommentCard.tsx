@@ -1,5 +1,6 @@
 import { Markdown } from '@lobehub/ui';
 import type { TopicCommentItem } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
@@ -206,7 +207,7 @@ const CommentCard = memo<CommentCardProps>(
               <div className="flex flex-row items-center gap-2 justify-between">
                 <div className="text-[12px] text-muted-foreground">
                   {t('topicComment.restoreDeadline', {
-                    date: new Date(comment.moderationExpiresAt).toLocaleString(),
+                    date: formatAbsoluteDateTime(comment.moderationExpiresAt),
                   })}
                 </div>
                 <Button loading={mutating} size="sm" variant="outline" onClick={handleRestore}>

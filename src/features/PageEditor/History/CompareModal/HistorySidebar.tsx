@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -241,7 +242,7 @@ const HistorySidebar = memo<HistorySidebarProps>(
         const d = dayjs(savedAt);
         if (d.isToday()) return t('pageEditor.history.dayLabel.today');
         if (d.isYesterday()) return t('pageEditor.history.dayLabel.yesterday');
-        return d.format('MM-DD');
+        return formatAbsoluteDate(d);
       },
       [t],
     );

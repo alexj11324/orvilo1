@@ -808,9 +808,13 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const actor = await resolveActivityActor(ctx, input.actorAgentId);
-        const deleted = await ctx.taskModel.deleteComment(input.commentId, {
-          source: actor.agentId ? 'agent' : 'user',
-        });
+        const deleted = await ctx.taskModel.deleteComment(
+          input.commentId,
+          {
+            source: actor.agentId ? 'agent' : 'user',
+          },
+          actor,
+        );
         if (!deleted) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
         }
@@ -846,6 +850,7 @@ export const taskRouter = router({
         if (!previous) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
         }
+        ctx.taskModel.assertCommentAuthor(previous, actor);
         // Only members @mentioned for the first time by this edit are pinged;
         // mentions kept from the previous revision were already notified.
         let addedMentionUserIds: string[] = [];
@@ -859,6 +864,7 @@ export const taskRouter = router({
           addedMentionUserIds = nextMentions.filter((id) => !previousMentions.has(id));
         }
         const comment = await ctx.taskModel.updateComment(input.commentId, input.content, {
+          actor,
           editorData: input.editorData === undefined ? null : input.editorData,
           mutation: { source: actor.agentId ? 'agent' : 'user' },
         });

@@ -173,7 +173,7 @@ const ModelList = memo<ModelListProps>(
           className={mobile ? 'flex flex-col gap-2 bg-card px-3 pb-4' : 'flex flex-col gap-2 pb-4'}
         >
           <ModelTitle provider={id} />
-          <Frame dense>
+          <Frame dense className="[--frame-radius:var(--radius-card)]">
             <FramePanel className="p-0">
               <ModelToolbar
                 provider={id}

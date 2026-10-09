@@ -32,6 +32,9 @@ const alias = {
   // apps/auth sits outside the root tsconfig's include, so its files get no path
   // mapping from tsconfigPaths — pin the one server util its worker shares.
   '@/server/utils/serializeForHtml': resolve(__dirname, './apps/server/src/utils/serializeForHtml'),
+  // Same gap for the shared entry chrome the accounts portal renders.
+  '@/components/ui': resolve(__dirname, './src/components/ui'),
+  '@/features/AuthShell': resolve(__dirname, './src/features/AuthShell'),
   '@/utils/identifier': resolve(__dirname, './src/utils/identifier'),
   '@/utils/electron': resolve(__dirname, './src/utils/electron'),
   '@/utils/markdownToTxt': resolve(__dirname, './src/utils/markdownToTxt'),

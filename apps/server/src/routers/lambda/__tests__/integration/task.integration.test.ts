@@ -1013,6 +1013,61 @@ describe('Task Router Integration', () => {
   });
 
   describe('comments', () => {
+    it('rejects a workspace owner editing or deleting another member comment', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const workspaceId = `comment-author-${userId}`;
+      const { workspaces, workspaceMembers } = await import('@/database/schemas');
+      await serverDB
+        .insert(workspaces)
+        .values({ id: workspaceId, name: workspaceId, slug: workspaceId, primaryOwnerId: userId });
+      await serverDB.insert(workspaceMembers).values([
+        { workspaceId, userId, role: 'owner' },
+        { workspaceId, userId: otherUserId, role: 'member' },
+      ]);
+      const owner = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      const author = taskRouter.createCaller({ ...createTestContext(otherUserId), workspaceId });
+      const task = await owner.create({ instruction: 'Shared comments' });
+      const comment = await author.addComment({ id: task.data.id, content: 'Member original' });
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const before = await model.findById(task.data.id);
+      await expect(
+        owner.updateComment({ commentId: comment.data.id, content: 'Owner edit' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(owner.deleteComment({ commentId: comment.data.id })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      expect((await model.findCommentById(comment.data.id))?.content).toBe('Member original');
+      expect((await model.findById(task.data.id))?.domainRevision).toBe(before?.domainRevision);
+      await author.updateComment({ commentId: comment.data.id, content: 'Member edit' });
+      await author.deleteComment({ commentId: comment.data.id });
+    });
+
+    it('does not let an Agent edit its user owner comment or another Agent comment', async () => {
+      const task = await caller.create({ instruction: 'Distinct actors' });
+      const human = await caller.addComment({ id: task.data.id, content: 'Human original' });
+      const secondAgentId = await createTestAgent(serverDB, userId, 'agt_second_author');
+      const otherAgent = await caller.addComment({
+        id: task.data.id,
+        authorAgentId: secondAgentId,
+        content: 'Other Agent original',
+      });
+      const agentCaller = taskRouter.createCaller({
+        ...createTestContext(userId),
+        actingAgentId: testAgentId,
+      });
+      for (const comment of [human.data, otherAgent.data]) {
+        await expect(
+          agentCaller.updateComment({ commentId: comment.id, content: 'Wrong actor' }),
+        ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        await expect(agentCaller.deleteComment({ commentId: comment.id })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        expect((await new TaskModel(serverDB, userId).findCommentById(comment.id))?.content).toBe(
+          comment.content,
+        );
+      }
+    });
+
     it('preserves the requirement fence for client-first agent comment edits and deletes', async () => {
       const task = await caller.create({ instruction: 'Test' });
       const model = new TaskModel(serverDB, userId);
@@ -1114,17 +1169,27 @@ describe('Task Router Integration', () => {
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
       ).toBe(before?.requirementRevision);
+      await expect(
+        caller.updateComment({
+          commentId: comment.data.id,
+          content: 'Human changes the requirement',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(caller.deleteComment({ commentId: comment.data.id })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      const human = await caller.addComment({ id: task.data.id, content: 'Human requirement' });
       await caller.updateComment({
-        commentId: comment.data.id,
-        content: 'Human changes the requirement',
+        commentId: human.data.id,
+        content: 'Human edits own requirement',
       });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
-      ).toBe((before?.requirementRevision ?? 0) + 1);
-      await caller.deleteComment({ commentId: comment.data.id });
+      ).toBe((before?.requirementRevision ?? 0) + 2);
+      await caller.deleteComment({ commentId: human.data.id });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
-      ).toBe((before?.requirementRevision ?? 0) + 2);
+      ).toBe((before?.requirementRevision ?? 0) + 3);
     });
 
     it('should add agent-authored comments and support update/delete', async () => {
@@ -1140,6 +1205,7 @@ describe('Task Router Integration', () => {
       expect(added.data.authorUserId).toBeNull();
 
       await caller.updateComment({
+        actorAgentId: testAgentId,
         commentId: added.data.id,
         content: 'Updated progress note',
       });
@@ -1149,7 +1215,7 @@ describe('Task Router Integration', () => {
       expect(updatedComment?.content).toBe('Updated progress note');
       expect(updatedComment?.agentId).toBe(testAgentId);
 
-      await caller.deleteComment({ commentId: added.data.id });
+      await caller.deleteComment({ actorAgentId: testAgentId, commentId: added.data.id });
 
       const deletedDetail = await caller.detail({ id: task.data.identifier });
       expect(deletedDetail.data.activities?.some((a) => a.id === added.data.id)).toBe(false);

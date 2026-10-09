@@ -6,6 +6,7 @@ import {
   type OAuthSessionResult,
   waitForOAuthSession,
 } from '@/features/Connectors/oauthSession';
+import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
 
 interface ConnectorOAuthActions {
   /** Server-side truth re-check used when the popup's result message is lost. */
@@ -21,16 +22,26 @@ interface ConnectorOAuthActions {
   fetchConnectors: () => Promise<void>;
   openExternalLink?: (url: string) => Promise<void>;
   startConnectorOAuth: (id: string, attempt?: string) => Promise<string>;
+  updateConnector: (id: string, patch: { isEnabled: boolean }) => Promise<void>;
 }
 
-/** Called directly from the click handler so the web popup opens before any await. */
+/** Called directly from the click handler so a needed OAuth popup opens before any await. */
 export const connectLinearMcpPreset = async (
   preset: McpPresetConnector,
-  existingConnectorId: string | undefined,
+  existingConnector: Pick<ConnectorWithTools, 'id' | 'isEnabled' | 'status'> | undefined,
   actions: ConnectorOAuthActions,
 ): Promise<
   (OAuthSessionResult & { refreshFailed?: boolean }) | { status: 'blocked' | 'external' }
 > => {
+  // Disconnect disables the record while keeping its authorization. Restore
+  // that record instead of asking the user to authorize the same grant again.
+  if (existingConnector?.status === 'connected') {
+    if (!existingConnector.isEnabled) {
+      await actions.updateConnector(existingConnector.id, { isEnabled: true });
+    }
+    return { status: 'success' };
+  }
+
   const popup = actions.openExternalLink
     ? null
     : window.open('about:blank', 'orvilo-connector-oauth', 'width=600,height=720');
@@ -38,7 +49,7 @@ export const connectLinearMcpPreset = async (
 
   try {
     const id =
-      existingConnectorId ??
+      existingConnector?.id ??
       (
         await actions.createConnector({
           identifier: getMcpPresetConnectorIdentifier(preset),

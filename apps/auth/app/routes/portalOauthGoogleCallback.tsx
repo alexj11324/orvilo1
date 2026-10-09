@@ -1,10 +1,8 @@
-import '../portal/styles.css';
-
 import { useClerk, useSignIn, useSignUp } from '@clerk/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { AuthShell } from '../portal/AuthShell';
+import { AuthNotice, AuthShell } from '../portal/AuthShell';
 import { consumeGoogleOAuthNonce, googleOAuthAttemptIsReady } from '../portal/googleOAuth';
 import { documentPortalMessages } from '../portal/messagesContext';
 import { resolveStandaloneReturnUrl } from '../portal/redirect';
@@ -78,9 +76,7 @@ export default function PortalOauthGoogleCallbackPage() {
 
   return (
     <AuthShell>
-      <p role={error ? 'alert' : 'status'}>
-        {error ? messages.completeFailed : messages.completing}
-      </p>
+      <AuthNotice error={error}>{error ? messages.completeFailed : messages.completing}</AuthNotice>
       <div id="clerk-captcha" />
     </AuthShell>
   );

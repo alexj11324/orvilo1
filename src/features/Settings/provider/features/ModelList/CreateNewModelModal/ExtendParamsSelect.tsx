@@ -661,7 +661,7 @@ const ExtendParamsSelect = memo<ExtendParamsSelectProps>(({ value, onChange }) =
         onChange={(val) => handleChange(val as ExtendParamsType[])}
       />
       {value && value.length > 0 && (
-        <Flexbox horizontal gap={8} wrap={'wrap'}>
+        <div className="flex flex-wrap gap-2">
           {value.map((key) => {
             const def = definitionMap.get(key);
             if (!def) return null;
@@ -685,7 +685,7 @@ const ExtendParamsSelect = memo<ExtendParamsSelectProps>(({ value, onChange }) =
               </Popover>
             );
           })}
-        </Flexbox>
+        </div>
       )}
     </Flexbox>
   );

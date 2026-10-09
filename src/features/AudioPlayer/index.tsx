@@ -100,7 +100,7 @@ const AudioPlayer = ({
         <Player
           aria-label={alt}
           className="min-w-0 flex-1"
-          mediaDuration={durationMs ? durationMs / 1000 : undefined}
+          defaultDuration={durationMs ? durationMs / 1000 : undefined}
         >
           <AudioPlayerElement
             preload="metadata"

@@ -37,6 +37,33 @@ describe('structured command output', () => {
     expect(parseTestReport(JSON.stringify({ ...report, numFailedTests: 0 }))).toBeUndefined();
     expect(parseTestReport(JSON.stringify({ ...report, testResults: [] }))).toBeUndefined();
   });
+  it('keeps collection and setup failures visible instead of presenting them as skipped', () => {
+    const collectionFailure = {
+      success: false,
+      numFailedTestSuites: 1,
+      numFailedTests: 0,
+      numPassedTests: 1,
+      numPendingTests: 0,
+      numTotalTests: 1,
+      testResults: [
+        {
+          name: 'passing.test.ts',
+          status: 'passed',
+          assertionResults: [{ fullName: 'works', status: 'passed' }],
+        },
+        {
+          name: 'broken.test.ts',
+          status: 'failed',
+          message: 'Cannot find module',
+          assertionResults: [],
+        },
+      ],
+    };
+    expect(parseTestReport(JSON.stringify(collectionFailure))).toBeUndefined();
+    expect(
+      parseTestReport(JSON.stringify({ ...report, numRuntimeErrorTestSuites: 1 })),
+    ).toBeUndefined();
+  });
   it('accepts empty reports and explicit todo counters without inventing tests', () => {
     expect(
       parseTestReport(

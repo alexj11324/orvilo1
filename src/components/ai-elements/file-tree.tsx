@@ -3,7 +3,7 @@
 import { cn } from 'cn';
 import { ChevronRightIcon, FileIcon, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import type { HTMLAttributes, ReactNode } from 'react';
-import { createContext, useCallback, useMemo, useState } from 'react';
+import { createContext, use, useCallback, useMemo, useState } from 'react';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 

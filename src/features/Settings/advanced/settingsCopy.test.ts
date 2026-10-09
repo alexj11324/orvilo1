@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 import setting from '@/locales/default/setting';
 
 describe('settings copy', () => {
-  it('describes Advanced tools without repeating Developer Mode wording', () => {
-    expect(setting['settingCommon.devMode.title']).toBe('Advanced tools');
-    expect(setting['settingCommon.devMode.desc']).toBe(
-      'Show technical details and manual controls for chats, models, and local tools. This does not change model responses.',
-    );
+  it('labels the dev-mode switch as Developer mode and names what it reveals', () => {
+    expect(setting['settingCommon.devMode.title']).toBe('Developer mode');
+    expect(setting['settingCommon.devMode.desc']).toContain('API Key page');
+  });
+
+  it('scopes Gateway mode to the built-in agent', () => {
+    expect(setting['tab.advanced.gatewayMode.desc']).toContain('built-in agent only');
   });
 
   it('uses non-repeating Advanced page group titles', () => {

@@ -80,10 +80,6 @@ vi.mock('@orvilo/const', () => ({
   isDesktop: false,
   TRACING_SCENARIOS: { InputCompletion: 'input_completion' },
 }));
-vi.mock('@orvilo/const/hotkeys', () => ({
-  HotkeyEnum: { AddUserMessage: 'add-user-message' },
-  KeyEnum: { Alt: 'alt', Enter: 'enter' },
-}));
 vi.mock('@orvilo/heterogeneous-agents', () => ({ HETEROGENEOUS_TYPE_LABELS: {} }));
 vi.mock('@orvilo/prompts', () => ({
   chainInputCompletion: mocks.chainInputCompletion,
@@ -117,7 +113,6 @@ vi.mock('@lobehub/editor/react', () => {
     useEditorState: vi.fn(() => ({ isEmpty: true })),
   };
 });
-vi.mock('@lobehub/ui', () => ({ combineKeys: vi.fn(() => 'alt+enter') }));
 vi.mock('fuse.js', () => ({
   default: class Fuse {
     search() {
@@ -126,12 +121,6 @@ vi.mock('fuse.js', () => ({
   },
 }));
 vi.mock('lexical', () => ({ KEY_ESCAPE_COMMAND: 'escape' }));
-vi.mock('react-hotkeys-hook', () => ({
-  useHotkeysContext: () => ({
-    disableScope: vi.fn(),
-    enableScope: vi.fn(),
-  }),
-}));
 
 vi.mock('@/components/DragUploadZone', () => ({
   usePasteFile: vi.fn(),
@@ -190,7 +179,6 @@ vi.mock('@/store/user', () => {
 });
 vi.mock('@/store/user/selectors', () => ({
   labPreferSelectors: { enableInputMarkdown: () => false },
-  settingsSelectors: { getHotkeyById: () => () => 'alt+enter' },
   systemAgentSelectors: {
     inputCompletion: () => mocks.inputCompletionConfig,
   },

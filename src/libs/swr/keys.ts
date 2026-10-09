@@ -843,19 +843,13 @@ export const statsKeys = {
       granularity,
     ],
   ),
-  agents: def('stats:agents', () => ['stats:agents']),
   countAgents: def('stats:countAgents', () => ['stats:countAgents']),
   countMessages: def('stats:countMessages', () => ['stats:countMessages']),
   countSessions: def('stats:countSessions', () => ['stats:countSessions']),
   countTopics: def('stats:countTopics', () => ['stats:countTopics']),
-  heatmaps: def('stats:heatmaps', (type: string) => ['stats:heatmaps', type]),
-  maxTaskDuration: def('stats:maxTaskDuration', () => ['stats:maxTaskDuration']),
-  messages: def('stats:messages', () => ['stats:messages']),
   sessions: def('stats:sessions', () => ['stats:sessions']),
-  topics: def('stats:topics', () => ['stats:topics']),
   usageLogs: def('stats:usageLogs', () => ['stats:usageLogs']),
   usageStat: def('stats:usageStat', () => ['stats:usageStat']),
-  welcome: def('stats:welcome', () => ['stats:welcome']),
 };
 
 // ---- verify (deliverable judging) ---------------------------------------

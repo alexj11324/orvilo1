@@ -452,12 +452,6 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     visible: (ctx) => ctx.enableBusinessFeatures,
   },
   {
-    anchor: 'storage-import',
-    keywords: ['import', 'restore'],
-    labelKey: 'storage.actions.import.title',
-    tab: SettingsTabs.Storage,
-  },
-  {
     anchor: 'storage-reset',
     keywords: ['reset', 'clear', 'delete', 'danger'],
     labelKey: 'danger.reset.title',

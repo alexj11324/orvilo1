@@ -1183,7 +1183,8 @@ export default {
   'settingAppearance.animationMode.elegant': 'Elegant',
   'settingAppearance.animationMode.title': 'Response Animation',
   'settingAppearance.contextMenuMode.default': 'Default',
-  'settingAppearance.contextMenuMode.desc': 'Enable the right-click menu for some list items.',
+  'settingAppearance.contextMenuMode.desc':
+    'Enable the right-click menu on messages in conversations.',
   'settingAppearance.contextMenuMode.disabled': 'Disabled',
   'settingAppearance.contextMenuMode.title': 'Right-Click Menu Mode',
   'settingAppearance.collaboration.showInCollaboration.desc':
@@ -1262,9 +1263,9 @@ export default {
   'settingChatAppearance.autoScrollOnStreaming.title': 'Auto-scroll During AI Response',
   'settingChatAppearance.chatBehavior.title': 'Chat Behavior',
   'settingChatAppearance.workflowStreamingExpand.title': 'Expand Tool Steps While Running',
-  'settingChatAppearance.fontSize.desc': 'Font size of messages',
+  'settingChatAppearance.fontSize.desc': 'Size of the message text in conversations',
   'settingChatAppearance.fontSize.marks.normal': 'Standard',
-  'settingChatAppearance.fontSize.title': 'Font Size',
+  'settingChatAppearance.fontSize.title': 'Message font size',
   'settingChatAppearance.highlighterTheme.title': 'Code Highlight Theme',
   'settingChatAppearance.linkIcon.desc': "Turn this off if you don't need it.",
   'settingChatAppearance.linkIcon.previewMessage':
@@ -1280,8 +1281,8 @@ export default {
   'settingChatAppearance.transitionMode.options.smooth': 'Smooth',
   'settingChatAppearance.transitionMode.title': 'Transition Animation',
   'settingCommon.devMode.desc':
-    'Show technical details and manual controls for chats, models, and local tools. This does not change model responses.',
-  'settingCommon.devMode.title': 'Advanced tools',
+    'Show technical details and manual controls: token usage in the message input, message IDs, branching and debug actions, model info tags, the CLI agent connection test in System tools, and the API Key page. This does not change model responses.',
+  'settingCommon.devMode.title': 'Developer mode',
   'settingCommon.lang.autoMode': 'Follow System',
   'settingCommon.lang.title': 'Language',
   'settingCommon.liteMode.desc': 'Simplify the interface and hide advanced features',
@@ -1537,6 +1538,7 @@ export default {
   'settingSystemTools.tools.grep.desc': 'GNU grep - standard text search tool',
   'settingSystemTools.tools.kimi.desc': 'Kimi Code - Moonshot AI agentic coding CLI',
   'settingSystemTools.tools.mdfind.desc': 'macOS Spotlight search (fast indexed search)',
+  'settingSystemTools.tools.opencode.desc': 'OpenCode - Open source agentic coding CLI',
   'settingSystemTools.tools.orvilo.desc': 'Orvilo CLI - manage and connect to Orvilo services',
   'settingSystemTools.tools.bun.desc': 'Bun - fast JavaScript runtime and package manager',
   'settingSystemTools.tools.bunx.desc': 'bunx - Bun package runner for executing npm packages',
@@ -1611,8 +1613,6 @@ export default {
   'storage.actions.export.exportType.allAgentWithMessage': 'Export All Agents and Messages',
   'storage.actions.export.exportType.globalSetting': 'Export Global Settings',
   'storage.actions.export.title': 'Export Data',
-  'storage.actions.import.button': 'Import',
-  'storage.actions.import.title': 'Import Data',
   'storage.actions.title': 'Advanced Operations',
   'storage.desc': 'Current storage usage in the browser',
   'storage.embeddings.used': 'Vector Storage',
@@ -1759,7 +1759,7 @@ export default {
   'tab.advanced': 'Advanced',
   'tab.advanced.appUpdates.title': 'App updates',
   'tab.advanced.gatewayMode.desc':
-    'Run supported agent tasks through the cloud Gateway by default. Individual agents can override this from the chat menu.',
+    'Run the built-in Orvilo agent through the cloud Gateway by default. This applies to the built-in agent only; CLI agents on a device are not affected. Individual agents can override this from the chat menu.',
   'tab.advanced.gatewayMode.title': 'Gateway Mode',
   'tab.advanced.toolsAndDiagnostics.title': 'Tools and diagnostics',
   'tab.addAgentSkill': 'Add Agent Skill',

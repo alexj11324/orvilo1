@@ -2,8 +2,7 @@
 import { ProviderIcon } from '@lobehub/ui/icons';
 import dayjs from 'dayjs';
 import { Brain, UserIcon } from 'lucide-react';
-import { createElement } from 'react';
-import { memo, type ReactNode, useEffect, useState } from 'react';
+import { createElement, memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
@@ -16,15 +15,7 @@ import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
 import { usageService } from '@/services/usage';
 
-import {
-  TotalAssistants,
-  TotalMessages,
-  TotalTokens,
-  TotalTopics,
-  Welcome,
-} from './features/overview';
 import { UsageCards, UsageTable, UsageTrends } from './features/usage';
-import { AiHeatmaps } from './features/visualization';
 import { GroupBy, type UserDisplayResolver } from './types';
 
 interface StatsSettingProps {
@@ -34,12 +25,6 @@ interface StatsSettingProps {
    * mode). Combine with `resolveUser` to render names instead of opaque IDs.
    */
   enableUserDimension?: boolean;
-  /**
-   * Replace the personal Welcome banner (uses user nickname / registration
-   * date) with a custom node. Pass `false` to drop the banner entirely.
-   */
-  headerNode?: ReactNode | false;
-  mobile?: boolean;
   /** Resolve userId → display info. Required when `enableUserDimension` is true. */
   resolveUser?: UserDisplayResolver;
   /** Render the standard personal-settings title and divider. */
@@ -47,7 +32,7 @@ interface StatsSettingProps {
 }
 
 const StatsSetting = memo<StatsSettingProps>(
-  ({ mobile, headerNode, enableUserDimension, resolveUser, showSettingHeader = true }) => {
+  ({ enableUserDimension, resolveUser, showSettingHeader = true }) => {
     const { t, i18n } = useTranslation('auth');
     dayjs.locale(i18n.language);
 
@@ -77,31 +62,6 @@ const StatsSetting = memo<StatsSettingProps>(
     return (
       <>
         {showSettingHeader && <SettingHeader title={t('tab.stats')} />}
-        {/* ========== Header Section ========== */}
-        <FormGroup
-          collapsible={false}
-          gap={16}
-          variant={'filled'}
-          title={
-            headerNode === undefined ? (
-              <Welcome mobile={mobile} />
-            ) : headerNode === false ? undefined : (
-              headerNode
-            )
-          }
-        >
-          <div
-            className="grid"
-            style={{ gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}
-          >
-            <TotalAssistants mobile={mobile} />
-            <TotalTopics mobile={mobile} />
-            <TotalMessages mobile={mobile} />
-            <TotalTokens />
-          </div>
-          <Separator />
-          <AiHeatmaps mobile={mobile} />
-        </FormGroup>
         <FormGroup
           collapsible={false}
           gap={16}

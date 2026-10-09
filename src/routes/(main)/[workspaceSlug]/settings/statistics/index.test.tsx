@@ -13,10 +13,6 @@ vi.mock('@/business/client/hooks/useFetchWorkspaceMembers', () => ({
   useFetchWorkspaceMembers: useFetchWorkspaceMembersMock,
 }));
 
-vi.mock('@/features/Settings/stats/features/overview/WorkspaceWelcome', () => ({
-  default: () => <div>Workspace Welcome</div>,
-}));
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string }) =>

@@ -27,12 +27,25 @@ comment (model picker). Consumers of the config inside the Issue detail:
 
 - `shared/useAgentDisplayMeta.ts` (assignee row, avatar, name): falls back to
   the sidebar agent list, so it renders without the config.
-- `TaskVerifyConfig.tsx` model/provider: only used by criteria generation,
-  which already returns early when `!model || !provider`, so a missing config
-  can never send a wrong model.
+- `TaskVerifyConfig.tsx` model/provider: only used by criteria generation. The
+  agent selectors supply global defaults while a config is absent, so checking
+  `!model || !provider` alone is insufficient. `useTaskVerifyModel` waits for
+  the actual assignee config (or the active agent for an unassigned Issue)
+  before using its defaults. A complete explicit Issue model/provider override
+  can generate without waiting; a partial override still needs the missing
+  field from the resolved target agent.
 - `TaskDetailRunPauseAction.tsx` reads only the inbox agent id, not the config.
 
-The gate is therefore dropped; hydration still runs in the background. The page
-decision is the pure `isTaskDetailResolving` in `taskDetailReadiness.ts`. One
-visible edge: for the short window before the config lands, "Generate" in the
-acceptance section does nothing (no model resolved yet).
+The page gate is therefore dropped; hydration still runs in the background. The
+page decision is the pure `isTaskDetailResolving` in `taskDetailReadiness.ts`.
+Only Generate/regenerate wait for model configuration, with loading feedback
+while the fetch runs and an unavailable message after a missing/error result.
+Opening the collapsed acceptance section during that wait still exposes manual
+and template editing. The generation handler also keeps its model/provider
+guard, so the collapsed generation entry cannot dispatch a global fallback.
+
+The existing `useActiveTaskDetail.test.ts` covers fast first paint alongside
+generation readiness, hydration of the correct assignee, switching to another
+Issue, unassigned/active-agent fallback, complete versus partial Issue overrides,
+and a settled missing config. The new cases fail with the old selector-default
+behavior and pass when generation waits for the resolved target.

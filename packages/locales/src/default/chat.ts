@@ -3408,6 +3408,9 @@ export default {
   'verifyConfig.generateInvalidProviderAPIKey':
     'The API key for {{provider}} is invalid or missing. Check the provider settings for {{model}} and try again.',
   'verifyConfig.generating': 'Breaking down acceptance criteria…',
+  'verifyConfig.modelLoading': 'Loading agent model configuration…',
+  'verifyConfig.modelUnavailable':
+    'Agent model configuration is unavailable. Check the agent before generating criteria.',
   'verifyConfig.manualAdd': 'Add manually',
   'verifyConfig.moreActions': 'More actions',
   'verifyConfig.regenerate': 'Regenerate',

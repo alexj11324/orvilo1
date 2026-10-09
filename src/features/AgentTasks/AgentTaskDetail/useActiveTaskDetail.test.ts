@@ -5,6 +5,7 @@ import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useActiveTaskDetail } from './useActiveTaskDetail';
+import { useTaskVerifyModel } from './useTaskVerifyModel';
 
 const mocks = vi.hoisted(() => ({
   agentState: {} as any,
@@ -24,6 +25,109 @@ vi.mock('@/store/task', () => {
   const useTaskStore = (selector: any) => selector(mocks.taskState);
   useTaskStore.getState = () => mocks.taskState;
   return { useTaskStore };
+});
+
+describe('acceptance generation configuration', () => {
+  beforeEach(() => {
+    mocks.isLogin = true;
+    mocks.taskState = buildTaskState();
+    mocks.agentState = {
+      ...buildAgentState({ isLoading: true }),
+      activeAgentId: 'agt_active',
+      agentMap: { agt_active: { model: 'active-model', provider: 'active-provider' } },
+    };
+  });
+
+  it('renders the Issue immediately but blocks generation while its assignee is hydrating', () => {
+    const { result } = renderHook(() => ({
+      detail: useActiveTaskDetail('T-194'),
+      generation: useTaskVerifyModel({ assigneeAgentId: 'agt_assignee' }),
+    }));
+
+    expect(result.current.detail.isInitialLoading).toBe(false);
+    expect(result.current.generation).toEqual({
+      isLoading: true,
+      isReady: false,
+      model: '',
+      provider: '',
+    });
+  });
+
+  it('uses the resolved assignee instead of the active agent or global defaults', () => {
+    const { result, rerender } = renderHook(() =>
+      useTaskVerifyModel({ assigneeAgentId: 'agt_assignee' }),
+    );
+    mocks.agentState.agentMap.agt_assignee = {
+      model: 'assigned-model',
+      provider: 'assigned-provider',
+    };
+    rerender();
+
+    expect(result.current).toEqual({
+      isLoading: false,
+      isReady: true,
+      model: 'assigned-model',
+      provider: 'assigned-provider',
+    });
+  });
+
+  it('does not reuse the previous Issue assignee configuration after switching', () => {
+    mocks.agentState.agentMap.agt_assignee = {
+      model: 'assigned-model',
+      provider: 'assigned-provider',
+    };
+    const { result, rerender } = renderHook(
+      ({ assigneeAgentId }) => useTaskVerifyModel({ assigneeAgentId }),
+      { initialProps: { assigneeAgentId: 'agt_assignee' } },
+    );
+    expect(result.current.isReady).toBe(true);
+    rerender({ assigneeAgentId: 'agt_other' });
+
+    expect(result.current.isReady).toBe(false);
+    expect(result.current.model).toBe('');
+  });
+
+  it('uses a hydrated active agent for an unassigned Issue', () => {
+    const { result } = renderHook(() => useTaskVerifyModel({}));
+
+    expect(result.current).toMatchObject({
+      isReady: true,
+      model: 'active-model',
+      provider: 'active-provider',
+    });
+  });
+
+  it('requires the assignee config when only the task model is overridden', () => {
+    const { result } = renderHook(() =>
+      useTaskVerifyModel({ assigneeAgentId: 'agt_assignee', taskModel: 'override-model' }),
+    );
+
+    expect(result.current).toMatchObject({ isReady: false, model: 'override-model', provider: '' });
+  });
+
+  it('allows a complete explicit task override while the assignee is still hydrating', () => {
+    const { result } = renderHook(() =>
+      useTaskVerifyModel({
+        assigneeAgentId: 'agt_assignee',
+        taskModel: 'override-model',
+        taskProvider: 'override-provider',
+      }),
+    );
+
+    expect(result.current).toEqual({
+      isLoading: false,
+      isReady: true,
+      model: 'override-model',
+      provider: 'override-provider',
+    });
+  });
+
+  it('keeps generation unavailable after a settled missing config without an endless spinner', () => {
+    mocks.agentState.useHydrateAgentConfig = () => ({ isLoading: false });
+    const { result } = renderHook(() => useTaskVerifyModel({ assigneeAgentId: 'agt_deleted' }));
+
+    expect(result.current).toEqual({ isLoading: false, isReady: false, model: '', provider: '' });
+  });
 });
 
 vi.mock('@/store/agent', () => ({

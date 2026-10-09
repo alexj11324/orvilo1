@@ -105,8 +105,11 @@ import TasksGroupConfig from './TasksGroupConfig';
 
 const styles = createStaticStyles(({ css }) => ({
   /**
-   * The project issues peek pane — same 400px / layout background contract
-   * the My issues detail pane holds.
+   * The project issues peek pane — same 400px column My issues and Team issues
+   * hold. Under 900px of surface width it overlays the list instead of taking
+   * its width (the project page's own right rail already narrows the surface,
+   * so a side-by-side 400px column crushed the list to ~95px). The list then
+   * keeps the full width underneath.
    */
   detailPane: css`
     overflow-y: auto;
@@ -117,6 +120,17 @@ const styles = createStaticStyles(({ css }) => ({
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
 
     background: ${cssVar.colorBgLayout};
+
+    @container work-surface (max-width: 900px) {
+      position: absolute;
+      z-index: 10;
+      inset-block: 0;
+      inset-inline-end: 0;
+
+      width: min(400px, calc(100% - 40px));
+
+      box-shadow: ${cssVar.boxShadowSecondary};
+    }
   `,
 }));
 
@@ -481,6 +495,18 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   // Peek only arms on the project issues list — board cards own their clicks.
   const peekEnabled = !!projectId && isOrdinaryCollection && ordinarySurface === 'list';
   const peekOnSelect = peekEnabled && detailsOpen;
+  // Keyboard peek (Space / J / K / Esc): an Issue arms the pane and selects it;
+  // `null` closes the pane — the header close button's contract.
+  const peekTask = useMemo(
+    () =>
+      peekEnabled
+        ? (task: { identifier: string } | null) => {
+            if (task) setSelectedIdentifier(task.identifier);
+            setDetailsOpen(task !== null);
+          }
+        : undefined,
+    [peekEnabled],
+  );
   const openSelectedTaskPage = useCallback(() => {
     if (!selectedIdentifier) return;
     const task = storeTasks.find((item) => item.identifier === selectedIdentifier);
@@ -1027,7 +1053,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
             </div>
           ) : (
-            <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+            <div className="relative flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
               <WorkSurfaceCollection className="flex flex-col gap-4">
                 {projectId && (
                   <IssueFilterChips
@@ -1085,6 +1111,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                             )
                           : undefined
                       }
+                      onPeekTask={peekTask}
                       onRetryLoadMoreGroup={retryIssueListGroup}
                       onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
                       onLoadMoreGroup={(key) =>
@@ -1115,6 +1142,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                           (!issueListPages.settled && !issueListPages.error)
                         : isLoading || (!isTaskListInit && !error)
                     }
+                    onPeekTask={peekTask}
                     onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
                     onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
                     onShowHiddenCompleted={handleShowHiddenCompleted}
@@ -1136,7 +1164,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 ) : null}
               </WorkSurfaceCollection>
               {peekOnSelect && (
-                <div className={styles.detailPane}>
+                <div className={styles.detailPane} data-issue-peek-pane="">
                   <IssueDetailPane
                     identifier={selectedIdentifier}
                     onClose={() => setDetailsOpen(false)}

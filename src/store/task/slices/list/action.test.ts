@@ -103,6 +103,21 @@ describe('TaskListSliceAction', () => {
       // …while other task caches are refreshed through their own keys.
       expect(matcher!(['task:groupList', 'agt_1', 'private'])).toBe(false);
     });
+
+    it('also revalidates the work-query lists (My issues, saved views, team issues)', async () => {
+      const { mutate } = await import('@/libs/swr');
+      vi.mocked(mutate).mockClear();
+
+      await useTaskStore.getState().refreshTaskList();
+
+      const matchers = vi
+        .mocked(mutate)
+        .mock.calls.map(([arg]) => arg)
+        .filter((arg): arg is (key: unknown) => boolean => typeof arg === 'function');
+      for (const root of ['workAttention:myWork', 'workAttention:savedView', 'team-tasks']) {
+        expect(matchers.some((matcher) => matcher([root, 'ws']))).toBe(true);
+      }
+    });
   });
 
   describe('useFetchTaskGroupList', () => {

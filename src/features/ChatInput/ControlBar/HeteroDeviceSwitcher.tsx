@@ -2,7 +2,7 @@
 
 import { DOWNLOAD_URL, isDesktop } from '@orvilo/const';
 import type { DeviceExecutionTarget } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -58,252 +58,40 @@ import { SimpleTooltip } from '../SimpleTooltip';
 import { formatLockedControlTooltip } from '../utils/lockedControlTooltip';
 import { useCommitWorkingDirectory } from './useCommitWorkingDirectory';
 
-const styles = createStaticStyles(({ css }) => ({
-  button: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  buttonLabel: css`
-    overflow: hidden;
-    max-width: 120px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  buttonOpen: css`
-    &&,
-    &&:hover {
-      color: var(--foreground);
-      background: var(--muted);
-    }
-  `,
-  buttonWarning: css`
-    color: ${cssVar.colorWarningText};
-
-    &:hover {
-      color: ${cssVar.colorWarningText};
-      background: ${cssVar.colorWarningBg};
-    }
-  `,
-  buttonReadonly: css`
-    cursor: default;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: transparent;
-    }
-  `,
-  check: css`
-    flex: none;
-    margin-inline-start: auto;
-    color: ${cssVar.colorPrimary};
-  `,
-  desc: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  extra: css`
-    display: flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    margin-inline-start: auto;
-
-    /* A disabled row dims itself, but its trailing action is the way OUT of
-       that state — dimming the setup button would read as "also unavailable". */
-    opacity: 1;
-  `,
-  extraInfo: css`
-    cursor: help;
-
-    display: flex;
-    align-items: center;
-
-    color: ${cssVar.colorTextQuaternary};
-
-    transition: color 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  deviceList: css`
-    overflow-y: auto;
-    max-height: 240px;
-
-    /* Room for the scrollbar so rows don't sit flush against it. */
-    margin-inline-end: -4px;
-    padding-inline-end: 4px;
-  `,
-  empty: css`
-    padding-block: 8px;
-    padding-inline: 8px;
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  option: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-radius: calc(var(--radius) - 2px);
-
-    transition: background-color 0.2s;
-
-    &[aria-current='true'],
-    &[aria-current='true']:hover {
-      background: var(--muted);
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  optionDisabled: css`
-    cursor: not-allowed;
-
-    &:hover {
-      background: transparent;
-    }
-  `,
-  optionIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  optionMeta: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 1px;
-
-    min-width: 0;
-  `,
-  reconnectButton: css`
-    min-height: 18px;
-    padding-block: 0;
-    padding-inline: 2px;
-    font-size: 11px;
-  `,
-  optionTitle: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  tag: css`
-    flex: none;
-
-    padding-block: 0;
-    padding-inline: 5px;
-    border-radius: 4px;
-
-    font-size: 10px;
-    line-height: 16px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  header: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-  `,
-  headerInfo: css`
-    cursor: help;
-    color: ${cssVar.colorTextQuaternary};
-    transition: color 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  headerTitle: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  manageButton: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 3px;
-    align-items: center;
-
-    padding: 0;
-    border: none;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-
-    background: none;
-
-    transition: color 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  groupLabel: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextQuaternary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
-}));
+const styles = {
+  button:
+    'cursor-pointer flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-muted-foreground whitespace-nowrap [transition:all_0.2s] hover:text-foreground hover:bg-accent hover:bg-none',
+  buttonLabel: 'overflow-hidden max-w-30 text-ellipsis whitespace-nowrap',
+  buttonOpen: 'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
+  buttonWarning:
+    'text-[var(--ant-color-warning-text)] hover:text-[var(--ant-color-warning-text)] hover:bg-[var(--ant-color-warning-bg)] hover:bg-none',
+  buttonReadonly: 'cursor-default hover:text-muted-foreground hover:bg-transparent hover:bg-none',
+  check: 'flex-none ms-auto text-primary',
+  desc: 'flex gap-1.5 items-center text-[11px] text-[var(--ant-color-text-description)]',
+  extra: 'flex flex-none gap-1 items-center ms-auto opacity-100',
+  extraInfo:
+    'cursor-help flex items-center text-[var(--ant-color-text-quaternary)] [transition:color_0.2s] hover:text-muted-foreground',
+  deviceList: 'overflow-y-auto max-h-60 -me-1 pe-1',
+  empty: 'py-2 px-2 text-[12px] text-[var(--ant-color-text-quaternary)]',
+  option:
+    "cursor-pointer flex gap-2.5 items-center py-2 px-2 rounded-[calc(var(--radius)_-_2px)] [transition:background-color_0.2s] [&[aria-current='true']]:bg-muted [&[aria-current='true']]:bg-none [&[aria-current='true']:hover]:bg-muted [&[aria-current='true']:hover]:bg-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:-outline-offset-2 hover:bg-accent hover:bg-none",
+  optionDisabled: 'cursor-not-allowed hover:bg-transparent hover:bg-none',
+  optionIcon:
+    'flex flex-none items-center justify-center w-7 h-7 border border-solid border-sidebar-border rounded-(--radius-card) text-foreground bg-popover bg-none',
+  optionMeta: 'flex flex-1 flex-col gap-[1px] min-w-0',
+  reconnectButton: 'min-h-4.5 py-0 px-0.5 text-[11px] leading-(--text-xs--line-height)',
+  optionTitle:
+    'overflow-hidden text-[13px] font-medium text-foreground text-ellipsis whitespace-nowrap',
+  tag: 'flex-none py-0 px-[5px] rounded-(--radius-chip) text-[10px] leading-[16px] text-muted-foreground bg-selected bg-none',
+  header: 'flex gap-1.5 items-center justify-between py-1 px-2',
+  headerInfo:
+    'cursor-help text-[var(--ant-color-text-quaternary)] [transition:color_0.2s] hover:text-muted-foreground',
+  headerTitle: 'text-[12px] font-medium text-[var(--ant-color-text-tertiary)]',
+  manageButton:
+    'cursor-pointer flex gap-[3px] items-center p-0 border-0 text-[11px] text-[var(--ant-color-text-quaternary)] bg-transparent bg-none [transition:color_0.2s] hover:text-primary',
+  groupLabel:
+    'py-1 px-2 text-[11px] font-medium text-[var(--ant-color-text-quaternary)] uppercase [letter-spacing:0.04em]',
+};
 
 interface OptionRowProps {
   active: boolean;
@@ -326,7 +114,7 @@ const OptionRow = memo<OptionRowProps>(
     return (
       <div
         aria-current={active ? 'true' : undefined}
-        className={cx(styles.option, disabled && styles.optionDisabled)}
+        className={cn(styles.option, disabled && styles.optionDisabled)}
         role={disabled ? 'group' : 'button'}
         tabIndex={disabled ? -1 : 0}
         onClick={() => {
@@ -360,7 +148,7 @@ const OptionRow = memo<OptionRowProps>(
           </div>
         ) : null}
         {active ? (
-          <span aria-hidden="true" className={cx('anticon', styles.check)}>
+          <span aria-hidden="true" className={cn('anticon', styles.check)}>
             <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
           </span>
         ) : null}
@@ -987,11 +775,11 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
 
   const chip = (
     <div
-      className={cx(
+      className={cn(
         styles.button,
-        open && styles.buttonOpen,
         !canShowExecutionTargetSelector && styles.buttonReadonly,
         bindingInvalid && styles.buttonWarning,
+        open && styles.buttonOpen,
       )}
     >
       {chipIcon}

@@ -44,7 +44,30 @@ import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 // Issue-row type ramp: mono 12px identifier (400) and 14px title (500) on a
 // 44px row. The identifier column's width comes from the list
 // (`issueIdColumnStyle`), so every status mark lines up.
+// The row is its own size container, so the right-hand chips give way by the
+// width the list actually has (a peek pane narrows it) — lowest priority
+// first: labels, then milestone, then project — instead of overlapping the
+// identifier and title. The assignee and date always stay.
 const styles = createStaticStyles(({ css, cssVar }) => ({
+  chipLabels: css`
+    @container issue-row (max-width: 760px) {
+      display: none;
+    }
+  `,
+  chipMilestone: css`
+    display: flex;
+
+    @container issue-row (max-width: 640px) {
+      display: none;
+    }
+  `,
+  chipProject: css`
+    display: flex;
+
+    @container issue-row (max-width: 540px) {
+      display: none;
+    }
+  `,
   identifier: css`
     flex: none;
 
@@ -67,6 +90,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   row: css`
     cursor: pointer;
+    container: issue-row / inline-size;
     min-height: 44px;
     border-radius: ${cssVar.borderRadius};
 
@@ -381,6 +405,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
+        data-issue-row={task.identifier}
         role="button"
         tabIndex={0}
         className={cn(
@@ -406,12 +431,16 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
                 hook (`rowHideLabels`). */}
             <div className="flex flex-none items-center gap-1">
               {task.labels?.length ? (
-                <div data-task-labels style={{ flex: 'none', minWidth: 0 }}>
+                <div
+                  data-task-labels
+                  className={styles.chipLabels}
+                  style={{ flex: 'none', minWidth: 0 }}
+                >
                   <LabelChips labels={task.labels} max={2} />
                 </div>
               ) : null}
-              {milestoneBadge}
-              {trailingChips}
+              {milestoneBadge ? <div className={styles.chipMilestone}>{milestoneBadge}</div> : null}
+              {trailingChips ? <div className={styles.chipProject}>{trailingChips}</div> : null}
             </div>
             {openRunNode}
             {scheduleNode}

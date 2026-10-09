@@ -288,3 +288,11 @@ together. The initial isolated BarButton candidate was reverted. ConnectorItem
 was the replacement hover sample at the original source revision, but that unused
 component is now removed by #563. Choose and accept an active hover surface in a
 separate scoped migration; do not restore dead code to meet a sample count.
+
+## Active rollout candidate
+
+The owner has now authorized continuing #577 and retaining original CSS variable
+references in Tailwind where semantic mappings are pending. The first candidate
+is tracked in [ChatInput rollout batch 1](antd-style-rollout-batch-1.md), including
+its exact base counts, temporary theme references and merge blockers. The phase-0
+acceptance above remains historical; it is not global rollout acceptance.

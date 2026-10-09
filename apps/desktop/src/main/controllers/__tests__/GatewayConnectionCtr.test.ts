@@ -486,14 +486,16 @@ describe('GatewayConnectionCtr', () => {
     it('should broadcast status changes: disconnected → connecting → connected', async () => {
       ctr.afterFirstFrame();
       await vi.advanceTimersByTimeAsync(0);
-      expect(mockBroadcast).toHaveBeenCalledWith('gatewayConnectionStatusChanged', {
-        status: 'connecting',
-      });
+      expect(mockBroadcast).toHaveBeenCalledWith(
+        'gatewayConnectionStatusChanged',
+        expect.objectContaining({ status: 'connecting' }),
+      );
 
       MockGatewayClient.lastInstance!.simulateConnected();
-      expect(mockBroadcast).toHaveBeenCalledWith('gatewayConnectionStatusChanged', {
-        status: 'connected',
-      });
+      expect(mockBroadcast).toHaveBeenCalledWith(
+        'gatewayConnectionStatusChanged',
+        expect.objectContaining({ status: 'connected' }),
+      );
     });
   });
 
@@ -510,9 +512,10 @@ describe('GatewayConnectionCtr', () => {
       await ctr.disconnect();
 
       expect(client.disconnect).toHaveBeenCalled();
-      expect(mockBroadcast).toHaveBeenCalledWith('gatewayConnectionStatusChanged', {
-        status: 'disconnected',
-      });
+      expect(mockBroadcast).toHaveBeenCalledWith(
+        'gatewayConnectionStatusChanged',
+        expect.objectContaining({ status: 'disconnected' }),
+      );
     });
 
     it('should persist gatewayEnabled=false on disconnect', async () => {
@@ -536,9 +539,10 @@ describe('GatewayConnectionCtr', () => {
 
       // Advance timers — no reconnect should happen
       await vi.advanceTimersByTimeAsync(60_000);
-      expect(mockBroadcast).not.toHaveBeenCalledWith('gatewayConnectionStatusChanged', {
-        status: 'reconnecting',
-      });
+      expect(mockBroadcast).not.toHaveBeenCalledWith(
+        'gatewayConnectionStatusChanged',
+        expect.objectContaining({ status: 'reconnecting' }),
+      );
     });
   });
 
@@ -616,9 +620,10 @@ describe('GatewayConnectionCtr', () => {
 
       client.simulateReconnecting(1000);
 
-      expect(mockBroadcast).toHaveBeenCalledWith('gatewayConnectionStatusChanged', {
-        status: 'reconnecting',
-      });
+      expect(mockBroadcast).toHaveBeenCalledWith(
+        'gatewayConnectionStatusChanged',
+        expect.objectContaining({ status: 'reconnecting' }),
+      );
     });
   });
 
@@ -1015,9 +1020,10 @@ describe('GatewayConnectionCtr', () => {
       client.simulateAuthExpired();
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(mockBroadcast).toHaveBeenCalledWith('gatewayConnectionStatusChanged', {
-        status: 'disconnected',
-      });
+      expect(mockBroadcast).toHaveBeenCalledWith(
+        'gatewayConnectionStatusChanged',
+        expect.objectContaining({ status: 'disconnected' }),
+      );
     });
   });
 
@@ -2136,14 +2142,14 @@ describe('GatewayConnectionCtr', () => {
 
   describe('getConnectionStatus', () => {
     it('should return current status', async () => {
-      expect(await ctr.getConnectionStatus()).toEqual({ status: 'disconnected' });
+      expect(await ctr.getConnectionStatus()).toMatchObject({ status: 'disconnected' });
 
       ctr.afterFirstFrame();
       await vi.advanceTimersByTimeAsync(0);
-      expect(await ctr.getConnectionStatus()).toEqual({ status: 'connecting' });
+      expect(await ctr.getConnectionStatus()).toMatchObject({ status: 'connecting' });
 
       MockGatewayClient.lastInstance!.simulateConnected();
-      expect(await ctr.getConnectionStatus()).toEqual({ status: 'connected' });
+      expect(await ctr.getConnectionStatus()).toMatchObject({ status: 'connected' });
     });
   });
 

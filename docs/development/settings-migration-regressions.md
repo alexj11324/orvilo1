@@ -21,3 +21,5 @@
 - 被其他 PR 覆盖：#513（API Key 弹窗复制反馈）、#551（`ViewCredModal` 与 `ToolDetectorSection` 复制按钮、`DeviceItem` 更多按钮的 aria-label）。#547 只改了转圈，没有改初始骨架，所以骨架统一照做。
 - B4：两处都在 `ModelSwitchPanel` 与不可达的旧 Linear 页，不改。B5：ollama 关闭按钮在 provider 目录，`DeviceItem` 由 #551 处理。
 - 需要产品判断或先核实上游：GroupForm 折叠与分隔线、Profile “账户” 标题、“渠道” 组合并、Devices 分组归属、语言下拉搜索、凭据空状态插图。
+
+变基集成保留 busy 状态的既有 Spinner 导入；初始加载使用 SettingsSectionSkeleton。两处 busy Spinner 导入遗漏由本次 CI Typecheck 的 TS2304 证实并补回，最终类型结果仍由修复后 CI 负责。

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { toast } from '@/components/toast';
+import { Spinner } from '@/components/ui/spinner';
 import { DESKTOP_HOTKEYS_REGISTRATION } from '@/const/desktopGlobalShortcuts';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';

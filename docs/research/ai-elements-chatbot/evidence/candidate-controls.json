@@ -1,0 +1,20 @@
+{
+  "afterCollapse": "Candidate draft retention — synthetic UI test.",
+  "fullscreen": {
+    "rect": {
+      "x": 16,
+      "y": 16,
+      "width": 1408,
+      "height": 968,
+      "top": 16,
+      "right": 1424,
+      "bottom": 984,
+      "left": 16
+    },
+    "text": "Candidate draft retention — synthetic UI test.Assistant UI fixture"
+  },
+  "plus": "Chat\nChat\nChat\nChat\nChat\nE\nE2E Test User's workspace\nToggle Sidebar\nIssues\nSearch\nTopics\n9\nToday\nSynthetic artifact and fence previews\n[Draft]\nSynthetic sources fixture\nSynthetic approval UI — do not execute\n[Draft]\nAI Elements synthetic rich-state fixture\nAI Elements synthetic Markdown fixture\n[Draft]\nSynthetic regular agent composer fixture\n[Draft]\nLibraries.dev synthetic operation fixture\nReply in Markdown with a heading Assistant UI acce...\n[Draft]\nAssistant UI fixture history\nET\nE2E Test User\nE\nE2E Test User's workspace\nSynthetic sources fixture\n\nSynthetic sources fixture only.\n\nFound 2 results\n\nSynthetic referenced answer.\n\nCandidate draft retention — synthetic UI test.\n\nAssistant UI fixture\nSkills\nDocuments\nAgent Mock\nFeature Flags\nRender Gallery\nTab Routers\n/ws-usere2etestu/chat/tpc_ai_sources_fixture\n24 FPS\nCLS 0.078\nR753.5M · J359.7M\nCPU 5.9%\nGPU 0.3% · 79M\n1/5\nAttachments\nMemory\nWeb Search\nFormatting Tool\nAgent Gateway\nBeta\nAdvanced Parameters",
+  "restoredDraft": "Candidate draft retention — synthetic UI test.",
+  "settings": "Agent\nNo device\nManual",
+  "slash": true
+}

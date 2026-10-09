@@ -1,0 +1,33 @@
+{
+  "collapsed": "false",
+  "empty": {
+    "text": "How can I help you?Ask a question or choose a suggestion to get started.Create a new projectResearch a topicDraft a project updateDescribe a task or ask a question to OpenCodeopencodeOpenCode acceptance",
+    "canvases": [
+      {
+        "width": 64,
+        "height": 64,
+        "rect": {
+          "x": 753.796875,
+          "y": 363,
+          "width": 64,
+          "height": 64,
+          "top": 363,
+          "right": 817.796875,
+          "bottom": 427,
+          "left": 753.796875
+        }
+      }
+    ]
+  },
+  "headerInfo": {
+    "text": "Run commandAwaiting approval",
+    "icons": [
+      "lucide lucide-wrench size-4 shrink-0 text-muted-foreground",
+      "lucide lucide-clock size-4 text-warning",
+      "lucide lucide-chevron-down size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-data-[open]:rotate-180"
+    ]
+  },
+  "inline": true,
+  "reducedMotion": true,
+  "reopened": "true"
+}

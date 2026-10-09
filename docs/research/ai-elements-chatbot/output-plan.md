@@ -43,7 +43,9 @@ Reference measured at 1440x1000 in isolated Chromium CDP 9265, 2026-10-09, Engli
 public demo populated with upstream content. Exact CSS stored in reference-measurements.json.
 Native textarea measured 64px minimum, 12px padding, 14px/20px Geist; footer 16px padding/gap.
 Example preview height 600px is documentation framing, not an application height.
-Reference dark/narrow/state inspection and final candidate comparison remain pending.
+Reference dark/narrow/state inspection and final native Electron comparison are complete
+for the exercised scope; see [acceptance](evidence/acceptance.md) for screenshots,
+source revisions, synthetic fixture disclosure and remaining coverage limits.
 No copied demo messages may be production records. Acceptance uses explicitly synthetic data.
 Real Step 5 gateway inference must be reported separately from UI/host-hook validation.
 

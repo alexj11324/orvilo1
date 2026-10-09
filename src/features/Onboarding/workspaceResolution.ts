@@ -59,3 +59,22 @@ export const resolveOnboardingWorkspace = async (
     throw error;
   }
 };
+
+/**
+ * The workspace this account already checkpointed, if it really exists. A
+ * checkpointed id is written before the create call, so it can outlive a
+ * create that never committed; only a hit in the caller's own list counts.
+ */
+export const findOnboardingWorkspace = async (
+  persistedWorkspaceId: string,
+): Promise<{ id: string; name: string; slug: string } | undefined> => {
+  try {
+    const mine = (await lambdaClient.workspace.list.query()).find(
+      (w) => w.id === persistedWorkspaceId,
+    );
+    return mine ? { id: mine.id, name: mine.name, slug: mine.slug } : undefined;
+  } catch {
+    // Not knowing is safe: the create form below resolves the same id idempotently.
+    return undefined;
+  }
+};

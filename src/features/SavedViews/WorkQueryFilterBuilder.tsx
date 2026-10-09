@@ -11,6 +11,7 @@ import ActionIcon from '@/components/ActionIcon';
 import { Badge as Tag } from '@/components/reui/badge';
 import Select from '@/components/Select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys, workAttentionKeys } from '@/libs/swr/keys';
@@ -366,8 +367,8 @@ const FilterRowEditor = memo<{
               : { from: '', to: '' };
           return (
             <div className="flex items-center gap-1">
-              <input
-                className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+              <Input
+                className="h-7 w-auto px-2 text-sm"
                 type="date"
                 value={range.from.slice(0, 10)}
                 onChange={(event) =>
@@ -380,8 +381,8 @@ const FilterRowEditor = memo<{
                   })
                 }
               />
-              <input
-                className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+              <Input
+                className="h-7 w-auto px-2 text-sm"
                 type="date"
                 value={range.to.slice(0, 10)}
                 onChange={(event) =>
@@ -398,8 +399,8 @@ const FilterRowEditor = memo<{
           );
         }
         return (
-          <input
-            className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+          <Input
+            className="h-7 w-auto px-2 text-sm"
             type="date"
             value={typeof row.value === 'string' ? row.value.slice(0, 10) : ''}
             onChange={(event) =>
@@ -413,8 +414,8 @@ const FilterRowEditor = memo<{
       }
       case 'text': {
         return (
-          <input
-            className="rounded border border-border bg-transparent px-2 py-1 text-sm"
+          <Input
+            className="h-7 w-auto px-2 text-sm"
             placeholder={t('savedViews.filters.textPlaceholder')}
             value={typeof row.value === 'string' ? row.value : ''}
             onChange={(event) => onChange({ ...row, value: event.target.value })}

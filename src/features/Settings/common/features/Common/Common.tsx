@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -17,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { imageUrl } from '@/const/url';
@@ -49,14 +49,7 @@ const Common = memo(() => {
     switchLocale(value);
   };
 
-  if (!(isStatusInit && isUserStateInit))
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+  if (!(isStatusInit && isUserStateInit)) return <SettingsSectionSkeleton />;
 
   const themeFormGroup: FormGroupItemType = {
     children: [

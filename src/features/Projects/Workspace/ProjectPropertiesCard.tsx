@@ -6,13 +6,14 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
-import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
 import { projectService } from '@/services/project';
 import type { ProjectDetail } from '@/store/project';
 import { useProjectStore } from '@/store/project';
@@ -24,6 +25,7 @@ import {
   ProjectLeadField,
   ProjectPriorityField,
 } from './ProjectPlanningFields';
+import { PROPERTY_CONTROL_CLASS, PROPERTY_LINK_CLASS } from './propertyControl';
 
 const styles = createStaticStyles(({ css }) => ({
   // Reference geometry (§3.1): a 90px hard column, `flex: 0 0 auto`, with no gap
@@ -164,7 +166,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <DropdownMenu items={statusItems}>
           <Button
             aria-label={t('properties.status')}
-            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+            className={PROPERTY_CONTROL_CLASS}
             disabled={updatingStatus || !detail.capabilities?.canEdit}
             variant="ghost"
           >
@@ -243,9 +245,15 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         ) : (
           <div className={styles.chipList}>
             {teams.map((team) => (
-              <Badge key={team.id} radius="full" size="sm" variant="secondary">
+              <WorkspaceLink className={PROPERTY_LINK_CLASS} key={team.id} to={`/teams/${team.id}`}>
+                <TeamIdentity
+                  color={team.color}
+                  id={team.id}
+                  letter={(team.key || team.name).slice(0, 1)}
+                  size={14}
+                />
                 {team.name}
-              </Badge>
+              </WorkspaceLink>
             ))}
           </div>
         )}

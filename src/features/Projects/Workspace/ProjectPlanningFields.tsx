@@ -1,14 +1,9 @@
 import type { ProjectDatePrecision } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
-import {
-  ArrowRightIcon,
-  CalendarDaysIcon,
-  CalendarIcon,
-  TagIcon,
-  UserRoundIcon,
-} from 'lucide-react';
-import { createElement, useId, useRef, useState } from 'react';
+import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
+import dayjs, { type Dayjs } from 'dayjs';
+import { ArrowRightIcon, CalendarIcon, TagIcon, UserRoundIcon, XIcon } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
@@ -26,6 +21,12 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from '@/components/ui/combobox';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -33,9 +34,12 @@ import { type ProjectDetail, useCurrentProjectDetail, useProjectStore } from '@/
 
 import {
   formatProjectDate,
+  formatProjectDay,
   getProjectDatePickerMode,
+  parseTypedProjectDay,
   PROJECT_DATE_PRECISIONS,
 } from '../projectPlanningDate';
+import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
 const styles = createStaticStyles(({ css }) => ({
   accessibleLabel: css`
@@ -49,86 +53,6 @@ const styles = createStaticStyles(({ css }) => ({
     white-space: nowrap;
 
     clip-path: inset(50%);
-  `,
-  field: css`
-    width: auto;
-    min-width: 0;
-    max-width: 100%;
-    height: 28px;
-    border-color: transparent;
-
-    font-size: 13px;
-
-    background: transparent;
-  `,
-  date: css`
-    flex: 0 0 120px;
-    width: 120px;
-    min-width: 0;
-  `,
-  inline: css`
-    flex: 0 0 auto;
-
-    width: auto;
-    min-width: 0;
-    max-width: 100%;
-    height: 28px;
-    padding-block: 3px;
-    padding-inline: 6px;
-    border: 1px solid transparent;
-    border-radius: 9999px;
-
-    font-size: 13px;
-    font-weight: 500;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-within {
-      outline: 2px solid ${cssVar.colorPrimary};
-    }
-
-    .ant-select-selector {
-      height: 28px !important;
-      padding: 0 !important;
-      border: 0 !important;
-      border-radius: 9999px !important;
-
-      background: transparent !important;
-    }
-
-    .ant-select-selection-item,
-    .ant-picker-input > input {
-      font-size: 13px !important;
-      font-weight: 500 !important;
-    }
-  `,
-  /* A date control whose calendar glyph leads the text instead of trailing
-     it, and whose input hugs its content. Shared by the overview's inline
-     chip and the rail's `Dates` row — the reference puts a 16px icon inside
-     each of those buttons (text offset +30px = the icon's lane) rather than
-     antd's trailing suffix. */
-  leadingIconDate: css`
-    border-radius: 8px;
-
-    .ant-picker-input {
-      gap: 8px;
-    }
-
-    .ant-picker-suffix {
-      order: -1;
-      margin-inline: 0;
-    }
-
-    .ant-picker-input > input {
-      width: auto;
-      min-width: 4ch;
-
-      field-sizing: content;
-    }
   `,
 }));
 
@@ -191,7 +115,7 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
         <>
           <ComboboxTrigger
             aria-label={t('properties.labels')}
-            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+            className={PROPERTY_CONTROL_CLASS}
             id={id}
             render={<Button variant="ghost" />}
           >
@@ -300,7 +224,7 @@ export function ProjectLeadField({
         <>
           <ComboboxTrigger
             aria-label={t('properties.lead')}
-            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+            className={PROPERTY_CONTROL_CLASS}
             id={id}
             render={<Button variant="ghost" />}
           >
@@ -370,7 +294,7 @@ export function ProjectPriorityField({
     >
       <Button
         aria-label={t('properties.priority')}
-        className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+        className={PROPERTY_CONTROL_CLASS}
         disabled={saving}
         id={id}
         variant="ghost"
@@ -382,24 +306,80 @@ export function ProjectPriorityField({
   );
 }
 
+export function ProjectDateInput({
+  disabled,
+  onCommit,
+  precision,
+  stored,
+  title,
+}: {
+  disabled: boolean;
+  onCommit: (date: Dayjs | null) => void;
+  precision: ProjectDatePrecision;
+  stored: { date: string | null; precision: ProjectDatePrecision };
+  title: string;
+}) {
+  const { t } = useTranslation('project');
+  const readOnly = precision !== 'day';
+  const [text, setText] = useState(() =>
+    stored.precision === 'day' ? formatProjectDay(stored.date) : '',
+  );
+  const [invalid, setInvalid] = useState(false);
+  const shown = readOnly
+    ? precision === stored.precision
+      ? formatProjectDate(stored.date, precision)
+      : ''
+    : text;
+  return (
+    <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
+      <span className="text-xs text-muted-foreground">{title}</span>
+      <InputGroup>
+        <InputGroupInput
+          autoFocus
+          aria-invalid={invalid || undefined}
+          aria-label={title}
+          disabled={disabled}
+          placeholder={t('create.dateInputPlaceholder')}
+          readOnly={readOnly}
+          value={shown}
+          onFocus={(event) => event.currentTarget.select()}
+          onChange={(event) => {
+            setText(event.target.value);
+            setInvalid(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' || readOnly) return;
+            event.preventDefault();
+            const parsed = parseTypedProjectDay(text);
+            if (!parsed) {
+              setInvalid(true);
+              return;
+            }
+            onCommit(parsed);
+          }}
+        />
+        {shown && (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              aria-label={t('create.clearDate')}
+              disabled={disabled}
+              size="icon-xs"
+              onClick={() => onCommit(null)}
+            >
+              <XIcon aria-hidden />
+            </InputGroupButton>
+          </InputGroupAddon>
+        )}
+      </InputGroup>
+      {invalid && <span className="text-xs text-destructive">{t('create.dateInputInvalid')}</span>}
+    </div>
+  );
+}
+
 export function ProjectDateField({
-  fitContent = false,
-  inline = false,
   kind,
   project,
 }: {
-  /**
-   * Size to content instead of the fixed box the overview's chip row keeps.
-   *
-   * The rail's `Dates` row holds two controls plus an arrow inside a 257px
-   * value column. At a fixed 120px each the row overflowed and wrapped, which
-   * doubled it: measured 60px on the candidate against the reference's 28px,
-   * where the controls are content-sized ("Sep 21st" 84px, "Target" 72px).
-   * The standalone usage keeps its box — it sits in a wrapping row of chips,
-   * where the fixed width is what keeps them even.
-   */
-  fitContent?: boolean;
-  inline?: boolean;
   kind: 'startDate' | 'targetDate';
   project: ProjectDetail['project'];
 }) {
@@ -408,25 +388,51 @@ export function ProjectDateField({
   const precisionField = kind === 'startDate' ? 'startDatePrecision' : 'targetDatePrecision';
   const storedPrecision = project[precisionField] ?? 'day';
   const [precision, setPrecision] = useState<ProjectDatePrecision>(storedPrecision);
+  const [open, setOpen] = useState(false);
+  const isStart = kind === 'startDate';
+  const title = t(`create.${kind}`);
+  const commit = (picked: Dayjs | null) => {
+    let date = picked;
+    if (date && precision !== 'day') {
+      const month =
+        precision === 'year'
+          ? 0
+          : precision === 'halfYear'
+            ? Math.floor(date.month() / 6) * 6
+            : precision === 'quarter'
+              ? Math.floor(date.month() / 3) * 3
+              : date.month();
+      date = date.date(1).month(month);
+    }
+    setOpen(false);
+    void save({
+      [kind]: date?.format('YYYY-MM-DD') ?? null,
+      [precisionField]: date ? precision : null,
+    });
+  };
   return (
     <DatePicker
-      allowClear
-      aria-label={t(`create.${kind}`)}
+      aria-label={title}
+      className={cn(PROPERTY_CONTROL_CLASS, 'min-w-0 shrink')}
       disabled={saving}
       format={(date) => formatProjectDate(date.format('YYYY-MM-DD'), storedPrecision)}
+      open={open}
       picker={getProjectDatePickerMode(precision)}
-      placeholder={t(kind === 'startDate' ? 'create.start' : 'create.target')}
-      size="small"
+      placeholder={t(isStart ? 'create.start' : 'create.target')}
+      prefix={<CalendarIcon aria-hidden size={16} />}
+      suffixIcon={null}
+      tooltip={t(project[kind] ? `create.change.${kind}` : `create.add.${kind}`)}
       value={project[kind] ? dayjs(project[kind]) : null}
-      className={
-        inline
-          ? `${styles.field} ${styles.inline} ${styles.leadingIconDate}`
-          : fitContent
-            ? `${styles.field} ${styles.leadingIconDate}`
-            : `${styles.field} ${styles.date}`
-      }
+      variant="ghost"
       panelRender={(panel) => (
         <>
+          <ProjectDateInput
+            disabled={saving}
+            precision={precision}
+            stored={{ date: project[kind] ?? null, precision: storedPrecision }}
+            title={title}
+            onCommit={commit}
+          />
           <Tabs
             value={precision}
             onValueChange={(value) => {
@@ -445,31 +451,10 @@ export function ProjectDateField({
           {panel}
         </>
       )}
-      suffixIcon={
-        inline || fitContent
-          ? createElement(kind === 'startDate' ? CalendarDaysIcon : CalendarIcon, { size: 16 })
-          : null
-      }
-      onChange={(value) => {
-        let date = Array.isArray(value) ? value[0] : value;
-        if (date && precision !== 'day') {
-          const month =
-            precision === 'year'
-              ? 0
-              : precision === 'halfYear'
-                ? Math.floor(date.month() / 6) * 6
-                : precision === 'quarter'
-                  ? Math.floor(date.month() / 3) * 3
-                  : date.month();
-          date = date.date(1).month(month);
-        }
-        void save({
-          [kind]: date?.format('YYYY-MM-DD') ?? null,
-          [precisionField]: date ? precision : null,
-        });
-      }}
-      onOpenChange={(open) => {
-        if (open) setPrecision(storedPrecision);
+      onChange={(value) => commit(Array.isArray(value) ? (value[0] ?? null) : value)}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setPrecision(storedPrecision);
       }}
     />
   );
@@ -477,14 +462,12 @@ export function ProjectDateField({
 
 export function ProjectDateFields({ project }: { project: ProjectDetail['project'] }) {
   return (
-    // No `wrap`: the reference keeps `Dates` on one line, and content-sized
-    // controls leave this row far short of the column (≈175px in 257px).
-    // The separator is a bare 16px svg arrow on the reference, not a text
-    // glyph — same treatment as the overview's main property row.
-    <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, minWidth: 0, flex: 1 }}>
-      <ProjectDateField fitContent kind="startDate" project={project} />
-      <ArrowRightIcon aria-hidden size={16} />
-      <ProjectDateField fitContent kind="targetDate" project={project} />
+    // One line, never clipped: the controls shrink and truncate before the
+    // row overflows; the 16px arrow keeps its size.
+    <div className="flex min-w-0 flex-1 flex-row items-center gap-1">
+      <ProjectDateField kind="startDate" project={project} />
+      <ArrowRightIcon aria-hidden className="shrink-0" size={16} />
+      <ProjectDateField kind="targetDate" project={project} />
     </div>
   );
 }

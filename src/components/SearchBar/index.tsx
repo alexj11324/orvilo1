@@ -11,7 +11,9 @@ import {
   useState,
 } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
 import { Spinner } from '@/components/ui/spinner';
@@ -52,6 +54,7 @@ const SearchBar = memo<SearchBarProps>(
     style,
     value,
   }) => {
+    const { t } = useTranslation('common');
     const [innerValue, setInnerValue] = useState(defaultValue ?? '');
     const [showTag, setShowTag] = useState(true);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -103,10 +106,12 @@ const SearchBar = memo<SearchBarProps>(
         {loading ? (
           <Spinner className="absolute right-2 text-muted-foreground size-3" />
         ) : inputValue ? (
-          <button
-            aria-label="Clear search"
-            className="absolute right-2 flex items-center text-muted-foreground hover:text-foreground"
+          <Button
+            aria-label={t('clearSearch', { defaultValue: 'Clear search' })}
+            className="absolute right-1 text-muted-foreground"
+            size="icon-xs"
             type="button"
+            variant="ghost"
             onClick={() => {
               const next = '';
               setInnerValue(next);
@@ -121,7 +126,7 @@ const SearchBar = memo<SearchBarProps>(
             }}
           >
             <X size={12} />
-          </button>
+          </Button>
         ) : enableShortKey && showTag ? (
           <Kbd className="pointer-events-none absolute right-2">{hotkey.replace('mod', '⌘')}</Kbd>
         ) : null}

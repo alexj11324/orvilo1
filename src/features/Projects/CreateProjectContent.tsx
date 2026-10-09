@@ -162,7 +162,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 
   date: css`
-    width: 88px;
+    width: auto;
+    min-width: 88px;
     height: 24px;
     padding-block: 0;
     padding-inline: 8px;

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
@@ -425,10 +426,12 @@ const PluginTag = memo<PluginTagProps>(
           getDisplayText()
         )}
         {removable && !disabled && !selectable && (
-          <button
+          <Button
             aria-label={t('close', { ns: 'common' })}
-            className="text-muted-foreground hover:text-foreground"
+            className="size-4 rounded-sm text-muted-foreground hover:text-foreground"
+            size="icon-xs"
             type="button"
+            variant="ghost"
             onClick={(e) => {
               if (disabled) return;
 
@@ -436,7 +439,7 @@ const PluginTag = memo<PluginTagProps>(
             }}
           >
             <X size={12} />
-          </button>
+          </Button>
         )}
       </Badge>
     );

@@ -5,6 +5,7 @@ import { createElement, isValidElement, memo, useCallback, useState } from 'reac
 
 import MobileContentLayout from '@/components/server/MobileNavLayout';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { resolveActiveTab } from '@/features/AgentSetting/AgentCategory/resolveActiveTab';
 import { useCategory } from '@/features/AgentSetting/AgentCategory/useCategory';
 import AgentSettings from '@/features/AgentSetting/AgentSettings';
 import Footer from '@/features/Setting/Footer';
@@ -16,8 +17,9 @@ import { ChatSettingsTabs } from '@/store/global/initialState';
 import { useSessionStore } from '@/store/session';
 
 export default memo(() => {
-  const [tab, setTab] = useState(ChatSettingsTabs.Prompt);
+  const [selectedTab, setTab] = useState<ChatSettingsTabs>();
   const cateItems = useCategory();
+  const tab = resolveActiveTab(cateItems, selectedTab);
   const id = useSessionStore((s) => s.activeId);
   const { allowed: canEdit } = usePermission('edit_own_content');
 
@@ -38,7 +40,7 @@ export default memo(() => {
   return (
     <MobileContentLayout header={<MobileHeader />}>
       <Tabs
-        value={tab}
+        value={tab ?? ''}
         style={{
           borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
         }}
@@ -63,7 +65,7 @@ export default memo(() => {
         id={id}
         loading={isLoading}
         meta={meta}
-        tab={tab}
+        tab={tab ?? ChatSettingsTabs.Opening}
         onConfigChange={updateAgentConfig}
         onMetaChange={updateMetadata}
       />

@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import { MessageActions } from '@/components/ai-elements/message';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { isDev } from '@/utils/env';
@@ -20,20 +21,11 @@ const Actions = memo<ActionsProps>(({ actionAddon, placement, actions }) => {
 
   const isUser = placement === 'right';
   return (
-    <div
-      className="flex items-center gap-1"
-      style={{
-        alignSelf: isUser ? 'flex-end' : 'flex-start',
-      }}
-    >
+    <MessageActions className={isUser ? 'self-end' : undefined}>
       {!isUser && actionAddon}
-      {actions && (
-        <div className="flex items-center" role="menubar">
-          {actions}
-        </div>
-      )}
+      {actions}
       {isUser && actionAddon}
-    </div>
+    </MessageActions>
   );
 });
 

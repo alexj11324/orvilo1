@@ -88,7 +88,7 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
           <DatePicker
             allowClear
             aria-label={t('milestones.form.targetDate')}
-            format="MMM D, YYYY"
+            format="YYYY/MM/DD"
             placeholder={t('create.milestone.date')}
             prefix={<CalendarIcon size={13} />}
             value={date ? dayjs(date) : null}

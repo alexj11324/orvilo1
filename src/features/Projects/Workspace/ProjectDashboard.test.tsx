@@ -83,6 +83,7 @@ const mocks = vi.hoisted(() => ({
   // Milestone store actions, spied so writes can be asserted directly.
   createMilestone: vi.fn(),
   updateMilestone: vi.fn(),
+  updateProject: vi.fn(),
   deleteMilestone: vi.fn(),
   reorderMilestones: vi.fn(),
   setTaskMilestone: vi.fn(),
@@ -332,6 +333,7 @@ vi.mock('@/store/project', () => ({
         reorderMilestones: mocks.reorderMilestones,
         setTaskMilestone: mocks.setTaskMilestone,
         updateMilestone: mocks.updateMilestone,
+        updateProject: mocks.updateProject,
       } as Record<string, unknown>,
       { get: (target, prop) => (prop in target ? target[prop as string] : fallback) },
     );
@@ -466,6 +468,7 @@ beforeEach(() => {
   mocks.detailTasks = [];
   mocks.createMilestone.mockReset().mockResolvedValue({ id: 'ms_new' });
   mocks.updateMilestone.mockReset().mockResolvedValue({ id: 'ms_1' });
+  mocks.updateProject.mockReset().mockResolvedValue(undefined);
   mocks.deleteMilestone.mockReset().mockResolvedValue(undefined);
   mocks.reorderMilestones.mockReset().mockResolvedValue([]);
   mocks.setTaskMilestone.mockReset().mockResolvedValue({ id: 'task_1' });
@@ -715,6 +718,46 @@ describe('project update composer controls', () => {
     expect(screen.getByText('Launch ready').tagName).toBe('STRONG');
     expect(screen.queryByText('**Launch ready**')).not.toBeInTheDocument();
   });
+  it.each([
+    { canEdit: false, canDelete: true, allowed: 'delete', denied: 'edit' },
+    { canEdit: true, canDelete: false, allowed: 'edit', denied: 'delete' },
+  ])(
+    'keeps update $allowed independent from $denied in the timeline row',
+    ({ canEdit, canDelete, allowed, denied }) => {
+      const onEdit = vi.fn();
+      const update = {
+        id: 'update_acl',
+        projectId: 'prj_1',
+        authorId: 'user_2',
+        body: 'A teammate update',
+        createdAt: '2026-09-22T00:00:00Z',
+        kind: 'comment' as const,
+      };
+      render(
+        <ProjectUpdateRow
+          hideAuthorAvatar
+          canDelete={canDelete}
+          canEdit={canEdit}
+          update={update}
+          onEdit={onEdit}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'overview.updateMenu' }));
+      expect(screen.getByRole('menuitem', { name: `common:${allowed}` })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: `common:${denied}` })).not.toBeInTheDocument();
+      if (canEdit) {
+        fireEvent.click(screen.getByRole('menuitem', { name: 'common:edit' }));
+        expect(onEdit).toHaveBeenCalledWith(update);
+      } else {
+        fireEvent.click(screen.getByRole('menuitem', { name: 'common:delete' }));
+        expect(mocks.confirmModal).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'overview.commentDeleteConfirm.title' }),
+        );
+        expect(onEdit).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   // The composer scopes drafts by user, workspace, project and target; the mocks
   // above sign in `user_1` in workspace `ws_1`.
   const newDraftKey = (projectId: string) =>
@@ -1159,6 +1202,20 @@ describe('project milestone management', () => {
     expect(mocks.deleteMilestone).toHaveBeenCalledWith('prj_1', 'ms_1');
   });
 
+  it('normalizes shared picker array selections before saving a milestone date', async () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    const picker = () =>
+      mocks.datePickerProps.find((props) => props['aria-label'] === 'overview.milestoneChooseDate');
+    await act(async () => {
+      (picker()!.onChange as (value: unknown) => void)([dayjs('2026-12-24'), dayjs('2026-12-25')]);
+    });
+    expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', { date: '2026-12-24' });
+    await act(async () => {
+      (picker()!.onChange as (value: unknown) => void)([]);
+    });
+    expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', { date: null });
+  });
+
   it('writes a picked target date, and a cleared one, through the update action', async () => {
     render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
     const picker = () =>
@@ -1344,10 +1401,9 @@ describe('project overview inline properties', () => {
     expect(screen.getByRole('button', { name: 'properties.status' })).toBeDisabled();
   });
 
-  it('renders both date glyphs in the main property row', () => {
+  it('renders one calendar glyph per date control in the main property row', () => {
     render(<ProjectWorkspace />);
-    expect(document.querySelector('svg.lucide-calendar-days')).toBeInTheDocument();
-    expect(document.querySelector('svg.lucide-calendar')).toBeInTheDocument();
+    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(2);
   });
 
   // The reference's property row is Status / Priority / Lead / dates / Teams /
@@ -1432,25 +1488,15 @@ describe('project properties row geometry', () => {
   const pickerClasses = () =>
     [...document.querySelectorAll('[data-datepicker]')].map((el) => el.className);
 
-  it('keeps the Dates row on one line instead of the fixed 120px boxes', () => {
+  it('keeps the Dates row on one line and styles both controls as property pills', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
     const inCard = pickerClasses();
     expect(inCard).toHaveLength(2);
-    // The row cannot wrap any more (this reads the prop the component passes;
-    // jsdom cannot measure the 60px → 28px row height it buys).
+    expect(inCard[0]).toBe(inCard[1]);
+    expect(inCard[0]).toContain('hover:bg-accent');
     expect(screen.getByText('properties.dates').parentElement?.children[1]).not.toHaveAttribute(
       'wrap',
     );
-
-    cleanup();
-
-    // The standalone usage in the overview's chip row keeps its fixed box, so
-    // the difference is exactly that class — and it must be absent in the card.
-    render(<ProjectDateField kind={'startDate'} project={dated.project} />);
-    const standalone = pickerClasses()[0] ?? '';
-    const cardTokens = new Set((inCard[0] ?? '').split(/\s+/));
-    const onlyOnStandalone = standalone.split(/\s+/).filter((token) => !cardTokens.has(token));
-    expect(onlyOnStandalone).toHaveLength(1);
   });
 
   // On the reference each rail date button carries a leading 16px calendar
@@ -1459,8 +1505,7 @@ describe('project properties row geometry', () => {
   it('draws a leading calendar glyph inside each rail date control, split by an svg arrow', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
 
-    expect(document.querySelectorAll('svg.lucide-calendar-days')).toHaveLength(1);
-    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(1);
+    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(2);
     expect(document.querySelector('svg.lucide-arrow-right')).toBeInTheDocument();
     expect(screen.queryByText('→')).not.toBeInTheDocument();
   });
@@ -1633,9 +1678,37 @@ describe('project properties planning metadata', () => {
     expect(screen.getByRole('button', { name: 'properties.priority' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.labels' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('Sep 2026');
+    expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('2026/09');
     expect(screen.getByRole('button', { name: 'create.targetDate' })).toHaveTextContent('2027 Q1');
     expect(screen.getByText('UI parity')).toBeInTheDocument();
     expect(screen.getByText('orvilo')).toBeInTheDocument();
   });
+});
+
+describe('project planning date picker values', () => {
+  it.each(['startDate', 'targetDate'] as const)(
+    'normalizes %s array selections and empty arrays',
+    async (kind) => {
+      render(<ProjectDateField kind={kind} project={detail.project} />);
+      const picker = () =>
+        mocks.datePickerProps.findLast((props) => props['aria-label'] === `create.${kind}`);
+      await act(async () => {
+        (picker()!.onChange as (value: unknown) => void)([
+          dayjs('2026-12-24'),
+          dayjs('2026-12-25'),
+        ]);
+      });
+      expect(mocks.updateProject).toHaveBeenCalledWith('prj_1', {
+        [kind]: '2026-12-24',
+        [`${kind}Precision`]: 'day',
+      });
+      await act(async () => {
+        (picker()!.onChange as (value: unknown) => void)([]);
+      });
+      expect(mocks.updateProject).toHaveBeenCalledWith('prj_1', {
+        [kind]: null,
+        [`${kind}Precision`]: null,
+      });
+    },
+  );
 });

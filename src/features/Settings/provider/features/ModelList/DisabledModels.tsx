@@ -1,13 +1,14 @@
-import { DropdownMenu, Flexbox, Icon, TooltipGroup } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { type ItemType } from 'antd/es/menu/interface';
 import isEqual from 'fast-deep-equal';
-import { ArrowDownUpIcon, LucideCheck } from 'lucide-react';
+import { ArrowDownUpIcon, CheckIcon } from 'lucide-react';
 import { type AiProviderModelListItem } from 'model-bank';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWRInfinite from 'swr/infinite';
 
+import { Button } from '@/components/ui/button';
+import SidebarDropdownMenu, {
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { aiModelKeys } from '@/libs/swr/keys';
 import { aiModelService } from '@/services/aiModel';
 import { useAiInfraStore } from '@/store/aiInfra';
@@ -15,6 +16,7 @@ import { aiModelSelectors } from '@/store/aiInfra/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
+import GroupHeader from './GroupHeader';
 import ModelItem from './ModelItem';
 
 interface DisabledModelsProps {
@@ -233,86 +235,77 @@ const DisabledModels = memo<DisabledModelsProps>(({ activeTab, providerId }) => 
 
   const displayModels = sortedDisabledModels;
 
+  // Unchecked rows keep a blank slot so every label aligns with the checked one.
+  const checkIcon = (type: SortType) =>
+    sortType === type ? <CheckIcon /> : <span className="size-4" />;
+
+  const sortMenuItems: SidebarMenuItems = [
+    {
+      icon: checkIcon(SortType.Default),
+      key: 'default',
+      label: t('providerModels.list.disabledActions.sortDefault'),
+      onClick: () => updateSortType(SortType.Default),
+    },
+    { type: 'divider' },
+    {
+      icon: checkIcon(SortType.Alphabetical),
+      key: 'alphabetical',
+      label: t('providerModels.list.disabledActions.sortAlphabetical'),
+      onClick: () => updateSortType(SortType.Alphabetical),
+    },
+    {
+      icon: checkIcon(SortType.AlphabeticalDesc),
+      key: 'alphabeticalDesc',
+      label: t('providerModels.list.disabledActions.sortAlphabeticalDesc'),
+      onClick: () => updateSortType(SortType.AlphabeticalDesc),
+    },
+    { type: 'divider' },
+    {
+      icon: checkIcon(SortType.ReleasedAt),
+      key: 'releasedAt',
+      label: t('providerModels.list.disabledActions.sortReleasedAt'),
+      onClick: () => updateSortType(SortType.ReleasedAt),
+    },
+    {
+      icon: checkIcon(SortType.ReleasedAtDesc),
+      key: 'releasedAtDesc',
+      label: t('providerModels.list.disabledActions.sortReleasedAtDesc'),
+      onClick: () => updateSortType(SortType.ReleasedAtDesc),
+    },
+  ];
+
   return (
     shouldRenderSection && (
-      <Flexbox>
-        <Flexbox horizontal align="center" justify="space-between">
-          <Text style={{ fontSize: 12, marginTop: 8 }} type={'secondary'}>
-            {t('providerModels.list.disabled')}
-          </Text>
-          {sourceDisabledModels.length > 1 && (
-            <DropdownMenu
-              items={
-                [
-                  {
-                    icon: sortType === SortType.Default ? <Icon icon={LucideCheck} /> : <div />,
-                    key: 'default',
-                    label: t('providerModels.list.disabledActions.sortDefault'),
-                    onClick: () => updateSortType(SortType.Default),
-                  },
-                  {
-                    type: 'divider',
-                  },
-                  {
-                    icon:
-                      sortType === SortType.Alphabetical ? <Icon icon={LucideCheck} /> : <div />,
-                    key: 'alphabetical',
-                    label: t('providerModels.list.disabledActions.sortAlphabetical'),
-                    onClick: () => updateSortType(SortType.Alphabetical),
-                  },
-                  {
-                    icon:
-                      sortType === SortType.AlphabeticalDesc ? (
-                        <Icon icon={LucideCheck} />
-                      ) : (
-                        <div />
-                      ),
-                    key: 'alphabeticalDesc',
-                    label: t('providerModels.list.disabledActions.sortAlphabeticalDesc'),
-                    onClick: () => updateSortType(SortType.AlphabeticalDesc),
-                  },
-                  {
-                    type: 'divider',
-                  },
-                  {
-                    icon: sortType === SortType.ReleasedAt ? <Icon icon={LucideCheck} /> : <div />,
-                    key: 'releasedAt',
-                    label: t('providerModels.list.disabledActions.sortReleasedAt'),
-                    onClick: () => updateSortType(SortType.ReleasedAt),
-                  },
-                  {
-                    icon:
-                      sortType === SortType.ReleasedAtDesc ? <Icon icon={LucideCheck} /> : <div />,
-                    key: 'releasedAtDesc',
-                    label: t('providerModels.list.disabledActions.sortReleasedAtDesc'),
-                    onClick: () => updateSortType(SortType.ReleasedAtDesc),
-                  },
-                ] as ItemType[]
-              }
-            >
-              <ActionIcon
-                icon={ArrowDownUpIcon}
-                size={'small'}
-                title={t('providerModels.list.disabledActions.sort')}
-              />
-            </DropdownMenu>
-          )}
-        </Flexbox>
-        <TooltipGroup>
-          {displayModels.map((item) => (
-            <ModelItem {...item} key={item.id} />
-          ))}
-        </TooltipGroup>
+      <>
+        <GroupHeader
+          actions={
+            sourceDisabledModels.length > 1 && (
+              <SidebarDropdownMenu items={sortMenuItems} placement="bottomRight">
+                <Button
+                  aria-label={t('providerModels.list.disabledActions.sort')}
+                  size="icon-xs"
+                  title={t('providerModels.list.disabledActions.sort')}
+                  variant="ghost"
+                >
+                  <ArrowDownUpIcon />
+                </Button>
+              </SidebarDropdownMenu>
+            )
+          }
+        >
+          {t('providerModels.list.disabled')}
+        </GroupHeader>
+        {displayModels.map((item) => (
+          <ModelItem {...item} key={item.id} />
+        ))}
 
-        <Flexbox horizontal align="center" justify="center" paddingBlock={8}>
-          <div ref={loadMoreRef} style={{ height: 1, width: '0' }} />
+        <div className="flex items-center justify-center py-2">
+          <div ref={loadMoreRef} style={{ height: 1, width: 0 }} />
           {(isInitialLoading || isLoadingMore) && (
-            <Text style={{ fontSize: 12, marginTop: 4 }} type={'secondary'}>
-              {t('common:loading')}
-            </Text>
+            <span className="mt-1 text-xs text-muted-foreground">{t('common:loading')}</span>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </>
     )
   );
 });

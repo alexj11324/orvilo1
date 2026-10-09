@@ -12,6 +12,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { type LiteTableColumn } from '@/components/LiteTable';
 import LiteTable from '@/components/LiteTable';
 import { confirmModal } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -133,12 +134,10 @@ const ApiKey: FC = () => {
       // The name is the affordance into the detail drawer — styled as a link so
       // the row reads as navigable rather than inert.
       render: (apiKey) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium group-hover:text-primary">{apiKey.name}</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium">{apiKey.name}</span>
           {apiKey.enabled === false && (
-            <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
-              {t('apikey.status.disabled')}
-            </span>
+            <Badge variant="outline">{t('apikey.status.disabled')}</Badge>
           )}
         </div>
       ),
@@ -169,11 +168,11 @@ const ApiKey: FC = () => {
     {
       key: 'scopes',
       render: (apiKey) => (
-        <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
+        <Badge variant="outline">
           {isFullAccessApiKey(apiKey.scopes)
             ? t('apikey.scopes.fullAccess')
             : t('apikey.scopes.count', { count: apiKey.scopes?.length ?? 0 })}
-        </span>
+        </Badge>
       ),
       title: t('apikey.list.columns.scopes'),
       width: 110,

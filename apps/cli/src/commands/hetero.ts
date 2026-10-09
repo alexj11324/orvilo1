@@ -4,6 +4,7 @@ import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { AgentInterventionProvider } from '@orvilo/agent-gateway-client';
 import {
   ACP_RUNTIME_AGENT_TYPES,
   HETEROGENEOUS_AGENT_CONFIGS,
@@ -678,8 +679,16 @@ const exec = async (options: ExecOptions): Promise<void> => {
     agentType === 'droid' ||
     agentType === 'devin' ||
     agentType === 'qoder';
-  if (serverIngest && (askSupported || mountBuiltinTools) && serverIngester) {
-    if (agentType === 'cursor' || agentType === 'droid') {
+  const nativePermissionSupported = ACP_RUNTIME_AGENT_TYPES.has(agentType);
+  if (serverIngest && (askSupported || nativePermissionSupported) && serverIngester) {
+    if (!askSupported && !mountBuiltinTools) {
+      // Native ACP approvals do not require an unrelated builtin MCP tool.
+      // Keep the question tool surface controlled by askSupported below.
+      askBridge = new AskUserBridge(operationId, {
+        identifier: agentType,
+        provider: agentType as AgentInterventionProvider,
+      });
+    } else if (agentType === 'cursor' || agentType === 'droid') {
       askBridge = new AskUserBridge(operationId, {
         identifier: agentType === 'cursor' ? 'claude-code' : agentType,
         provider: agentType,

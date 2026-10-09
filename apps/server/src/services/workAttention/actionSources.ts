@@ -5,6 +5,7 @@ import type {
   ActionSourceKind,
   DecisionReceipt,
   DecisionVerb,
+  NotificationMetadata,
   VersionedDecision,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -18,7 +19,7 @@ import {
   cancelOwnershipTransfer,
   respondOwnershipTransfer,
 } from '@/business/server/membershipLifecycle/ownershipTransfer';
-import type { NotificationModel } from '@/database/models/notification';
+import { NotificationModel } from '@/database/models/notification';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
 import { actionApprovals } from '@/database/schemas/actionApproval';
 import {
@@ -41,12 +42,14 @@ const PENDING_SOURCE_LIMIT = 50;
 export interface PendingSourceCard {
   actionKind: ActionSourceKind;
   content: string;
+  metadata?: NotificationMetadata;
   outgoing?: boolean;
   requestId: string;
   resourceId?: string;
   resourceType?: string;
   sourceRevision?: number | string | null;
   title: string;
+  type?: string;
 }
 
 const verbToApproval = (decision: DecisionVerb): 'approved' | 'rejected' => {
@@ -176,6 +179,13 @@ export class ActionSourceRegistry {
       });
     }
     groups.push({ kinds: ['acp_intervention'], load: () => this.loadInterventionCards(now) });
+    groups.push({
+      kinds: ['acp_intervention'],
+      load: () =>
+        new NotificationModel(this.db, this.userId, {
+          workspaceId: this.workspaceId ?? null,
+        }).syncNativeInterventions(),
+    });
     const settled = await settleSourceLoads(groups);
     return { pending: settled.items, unavailable: settled.unavailable };
   };

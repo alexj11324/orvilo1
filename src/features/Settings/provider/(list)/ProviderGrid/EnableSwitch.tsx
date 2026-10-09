@@ -8,9 +8,11 @@ interface SwitchProps {
   Component?: FC<{ enabled: boolean; id: string }>;
   enabled: boolean;
   id: string;
+  /** Accessible name of the switch; the visible card title names it for screen readers. */
+  label?: string;
 }
 
-const Switch = ({ id, Component, enabled }: SwitchProps) => {
+const Switch = ({ id, Component, enabled, label }: SwitchProps) => {
   const { allowed: canManageProvider } = usePermission('manage_provider_key');
   const [toggleProviderEnabled] = useAiInfraStore((s) => [s.toggleProviderEnabled]);
 
@@ -19,9 +21,9 @@ const Switch = ({ id, Component, enabled }: SwitchProps) => {
 
   return (
     <InstantSwitch
+      aria-label={label}
       disabled={!canManageProvider}
       enabled={enabled}
-      size={'sm'}
       onChange={async (checked) => {
         if (!canManageProvider) return;
         await toggleProviderEnabled(id, checked);

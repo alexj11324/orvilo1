@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { Outlet, useParams } from 'react-router';
 
@@ -19,18 +18,12 @@ export const ProviderLayout = memo(() => {
   };
 
   return (
-    <Flexbox
-      horizontal
-      width={'100%'}
-      style={{
-        maxHeight: '100%',
-      }}
-    >
+    <div className="flex max-h-full w-full">
       <ProviderMenu mobile={false} onProviderSelect={handleProviderSelect} />
       <DesktopLayoutContainer>
         <Outlet />
       </DesktopLayoutContainer>
-    </Flexbox>
+    </div>
   );
 });
 

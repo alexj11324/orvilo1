@@ -1,0 +1,97 @@
+[
+  {
+    "name": "reasoning",
+    "registry": "https://elements.ai-sdk.dev/api/registry/reasoning.json",
+    "sha256": "f2047dec91f18c922c56c04edc53398d981ac43fa47be583703d9138fbdb03e8"
+  },
+  {
+    "name": "tool",
+    "registry": "https://elements.ai-sdk.dev/api/registry/tool.json",
+    "sha256": "b142e6ab3889bb9e8462b5d9af55f7880082ed60f98f0d3234eabdafd3ab32ca"
+  },
+  {
+    "name": "confirmation",
+    "registry": "https://elements.ai-sdk.dev/api/registry/confirmation.json",
+    "sha256": "68e5fa3bc8961531bfb4f6d004a01562047d0544e210256420c6f6c413337cea"
+  },
+  {
+    "name": "message",
+    "registry": "https://elements.ai-sdk.dev/api/registry/message.json",
+    "sha256": "db7d416e1515b8e3f39390119192bdd4f11647ed8bae92d1588726dc4227b568"
+  },
+  {
+    "name": "conversation",
+    "registry": "https://elements.ai-sdk.dev/api/registry/conversation.json",
+    "sha256": "ac2589ea88b2a231c049a639d150e01af4ecd3022677a53fc21f3c3e3af3b150"
+  },
+  {
+    "name": "prompt-input",
+    "registry": "https://elements.ai-sdk.dev/api/registry/prompt-input.json",
+    "sha256": "9402979f8ce84d58e889971370567a8f97f9940154862fa43c52c71f54a0ede2"
+  },
+  {
+    "name": "attachments",
+    "registry": "https://elements.ai-sdk.dev/api/registry/attachments.json",
+    "sha256": "4fa02d79baf076b24de75d167b84f19490ba76bfd769799e369fec5c6d1eca9a"
+  },
+  {
+    "name": "sources",
+    "registry": "https://elements.ai-sdk.dev/api/registry/sources.json",
+    "sha256": "6fa3ca4cc72a87e3a5cc37d4004b0bb87ba8432c27a56fb442161d86de1939e7"
+  },
+  {
+    "name": "inline-citation",
+    "registry": "https://elements.ai-sdk.dev/api/registry/inline-citation.json",
+    "sha256": "9aec10df2f14d1e6db58bfb6dec0232231031d029e2bb3e1dd5b44cbb667b047"
+  },
+  {
+    "name": "suggestion",
+    "registry": "https://elements.ai-sdk.dev/api/registry/suggestion.json",
+    "sha256": "4fbf7d90cac64b771dd4e0fa99d7099e4d102aed1249333ef4fcdf9456807a00"
+  },
+  {
+    "name": "plan",
+    "registry": "https://elements.ai-sdk.dev/api/registry/plan.json",
+    "sha256": "97a210d4bba6868d0225273f296451454443791ef44bb7eba04f455b03f3589f"
+  },
+  {
+    "name": "task",
+    "registry": "https://elements.ai-sdk.dev/api/registry/task.json",
+    "sha256": "ecc83dc185a0b0fecba918adab5bfce14c712d72595be074ed8b428ca02d7efa"
+  },
+  {
+    "name": "queue",
+    "registry": "https://elements.ai-sdk.dev/api/registry/queue.json",
+    "sha256": "6d46ac152f237f8f5618bd0fee754c2b97db572ac629246571be04e64ef061ac"
+  },
+  {
+    "name": "context",
+    "registry": "https://elements.ai-sdk.dev/api/registry/context.json",
+    "sha256": "ef122d0a025ad8d04e3fb38bc6ba6546bfe1e9f4aa27dd1d443758a743399c3b"
+  },
+  {
+    "name": "shimmer",
+    "registry": "https://elements.ai-sdk.dev/api/registry/shimmer.json",
+    "sha256": "24bcb9b1dd45d616bd50dc6500e9f414ccabf440efb249e8d92522344b9057d6"
+  },
+  {
+    "name": "terminal",
+    "registry": "https://elements.ai-sdk.dev/api/registry/terminal.json",
+    "sha256": "b8516497a8ae6abdc3336efe3d04c0097a5321529e999089b401e9906938da19"
+  },
+  {
+    "name": "snippet",
+    "registry": "https://elements.ai-sdk.dev/api/registry/snippet.json",
+    "sha256": "04e34edeea7330a75a467f57a2b8c6dbe3e8314a7bc163a53a05b1d0c87d0206"
+  },
+  {
+    "name": "artifact",
+    "registry": "https://elements.ai-sdk.dev/api/registry/artifact.json",
+    "sha256": "acabdfc7f977bb8871b6d470ba3e706791bb4f938ae8a0885985b59e73d02c0f"
+  },
+  {
+    "name": "chain-of-thought",
+    "registry": "https://elements.ai-sdk.dev/api/registry/chain-of-thought.json",
+    "sha256": "5ccfddc925c98161c2508f63632380bb9976bfe95ffede4b9332451dcb6f0b70"
+  }
+]

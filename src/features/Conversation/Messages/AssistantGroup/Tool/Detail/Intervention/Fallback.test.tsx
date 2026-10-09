@@ -3,13 +3,31 @@
  */
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import type { Namespace } from 'i18next';
+import type { ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import ToolDetail from '../index';
+import type ApprovalActionsType from './ApprovalActions';
 import FallbackIntervention from './Fallback';
 import Intervention from './index';
 
-const { submitHeteroIntervention } = vi.hoisted(() => ({
+const {
+  approveToolCall,
+  rejectAndContinueToolCall,
+  stopPendingApprovalForCard,
+  submitHeteroIntervention,
+  toastError,
+  interactionAction,
+  access,
+} = vi.hoisted(() => ({
+  access: { canUseResource: true },
+  approveToolCall: vi.fn(),
+  rejectAndContinueToolCall: vi.fn(),
+  stopPendingApprovalForCard: vi.fn(),
   submitHeteroIntervention: vi.fn(),
+  toastError: vi.fn(),
+  interactionAction: { current: undefined as BuiltinInterventionProps['onInteractionAction'] },
 }));
 
 const metaMap: Record<string, { avatar?: string; title?: string }> = {
@@ -18,45 +36,79 @@ const metaMap: Record<string, { avatar?: string; title?: string }> = {
   'search': { title: 'Web Search' },
 };
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { count?: number; defaultValue?: string }) =>
-      (
-        ({
-          'builtins.orvilo-activator.apiName.activateTools': 'Activate Tools',
-          'builtins.orvilo-activator.title': 'Tools & Skills Activator',
-          'edit': 'Edit',
-        }) as Record<string, string>
-      )[key] ||
-      (key === 'tool.intervention.viewParameters'
-        ? `View parameters (${options?.count ?? 0})`
-        : options?.defaultValue || key),
-  }),
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: common } = await import('../../../../../../../../locales/en-US/common.json');
+  const { default: notification } =
+    await import('../../../../../../../../locales/en-US/notification.json');
+  const i18n = createInstance();
+  await i18n.init({
+    fallbackLng: false,
+    lng: 'en-US',
+    ns: ['common', 'notification'],
+    resources: { 'en-US': { common, notification } },
+  });
+
+  return {
+    useTranslation: (namespace: Namespace) => ({
+      t: (key: string, options?: { count?: number; defaultValue?: string; ns?: Namespace }) =>
+        key === 'inbox.question.replyFailed'
+          ? i18n.getFixedT('en-US', namespace)(key, options)
+          : (
+              {
+                'builtins.orvilo-activator.apiName.activateTools': 'Activate Tools',
+                'builtins.orvilo-activator.title': 'Tools & Skills Activator',
+                'edit': 'Edit',
+              } as Record<string, string>
+            )[key] ||
+            (key === 'tool.intervention.viewParameters'
+              ? `View parameters (${options?.count ?? 0})`
+              : options?.defaultValue || key),
+    }),
+  };
+});
+
+vi.mock('@/components/toast', () => ({ toast: { error: toastError } }));
+
+vi.mock('@orvilo/builtin-tools/streamings', () => ({ getBuiltinStreaming: () => undefined }));
+vi.mock('@/components/ai-elements/tool', () => ({
+  ToolOutput: ({ output, errorText }: { output: unknown; errorText?: string }) => (
+    <div>
+      {errorText}
+      {JSON.stringify(output)}
+    </div>
+  ),
+  ToolInput: ({ input }: { input: unknown }) => (
+    <pre data-testid="tool-input">{JSON.stringify(input)}</pre>
+  ),
 }));
 
 vi.mock('@orvilo/builtin-tools/interventions', () => ({
   getBuiltinIntervention: (identifier?: string, apiName?: string) => {
     if (identifier !== 'devin' || apiName !== 'askUserQuestion') return;
 
-    return ({ onInteractionAction }: BuiltinInterventionProps) => (
-      <button
-        data-testid="devin-permission-option"
-        type="button"
-        onClick={() =>
-          void onInteractionAction?.({
-            payload: { 'Allow Devin to continue?': 'allow-once' },
-            type: 'submit',
-          })
-        }
-      >
-        Allow once
-      </button>
-    );
+    return ({ onInteractionAction }: BuiltinInterventionProps) => {
+      interactionAction.current = onInteractionAction;
+      return (
+        <button
+          data-testid="devin-permission-option"
+          type="button"
+          onClick={() =>
+            void onInteractionAction?.({
+              payload: { 'Allow Devin to continue?': 'allow-once' },
+              type: 'submit',
+            })
+          }
+        >
+          Allow once
+        </button>
+      );
+    };
   },
 }));
 
 vi.mock('../../../../../hooks/useConversationResourceAccess', () => ({
-  useConversationResourceAccess: () => ({ canUseResource: true }),
+  useConversationResourceAccess: () => access,
 }));
 
 vi.mock('@/store/tool/selectors', () => ({
@@ -85,9 +137,13 @@ vi.mock('@/store/user/selectors', () => ({
 vi.mock('../../../../../store', () => ({
   dataSelectors: {
     getDbMessageById: () => () => undefined,
+    pendingInterventions: () => [{ toolCallId: 'call-1', assistantGroupId: 'real-turn-owner' }],
   },
   useConversationStore: (
     selector: (state: {
+      approveToolCall: typeof approveToolCall;
+      rejectAndContinueToolCall: typeof rejectAndContinueToolCall;
+      stopPendingApprovalForCard: typeof stopPendingApprovalForCard;
       cancelToolInteraction: ReturnType<typeof vi.fn>;
       skipToolInteraction: ReturnType<typeof vi.fn>;
       submitHeteroIntervention: typeof submitHeteroIntervention;
@@ -96,6 +152,9 @@ vi.mock('../../../../../store', () => ({
     }) => unknown,
   ) =>
     selector({
+      approveToolCall,
+      rejectAndContinueToolCall,
+      stopPendingApprovalForCard,
       cancelToolInteraction: vi.fn(),
       skipToolInteraction: vi.fn(),
       submitHeteroIntervention,
@@ -109,7 +168,17 @@ vi.mock('../Arguments', () => ({
 }));
 
 vi.mock('./ApprovalActions', () => ({
-  default: () => <div>approval-actions</div>,
+  default: ({
+    children,
+    assistantGroupId,
+  }: {
+    children?: ReactNode;
+    assistantGroupId?: string;
+  }) => (
+    <div data-owner={assistantGroupId} data-testid="approval-actions">
+      approval-actions{children}
+    </div>
+  ),
 }));
 
 vi.mock('./KeyValueEditor', () => ({
@@ -172,6 +241,28 @@ describe('FallbackIntervention', () => {
 });
 
 describe('heterogeneous custom intervention', () => {
+  it('keeps the notification error copy when a permission reply fails', async () => {
+    const error = new Error('Agent session disconnected');
+    submitHeteroIntervention.mockRejectedValueOnce(error);
+    render(
+      <Intervention
+        apiName="askUserQuestion"
+        id="message-devin-permission"
+        identifier="devin"
+        requestArgs="{}"
+        toolCallId="devin-permission-1"
+      />,
+    );
+
+    expect(interactionAction.current).toBeTypeOf('function');
+    await expect(
+      interactionAction.current!({ payload: { answer: 'allow-once' }, type: 'submit' }),
+    ).rejects.toThrow('Agent session disconnected');
+    expect(toastError).toHaveBeenCalledWith(
+      'Could not send this reply to the original Agent session. Your answer is kept; refresh the question and try again.',
+    );
+  });
+
   it('routes a Devin permission option ID through submitHeteroIntervention', async () => {
     render(
       <Intervention
@@ -190,5 +281,236 @@ describe('heterogeneous custom intervention', () => {
         'Allow Devin to continue?': 'allow-once',
       });
     });
+  });
+});
+
+describe('pending tool inline confirmation', () => {
+  it('keeps parameters and binary approval in the tool and uses the real turn owner', () => {
+    render(
+      <ToolDetail
+        apiName="runCommand"
+        arguments='{"command":"printf fixture"}'
+        identifier="orvilo-local-system"
+        intervention={{ status: 'pending' }}
+        messageId="content-block-not-turn"
+        toolCallId="call-1"
+        toolMessageId="persisted-tool-message"
+      />,
+    );
+    expect(screen.getByTestId('tool-input')).toHaveTextContent('printf fixture');
+    expect(screen.getByTestId('approval-actions')).toHaveAttribute('data-owner', 'real-turn-owner');
+  });
+
+  it('leaves custom question controls to the bottom interaction host', () => {
+    const { container } = render(
+      <ToolDetail
+        apiName="askUserQuestion"
+        arguments="{}"
+        identifier="devin"
+        intervention={{ status: 'pending' }}
+        messageId="content-block"
+        toolCallId="call-1"
+        toolMessageId="persisted-tool-message"
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('truthful tool approval outcomes', () => {
+  it.each([
+    ['approved', 'tool.intervention.approved'],
+    ['rejected', 'tool.intervention.toolRejected'],
+    ['aborted', 'tool.intervention.toolAbort'],
+  ] as const)('renders the persisted %s outcome', (status, label) => {
+    render(
+      <ToolDetail
+        apiName="runCommand"
+        arguments="{}"
+        identifier="orvilo-local-system"
+        intervention={{ status }}
+        messageId="block"
+        result={{ id: 'tool-result', content: 'done' }}
+        toolCallId="call-1"
+        toolMessageId="tool-message"
+      />,
+    );
+    expect(screen.getByText(label)).toBeInTheDocument();
+    if (status !== 'approved')
+      expect(screen.queryByText('tool.intervention.approved')).not.toBeInTheDocument();
+    if (status === 'aborted')
+      expect(screen.queryByText('tool.intervention.toolRejected')).not.toBeInTheDocument();
+  });
+
+  it('does not imply approval when a tool completed without a recorded decision', () => {
+    render(
+      <ToolDetail
+        apiName="runCommand"
+        arguments="{}"
+        identifier="orvilo-local-system"
+        messageId="block"
+        result={{ id: 'tool-result', content: 'done' }}
+        toolCallId="call-1"
+      />,
+    );
+    expect(screen.queryByText('tool.intervention.approved')).not.toBeInTheDocument();
+  });
+
+  it('keeps skipped questions neutral rather than showing a rejected confirmation', () => {
+    const { container } = render(
+      <ToolDetail
+        apiName="askUserQuestion"
+        arguments="{}"
+        identifier="devin"
+        intervention={{ status: 'rejected', skipped: true }}
+        messageId="block"
+        toolCallId="call-1"
+      />,
+    );
+    expect(screen.getByText('tool.intervention.questionSkipped')).toBeInTheDocument();
+    expect(container.querySelector('[data-ai-element="confirmation"]')).not.toBeInTheDocument();
+  });
+});
+
+describe('direct tool approval actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    access.canUseResource = true;
+  });
+
+  const mountActions = async (
+    approvalMode: 'manual' | 'allow-list' = 'manual',
+    messageId = 'tool-message-1',
+  ) => {
+    const { default: ApprovalActions } = await vi.importActual<{
+      default: typeof ApprovalActionsType;
+    }>('./ApprovalActions');
+    const onBeforeApprove = vi.fn().mockResolvedValue({ command: 'edited' });
+    render(
+      <ApprovalActions
+        apiName="runCommand"
+        approvalMode={approvalMode}
+        assistantGroupId="group-1"
+        identifier="local-system"
+        messageId={messageId}
+        toolCallId="call-1"
+        onBeforeApprove={onBeforeApprove}
+      />,
+    );
+    return onBeforeApprove;
+  };
+
+  it('approves directly and flushes edited arguments without a separate Submit step', async () => {
+    const beforeApprove = await mountActions();
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.optionApprove' }));
+    await waitFor(() =>
+      expect(approveToolCall).toHaveBeenCalledWith('tool-message-1', 'group-1', {
+        editedArguments: { command: 'edited' },
+      }),
+    );
+    expect(beforeApprove).toHaveBeenCalledOnce();
+    expect(rejectAndContinueToolCall).not.toHaveBeenCalled();
+  });
+
+  it('rejects directly with a trimmed reason and never flushes executable arguments', async () => {
+    const beforeApprove = await mountActions();
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.details' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '  use another command  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.reject' }));
+    await waitFor(() =>
+      expect(rejectAndContinueToolCall).toHaveBeenCalledWith(
+        'tool-message-1',
+        'use another command',
+      ),
+    );
+    expect(beforeApprove).not.toHaveBeenCalled();
+    expect(approveToolCall).not.toHaveBeenCalled();
+  });
+
+  it('remembers permissions only for the explicit allow-list action', async () => {
+    await mountActions('allow-list');
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.details' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'tool.intervention.optionApproveRemember' }),
+    );
+    await waitFor(() =>
+      expect(approveToolCall).toHaveBeenCalledWith('tool-message-1', 'group-1', {
+        editedArguments: { command: 'edited' },
+        rememberToolKey: 'local-system/runCommand',
+      }),
+    );
+  });
+
+  it('stops directly without approving or rejecting', async () => {
+    await mountActions();
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.stop' }));
+    await waitFor(() => expect(stopPendingApprovalForCard).toHaveBeenCalledWith('tool-message-1'));
+    expect(approveToolCall).not.toHaveBeenCalled();
+    expect(rejectAndContinueToolCall).not.toHaveBeenCalled();
+  });
+
+  it('keeps the default confirmation compact with advanced controls behind disclosure', async () => {
+    await mountActions('allow-list');
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'tool.intervention.stop' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'tool.intervention.optionApproveRemember' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'tool.intervention.reject' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'tool.intervention.optionApprove' })).toBeVisible();
+  });
+
+  it('opens the rejection details using the existing keyboard shortcut', async () => {
+    await mountActions();
+    fireEvent.keyDown(document.body, { key: '2' });
+    const input = await screen.findByRole('textbox');
+    expect(input).toHaveFocus();
+    fireEvent.change(input, { target: { value: 'keyboard reason' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() =>
+      expect(rejectAndContinueToolCall).toHaveBeenCalledWith('tool-message-1', 'keyboard reason'),
+    );
+    expect(approveToolCall).not.toHaveBeenCalled();
+  });
+
+  it('keeps execution choices visible but denies pointer and keyboard responses without Use', async () => {
+    access.canUseResource = false;
+    const beforeApprove = await mountActions('allow-list');
+    const approve = screen.getByRole('button', { name: 'tool.intervention.optionApprove' });
+    const reject = screen.getByRole('button', { name: 'tool.intervention.reject' });
+    expect(approve).toBeVisible();
+    expect(approve).toBeDisabled();
+    expect(reject).toBeVisible();
+    expect(reject).toBeDisabled();
+    fireEvent.click(approve);
+    fireEvent.click(reject);
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.details' }));
+    const stop = screen.getByRole('button', { name: 'tool.intervention.stop' });
+    const remember = screen.getByRole('button', {
+      name: 'tool.intervention.optionApproveRemember',
+    });
+    expect(stop).toBeDisabled();
+    expect(remember).toBeDisabled();
+    expect(screen.getByRole('textbox')).toBeDisabled();
+    fireEvent.click(stop);
+    fireEvent.click(remember);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.keyDown(document.body, { key: 'Enter' });
+    expect(approveToolCall).not.toHaveBeenCalled();
+    expect(rejectAndContinueToolCall).not.toHaveBeenCalled();
+    expect(stopPendingApprovalForCard).not.toHaveBeenCalled();
+    expect(beforeApprove).not.toHaveBeenCalled();
+  });
+
+  it('blocks all approval actions for temporary messages', async () => {
+    await mountActions('manual', 'tmp_pending');
+    expect(screen.getByRole('button', { name: 'tool.intervention.optionApprove' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'tool.intervention.reject' })).toBeDisabled();
+    expect(approveToolCall).not.toHaveBeenCalled();
+    expect(rejectAndContinueToolCall).not.toHaveBeenCalled();
+    expect(stopPendingApprovalForCard).not.toHaveBeenCalled();
   });
 });

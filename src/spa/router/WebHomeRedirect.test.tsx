@@ -59,15 +59,15 @@ describe('the Web landing redirect', () => {
     expect(navigatedUrl()).toBe('/team-a/tasks');
   });
 
-  // Root-path links arrive with parameters attached — `?onboarding=task` is how
-  // the post-onboarding entry asks for the board. Dropping them here would let
-  // the landing redirect steal the link that brought the user in.
+  // Root-path links arrive with parameters attached — an invitation or auth
+  // callback can sanitize down to `/`. Dropping them here would let the landing
+  // redirect steal the link that brought the user in.
   it('carries the query across instead of dropping it', () => {
-    mocks.search = '?onboarding=task';
+    mocks.search = '?ref=invite';
 
     render(<WebHomeRedirect />);
 
-    expect(navigatedUrl()).toBe('/tasks?onboarding=task');
+    expect(navigatedUrl()).toBe('/tasks?ref=invite');
   });
 
   it('replaces rather than pushes, so back does not bounce between the two', () => {

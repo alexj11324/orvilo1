@@ -151,7 +151,7 @@ Given('用户已发送消息 {string}', async function (this: CustomWorld, messa
   await this.page.waitForTimeout(1000);
 
   // Wait for the assistant response to appear
-  // Assistant messages are left-aligned .message-wrapper elements that contain "Orvilo AI" title
+  // Message.from identifies the assistant independently of the surface's sender header.
   console.log('   📍 Step: 等待助手回复...');
 
   // Wait for any new message wrapper to appear (there should be at least 2 - user + assistant)
@@ -164,9 +164,7 @@ Given('用户已发送消息 {string}', async function (this: CustomWorld, messa
     });
 
   // Verify the assistant message contains expected content
-  const assistantMessage = this.page.locator('.message-wrapper').filter({
-    has: this.page.locator('text=Orvilo AI'),
-  });
+  const assistantMessage = this.page.locator('.message-wrapper.is-assistant');
   await expect(assistantMessage).toBeVisible({ timeout: 5000 });
 
   this.testContext.lastMessage = message;
@@ -210,9 +208,7 @@ Then('用户应该收到助手的回复', async function (this: CustomWorld) {
 });
 
 Then('回复内容应该可见', async function (this: CustomWorld) {
-  const assistantMessage = this.page.locator('.message-wrapper').filter({
-    has: this.page.locator('.message-header', { hasText: /Orvilo AI|AI/ }),
-  });
+  const assistantMessage = this.page.locator('.message-wrapper.is-assistant');
   await expect(assistantMessage.last()).toBeVisible({ timeout: 15_000 });
 
   // Streaming responses may render an empty first child initially, so poll full text.

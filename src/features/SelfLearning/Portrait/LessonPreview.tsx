@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
@@ -143,9 +144,15 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
 
       {/* Without this the card sits on "loading…" forever: SWR clears isLoading on failure. */}
       {!!error && !data && (
-        <button className={cn('text-[12px] text-info', styles.retry)} onClick={() => void mutate()}>
+        <Button
+          className={cn('h-auto p-0 text-[12px] text-info', styles.retry)}
+          size="sm"
+          type="button"
+          variant="link"
+          onClick={() => void mutate()}
+        >
           {t('rules.detail.retry')}
-        </button>
+        </Button>
       )}
 
       {sections.length > 0 && (

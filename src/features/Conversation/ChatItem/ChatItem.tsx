@@ -1,9 +1,11 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
+
+import { Message } from '@/components/ai-elements/message';
+import { useChatbotSurface } from '@/features/AIChatbot/context';
 
 import FollowUpChips from '../FollowUp/FollowUpChips';
 import { contextSelectors, useConversationStore } from '../store';
@@ -19,6 +21,7 @@ const ChatItem = memo<ChatItemProps>(
   ({
     onAvatarClick,
     avatarProps,
+    assistantAvatar,
     customAvatarRender,
     afterActions,
     actionAddon,
@@ -48,6 +51,7 @@ const ChatItem = memo<ChatItemProps>(
     ...rest
   }) => {
     const isUser = placement === 'right';
+    const chatbotSurface = useChatbotSurface();
     const conversationKey = useConversationStore(contextSelectors.conversationKey);
     const isEmptyMessage =
       !message || String(message).trim() === '' || message === placeholderMessage;
@@ -58,6 +62,7 @@ const ChatItem = memo<ChatItemProps>(
     const avatarContent = (
       <Avatar
         alt={avatarProps?.alt || agentDisplayName(avatar, 'avatar')}
+        assistantAvatar={assistantAvatar}
         loading={loading}
         shape={'square'}
         onClick={onAvatarClick}
@@ -67,76 +72,64 @@ const ChatItem = memo<ChatItemProps>(
     );
 
     return (
-      <div
+      <Message
+        from={isUser ? 'user' : 'assistant'}
         {...rest}
+        className={cn('message-wrapper', styles.container, className)}
         data-message-id={id}
-        className={cn(
-          'flex flex-col gap-2 py-2',
-          cx('message-wrapper', styles.container, className),
-        )}
-        style={{
-          paddingInlineStart: isUser ? 36 : 0,
-          ...style,
-        }}
+        role={chatbotSurface ? 'article' : rest.role}
+        style={style}
+        aria-label={
+          chatbotSurface
+            ? avatarProps?.alt || agentDisplayName(avatar, 'avatar')
+            : rest['aria-label']
+        }
       >
-        <div
-          className={cn('flex items-center gap-2', 'message-header')}
-          style={{ flexDirection: isUser ? 'row-reverse' : 'row' }}
-        >
-          {showAvatar &&
-            (customAvatarRender ? customAvatarRender(avatar, avatarContent) : avatarContent)}
-          {headerAddon}
-          <Title avatar={avatar} showTitle={showTitle} time={time} titleAddon={titleAddon} />
-        </div>
-        <div
-          className={cn('flex flex-col gap-2', 'message-body')}
-          style={{
-            maxWidth: '100%',
-            overflow: 'hidden',
-            position: 'relative',
-            width: isUser ? undefined : '100%',
-          }}
-        >
-          {aboveMessage}
-          {error && isEmptyMessage ? (
-            errorContent
-          ) : (
-            <MessageContent
-              disabled={disabled}
-              editing={editing}
-              id={id!}
-              message={message}
-              variant={isUser ? 'bubble' : undefined}
-              messageExtra={
-                <>
-                  {errorContent}
-                  {messageExtra}
-                </>
-              }
-              onDoubleClick={onDoubleClick}
-            >
-              {children}
-            </MessageContent>
-          )}
-          {belowMessage}
-        </div>
-        {id && conversationKey && (
+        {!chatbotSurface && (showAvatar || showTitle || headerAddon || time !== undefined) && (
+          <div
+            className={cn('message-header flex items-center gap-2', isUser && 'flex-row-reverse')}
+          >
+            {showAvatar &&
+              (customAvatarRender ? customAvatarRender(avatar, avatarContent) : avatarContent)}
+            {headerAddon}
+            <Title avatar={avatar} showTitle={showTitle} time={time} titleAddon={titleAddon} />
+          </div>
+        )}
+        {chatbotSurface && (headerAddon || titleAddon) && (
+          <div className={cn('flex items-center gap-2', isUser && 'self-end')}>
+            {headerAddon}
+            {titleAddon}
+          </div>
+        )}
+        {aboveMessage}
+        {error && isEmptyMessage ? (
+          errorContent
+        ) : (
+          <MessageContent
+            disabled={disabled}
+            editing={editing}
+            id={id!}
+            message={message}
+            messageExtra={
+              <>
+                {errorContent}
+                {messageExtra}
+              </>
+            }
+            onDoubleClick={onDoubleClick}
+          >
+            {children}
+          </MessageContent>
+        )}
+        {belowMessage}
+        {!chatbotSurface && id && conversationKey && (
           <FollowUpChips conversationKey={conversationKey} messageId={id} />
         )}
         {(actionAddon || actions) && (
           <Actions actionAddon={actionAddon} actions={actions} placement={placement} />
         )}
-        {afterActions && (
-          <div
-            className="flex flex-col"
-            style={{
-              width: isUser ? undefined : '100%',
-            }}
-          >
-            {afterActions}
-          </div>
-        )}
-      </div>
+        {afterActions}
+      </Message>
     );
   },
 );

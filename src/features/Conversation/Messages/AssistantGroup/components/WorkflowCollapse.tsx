@@ -1,23 +1,18 @@
 import { type ChatToolPayloadWithResult } from '@orvilo/types';
-import { cssVar } from 'antd-style';
-import { Check, HandIcon, Maximize2, Minimize2, X } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
-import * as motion from 'motion/react-m';
+import { AlertTriangle, Check, HandIcon, Maximize2, Minimize2, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
-import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+} from '@/components/ai-elements/chain-of-thought';
+import { MessageAction } from '@/components/ai-elements/message';
+import { Spinner } from '@/components/ui/spinner';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
-import { shinyTextStyles } from '@/styles';
 
 import { messageStateSelectors, useConversationStore } from '../../../store';
 import {
@@ -26,7 +21,6 @@ import {
   WORKFLOW_HEADLINE_DEBOUNCE_MS,
   WORKFLOW_PROSE_IDLE_COMMIT_MS,
   WORKFLOW_PROSE_QUICK_COMMIT_MS,
-  WORKFLOW_STREAMING_TITLE_MIN_HEIGHT_PX,
   WORKFLOW_WORKING_ELAPSED_SHOW_AFTER_MS,
 } from '../constants';
 import {
@@ -39,12 +33,6 @@ import {
 } from '../toolDisplayNames';
 import type { RenderableAssistantContentBlock } from './types';
 import WorkflowExpandedList from './WorkflowExpandedList';
-
-const WORKFLOW_EXPAND_TOGGLE_ICON_SIZE = 12;
-const WORKFLOW_EXPAND_TOGGLE_TRANSITION = {
-  duration: 0.18,
-  ease: [0.4, 0, 0.2, 1],
-} as const;
 
 export type WorkflowExpandLevel = 'collapsed' | 'semi' | 'full';
 
@@ -340,13 +328,10 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
       !pendingInterventionPresent &&
       workingElapsedSeconds >= WORKFLOW_WORKING_ELAPSED_SHOW_AFTER_MS / TIME_MS_PER_SECOND;
 
-    // Stable refs so the underlying Accordion's memoized contextValue can
-    // remain reference-stable across WorkflowCollapse re-renders — otherwise
-    // every nested AccordionItem (each GroupTool) re-renders due to "context
-    // changed" on every streaming chunk.
+    // Keep user expansion and pending-approval ownership when the presentation
+    // changes. A pending confirmation cannot disappear behind a collapsed panel.
     const handleExpandedChange = useCallback(
-      (keys: string[]) => {
-        const nowExpanded = keys.includes('workflow');
+      (nowExpanded: boolean) => {
         if (forceExpanded && !nowExpanded) return;
 
         if (nowExpanded) {
@@ -358,7 +343,6 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
       },
       [forceExpanded, manualExpandLevel],
     );
-    const expandedKeys = useMemo(() => (isExpanded ? ['workflow'] : []), [isExpanded]);
     const constrained = expandLevel === 'semi';
 
     const { ref: scrollRef, handleScroll: handleAutoScroll } = useAutoScroll<HTMLDivElement>({
@@ -367,52 +351,25 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
       threshold: WORKFLOW_EXPANDED_SCROLL_THRESHOLD_PX,
     });
 
-    const renderStatusBlock = (): React.ReactNode => {
-      const wrapInBlock = (inner: React.ReactNode) => (
-        <div
-          className="flex items-center justify-center"
-          style={{
-            flex: 'none',
-            height: 24,
-            border: `1px solid ${cssVar.colorBorder}`,
-            borderRadius: cssVar.borderRadiusLG,
-            width: 24,
-            fontSize: 12,
-          }}
-        >
-          {inner}
-        </div>
-      );
-
-      if (streaming) {
-        return wrapInBlock(
-          pendingInterventionPresent ? (
-            <HandIcon color={cssVar.colorInfo} />
-          ) : (
-            <NeuralNetworkLoading size={16} />
-          ),
-        );
-      }
-
-      switch (completionStatus) {
-        case 'error': {
-          return wrapInBlock(<X color={cssVar.colorError} />);
-        }
-        case 'partial': {
-          return wrapInBlock(<Check color={cssVar.colorSuccess} />);
-        }
-        default: {
-          return wrapInBlock(<Check color={cssVar.colorSuccess} />);
-        }
-      }
-    };
-
+    const statusIcon = streaming ? (
+      pendingInterventionPresent ? (
+        <HandIcon className="size-4 text-info-text" />
+      ) : (
+        <Spinner className="size-4" />
+      )
+    ) : completionStatus === 'error' ? (
+      <X aria-label={t('error', { ns: 'common' })} className="size-4 text-destructive" />
+    ) : completionStatus === 'partial' ? (
+      <AlertTriangle
+        aria-label={t('error', { ns: 'common' })}
+        className="size-4 text-warning-text"
+      />
+    ) : (
+      <Check className="size-4" />
+    );
     const showExpandToggle = expandLevel !== 'collapsed';
     const expandToggleLabel =
       expandLevel === 'semi' ? t('workflow.expandFull') : t('workflow.collapse');
-
-    const expandToggleIcon = expandLevel === 'semi' ? Maximize2 : Minimize2;
-
     const handleToggleExpand = () => {
       if (expandLevel === 'semi') {
         setExpandLevel('full');
@@ -422,126 +379,52 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
       }
     };
 
-    const expandToggleNode = (
-      <AnimatePresence initial={false}>
-        {showExpandToggle && (
-          <motion.div
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            initial={{ opacity: 0, scale: 0.9 }}
-            style={{ display: 'flex' }}
-            transition={WORKFLOW_EXPAND_TOGGLE_TRANSITION}
-          >
-            <ActionIcon
-              icon={expandToggleIcon}
-              size={{ blockSize: 24, size: WORKFLOW_EXPAND_TOGGLE_ICON_SIZE }}
-              title={expandToggleLabel}
-              onClick={handleToggleExpand}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    );
-
-    const title = (
-      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-        {renderStatusBlock()}
-        {streaming ? (
-          <div
-            className="flex items-center gap-1.5"
-            style={{
-              minHeight: WORKFLOW_STREAMING_TITLE_MIN_HEIGHT_PX,
-              minWidth: 0,
-            }}
-          >
-            <div style={{ minWidth: 0, overflow: 'hidden' }}>
-              <AnimatePresence initial={false} mode="popLayout">
-                <motion.div
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  initial={{ opacity: 0, y: 8 }}
-                  key={streamingHeadline || 'working-fallback'}
-                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    minHeight: WORKFLOW_STREAMING_TITLE_MIN_HEIGHT_PX,
-                  }}
-                >
-                  <span
-                    className={pendingInterventionPresent ? undefined : shinyTextStyles.shinyText}
-                    style={{
-                      color: pendingInterventionPresent ? cssVar.colorInfo : undefined,
-                      overflow: 'hidden',
-                      paddingBlock: 1,
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {streamingHeadline ||
-                      (pendingInterventionPresent ? pendingInterventionLabel : workingLabel)}
-                  </span>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            {showWorkingElapsed && (
-              <span style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>
-                ({formatReasoningDuration(workingElapsedSeconds * TIME_MS_PER_SECOND)})
-              </span>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-            <div
-              className="text-muted-foreground"
-              style={{
-                minWidth: 0,
-                overflow: 'hidden',
-                paddingBlock: 1,
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {summaryText}
-            </div>
-            {durationText && (
-              <span style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>
-                {durationText}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    );
+    const headline = streaming
+      ? streamingHeadline || (pendingInterventionPresent ? pendingInterventionLabel : workingLabel)
+      : summaryText;
+    const elapsed = streaming
+      ? showWorkingElapsed
+        ? formatReasoningDuration(workingElapsedSeconds * TIME_MS_PER_SECOND)
+        : undefined
+      : durationText;
 
     return (
-      <Accordion multiple value={expandedKeys} onValueChange={handleExpandedChange}>
-        <AccordionItem value="workflow">
-          <div className="flex items-center">
-            <div className="min-w-0 flex-1">
-              <AccordionTrigger
-                className="hover:no-underline"
-                style={{ paddingBlock: 4, paddingInline: 4 }}
-              >
-                {title}
-              </AccordionTrigger>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">{expandToggleNode}</div>
-          </div>
-          <AccordionContent>
-            {
-              <WorkflowExpandedList
-                assistantId={assistantMessageId}
-                blocks={blocks}
-                constrained={constrained}
-                disableEditing={disableEditing}
-                scrollRef={scrollRef}
-                onScroll={handleAutoScroll}
-              />
-            }
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+      <ChainOfThought open={isExpanded} onOpenChange={handleExpandedChange}>
+        <div className="flex items-center gap-2">
+          <ChainOfThoughtHeader icon={statusIcon}>
+            <span className="flex items-center gap-2">
+              <span className={pendingInterventionPresent ? 'text-info-text' : undefined}>
+                {headline}
+              </span>
+              {elapsed && (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {streaming ? `(${elapsed})` : elapsed}
+                </span>
+              )}
+            </span>
+          </ChainOfThoughtHeader>
+          {showExpandToggle && (
+            <MessageAction tooltip={expandToggleLabel} onClick={handleToggleExpand}>
+              {expandLevel === 'semi' ? (
+                <Maximize2 className="size-4" />
+              ) : (
+                <Minimize2 className="size-4" />
+              )}
+            </MessageAction>
+          )}
+        </div>
+        <ChainOfThoughtContent>
+          <WorkflowExpandedList
+            assistantId={assistantMessageId}
+            blocks={blocks}
+            constrained={constrained}
+            disableEditing={disableEditing}
+            scrollRef={scrollRef}
+            streaming={streaming}
+            onScroll={handleAutoScroll}
+          />
+        </ChainOfThoughtContent>
+      </ChainOfThought>
     );
   },
 );

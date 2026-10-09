@@ -2,16 +2,10 @@
 
 import { type UIChatMessage } from '@orvilo/types';
 import { ThreadStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo, useState } from 'react';
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { Task, TaskContent as TaskPanel, TaskTrigger } from '@/components/ai-elements/task';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -61,51 +55,34 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
   ]);
 
   return (
-    <Accordion
-      keepMounted
-      multiple
-      value={expanded ? [id] : []}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    >
-      <AccordionItem value={id}>
-        <AccordionTrigger
-          className="hover:no-underline"
-          style={{ paddingBlock: 4, paddingInline: 4 }}
-        >
-          {
-            <TaskTitle
-              agent={agent ? { id: agentId } : undefined}
-              metrics={metrics}
-              status={status}
-              title={title}
-            />
-          }
-        </AccordionTrigger>
-        <AccordionContent>
-          {
-            <div
-              className="flex flex-col gap-4 p-3"
-              style={{
-                border: `1px solid ${cssVar.colorBorder}`,
-                borderRadius: cssVar.borderRadiusLG,
-                marginBlock: 8,
-              }}
-            >
-              {expanded && (
-                <TaskContent
-                  id={id}
-                  isError={isError}
-                  messages={tasks}
-                  status={status}
-                  taskDetail={taskDetail}
-                  threadId={threadId}
-                />
-              )}
-            </div>
-          }
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+    <Task open={expanded} onOpenChange={setExpanded}>
+      <TaskTrigger title={title || ''}>
+        {
+          <TaskTitle
+            agent={agent ? { id: agentId } : undefined}
+            metrics={metrics}
+            status={status}
+            title={title}
+          />
+        }
+      </TaskTrigger>
+      <TaskPanel keepMounted>
+        {
+          <div className="flex flex-col gap-4">
+            {expanded && (
+              <TaskContent
+                id={id}
+                isError={isError}
+                messages={tasks}
+                status={status}
+                taskDetail={taskDetail}
+                threadId={threadId}
+              />
+            )}
+          </div>
+        }
+      </TaskPanel>
+    </Task>
   );
 }, isEqual);
 

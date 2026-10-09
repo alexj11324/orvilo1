@@ -1,10 +1,12 @@
-import { SendButton as Send } from '@lobehub/editor/react';
 import isEqual from 'fast-deep-equal';
+import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { PromptInputButton, PromptInputSubmit } from '@/components/ai-elements/prompt-input';
 import { usePermission } from '@/hooks/usePermission';
 
+import ActionDropdown from '../ActionBar/components/ActionDropdown';
 import { useChatInputResourceAccess } from '../hooks/useChatInputResourceAccess';
 import { SimpleTooltip } from '../SimpleTooltip';
 import { selectors, useChatInputStore } from '../store';
@@ -12,8 +14,6 @@ import { selectors, useChatInputStore } from '../store';
 const SendButton = memo(() => {
   const { t } = useTranslation('setting');
   const sendMenu = useChatInputStore((s) => s.sendMenu);
-  const shape = useChatInputStore((s) => s.sendButtonProps?.shape);
-  const size = useChatInputStore((s) => s.sendButtonProps?.size);
   const { generating, disabled } = useChatInputStore(selectors.sendButtonProps, isEqual);
   const [send, handleStop] = useChatInputStore((s) => [s.handleSendButton, s.handleStop]);
 
@@ -24,22 +24,32 @@ const SendButton = memo(() => {
 
   // Per-resource General-access gating: a member with view-only access on the
   // bound agent/group can read the conversation but the server rejects sends.
-  const { canUseResource } = useChatInputResourceAccess();
+  const { canUseResource, isAccessLoading } = useChatInputResourceAccess();
   const viewOnly = !canUseResource;
-  const canSend = canCreate && !viewOnly;
+  const canSend = canCreate && !viewOnly && !isAccessLoading;
 
   const button = (
-    <Send
-      disabled={disabled || !canSend}
-      generating={generating}
-      menu={canSend ? (sendMenu as any) : undefined}
-      placement={'topRight'}
-      shape={shape}
-      size={size}
-      trigger={['hover']}
-      onClick={generating || !canSend ? undefined : () => send()}
-      onStop={canSend ? () => handleStop() : undefined}
-    />
+    <div className="flex items-center gap-1">
+      <PromptInputSubmit
+        aria-label={t(generating ? 'input.stop' : 'input.send', { ns: 'chat' })}
+        disabled={!canSend || (!generating && disabled)}
+        status={generating ? 'streaming' : 'ready'}
+        type="button"
+        onClick={() => {
+          if (canSend && !generating) send();
+        }}
+        onStop={() => {
+          if (canSend) handleStop();
+        }}
+      />
+      {!generating && canSend && sendMenu && (
+        <ActionDropdown menu={sendMenu} placement="topRight" trigger="click">
+          <PromptInputButton aria-label={t('more', { ns: 'common' })}>
+            <ChevronDown className="size-4" />
+          </PromptInputButton>
+        </ActionDropdown>
+      )}
+    </div>
   );
 
   if (!canCreate) return <SimpleTooltip title={reason}>{button}</SimpleTooltip>;

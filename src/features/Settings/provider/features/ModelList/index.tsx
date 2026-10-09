@@ -1,8 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import {
   AudioLines,
@@ -17,6 +14,8 @@ import { memo, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Frame, FramePanel } from '@/components/reui/frame';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 
@@ -24,6 +23,7 @@ import DisabledModels from './DisabledModels';
 import EmptyModels from './EmptyModels';
 import EnabledModelList from './EnabledModelList';
 import ModelTitle from './ModelTitle';
+import ModelToolbar from './ModelToolbar';
 import { type ProviderSettingsContextValue } from './ProviderSettingsContext';
 import { ProviderSettingsContext } from './ProviderSettingsContext';
 import SearchResult from './SearchResult';
@@ -78,43 +78,43 @@ const Content = memo<ContentProps>(({ id }) => {
     const allTabs = [
       {
         count: modelCounts.all,
-        icon: <Icon icon={Grid3x3Icon} size={16} />,
+        icon: Grid3x3Icon,
         key: 'all',
         label: formatTabLabel(t('providerModels.tabs.all'), modelCounts.all),
       },
       {
         count: modelCounts.chat,
-        icon: <Icon icon={MessageSquareTextIcon} size={16} />,
+        icon: MessageSquareTextIcon,
         key: 'chat',
         label: formatTabLabel(t('providerModels.tabs.chat'), modelCounts.chat),
       },
       {
         count: modelCounts.image,
-        icon: <Icon icon={ImageIcon} size={16} />,
+        icon: ImageIcon,
         key: 'image',
         label: formatTabLabel(t('providerModels.tabs.image'), modelCounts.image),
       },
       {
         count: modelCounts.video,
-        icon: <Icon icon={VideoIcon} size={16} />,
+        icon: VideoIcon,
         key: 'video',
         label: formatTabLabel(t('providerModels.tabs.video'), modelCounts.video),
       },
       {
         count: modelCounts.embedding,
-        icon: <Icon icon={BoltIcon} size={16} />,
+        icon: BoltIcon,
         key: 'embedding',
         label: formatTabLabel(t('providerModels.tabs.embedding'), modelCounts.embedding),
       },
       {
         count: modelCounts.asr,
-        icon: <Icon icon={MicIcon} size={16} />,
+        icon: MicIcon,
         key: 'asr',
         label: formatTabLabel(t('providerModels.tabs.asr'), modelCounts.asr),
       },
       {
         count: modelCounts.tts,
-        icon: <Icon icon={AudioLines} size={16} />,
+        icon: AudioLines,
         key: 'tts',
         label: formatTabLabel(t('providerModels.tabs.tts'), modelCounts.tts),
       },
@@ -122,7 +122,7 @@ const Content = memo<ContentProps>(({ id }) => {
 
     // Only show tabs that have models (count > 0), but always show 'all' tab
     return allTabs.filter((tab) => tab.key === 'all' || tab.count > 0);
-  }, [modelCounts]);
+  }, [modelCounts, t]);
 
   // Ensure active tab is available, fallback to 'all' if current tab is hidden
   const availableTabKeys = tabs.map((tab) => tab.key);
@@ -140,18 +140,20 @@ const Content = memo<ContentProps>(({ id }) => {
   return isEmpty ? (
     <EmptyModels provider={id} />
   ) : (
-    <Flexbox>
-      <Tabs
-        activeKey={currentActiveTab}
-        items={tabs}
-        size="small"
-        style={{ marginBottom: 12, marginLeft: -6 }}
-        variant="square"
-        onChange={setActiveTab}
-      />
+    <>
+      <Tabs className="px-3 pt-2 pb-1" value={currentActiveTab} onValueChange={setActiveTab}>
+        <TabsList className="h-auto flex-wrap justify-start">
+          {tabs.map(({ icon: TabIcon, key, label }) => (
+            <TabsTrigger className="flex-none" key={key} value={key}>
+              <TabIcon />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       <EnabledModelList activeTab={currentActiveTab} />
       <DisabledModels activeTab={currentActiveTab} providerId={id} />
-    </Flexbox>
+    </>
   );
 });
 
@@ -167,24 +169,23 @@ const ModelList = memo<ModelListProps>(
       <ProviderSettingsContext
         value={{ modelEditable, sdkType, showAddNewModel, showDeployName, showModelFetcher }}
       >
-        <Flexbox
-          gap={16}
-          paddingInline={mobile ? 12 : 0}
-          style={{
-            background: mobile ? cssVar.colorBgContainer : undefined,
-            paddingBottom: 16,
-            paddingTop: 8,
-          }}
+        <section
+          className={mobile ? 'flex flex-col gap-2 bg-card px-3 pb-4' : 'flex flex-col gap-2 pb-4'}
         >
-          <ModelTitle
-            provider={id}
-            showAddNewModel={showAddNewModel}
-            showModelFetcher={showModelFetcher}
-          />
-          <Suspense fallback={<SkeletonList />}>
-            <Content id={id} />
-          </Suspense>
-        </Flexbox>
+          <ModelTitle provider={id} />
+          <Frame dense>
+            <FramePanel className="p-0">
+              <ModelToolbar
+                provider={id}
+                showAddNewModel={showAddNewModel}
+                showModelFetcher={showModelFetcher}
+              />
+              <Suspense fallback={<SkeletonList />}>
+                <Content id={id} />
+              </Suspense>
+            </FramePanel>
+          </Frame>
+        </section>
       </ProviderSettingsContext>
     );
   },

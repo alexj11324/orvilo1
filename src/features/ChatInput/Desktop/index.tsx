@@ -1,7 +1,6 @@
 'use client';
 
 import { type ChatInputProps } from '@lobehub/editor/react';
-import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode, use } from 'react';
@@ -9,9 +8,17 @@ import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputTools,
+} from '@/components/ai-elements/prompt-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import ChatInputNotice from '@/features/ChatInput/ChatInputNotice';
 import ComposerExpandButton from '@/features/ChatInput/components/ComposerExpandButton';
+import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { LayoutContainerContext } from '@/features/DesktopLayoutContainer/LayoutContainerContext';
 import { useChatStore } from '@/store/chat';
@@ -30,6 +37,7 @@ import { useTopicDrop } from '../InputEditor/ReferTopic/useTopicDrop';
 import { useWorkspaceFileDrop } from '../InputEditor/useWorkspaceFileDrop';
 import SendArea from '../SendArea';
 import TypoBar from '../TypoBar';
+import ComposerBeam from './ComposerBeam';
 import ContextContainer from './ContextContainer';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -58,32 +66,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     background: ${cssVar.colorBgContainer};
   `,
-  controlBarInCard: css`
-    flex: none;
-    padding-block-end: 4px;
-    padding-inline: 4px;
-  `,
-  inputFullscreen: css`
-    border: none;
-    border-radius: 0 !important;
-  `,
-  leftActions: css`
-    flex: none;
-    min-width: 0;
-
-    > * {
-      flex: none !important;
-    }
-  `,
-  leftSlot: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
 }));
 
 interface DesktopChatInputProps extends ActionToolbarProps {
   actionBarStyle?: React.CSSProperties;
+  /** Conversation-only busy effect; undefined leaves other editor surfaces unchanged. */
+  beamActive?: boolean;
   /**
    * Collapse the editor to a single bordered row by dropping the action bar footer.
    * Send still works through the Enter keybinding; the rest of the chrome
@@ -141,6 +129,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     inputContainerProps,
     extentHeaderContent,
     actionBarStyle,
+    beamActive,
     borderRadius,
     extraActionItems,
     dropdownPlacement,
@@ -159,6 +148,8 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
       systemStatusSelectors.chatInputHeight(s),
       s.updateSystemStatus,
     ]);
+    const { canUseResource, isAccessLoading } = useChatInputResourceAccess();
+    const handleSendButton = useChatInputStore((s) => s.handleSendButton);
     const contextSelectionKey = useChatInputStore((s) => s.contextSelectionKey);
     const hasContextSelections = useFileStore(
       fileChatSelectors.chatContextSelectionHasItem(contextSelectionKey),
@@ -215,32 +206,19 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
       <Skeleton style={{ height: 32, minWidth: 64, width: 64, borderRadius: 999 }} />
     ) : null;
     const noticeNode = !isConfigLoading && <ChatInputNotice />;
-    // The action bar is `width: 100%`, so a sibling placed *inside* its
-    // shrink-to-fit box is pushed past the bar's right edge and leaves a
-    // one-slot hole between the last action and the expand toggle. Keep the
-    // toggle in a row outside that box.
-    const leftSlotContent = (
-      <div className="flex flex-row items-center flex-none gap-0.5">
-        <div className={cx('flex flex-row items-center', styles.leftActions)}>
-          {leftContent ?? (
-            <ActionBar
-              disableCollapse
-              borderRadius={borderRadius}
-              dropdownPlacement={dropdownPlacement}
-              extraActionItems={extraActionItems}
-            />
-          )}
-        </div>
+    const leftSlot = (
+      <>
+        {leftContent ?? (
+          <ActionBar
+            disableCollapse
+            borderRadius={borderRadius}
+            dropdownPlacement={dropdownPlacement}
+            extraActionItems={extraActionItems}
+          />
+        )}
         <ComposerExpandButton />
-      </div>
-    );
-    const leftSlot = noticeNode ? (
-      <div className={cx('flex flex-row items-center gap-1', styles.leftSlot)}>
-        {leftSlotContent}
         {noticeNode}
-      </div>
-    ) : (
-      leftSlotContent
+      </>
     );
 
     // The control bar's home: a sibling under the card by default, or the
@@ -252,6 +230,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     const content = (
       <div
         className={cx('flex flex-col gap-2', cx(styles.container, expand && styles.fullscreen))}
+        ref={slashMenuRef}
         style={{
           display: hidden ? 'none' : undefined,
           paddingBlock: expand ? 0 : showFootnote ? '0 12px' : '0 8px',
@@ -259,59 +238,81 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <ChatInput
-          data-testid="chat-input"
-          defaultHeight={chatInputHeight || 32}
-          fullscreen={expand}
-          maxHeight={320}
-          minHeight={36}
-          resize={true}
-          slashMenuRef={slashMenuRef}
-          footer={
-            compact ? undefined : (
-              <>
-                <ChatInputActionBar
-                  left={loadingLeftSlot ?? leftSlot}
-                  style={actionBarStyle ?? { paddingRight: 8 }}
-                  right={
-                    loadingRightSlot ??
-                    rightContent ??
-                    (sendAreaPrefix ? (
-                      <div className="flex flex-row items-center gap-1.5">
-                        {sendAreaPrefix}
-                        <SendArea hideContextWindow={hasControlBar} />
-                      </div>
-                    ) : (
+        <ComposerBeam active={beamActive} fullscreen={expand}>
+          <PromptInput
+            className={cx(expand && 'flex h-full min-h-0 flex-1 flex-col')}
+            data-testid="chat-input"
+            style={inputContainerProps?.style}
+            externalEditor={{
+              onSubmit: (event) => {
+                event.preventDefault();
+                if (canUseResource && !isAccessLoading) handleSendButton();
+              },
+            }}
+            // An empty draft disables Send, not the entire editable surface.
+            // Override InputGroup's descendant-disabled wash for this composite control.
+            groupClassName={cx(
+              'h-auto flex-col overflow-visible rounded-[12px] border-border bg-card text-card-foreground shadow-sm has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
+              expand && 'min-h-0 flex-1 rounded-none',
+              inputContainerProps?.className,
+            )}
+          >
+            {(extentHeaderContent || showTypoBar || shouldShowContextContainer) && (
+              <PromptInputHeader>
+                <div className="flex w-full flex-col gap-0">
+                  {extentHeaderContent}
+                  {showTypoBar && <TypoBar />}
+                  {contextContainerNode}
+                </div>
+              </PromptInputHeader>
+            )}
+            <PromptInputBody
+              className={cx('block w-full overflow-y-auto px-3 py-2', expand && 'min-h-0 flex-1')}
+              style={
+                expand
+                  ? undefined
+                  : {
+                      height: chatInputHeight || undefined,
+                      maxHeight: inputContainerProps?.maxHeight ?? 320,
+                      minHeight: inputContainerProps?.minHeight ?? 36,
+                      resize: inputContainerProps?.resize === false ? undefined : 'vertical',
+                    }
+              }
+              onPointerUp={(event) => {
+                if (!expand && inputContainerProps?.resize !== false) {
+                  updateSystemStatus({
+                    chatInputHeight: Math.round(event.currentTarget.getBoundingClientRect().height),
+                  });
+                }
+              }}
+            >
+              <InputEditor
+                defaultRows={editorDefaultRows}
+                initialContent={initialContent}
+                placeholder={placeholder}
+                placeholderVariant={placeholderVariant}
+              />
+            </PromptInputBody>
+            {!compact && (
+              <PromptInputFooter style={actionBarStyle}>
+                <PromptInputTools className="flex-1">
+                  {loadingLeftSlot ?? leftSlot}
+                </PromptInputTools>
+                <PromptInputTools className="shrink-0">
+                  {loadingRightSlot ?? rightContent ?? (
+                    <>
+                      {sendAreaPrefix}
                       <SendArea hideContextWindow={hasControlBar} />
-                    ))
-                  }
-                />
-                {controlBarInsideCard && controlBarNode ? (
-                  <div className={styles.controlBarInCard}>{controlBarNode}</div>
-                ) : null}
-              </>
-            )
-          }
-          header={
-            <div className="flex flex-col gap-0">
-              {extentHeaderContent}
-              {showTypoBar && <TypoBar />}
-              {contextContainerNode}
-            </div>
-          }
-          onSizeChange={(height) => {
-            updateSystemStatus({ chatInputHeight: height });
-          }}
-          {...inputContainerProps}
-          className={cx(expand && styles.inputFullscreen, inputContainerProps?.className)}
-        >
-          <InputEditor
-            defaultRows={editorDefaultRows}
-            initialContent={initialContent}
-            placeholder={placeholder}
-            placeholderVariant={placeholderVariant}
-          />
-        </ChatInput>
+                    </>
+                  )}
+                </PromptInputTools>
+              </PromptInputFooter>
+            )}
+            {controlBarInsideCard && controlBarNode ? (
+              <PromptInputFooter className="pt-0">{controlBarNode}</PromptInputFooter>
+            ) : null}
+          </PromptInput>
+        </ComposerBeam>
         {controlBarInsideCard ? null : controlBarNode}
         {showFootnote && !expand && (
           <div

@@ -1,9 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
 import { type PropsWithChildren } from 'react';
 
 import ProviderMenu from '../../ProviderMenu';
 import Container from './Container';
-import { styles } from './style';
 
 const Layout = ({
   children,
@@ -12,10 +10,10 @@ const Layout = ({
   onProviderSelect: (providerKey: string) => void;
 }) => {
   return (
-    <Flexbox horizontal className={styles.mainContainer} width={'100%'}>
+    <div className="flex max-h-full w-full">
       <ProviderMenu mobile={false} onProviderSelect={onProviderSelect} />
       <Container>{children}</Container>
-    </Flexbox>
+    </div>
   );
 };
 export default Layout;

@@ -1175,7 +1175,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       expect(toolCreateIndex).toBeGreaterThanOrEqual(0);
       expect(optimisticUpdateMessagePlugin).toHaveBeenCalledWith(
         mockCreateMessage.mock.calls[toolCreateIndex][0].id,
-        { intervention: { status: 'pending' } },
+        { intervention: { operationId: 'op-1', status: 'pending' } },
         { operationId: 'op-1' },
       );
       expect(mockCreateMessage.mock.invocationCallOrder[toolCreateIndex]).toBeLessThan(

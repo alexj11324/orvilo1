@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import ContentBlocksScroll from './ContentBlocksScroll';
 import type { RenderableAssistantContentBlock } from './types';
+import WorkflowExpandedList from './WorkflowExpandedList';
 
 vi.mock('./ContentBlock', () => ({
   default: ({ disableMarkdownStreaming, id }: RenderableAssistantContentBlock) => (
@@ -65,5 +66,26 @@ describe('ContentBlocksScroll', () => {
 
     const [firstBlock] = screen.getAllByTestId('content-block');
     expect(firstBlock.parentElement!).toHaveStyle({ gap: '8px' });
+  });
+  it('preserves projected Markdown streaming flags in the AI Elements workflow timeline', () => {
+    render(
+      <WorkflowExpandedList
+        streaming
+        assistantId="assistant-1"
+        blocks={[
+          { content: 'settled step', disableMarkdownStreaming: true, id: 'block-1' },
+          { content: 'streaming step', disableMarkdownStreaming: false, id: 'block-2' },
+        ]}
+      />,
+    );
+    const blocks = screen.getAllByTestId('content-block');
+    expect(blocks.map((block) => block.getAttribute('data-disable-markdown-streaming'))).toEqual([
+      'true',
+      'false',
+    ]);
+    expect(blocks.map((block) => block.getAttribute('data-block-id'))).toEqual([
+      'block-1',
+      'block-2',
+    ]);
   });
 });

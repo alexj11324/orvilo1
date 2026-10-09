@@ -1,11 +1,16 @@
-import { TokenTag } from '@lobehub/ui/chat';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Context,
+  ContextContent,
+  ContextContentBody,
+  ContextContentHeader,
+  ContextTrigger,
+} from '@/components/ai-elements/context';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-import ActionPopover from '../components/ActionPopover';
 import TokenDetails from './TokenDetails';
 import { useTokenBreakdown } from './useTokenBreakdown';
 
@@ -36,22 +41,13 @@ const Token = memo(() => {
   if (!isDevMode && maxTokens > 0 && totalToken / maxTokens <= 0.5) return null;
 
   return (
-    <ActionPopover content={content}>
-      <TokenTag
-        maxValue={maxTokens}
-        mode={'used'}
-        value={totalToken}
-        size={{
-          blockSize: 28,
-          size: 18,
-        }}
-        text={{
-          overload: t('tokenTag.overload'),
-          remained: t('tokenTag.remained'),
-          used: t('tokenTag.used'),
-        }}
-      />
-    </ActionPopover>
+    <Context maxTokens={maxTokens} usedTokens={totalToken}>
+      <ContextTrigger aria-label={t('tokenDetails.title')} className="h-7 gap-1 px-1 text-xs" />
+      <ContextContent align="end" side="top">
+        <ContextContentHeader />
+        <ContextContentBody>{content}</ContextContentBody>
+      </ContextContent>
+    </Context>
   );
 });
 

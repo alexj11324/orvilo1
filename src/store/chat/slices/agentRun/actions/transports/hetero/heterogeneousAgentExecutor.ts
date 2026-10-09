@@ -978,7 +978,7 @@ export const executeHeterogeneousAgent = async (
     try {
       await get().optimisticUpdateMessagePlugin(
         toolMsgId,
-        { intervention: { status: 'pending' } },
+        { intervention: { operationId, status: 'pending' } },
         { operationId },
       );
       // Sidebar topic row swaps the running spinner for a hand icon

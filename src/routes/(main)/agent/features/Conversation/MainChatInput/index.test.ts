@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { getHeterogeneousComposerLeftActions } from '../HeterogeneousChatInput';
+import { heterogeneousComposerLeftActions } from '../HeterogeneousChatInput';
 import { agentComposerRightActions } from './index';
 
 describe('agent composer action order', () => {
-  it('offers the existing tool selector for native MCP runtimes without a model picker', () => {
-    expect(getHeterogeneousComposerLeftActions('opencode')).toEqual(['tools']);
-    expect(getHeterogeneousComposerLeftActions('codex')).toEqual(['tools']);
-    expect(getHeterogeneousComposerLeftActions('pi')).toEqual([]);
-    expect(getHeterogeneousComposerLeftActions('orvilo')).toEqual([]);
-    expect(getHeterogeneousComposerLeftActions(undefined)).toEqual([]);
+  it('omits the redundant tools button from the heterogeneous composer', () => {
+    expect(heterogeneousComposerLeftActions).toEqual([]);
   });
   it('offers the agent selector', () => {
     expect(agentComposerRightActions).toContain('agent');

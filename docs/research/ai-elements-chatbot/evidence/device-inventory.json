@@ -1,0 +1,37 @@
+{
+  "devices": [
+    {
+      "channels": [
+        {
+          "channel": "default",
+          "connectedAt": "2026-10-09T04:39:20.013Z",
+          "hostname": "E2E Mock Device",
+          "platform": "darwin"
+        }
+      ],
+      "defaultCwd": null,
+      "deviceId": "e2e-mock-device",
+      "enroller": null,
+      "friendlyName": null,
+      "hostname": "E2E Mock Device",
+      "identitySource": null,
+      "lastSeen": "2026-10-09T04:39:20.013Z",
+      "online": true,
+      "platform": "darwin",
+      "registered": false,
+      "scope": "personal",
+      "visibility": null,
+      "workingDirs": []
+    }
+  ],
+  "keys": [
+    "devices",
+    "isDevicesInit",
+    "updateDeviceCwd",
+    "clearDeviceDefaultCwd",
+    "migrateLocalRecentsToDevice",
+    "removeDeviceWorkingDir",
+    "useFetchDevices"
+  ],
+  "selectorText": "afe text\nsecond line\n\nEmpty fence:\n\nTEXT\nWrap\n\n\n\nUnfinished fence:\n\nPYTHON\nWrap\nprint(\"still streaming\")\nCopy\nMore\n\n\n\n\nDescribe a task or ask a question to OpenCode\nOpenCode acceptance\nDesktop\nThis device · /home/agent/Desktop\nFiles\nSkills\nAgent Mock\nFeature Flags\nRender Gallery\nTab Routers\n/ws-usere2etestu/chat/tpc_ai_elements_fixture\n60 FPS\nCLS 0.019\nR751.2M · J350.8M\nCPU 1.2%\nGPU 0.2% · 72M\n1/5"
+}

@@ -21,29 +21,12 @@ const AgentConnectorUsage = memo<{
   const navigateToAgent = useNavigateToAgent();
 
   return (
-    <div
-      className={'flex min-w-0'}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        background: 'var(--ant-color-fill-quaternary)',
-        borderRadius: 8,
-        marginBottom: 16,
-        padding: '10px 12px',
-      }}
-    >
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}
-      >
+    <div className="mb-4 flex min-w-0 flex-row items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
+      <div className="flex min-w-0 flex-1 flex-row items-center gap-2.5 overflow-hidden">
         <AssigneeAvatar agentId={agentId} size={32} />
-        <div className={'flex min-w-0'} style={{ flexDirection: 'column', overflow: 'hidden' }}>
-          <span className={'text-muted-foreground'} style={{ fontSize: 12 }}>
-            {t('agentConnectorUsage.label')}
-          </span>
-          <span className={'truncate'} style={{ fontSize: 14, fontWeight: 500 }}>
+        <div className="flex min-w-0 flex-col overflow-hidden">
+          <span className="text-xs text-muted-foreground">{t('agentConnectorUsage.label')}</span>
+          <span className="truncate text-sm font-medium">
             {agentTitle || t('skillGroup.agentConnectors')}
           </span>
         </div>

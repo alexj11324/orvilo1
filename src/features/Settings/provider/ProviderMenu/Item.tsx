@@ -1,9 +1,9 @@
-import { Center } from '@lobehub/ui';
-import { Avatar, Badge } from '@lobehub/ui/base-ui';
 import { BRANDING_PROVIDER } from '@orvilo/business-const';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
+import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding/ProductLogo';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { isCustomBranding } from '@/const/version';
@@ -17,6 +17,7 @@ interface ProviderItemProps extends AiProviderListItem {
 
 const ProviderItem = memo<ProviderItemProps>(
   ({ id, name, source, enabled, logo, onClick = () => {} }) => {
+    const { t } = useTranslation('modelProvider');
     const location = useLocation();
 
     // Extract providerId from pathname: /settings/provider/xxx -> xxx
@@ -58,9 +59,10 @@ const ProviderItem = memo<ProviderItemProps>(
         title={name}
         extra={
           enabled ? (
-            <Center width={24}>
-              <Badge status="success" />
-            </Center>
+            <span className="flex w-6 items-center justify-center">
+              <span aria-hidden className="size-1.5 rounded-full bg-success" />
+              <span className="sr-only">{t('menu.list.enabled')}</span>
+            </span>
           ) : undefined
         }
         onClick={() => {

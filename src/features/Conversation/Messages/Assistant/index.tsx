@@ -126,6 +126,7 @@ const AssistantMessage = memo<AssistantMessageProps>(
 
     return (
       <ChatItem
+        assistantAvatar
         showTitle
         aboveMessage={<ThreadExecutionSummary messageId={id} />}
         // ChatItem renders this as the primary block when the message is empty,

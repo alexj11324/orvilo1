@@ -1,0 +1,9 @@
+{
+  "files": [
+    {
+      "path": "registry/default/examples/chatbot.tsx",
+      "sha256": "e82d5ec48e73263b805f194bd700724baae0a856118864cfc0fd70e6e55b2b81"
+    }
+  ],
+  "url": "https://elements.ai-sdk.dev/api/registry/example-chatbot.json"
+}

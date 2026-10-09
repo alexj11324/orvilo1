@@ -1584,12 +1584,11 @@ export class ConversationControlActionImpl {
     context?: ConversationContext,
   ): Promise<void> => {
     const toolMessage = dbMessageSelectors.getDbMessageById(toolMessageId)(this.#get());
-    if (!toolMessage) return;
+    if (!toolMessage) throw new Error('This Agent question is no longer available.');
 
     const toolCallId = toolMessage.tool_call_id;
     if (!toolCallId) {
-      console.warn('[submitHeteroIntervention] tool message has no tool_call_id', toolMessageId);
-      return;
+      throw new Error('This Agent question has no original tool call.');
     }
 
     const effectiveContext: ConversationContext = context ?? {
@@ -1598,7 +1597,6 @@ export class ConversationControlActionImpl {
       threadId: this.#get().activeThreadId,
     };
     const originalIntervention = toolMessage.pluginIntervention;
-    const originalContent = toolMessage.content;
     const interventionState = (
       toolMessage.pluginState as
         | { heterogeneousIntervention?: { interactionKind?: unknown; windowId?: unknown } }
@@ -1669,12 +1667,15 @@ export class ConversationControlActionImpl {
     // provenance for local desktop IPC / legacy fallback, never server auth.
     const { messageOperationMap } = this.#get();
     const candidateOperationId =
+      (originalIntervention?.operationId && !originalIntervention.batchId
+        ? originalIntervention.operationId
+        : undefined) ??
       (toolMessage.parentId && messageOperationMap?.[toolMessage.parentId]) ??
-      messageOperationMap?.[toolMessageId];
+      messageOperationMap?.[toolMessageId] ??
+      originalIntervention?.operationId;
 
     if (!candidateOperationId) {
-      console.warn('[submitHeteroIntervention] no operationId for', toolMessageId);
-      return;
+      throw new Error('The original Agent operation is no longer available.');
     }
 
     // Resolve the runtime execution op before choosing IPC vs remote transport.
@@ -1682,6 +1683,9 @@ export class ConversationControlActionImpl {
     // this is `execServerAgentRuntime`.
     const { operation, operationId } =
       this.#resolveHeteroInterventionExecutionOperation(candidateOperationId);
+    if (originalIntervention?.operationId && !operation) {
+      throw new Error('The original Agent operation is no longer pending on this device.');
+    }
 
     // If the operation has already been garbage-collected (e.g. the bridge
     // timed out earlier and `runtime_end` rolled the op into `completed`
@@ -1700,58 +1704,14 @@ export class ConversationControlActionImpl {
     const optimisticContext: OptimisticUpdateContext = operationAlive ? { operationId } : {};
     const isLocalDesktopHetero = operation?.type === 'execHeterogeneousAgent';
 
-    if (!isLocalDesktopHetero) {
-      // Publishing the user intent is not completion. Keep the interaction
-      // pending but mark its in-flight phase so a remount/retry cannot present
-      // an optimistic terminal state before the producer has consumed it.
-      await this.#get().optimisticUpdateMessagePlugin(
-        toolMessageId,
-        { intervention: { resolving: true, status: 'pending' } },
-        optimisticContext,
-      );
-      if (actionType === 'submit') {
-        await this.setInterventionAnswers(toolMessageId, payload ?? {}, optimisticContext);
-      }
-    } else if (actionType === 'submit') {
-      await this.#get().optimisticUpdateMessagePlugin(
-        toolMessageId,
-        { intervention: { status: 'approved' } },
-        optimisticContext,
-      );
-      // Persist the structured `{ [questionText]: selectedLabel(s) }` answers
-      // to `pluginState.askUserAnswers` so the Render component can show
-      // Q&A pairs instead of parsing the bridge's prose `User answers:`
-      // dump out of `content`. Best-effort — never block the IPC submit.
+    // Local and remote replies remain pending until their producer consumes them.
+    await this.#get().optimisticUpdateMessagePlugin(
+      toolMessageId,
+      { intervention: { ...originalIntervention, resolving: true, status: 'pending' } },
+      optimisticContext,
+    );
+    if (actionType === 'submit') {
       await this.setInterventionAnswers(toolMessageId, payload ?? {}, optimisticContext);
-      // Bridge formats its own "User answers:" string for CC, so the eventual
-      // tool_result re-rewrites this content. The optimistic write is just
-      // for the brief gap between Submit and CC echoing the result back.
-      const summary = `User submitted: ${JSON.stringify(payload ?? {})}`;
-      await this.#get().optimisticUpdateMessageContent(
-        toolMessageId,
-        summary,
-        undefined,
-        optimisticContext,
-      );
-    } else {
-      const reason = actionType === 'skip' ? 'User skipped' : 'User cancelled';
-      await this.#get().optimisticUpdateMessagePlugin(
-        toolMessageId,
-        {
-          intervention: {
-            rejectedReason: reason,
-            skipped: actionType === 'skip',
-            status: 'rejected',
-          },
-        },
-        optimisticContext,
-      );
-      await this.#get().optimisticUpdateMessageContent(
-        toolMessageId,
-        `${reason} this interaction.`,
-        undefined,
-        optimisticContext,
-      );
     }
 
     // Forward the answer to the producer over the transport THIS op actually
@@ -1801,18 +1761,42 @@ export class ConversationControlActionImpl {
             ? { operationId, result: payload ?? {}, toolCallId }
             : { cancelReason: 'user_cancelled', cancelled: true, operationId, toolCallId },
         );
+        // IPC returns only after the original bridge accepted this tool call.
+        const reason = actionType === 'skip' ? 'User skipped' : 'User cancelled';
+        await this.#get().optimisticUpdateMessagePlugin(
+          toolMessageId,
+          {
+            intervention:
+              actionType === 'submit'
+                ? { ...originalIntervention, resolving: false, status: 'approved' }
+                : {
+                    ...originalIntervention,
+                    rejectedReason: reason,
+                    resolving: false,
+                    skipped: actionType === 'skip',
+                    status: 'rejected',
+                  },
+          },
+          optimisticContext,
+        );
       } else {
+        // Gateway attachment owns a local UI operation; the child producer
+        // listens on the original server operation carried by its question.
+        const remoteOperationId =
+          originalIntervention?.operationId ??
+          operation?.metadata?.serverOperationId ??
+          operationId;
         const resolutionIntent = JSON.stringify(
           canonicalizeResolutionPayload({ actionType, payload: payload ?? {} }),
         );
-        const resolutionKey = `${operationId}:${toolCallId}:${resolutionIntent}`;
+        const resolutionKey = `${remoteOperationId}:${toolCallId}:${resolutionIntent}`;
         const resolutionRequestId =
           this.#heteroResolutionRequestIds.get(resolutionKey) ?? globalThis.crypto.randomUUID();
         this.#heteroResolutionRequestIds.set(resolutionKey, resolutionRequestId);
         await lambdaClient.aiAgent.submitHeteroIntervention.mutate(
           actionType === 'submit'
             ? {
-                operationId,
+                operationId: remoteOperationId,
                 resolutionRequestId,
                 result: payload ?? {},
                 toolCallId,
@@ -1821,7 +1805,7 @@ export class ConversationControlActionImpl {
             : {
                 cancelReason: 'user_cancelled',
                 cancelled: true,
-                operationId,
+                operationId: remoteOperationId,
                 resolutionRequestId,
                 toolCallId,
                 windowId: interventionWindowId,
@@ -1835,14 +1819,6 @@ export class ConversationControlActionImpl {
         { intervention: originalIntervention ?? { status: 'pending' } },
         optimisticContext,
       );
-      if (isLocalDesktopHetero) {
-        await this.#get().optimisticUpdateMessageContent(
-          toolMessageId,
-          originalContent,
-          undefined,
-          optimisticContext,
-        );
-      }
       throw err;
     }
 

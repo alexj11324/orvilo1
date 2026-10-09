@@ -236,3 +236,27 @@ Reduce anxiety and restore control without being sentimental. Default to 80% inf
 3. Give the next action (button or path).
 
 Avoid preachy encouragement ("don't worry"), grand narratives, and over-anthropomorphizing ("I understand you", "I'll always remember you"). The stance: Agents accelerate output, but the user owns the judgment and the final decision.
+
+### Libraries.dev conversation effects experiment
+
+The user-requested `feat/orbs-chat` experiment directly reuses Libraries.dev's
+Thinking Orbs, Border Beam and Bot Avatars rather than approximating their visuals.
+Within conversation AI status, composer glow and default assistant avatar only,
+upstream particle geometry, animation and effect colors are permitted. Existing
+application theme, input layout, custom identity and accessible controls remain
+owned by Orvilo. This scoped exception also permits `thinking-orbs` in the two
+conversation status components despite the inherited ESLint preference for
+LobeHub Spin. It does not authorize replacing unrelated spinners or user avatars.
+Evidence and state contract: `docs/research/thinking-orbs/implementation.md`.
+
+### AI Elements conversation presentation
+
+For `feat/orbs-chat`, the user selected AI Elements as the first choice for
+matching chat surfaces, with ReUI Code Block for code. Reuse upstream component
+structure and spacing within the conversation and composer; map their colors to
+existing semantic theme tokens and their triggers to local Base UI primitives.
+This supersedes the earlier experiment's requirement to retain the old input
+layout. Keep the chosen Orbs, Beam and Bot accents, real domain state, permission
+guards, editor behavior and specialized preview engines. The removed composer
+operation ticker and four-square Tools shortcut stay removed; Skills use `/`.
+Source provenance and behavior coverage: `docs/research/thinking-orbs/ai-elements-migration.md`.

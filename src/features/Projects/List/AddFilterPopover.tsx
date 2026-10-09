@@ -1,39 +1,34 @@
 'use client';
 import type { ProjectHealth, ProjectStatus } from '@orvilo/types';
 import { PROJECT_HEALTH_STATES, PROJECT_STATUSES } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
 import type { ParseKeys } from 'i18next';
 import {
   ALargeSmallIcon,
-  ArrowLeftIcon,
   CalendarDaysIcon,
-  CheckIcon,
-  ChevronRightIcon,
   CircleUserIcon,
   DiamondIcon,
-  FilterIcon,
   HeartPulseIcon,
   LayoutTemplateIcon,
   LinkIcon,
   SignalHighIcon,
-  SlidersHorizontalIcon,
-  SparklesIcon,
   TagIcon,
   UserRoundIcon,
   UsersRoundIcon,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { createElement, memo, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
+import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import FilterMenuPopover from '@/features/Projects/FilterMenu/FilterMenuPopover';
+import type {
+  FilterMemberRow,
+  FilterMenuGroup,
+  FilterMenuOption,
+  FilterMenuPicker,
+} from '@/features/Projects/FilterMenu/model';
+import { toggleListValue, toMemberOptions } from '@/features/Projects/FilterMenu/model';
 import { ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
@@ -44,7 +39,6 @@ import {
   PROJECT_LIST_DATE_FIELDS,
   PROJECT_LIST_DATE_WINDOWS,
   PROJECT_LIST_FILTER_GROUPS,
-  type ProjectListDateField,
   type ProjectListFilter,
   type ProjectListFilterGroupId,
   projectListFilterKey,
@@ -52,129 +46,7 @@ import {
   upsertProjectListFilter,
 } from './listFilters';
 
-const styles = createStaticStyles(({ css }) => ({
-  aiPane: css`
-    width: 280px;
-    padding: 10px;
-  `,
-  backButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding: 0;
-    border: 0;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      color: ${cssVar.colorText};
-    }
-  `,
-  groupTitle: css`
-    padding-block: 2px;
-    padding-inline: 8px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  menu: css`
-    overflow: auto;
-    width: 260px;
-    max-height: 380px;
-    padding: 6px;
-  `,
-  menuRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 30px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 4px;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  menuRowDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.4;
-
-    &:hover,
-    &:focus-visible {
-      background: transparent;
-    }
-  `,
-  menuRowLabel: css`
-    flex: 1;
-    min-width: 0;
-  `,
-  pickerPane: css`
-    overflow: auto;
-    width: 260px;
-    max-height: 380px;
-    padding: 6px;
-  `,
-  pickerRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 30px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 4px;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rowCheck: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-
-    color: ${cssVar.colorPrimary};
-  `,
-  searchWrap: css`
-    padding-block-end: 6px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
-
-const GROUP_ICONS: Record<ProjectListFilterGroupId, StatusVisual['icon']> = {
+const GROUP_ICONS: Record<ProjectListFilterGroupId, FilterMenuGroup['icon']> = {
   creator: CircleUserIcon,
   dates: CalendarDaysIcon,
   health: HeartPulseIcon,
@@ -193,17 +65,10 @@ const GROUP_ICONS: Record<ProjectListFilterGroupId, StatusVisual['icon']> = {
   text: ALargeSmallIcon,
 };
 
-type MemberRow = {
-  deletedAt?: Date | null | string;
-  suspendedAt?: Date | null | string;
-  user?: { avatar?: null | string; fullName?: null | string; username?: null | string } | null;
-  userId: string;
-};
-
 export interface AddFilterPopoverProps {
   currentUserId?: string;
   filters: readonly ProjectListFilter[];
-  members?: readonly MemberRow[];
+  members?: readonly FilterMemberRow[];
   membersError?: unknown;
   membersLoading?: boolean;
   onChange: (filters: ProjectListFilter[]) => void;
@@ -211,12 +76,6 @@ export interface AddFilterPopoverProps {
   onOpenAdvanced: () => void;
   projects: readonly Pick<ProjectListItem, 'id' | 'name'>[];
 }
-
-type PaneView =
-  | { kind: 'ai' }
-  | { kind: 'dateField'; field: ProjectListDateField }
-  | { kind: 'group'; group: ProjectListFilterGroupId }
-  | { kind: 'menu' };
 
 const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'project'>> = {
   0: 'create.priority.noPriority',
@@ -226,16 +85,19 @@ const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'project'>> = {
   4: 'create.priority.low',
 };
 
-const memberDisplayName = (member: MemberRow) =>
-  member.user?.fullName || member.user?.username || member.userId;
+const option = (
+  key: string,
+  label: string,
+  checked: boolean,
+  onToggle: () => void,
+  extra?: Pick<FilterMenuOption, 'icon' | 'pinned'>,
+): FilterMenuOption => ({ checked, key, label, onToggle, ...extra });
 
 /**
- * The Linear projects "Add filter" menu (ref-projects-filter-menu.png):
- * searchable property menu with `AI filter` / `Advanced filter` on top, then
- * the property groups. Supported groups drill into a value picker that
- * applies live (each toggle updates the URL filter immediately, like the
- * reference's submenu checkmarks). Groups whose data is not in the
- * `project.list` payload render disabled rather than filtering on nothing.
+ * The Linear projects "Add filter" menu: the shared {@link FilterMenuPopover}
+ * fed with the project list filter groups. Each toggle updates the URL filter
+ * immediately; groups whose data is not in the `project.list` payload render
+ * disabled rather than filtering on nothing.
  */
 const AddFilterPopover = memo<AddFilterPopoverProps>(
   ({
@@ -249,26 +111,8 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
     projects,
   }) => {
     const { t } = useTranslation('project');
-    const [open, setOpen] = useState(false);
-    const [view, setView] = useState<PaneView>({ kind: 'menu' });
-    const [menuKeyword, setMenuKeyword] = useState('');
-    const [aiText, setAiText] = useState('');
-    const [aiError, setAiError] = useState(false);
-    const [textDraft, setTextDraft] = useState('');
-    const [memberKeyword, setMemberKeyword] = useState('');
 
-    const memberOptions = useMemo(
-      () =>
-        (members ?? [])
-          .filter((member) => !member.deletedAt && !member.suspendedAt)
-          .map((member) => ({
-            avatar: member.user?.avatar ?? undefined,
-            name: memberDisplayName(member),
-            userId: member.userId,
-          }))
-          .sort((a, b) => a.name.toLocaleLowerCase().localeCompare(b.name.toLocaleLowerCase())),
-      [members],
-    );
+    const memberOptions = useMemo(() => toMemberOptions(members), [members]);
 
     const activeFilterFor = (key: string) =>
       filters.find((filter) => projectListFilterKey(filter) === key);
@@ -276,170 +120,80 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
     const applyFilter = (filter: ProjectListFilter) =>
       onChange(upsertProjectListFilter(filters, filter));
 
-    const submitAi = () => {
-      const parsed = parseAiProjectFilters(aiText, { currentUserId, members: memberOptions });
-      if (parsed.length === 0) {
-        setAiError(true);
-        return;
-      }
-      let next = [...filters];
-      for (const filter of parsed) next = upsertProjectListFilter(next, filter);
-      onChange(next);
-      setOpen(false);
-    };
-
-    const openGroup = (group: ProjectListFilterGroupId) => {
-      setMemberKeyword('');
-      if (group === 'text') {
-        const current = activeFilterFor('text');
-        setTextDraft(current?.type === 'text' ? current.query : '');
-      }
-      setView({ kind: 'group', group });
-    };
-
-    /* ------------------------------- pickers ------------------------------ */
-
-    const toggleValues = <T,>(
-      make: (values: T[]) => ProjectListFilter,
-      current: readonly T[],
-      value: T,
-    ) => {
-      const nextValues = current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value];
-      applyFilter(make(nextValues));
-    };
-
-    const pickerShell = (title: string, children: ReactNode, onBack?: () => void) => (
-      <div className={cn('flex flex-col', styles.pickerPane)} style={{ gap: 2 }}>
-        <button
-          className={styles.backButton}
-          type="button"
-          onClick={onBack ?? (() => setView({ kind: 'menu' }))}
-        >
-          <ArrowLeftIcon size={14} />
-          {t('list.filter.back')}
-        </button>
-        <span className={styles.groupTitle}>{title}</span>
-        {children}
-      </div>
-    );
-
-    const checkRow = (
-      key: string,
-      checked: boolean,
-      label: ReactNode,
-      onToggle: () => void,
-      icon?: ReactNode,
-    ) => (
-      <button
-        aria-pressed={checked}
-        className={styles.pickerRow}
-        key={key}
-        type="button"
-        onClick={onToggle}
-      >
-        <span className={styles.rowCheck}>{checked ? <CheckIcon size={14} /> : null}</span>
-        {icon}
-        <span className={styles.menuRowLabel}>{label}</span>
-      </button>
-    );
-
-    const memberPicker = (kind: 'creator' | 'lead') => {
+    const memberPicker = (kind: 'creator' | 'lead'): FilterMenuPicker => {
       const applied = activeFilterFor(kind);
       const selected: (string | null)[] = applied && applied.type === kind ? applied.values : [];
-      const keyword = memberKeyword.trim().toLocaleLowerCase();
-      const visible = memberOptions.filter((member) =>
-        keyword ? member.name.toLocaleLowerCase().includes(keyword) : true,
-      );
-      const noneLabel = kind === 'lead' ? t('properties.noLead') : t('list.filter.noCreator');
-      return pickerShell(
-        t(`list.filter.group.${kind}`),
-        <>
-          <Input
-            autoFocus
-            aria-label={t('list.filter.searchMembers')}
-            placeholder={t('list.filter.searchMembers')}
-            value={memberKeyword}
-            onChange={(event) => setMemberKeyword(event.target.value)}
-          />
-          {checkRow('none', selected.includes(null), noneLabel, () =>
-            toggleValues((values) => ({ type: kind, values }), selected, null),
-          )}
-          {membersLoading ? (
-            <span
-              className="text-sm text-muted-foreground"
-              style={{ fontSize: 12, padding: '4px 8px' }}
-            >
-              {t('list.lead.loading')}
-            </span>
-          ) : membersError ? (
-            <span
-              className="text-sm text-muted-foreground"
-              style={{ fontSize: 12, padding: '4px 8px' }}
-            >
-              {t('list.filter.membersError')}
-            </span>
-          ) : visible.length === 0 ? (
-            <span
-              className="text-sm text-muted-foreground"
-              style={{ fontSize: 12, padding: '4px 8px' }}
-            >
-              {t('list.lead.noMatches')}
-            </span>
-          ) : (
-            visible.map((member) =>
-              checkRow(
-                member.userId,
-                selected.includes(member.userId),
-                member.name,
-                () => toggleValues((values) => ({ type: kind, values }), selected, member.userId),
-                <Avatar avatar={member.avatar} name={member.name} shape="circle" size={18} />,
-              ),
-            )
-          )}
-        </>,
-      );
+      const toggle = (value: string | null) =>
+        applyFilter({ type: kind, values: toggleListValue(selected, value) });
+      let statusMessage: string | undefined;
+      if (membersLoading) statusMessage = t('list.lead.loading');
+      else if (membersError) statusMessage = t('list.filter.membersError');
+      return {
+        emptyMessage: t('list.lead.noMatches'),
+        kind: 'options',
+        options: [
+          option(
+            'none',
+            kind === 'lead' ? t('properties.noLead') : t('list.filter.noCreator'),
+            selected.includes(null),
+            () => toggle(null),
+            { pinned: true },
+          ),
+          ...memberOptions.map((member) =>
+            option(
+              member.userId,
+              member.name,
+              selected.includes(member.userId),
+              () => toggle(member.userId),
+              {
+                icon: <Avatar avatar={member.avatar} name={member.name} shape="circle" size={18} />,
+              },
+            ),
+          ),
+        ],
+        searchPlaceholder: t('list.filter.searchMembers'),
+        statusMessage,
+      };
     };
 
-    const groupPicker = (group: ProjectListFilterGroupId): ReactNode => {
+    const pickerFor = (group: ProjectListFilterGroupId): FilterMenuPicker => {
       switch (group) {
         case 'status': {
           const applied = activeFilterFor('status');
           const selected = applied?.type === 'status' ? applied.values : [];
-          return pickerShell(
-            t('list.filter.group.status'),
-            PROJECT_STATUSES.map((status) =>
-              checkRow(
+          return {
+            kind: 'options',
+            options: PROJECT_STATUSES.map((status) =>
+              option(
                 status,
-                selected.includes(status),
                 t(`status.${status}`),
+                selected.includes(status),
                 () =>
-                  toggleValues(
-                    (values) => ({ type: 'status', values: values as ProjectStatus[] }),
-                    selected,
-                    status,
-                  ),
-                <ProjectStatusIcon size={16} status={status} />,
+                  applyFilter({
+                    type: 'status',
+                    values: toggleListValue(selected, status) as ProjectStatus[],
+                  }),
+                { icon: <ProjectStatusIcon size={16} status={status} /> },
               ),
             ),
-          );
+          };
         }
         case 'priority': {
           const applied = activeFilterFor('priority');
           const selected = applied?.type === 'priority' ? applied.values : [];
-          return pickerShell(
-            t('list.filter.group.priority'),
-            [1, 2, 3, 4, 0].map((priority) =>
-              checkRow(
+          return {
+            kind: 'options',
+            options: [1, 2, 3, 4, 0].map((priority) =>
+              option(
                 String(priority),
-                selected.includes(priority),
                 t(PRIORITY_LABEL_KEY[priority]),
-                () => toggleValues((values) => ({ type: 'priority', values }), selected, priority),
-                <PriorityIcon priority={priority} size={14} />,
+                selected.includes(priority),
+                () =>
+                  applyFilter({ type: 'priority', values: toggleListValue(selected, priority) }),
+                { icon: <PriorityIcon priority={priority} size={14} /> },
               ),
             ),
-          );
+          };
         }
         case 'lead':
         case 'creator': {
@@ -448,288 +202,116 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
         case 'health': {
           const applied = activeFilterFor('health');
           const selected = applied?.type === 'health' ? applied.values : [];
-          return pickerShell(
-            t('list.filter.group.health'),
-            <>
-              {PROJECT_HEALTH_STATES.map((health) =>
-                checkRow(
+          const toggle = (value: ProjectHealth | null) =>
+            applyFilter({ type: 'health', values: toggleListValue(selected, value) });
+          return {
+            kind: 'options',
+            options: [
+              ...PROJECT_HEALTH_STATES.map((health) =>
+                option(
                   health,
-                  selected.includes(health),
                   t(`list.health.${health}`),
-                  () =>
-                    toggleValues(
-                      (values) => ({ type: 'health', values: values as (ProjectHealth | null)[] }),
-                      selected,
-                      health,
-                    ),
-                  <ProjectHealthIcon health={health} size={14} />,
+                  selected.includes(health),
+                  () => toggle(health),
+                  { icon: <ProjectHealthIcon health={health} size={14} /> },
                 ),
-              )}
-              {checkRow(
+              ),
+              option(
                 'none',
-                selected.includes(null),
                 t('list.health.noUpdates'),
-                () =>
-                  toggleValues(
-                    (values) => ({ type: 'health', values: values as (ProjectHealth | null)[] }),
-                    selected,
-                    null,
-                  ),
-                <ProjectHealthIcon health={null} size={14} />,
-              )}
-            </>,
-          );
+                selected.includes(null),
+                () => toggle(null),
+                { icon: <ProjectHealthIcon health={null} size={14} /> },
+              ),
+            ],
+          };
         }
         case 'dates': {
-          return pickerShell(
-            t('list.filter.group.dates'),
-            PROJECT_LIST_DATE_FIELDS.map((field) => {
+          return {
+            fields: PROJECT_LIST_DATE_FIELDS.map((field) => {
               const applied = activeFilterFor(`date.${field}`);
-              return (
-                <button
-                  className={styles.menuRow}
-                  key={field}
-                  type="button"
-                  onClick={() => setView({ field, kind: 'dateField' })}
-                >
-                  <span className={styles.menuRowLabel}>
-                    {t(`list.filter.dateField.${field}`)}
-                    {applied?.type === 'date' ? (
-                      <span style={{ color: cssVar.colorTextTertiary, fontSize: 12 }}>
-                        {' '}
-                        · {t(`list.filter.window.${applied.window}`)}
-                      </span>
-                    ) : null}
-                  </span>
-                  <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
-                </button>
-              );
+              const activeWindow = applied?.type === 'date' ? applied.window : undefined;
+              return {
+                activeLabel: activeWindow
+                  ? `· ${t(`list.filter.window.${activeWindow}`)}`
+                  : undefined,
+                key: field,
+                label: t(`list.filter.dateField.${field}`),
+                windows: PROJECT_LIST_DATE_WINDOWS.map((window) => ({
+                  checked: activeWindow === window,
+                  key: window,
+                  label: t(`list.filter.window.${window}`),
+                  // Re-clicking the active window removes the filter (the
+                  // reference's submenu checkmarks toggle).
+                  onSelect: () =>
+                    activeWindow === window
+                      ? onChange(removeProjectListFilter(filters, `date.${field}`))
+                      : applyFilter({ field, type: 'date', window }),
+                })),
+              };
             }),
-          );
-        }
-        case 'text': {
-          return pickerShell(
-            t('list.filter.group.text'),
-            <div className="flex flex-col" style={{ gap: 8 }}>
-              <Input
-                autoFocus
-                aria-label={t('list.filter.textPlaceholder')}
-                placeholder={t('list.filter.textPlaceholder')}
-                value={textDraft}
-                onChange={(event) => setTextDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    applyFilter({ query: textDraft, type: 'text' });
-                    setOpen(false);
-                  }
-                }}
-              />
-              <div className="flex flex-row" style={{ justifyContent: 'flex-end' }}>
-                <Button
-                  disabled={!textDraft.trim()}
-                  size="sm"
-                  variant="default"
-                  onClick={() => {
-                    applyFilter({ query: textDraft, type: 'text' });
-                    setOpen(false);
-                  }}
-                >
-                  {t('list.filter.apply')}
-                </Button>
-              </div>
-            </div>,
-          );
+            kind: 'dates',
+          };
         }
         case 'projects': {
           const applied = activeFilterFor('projects');
           const selected = applied?.type === 'projects' ? applied.ids : [];
-          return pickerShell(
-            t('list.filter.group.projects'),
-            projects.map((project) =>
-              checkRow(project.id, selected.includes(project.id), project.name, () =>
-                toggleValues((ids) => ({ ids, type: 'projects' }), selected, project.id),
+          return {
+            kind: 'options',
+            options: projects.map((project) =>
+              option(project.id, project.name, selected.includes(project.id), () =>
+                applyFilter({ ids: toggleListValue(selected, project.id), type: 'projects' }),
               ),
             ),
-          );
+          };
         }
         default: {
-          return null;
+          const applied = activeFilterFor('text');
+          return {
+            applyLabel: t('list.filter.apply'),
+            initialValue: applied?.type === 'text' ? applied.query : '',
+            kind: 'text',
+            onApply: (query) => applyFilter({ query, type: 'text' }),
+            placeholder: t('list.filter.textPlaceholder'),
+          };
         }
       }
     };
 
-    /* --------------------------------- pane -------------------------------- */
-
-    const pane = (() => {
-      if (view.kind === 'ai') {
-        return (
-          <div className={cn('flex flex-col', styles.aiPane)} style={{ gap: 8 }}>
-            <button
-              className={styles.backButton}
-              type="button"
-              onClick={() => {
-                setView({ kind: 'menu' });
-                setAiError(false);
-              }}
-            >
-              <ArrowLeftIcon size={14} />
-              {t('list.filter.back')}
-            </button>
-            <Input
-              autoFocus
-              aria-invalid={(aiError ? 'error' : undefined) === 'error' || undefined}
-              aria-label={t('list.filter.aiPlaceholder')}
-              placeholder={t('list.filter.aiPlaceholder')}
-              value={aiText}
-              onChange={(event) => {
-                setAiText(event.target.value);
-                setAiError(false);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') submitAi();
-              }}
-            />
-            <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-              {aiError ? t('list.filter.aiNoMatch') : t('list.filter.aiHint')}
-            </span>
-          </div>
-        );
-      }
-      if (view.kind === 'dateField') {
-        const field = view.field;
-        const applied = activeFilterFor(`date.${field}`);
-        const activeWindow = applied?.type === 'date' ? applied.window : undefined;
-        return pickerShell(
-          t(`list.filter.dateField.${field}`),
-          PROJECT_LIST_DATE_WINDOWS.map((window) =>
-            checkRow(window, activeWindow === window, t(`list.filter.window.${window}`), () => {
-              // Re-clicking the active window removes the filter (the
-              // reference's submenu checkmarks toggle).
-              if (activeWindow === window) {
-                onChange(removeProjectListFilter(filters, `date.${field}`));
-              } else {
-                applyFilter({ field, type: 'date', window });
-              }
-              setView({ kind: 'menu' });
-            }),
-          ),
-          () => setView({ group: 'dates', kind: 'group' }),
-        );
-      }
-      if (view.kind === 'group') {
-        return groupPicker(view.group);
-      }
-
-      // menu
-      const keyword = menuKeyword.trim().toLocaleLowerCase();
-      const topEntries = [
-        { icon: SparklesIcon, key: 'ai', label: t('list.filter.ai') },
-        { icon: SlidersHorizontalIcon, key: 'advanced', label: t('list.filter.advanced') },
-      ].filter((entry) => (keyword ? entry.label.toLocaleLowerCase().includes(keyword) : true));
-      const groups = PROJECT_LIST_FILTER_GROUPS.filter((group) =>
-        keyword ? t(`list.filter.group.${group.id}`).toLocaleLowerCase().includes(keyword) : true,
-      );
-      return (
-        <div className={cn('flex flex-col', styles.menu)} style={{ gap: 2 }}>
-          <div className={styles.searchWrap}>
-            <Input
-              autoFocus
-              aria-label={t('list.filter.searchPlaceholder')}
-              placeholder={t('list.filter.searchPlaceholder')}
-              value={menuKeyword}
-              onChange={(event) => setMenuKeyword(event.target.value)}
-            />
-          </div>
-          {topEntries.map((entry) => (
-            <button
-              className={styles.menuRow}
-              key={entry.key}
-              type="button"
-              onClick={() => {
-                if (entry.key === 'ai') {
-                  setView({ kind: 'ai' });
-                } else {
-                  setOpen(false);
-                  onOpenAdvanced();
-                }
-              }}
-            >
-              <entry.icon color={cssVar.colorTextSecondary} size={14} />
-              <span className={styles.menuRowLabel}>{entry.label}</span>
-            </button>
-          ))}
-          {groups.map((group) => {
-            const row = (
-              <button
-                className={cx(styles.menuRow, !group.supported && styles.menuRowDisabled)}
-                disabled={!group.supported}
-                key={group.id}
-                type="button"
-                onClick={() => openGroup(group.id)}
-              >
-                {createElement(GROUP_ICONS[group.id], {
-                  color: cssVar.colorTextSecondary,
-                  size: 14,
-                })}
-                <span className={styles.menuRowLabel}>{t(`list.filter.group.${group.id}`)}</span>
-                {group.supported ? (
-                  <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
-                ) : null}
-              </button>
-            );
-            return group.supported ? (
-              row
-            ) : (
-              <Tooltip key={group.id}>
-                <TooltipTrigger render={<span style={{ display: 'flex' }}>{row}</span>} />
-                <TooltipContent>{t('list.filter.unavailable')}</TooltipContent>
-              </Tooltip>
-            );
-          })}
-          {groups.length === 0 && topEntries.length === 0 ? (
-            <span
-              className="text-sm text-muted-foreground"
-              style={{ fontSize: 12, padding: '4px 8px' }}
-            >
-              {t('list.filter.noMenuMatches')}
-            </span>
-          ) : null}
-        </div>
-      );
-    })();
+    const groups = PROJECT_LIST_FILTER_GROUPS.map((group): FilterMenuGroup => ({
+      getPicker: () => pickerFor(group.id),
+      icon: GROUP_ICONS[group.id],
+      id: group.id,
+      label: t(`list.filter.group.${group.id}`),
+      supported: group.supported,
+    }));
 
     return (
-      <Popover
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) {
-            setView({ kind: 'menu' });
-            setMenuKeyword('');
-            setAiText('');
-            setAiError(false);
-            setMemberKeyword('');
-          }
+      <FilterMenuPopover
+        active={filters.length > 0}
+        groups={groups}
+        labels={{
+          add: t('list.filter.add'),
+          advanced: t('list.filter.advanced'),
+          ai: t('list.filter.ai'),
+          aiHint: t('list.filter.aiHint'),
+          aiNoMatch: t('list.filter.aiNoMatch'),
+          aiPlaceholder: t('list.filter.aiPlaceholder'),
+          back: t('list.filter.back'),
+          noMenuMatches: t('list.filter.noMenuMatches'),
+          searchPlaceholder: t('list.filter.searchPlaceholder'),
+          unavailable: t('list.filter.unavailable'),
         }}
-      >
-        <PopoverTrigger
-          render={
-            <Button
-              aria-label={t('list.filter.add')}
-              aria-pressed={filters.length > 0}
-              className={cn(filters.length > 0 && 'bg-muted', undefined)}
-              size="icon-sm"
-              title={t('list.filter.add')}
-              variant="ghost"
-            >
-              {createElement(FilterIcon, { 'size': 16, 'aria-hidden': true })}
-            </Button>
-          }
-        />
-        <PopoverContent align="end" side="bottom">
-          {pane}
-        </PopoverContent>
-      </Popover>
+        onOpenAdvanced={onOpenAdvanced}
+        onSubmitAi={(text) => {
+          const parsed = parseAiProjectFilters(text, { currentUserId, members: memberOptions });
+          if (parsed.length === 0) return false;
+          let next = [...filters];
+          for (const filter of parsed) next = upsertProjectListFilter(next, filter);
+          onChange(next);
+          return true;
+        }}
+      />
     );
   },
 );

@@ -7,7 +7,6 @@ import {
   ChartColumnBigIcon,
   Coins,
   CreditCard,
-  Database,
   EllipsisIcon,
   FlaskConical,
   HandCoins,
@@ -41,7 +40,6 @@ import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 export enum WorkspaceSettingsGroupKey {
   Account = 'account',
-  Admin = 'admin',
   Agent = 'agent',
   Developer = 'developer',
   General = 'general',
@@ -236,20 +234,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
           key: WorkspaceSettingsGroupKey.Agent,
           title: t('workspaceSetting.group.agent'),
         },
-        // The Admin group is available to Admin and Owner.
-        canManageWorkspace && {
-          items: [
-            {
-              icon: Database,
-              key: WorkspaceSettingsTabs.Storage,
-              label: t('tab.storage'),
-            },
-          ].filter(Boolean) as WorkspaceSettingCategoryItem[],
-          key: WorkspaceSettingsGroupKey.Admin,
-          title: t('workspaceSetting.group.admin'),
-        },
-        // System group: Storage stays in Admin because it is workspace-scoped
-        // there; About is informational and visible to every role.
+        // System group: About is informational and visible to every role.
         !hideDocs && {
           items: [
             {

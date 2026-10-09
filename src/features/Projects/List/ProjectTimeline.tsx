@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { ProjectIcon } from '@/features/Projects/ProjectIcon';
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useProjectStore } from '@/store/project';
@@ -369,8 +370,8 @@ const TimelineRow = memo<TimelineRowProps>(
         : null;
 
     const rangeLabel = [
-      project.startDate ? dayjs(project.startDate).format('MMM D, YYYY') : null,
-      project.targetDate ? dayjs(project.targetDate).format('MMM D, YYYY') : null,
+      project.startDate ? formatProjectDay(project.startDate) : null,
+      project.targetDate ? formatProjectDay(project.targetDate) : null,
     ]
       .filter(Boolean)
       .join(' → ');
@@ -634,7 +635,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                 ))}
                 {axis.todayOffset === null ? null : (
                   <span className={styles.todayPill} style={{ left: axis.todayOffset }}>
-                    {now.format('MMM D')}
+                    {formatProjectDay(now)}
                   </span>
                 )}
               </div>

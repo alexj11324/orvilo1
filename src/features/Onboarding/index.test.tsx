@@ -37,7 +37,10 @@ vi.mock('./DesktopAuthGate', () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock('./useOnboardingUserStateReady', () => ({ useOnboardingUserStateReady: () => true }));
-vi.mock('./workspaceResolution', () => ({ resolveOnboardingWorkspace: api.resolveWorkspace }));
+vi.mock('./workspaceResolution', () => ({
+  findOnboardingWorkspace: vi.fn().mockResolvedValue(undefined),
+  resolveOnboardingWorkspace: api.resolveWorkspace,
+}));
 vi.mock('./finishOnboarding', () => ({
   finishOnboardingAndNavigate: api.finish,
   repairDesktopOnboardingMarkers: vi.fn(),

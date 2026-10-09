@@ -19,6 +19,7 @@ import { useElectronStore } from '@/store/electron';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
+import { shouldCoverAppForAgentSetup } from './gate';
 import { isFirstAgentSetupPath } from './setupPath';
 import { useAgentAvailability } from './useAgentAvailability';
 
@@ -147,11 +148,14 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
   const pathname = activeTabUrl?.split(/[?#]/)[0] ?? location.pathname;
   const { availability, ready, error, retry, retrying } = useAgentAvailability();
   const isLogin = useUserStore(authSelectors.isLogin);
+  const onboardingFinished = useUserStore((s) => !!s.onboarding?.finishedAt);
   if (
-    !isLogin ||
-    location.pathname === '/onboarding' ||
-    pathname === '/onboarding' ||
-    isFirstAgentSetupPath(pathname)
+    !shouldCoverAppForAgentSetup({
+      isLogin,
+      onboardingFinished,
+      onOnboardingPath: location.pathname === '/onboarding' || pathname === '/onboarding',
+      onSetupPath: isFirstAgentSetupPath(pathname),
+    })
   )
     return <>{children}</>;
 
@@ -178,6 +182,17 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
     );
   if (availability.usable) return <>{children}</>;
   return cover(<OnboardingBody retry={retry} />);
+};
+
+/**
+ * Non-blocking counterpart of the gate: the same setup content as an inline empty
+ * state, rendered where an Agent is needed. Renders nothing while a usable Agent
+ * exists or the check is still running.
+ */
+export const AgentSetupPrompt = () => {
+  const { availability, ready, error, retry } = useAgentAvailability();
+  if (!ready || error !== undefined || availability.usable) return null;
+  return <OnboardingBody retry={retry} />;
 };
 
 export default AgentOnboarding;

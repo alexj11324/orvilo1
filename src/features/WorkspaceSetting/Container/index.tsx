@@ -22,7 +22,7 @@ const WorkspaceSettingsContainer = memo<WorkspaceSettingsContainerProps>(
     ...rest
   }) => (
     <div
-      className="flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto bg-background"
+      className="flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto bg-card"
       style={{ paddingBlock, paddingInline, ...style }}
       {...rest}
     >

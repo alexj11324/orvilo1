@@ -1,12 +1,15 @@
 'use client';
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import { useEffect, useRef, useState } from 'react';
+import { ChevronDownIcon } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -48,6 +51,7 @@ const CreateAgentPanel = ({
 }: CreateAgentPanelProps) => {
   const { t } = useTranslation(['chat', 'common']);
   const workspaceId = useActiveWorkspaceId();
+  const fieldId = useId();
   const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(
     lockVisibility ? 'private' : visibility,
   );
@@ -109,12 +113,13 @@ const CreateAgentPanel = ({
         void submit();
       }}
     >
-      <label className="flex flex-col gap-2 text-sm">
-        {t('createAgent.name')}
+      <Field>
+        <FieldLabel htmlFor={`${fieldId}-name`}>{t('createAgent.name')}</FieldLabel>
         <Input
           required
           className="h-9"
           disabled={locked}
+          id={`${fieldId}-name`}
           placeholder={t('createAgent.namePlaceholder')}
           value={name}
           onChange={(event) => {
@@ -122,18 +127,29 @@ const CreateAgentPanel = ({
             setNameTouched(true);
           }}
         />
-      </label>
+      </Field>
       <RuntimeFields disabled={locked} form={form} />
-      <details className="rounded-(--radius-card) border p-3 text-sm">
-        <summary className="cursor-pointer text-muted-foreground">
-          {t('createAgent.moreSettings')}
-          {workspaceId &&
-            ` · ${t(selectedVisibility === 'private' ? 'createAgent.visibility.private' : 'createAgent.visibility.public')}`}
-        </summary>
-        <div className="flex flex-col gap-2 pt-3">
+      <Collapsible className="rounded-(--radius-card) border p-3 text-sm">
+        <CollapsibleTrigger
+          className="group/more flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm text-left text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          type="button"
+        >
+          <span>
+            {t('createAgent.moreSettings')}
+            {workspaceId &&
+              ` · ${t(selectedVisibility === 'private' ? 'createAgent.visibility.private' : 'createAgent.visibility.public')}`}
+          </span>
+          <ChevronDownIcon
+            aria-hidden="true"
+            className="size-4 shrink-0 transition-transform group-data-[panel-open]/more:rotate-180"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="flex flex-col gap-2 pt-3">
           {workspaceId ? (
-            <label className="flex flex-col gap-2">
-              {t('createAgent.visibility.label')}
+            <Field>
+              <FieldLabel htmlFor={`${fieldId}-visibility`}>
+                {t('createAgent.visibility.label')}
+              </FieldLabel>
               {lockVisibility ? (
                 <span className="text-muted-foreground">{t('createAgent.visibility.private')}</span>
               ) : (
@@ -148,7 +164,10 @@ const CreateAgentPanel = ({
                     form.selectChoice(BUILTIN_AGENT_KEY);
                   }}
                 >
-                  <SelectTrigger className="w-full data-[size=default]:h-9">
+                  <SelectTrigger
+                    className="w-full data-[size=default]:h-9"
+                    id={`${fieldId}-visibility`}
+                  >
                     <SelectValue>
                       {() =>
                         t(
@@ -165,13 +184,13 @@ const CreateAgentPanel = ({
                   </SelectContent>
                 </Select>
               )}
-            </label>
+            </Field>
           ) : (
             <span className="text-muted-foreground">{t('createAgent.visibility.personal')}</span>
           )}
           {groupId && <p className="text-muted-foreground">{t('createAgent.categoryPreserved')}</p>}
-        </div>
-      </details>
+        </CollapsibleContent>
+      </Collapsible>
       {error !== undefined && (
         <AsyncError
           description={t('createAgent.failed')}

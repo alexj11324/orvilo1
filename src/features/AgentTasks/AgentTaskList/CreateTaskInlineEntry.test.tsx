@@ -295,7 +295,7 @@ describe('CreateTaskInlineEntry', () => {
   it('renders the task editor as disabled when the user cannot create content', () => {
     permissionMock.allowed = false;
 
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
 
     expect(screen.getByTestId('task-editor')).toHaveAttribute('data-disabled', 'true');
     expect(focusMock).not.toHaveBeenCalled();
@@ -303,9 +303,7 @@ describe('CreateTaskInlineEntry', () => {
 
   it('submits a shared task with its private agent and responsible member', async () => {
     editorMarkdownMock.value = 'Coordinate the release';
-    const { rerender } = render(
-      <CreateTaskInlineEntry lockAssignee agentId="agent-private" variant="hero" />,
-    );
+    const { rerender } = render(<CreateTaskInlineEntry lockAssignee agentId="agent-private" />);
 
     expect(screen.queryByTestId('visibility-trigger')).not.toBeInTheDocument();
 
@@ -322,16 +320,16 @@ describe('CreateTaskInlineEntry', () => {
       ),
     );
 
-    rerender(<CreateTaskInlineEntry variant="hero" />);
+    rerender(<CreateTaskInlineEntry />);
 
     expect(screen.queryByTestId('visibility-trigger')).not.toBeInTheDocument();
   });
 
   it('uses compact editor padding and aligned action controls', () => {
-    const { container } = render(<CreateTaskInlineEntry variant="hero" />);
+    const { container } = render(<CreateTaskInlineEntry />);
 
     const editor = screen.getByTestId('task-editor');
-    expect(editor.parentElement).toHaveStyle({ padding: '12px 16px 0' });
+    expect(editor.parentElement).toHaveStyle({ padding: '8px 40px 0 16px' });
     expect(editor).toHaveAttribute('data-padding-bottom', '12');
 
     const assigneeControl = screen.getByText('createTask.assignee').parentElement;
@@ -351,7 +349,7 @@ describe('CreateTaskInlineEntry', () => {
     editorMarkdownMock.value = 'Write a project plan';
     analyzeIntentMock.mockResolvedValue(clearReading);
 
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
 
     fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
@@ -361,7 +359,7 @@ describe('CreateTaskInlineEntry', () => {
 
   it('submits agent and member assignments together', async () => {
     editorMarkdownMock.value = 'Coordinate the release';
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
 
     fireEvent.click(screen.getByTestId('select-agent'));
     fireEvent.click(screen.getByTestId('select-member'));
@@ -376,7 +374,7 @@ describe('CreateTaskInlineEntry', () => {
 
   it('persists the responsible member when the scoped agent is locked', async () => {
     editorMarkdownMock.value = 'Coordinate the release';
-    render(<CreateTaskInlineEntry lockAssignee agentId="agent-locked" variant="hero" />);
+    render(<CreateTaskInlineEntry lockAssignee agentId="agent-locked" />);
 
     fireEvent.click(screen.getByTestId('select-member'));
 
@@ -390,7 +388,7 @@ describe('CreateTaskInlineEntry', () => {
 
   it('resets member assignment and draft persistence when the workspace changes', async () => {
     editorMarkdownMock.value = 'Coordinate the release';
-    const { rerender } = render(<CreateTaskInlineEntry variant="hero" />);
+    const { rerender } = render(<CreateTaskInlineEntry />);
 
     fireEvent.click(screen.getByTestId('select-member'));
     await waitFor(() => {
@@ -403,7 +401,7 @@ describe('CreateTaskInlineEntry', () => {
     activeWorkspaceMock.id = 'workspace-2';
     // The real workspace hook publishes a store update. Change one prop here
     // as well so the memoized test component observes the mocked hook value.
-    rerender(<CreateTaskInlineEntry placeholder="New workspace" variant="hero" />);
+    rerender(<CreateTaskInlineEntry placeholder="New workspace" />);
 
     await waitFor(() =>
       expect(screen.getByTestId('member-selector')).toHaveAttribute('data-current-user-id', ''),
@@ -427,7 +425,7 @@ describe('CreateTaskInlineEntry', () => {
       }),
     );
 
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
 
     await waitFor(() => {
       expect(screen.getByTestId('agent-selector')).toHaveAttribute(
@@ -455,7 +453,7 @@ describe('CreateTaskInlineEntry', () => {
         }),
       );
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       expect(screen.queryByTestId('visibility-trigger')).not.toBeInTheDocument();
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
@@ -474,9 +472,7 @@ describe('CreateTaskInlineEntry', () => {
 
   it('creates a workspace subtask shared even when an old private parent supplies its default', async () => {
     editorMarkdownMock.value = 'Create a shared subtask';
-    render(
-      <CreateTaskInlineEntry defaultVisibility="private" parentTaskId="T-parent" variant="hero" />,
-    );
+    render(<CreateTaskInlineEntry defaultVisibility="private" parentTaskId="T-parent" />);
 
     fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
@@ -502,7 +498,7 @@ describe('CreateTaskInlineEntry', () => {
       }),
     );
 
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
 
     await waitFor(() =>
       expect(screen.getByTestId('member-selector')).toHaveAttribute('data-current-user-id', ''),
@@ -513,7 +509,7 @@ describe('CreateTaskInlineEntry', () => {
     analyzeIntentMock.mockResolvedValue(clearReading);
     createTaskMock.mockResolvedValue({ identifier: 'TASK-9', name: 'Write the Q3 project plan' });
 
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
     fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
     // Creating leaves the user on the list, so the spinner blinking out was the
@@ -542,7 +538,7 @@ describe('CreateTaskInlineEntry', () => {
       confidence: 'medium',
     });
 
-    render(<CreateTaskInlineEntry variant="hero" />);
+    render(<CreateTaskInlineEntry />);
     fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
     await screen.findByText('taskIntent.reviewStep');
@@ -563,7 +559,7 @@ describe('CreateTaskInlineEntry', () => {
     it('reads the draft on every submit — there is no setting to turn it on', async () => {
       analyzeIntentMock.mockResolvedValue(clearReading);
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await waitFor(() => expect(analyzeIntentMock).toHaveBeenCalledTimes(1));
@@ -572,7 +568,7 @@ describe('CreateTaskInlineEntry', () => {
     it('creates an unambiguous draft straight through, named by the reading', async () => {
       analyzeIntentMock.mockResolvedValue(clearReading);
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
@@ -592,7 +588,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -624,7 +620,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -652,7 +648,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       // Whether or not the question gets an answer, pressing it ends with a
@@ -673,7 +669,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -697,7 +693,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -730,7 +726,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -753,7 +749,7 @@ describe('CreateTaskInlineEntry', () => {
         confidence: 'medium',
       });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -769,7 +765,7 @@ describe('CreateTaskInlineEntry', () => {
     it('keeps a standing-goal reading in the task composer without creating an application goal', async () => {
       analyzeIntentMock.mockResolvedValue({ ...clearReading, kind: 'goal' });
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
@@ -781,7 +777,7 @@ describe('CreateTaskInlineEntry', () => {
     it('still creates the task when the reading itself fails', async () => {
       analyzeIntentMock.mockRejectedValue(new Error('model unavailable'));
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
@@ -810,7 +806,7 @@ describe('CreateTaskInlineEntry', () => {
         }),
       );
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ markdown: 'Write a project plan' }));
 
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
@@ -825,7 +821,7 @@ describe('CreateTaskInlineEntry', () => {
     it('puts the draft back when the create fails', async () => {
       createTaskMock.mockRejectedValue(new Error('offline'));
 
-      render(<CreateTaskInlineEntry variant="hero" />);
+      render(<CreateTaskInlineEntry />);
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ markdown: 'Write a project plan' }));
 
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });

@@ -1,0 +1,67 @@
+[
+  {
+    "s": "[data-testid=ai-chatbot-page]",
+    "x": 251,
+    "y": 92,
+    "width": 808,
+    "height": 879,
+    "padding": "0px",
+    "minHeight": "0px",
+    "maxHeight": "none",
+    "bg": "rgb(248, 248, 248)",
+    "opacity": "1",
+    "radius": "0px"
+  },
+  {
+    "s": "[data-testid=chatbot-composer]",
+    "x": 267,
+    "y": 829,
+    "width": 776,
+    "height": 126,
+    "padding": "0px",
+    "minHeight": "0px",
+    "maxHeight": "none",
+    "bg": "rgba(0, 0, 0, 0)",
+    "opacity": "1",
+    "radius": "0px"
+  },
+  {
+    "s": "[data-slot=input-group]",
+    "x": 267,
+    "y": 829,
+    "width": 776,
+    "height": 126,
+    "padding": "0px",
+    "minHeight": "0px",
+    "maxHeight": "none",
+    "bg": "rgb(248, 248, 248)",
+    "opacity": "1",
+    "radius": "8px"
+  },
+  {
+    "s": "[contenteditable=true]",
+    "x": 280,
+    "y": 856,
+    "width": 750,
+    "height": 23.59375,
+    "padding": "0px",
+    "minHeight": "0px",
+    "maxHeight": "none",
+    "bg": "rgba(0, 0, 0, 0)",
+    "opacity": "1",
+    "radius": "0px"
+  },
+  {
+    "s": "[data-ai-element=tool]",
+    "x": 267,
+    "y": 298.390625,
+    "width": 432.640625,
+    "height": 46,
+    "padding": "0px",
+    "minHeight": "auto",
+    "maxHeight": "none",
+    "bg": "rgba(0, 0, 0, 0)",
+    "opacity": "1",
+    "radius": "8px"
+  }
+]

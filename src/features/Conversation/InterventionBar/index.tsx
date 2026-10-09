@@ -1,5 +1,16 @@
-import { ChatInput } from '@lobehub/editor/react';
+import { classifyToolInterventionPresentation } from '@orvilo/types';
+import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Confirmation, ConfirmationRequest } from '@/components/ai-elements/confirmation';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import { useConversationResourceAccess } from '../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../store';
@@ -10,13 +21,14 @@ import {
 } from '../store/slices/data/pendingInterventions';
 import InterventionContent from './InterventionContent';
 import InterventionTabBar from './InterventionTabBar';
-import { styles } from './style';
 
 interface InterventionBarProps {
   interventions: PendingIntervention[];
+  onReviewInline?: (toolCallId: string) => void;
 }
 
-const InterventionBar = memo<InterventionBarProps>(({ interventions }) => {
+const InterventionBar = memo<InterventionBarProps>(({ interventions, onReviewInline }) => {
+  const { t } = useTranslation(['chat', 'common']);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [actionsPortalTarget, setActionsPortalTarget] = useState<HTMLDivElement | null>(null);
   const [approveAllLoading, setApproveAllLoading] = useState(false);
@@ -70,16 +82,57 @@ const InterventionBar = memo<InterventionBarProps>(({ interventions }) => {
   const hasMultipleCards = interventions.length > 1;
   const canApproveBatch = canApproveInterventionBatch(batch);
 
-  return (
-    <ChatInput
-      data-pending-hotkey-scope
-      className={styles.container}
-      footer={<div className={styles.actions} ref={setActionsPortalTarget} />}
-      // The card's action row — Stop sits beside Submit inside `ApprovalActions`
-      // and the whole row portals in here.
-      maxHeight={'50vh' as any}
-      resize={false}
-    >
+  const isBinary =
+    classifyToolInterventionPresentation(activeIntervention.identifier, activeIntervention.apiName)
+      .surface === 'binary';
+  if (isBinary && onReviewInline) {
+    return (
+      <div className="mb-2 flex min-w-0 items-center gap-1">
+        <Button
+          className="min-w-0 text-muted-foreground"
+          size="sm"
+          variant="ghost"
+          onClick={() => onReviewInline(activeIntervention.toolCallId)}
+        >
+          <span className="truncate">
+            {t('components.aiElements.tool.awaitingApproval')} · {activeIntervention.apiName}
+          </span>
+        </Button>
+        {(hasMultipleCards || canApproveBatch) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button aria-label={t('more', { ns: 'common' })} size="icon-sm" variant="ghost" />
+              }
+            >
+              <MoreHorizontalIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {hasMultipleCards &&
+                interventions.map((item, index) => (
+                  <DropdownMenuItem
+                    key={item.toolCallId}
+                    onClick={() => {
+                      handleTabChange(index);
+                      onReviewInline(item.toolCallId);
+                    }}
+                  >
+                    {index + 1}. {item.apiName}
+                  </DropdownMenuItem>
+                ))}
+              {canUseResource && canApproveBatch && (
+                <DropdownMenuItem disabled={approveAllLoading} onClick={handleApproveAll}>
+                  {t('tool.intervention.approveAll', { count: batch.length })}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    );
+  }
+  const content = (
+    <>
       {hasMultipleCards && (
         <InterventionTabBar
           activeIndex={activeIndex}
@@ -93,11 +146,34 @@ const InterventionBar = memo<InterventionBarProps>(({ interventions }) => {
         />
       )}
       <InterventionContent
-        actionsPortalTarget={actionsPortalTarget}
+        actionsPortalTarget={isBinary ? null : actionsPortalTarget}
         intervention={activeIntervention}
         key={activeIntervention.toolCallId}
       />
-    </ChatInput>
+      {!isBinary && (
+        <div className="border-t border-border pt-3 empty:hidden" ref={setActionsPortalTarget} />
+      )}
+    </>
+  );
+
+  // Binary cards own their upstream Confirmation composition, also when shown
+  // in global notifications. Custom questions keep the existing portal host.
+  return isBinary ? (
+    <div data-pending-hotkey-scope className="mb-3">
+      {content}
+    </div>
+  ) : (
+    <Confirmation
+      data-pending-hotkey-scope
+      approval={{ id: activeIntervention.toolCallId }}
+      className="mb-3 gap-3 overflow-hidden p-4"
+      data-intervention-placement="bottom"
+      state="approval-requested"
+    >
+      <ConfirmationRequest>
+        <div className="max-h-[50vh] min-h-0 overflow-y-auto">{content}</div>
+      </ConfirmationRequest>
+    </Confirmation>
   );
 });
 

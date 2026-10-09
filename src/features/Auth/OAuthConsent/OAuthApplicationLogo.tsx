@@ -1,30 +1,8 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Link2Icon, LockKeyholeIcon } from 'lucide-react';
 import React, { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  connector: css`
-    width: 40px;
-    height: 40px;
-
-    @media (width <= 768px) {
-      width: 32px;
-      height: 32px;
-    }
-  `,
-  connectorLine: css`
-    width: 24px;
-    height: 1px;
-    background-color: ${cssVar.colorBorderSecondary};
-
-    @media (width <= 768px) {
-      width: 24px;
-    }
-  `,
-}));
 
 interface OAuthApplicationLogoProps {
   clientDisplayName: string;
@@ -44,11 +22,11 @@ const OAuthApplicationLogo = memo<OAuthApplicationLogoProps>(
         ) : (
           <LockKeyholeIcon size={size} />
         )}
-        <div className={styles.connectorLine} />
-        <div className={cx(styles.connector, 'flex flex-col items-center justify-center')}>
-          <Link2Icon style={{ color: cssVar.colorTextSecondary, fontSize: 20 }} />
+        <div className="h-px w-6 bg-sidebar-border" />
+        <div className="flex size-10 flex-col items-center justify-center [@media(width<=768px)]:size-8">
+          <Link2Icon className="text-xl leading-[inherit] text-muted-foreground" />
         </div>
-        <div className={styles.connectorLine} />
+        <div className="h-px w-6 bg-sidebar-border" />
         <ProductLogo size={size} />
       </div>
     );

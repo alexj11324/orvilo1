@@ -1,20 +1,12 @@
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Attachments } from '@/components/ai-elements/attachments';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
 import ContextItem from './ContextItem';
 import ElementItem from './ElementItem';
 import SelectionItem from './SelectionItem';
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow-x: scroll;
-    width: 100%;
-  `,
-}));
 
 const ContextList = memo(() => {
   const contextSelectionKey = useChatInputStore((s) => s.contextSelectionKey);
@@ -38,20 +30,18 @@ const ContextList = memo(() => {
   if (inputFilesList.length === 0 && !hasSelections) return null;
 
   return (
-    <ScrollArea className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}>
-      <div className="flex flex-row gap-1 px-0 flex-wrap" style={{ paddingBlockStart: 8 }}>
-        {selectionList.map((item) =>
-          item.source === 'element' ? (
-            <ElementItem key={item.id} {...item} />
-          ) : (
-            <SelectionItem key={item.id} {...item} />
-          ),
-        )}
-        {inputFilesList.map((item) => (
-          <ContextItem key={item.id} {...item} />
-        ))}
-      </div>
-    </ScrollArea>
+    <Attachments variant="inline">
+      {selectionList.map((item) =>
+        item.source === 'element' ? (
+          <ElementItem key={item.id} {...item} />
+        ) : (
+          <SelectionItem key={item.id} {...item} />
+        ),
+      )}
+      {inputFilesList.map((item) => (
+        <ContextItem key={item.id} {...item} />
+      ))}
+    </Attachments>
   );
 });
 

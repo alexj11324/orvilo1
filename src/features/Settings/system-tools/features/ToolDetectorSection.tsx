@@ -1,11 +1,12 @@
 'use client';
 
 import { type BinaryStatus } from '@orvilo/electron-client-ipc';
-import { CheckCircle2, Copy, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import CopyButton from '@/components/CopyButton';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { binaryService } from '@/services/electron/binary';
-import { copyToClipboard } from '@/utils/clipboard';
 
 /**
  * Predefined tool configurations by category
@@ -151,15 +151,11 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
                   <span className={'truncate text-muted-foreground'} style={{ fontSize: 12 }}>
                     {status.path}
                   </span>
-                  <Button
-                    aria-label={t('copy', { ns: 'common' })}
-                    size="icon-sm"
-                    type="button"
-                    variant="ghost"
-                    onClick={() => status.path && void copyToClipboard(status.path)}
-                  >
-                    <Copy size={14} />
-                  </Button>
+                  <CopyButton
+                    content={status.path}
+                    size="small"
+                    title={t('copy', { ns: 'common' })}
+                  />
                 </div>
               </span>
             }

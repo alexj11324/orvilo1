@@ -136,6 +136,7 @@ export default {
     'Enter your HuggingFace Token, click [here](https://huggingface.co/settings/tokens) to create one',
   'huggingface.accessToken.placeholder': 'hf_xxxxxxxxx',
   'huggingface.accessToken.title': 'HuggingFace Token',
+  'list.header.desc': 'Connect model providers and choose the models your agents can use.',
   'list.title.custom': 'Custom provider not enabled',
   'list.title.disabled': 'Disabled',
   'list.title.enabled': 'Enabled',
@@ -204,6 +205,7 @@ export default {
   'providerModels.config.checker.desc': 'Test if the API Key and proxy URL are correctly filled',
   'providerModels.config.checker.pass': 'Check passed',
   'providerModels.config.checker.title': 'Connectivity Check',
+  'providerModels.config.credentials.title': 'Credentials',
   'providerModels.config.fetchOnClient.desc':
     'Client request mode will initiate session requests directly from the browser, which can improve response speed',
   'providerModels.config.fetchOnClient.title': 'Use Client Request Mode',
@@ -233,6 +235,7 @@ export default {
   'providerModels.config.responsesApi.desc':
     "Uses OpenAI's next-generation request format specification to unlock advanced features like chain-of-thought (supported by OpenAI models only)",
   'providerModels.config.responsesApi.title': 'Use Responses API Specification',
+  'providerModels.config.status.notConfigured': 'Not configured',
   'providerModels.config.waitingForMore':
     'More models are currently <1>planned for integration</1>, please stay tuned',
   'providerModels.createNew.title': 'Create Custom AI Model',
@@ -412,6 +415,7 @@ export default {
   'providerModels.list.enabledActions.disableAll': 'Disable All',
   'providerModels.list.enabledActions.enableAll': 'Enable All',
   'providerModels.list.enabledActions.sort': 'Custom Model Sorting',
+  'providerModels.list.enabledCount': '{{count}} enabled',
   'providerModels.list.enabledEmpty': 'No models enabled yet — enable one from the list below.',
   'providerModels.list.fetcher.clear': 'Clear fetched models',
   'providerModels.list.fetcher.duplicatesRemoved': 'Duplicate entries removed ({{count}}): {{ids}}',

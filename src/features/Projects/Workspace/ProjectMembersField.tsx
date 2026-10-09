@@ -31,6 +31,8 @@ import {
 } from '@/features/Teammates/api/hooks';
 import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
 
+import { PROPERTY_CONTROL_CLASS } from './propertyControl';
+
 const styles = createStaticStyles(({ css }) => ({
   label: css`
     position: absolute;
@@ -194,7 +196,7 @@ export function ProjectMembersField({
         <>
           <ComboboxTrigger
             aria-label={t('properties.members')}
-            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+            className={PROPERTY_CONTROL_CLASS}
             id={id}
             render={<Button variant="ghost" />}
           >

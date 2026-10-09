@@ -102,19 +102,17 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
     <>
       <div className={styles.root}>
         <div className={styles.header}>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>
-            {t('skillView.connectors', 'Connectors')}
-          </span>
+          <span className="text-sm font-semibold">{t('skillView.connectors', 'Connectors')}</span>
 
-          <div
-            className={'flex min-w-0'}
-            style={{ flexDirection: 'row', gap: 6 }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex min-w-0 flex-row gap-1.5" onClick={(e) => e.stopPropagation()}>
             {/* Single action: add a custom OAuth connector. */}
             <Button
-              size="sm"
+              size="icon-sm"
               variant="outline"
+              aria-label={t('connector.add.title', {
+                defaultValue: 'Add Custom Connector',
+                ns: 'tool',
+              })}
               title={t('connector.add.title', {
                 defaultValue: 'Add Custom Connector',
                 ns: 'tool',

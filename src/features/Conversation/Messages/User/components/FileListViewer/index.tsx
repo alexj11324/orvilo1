@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import { Attachments } from '@/components/ai-elements/attachments';
 import { type ChatFileItem } from '@/types/index';
 
 import FileItem from './Item';
@@ -10,11 +11,11 @@ interface FileListViewerProps {
 
 const FileListViewer = memo<FileListViewerProps>(({ items }) => {
   return (
-    <div className="flex flex-col gap-2">
+    <Attachments className="w-full" variant="list">
       {items.map((item) => (
         <FileItem key={item.id} {...item} />
       ))}
-    </div>
+    </Attachments>
   );
 });
 export default FileListViewer;

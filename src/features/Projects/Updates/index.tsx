@@ -3,7 +3,6 @@ import { Markdown } from '@lobehub/ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -19,6 +18,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { useCurrentProjectDetail } from '@/store/project';
@@ -432,11 +432,13 @@ export const ProjectUpdateRow = memo<{
   /** Whether the ⋯ menu (edit/delete) renders — the caller applies the row ACL. */
   canEdit?: boolean;
   canDelete?: boolean;
+  /** The host already draws the author's avatar as the row's leading mark (activity timeline). */
+  hideAuthorAvatar?: boolean;
   /** Called after a delete lands so the feed can revalidate. */
   onChanged?: () => void;
   onEdit?: (update: ProjectUpdate) => void;
   update: ProjectUpdate;
-}>(({ update, canEdit, canDelete, onChanged, onEdit }) => {
+}>(({ update, canEdit, canDelete, hideAuthorAvatar, onChanged, onEdit }) => {
   const { t } = useTranslation(['project', 'common']);
   const meta = update.health ? PROJECT_HEALTH_META[update.health] : null;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -469,7 +471,9 @@ export const ProjectUpdateRow = memo<{
       className={cn('flex flex-row', cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen))}
       style={{ alignItems: 'flex-start', gap: 12 }}
     >
-      <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
+      {hideAuthorAvatar ? null : (
+        <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
+      )}
       <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
         <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
           <span className="text-sm" style={{ fontSize: 14, fontWeight: 500 }}>
@@ -492,7 +496,7 @@ export const ProjectUpdateRow = memo<{
             </Badge>
           )}
           <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-            {dayjs(update.createdAt).format('MMM D')}
+            {formatProjectDay(update.createdAt)}
           </span>
           {(canEdit || canDelete) && (
             <div

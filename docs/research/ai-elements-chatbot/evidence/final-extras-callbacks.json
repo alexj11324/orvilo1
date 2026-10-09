@@ -1,0 +1,75 @@
+{
+  "calls": [
+    {
+      "type": "reject-veto",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "approve-dispatch",
+      "args": ["msg_ai_approval_tool", "msg_ai_approval_assistant", {}]
+    },
+    {
+      "type": "approve-veto",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "reject-veto",
+      "id": "msg_ai_approval_tool",
+      "reason": "Direct synthetic rejection"
+    },
+    {
+      "type": "approve-dispatch",
+      "args": [
+        "msg_ai_approval_tool",
+        "msg_ai_approval_assistant",
+        {
+          "rememberToolKey": "orvilo-local-system/runCommand"
+        }
+      ]
+    },
+    {
+      "type": "approve-veto",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "stop-dispatch-veto",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "approve-dispatch",
+      "args": ["msg_ai_approval_tool", "msg_ai_approval_assistant", {}]
+    },
+    {
+      "type": "approve-veto",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "reject-veto",
+      "id": "msg_ai_approval_tool",
+      "reason": "Keyboard synthetic rejection"
+    },
+    {
+      "type": "approve-dispatch",
+      "args": ["msg_ai_approval_tool", "msg_ai_approval_assistant", {}]
+    },
+    {
+      "type": "approve-veto",
+      "id": "msg_ai_approval_tool"
+    },
+    {
+      "type": "approve-dispatch",
+      "args": [
+        "msg_ai_approval_tool",
+        "msg_ai_approval_assistant",
+        {
+          "rememberToolKey": "orvilo-local-system/runCommand"
+        }
+      ]
+    },
+    {
+      "type": "approve-veto",
+      "id": "msg_ai_approval_tool"
+    }
+  ],
+  "fixture": "real UI dispatch; supported host approve/reject veto; stop action recorded via test-only wrapper; no execution; temporary allow-list preference restored"
+}

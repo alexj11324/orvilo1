@@ -3,12 +3,13 @@
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type { HeterogeneousReasoningEffort, OrviloAgentConfig } from '@orvilo/types';
 import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -218,6 +219,7 @@ export const RuntimeFields = ({
 }) => {
   const { t } = useTranslation(['chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
+  const fieldId = useId();
   const { host, choice } = form;
   const builtin = choice === BUILTIN_AGENT_KEY;
   const agentLabel = builtin ? 'Orvilo AI' : form.provider?.title;
@@ -225,8 +227,8 @@ export const RuntimeFields = ({
   return (
     <div className="flex flex-col gap-4">
       {!form.builtinOnly && (
-        <label className="flex flex-col gap-2 text-sm">
-          {t('createAgent.step.agent')}
+        <Field>
+          <FieldLabel htmlFor={`${fieldId}-agent`}>{t('createAgent.step.agent')}</FieldLabel>
           <Select
             disabled={disabled}
             value={choice}
@@ -234,7 +236,7 @@ export const RuntimeFields = ({
               if (value) form.selectChoice(value as AgentChoice);
             }}
           >
-            <SelectTrigger className="w-full data-[size=default]:h-9">
+            <SelectTrigger className="w-full data-[size=default]:h-9" id={`${fieldId}-agent`}>
               <SelectValue>{() => agentLabel ?? t('createAgent.choose')}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -251,10 +253,10 @@ export const RuntimeFields = ({
               ))}
             </SelectContent>
           </Select>
-        </label>
+        </Field>
       )}
-      <label className="flex flex-col gap-2 text-sm">
-        {t('creation.runtime.host')}
+      <Field>
+        <FieldLabel htmlFor={`${fieldId}-host`}>{t('creation.runtime.host')}</FieldLabel>
         <Select
           disabled={disabled || host.loading}
           value={host.deviceId ?? null}
@@ -262,7 +264,7 @@ export const RuntimeFields = ({
             host.select(value ?? undefined);
           }}
         >
-          <SelectTrigger className="w-full data-[size=default]:h-9">
+          <SelectTrigger className="w-full data-[size=default]:h-9" id={`${fieldId}-host`}>
             <SelectValue
               placeholder={t(
                 host.loading ? 'createAgent.host.loading' : 'creation.runtime.hostEmpty',
@@ -292,7 +294,7 @@ export const RuntimeFields = ({
               ))}
           </SelectContent>
         </Select>
-      </label>
+      </Field>
       {host.error && (
         <AsyncError error={host.error} variant="inline" onRetry={() => void host.retry()} />
       )}
@@ -350,10 +352,13 @@ export const RuntimeFields = ({
               onRetry={() => void form.providerFetch.mutate()}
             />
           ) : (
-            <label className="flex flex-col gap-2 text-sm">
-              {t('creation.runtime.provider')}
+            <Field>
+              <FieldLabel htmlFor={`${fieldId}-provider`}>
+                {t('creation.runtime.provider')}
+              </FieldLabel>
               <AgentModelPicker
                 disabled={disabled || form.providerFetch.isLoading}
+                id={`${fieldId}-provider`}
                 loading={form.providerFetch.isLoading}
                 size="lg"
                 value={form.selectedBindingId}
@@ -369,7 +374,7 @@ export const RuntimeFields = ({
                 ]}
                 onChange={form.setBindingId}
               />
-            </label>
+            </Field>
           )}
           {!form.providerFetch.isLoading && form.selectedBindingId === 'configure' && (
             <ProviderSetupFields
@@ -387,11 +392,12 @@ export const RuntimeFields = ({
       ) : (
         <>
           {form.modelOptions.supported && (
-            <label className="flex flex-col gap-2 text-sm">
-              {t('createAgent.step.model')}
+            <Field>
+              <FieldLabel htmlFor={`${fieldId}-model`}>{t('createAgent.step.model')}</FieldLabel>
               <AgentModelPicker
                 disabled={disabled}
                 error={form.modelOptions.error}
+                id={`${fieldId}-model`}
                 loading={form.modelOptions.loading}
                 size="lg"
                 value={form.model}
@@ -405,11 +411,13 @@ export const RuntimeFields = ({
                 onChange={form.setModel}
                 onRetry={form.modelOptions.retry}
               />
-            </label>
+            </Field>
           )}
           {!!form.efforts.length && (
-            <label className="flex flex-col gap-2 text-sm">
-              {t('createAgent.step.strength')}
+            <Field>
+              <FieldLabel htmlFor={`${fieldId}-strength`}>
+                {t('createAgent.step.strength')}
+              </FieldLabel>
               <Select
                 disabled={disabled}
                 value={form.effort}
@@ -417,7 +425,10 @@ export const RuntimeFields = ({
                   if (value) form.setEffort(value as HeterogeneousReasoningEffort);
                 }}
               >
-                <SelectTrigger className="w-full data-[size=default]:h-9">
+                <SelectTrigger
+                  className="w-full data-[size=default]:h-9"
+                  id={`${fieldId}-strength`}
+                >
                   <SelectValue>{() => t(effortLabels[form.effort])}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -428,7 +439,7 @@ export const RuntimeFields = ({
                   ))}
                 </SelectContent>
               </Select>
-            </label>
+            </Field>
           )}
         </>
       )}

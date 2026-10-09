@@ -104,8 +104,8 @@ describe('createProjectForm', () => {
   });
 
   it('formats planning dates according to their selected precision', () => {
-    expect(formatProjectDate('2026-02-14', 'day')).toBe('Feb 14, 2026');
-    expect(formatProjectDate('2026-02-14', 'month')).toBe('Feb 2026');
+    expect(formatProjectDate('2026-02-14', 'day')).toBe('2026/02/14');
+    expect(formatProjectDate('2026-02-14', 'month')).toBe('2026/02');
     expect(formatProjectDate('2026-02-14', 'quarter')).toBe('2026 Q1');
     expect(formatProjectDate('2026-09-14', 'halfYear')).toBe('2026 H2');
     expect(formatProjectDate('2026-09-14', 'year')).toBe('2026');

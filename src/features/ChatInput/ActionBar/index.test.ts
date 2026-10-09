@@ -12,9 +12,18 @@ const tokenMocks = vi.hoisted(() => ({
   useTokenBreakdown: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/chat', () => ({
-  TokenTag: ({ value }: { value: number }) =>
-    createElement('div', { 'data-testid': 'token-tag' }, value),
+vi.mock('@/components/ai-elements/context', () => ({
+  Context: ({ usedTokens, children }: { usedTokens: number; children: ReactNode }) =>
+    createElement(
+      'div',
+      {},
+      createElement('span', { 'data-testid': 'token-tag' }, usedTokens),
+      children,
+    ),
+  ContextTrigger: () => null,
+  ContextContent: ({ children }: { children: ReactNode }) => createElement('div', {}, children),
+  ContextContentHeader: () => null,
+  ContextContentBody: ({ children }: { children: ReactNode }) => createElement('div', {}, children),
 }));
 
 vi.mock('@/store/user', () => ({
@@ -23,20 +32,6 @@ vi.mock('@/store/user', () => ({
 
 vi.mock('@/store/user/selectors', () => ({
   userGeneralSettingsSelectors: { config: () => ({ isDevMode: true }) },
-}));
-
-vi.mock('./components/ActionPopover', () => ({
-  default: ({ children, content }: { children?: ReactNode; content?: ReactNode }) =>
-    createElement('div', {}, children, content),
-}));
-
-vi.mock('./Token/TokenProgress', () => ({
-  default: ({ data }: { data: { id: string; value: number }[] }) =>
-    createElement(
-      'div',
-      { 'data-testid': `token-progress-${data[0].id}` },
-      data.map(({ id, value }) => `${id}:${value}`).join(','),
-    ),
 }));
 
 vi.mock('./Token/useTokenBreakdown', () => ({
@@ -92,6 +87,8 @@ describe('Context window token', () => {
 
     expect(tokenMocks.useTokenBreakdown).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('token-tag')).toHaveTextContent('6000');
-    expect(screen.getByTestId('token-progress-used')).toHaveTextContent('used:6000,rest:2000');
+    expect(screen.getByText('6,000')).toBeInTheDocument();
+    expect(screen.getByText('2,000')).toBeInTheDocument();
+    expect(screen.getByText('1,500')).toBeInTheDocument();
   });
 });

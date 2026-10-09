@@ -50,7 +50,7 @@ describe('buildTimelineAxis', () => {
   });
 
   it('emits month cells that vary with their day count', () => {
-    expect(axis.months.map((m) => m.label)).toEqual(['Sep 2026', 'Oct 2026', 'Nov 2026']);
+    expect(axis.months.map((m) => m.label)).toEqual(['2026/09', '2026/10', '2026/11']);
     expect(axis.months[0]).toMatchObject({ offset: 0, width: 30 * TIMELINE_DAY_WIDTH });
     expect(axis.months[1].offset).toBe(30 * TIMELINE_DAY_WIDTH);
     expect(axis.months[1].width).toBe(31 * TIMELINE_DAY_WIDTH);

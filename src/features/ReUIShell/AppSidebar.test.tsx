@@ -10,7 +10,6 @@ import SearchSection from '@/features/SettingsSearch/SearchSection';
 
 import { AppSidebar } from './AppSidebar';
 import { NavMain } from './NavMain';
-import { NavWorkspace } from './NavWorkspace';
 import { NotificationsPopover } from './NotificationsPopover';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
@@ -25,6 +24,7 @@ const globalState = vi.hoisted(() => ({
   toggleLeftPanel: vi.fn(),
 }));
 const viewport = vi.hoisted(() => ({ mobile: false }));
+const translations = vi.hoisted(() => ({ resolveSetting: false }));
 const workspace = vi.hoisted(() => {
   const items: Array<{ id: string; memberCount?: number; name: string; slug: string }> = [
     { id: 'w1', name: 'Team', slug: 'team' },
@@ -38,7 +38,20 @@ vi.mock('@/const/version', () => ({
 }));
 vi.mock('@/utils/platform', () => ({ isMacOS: () => false }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => viewport.mobile }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', async () => {
+  const { default: setting } = await import('../../../locales/en-US/setting.json');
+  const catalog = setting as Record<string, string>;
+  return {
+    useTranslation: () => ({
+      t: (key: string, options?: { count?: number; ns?: string }) => {
+        if (!translations.resolveSetting || options?.ns !== 'setting') return key;
+        const resource =
+          catalog[options.count !== undefined && options.count !== 1 ? `${key}_other` : key];
+        return resource?.replace('{{count}}', String(options.count)) ?? key;
+      },
+    }),
+  };
+});
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: typeof globalState) => unknown) => selector(globalState),
 }));
@@ -115,6 +128,7 @@ vi.mock('@/components/ui/dropdown-menu', () => {
   };
 });
 beforeEach(() => {
+  translations.resolveSetting = false;
   notifications.enabled = false;
   route.key = 'home';
   clearNavPanelRegistry();
@@ -306,7 +320,7 @@ describe('workspace destinations', () => {
   it('offers actual workspaces and no Personal destination that root routing would overwrite', () => {
     render(
       <SidebarProvider>
-        <NavWorkspace />
+        <WorkspaceSwitcher />
       </SidebarProvider>,
     );
     expect(screen.queryByRole('menuitem', { name: /workspaceSwitcher.personal/ })).toBeNull();
@@ -317,11 +331,44 @@ describe('workspace destinations', () => {
     workspace.items = [];
     render(
       <SidebarProvider>
-        <NavWorkspace />
+        <WorkspaceSwitcher />
       </SidebarProvider>,
     );
     expect(screen.queryByRole('menuitem', { name: /workspaceSwitcher.personal/ })).toBeNull();
-    expect(screen.queryByText('reuiShell9.organizations')).toBeNull();
+  });
+});
+
+describe('account menu inside the workspace switcher', () => {
+  it('carries the account entries that used to live in the footer user block', () => {
+    render(
+      <SidebarProvider>
+        <WorkspaceSwitcher />
+      </SidebarProvider>,
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /navPanel.members/ }));
+    expect(workspace.navigate).toHaveBeenCalledWith('/settings/members');
+    fireEvent.click(screen.getByRole('menuitem', { name: /userPanel.profile/ }));
+    expect(workspace.navigate).toHaveBeenCalledWith('/settings/profile', { escape: true });
+    expect(screen.getByRole('radiogroup', { name: 'settingCommon.themeMode.title' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /auth:signout/ })).toBeTruthy();
+    expect(screen.getByText('userPanel.docs')).toBeTruthy();
+  });
+  it('offers sign-out in the footer only where the switcher header is hidden', () => {
+    route.key = 'settings';
+    const { unmount } = render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'signout' })).toBeTruthy();
+    unmount();
+    route.key = 'home';
+    render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'signout' })).toBeNull();
   });
 });
 
@@ -399,6 +446,19 @@ describe('workspace switcher header', () => {
     );
     fireEvent.click(screen.getByRole('menuitem', { name: /Solo/ }));
     expect(workspace.switchWorkspace).toHaveBeenCalledWith('w2');
+  });
+  it('resolves workspace membership and onboarding labels from the settings catalog', () => {
+    translations.resolveSetting = true;
+    workspace.items = [{ id: 'w1', memberCount: 2, name: 'Team', slug: 'team' }];
+    render(
+      <SidebarProvider>
+        <WorkspaceSwitcher />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText('2 members')).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /New Workspace Collaborate with others/ }),
+    ).toBeInTheDocument();
   });
   it('routes New Workspace into the existing onboarding flow', () => {
     render(

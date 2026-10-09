@@ -160,26 +160,17 @@ describe('workspace settings useCategory', () => {
 
   it('places API Key in the Developer group', () => {
     const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
-    const adminGroup = result.current.find(
-      (group) => group.key === WorkspaceSettingsGroupKey.Admin,
-    );
     const developerGroup = result.current.find(
       (group) => group.key === WorkspaceSettingsGroupKey.Developer,
     );
 
     expect(developerGroup?.items.map((item) => item.key)).toContain(WorkspaceSettingsTabs.APIKey);
-    expect(adminGroup?.items.map((item) => item.key)).not.toContain(WorkspaceSettingsTabs.APIKey);
   });
 
   it('exposes API Key settings to members', () => {
     mocks.canManageWorkspace = false;
 
     const itemKeys = getItemKeys();
-    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
-
-    expect(result.current.some((group) => group.key === WorkspaceSettingsGroupKey.Admin)).toBe(
-      false,
-    );
     expect(itemKeys).toContain(WorkspaceSettingsTabs.APIKey);
   });
 
@@ -223,16 +214,10 @@ describe('workspace settings useCategory', () => {
 
   // The audit-log surface was deleted — no page, route or nav entry. The nav
   // must never offer it again on any build.
-  it('never lists Audit logs', () => {
-    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
-    const adminGroup = result.current.find(
-      (group) => group.key === WorkspaceSettingsGroupKey.Admin,
-    );
-
-    expect(adminGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Storage]);
-
+  it('never lists Audit logs or the retired Storage page', () => {
     const businessItemKeys = getItemKeys(businessWrapper);
     expect(businessItemKeys).not.toContain(WorkspaceSettingsTabs.AuditLog);
+    expect(getItemKeys()).not.toContain('storage');
   });
 
   // Admin-or-higher reads the billing numbers; the pages keep the

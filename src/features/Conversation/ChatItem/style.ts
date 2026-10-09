@@ -14,39 +14,27 @@ export const styles = createStaticStyles(({ css, cssVar }) => {
   return {
     container: css`
       position: relative;
-      max-width: 100%;
 
       &[data-message-locate-highlight] {
         border-radius: ${cssVar.borderRadiusLG};
         animation: ${locateHighlight} 1400ms ${cssVar.motionEaseOut};
       }
 
-      time,
-      div[role='menubar'] {
+      time {
         pointer-events: none;
+
+        display: inline-block;
+
+        white-space: nowrap;
+
         opacity: 0;
+
         transition: opacity 200ms ${cssVar.motionEaseOut};
       }
 
-      time {
-        display: inline-block;
-        white-space: nowrap;
-      }
-
-      div[role='menubar'] {
-        display: flex;
-      }
-
-      &:has([data-popup-open]) {
-        div[role='menubar'] {
-          pointer-events: unset;
-          opacity: 1;
-        }
-      }
-
-      &:hover {
-        time,
-        div[role='menubar'] {
+      &:hover,
+      &:focus-within {
+        time {
           pointer-events: unset;
           opacity: 1;
         }

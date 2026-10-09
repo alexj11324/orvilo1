@@ -1,34 +1,20 @@
 'use client';
-import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
+import type { ProjectUpdate } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
-import {
-  Archive,
-  ArrowLeftRight,
-  BadgeCheck,
-  CirclePlay,
-  CirclePlus,
-  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- review-rejected event kind, not a status mark
-  CircleX,
-  DiamondIcon,
-  Timer,
-  UserRoundCog,
-} from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
-import Avatar from '@/components/Avatar';
-import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
+import { Timeline, TimelineDate } from '@/components/reui/timeline';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { getProjectOverviewPath } from '@/features/Projects/Layout/navigation';
-import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { getMilestoneAnchorId } from '@/features/Projects/milestoneRow';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
@@ -50,21 +36,19 @@ import {
   feedWindowStart,
   mergeActivityFeed,
   type ProjectFeedEvent,
-  type ProjectFeedEventType,
 } from './activityFeedItems';
 import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
-import { ProjectCreationActivity } from './ProjectCreationActivity';
+import { ActivityMarker } from './ActivityMarker';
+import { resolveEventMarker, resolveRowMarker, UPDATE_MARKER } from './activityMarkers';
+import { ActivityTimelineItem } from './ActivityTimelineItem';
+import { ProjectCreationTimelineItem } from './ProjectCreationTimelineItem';
 
 /**
- * Inline rows: a 16px glyph with no circular backing, 14px/22px body copy,
- * 12px timestamps, 12px between glyph and text. Long-form comments render as
- * bordered cards, not inline rows.
+ * Each line is a ReUI Timeline item: one 14px mark in a 28px bordered slot,
+ * 14px/22px body copy and a 12px timestamp. Long-form comments render as
+ * bordered cards inside the same item.
  */
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  avatar: css`
-    flex: none;
-    margin-block-start: 1px;
-  `,
   body: css`
     overflow-y: auto;
     flex: 1;
@@ -74,7 +58,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: max(24px, calc((100% - 800px) / 2));
   `,
   card: css`
-    margin-block: 8px;
     padding-block: 2px;
     padding-inline: 12px;
     border: 0.5px solid ${cssVar.colorBorder};
@@ -88,17 +71,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     color: ${cssVar.colorTextTertiary};
     text-align: center;
   `,
-  glyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 22px;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
   link: css`
     font-weight: 500;
     color: ${cssVar.colorText};
@@ -106,23 +78,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     &:hover {
       text-decoration: underline;
-    }
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    padding-block: 6px;
-  `,
-  sentence: css`
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 22px;
-    color: ${cssVar.colorTextSecondary};
-
-    strong {
-      font-weight: 500;
-      color: ${cssVar.colorText};
     }
   `,
   taskRef: css`
@@ -133,14 +88,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       color: ${cssVar.colorText};
       text-decoration: underline;
     }
-  `,
-  time: css`
-    flex: none;
-
-    font-size: 12px;
-    line-height: 22px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
   `,
 }));
 
@@ -167,31 +114,12 @@ const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent
   4: 'low',
 };
 
-const TYPE_ICON: Record<TaskActivityLogType, StatusVisual['icon']> = {
-  assignee_agent: UserRoundCog,
-  assignee_user: UserRoundCog,
-  automation: Timer,
-  priority: ArrowLeftRight,
-  reviewer: UserRoundCog,
-  status: STATUS_PROPERTY_ICON,
-};
-
-const EVENT_ICON: Record<ProjectFeedEventType, typeof Archive> = {
-  milestone_added: DiamondIcon,
-  project_archived: Archive,
-  project_completed: BadgeCheck,
-  project_started: CirclePlay,
-  review_accepted: BadgeCheck,
-  review_rejected: CircleX,
-  task_created: CirclePlus,
-};
-
 const RelTime = memo<{ time: string }>(({ time }) => {
   const { text, title } = useActivityTime(time);
   return (
-    <span className={styles.time} title={title}>
+    <TimelineDate className="mb-0 inline font-normal" dateTime={time} title={title}>
       {text}
-    </span>
+    </TimelineDate>
   );
 });
 
@@ -311,35 +239,22 @@ const RowSentence = ({ row }: { row: ActivityFeedRow }) => {
   }
 };
 
-const ActivityRowItem = memo<{ row: ActivityFeedRow }>(({ row }) => {
-  const RowIcon = TYPE_ICON[row.type] ?? ArrowLeftRight;
-  return (
-    <div className={styles.row}>
-      <span className={styles.glyph}>
-        <RowIcon size={16} />
-      </span>
-      {row.actor ? (
-        <Avatar
-          avatar={row.actor.avatar ?? undefined}
-          className={styles.avatar}
-          name={row.actor.name ?? undefined}
-          size={16}
-        />
-      ) : null}
-      <div className={styles.sentence}>
-        <RowSentence row={row} />{' '}
-        <WorkspaceLink
-          className={styles.taskRef}
-          to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}
-        >
-          {row.taskIdentifier} · {row.taskTitle}
-        </WorkspaceLink>
-        {' · '}
-        <RelTime time={row.createdAt} />
-      </div>
-    </div>
-  );
-});
+const ActivityRowItem = memo<{ row: ActivityFeedRow; step: number }>(({ row, step }) => (
+  <ActivityTimelineItem
+    marker={<ActivityMarker actor={row.actor} marker={resolveRowMarker(row)} />}
+    step={step}
+  >
+    <RowSentence row={row} />{' '}
+    <WorkspaceLink
+      className={styles.taskRef}
+      to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}
+    >
+      {row.taskIdentifier} · {row.taskTitle}
+    </WorkspaceLink>
+    {' · '}
+    <RelTime time={row.createdAt} />
+  </ActivityTimelineItem>
+));
 
 ActivityRowItem.displayName = 'ActivityRowItem';
 
@@ -411,30 +326,22 @@ const EventSentence = ({ event, projectRef }: { event: ProjectFeedEvent; project
   }
 };
 
-const EventRowItem = memo<{ event: ProjectFeedEvent; projectRef: string }>(
-  ({ event, projectRef }) => {
-    const EventIcon = EVENT_ICON[event.type];
-    return (
-      <div className={styles.row}>
-        <span className={styles.glyph}>
-          {event.type === 'milestone_added' ? <MilestoneIcon size={16} /> : <EventIcon size={16} />}
-        </span>
-        {event.actorName || event.actorAvatar ? (
-          <Avatar
-            avatar={event.actorAvatar}
-            className={styles.avatar}
-            name={event.actorName}
-            size={16}
-          />
-        ) : null}
-        <div className={styles.sentence}>
-          <EventSentence event={event} projectRef={projectRef} />
-          {' · '}
-          <RelTime time={event.createdAt} />
-        </div>
-      </div>
-    );
-  },
+const EventRowItem = memo<{ event: ProjectFeedEvent; projectRef: string; step: number }>(
+  ({ event, projectRef, step }) => (
+    <ActivityTimelineItem
+      step={step}
+      marker={
+        <ActivityMarker
+          actor={{ avatar: event.actorAvatar, name: event.actorName }}
+          marker={resolveEventMarker(event)}
+        />
+      }
+    >
+      <EventSentence event={event} projectRef={projectRef} />
+      {' · '}
+      <RelTime time={event.createdAt} />
+    </ActivityTimelineItem>
+  ),
 );
 
 EventRowItem.displayName = 'EventRowItem';
@@ -446,6 +353,7 @@ const FeedItem = ({
   editing,
   onEditUpdate,
   onUpdateChanged,
+  step,
 }: {
   canModerate: (update: ProjectUpdate) => { canEdit: boolean; canDelete: boolean };
   editing: boolean;
@@ -453,35 +361,48 @@ const FeedItem = ({
   onEditUpdate: (updateId: string | null) => void;
   onUpdateChanged: () => void;
   projectRef: string;
+  step: number;
 }) => {
   if (item.kind === 'update') {
+    const marker = (
+      <ActivityMarker
+        actor={{ avatar: item.update.authorAvatar, name: item.update.authorName }}
+        marker={UPDATE_MARKER}
+      />
+    );
     // The composer is already a bordered card — while editing it replaces the
     // card rather than nesting inside it.
     if (editing)
       return (
-        <ProjectUpdateComposer
-          editingUpdate={item.update}
-          projectId={item.update.projectId}
-          onCancelEdit={() => onEditUpdate(null)}
-          onPosted={() => {
-            onEditUpdate(null);
-            onUpdateChanged();
-          }}
-        />
+        <ActivityTimelineItem inline={false} marker={marker} step={step}>
+          <ProjectUpdateComposer
+            editingUpdate={item.update}
+            projectId={item.update.projectId}
+            onCancelEdit={() => onEditUpdate(null)}
+            onPosted={() => {
+              onEditUpdate(null);
+              onUpdateChanged();
+            }}
+          />
+        </ActivityTimelineItem>
       );
     return (
-      <div className={styles.card}>
-        <ProjectUpdateRow
-          {...canModerate(item.update)}
-          update={item.update}
-          onChanged={onUpdateChanged}
-          onEdit={(update) => onEditUpdate(update.id)}
-        />
-      </div>
+      <ActivityTimelineItem inline={false} marker={marker} step={step}>
+        <div className={styles.card}>
+          <ProjectUpdateRow
+            hideAuthorAvatar
+            {...canModerate(item.update)}
+            update={item.update}
+            onChanged={onUpdateChanged}
+            onEdit={(update) => onEditUpdate(update.id)}
+          />
+        </div>
+      </ActivityTimelineItem>
     );
   }
-  if (item.kind === 'event') return <EventRowItem event={item.event} projectRef={projectRef} />;
-  return <ActivityRowItem row={item.row} />;
+  if (item.kind === 'event')
+    return <EventRowItem event={item.event} projectRef={projectRef} step={step} />;
+  return <ActivityRowItem row={item.row} step={step} />;
 };
 
 const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
@@ -578,23 +499,27 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
       {merged.length === 0 && !updatesSWR.isLoading ? (
         <div className={styles.empty}>{t('activity.empty')}</div>
       ) : null}
-      {merged.map((item) => (
-        <FeedItem
-          canModerate={canModerateUpdate}
-          editing={item.kind === 'update' && editingUpdateId === item.update.id}
-          item={item}
-          projectRef={projectRef}
-          key={
-            item.kind === 'activity'
-              ? item.row.id
-              : item.kind === 'update'
-                ? `update-${item.update.id}`
-                : `event-${item.event.id}`
-          }
-          onEditUpdate={setEditingUpdateId}
-          onUpdateChanged={() => void updatesSWR.mutate()}
-        />
-      ))}
+      <Timeline value={0}>
+        {merged.map((item, index) => (
+          <FeedItem
+            canModerate={canModerateUpdate}
+            editing={item.kind === 'update' && editingUpdateId === item.update.id}
+            item={item}
+            projectRef={projectRef}
+            step={index + 1}
+            key={
+              item.kind === 'activity'
+                ? item.row.id
+                : item.kind === 'update'
+                  ? `update-${item.update.id}`
+                  : `event-${item.event.id}`
+            }
+            onEditUpdate={setEditingUpdateId}
+            onUpdateChanged={() => void updatesSWR.mutate()}
+          />
+        ))}
+        {!nextCursor && <ProjectCreationTimelineItem project={project} step={merged.length + 1} />}
+      </Timeline>
       {moreError ? (
         <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />
       ) : null}
@@ -611,7 +536,6 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
           </Button>
         </div>
       ) : null}
-      {!nextCursor && <ProjectCreationActivity project={project} />}
     </div>
   );
 };

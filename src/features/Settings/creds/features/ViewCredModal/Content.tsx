@@ -3,13 +3,14 @@
 import { type OwnCredSummary } from '@orvilo/types';
 import { useQuery } from '@tanstack/react-query';
 import { cx } from 'antd-style';
-import { Copy, Eye, EyeOff } from 'lucide-react';
+import { CircleAlert, Eye, EyeOff, Info, TriangleAlert } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CopyButton from '@/components/CopyButton';
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { copyToClipboard } from '@/utils/clipboard';
 
 import { type CredsApi } from '../useCredsApi';
 
@@ -61,15 +62,7 @@ const KVRow: FC<KVRowProps> = ({ keyName, value }) => {
           >
             {visible ? <EyeOff size={16} /> : <Eye size={16} />}
           </Button>
-          <Button
-            aria-label={t('copy', { ns: 'common' })}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-            onClick={() => void copyToClipboard(value)}
-          >
-            <Copy size={14} />
-          </Button>
+          <CopyButton content={value} size="small" title={t('copy', { ns: 'common' })} />
         </div>
       </div>
     </div>
@@ -109,18 +102,20 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
 
   if (error) {
     return (
-      <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
-        {t('creds.view.error')}
-        <p className="mt-1 text-muted-foreground">{(error as Error).message}</p>
-      </div>
+      <Alert className="my-4" variant="destructive">
+        <CircleAlert />
+        <AlertTitle>{t('creds.view.error')}</AlertTitle>
+        <AlertDescription>{(error as Error).message}</AlertDescription>
+      </Alert>
     );
   }
 
   return (
     <>
-      <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
-        {t('creds.view.warning')}
-      </div>
+      <Alert className="my-4" variant="warning">
+        <TriangleAlert />
+        <AlertDescription>{t('creds.view.warning')}</AlertDescription>
+      </Alert>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 rounded-lg border border-border p-3 text-sm">
         <dt className="text-muted-foreground">{t('creds.table.name')}</dt>
         <dd>{cred.name}</dd>
@@ -142,10 +137,11 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
       )}
 
       {valueEntries.length === 0 && cred.type === 'oauth' && (
-        <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
-          {t('creds.view.noValues')}
-          <p className="mt-1 text-muted-foreground">{t('creds.view.oauthNote')}</p>
-        </div>
+        <Alert className="my-4" variant="info">
+          <Info />
+          <AlertTitle>{t('creds.view.noValues')}</AlertTitle>
+          <AlertDescription>{t('creds.view.oauthNote')}</AlertDescription>
+        </Alert>
       )}
     </>
   );

@@ -4,8 +4,6 @@
   "features.agentGraphConfig.title": "Agent Graph 运行时配置",
   "features.agentSelfIteration.desc": "允许智能体自我反思、自我感知，并在持续的尝试与交互中不断自我迭代。",
   "features.agentSelfIteration.title": "Agent 自我迭代",
-  "features.artifactDeployment.desc": "将 Artifact 发布为可访问的托管链接，并在会话侧边栏管理发布版本",
-  "features.artifactDeployment.title": "Artifact 部署",
   "features.assistantMessageGroup.desc": "将智能体消息及其工具调用结果组合在一起显示",
   "features.assistantMessageGroup.title": "智能体消息分组",
   "features.desktopSplitView.desc": "在桌面端并排显示两个标签页，支持独立导航和拖拽调整分栏宽度。",

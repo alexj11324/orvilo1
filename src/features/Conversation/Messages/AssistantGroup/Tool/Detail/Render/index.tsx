@@ -7,6 +7,7 @@ import { FallbackArgumentRender } from './FallbacktArgumentRender';
 
 interface ToolRenderProps {
   content: string;
+  errorText?: string;
   messageId?: string;
   plugin?: ChatPluginPayload;
   pluginState?: any;
@@ -15,7 +16,7 @@ interface ToolRenderProps {
 }
 
 const ToolRender = memo<ToolRenderProps>(
-  ({ showCustomToolRender, content, messageId, plugin, pluginState, toolCallId }) => {
+  ({ showCustomToolRender, content, errorText, messageId, plugin, pluginState, toolCallId }) => {
     const hasCustomRender = !!getBuiltinRender(plugin?.identifier, plugin?.apiName);
 
     if (hasCustomRender && showCustomToolRender) {
@@ -33,6 +34,7 @@ const ToolRender = memo<ToolRenderProps>(
     return (
       <FallbackArgumentRender
         content={content}
+        errorText={errorText}
         requestArgs={plugin?.arguments}
         toolCallId={toolCallId}
       />

@@ -3,8 +3,15 @@
 import type { UIChatMessage } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation';
 import AsyncError from '@/components/AsyncError';
+import { useChatbotSurface } from '@/features/AIChatbot/context';
 import { TopicNotFoundRedirect } from '@/features/TopicNotFound';
 import { useFetchTopicMemories } from '@/hooks/useFetchMemoryForTopic';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
@@ -21,7 +28,7 @@ import SkeletonList from '../components/SkeletonList';
 import MessageItem from '../Messages';
 import type { WorkflowExpandLevelDefault } from '../Messages/AssistantGroup/components/WorkflowCollapse';
 import { MessageActionProvider } from '../Messages/Contexts/MessageActionProvider';
-import { dataSelectors, inputSelectors, useConversationStore } from '../store';
+import { dataSelectors, inputSelectors, useConversationStore, virtuaListSelectors } from '../store';
 import AgentHandoffMarker from './components/AgentHandoffMarker';
 import AgentSignalReceiptList from './components/AgentSignalReceiptList';
 import { RefreshError } from './components/RefreshError';
@@ -32,6 +39,19 @@ import { resolveMessageListFeedback } from './resolveMessageListFeedback';
 import { buildChatRows } from './utils/chatRows';
 import type { MessageDeepLink } from './utils/messageDeepLink';
 import { resolveMessageDeepLink } from './utils/messageDeepLink';
+
+// Subscribe at the button boundary so scroll updates do not rerender the list host.
+const ChatbotScrollButton = () => {
+  const { t } = useTranslation('chat');
+  const isAtBottom = useConversationStore(virtuaListSelectors.atBottom);
+  const scrollToBottom = useConversationStore((s) => s.scrollToBottom);
+  return (
+    <ConversationScrollButton
+      aria-label={t('backToBottom')}
+      externalScroll={{ isAtBottom, scrollToBottom: () => scrollToBottom(true) }}
+    />
+  );
+};
 
 const MessageAuthorConfigLoader = memo<{ agentId: string; isLogin: boolean | undefined }>(
   ({ agentId, isLogin }) => {
@@ -170,6 +190,7 @@ const ChatList = memo<ChatListProps>(
       () => resolveMessageDeepLink(displayMessages, rowIds, messageDeepLink),
       [displayMessages, messageDeepLink, rowIds],
     );
+    const chatbotSurface = useChatbotSurface();
     const overlayHeight = useConversationStore(inputSelectors.chatInputOverlayHeight);
     const latestMessageId = displayMessageIds.at(-1);
 
@@ -281,7 +302,9 @@ const ChatList = memo<ChatListProps>(
       // server-rendered title the moment the list mounts to fetch.
       return (
         <div className="flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-          {headerSlot && <WideScreenContainer>{headerSlot}</WideScreenContainer>}
+          {headerSlot && (
+            <WideScreenContainer fullWidth={chatbotSurface}>{headerSlot}</WideScreenContainer>
+          )}
           <SkeletonList />
         </div>
       );
@@ -290,10 +313,11 @@ const ChatList = memo<ChatListProps>(
     const content =
       (showWelcome || displayMessageIds.length === 0) && welcome ? (
         <WideScreenContainer
+          fullWidth={chatbotSurface}
           style={{
             boxSizing: 'border-box',
             height: '100%',
-            paddingBottom: overlayHeight > 0 ? overlayHeight + 12 : undefined,
+            paddingBottom: !chatbotSurface && overlayHeight > 0 ? overlayHeight + 12 : undefined,
           }}
           wrapperStyle={{
             minHeight: '100%',
@@ -315,7 +339,7 @@ const ChatList = memo<ChatListProps>(
       );
 
     return (
-      <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
+      <Conversation scrollMode="external" style={{ height: '100%', minHeight: 0 }}>
         {messageAuthorAgentIds.map((agentId) => (
           <MessageAuthorConfigLoader
             agentId={agentId}
@@ -323,9 +347,8 @@ const ChatList = memo<ChatListProps>(
             key={agentId}
           />
         ))}
-        <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
-          {content}
-        </div>
+        <ConversationContent scrollMode="external">{content}</ConversationContent>
+        {chatbotSurface && displayMessageIds.length > 0 && <ChatbotScrollButton />}
         {feedback.showBackgroundError && (
           <RefreshError
             error={refreshError.error}
@@ -333,7 +356,7 @@ const ChatList = memo<ChatListProps>(
             onRetry={refreshError.retry}
           />
         )}
-      </div>
+      </Conversation>
     );
   },
 );

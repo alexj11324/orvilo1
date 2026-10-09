@@ -1,8 +1,10 @@
 import { getBuiltinIntervention } from '@orvilo/builtin-tools/interventions';
 import { safeParseJSON } from '@orvilo/utils';
 import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { requestAgentRuntime } from '@/features/CreateAgent';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useUserStore } from '@/store/user';
@@ -37,6 +39,7 @@ interface InterventionProps {
 
 const Intervention = memo<InterventionProps>(
   ({ requestArgs, id, identifier, apiName, toolCallId, assistantGroupId, actionsPortalTarget }) => {
+    const { t } = useTranslation(['common', 'notification']);
     const approvalMode = useUserStore(toolInterventionSelectors.approvalMode);
     const { canUseResource } = useConversationResourceAccess();
     const [isEditing, setIsEditing] = useState(false);
@@ -141,7 +144,12 @@ const Intervention = memo<InterventionProps>(
       ) => {
         if (!canUseResource || interventionResolving) return;
         if (isHeteroInteractionIdentifier(identifier)) {
-          await submitHeteroIntervention(id, action.type, action.payload);
+          try {
+            await submitHeteroIntervention(id, action.type, action.payload);
+          } catch (error) {
+            toast.error(t('inbox.question.replyFailed', { ns: 'notification' }));
+            throw error;
+          }
           return;
         }
         switch (action.type) {
@@ -227,6 +235,7 @@ const Intervention = memo<InterventionProps>(
         parsedArgs,
         skipToolInteraction,
         submitHeteroIntervention,
+        t,
         submitToolInteraction,
         topicId,
         usesDurableServerClaim,
@@ -266,32 +275,33 @@ const Intervention = memo<InterventionProps>(
         );
       }
 
-      const actions = (
-        <div className="flex justify-end">
+      return (
+        <div data-pending-hotkey-scope className="flex flex-col gap-3">
+          <SecurityBlacklistWarning args={parsedArgs} />
           <ApprovalActions
             apiName={apiName}
             approvalMode={approvalMode}
             assistantGroupId={assistantGroupId}
             identifier={identifier}
             messageId={id}
+            requestArgs={parsedArgs}
             toolCallId={toolCallId}
             onBeforeApprove={handleBeforeApprove}
-          />
-        </div>
-      );
-
-      return (
-        <div data-pending-hotkey-scope className="flex flex-col gap-3">
-          <SecurityBlacklistWarning args={parsedArgs} />
-          <BuiltinToolInterventionRender
-            apiName={apiName}
-            args={parsedArgs}
-            identifier={identifier}
-            messageId={id}
-            registerBeforeApprove={registerBeforeApprove}
-            onArgsChange={handleArgsChange}
-          />
-          {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
+          >
+            {canUseResource && (
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                {t('edit')}
+              </Button>
+            )}
+            <BuiltinToolInterventionRender
+              apiName={apiName}
+              args={parsedArgs}
+              identifier={identifier}
+              messageId={id}
+              registerBeforeApprove={registerBeforeApprove}
+              onArgsChange={handleArgsChange}
+            />
+          </ApprovalActions>
         </div>
       );
     }

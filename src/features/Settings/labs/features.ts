@@ -13,7 +13,6 @@ export type LabStage = 'alpha' | 'beta';
  */
 type LabFeatureI18nKey =
   | 'agentGraphConfig'
-  | 'artifactDeployment'
   | 'desktopSplitView'
   | 'evalCapture'
   | 'heteroSessionImport'
@@ -77,12 +76,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     i18nKey: 'projects',
     searchKeywords: ['project', 'workspace'],
     stage: 'alpha',
-  },
-  {
-    flag: 'enableArtifactDeployment',
-    i18nKey: 'artifactDeployment',
-    searchKeywords: ['artifact', 'deploy', 'publish'],
-    stage: 'beta',
   },
   {
     desktopOnly: true,

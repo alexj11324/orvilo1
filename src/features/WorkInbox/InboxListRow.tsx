@@ -4,12 +4,12 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
-  ArchiveIcon,
   ArchiveRestoreIcon,
   ClockIcon,
   MailIcon,
   MailOpenIcon,
   TimerOffIcon,
+  Trash2Icon,
 } from 'lucide-react';
 import { createElement, memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 
 import { formatInboxAge } from './inboxAge';
 import { INBOX_SNOOZE_DAYS, type InboxSnoozeDays, snoozeUntilForDays } from './inboxOrganize';
@@ -176,11 +177,15 @@ const InboxListRow = memo((props: InboxListRowProps) => {
     >
       {card.read ? null : <span aria-hidden className={styles.unreadDot} />}
       <span className={styles.avatarDisc}>
-        {card.actor || card.agent ? (
+        {card.agent ? (
+          <AssigneeAvatar
+            agentId={card.agent.id}
+            size={32 /* linear-token-override: match the human actor avatar in this shared slot. */}
+          />
+        ) : card.actor ? (
           <Avatar
-            avatar={card.actor?.avatar ?? card.agent?.avatar}
-            background={card.agent?.backgroundColor}
-            name={card.actor?.name ?? card.agent?.name}
+            avatar={card.actor.avatar}
+            name={card.actor.name}
             size={40} // linear-token-override: Plane notification rows use a 40px avatar disc
           />
         ) : (
@@ -223,12 +228,13 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                 {card.read ? t('inbox.markUnread') : t('inbox.markRead')}
               </TooltipContent>
             </Tooltip>
-            {card.availableActions.includes('archive') ? (
+            {card.availableActions.includes('dismiss') ||
+            card.availableActions.includes('archive') ? (
               <Tooltip>
                 <TooltipTrigger
                   render={
                     <button
-                      aria-label={archivedView ? t('inbox.unarchive') : t('inbox.archive')}
+                      aria-label={archivedView ? t('inbox.unarchive') : t('inbox.delete')}
                       className={styles.optionButton}
                       type="button"
                       onClick={(event) => {
@@ -241,11 +247,11 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                   {archivedView ? (
                     <ArchiveRestoreIcon aria-hidden className="size-3" />
                   ) : (
-                    <ArchiveIcon aria-hidden className="size-3" />
+                    <Trash2Icon aria-hidden className="size-3" />
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  {archivedView ? t('inbox.unarchive') : t('inbox.archive')}
+                  {archivedView ? t('inbox.unarchive') : t('inbox.delete')}
                 </TooltipContent>
               </Tooltip>
             ) : null}

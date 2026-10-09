@@ -5,6 +5,7 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -59,13 +60,16 @@ const AllRecentsDrawer = memo<AllRecentsDrawerProps>(({ open, onClose }) => {
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
             {searchKeyword && (
-              <button
+              <Button
                 aria-label={t('navPanel.searchRecent')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size="icon-xs"
+                type="button"
+                variant="ghost"
                 onClick={() => setSearchKeyword('')}
               >
                 <XIcon size={12} />
-              </button>
+              </Button>
             )}
           </div>
         </div>

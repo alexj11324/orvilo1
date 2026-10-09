@@ -4,12 +4,13 @@ import { type NetworkProxySettings } from '@orvilo/electron-client-ipc';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FormPassword } from '@/components/FormInput';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
@@ -210,14 +211,7 @@ const ProxyForm = () => {
     }
   }, [proxySettings, testUrl, form, t]);
 
-  if (isLoading)
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+  if (isLoading) return <SettingsSectionSkeleton />;
 
   const enableProxyGroup: FormGroupItemType = {
     children: [
@@ -294,10 +288,9 @@ const ProxyForm = () => {
             },
             {
               children: (
-                <Input
+                <FormPassword
                   autoComplete="new-password"
                   placeholder={t('proxy.password_placeholder')}
-                  type="password"
                 />
               ),
               label: t('proxy.password'),

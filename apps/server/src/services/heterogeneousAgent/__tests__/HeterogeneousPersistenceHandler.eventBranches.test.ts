@@ -951,6 +951,120 @@ describe('HeterogeneousPersistenceHandler — event branch coverage', () => {
   });
 
   describe('agent_intervention producer ACK', () => {
+    it.each(['amp', 'codebuddy', 'codex', 'kimi-code', 'opencode', 'pi'])(
+      'preserves %s permission identity through a cold producer ACK',
+      async (provider) => {
+        const h = createHarness({ topicAgentId: 'agent-test' });
+        const toolCallId = 'native-permission';
+        await ingest(h, [
+          buildEvent('agent_intervention_request', 0, {
+            apiName: 'askUserQuestion',
+            arguments: JSON.stringify({
+              questions: [
+                {
+                  header: 'Permission',
+                  options: [
+                    { id: 'once', label: 'Allow once' },
+                    { id: 'reject', label: 'Reject' },
+                  ],
+                  question: 'Write the requested file?',
+                },
+              ],
+            }),
+            deadline: 1_900_000_000_000,
+            identifier: provider,
+            interactionKind: 'permission',
+            provider,
+            toolCallId,
+          }),
+        ]);
+        const tool = [...h.messages.values()].find(
+          (message) => message.tool_call_id === toolCallId,
+        )!;
+        expect(tool.pluginState.heterogeneousIntervention.provider).toBe(provider);
+        h.messageModel.listMessagePluginsByTopic.mockResolvedValue([
+          {
+            ...tool.plugin,
+            id: tool.id,
+            state: tool.pluginState,
+            toolCallId,
+          },
+        ] as any);
+
+        __resetOperationStatesForTesting();
+        await ingest(h, [
+          buildEvent('agent_intervention_response', 1, {
+            producerAck: true,
+            resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000001',
+            result: { 'Write the requested file?': 'once' },
+            toolCallId,
+          }),
+        ]);
+
+        expect(h.messages.get(tool.id)?.pluginState.heterogeneousIntervention).toMatchObject({
+          interactionKind: 'permission',
+          provider,
+          summary: `${provider} permission: askUserQuestion`,
+          transition: 'resolved',
+        });
+        expect(acknowledgeAgentInterventionProducerResolution).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('replaces native question display metadata with the authoritative form on the same tool', async () => {
+      const h = createHarness({ topicAgentId: 'agent-test' });
+      const toolCallId = 'native-elicitation-question';
+      await ingest(h, [
+        buildEvent('stream_chunk', 0, {
+          chunkType: 'tools_calling',
+          toolsCalling: [
+            {
+              apiName: 'Asking for your input',
+              arguments: '{}',
+              id: toolCallId,
+              identifier: 'claude-code',
+              type: 'default',
+            },
+          ],
+        }),
+      ]);
+      const originalTool = [...h.messages.values()].find(
+        (message) => message.tool_call_id === toolCallId,
+      )!;
+      const questions = [
+        {
+          header: 'Scope',
+          options: [{ label: 'Narrow' }, { label: 'Full' }],
+          question: 'Which scope should I use?',
+        },
+      ];
+      await ingest(h, [
+        buildEvent('agent_intervention_request', 0, {
+          apiName: 'askUserQuestion',
+          arguments: JSON.stringify({ questions }),
+          deadline: 1_900_000_000_000,
+          identifier: 'claude-code',
+          interactionKind: 'question',
+          provider: 'claude-code',
+          toolCallId,
+        }),
+      ]);
+      const tools = [...h.messages.values()].filter((message) => message.role === 'tool');
+      expect(tools).toHaveLength(1);
+      expect(tools[0]).toMatchObject({
+        id: originalTool.id,
+        plugin: {
+          apiName: 'askUserQuestion',
+          identifier: 'claude-code',
+          intervention: { operationId: h.operationId, status: 'pending' },
+        },
+        tool_call_id: toolCallId,
+      });
+      expect(JSON.parse(tools[0].plugin.arguments)).toEqual({
+        questions: [{ ...questions[0], multiSelect: false }],
+      });
+    });
+
     const materializeAskUserTool = async (
       h: ReturnType<typeof createHarness>,
       toolCallId: string,

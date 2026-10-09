@@ -1,7 +1,5 @@
 'use client';
 
-import '@/app/globals.css';
-
 import { type AuthorizationPhase, type AuthorizationProgress } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { ArrowLeft, ArrowRight, Cloud, ExternalLink, LogOutIcon, Server } from 'lucide-react';
@@ -16,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { OFFICIAL_SITE } from '@/const/url';
 import { isDesktop } from '@/const/version';
+import { EntryHeading, EntryPanel } from '@/features/AuthShell/EntryShell';
 import UserInfo from '@/features/User/UserInfo';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { useSignOut } from '@/hooks/useSignOut';
@@ -321,11 +320,8 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         : t('screen5.status.description');
 
     return (
-      <section className="orvilo-entry-surface text-foreground mx-auto flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground text-sm leading-6">{description}</p>
-        </div>
+      <EntryPanel className="orvilo-entry-surface text-foreground">
+        <EntryHeading description={description} title={title} />
         <UserInfo />
         <div className="flex items-center justify-between gap-4">
           {isStatusMode ? (
@@ -348,7 +344,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
             <ArrowRight data-icon="inline-end" />
           </Button>
         </div>
-      </section>
+      </EntryPanel>
     );
   }
 
@@ -359,17 +355,13 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     : remoteError || t('authResult.failed.desc');
 
   return (
-    <section className="orvilo-entry-surface text-foreground mx-auto flex w-full max-w-sm flex-col gap-6">
-      <div className="flex flex-col gap-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {showEndpoint ? t('screen5.entry.serverTitle') : t('screen5.entry.title')}
-        </h1>
-        <p className="text-muted-foreground text-sm leading-6">
-          {showEndpoint
-            ? t('screen5.methods.selfhost.description')
-            : t('screen5.entry.description')}
-        </p>
-      </div>
+    <EntryPanel className="orvilo-entry-surface text-foreground">
+      <EntryHeading
+        title={showEndpoint ? t('screen5.entry.serverTitle') : t('screen5.entry.title')}
+        description={
+          showEndpoint ? t('screen5.methods.selfhost.description') : t('screen5.entry.description')
+        }
+      />
 
       {failed && (
         <Alert variant="destructive">
@@ -473,25 +465,28 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
                 : t('screen5.actions.signInCloud')}
             {!busy && <ExternalLink data-icon="inline-end" />}
           </Button>
-          <Button
-            className="w-full"
-            disabled={busy || isConnectingServer}
-            variant="ghost"
-            onClick={() => {
-              setShowEndpoint(true);
-              setCloudLoginStatus('idle');
-              setRemoteError(null);
-              clearRemoteServerSyncError();
-            }}
-          >
-            <Server data-icon="inline-start" />
-            {t('screen5.entry.selfhostAction')}
-          </Button>
           {!busy && (
             <p className="text-muted-foreground text-center text-xs leading-5">
               {t('screen5.entry.browserHint')}
             </p>
           )}
+          {/* Cloud is the default path; a server of one's own stays one quiet step away. */}
+          <p className="text-muted-foreground text-center text-xs leading-5">
+            {t('screen5.entry.selfhostPrompt')}{' '}
+            <Button
+              className="h-auto p-0 text-xs"
+              disabled={busy || isConnectingServer}
+              variant="link"
+              onClick={() => {
+                setShowEndpoint(true);
+                setCloudLoginStatus('idle');
+                setRemoteError(null);
+                clearRemoteServerSyncError();
+              }}
+            >
+              {t('screen5.entry.selfhostAction')}
+            </Button>
+          </p>
         </>
       )}
 
@@ -537,7 +532,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
           {t('screen5.legacyLocalDb.link')}
         </Button>
       )}
-    </section>
+    </EntryPanel>
   );
 });
 

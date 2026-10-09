@@ -1,4 +1,11 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, type PropsWithChildren, type ReactNode, useState } from 'react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldLabel, FieldSeparator } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { EntryHeading, EntryPanel } from '@/features/AuthShell/EntryShell';
 
 import type { PortalMessages } from './messages';
 import { useAccountsSignIn } from './useAccountsSignIn';
@@ -9,12 +16,7 @@ type AccountsLoginFormProps = {
 };
 
 const GoogleMark = () => (
-  <svg
-    aria-hidden="true"
-    className="accounts-login-form__provider-glyph"
-    data-testid="google-mark"
-    viewBox="0 0 24 24"
-  >
+  <svg aria-hidden="true" className="size-4" data-testid="google-mark" viewBox="0 0 24 24">
     <path
       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
       fill="#4285F4"
@@ -32,6 +34,28 @@ const GoogleMark = () => (
       fill="#EA4335"
     />
   </svg>
+);
+
+interface StepProps extends PropsWithChildren {
+  description: ReactNode;
+  title: ReactNode;
+}
+
+const Step = ({ children, description, title }: StepProps) => (
+  <EntryPanel data-testid="accounts-login-form">
+    <EntryHeading description={description} title={title} />
+    {children}
+  </EntryPanel>
+);
+
+const FormError = ({ children }: PropsWithChildren) => (
+  <Alert variant="destructive">
+    <AlertDescription>{children}</AlertDescription>
+  </Alert>
+);
+
+const LinkRow = ({ children }: PropsWithChildren) => (
+  <div className="flex items-center justify-center gap-4">{children}</div>
 );
 
 export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginFormProps) => {
@@ -80,76 +104,64 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
 
   if (step === 'password') {
     return (
-      <div className="accounts-login-form" data-testid="accounts-login-form">
-        <div className="accounts-login-form__heading">
-          <h1>{messages.passwordTitle}</h1>
-          <p>{messages.passwordDescription.replace('{{email}}', email)}</p>
-        </div>
-        <form className="accounts-login-form__fields" onSubmit={handlePasswordSubmit}>
-          <div className="accounts-login-form__field">
-            <label htmlFor="accounts-password">{messages.password}</label>
-            <input
+      <Step
+        description={messages.passwordDescription.replace('{{email}}', email)}
+        title={messages.passwordTitle}
+      >
+        <form className="flex flex-col gap-4" onSubmit={handlePasswordSubmit}>
+          <Field>
+            <FieldLabel htmlFor="accounts-password">{messages.password}</FieldLabel>
+            <Input
               required
               autoComplete="current-password"
+              className="h-9"
               disabled={loading}
               id="accounts-password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-          </div>
-          {error && (
-            <p className="accounts-login-form__error" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            aria-busy={loading}
-            className="accounts-login-form__button accounts-login-form__button--primary"
-            disabled={loading || !password}
-            type="submit"
-          >
+          </Field>
+          {error && <FormError>{error}</FormError>}
+          <Button aria-busy={loading} disabled={loading || !password} size="lg" type="submit">
             {messages.passwordButton}
-          </button>
+          </Button>
         </form>
-        <div className="accounts-login-form__footer">
+        <LinkRow>
           {supportsEmailCode && (
-            <button
-              className="accounts-login-form__link"
+            <Button
               disabled={loading}
               type="button"
+              variant="link"
               onClick={() => void switchToCode()}
             >
               {messages.useCode}
-            </button>
+            </Button>
           )}
-          <button
-            className="accounts-login-form__link"
-            disabled={loading}
-            type="button"
-            onClick={reset}
-          >
+          <Button disabled={loading} type="button" variant="link" onClick={reset}>
             {messages.back}
-          </button>
-        </div>
+          </Button>
+        </LinkRow>
         <div id="clerk-captcha" />
-      </div>
+      </Step>
     );
   }
 
   if (step === 'code') {
     return (
-      <div className="accounts-login-form" data-testid="accounts-login-form">
-        <div className="accounts-login-form__heading">
-          <h1>{messages.verifyTitle}</h1>
-          <p>{messages.verifyDescription.replace('{{email}}', email)}</p>
-        </div>
-        <form className="accounts-login-form__fields" onSubmit={handleVerificationSubmit}>
-          <div className="accounts-login-form__field">
-            <label htmlFor="accounts-verification-code">{messages.verificationCode}</label>
-            <input
+      <Step
+        description={messages.verifyDescription.replace('{{email}}', email)}
+        title={messages.verifyTitle}
+      >
+        <form className="flex flex-col gap-4" onSubmit={handleVerificationSubmit}>
+          <Field>
+            <FieldLabel htmlFor="accounts-verification-code">
+              {messages.verificationCode}
+            </FieldLabel>
+            <Input
               required
               autoComplete="one-time-code"
+              className="h-9"
               disabled={loading}
               id="accounts-verification-code"
               inputMode="numeric"
@@ -157,104 +169,68 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
               value={code}
               onChange={(event) => setCode(event.target.value)}
             />
-          </div>
-          {error && (
-            <p className="accounts-login-form__error" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            aria-busy={loading}
-            className="accounts-login-form__button accounts-login-form__button--primary"
-            disabled={loading || !code.trim()}
-            type="submit"
-          >
+          </Field>
+          {error && <FormError>{error}</FormError>}
+          <Button aria-busy={loading} disabled={loading || !code.trim()} size="lg" type="submit">
             {messages.verifyButton}
-          </button>
+          </Button>
         </form>
-        <div className="accounts-login-form__footer">
-          <button
-            className="accounts-login-form__link"
-            disabled={loading}
-            type="button"
-            onClick={() => void resendCode()}
-          >
+        <LinkRow>
+          <Button disabled={loading} type="button" variant="link" onClick={() => void resendCode()}>
             {messages.resend}
-          </button>
-          <button
-            className="accounts-login-form__link"
-            disabled={loading}
-            type="button"
-            onClick={reset}
-          >
+          </Button>
+          <Button disabled={loading} type="button" variant="link" onClick={reset}>
             {messages.back}
-          </button>
-        </div>
+          </Button>
+        </LinkRow>
         <div id="clerk-captcha" />
-      </div>
+      </Step>
     );
   }
 
   if (step === 'requirements') {
     return (
-      <div className="accounts-login-form" data-testid="accounts-login-form">
-        <div className="accounts-login-form__heading">
-          <h1>{messages.completeAccount}</h1>
-          <p>{messages.completeAccountDescription}</p>
-        </div>
-        <form className="accounts-login-form__requirements" onSubmit={handleRequirementsSubmit}>
-          <label className="accounts-login-form__legal-check">
-            <input
+      <Step description={messages.completeAccountDescription} title={messages.completeAccount}>
+        <form className="flex flex-col gap-4" onSubmit={handleRequirementsSubmit}>
+          <Field orientation="horizontal">
+            <Checkbox
               required
               checked={legalAccepted}
               disabled={loading}
-              type="checkbox"
-              onChange={(event) => setLegalAccepted(event.target.checked)}
+              id="accounts-legal"
+              onCheckedChange={(checked) => setLegalAccepted(checked)}
             />
-            <span>{messages.legal}</span>
-          </label>
-          {error && (
-            <p className="accounts-login-form__error" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            aria-busy={loading}
-            className="accounts-login-form__button accounts-login-form__button--primary"
-            disabled={loading || !legalAccepted}
-            type="submit"
-          >
+            <FieldLabel className="font-normal" htmlFor="accounts-legal">
+              {messages.legal}
+            </FieldLabel>
+          </Field>
+          {error && <FormError>{error}</FormError>}
+          <Button aria-busy={loading} disabled={loading || !legalAccepted} size="lg" type="submit">
             {messages.createAccountButton}
-          </button>
+          </Button>
         </form>
-        <button
-          className="accounts-login-form__link"
-          disabled={loading}
-          type="button"
-          onClick={reset}
-        >
-          {messages.startOver}
-        </button>
-      </div>
+        <LinkRow>
+          <Button disabled={loading} type="button" variant="link" onClick={reset}>
+            {messages.startOver}
+          </Button>
+        </LinkRow>
+      </Step>
     );
   }
 
   return (
-    <div className="accounts-login-form" data-testid="accounts-login-form">
-      <div className="accounts-login-form__heading">
-        <h1>{messages.login}</h1>
-        <p>{messages.emailDescription}</p>
-      </div>
-      <form className="accounts-login-form__fields" onSubmit={handleEmailSubmit}>
-        <div className="accounts-login-form__field">
-          <label className="sr-only" htmlFor="accounts-email">
+    <Step description={messages.emailDescription} title={messages.login}>
+      <form className="flex flex-col gap-4" onSubmit={handleEmailSubmit}>
+        <Field>
+          <FieldLabel className="sr-only" htmlFor="accounts-email">
             {messages.email}
-          </label>
-          <input
+          </FieldLabel>
+          <Input
             required
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect="off"
+            className="h-9"
             disabled={loading || !signIn}
             id="accounts-email"
             placeholder={messages.emailPlaceholder}
@@ -262,36 +238,30 @@ export const AccountsLoginForm = ({ messages, onGoogleLogin }: AccountsLoginForm
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
-        </div>
-        {error && (
-          <p className="accounts-login-form__error" role="alert">
-            {error}
-          </p>
-        )}
-        <button
+        </Field>
+        {error && <FormError>{error}</FormError>}
+        <Button
           aria-busy={loading}
-          className="accounts-login-form__button accounts-login-form__button--primary"
           disabled={loading || !signIn || !email.trim()}
+          size="lg"
           type="submit"
         >
           {messages.emailButton}
-        </button>
+        </Button>
       </form>
-      <div className="accounts-login-form__separator" role="separator">
-        <span>{messages.continueWith}</span>
-      </div>
-      <button
+      <FieldSeparator>{messages.continueWith}</FieldSeparator>
+      <Button
         aria-busy={loading}
-        className="accounts-login-form__button accounts-login-form__button--secondary"
         disabled={loading || !signIn}
+        size="lg"
         type="button"
+        variant="outline"
         onClick={() => void runGoogle(onGoogleLogin)}
       >
         <GoogleMark />
         {messages.google}
-      </button>
-      <p className="accounts-login-form__legal">{messages.terms}</p>
+      </Button>
       <div id="clerk-captcha" />
-    </div>
+    </Step>
   );
 };

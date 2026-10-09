@@ -62,10 +62,11 @@ Regressions to capture if seen:
   (exchange endpoint down/broken — the #305/#313 class of bug)
 - Redirect ping-pong between `accounts…/login` and `orvilo…/signin`
 - Landing on product `/signin` after password submit (cookie not minted)
-- White header strip or an "English" language-selector = wrong/old shell
-  (portal is full-bleed: `data-testid="accounts-auth-shell"`,
-  `accounts-auth-brand-panel` charcoal left, `accounts-auth-form-panel` black
-  right)
+- A language selector or theme button in the header = wrong shell (that is the
+  auth routes' `AuthContainer`). The portal renders the shared `EntryShell`
+  with `data-testid="accounts-auth-shell"`: centered brand, one column, terms in
+  the footer, following the light/dark theme. A two-panel dark layout is the
+  pre-unification portal.
 
 ## Launch + attach
 

@@ -355,9 +355,8 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
  * the business slot resolves to an empty component or to switches nothing reads
  * — so a direct visit must behave like an unknown tab, not render a blank pane.
  *
- * Unlike the personal `Notification` tab, the workspace one gets no desktop
- * exception: the local OS-notification page is personal, and the workspace tab
- * is always the business component.
+ * Notification is not here: its preferences are personal, so the workspace URL
+ * is a redirect to the personal page on every deployment.
  */
 const BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'billing',

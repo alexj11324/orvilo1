@@ -1,5 +1,4 @@
 import type { TaskStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +10,7 @@ import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
+import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TaskDetailAssignee = memo(() => {
@@ -34,7 +34,7 @@ const TaskDetailAssignee = memo(() => {
       ) : (
         <>
           <UnassignedAssigneeIcon kind={'agent'} size={16} />
-          <span style={{ color: cssVar.colorTextPlaceholder }}>{t('createTask.assignee')}</span>
+          <span className={styles.propertyPlaceholder}>{t('createTask.assignee')}</span>
         </>
       )}
     </div>

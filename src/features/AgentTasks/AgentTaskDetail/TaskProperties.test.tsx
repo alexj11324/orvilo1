@@ -12,6 +12,7 @@ import TaskProperties from './TaskProperties';
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
   moveWorkflow: vi.fn(),
+  openTaskScheduleDialog: vi.fn(),
   taskState: {
     activeTaskId: 'T-1',
     taskDetailMap: {
@@ -74,6 +75,10 @@ vi.mock('../features/TaskPriorityTag', () => ({
   default: () => <span>priority</span>,
 }));
 
+vi.mock('../features/TaskScheduleDialog', () => ({
+  openTaskScheduleDialog: mocks.openTaskScheduleDialog,
+}));
+
 vi.mock('../features/TaskTriggerTag', () => ({
   default: () => <span>trigger</span>,
 }));
@@ -111,6 +116,7 @@ describe('TaskProperties', () => {
   beforeEach(() => {
     mocks.activeWorkspaceId = 'workspace-1';
     mocks.moveWorkflow.mockClear();
+    mocks.openTaskScheduleDialog.mockClear();
   });
 
   afterEach(() => {
@@ -317,5 +323,21 @@ describe('TaskProperties', () => {
 
     expect(screen.getByRole('group', { name: 'taskDetail.dueDate' })).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
+  });
+
+  // The due date used to be a clickable <div>: no role, no tab stop, so the
+  // dialog could not be opened from the keyboard.
+  it('exposes the due date as a focusable button that opens the schedule dialog', async () => {
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+    fireEvent.click(await screen.findByText('taskDetail.dueDate'));
+
+    const dueDate = screen.getByRole('button', { name: 'taskDetail.property.addDueDate' });
+    expect(dueDate.tagName).toBe('BUTTON');
+    expect(dueDate.tabIndex).toBe(0);
+
+    fireEvent.click(dueDate);
+    expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
   });
 });

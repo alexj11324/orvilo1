@@ -3,7 +3,7 @@ import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { UserRoundX } from 'lucide-react';
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,6 +21,7 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 
+import { blockedPickerTriggerStyle, pickerTriggerStyle } from './pickerTriggerStyles';
 import { SimpleTooltip } from './SimpleTooltip';
 
 interface AssigneeAgentSelectorProps {
@@ -75,15 +76,6 @@ const matchesSearch = (agent: SidebarAgentItem, query: string) =>
   [agentDisplayName(agent), agent.title].some((label) =>
     (label ?? '').toLowerCase().includes(query),
   );
-
-const triggerStyle: CSSProperties = {
-  alignItems: 'center',
-  display: 'inline-flex',
-  justifyContent: 'center',
-  lineHeight: 1,
-  maxWidth: '100%',
-  minWidth: 0,
-};
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
   ({ children, currentAgentId, disabled, onChange, onHandoff, taskIdentifier }) => {
@@ -309,11 +301,8 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     if (blocked)
       return (
         <SimpleTooltip title={disabled ? t('taskDetail.reassignDisabled', { ns: 'chat' }) : reason}>
-          <div
-            style={{ ...triggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <span style={{ pointerEvents: 'none' }}>{children}</span>
+          <div style={blockedPickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
+            <span className="pointer-events-none">{children}</span>
           </div>
         </SimpleTooltip>
       );
@@ -323,17 +312,18 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
         <PopoverTrigger
           nativeButton={false}
           render={
-            <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
+            <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
               {children}
             </div>
           }
         />
-        <PopoverContent align="start" className="w-[260px] gap-0 p-0">
+        <PopoverContent align="start" className="w-65 gap-0 p-0">
           <Suspense fallback={<SkeletonList rows={6} />}>
             {isAgentListInit ? (
               <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
                 <input
                   autoFocus
+                  aria-label={t('taskList.assigneeSearch.agentPlaceholder', { ns: 'chat' })}
                   className={styles.searchInput}
                   placeholder={t('taskList.assigneeSearch.agentPlaceholder', { ns: 'chat' })}
                   value={search}
@@ -342,15 +332,15 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
                 />
                 {flatOptions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-4">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('taskList.assigneeSearch.agentEmpty', { ns: 'chat' })}
                     </div>
                   </div>
                 ) : (
                   <div
-                    className="flex flex-col gap-1 p-2"
+                    className="flex w-full flex-col gap-1 overflow-y-auto p-2"
                     ref={listRef}
-                    style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
+                    style={{ maxHeight: '50vh' }}
                   >
                     {showUnassigned && renderOption({ key: 'unassigned', kind: 'unassigned' })}
                     {filteredPrivate.length > 0 && (

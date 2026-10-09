@@ -225,10 +225,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
               member
                 ? {
                     iconPostfix: (
-                      <div
-                        className="flex flex-none items-center justify-center"
-                        style={{ height: 28, width: 28 }}
-                      >
+                      <div className="flex size-7 flex-none items-center justify-center">
                         <Avatar
                           avatar={member.user?.avatar || undefined}
                           name={memberName(member)}
@@ -281,6 +278,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
           {activeWorkspaceId && (
             <input
               autoFocus
+              aria-label={t('taskList.assigneeSearch.memberPlaceholder')}
               className={styles.searchInput}
               placeholder={t('taskList.assigneeSearch.memberPlaceholder')}
               value={search}
@@ -292,15 +290,15 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
             <SkeletonList rows={6} />
           ) : flatOptions.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-4">
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('taskList.assigneeSearch.memberEmpty')}
               </div>
             </div>
           ) : (
             <div
-              className="flex flex-col gap-1 p-2"
+              className="flex w-full flex-col gap-1 overflow-y-auto p-2"
               ref={listRef}
-              style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
+              style={{ maxHeight: '50vh' }}
             >
               {showUnassigned && renderOption({ key: 'unassigned', kind: 'unassigned' })}
               {selfMember && renderOption(toMemberOption(selfMember))}

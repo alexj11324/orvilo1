@@ -1,3 +1,4 @@
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -30,7 +31,7 @@ const TaskDetailSections = memo(() => {
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
       <div className={styles.root}>
         <div data-task-detail-header className={styles.header}>
-          <div className={`flex flex-col gap-3 ${styles.main}`}>
+          <div className={cn('flex flex-col gap-3', styles.main)}>
             {/* Reference order: the title owns the top line, then the
                 "Sub-issue of" parent bar; assignee lives in the properties. */}
             <TaskDetailTitleInput />
@@ -46,7 +47,7 @@ const TaskDetailSections = memo(() => {
           <div className={styles.description}>
             <TaskInstruction />
           </div>
-          <div className={`flex flex-col gap-6 ${styles.body}`}>
+          <div className={cn('flex flex-col gap-6', styles.body)}>
             <TaskBlockedNotice />
             <TaskSubtasks />
             <TaskArtifacts />

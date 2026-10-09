@@ -1,11 +1,11 @@
 export default {
   'tab.orchestrator': 'Orchestrator',
   'orchestrator.description':
-    'Choose a configured Agent to coordinate new groups and projects. Existing conversations keep their current coordinator.',
-  'orchestrator.workspaceScope': 'Applies to your new groups and projects in this Workspace.',
-  'orchestrator.personalScope': 'Applies to your new personal groups and projects.',
+    'Choose a configured Agent to coordinate new projects. Existing projects keep their current coordinator.',
+  'orchestrator.workspaceScope': 'Applies to your new projects in this Workspace.',
+  'orchestrator.personalScope': 'Applies to your new personal projects.',
   'orchestrator.select': 'Choose Orchestrator Agent',
-  'orchestrator.unsupported': 'This engine cannot coordinate groups. Choose a supported Agent.',
+  'orchestrator.unsupported': 'This engine cannot coordinate projects. Choose a supported Agent.',
   'orchestrator.empty': 'Create and configure an Agent to choose an Orchestrator.',
   'orchestrator.selectionUnavailable':
     'The selected Agent is unavailable. Configure it or choose another Agent.',
@@ -1118,9 +1118,8 @@ export default {
   'settingAgent.accessSettings.title': 'Access',
   'settingAgent.advancedSettings.diagnosticsAction': 'View diagnostics',
   'settingAgent.advancedSettings.diagnosticsLabel': 'Diagnostics',
-  'settingAgent.advancedSettings.title': 'Advanced',
   'settingAgent.devicePolicy.selectTarget': 'Select target',
-  'settingAgent.devicePolicy.title': 'Device switching',
+  'settingAgent.devicePolicy.title': 'Member device switching',
   'settingAgent.deviceSettings.bindingInvalidDesc':
     'The bound device is gone or no longer selectable. Choose a replacement to repair this agent.',
   'settingAgent.deviceSettings.bindingInvalidTitle': 'Device no longer available',
@@ -1136,12 +1135,11 @@ export default {
   'settingAgent.deviceSettings.zeroDeviceTitle': 'No device available',
   'settingAgent.generalSettings.legacyDesc':
     'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
-  'settingAgent.generalSettings.legacyLabel': 'Runtime',
   'settingAgent.generalSettings.legacyMigrate': 'Migrate to Orvilo',
   'settingAgent.generalSettings.legacyName': 'Legacy chat runtime',
   'settingAgent.generalSettings.name': 'Name',
   'settingAgent.generalSettings.title': 'Basic configuration',
-  'settingAgent.modelPolicy.title': 'Model',
+  'settingAgent.modelPolicy.title': 'Member model switching',
   'settingAgent.modelSettings.bindAction': 'Bind a provider',
   'settingAgent.modelSettings.catalogError': 'Could not load models from the selected device.',
   'settingAgent.modelSettings.catalogPending':
@@ -1701,8 +1699,8 @@ export default {
     'Model used to draft expertise domains and extract reusable experience from conversations.',
   'systemAgent.expertise.title': 'Agent Self-Evolution',
   'systemAgent.goal.modelDesc':
-    'Model used to turn a persistent goal into its standing acceptance criteria.',
-  'systemAgent.goal.title': 'Goal Creation',
+    'Drafts acceptance criteria, analyses task intent and plans exploration. Reviews results only as a last resort, when no verifier or assigned agent model is available.',
+  'systemAgent.goal.title': 'Planning & acceptance',
   'systemAgent.customPrompt.addPrompt': 'Add Custom Prompt',
   'systemAgent.customPrompt.desc':
     'Once filled out, the system agent will use the custom prompt when generating content',
@@ -4327,7 +4325,7 @@ export default {
   'workspaceSetting.import.newImport': 'New import',
   'workspaceSetting.import.loadMore': 'Load more projects',
 
-  'settingAgent.generalSettings.agentLabel': 'Agent',
+  'settingAgent.generalSettings.agentLabel': 'Runtime',
   'settingAgent.execution.target': 'Execution target',
   'settingAgent.execution.cwd': 'Working directory',
   'settingAgent.execution.isolation': 'Isolate commands',

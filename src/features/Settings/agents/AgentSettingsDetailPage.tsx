@@ -130,12 +130,7 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
             </details>
             <AgentAccessSettings agentId={agentId} />
             <AgentOpeningSettings agentId={agentId} />
-            <details className="mt-5 rounded-lg border px-4 py-3">
-              <summary className="cursor-pointer text-sm font-medium">
-                {t('settingAgent.advancedSettings.title')}
-              </summary>
-              <AgentAdvancedSettings agentId={agentId} />
-            </details>
+            <AgentAdvancedSettings agentId={agentId} />
           </div>
         </AsyncBoundary>
       </SettingContainer>

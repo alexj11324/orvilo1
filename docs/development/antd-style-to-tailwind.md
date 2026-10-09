@@ -17,11 +17,12 @@ The table covers every **132** distinct `cssVar.*` name found in tracked TS/TSX/
 under src/packages/apps at this source (the issue's 133 was an earlier baseline).
 A row marked unmapped is not a license to select the closest-looking utility.
 
-Baseline lexical inventory (tracked TS/TSX/CSS only): 1,328 files importing
+Original phase-0 lexical inventory (tracked TS/TSX/CSS only): 1,328 files importing
 antd-style, 26 importing antd, 951 calling createStaticStyles, 1,110 containing
 cssVar references and 542 calling cx. These are file counts, not AST call counts;
-comments can contribute to the reference counts. This sample removes five direct
-antd-style imports (1,323 remain), not the transitive dependencies.
+comments can contribute to the reference counts. These are historical counts, not
+an inventory of the final inherited canary tree. The four delivered sample changes
+remove four direct antd-style imports; transitive dependencies remain.
 
 Important corrections to the issue's illustrative examples:
 
@@ -46,7 +47,7 @@ Important corrections to the issue's illustrative examples:
 original CSS property. A raw status fill used as text does not prove contrast;
 changing it to contrast-adjusted status text requires separate visual review.
 Dynamic theme customization of a dimension needs an explicit decision before using
-its fixed DESIGN role. The five samples use existing literal dimensions only.
+its fixed DESIGN role. The delivered samples use existing literal dimensions only.
 
 | cssVar                 | Tailwind / semantic expression               | Source check / restriction                                                                                                                              |
 | ---------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -226,31 +227,37 @@ consumer; they are examples, not a complete exception allowlist.
   tokens, route/store/data changes, or antd/provider removal. A precedence mismatch
   is a finding to investigate, not permission to force utility priority.
 
-## Five samples
+## Four delivered samples
 
 | Pattern     | File                                                    | Change / retained contract                                                                                                                      |
 | ----------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Flat        | src/features/SharePopover/style.ts                      | p-4, 12px hint with inherited line-height; exported style-object API unchanged.                                                                 |
-| Hover       | src/features/Connectors/ConnectorList/ConnectorItem.tsx | Same selected/hover fills, logical layout, 6px input radius and existing click/focus handler. No control replacement.                           |
 | Descendants | src/components/GuideModal/index.tsx                     | Preserve h3/p selectors over arbitrary ReactNode descendants; same DOM and modal callbacks.                                                     |
 | Media       | src/features/Auth/OAuthConsent/OAuthApplicationLogo.tsx | Same connector dimensions at/below/above768px, subtle separator and icon tone. Same Avatar/ProductLogo.                                         |
 | Keyframes   | src/components/Loading/ContentLoading/index.tsx         | Reuse identical global spin keyframe at800ms; preserve 28px indicator/2px stroke/96px minimum region. Motion-policy correction described above. |
 
-These five files remove their direct antd-style imports. No claim is made that
+These four files remove their direct antd-style imports. No claim is made that
 other call sites, GroupForm, theme hosts or transitive @lobehub/ui dependencies
 have been migrated. `skeleton: no-change` — no loading shape/DOM replacement.
 
 ## Validation and gates
 
-Scoped `bun run check` passed for the five final source paths and this document
-(initial batch plus the replacement hover sample). No related tests were selected.
+Scoped checks passed for the original five sample source paths and this document.
+The final canary integration retains four of those source files unchanged and
+preserves #563's intentional deletion of the obsolete ConnectorList/ConnectorItem.
+No related tests were selected.
 Independent light review caught the shared DevDock cascade issue described below;
 the single follow-up verified its removal and found no new findings.
 These are presentation-only
 samples; source-string rendering tests would not prove CSS equivalence.
-Native Electron acceptance completed for these five samples in light/dark.
+Native Electron acceptance completed for the original five samples in light/dark.
+The four delivered sample files are byte-identical to that accepted source.
+The fifth, ConnectorItem hover/selected/focus sample was a presentation fixture;
+\#563 subsequently deleted its unused module and parent list. This PR preserves
+that deletion. Its old receipt is historical and does not validate the active
+Settings connector rows or deliver a fifth migration.
 Actual product components were loaded under the existing native ModalHost: the
-ConnectorItem data/callbacks were presentation fixtures; GuideModal tested arbitrary
+GuideModal tested arbitrary
 cover/title h3/p descendants and normal cancel/OK callbacks with close; OAuthApplicationLogo's
 third-party connector measured 32/32/40px at native widths 767/768/769. The native
 window minimum was temporarily lowered through normal IPC and restored to 1000px.
@@ -277,5 +284,7 @@ an unrelated fresh canary branch. Retarget/rebase in order after ancestors merge
 Do not migrate shared DevDock BarButton in isolation: MemoryWidget still mixes
 its class with unlayered text/status/active declarations. Those override layered
 hover utilities until the layer prerequisites are active or consumers migrate
-together. The initial isolated BarButton candidate was reverted; the hover sample
-is ConnectorItem, whose item/active/hover declarations migrate together.
+together. The initial isolated BarButton candidate was reverted. ConnectorItem
+was the replacement hover sample at the original source revision, but that unused
+component is now removed by #563. Choose and accept an active hover surface in a
+separate scoped migration; do not restore dead code to meet a sample count.

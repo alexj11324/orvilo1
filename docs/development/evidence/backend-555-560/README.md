@@ -68,7 +68,7 @@ configuration/dependency errors (desktop `@/modules/*` resolution, missing SPA
 ambient globals and Next's `RequestInit.next` augmentation). It is **not a clean
 typecheck**. The complete-repository CI typecheck remains required.
 
-## Scope and remaining product decision
+## Scope and confirmed product decisions
 
 Local prerequisites: PRs #491, #536, #544, #545 and #550, not yet merged into canary
 when integrated. Do not apply the implementation commit without those prerequisites.
@@ -83,8 +83,40 @@ The Inbox dismissal rule comes from the user's explicit blue-dot-only clarificat
 with Astra review; neither reference was presented as evidence for dismissing a
 pending Agent question through archive/delete/cancel.
 
-**#559 remains partly pending:** neither reference establishes whether copying
-should retain an Agent assignee by default or whether reopening should restore
-Todo versus the previous closed-from state. The question was sent to the user.
-Current defaults remain: assignee copying is opt-in; reopening uses Todo. An
-explicitly selected Agent copy is proven not to start execution.
+The user confirmed #559's defaults on 2026-10-09: copying retains both human and
+Agent assignees unless explicitly deselected, without starting execution; reopening
+returns to Todo. Commit `0c3ace0c72534e410866c4afb192242336e6ed1c` applies the copy
+default in both client and service. The updated regression failed before the change
+and passed afterward; both owning suites passed **52 tests**, including reopening
+completed/canceled Issues through the shared workflow command.
+
+## Refreshed candidate
+
+PR #585 integrates current canary and #491 head
+`6973e700011dcbe960c3b08ab11c62af4617ded0`. PRs #536, #544, #545 and #550 are now
+merged; #491 remains an open dependency. Its outstanding review/acceptance work is
+not represented as passed by this evidence.
+
+At `90d6b38da2b2efcdd1f3702a289bd8478a9c0a95`, the six-issue scoped check passed
+**273 tests in 12 files**. A separate WorkQuery/unresolved-input run passed **60
+tests**. Independent light review identified one introduced workflow-swimlane
+regression; the fix preserves canonical workflow categories while projecting
+`needs_input` through attention. The regression failed before the fix and passed
+after it. The single independent follow-up verified the finding resolved with no
+new defects in the correction. Scoped lint and normal commit hooks passed.
+
+Fresh real Electron acceptance at the same `90d6b38da` revision passed: the copy
+dialog checked **Assignees** by default; normal UI submission retained both human
+and Agent assignees and both labels. Clicking **Cancel issue**, then **Reopen
+issue**, persisted Todo with no current topic. The omitted-option copy API also
+retained the Agent. Read-only database assertions confirmed **zero operations and
+zero dispatches** for both copies. The script waits for server persistence rather
+than treating an optimistic UI update as completion.
+
+- [Default-copy dialog](copy-default-dialog.png)
+- [Reopened Issue](copy-reopened.png)
+- [Assertions and database counts](electron-copy-reopen.json)
+
+The earlier screenshots above prove only their recorded revision. The new proof
+uses the actual rebuilt Electron main/preload, renderer and local PostgreSQL backend;
+no business API was mocked.

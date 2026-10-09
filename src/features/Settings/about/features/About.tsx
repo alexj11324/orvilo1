@@ -87,11 +87,6 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
               label: t('getDesktopApp'),
               value: 'desktop',
             },
-            {
-              href: DOWNLOAD_URL.mobile,
-              label: t('getMobileApp'),
-              value: 'mobile',
-            },
           ]}
         />
         <Separator style={{ marginBlock: 0 }} />

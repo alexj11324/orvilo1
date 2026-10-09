@@ -1,4 +1,4 @@
-import { Activity, Bot, Handshake, LinkIcon, NotebookText } from 'lucide-react';
+import { Activity, Handshake, LinkIcon, NotebookText } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -24,11 +24,6 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
   const cateItems: MenuProps['items'] = useMemo(
     () =>
       [
-        {
-          icon: <Bot size={iconSize} />,
-          key: ChatSettingsTabs.Prompt,
-          label: t('agentTab.prompt'),
-        },
         (!isInbox && {
           icon: <Handshake size={iconSize} />,
           key: ChatSettingsTabs.Opening,

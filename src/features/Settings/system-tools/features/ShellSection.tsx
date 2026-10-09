@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FORM_STYLE } from '@/const/layoutTokens';
+import { runWithRollback } from '@/features/Settings/features/runWithRollback';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { desktopSettingsService } from '@/services/electron/settings';
 import { getPlatform } from '@/utils/platform';
@@ -37,13 +39,21 @@ const ShellSection = memo(() => {
     async (mode: WindowsShellMode) => {
       setUpdating(true);
       try {
-        const next = await desktopSettingsService.setShellMode(mode);
-        await mutate(next, { revalidate: false });
+        await runWithRollback(
+          async () => {
+            const next = await desktopSettingsService.setShellMode(mode);
+            await mutate(next, { revalidate: false });
+          },
+          // The select is driven by the stored mode, so a failed save needs no
+          // local rollback; re-read it in case the main process changed anyway.
+          () => void mutate(),
+          () => toast.error(t('settingSystemTools.shell.mode.saveFailed')),
+        );
       } finally {
         setUpdating(false);
       }
     },
-    [mutate],
+    [mutate, t],
   );
 
   const options = [

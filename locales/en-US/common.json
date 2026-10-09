@@ -364,7 +364,6 @@
   "generation.promptModeration.blocked": "Content policy check failed. Please revise your prompt.",
   "getApp": "Get App",
   "getDesktopApp": "Get Desktop App",
-  "getMobileApp": "Use in your phone browser",
   "globalSearch.empty": "No results for \"{{query}}\"",
   "globalSearch.error": "Search failed. Please try again.",
   "globalSearch.loading": "Searching…",

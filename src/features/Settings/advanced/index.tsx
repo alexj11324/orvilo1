@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
+import { toast } from '@/components/toast';
 import {
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
+import { runWithRollback } from '@/features/Settings/features/runWithRollback';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { getHostPort, hostResultOr } from '@/platform';
@@ -56,10 +58,18 @@ const Page = memo(() => {
       .catch(() => {});
   }, []);
 
-  const handleChannelChange = useCallback((value: UpdateChannelValue) => {
-    setChannel(value);
-    void getHostPort().updater.setUpdateChannel(value);
-  }, []);
+  const handleChannelChange = useCallback(
+    (value: UpdateChannelValue) => {
+      const previous = channel;
+      setChannel(value);
+      void runWithRollback(
+        () => getHostPort().updater.setUpdateChannel(value),
+        () => setChannel(previous),
+        () => toast.error(t('tab.advanced.updateChannel.saveFailed')),
+      );
+    },
+    [channel, t],
+  );
 
   const handleGatewayModeChange = useCallback(
     (checked: boolean) => {

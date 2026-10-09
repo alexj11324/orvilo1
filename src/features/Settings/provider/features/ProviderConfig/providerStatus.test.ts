@@ -45,6 +45,20 @@ describe('hasEndpoint', () => {
   });
 });
 
+describe('before the form has filled', () => {
+  it('reads the stored values when the live form value is null or undefined', () => {
+    expect(hasEndpoint(null, { baseURL: 'https://example.com/v1' })).toBe(true);
+    expect(hasEndpoint(undefined, { baseURL: 'https://example.com/v1' })).toBe(true);
+    expect(hasApiCredential(null, { apiKey: 'sk-test' })).toBe(true);
+  });
+
+  it('is empty when neither the form nor the stored config exists', () => {
+    expect(hasEndpoint(null, null)).toBe(false);
+    expect(hasEndpoint(undefined, undefined)).toBe(false);
+    expect(hasApiCredential(null, null)).toBe(false);
+  });
+});
+
 describe('resolveProviderStatus', () => {
   const base = {
     enabled: false,

@@ -35,3 +35,7 @@
 设备名称或默认目录的失败回滚只在当前草稿仍等于该次提交值时执行，保留等待期间继续输入的新草稿。Electron 原生 ModalHost 挂载交付的 DeviceDetailPanel，通过 bridge 前 fixture-only fetch 拦截延迟失败，名称 / 目录各覆盖新草稿与未改草稿：旧实现 4 cases 重现新草稿丢失；修复后 4 cases 保留新草稿、未改草稿回滚。所有设备写入均未转发。仅组件级原生回归证明，不声称完整设备路由、设备持久化或网关连接验收。
 
 现有相关测试 5 文件 46 cases 通过；共享 node_modules 的 hotkey package 路径用临时本地别名校正，未改项目测试配置。
+
+## Workspace route parity integration
+
+The retired workspace Storage URL remains a bookmark redirect to the workspace settings index. It is deliberately excluded from automatic workspace prefixing, so personal storage stays personal. The shared Web/Electron parity test now compares registered tabs against both live workspace tabs and declared legacy aliases; existing alias tests still assert their exact redirect destinations. The prior owning CI failed both parity cases for the additional `storage` redirect; the scoped shared-router and alias suites pass all 81 cases after this correction. Canonical Issue hotkey copy is preserved while dead delete actions are removed.

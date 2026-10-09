@@ -19,6 +19,7 @@ import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import SettingsPageSkeleton from '@/components/Skeleton/Settings/Page';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import TasksSkeleton from '@/components/Skeleton/Tasks';
+import { WORKSPACE_SETTINGS_ALIASES } from '@/config/routes/settings';
 import TaskDetailSkeleton from '@/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
 import { WORKSPACE_SETTINGS_TABS } from '@/features/Workspace/workspaceAwarePath';
 import AppShellSkeleton from '@/spa/BootShell/AppShellSkeleton';
@@ -742,7 +743,13 @@ describe('desktop router shared definition', () => {
       ].sort();
 
       expect(settingsRoute, 'Workspace settings route must exist').toBeDefined();
-      expect(registeredTabs).toEqual([...WORKSPACE_SETTINGS_TABS].sort());
+      // Retired workspace pages may keep bookmark redirects without becoming
+      // destinations for automatic workspace prefixing.
+      const expectedTabs = new Set([
+        ...WORKSPACE_SETTINGS_TABS,
+        ...WORKSPACE_SETTINGS_ALIASES.map(({ alias }) => alias),
+      ]);
+      expect(registeredTabs).toEqual([...expectedTabs].sort());
     },
   );
 

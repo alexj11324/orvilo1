@@ -24,6 +24,7 @@ import {
 } from '@/const/apiKeyScope';
 import { type ApiKeyItem, type UpdateApiKeyParams } from '@/types/apiKey';
 
+import { isExpiryUnchanged } from './apiKeyExpiry';
 import ScopeSelector, { ScopeOverview } from './ApiKeyModal/ScopeSelector';
 import { ApiKeyDisplay, EditableCell } from './index';
 
@@ -232,7 +233,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                     type="date"
                     value={apiKey.expiresAt?.toLocaleString() || t('apikey.display.neverExpires')}
                     onSubmit={(expiresAt) => {
-                      if (!canEdit || expiresAt === apiKey.expiresAt) return;
+                      if (!canEdit || isExpiryUnchanged(expiresAt, apiKey.expiresAt)) return;
                       void onUpdate(apiKey.id, {
                         expiresAt: expiresAt ? new Date(expiresAt as string) : null,
                       });

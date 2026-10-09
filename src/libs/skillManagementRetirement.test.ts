@@ -50,14 +50,11 @@ describe('the platform Skill management chain stays retired', () => {
       expect(exists('src/features/Settings/skill')).toBe(false);
       expect(exists('src/routes/(main)/[workspaceSlug]/settings/skill')).toBe(false);
 
-      // The workspace connector route used to import the skill feature directly
-      // (it bypassed the `Settings/connector` shim), so a partial delete there
-      // would keep the skill page alive through the connector URL.
-      const workspaceConnector = read(
-        'src/routes/(main)/[workspaceSlug]/settings/connector/index.tsx',
-      );
-      expect(workspaceConnector).not.toContain('Settings/skill');
-      expect(workspaceConnector).toContain('@/features/Settings/connector/ConnectorSettings');
+      // The workspace connector route used to import the skill feature directly,
+      // so a partial delete there kept the skill page alive through the
+      // connector URL. The route itself is gone now: the workspace URL redirects
+      // to the personal connector page.
+      expect(exists('src/routes/(main)/[workspaceSlug]/settings/connector')).toBe(false);
     });
 
     it('no longer ships the skill store features', () => {

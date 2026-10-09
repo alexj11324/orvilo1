@@ -1949,6 +1949,17 @@ export class TaskService {
       return a.time.localeCompare(b.time);
     });
 
+    // Only a target the caller can still read is named; anything else is
+    // reported as unavailable without leaking its id or title.
+    const duplicateTarget = task.duplicateOfTaskId
+      ? await this.taskModel.findById(task.duplicateOfTaskId)
+      : null;
+    const duplicateOf: TaskDetailData['duplicateOf'] = task.duplicateOfTaskId
+      ? duplicateTarget && !duplicateTarget.isDeleted && !duplicateTarget.deletedAt
+        ? { identifier: duplicateTarget.identifier, name: duplicateTarget.name }
+        : { unavailable: true }
+      : undefined;
+
     const taskConfig = task.config ? (task.config as Record<string, unknown>) : undefined;
     const taskContext = task.context ? (task.context as TaskContext) : undefined;
     const scheduleConfig = (taskConfig?.schedule ?? {}) as { maxExecutions?: number | null };
@@ -1979,6 +1990,7 @@ export class TaskService {
       description: task.description,
       domainRevision: task.domainRevision,
       dueDate: task.dueDate,
+      duplicateOf,
       editorData: task.editorData ?? undefined,
       error: task.error,
       files: taskFiles.length > 0 ? taskFiles : undefined,

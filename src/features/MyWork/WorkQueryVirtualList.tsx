@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type Ref,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -34,8 +35,10 @@ import type { WorkQueryGroupPage, WorkQueryResultTask } from './workQueryPaging'
 import {
   flattenWorkQueryFlatItems,
   flattenWorkQueryVirtualItems,
+  groupHidesIssue,
   indexWorkQueryVirtualTasks,
   nestWorkQueryListGroups,
+  stickyFlatKeys,
   stickyVirtualSections,
   type WorkQueryVirtualItem,
   workQueryVirtualPeekRows,
@@ -44,6 +47,14 @@ import {
 const DEFAULT_ROW_HEIGHT = 44;
 
 const noopPeek = () => {};
+
+/**
+ * Group header to focus once the list is back. Closing the peek re-parents the
+ * list (MyWorkPage swaps its split layout for the plain one), so the instance
+ * that collapsed the group is gone before the header can be focused; the key
+ * outlives it here and the new instance consumes it.
+ */
+let pendingHeaderFocus: string | null = null;
 
 const StickyGroup = ({ children, style, ...rest }: GroupProps) => (
   <div {...rest} className="z-2 bg-background" style={style}>
@@ -137,14 +148,6 @@ const WorkQueryVirtualList = ({
     [allTasks, groups, tasks],
   );
 
-  const toggleCollapsed = (key: string) => {
-    const next = collapsed.has(key)
-      ? collapsedKeys.filter((item) => item !== key)
-      : [...collapsedKeys, key];
-    if (onCollapsedGroupsChange) onCollapsedGroupsChange([...next]);
-    else setSessionCollapsed(next);
-  };
-
   const { items, orderedIds } = useMemo(() => {
     if (listGroupBy === 'none') return flattenWorkQueryFlatItems(tasks, nestRows);
     const nested = nestWorkQueryListGroups(groups ?? [], Boolean(laneAxis));
@@ -182,10 +185,39 @@ const WorkQueryVirtualList = ({
     [items, listGroupBy],
   );
 
+  const windowItems = sections ? sections.items : items;
+  const flatKeys = useMemo(() => (sections ? stickyFlatKeys(sections) : []), [sections]);
+
+  const toggleCollapsed = (key: string) => {
+    const collapsing = !collapsed.has(key);
+    const next = collapsing
+      ? [...collapsedKeys, key]
+      : collapsedKeys.filter((item) => item !== key);
+    // The peek must never stay open on a row this collapse just hid.
+    if (collapsing && peekKeys && groupHidesIssue(windowItems, taskById, key, peekKeys.peekId)) {
+      pendingHeaderFocus = key;
+      peekKeys.onPeek(null);
+    }
+    if (onCollapsedGroupsChange) onCollapsedGroupsChange([...next]);
+    else setSessionCollapsed(next);
+  };
+
+  // Runs after every render: the header only exists once the (re-mounted)
+  // virtualizer has laid out, which can be a render or two after the toggle.
+  useEffect(() => {
+    if (pendingHeaderFocus === null || !anchorNode) return;
+    const header = [...anchorNode.querySelectorAll<HTMLElement>('[data-work-group-header]')].find(
+      (element) => element.dataset.workGroupHeader === pendingHeaderFocus,
+    );
+    if (!header) return;
+    pendingHeaderFocus = null;
+    header.focus();
+  });
+
   const virtuosoRef = useRef<GroupedVirtuosoHandle | VirtuosoHandle>(null);
   const peekRows = useMemo(
-    () => workQueryVirtualPeekRows(sections ? sections.items : items, taskById),
-    [items, sections, taskById],
+    () => workQueryVirtualPeekRows(windowItems, taskById),
+    [windowItems, taskById],
   );
   const revealRow = useCallback(
     (rowKey: string) => {
@@ -241,6 +273,7 @@ const WorkQueryVirtualList = ({
         <Button
           aria-expanded={!item.collapsed}
           className="min-w-0 flex-1 justify-start"
+          data-work-group-header={item.collapseKey}
           variant="ghost"
           onClick={() => toggleCollapsed(item.collapseKey)}
         >
@@ -313,17 +346,21 @@ const WorkQueryVirtualList = ({
   return (
     <div ref={anchorRef}>
       {scrollParent && sections ? (
+        // No `data` prop: see `stickyFlatKeys`. Rows come from `sections.items`
+        // by item index, keys by flat slot index.
         <GroupedVirtuoso
           components={{ Group: StickyGroup }}
-          computeItemKey={(_index, item) => item.key}
+          computeItemKey={(index) => flatKeys[index] ?? index}
           customScrollParent={scrollParent}
-          data={sections.items}
           defaultItemHeight={DEFAULT_ROW_HEIGHT}
           groupContent={(index) => sections.headers[index]?.map((header) => renderHeader(header))}
           groupCounts={sections.groupCounts}
           increaseViewportBy={{ bottom: 600, top: 600 }}
-          itemContent={(_index, _groupIndex, item) => renderItem(item)}
           ref={virtuosoRef as Ref<GroupedVirtuosoHandle>}
+          itemContent={(index) => {
+            const item = sections.items[index];
+            return item ? renderItem(item) : null;
+          }}
         />
       ) : scrollParent ? (
         <Virtuoso

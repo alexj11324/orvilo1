@@ -99,6 +99,7 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
           style={{ flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}
         >
           <EditorCanvas
+            tabMovesFocus
             editor={editor}
             floatingToolbar={false}
             mentionOption={mentionOption}

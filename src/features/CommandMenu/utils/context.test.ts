@@ -1,6 +1,32 @@
+import { defaultFilter } from 'cmdk';
 import { describe, expect, it } from 'vitest';
 
+import english from '../../../../locales/en-US/common.json';
+import chinese from '../../../../locales/zh-CN/common.json';
+import { getRouteById } from '../../../../packages/app-config/src/routes';
 import { detectContext, getContextAgentId } from './context';
+import { routeSearchKeywords } from './routeKeywords';
+
+describe('translated route search', () => {
+  const route = getRouteById('myWork')!;
+  it.each([english, chinese])('matches the visible My issues label using CMDK', (locale) => {
+    const label = locale[route.cmdkKey as keyof typeof locale];
+    const aliases = locale[route.keywordsKey as keyof typeof locale].split(' ');
+
+    expect(defaultFilter(route.id, label, routeSearchKeywords(label, aliases))).toBeGreaterThan(0);
+  });
+
+  it.each([english, chinese])('preserves each previous translated search alias', (locale) => {
+    const label = locale[route.cmdkKey as keyof typeof locale];
+    const aliases = locale[route.keywordsKey as keyof typeof locale].split(' ');
+
+    for (const alias of aliases) {
+      expect(defaultFilter(route.id, alias, routeSearchKeywords(label, aliases))).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+});
 
 describe('detectContext', () => {
   it('detects agent context for base and topic routes', () => {

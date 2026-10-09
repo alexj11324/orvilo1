@@ -182,7 +182,7 @@
   "taskManager.agent": "任务智能体",
   "taskManager.agentSelector.privateGroup": "私人",
   "taskManager.agentSelector.workspaceGroup": "工作区",
-  "taskManager.welcome": "问我关于你的任务",
+  "taskManager.welcome": "问我关于你的 Issue",
   "temp": "临时",
   "title": "话题"
 }

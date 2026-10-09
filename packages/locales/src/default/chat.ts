@@ -1397,9 +1397,9 @@ export default {
   'sendPlaceholderChat': 'Ask, search, or brainstorm, <hotkey><hotkey/>',
   'sendPlaceholderChatWithAgentAssignment':
     'Ask, search, or brainstorm. @ to bring in other agents.',
-  'sendPlaceholderHeterogeneous': 'Describe a task or ask a question to {{name}}',
+  'sendPlaceholderHeterogeneous': 'Describe an issue or ask a question to {{name}}',
   'sendPlaceholderWithAgentAssignment':
-    'Ask, create, or start a task. @ to assign tasks to other agents.',
+    'Ask, create, or start an issue. @ to assign issues to other agents.',
   'sender.unknownMember': 'Member',
   'steer.tag': 'Steered',
   'sessionGroup.config': 'Category Management',

@@ -1,7 +1,6 @@
 import type { AgentContextDocument } from '@orvilo/context-engine';
 import type { PartialDeep } from 'type-fest';
 
-import { type AgentSettingsInstance } from '@/features/AgentSetting';
 import { type AvailableAgentItem } from '@/services/agent';
 import { type AgentItem } from '@/types/agent';
 import { type MetaData } from '@/types/meta';
@@ -31,7 +30,6 @@ export interface AgentSliceState {
    * agent is made public again).
    */
   agentNotFoundMap: Record<string, boolean>;
-  agentSettingInstance?: AgentSettingsInstance | null;
   availableAgents?: AvailableAgentItem[];
   /**
    * Whether the agent panel is pinned (UI state)

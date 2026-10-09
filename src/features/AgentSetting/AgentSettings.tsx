@@ -12,7 +12,7 @@ export interface AgentSettingsProps extends StoreUpdaterProps {
   tab: ChatSettingsTabs;
 }
 
-const AgentSettings = memo<AgentSettingsProps>(({ tab = ChatSettingsTabs.Opening, ...rest }) => {
+const AgentSettings = memo<AgentSettingsProps>(({ tab = ChatSettingsTabs.Connector, ...rest }) => {
   const isMobile = useServerConfigStore((s) => s.isMobile);
   const loadingSkeleton = (
     <ArticleSkeleton rows={6} style={{ padding: isMobile ? 16 : 0 }} title={false} />

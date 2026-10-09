@@ -1,6 +1,6 @@
 import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { shouldDropUnsupportedClaudeAssistantPrefill } from '@orvilo/model-runtime/providers/anthropic/modelId';
-import type { ChatTTS, ConversationContext } from '@orvilo/types';
+import type { ConversationContext } from '@orvilo/types';
 import { resolveAgentAgencyConfig } from '@orvilo/types';
 import { t } from 'i18next';
 import { type StateCreator } from 'zustand';
@@ -372,21 +372,9 @@ export interface GenerationAction {
   cancelScheduledRun: () => Promise<void>;
 
   /**
-   * Clear TTS for a message
-   * @deprecated Temporary bridge to ChatStore
-   */
-  clearMessageTTS: (messageId: string) => Promise<void>;
-
-  /**
    * Clear all operations
    */
   clearOperations: () => void;
-
-  /**
-   * Clear translate for a message
-   * @deprecated Temporary bridge to ChatStore
-   */
-  clearTranslate: (messageId: string) => Promise<void>;
 
   /**
    * Continue generation from a message.
@@ -504,30 +492,12 @@ export interface GenerationAction {
    */
   retryFailedAssistantStep: (groupMessageId: string, blockId: string) => Promise<void>;
 
-  /**
-   * Save TTS metadata for a message
-   * @deprecated Temporary bridge to ChatStore
-   */
-  saveMessageTTS: (messageId: string, data: Required<ChatTTS>) => Promise<void>;
-
   scheduleHeteroContinuation: (params: HeteroContinuationScheduleParams) => Promise<void>;
-
-  /**
-   * Start TTS for a message
-   * @deprecated Temporary bridge to ChatStore
-   */
-  startMessageTTS: (messageId: string) => void;
 
   /**
    * Stop current generation
    */
   stopGenerating: () => void;
-
-  /**
-   * Translate a message
-   * @deprecated Temporary bridge to ChatStore
-   */
-  translateMessage: (messageId: string, targetLang: string) => Promise<void>;
 }
 
 export const generationSlice: StateCreator<
@@ -605,16 +575,6 @@ export const generationSlice: StateCreator<
 
   clearOperations: () => {
     // Operations are now managed by ChatStore, nothing to clear locally
-  },
-
-  clearMessageTTS: async (messageId: string) => {
-    const chatStore = useChatStore.getState();
-    await chatStore.clearMessageTTS(messageId);
-  },
-
-  clearTranslate: async (messageId: string) => {
-    const chatStore = useChatStore.getState();
-    await chatStore.clearTranslate(messageId);
   },
 
   continueGeneration: async (groupMessageId: string) => {
@@ -1088,20 +1048,5 @@ export const generationSlice: StateCreator<
     if (hooks.onGenerationStop) {
       hooks.onGenerationStop();
     }
-  },
-
-  translateMessage: async (messageId: string, targetLang: string) => {
-    const chatStore = useChatStore.getState();
-    await chatStore.translateMessage(messageId, targetLang);
-  },
-
-  saveMessageTTS: async (messageId: string, data: Required<ChatTTS>) => {
-    const chatStore = useChatStore.getState();
-    await chatStore.saveMessageTTS(messageId, data);
-  },
-
-  startMessageTTS: (messageId: string) => {
-    const chatStore = useChatStore.getState();
-    chatStore.startMessageTTS(messageId);
   },
 });

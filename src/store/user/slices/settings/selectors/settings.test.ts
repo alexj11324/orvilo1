@@ -101,25 +101,6 @@ describe('settingsSelectors', () => {
     });
   });
 
-  describe('currentTTS', () => {
-    it('should merge DEFAULT_TTS_CONFIG and s.settings.tts correctly', () => {
-      const s = {
-        settings: {
-          tts: {
-            sttAutoStop: false,
-            openAI: {
-              sttModel: 'whisper-2',
-            },
-          },
-        },
-      } as unknown as UserStore;
-
-      const result = settingsSelectors.currentTTS(s);
-
-      expect(result).toMatchSnapshot();
-    });
-  });
-
   describe('getProviderConfigById', () => {
     it('should return the provider config for a given provider id', () => {
       const providerConfig = {

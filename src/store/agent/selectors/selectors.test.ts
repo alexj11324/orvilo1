@@ -4,7 +4,6 @@ import {
   DEFAULT_AVATAR,
   DEFAULT_INBOX_AVATAR,
   DEFAULT_MODEL,
-  DEFAUTT_AGENT_TTS_CONFIG,
   INBOX_SESSION_ID,
 } from '@orvilo/const';
 import { KnowledgeType } from '@orvilo/types';
@@ -502,63 +501,6 @@ describe('agentSelectors', () => {
     });
   });
 
-  describe('currentAgentTTS', () => {
-    it('should return TTS config from current agent', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: {
-          'agent-1': {
-            tts: { ttsService: 'openai', voice: { openai: 'nova' } },
-          },
-        },
-      });
-
-      const tts = agentSelectors.currentAgentTTS(state);
-
-      expect(tts.ttsService).toBe('openai');
-      expect(tts.voice?.openai).toBe('nova');
-    });
-
-    it('should return default TTS config when not specified', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: { 'agent-1': {} },
-      });
-
-      const tts = agentSelectors.currentAgentTTS(state);
-
-      expect(tts).toEqual(DEFAUTT_AGENT_TTS_CONFIG);
-    });
-  });
-
-  describe('currentAgentTTSVoice', () => {
-    it('should return openai voice', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: {
-          'agent-1': {
-            tts: { ttsService: 'openai', voice: { openai: 'nova' } },
-          },
-        },
-      });
-
-      expect(agentSelectors.currentAgentTTSVoice(state)).toBe('nova');
-    });
-
-    it('should return default voice when no voice specified', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: {
-          'agent-1': {
-            tts: { ttsService: 'openai', voice: {} },
-          },
-        },
-      });
-
-      expect(agentSelectors.currentAgentTTSVoice(state)).toBe('alloy');
-    });
-  });
-
   describe('hasEnabledKnowledgeBases', () => {
     it('should return true when has enabled knowledge bases', () => {
       const state = createState({
@@ -584,56 +526,6 @@ describe('agentSelectors', () => {
       });
 
       expect(agentSelectors.hasEnabledKnowledgeBases(state)).toBe(false);
-    });
-  });
-
-  describe('openingQuestions', () => {
-    it('should return opening questions from config', () => {
-      const questions = ['Question 1', 'Question 2'];
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: {
-          'agent-1': {
-            openingQuestions: questions,
-          },
-        },
-      });
-
-      expect(agentSelectors.openingQuestions(state)).toEqual(questions);
-    });
-
-    it('should return default when no opening questions', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: { 'agent-1': {} },
-      });
-
-      const result = agentSelectors.openingQuestions(state);
-      expect(Array.isArray(result)).toBe(true);
-    });
-  });
-
-  describe('openingMessage', () => {
-    it('should return opening message from config', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: {
-          'agent-1': {
-            openingMessage: 'Hello! How can I help you?',
-          },
-        },
-      });
-
-      expect(agentSelectors.openingMessage(state)).toBe('Hello! How can I help you?');
-    });
-
-    it('should return empty string when no opening message', () => {
-      const state = createState({
-        activeAgentId: 'agent-1',
-        agentMap: { 'agent-1': {} },
-      });
-
-      expect(agentSelectors.openingMessage(state)).toBe('');
     });
   });
 

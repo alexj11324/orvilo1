@@ -9,7 +9,6 @@ Generate text, speech, and transcriptions.
 ```
 orvilo generate (alias: gen)
 ├── text <prompt>                          # Text generation
-├── tts <text>                             # Text-to-speech
 └── asr <audioFile>                        # Audio-to-text (speech recognition)
 ```
 
@@ -43,18 +42,6 @@ When `--pipe` is used, reads stdin and prepends it to the prompt. Useful for pip
 
 ```bash
 cat README.md | orvilo gen text "summarize this" --pipe
-```
-
----
-
-## `orvilo generate tts <text>` / `orvilo gen tts <text>`
-
-Text-to-speech generation.
-
-**Source**: `apps/cli/src/commands/generate/tts.ts`
-
-```bash
-orvilo gen tts "Hello, world!" [options]
 ```
 
 ---

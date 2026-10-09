@@ -797,7 +797,6 @@ export const agentKnowledgeKeys = {
 // ---- file ---------------------------------------------------------------
 export const fileKeys = {
   knowledgeItems: def('file:knowledgeItems', (params: unknown) => ['file:knowledgeItems', params]),
-  ttsFile: def('file:ttsFile', (messageId: string) => ['file:ttsFile', messageId]),
 };
 
 // ---- chat tools ---------------------------------------------------------

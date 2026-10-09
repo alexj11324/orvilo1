@@ -109,14 +109,14 @@ describe('AgentSettings Content', () => {
     render(<Content />);
 
     const layout = screen.getByTestId('layout');
-    expect(layout).toHaveAttribute('data-active', ChatSettingsTabs.Opening);
+    expect(layout).toHaveAttribute('data-active', ChatSettingsTabs.Rules);
     expect(layout).toHaveAttribute(
       'data-tabs',
-      `${ChatSettingsTabs.Opening},${ChatSettingsTabs.Rules},${ChatSettingsTabs.SelfIteration}`,
+      `${ChatSettingsTabs.Rules},${ChatSettingsTabs.SelfIteration}`,
     );
     expect(screen.getByTestId('agent-settings-content')).toHaveAttribute(
       'data-tab',
-      ChatSettingsTabs.Opening,
+      ChatSettingsTabs.SelfIteration,
     );
   });
 
@@ -126,24 +126,21 @@ describe('AgentSettings Content', () => {
     render(<Content />);
 
     const layout = screen.getByTestId('layout');
-    expect(layout).toHaveAttribute('data-active', ChatSettingsTabs.Opening);
+    expect(layout).toHaveAttribute('data-active', ChatSettingsTabs.Rules);
     expect(layout).toHaveAttribute(
       'data-tabs',
-      `${ChatSettingsTabs.Opening},${ChatSettingsTabs.Rules},${ChatSettingsTabs.SelfIteration},${ChatSettingsTabs.Graph}`,
+      `${ChatSettingsTabs.Rules},${ChatSettingsTabs.SelfIteration},${ChatSettingsTabs.Graph}`,
     );
   });
 
-  it('keeps opening active when the self-iteration flag is off (inbox)', () => {
+  it('keeps rules active when the self-iteration flag is off (inbox)', () => {
     mocks.serverState.featureFlags.enableAgentSelfIteration = false;
 
     render(<Content />);
 
     const layout = screen.getByTestId('layout');
-    expect(layout).toHaveAttribute('data-active', ChatSettingsTabs.Opening);
-    expect(layout).toHaveAttribute(
-      'data-tabs',
-      `${ChatSettingsTabs.Opening},${ChatSettingsTabs.Rules}`,
-    );
+    expect(layout).toHaveAttribute('data-active', ChatSettingsTabs.Rules);
+    expect(layout).toHaveAttribute('data-tabs', ChatSettingsTabs.Rules);
   });
 
   it('drops only self-iteration when its flag is off (not inbox)', () => {
@@ -155,12 +152,13 @@ describe('AgentSettings Content', () => {
     const layout = screen.getByTestId('layout');
     expect(layout).toHaveAttribute(
       'data-tabs',
-      `${ChatSettingsTabs.Opening},${ChatSettingsTabs.Rules},${ChatSettingsTabs.Graph}`,
+      `${ChatSettingsTabs.Rules},${ChatSettingsTabs.Graph}`,
     );
   });
 });
 
 it('propagates metadata persistence failure from the production callback', async () => {
+  mocks.serverState.featureFlags.enableAgentSelfIteration = true;
   const failure = new Error('write rejected');
   mocks.agentState.optimisticUpdateAgentMeta.mockImplementation(
     async (_id, _meta, _extra, options) => {

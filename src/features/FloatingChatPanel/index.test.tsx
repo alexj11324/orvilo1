@@ -179,10 +179,6 @@ vi.mock('@/features/PageEditor/RightPanel/OverrideContext', () => ({
   PageAgentPanelOverrideProvider: ({ children }: { children?: ReactNode }) => children,
 }));
 
-vi.mock('@/features/Conversation/hooks/useChatFollowUp', () => ({
-  useChatFollowUp: () => ({}),
-}));
-
 vi.mock('@/store/agent', () => ({
   useAgentStore: () => undefined,
 }));

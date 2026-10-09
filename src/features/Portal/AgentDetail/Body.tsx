@@ -1,6 +1,5 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,9 +19,6 @@ const Body = memo(() => {
   const useFetchAgentConfig = useAgentStore((s) => s.useFetchAgentConfig);
   const { error, isLoading, mutate } = useFetchAgentConfig(true, agentId);
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  const openingMessage = useAgentStore(
-    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.openingMessage,
-  );
   const isNotFound = useAgentStore(agentByIdSelectors.isAgentNotFoundById(agentId));
   const displayName = agentDisplayName(meta, t('defaultSession', { ns: 'common' }));
 
@@ -54,11 +50,6 @@ const Body = memo(() => {
       <div className="text-center text-[24px] font-bold">{displayName}</div>
       {meta.description && (
         <div className="text-center text-muted-foreground">{meta.description}</div>
-      )}
-      {openingMessage && (
-        <div className="flex flex-col" style={{ width: 'min(100%, 560px)' }}>
-          <Markdown variant="chat">{openingMessage}</Markdown>
-        </div>
       )}
     </div>
   );

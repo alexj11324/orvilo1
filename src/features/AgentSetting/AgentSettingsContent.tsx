@@ -8,7 +8,6 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 
 import AgentConnectors from './AgentConnectors';
 import AgentGraphRuntime from './AgentGraphRuntime';
-import AgentOpening from './AgentOpening';
 import AgentRules from './AgentRules';
 import AgentSelfIteration from './AgentSelfIteration';
 
@@ -25,7 +24,6 @@ const AgentSettingsContent = memo<AgentSettingsContentProps>(({ tab, loadingSkel
 
   return (
     <>
-      {tab === ChatSettingsTabs.Opening && <AgentOpening />}
       {tab === ChatSettingsTabs.Rules && <AgentRules />}
       {enableAgentSelfIteration && tab === ChatSettingsTabs.SelfIteration && <AgentSelfIteration />}
       {tab === ChatSettingsTabs.Graph && <AgentGraphRuntime />}

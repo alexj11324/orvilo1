@@ -2,7 +2,7 @@
 
 import type { FormGroupItemType, FormItemProps } from '@lobehub/ui';
 import { Flexbox, Form, Tooltip } from '@lobehub/ui';
-import { InputNumber, Switch, TextArea } from '@lobehub/ui/base-ui';
+import { InputNumber } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,15 +25,10 @@ import { serviceModelFormStyles as styles } from './styles';
 // templated from them (`systemAgent.${key}.title`) all exist.
 type ModelAssignmentItemKey = Extract<
   UserServiceModelConfigKey,
-  | 'agentMeta'
   | 'expertise'
-  | 'followUpAction'
   | 'goal'
-  | 'inputCompletion'
   | 'memoryAnalysisAgentConfig'
   | 'topic'
-  | 'topicAutoSummary'
-  | 'translation'
   | 'userMemoryEmbedding'
   | 'userMemoryPersonaWriter'
 >;
@@ -46,20 +41,12 @@ interface SystemAgentModelItem {
 
 type LoadingKey = 'defaultAgent' | UserServiceModelConfigKey;
 
-type SavingGroup = 'assignments' | 'memory' | 'optional';
+type SavingGroup = 'assignments' | 'memory';
 
 const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [
   { key: 'expertise' },
   { key: 'goal' },
   { key: 'topic' },
-  { key: 'translation' },
-  { key: 'agentMeta' },
-];
-
-const OPTIONAL_FEATURE_ITEMS: SystemAgentModelItem[] = [
-  { key: 'topicAutoSummary' },
-  { key: 'followUpAction' },
-  { key: 'inputCompletion' },
 ];
 
 const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [
@@ -100,7 +87,6 @@ const ModelAssignmentsForm = memo(() => {
 
   const groupOfKey = (key: UserServiceModelConfigKey): SavingGroup => {
     if (MEMORY_MODEL_ITEMS.some((item) => item.key === key)) return 'memory';
-    if (OPTIONAL_FEATURE_ITEMS.some((item) => item.key === key)) return 'optional';
     return 'assignments';
   };
 
@@ -245,64 +231,6 @@ const ModelAssignmentsForm = memo(() => {
     },
   );
 
-  const optionalFeatureItems: FormItemProps[] = OPTIONAL_FEATURE_ITEMS.map(({ key }) => {
-    const value = systemAgentSettings[key];
-    const featureDisabled = value.enabled === false;
-
-    return {
-      children: (
-        <Tooltip title={reason}>
-          <Flexbox gap={12} style={{ width: 'min(100%, 448px)' }}>
-            <Flexbox align="center" direction="horizontal" gap={12} justify="flex-end">
-              {/* Which model runs a feature is only worth asking once the feature
-                itself is on — off, the picker is a dead control, so the switch
-                stands alone until it's flipped back. */}
-              {!featureDisabled && (
-                <ModelSelect
-                  disabled={!canManageServiceModel}
-                  showAbility={false}
-                  style={{ minWidth: 0, width: '100%' }}
-                  value={value}
-                  onChange={(props) => updateSystemAgentModel(key, props)}
-                />
-              )}
-              <Flexbox align="center" direction="horizontal" gap={8}>
-                <Switch
-                  aria-label={t(`systemAgent.${key}.title`)}
-                  checked={value.enabled}
-                  disabled={!canManageServiceModel}
-                  loading={loadingKey === key}
-                  onChange={(enabled) => updateSystemAgentModel(key, { enabled })}
-                />
-              </Flexbox>
-            </Flexbox>
-            {key === 'topicAutoSummary' && !featureDisabled && (
-              <TextArea
-                autoSize={{ maxRows: 8, minRows: 3 }}
-                defaultValue={value.customPrompt}
-                disabled={!canManageServiceModel}
-                placeholder={t('systemAgent.topicAutoSummary.promptPlaceholder')}
-                onBlur={(event) =>
-                  updateSystemAgentModel(key, { customPrompt: event.currentTarget.value.trim() })
-                }
-              />
-            )}
-          </Flexbox>
-        </Tooltip>
-      ),
-      desc: t(`systemAgent.${key}.modelDesc`),
-      label: (
-        <span
-          style={{
-            opacity: featureDisabled || !canManageServiceModel ? 0.45 : 1,
-          }}
-        >
-          {t(`systemAgent.${key}.title`)}
-        </span>
-      ),
-    } satisfies FormItemProps;
-  });
-
   const renderSaveHint = (group: SavingGroup) =>
     savingGroup === group && (
       <AutoSaveHint lastUpdatedTime={lastSavedAt} saveStatus={saveStatus} onRetry={retry} />
@@ -314,16 +242,6 @@ const ModelAssignmentsForm = memo(() => {
     title: (
       <SettingsSearchAnchor id={'service-model-assignments'}>
         {t('serviceModel.modelAssignments.title')}
-      </SettingsSearchAnchor>
-    ),
-  };
-
-  const optionalFeatures: FormGroupItemType = {
-    children: optionalFeatureItems,
-    extra: renderSaveHint('optional'),
-    title: (
-      <SettingsSearchAnchor id={'service-model-optional-features'}>
-        {t('serviceModel.optionalFeatures.title')}
       </SettingsSearchAnchor>
     ),
   };
@@ -341,7 +259,7 @@ const ModelAssignmentsForm = memo(() => {
   return (
     <Form
       collapsible={false}
-      items={[modelAssignments, memoryModels, optionalFeatures]}
+      items={[modelAssignments, memoryModels]}
       itemsType={'group'}
       variant={'filled'}
       {...FORM_STYLE}

@@ -11,60 +11,7 @@ const platform = vi.hoisted(() => ({
   isMobile: false,
 }));
 
-const mocks = vi.hoisted(() => {
-  const chatInputState = {
-    clearInputCompletionError: vi.fn(() => {
-      chatInputState.inputCompletionError = undefined;
-      chatInputState.inputCompletionErrorDismissed = false;
-    }),
-    dismissInputCompletionError: vi.fn(() => {
-      chatInputState.inputCompletionErrorDismissed = true;
-    }),
-    getMessages: vi.fn(() => []),
-    inputCompletionError: undefined as { message: string } | undefined,
-    inputCompletionErrorDismissed: false,
-    pauseInputCompletion: vi.fn((error: { message: string }) => {
-      chatInputState.inputCompletionError = error;
-      chatInputState.inputCompletionErrorDismissed = false;
-    }),
-  };
-
-  return {
-    chainInputCompletion: vi.fn(),
-    chatInputState,
-    generateJSON: vi.fn(),
-    inputCompletionConfig: {
-      enabled: false,
-      model: 'gpt-4o-mini',
-      provider: 'openai',
-    },
-    recordTracingFeedback: vi.fn(),
-  };
-});
-
 type StoreSelector<T = unknown> = (state: Record<PropertyKey, unknown>) => T;
-
-type AutoCompleteProps = {
-  onAutoComplete: (params: {
-    abortSignal: AbortSignal;
-    afterText: string;
-    input: string;
-    suggestionId: string;
-  }) => Promise<string | null>;
-};
-
-const getAutoCompleteProps = async (): Promise<AutoCompleteProps> => {
-  const { ReactAutoCompletePlugin } = await import('@lobehub/editor');
-  const { Editor } = await import('@lobehub/editor/react');
-  const autoCompleteCall = vi
-    .mocked(Editor.withProps)
-    .mock.calls.find(([plugin]) => plugin === ReactAutoCompletePlugin);
-  const autoCompleteProps = autoCompleteCall?.[1] as AutoCompleteProps | undefined;
-
-  expect(autoCompleteProps).toBeDefined();
-
-  return autoCompleteProps!;
-};
 
 const getEditorStyle = async () => {
   const { Editor } = await import('@lobehub/editor/react');
@@ -78,19 +25,12 @@ const getEditorStyle = async () => {
 
 vi.mock('@orvilo/const', () => ({
   isDesktop: false,
-  TRACING_SCENARIOS: { InputCompletion: 'input_completion' },
 }));
 vi.mock('@orvilo/const/hotkeys', () => ({
   HotkeyEnum: { AddUserMessage: 'add-user-message' },
   KeyEnum: { Alt: 'alt', Enter: 'enter' },
 }));
 vi.mock('@orvilo/heterogeneous-agents', () => ({ HETEROGENEOUS_TYPE_LABELS: {} }));
-vi.mock('@orvilo/prompts', () => ({
-  chainInputCompletion: mocks.chainInputCompletion,
-  escapeXmlAttr: (value: string) => value,
-  INPUT_COMPLETION_PROMPT_VERSION: 'v1',
-  INPUT_COMPLETION_SCHEMA_NAME: 'InputCompletion',
-}));
 vi.mock('@orvilo/utils', () => ({
   isRecord: (value: unknown): value is Record<PropertyKey, unknown> =>
     Boolean(value) && typeof value === 'object' && !Array.isArray(value),
@@ -99,7 +39,6 @@ vi.mock('@orvilo/utils', () => ({
 }));
 vi.mock('@lobehub/editor', () => ({
   INSERT_MENTION_COMMAND: 'insert-mention',
-  ReactAutoCompletePlugin: vi.fn(),
   ReactMathPlugin: vi.fn(),
 }));
 vi.mock('@lobehub/editor/react', () => {
@@ -125,7 +64,6 @@ vi.mock('fuse.js', () => ({
     }
   },
 }));
-vi.mock('lexical', () => ({ KEY_ESCAPE_COMMAND: 'escape' }));
 vi.mock('react-hotkeys-hook', () => ({
   useHotkeysContext: () => ({
     disableScope: vi.fn(),
@@ -149,12 +87,6 @@ vi.mock('@/hooks/useIMECompositionEvent', () => ({
 }));
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ allowed: permission.allowed, reason: '' }),
-}));
-vi.mock('@/services/aiChat', () => ({
-  aiChatService: {
-    generateJSON: mocks.generateJSON,
-    recordTracingFeedback: mocks.recordTracingFeedback,
-  },
 }));
 vi.mock('@/store/chat', () => ({
   useChatStore: Object.assign(<T,>(selector: StoreSelector<T>) => selector({}), {
@@ -190,9 +122,6 @@ vi.mock('@/store/user', () => {
 });
 vi.mock('@/store/user/selectors', () => ({
   settingsSelectors: { getHotkeyById: () => () => 'alt+enter' },
-  systemAgentSelectors: {
-    inputCompletion: () => mocks.inputCompletionConfig,
-  },
   userProfileSelectors: { userId: () => 'user-id' },
 }));
 
@@ -215,7 +144,7 @@ vi.mock('../store', () => {
   return {
     useChatInputStore: <T,>(selector: StoreSelector<T>) => selector(state),
     useStoreApi: () => ({
-      getState: () => mocks.chatInputState,
+      getState: () => ({}),
       subscribe: vi.fn(() => vi.fn()),
     }),
   };
@@ -249,18 +178,6 @@ describe('ChatInput InputEditor', () => {
     vi.clearAllMocks();
     permission.allowed = false;
     platform.isMobile = false;
-    mocks.inputCompletionConfig.enabled = false;
-    mocks.inputCompletionConfig.model = 'gpt-4o-mini';
-    mocks.inputCompletionConfig.provider = 'openai';
-    mocks.chatInputState.inputCompletionError = undefined;
-    mocks.chatInputState.inputCompletionErrorDismissed = false;
-    mocks.chainInputCompletion.mockReturnValue({
-      messages: [],
-      schema: {
-        name: 'InputCompletion',
-        schema: { type: 'object' },
-      },
-    });
   });
 
   it('renders as read-only when create-content permission is denied', () => {
@@ -293,83 +210,5 @@ describe('ChatInput InputEditor', () => {
     render(<InputEditor />);
 
     expect((await getEditorStyle())?.fontSize).toBeUndefined();
-  });
-
-  it('pauses autocomplete after a non-abort generation error', async () => {
-    permission.allowed = true;
-    mocks.inputCompletionConfig.enabled = true;
-    mocks.generateJSON.mockRejectedValueOnce(new Error('InsufficientBudgetForModel'));
-
-    render(<InputEditor />);
-
-    const autoCompleteProps = await getAutoCompleteProps();
-
-    const abortController = new AbortController();
-    await expect(
-      autoCompleteProps.onAutoComplete({
-        abortSignal: abortController.signal,
-        afterText: '',
-        input: 'hello',
-        suggestionId: 'suggestion-1',
-      }),
-    ).resolves.toBeNull();
-
-    expect(mocks.generateJSON).toHaveBeenCalledTimes(1);
-    expect(mocks.chatInputState.inputCompletionError?.message).toBe('InsufficientBudgetForModel');
-
-    await expect(
-      autoCompleteProps.onAutoComplete({
-        abortSignal: abortController.signal,
-        afterText: '',
-        input: 'hello again',
-        suggestionId: 'suggestion-2',
-      }),
-    ).resolves.toBeNull();
-
-    expect(mocks.generateJSON).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps autocomplete paused when an older in-flight request resolves after a failure', async () => {
-    permission.allowed = true;
-    mocks.inputCompletionConfig.enabled = true;
-
-    let resolveOlderRequest!: (value: { data: { completion: string } }) => void;
-    mocks.generateJSON
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveOlderRequest = resolve;
-          }),
-      )
-      .mockRejectedValueOnce(new Error('InsufficientBudgetForModel'));
-
-    render(<InputEditor />);
-
-    const autoCompleteProps = await getAutoCompleteProps();
-    const olderAbortController = new AbortController();
-    const newerAbortController = new AbortController();
-
-    const olderCompletion = autoCompleteProps.onAutoComplete({
-      abortSignal: olderAbortController.signal,
-      afterText: '',
-      input: 'older request',
-      suggestionId: 'suggestion-1',
-    });
-
-    await expect(
-      autoCompleteProps.onAutoComplete({
-        abortSignal: newerAbortController.signal,
-        afterText: '',
-        input: 'newer request',
-        suggestionId: 'suggestion-2',
-      }),
-    ).resolves.toBeNull();
-
-    expect(mocks.chatInputState.inputCompletionError?.message).toBe('InsufficientBudgetForModel');
-
-    resolveOlderRequest({ data: { completion: 'older completion' } });
-
-    await expect(olderCompletion).resolves.toBeNull();
-    expect(mocks.chatInputState.inputCompletionError?.message).toBe('InsufficientBudgetForModel');
   });
 });

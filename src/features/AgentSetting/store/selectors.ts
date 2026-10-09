@@ -14,12 +14,9 @@ const currentChatConfig = (s: Store) => merge(DEFAULT_AGENT_CHAT_CONFIG, s.confi
 
 const currentMetaConfig = (s: Store) => merge(DEFAULT_AGENT_META, s.meta);
 
-export const DEFAULT_OPENING_QUESTIONS: string[] = [];
 export const selectors = {
   chatConfig,
   currentAgentConfig,
   currentChatConfig,
   currentMetaConfig,
-  openingMessage: (s: Store) => s.config.openingMessage,
-  openingQuestions: (s: Store) => s.config.openingQuestions || DEFAULT_OPENING_QUESTIONS,
 };

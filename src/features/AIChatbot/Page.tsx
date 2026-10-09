@@ -11,7 +11,6 @@ import type { MessageDeepLink } from '@/features/Conversation/ChatList/utils/mes
 import SplitDropZone from '@/features/Conversation/SplitDropZone';
 
 import { ChatbotSurfaceContext } from './context';
-import Suggestions from './Suggestions';
 
 interface ChatbotPageProps {
   composer?: ReactNode;
@@ -64,7 +63,6 @@ export default function ChatbotPage({
         </SplitDropZone>
         {composer && !resolving && !placeholder && (
           <div className="grid shrink-0 gap-4 pt-4" data-testid="ai-chatbot-footer">
-            <Suggestions />
             <div className="w-full px-4 pb-4">{composer}</div>
           </div>
         )}

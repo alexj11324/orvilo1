@@ -22,7 +22,6 @@ describe('Main Index Export', () => {
     const chainExports = [
       'chainAbstractChunkText',
       'chainAnswerWithContext',
-      'chainLangDetect',
       'chainPickEmoji',
       'chainSummaryAgentName',
       'chainSummaryDescription',
@@ -30,7 +29,6 @@ describe('Main Index Export', () => {
       'chainSummaryHistory',
       'chainSummaryTags',
       'chainSummaryTitle',
-      'chainTranslate',
     ];
 
     chainExports.forEach((exportName) => {

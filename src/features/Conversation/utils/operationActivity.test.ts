@@ -52,7 +52,7 @@ describe('resolveOperationActivity', () => {
       'execHeterogeneousAgent',
       'execServerAgentRuntime',
       'sendMessage',
-      'translate',
+      'createMessageGroup',
     ];
     for (const type of unmapped) {
       expect(resolveOperationActivity(type)).toBeUndefined();

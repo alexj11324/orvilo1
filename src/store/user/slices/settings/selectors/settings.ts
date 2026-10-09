@@ -5,7 +5,6 @@ import {
   DEFAULT_HOTKEY_CONFIG,
   DEFAULT_MEMORY_SETTINGS,
   DEFAULT_SYSTEM_AGENT_CONFIG,
-  DEFAULT_TTS_CONFIG,
 } from '@orvilo/const';
 import {
   type GlobalLLMProviderKey,
@@ -31,8 +30,6 @@ const currentMemorySettings = (s: UserStore) =>
 
 const memoryEnabled = (s: UserStore) => currentMemorySettings(s).enabled !== false;
 
-const currentTTS = (s: UserStore) => merge(DEFAULT_TTS_CONFIG, currentSettings(s).tts);
-
 const defaultAgent = (s: UserStore) => merge(DEFAULT_AGENT, currentSettings(s).defaultAgent);
 const defaultAgentConfig = (s: UserStore) => merge(DEFAULT_AGENT_CONFIG, defaultAgent(s).config);
 
@@ -50,7 +47,6 @@ export const settingsSelectors = {
   currentMemorySettings,
   currentSettings,
   currentSystemAgent,
-  currentTTS,
   defaultAgent,
   defaultAgentConfig,
   defaultAgentMeta,

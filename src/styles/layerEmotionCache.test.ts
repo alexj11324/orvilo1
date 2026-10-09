@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { createInstance } from 'antd-style';
+import { createInstance, createStaticStyles, styleManager } from 'antd-style';
 import { describe, expect, it } from 'vitest';
 
 import { layerEmotionCache, toLayeredInsertArgs } from './layerEmotionCache';
@@ -122,5 +122,25 @@ describe('layerEmotionCache on a real antd-style instance', () => {
       `,
     }));
     expect(layerEmotionCache(late.styleManager.cache)).toBe('late');
+  });
+});
+
+describe('default runtime cascade', () => {
+  it('layers styles created after the renderer initialization import', async () => {
+    await import('./antdStyleLayer');
+
+    const styles = createStaticStyles(({ css }) => ({
+      rollout: css`
+        padding: 13px;
+
+        &:hover {
+          padding: 17px;
+        }
+      `,
+    }));
+
+    const output = insertedCss(styleManager.cache);
+    expect(output).toContain(`@layer antd-style{.${styles.rollout}{`);
+    expect(output).toContain(`.${styles.rollout}:hover{padding:17px;}`);
   });
 });

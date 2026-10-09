@@ -19,8 +19,8 @@ export const ANTD_STYLE_LAYER = 'antd-style';
  * Vite build-time precompile (`plugins/vite/staticStylesPrecompile.ts`), which
  * bypasses `cache.insert` and therefore needs the same layering baked in.
  */
-// Keep the broad precedence flip off until the affected surfaces are migrated.
-export const ANTD_STYLE_LAYER_ENABLED = false;
+// Runtime and precompiled styles must use the same cascade during the rollout.
+export const ANTD_STYLE_LAYER_ENABLED = true;
 
 interface SerializedStyles {
   name: string;

@@ -284,6 +284,7 @@ describe('viteStaticStylesPrecompile', () => {
     expect(code).not.toContain('createStaticStyles');
     expect(code).toMatch(/import \{ styleManager \} from ["']antd-style["']/);
     expect(code).toContain('cache.sheet.insert(rule)');
+    expect(code).toContain('@layer antd-style{');
     expect(code).toContain('color:var(--ant-color-text-secondary)');
   });
 });

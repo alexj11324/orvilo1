@@ -1,5 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
-
 /**
  * Chips shared by the live git status and by the snapshot that stands in for it
  * once the recorded directory is gone. Both render into the same composer bar,
@@ -7,81 +5,12 @@ import { createStaticStyles, cssVar } from 'antd-style';
  * the deliberately muted variant of `trigger`, lives next to the live one so the
  * two can't drift apart.
  */
-export const gitChipStyles = createStaticStyles(({ css }) => ({
-  prTrigger: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    transition: background 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  separator: css`
-    flex: none;
-    width: 1px;
-    height: 10px;
-    background: ${cssVar.colorSplit};
-  `,
-  // Muted so the snapshot never reads as live state, but still a control: the
-  // recovery action is the only thing this cluster can still do.
-  staleTrigger: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    max-width: 200px;
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-    white-space: nowrap;
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+export const gitChipStyles = {
+  prTrigger:
+    'cursor-pointer flex flex-none gap-1 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-muted-foreground whitespace-nowrap [transition:background_0.2s] hover:text-foreground hover:bg-accent hover:bg-none',
+  separator: 'flex-none w-[1px] h-2.5 bg-[var(--ant-color-split)] bg-none',
+  staleTrigger:
+    'cursor-pointer flex flex-none gap-1 items-center max-w-50 py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-[var(--ant-color-text-quaternary)] whitespace-nowrap [transition:background_0.2s] hover:bg-accent hover:bg-none',
+  trigger:
+    'cursor-pointer flex flex-none gap-1 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-muted-foreground whitespace-nowrap [transition:background_0.2s] hover:bg-accent hover:bg-none',
+};

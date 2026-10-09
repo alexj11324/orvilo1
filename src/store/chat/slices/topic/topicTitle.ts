@@ -1,3 +1,5 @@
+import type { TopicTitleOrigin } from '@orvilo/types';
+
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 export interface TopicTitleAgent {
@@ -55,6 +57,34 @@ export const resolveTopicTitleSource = (
 
   const model = resolveTopicTitleModel(agent);
   return model ? { kind: 'model', ...model } : { kind: 'slice' };
+};
+
+/**
+ * Whether an agent-reported title may replace the topic's current title.
+ *
+ * Order of authority: user > agent > auto (model / first-message slice).
+ * `origin` is the recorded source (the in-memory last write, else the persisted
+ * `metadata.titleSource`). Without one (topics titled before it existed) a title is only replaceable
+ * if it is clearly Orvilo's own placeholder: empty, one of the placeholder /
+ * default titles, or the slice of the first user message. Anything else is
+ * assumed to be user-set (a heuristic for legacy topics).
+ */
+export const canAgentRetitleTopic = ({
+  currentTitle,
+  origin,
+  placeholderTitles,
+  sliceTitle,
+}: {
+  currentTitle?: string | null;
+  origin?: TopicTitleOrigin;
+  placeholderTitles: readonly string[];
+  sliceTitle?: string;
+}): boolean => {
+  if (origin) return origin !== 'user';
+
+  const current = currentTitle?.trim();
+  if (!current) return true;
+  return placeholderTitles.includes(current) || current === sliceTitle;
 };
 
 const TOPIC_TITLE_SLICE_LENGTH = 80;

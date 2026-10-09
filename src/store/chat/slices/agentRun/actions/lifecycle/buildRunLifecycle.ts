@@ -166,7 +166,7 @@ export const buildRunLifecycle = (
     // `internal_updateTopic` already balances its own loading owner. For a
     // new client-runtime topic like "阅读下面...", an extra `false` here would
     // consume the runtime's loading owner and hide the sidebar spinner early.
-    await get().internal_updateTopic(tid, { title });
+    await get().applyAutoTopicTitle(tid, title);
     console.info('[dev] sliced topic title (NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC=1):', title);
   };
 

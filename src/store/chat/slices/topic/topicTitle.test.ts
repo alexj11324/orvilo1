@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canAgentRetitleTopic,
   isExternalAgentRuntime,
   resolveTopicTitleModel,
   resolveTopicTitleSource,
@@ -79,5 +80,28 @@ describe('sliceTopicTitle', () => {
 
   it('falls back when there is no user text', () => {
     expect(sliceTopicTitle([{ content: 'hi', role: 'assistant' }])).toBe('New Topic');
+  });
+});
+
+describe('canAgentRetitleTopic', () => {
+  const placeholderTitles = ['...', 'Default Topic'];
+  const base = { placeholderTitles, sliceTitle: 'first message' };
+
+  it('lets the agent replace anything but a user title when the origin is known', () => {
+    expect(canAgentRetitleTopic({ ...base, currentTitle: 'x', origin: 'auto' })).toBe(true);
+    expect(canAgentRetitleTopic({ ...base, currentTitle: 'x', origin: 'agent' })).toBe(true);
+    expect(canAgentRetitleTopic({ ...base, currentTitle: 'x', origin: 'user' })).toBe(false);
+  });
+
+  it('recognises Orvilo placeholders when the origin is unknown', () => {
+    expect(canAgentRetitleTopic({ ...base, currentTitle: '' })).toBe(true);
+    expect(canAgentRetitleTopic({ ...base, currentTitle: null })).toBe(true);
+    expect(canAgentRetitleTopic({ ...base, currentTitle: ' ... ' })).toBe(true);
+    expect(canAgentRetitleTopic({ ...base, currentTitle: 'Default Topic' })).toBe(true);
+    expect(canAgentRetitleTopic({ ...base, currentTitle: 'first message' })).toBe(true);
+  });
+
+  it('treats any other title as user-set when the origin is unknown', () => {
+    expect(canAgentRetitleTopic({ ...base, currentTitle: 'My own name' })).toBe(false);
   });
 });

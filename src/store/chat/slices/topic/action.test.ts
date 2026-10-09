@@ -3720,7 +3720,7 @@ describe('topic action', () => {
       });
 
       expect(getMessagesSpy).toHaveBeenCalledWith({ agentId: activeAgentId, topicId });
-      expect(summaryTopicTitleSpy).toHaveBeenCalledWith(topicId, messages);
+      expect(summaryTopicTitleSpy).toHaveBeenCalledWith(topicId, messages, { force: true });
     });
   });
 

@@ -1,8 +1,9 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { isRecord } from '@orvilo/utils/object';
 
+import { parseAcpSessionTitleMessage } from '../adapters/acpCommon';
 import type { AcpRpcMessage } from './acpStdioClient';
-import { AcpStdioClient } from './acpStdioClient';
+import { AcpServerRequestError, AcpStdioClient } from './acpStdioClient';
 import type { AgentStreamPipelineOptions } from './agentStreamPipeline';
 import { AgentStreamPipeline } from './agentStreamPipeline';
 import {
@@ -54,6 +55,13 @@ export const selectAcpPermissionOption = (
   return undefined;
 };
 
+/**
+ * How long a finished turn's bridge process is kept alive for the title it
+ * generates in the background (claude-agent-acp: ~2s after turn end). The wait
+ * ends earlier when a title arrives.
+ */
+export const SESSION_TITLE_LINGER_MS = 5000;
+
 /** Options shared by every ACP agent session, independent of the vendor. */
 export interface AcpAgentSessionOptions {
   args: string[];
@@ -72,7 +80,20 @@ export interface AcpAgentSessionOptions {
   onRawMessage: (line: string) => Promise<void> | void;
   onRuntimeStatus: (status: HeterogeneousAgentRuntimeStatus) => void;
   onSessionId: (sessionId: string) => void;
+  /**
+   * Title the agent reported for this session (`session_info_update`). A
+   * side channel, deliberately outside `onEvents`: the title describes the
+   * session, not the turn, so it is delivered whenever it arrives while the
+   * process is alive, and it never enters the persisted/ingested event stream.
+   */
+  onSessionTitle?: (title: string) => void;
   onStderr: (data: string) => Promise<void> | void;
+  /**
+   * The window in which `onSessionTitle` can still fire is over: the process
+   * is closing (title delivered, linger cap reached, forced close, or the
+   * session ended with nothing to wait for). Called at most once.
+   */
+  onTitleWindowEnd?: () => void;
   operationId: string;
   requestTimeoutMs?: number;
   resumeSessionId?: string;
@@ -118,6 +139,12 @@ export abstract class AcpAgentSession<
   private inInertTurnActive = false;
   private readonly transport: HeterogeneousAgentRuntimeStatus['transport'];
   private hostClosed = false;
+  private lastSessionTitle?: string;
+  private titleLingerTimer?: ReturnType<typeof setTimeout>;
+  private interruptRequested = false;
+  private titleWindowEnded = false;
+  /** Set once `session/prompt` is about to be sent; earlier updates are `session/load` replay. */
+  private promptStarted = false;
   private lastStatus?: HeterogeneousAgentRuntimeStatus['state'];
 
   protected constructor(
@@ -136,9 +163,18 @@ export abstract class AcpAgentSession<
       cwd: options.cwd,
       detached: options.detached,
       env: options.env,
-      onMessage: (message) => this.handleAgentMessage(message),
+      onMessage: (message) => {
+        this.forwardSessionTitle(message);
+        // A lingering child only waits for its title: nothing else it sends
+        // may reach the pipeline, whatever the subclass does.
+        if (this.titleLingering) return;
+        return this.handleAgentMessage(message);
+      },
       onRawMessage: options.onRawMessage,
-      onServerRequest: (message) => this.handleServerRequest(message),
+      onServerRequest: (message) =>
+        this.titleLingering
+          ? this.refuseLingeringRequest(message)
+          : this.handleServerRequest(message),
       onStderr: options.onStderr,
       processLabel: config.processLabel,
       requestTimeoutMs: options.requestTimeoutMs,
@@ -171,6 +207,7 @@ export abstract class AcpAgentSession<
 
   /** Run one full prompt turn. Resolves silently when the host closed the session mid-run. */
   async run(): Promise<void> {
+    let completedNormally = false;
     this.emitStatus('starting');
     try {
       await this.prepareRun?.();
@@ -179,11 +216,13 @@ export abstract class AcpAgentSession<
       this.acpSessionId = sessionId;
       this.emitStatus('running');
       this.onBeforePrompt?.();
+      this.promptStarted = true;
       const result = await this.client.request<unknown>(
         'session/prompt',
         await this.buildPromptParams(sessionId),
         false,
       );
+      completedNormally = isRecord(result) && result.stopReason === 'end_turn';
       await this.settlePrompt(result);
       if (this.hostClosed) return;
       await this.emitEvents(await this.pipeline.flush());
@@ -205,8 +244,12 @@ export abstract class AcpAgentSession<
       // An armed keeper owns the child from here on — it disposes the client
       // itself when the scheduler disarms.
       if (!this.keepaliveArmed) {
-        this.client.close();
-        this.emitStatus('closed');
+        if (completedNormally && this.shouldLingerForTitle()) this.beginTitleLinger();
+        else {
+          this.client.close();
+          this.emitStatus('closed');
+          this.notifyTitleWindowEnd();
+        }
       }
     }
   }
@@ -223,6 +266,11 @@ export abstract class AcpAgentSession<
    * survived SIGKILL and the caller should surface the cancel as unconfirmed.
    */
   async interrupt(): Promise<boolean> {
+    this.interruptRequested = true;
+    if (this.titleLingering) {
+      this.close();
+      return this.waitForExit(this.cancelGraceMs);
+    }
     if (this.cacheKeepalive) {
       // No turn is in flight while the keeper holds the child — skip
       // session/cancel and go straight to the kill escalation.
@@ -260,10 +308,85 @@ export abstract class AcpAgentSession<
   close(signal: NodeJS.Signals = 'SIGTERM'): void {
     if (this.hostClosed) return;
     this.hostClosed = true;
+    this.clearTitleLinger();
     this.cacheKeepalive?.dispose('closed');
     this.onHostClose?.();
     this.client.close(signal);
     this.emitStatus('closed');
+    this.notifyTitleWindowEnd();
+  }
+
+  /** True while a finished turn's process is kept alive only to wait for the session title. */
+  get titleLingering(): boolean {
+    return this.titleLingerTimer !== undefined;
+  }
+
+  /**
+   * Graceful close for a session whose turn is over. If the bridge is still
+   * waiting for its title this joins the pending linger (no new timer, no
+   * early cut); otherwise it closes like {@link close}. Forced stops (cancel,
+   * app quit, a new prompt for the same session) call {@link close} instead,
+   * which always kills immediately.
+   */
+  release(): void {
+    if (this.titleLingering) return;
+    this.close();
+  }
+
+  private shouldLingerForTitle(): boolean {
+    return (
+      !!this.options.onSessionTitle &&
+      this.lastSessionTitle === undefined &&
+      !this.hostClosed &&
+      !this.interruptRequested
+    );
+  }
+
+  /** Keep the child alive for up to {@link SESSION_TITLE_LINGER_MS}; never delays `run()` settling. */
+  private beginTitleLinger(): void {
+    this.titleLingerTimer = setTimeout(() => this.endTitleLinger(), SESSION_TITLE_LINGER_MS);
+    this.titleLingerTimer.unref?.();
+  }
+
+  private clearTitleLinger(): void {
+    if (this.titleLingerTimer === undefined) return;
+    clearTimeout(this.titleLingerTimer);
+    this.titleLingerTimer = undefined;
+  }
+
+  /** The linger is over (title arrived or cap hit): close exactly as a finished turn would. */
+  private endTitleLinger(): void {
+    if (!this.titleLingering) return;
+    this.clearTitleLinger();
+    this.hostClosed = true;
+    this.client.close();
+    this.emitStatus('closed');
+    this.notifyTitleWindowEnd();
+  }
+
+  private notifyTitleWindowEnd(): void {
+    if (this.titleWindowEnded) return;
+    this.titleWindowEnded = true;
+    try {
+      this.options.onTitleWindowEnd?.();
+    } catch (error) {
+      console.error('[acp] onTitleWindowEnd failed:', error);
+    }
+  }
+
+  /** Answer a reverse request from a lingering child: nothing is ever granted. */
+  private refuseLingeringRequest(message: AcpRpcMessage): unknown {
+    switch (message.method) {
+      case 'session/request_permission': {
+        return { outcome: { outcome: 'cancelled' } };
+      }
+      case 'elicitation/create': {
+        return { action: 'cancel' };
+      }
+      default: {
+        throw new AcpServerRequestError(-32_000, 'The session has ended');
+      }
+    }
   }
 
   /**
@@ -305,6 +428,7 @@ export abstract class AcpAgentSession<
     this.hostClosed = true;
     this.client.close();
     this.emitStatus('closed', { cacheKeepalive: this.cacheKeepaliveStats });
+    this.notifyTitleWindowEnd();
   }
 
   /**
@@ -366,6 +490,29 @@ export abstract class AcpAgentSession<
     return { sessionId };
   }
 
+  /**
+   * Hand an agent-reported session title to `onSessionTitle`. Runs before the
+   * subclass sees the message and is gated only on the host still owning the
+   * session: not on the turn lifecycle (a title can follow the prompt
+   * response), not on the keep-alive gate, not on the event stream. Replayed
+   * history and unchanged titles are ignored; a throwing callback never breaks
+   * the stream.
+   */
+  private forwardSessionTitle(message: AcpRpcMessage): void {
+    if (!this.options.onSessionTitle || !this.promptStarted || this.hostClosed) return;
+    const title = parseAcpSessionTitleMessage(message);
+    if (!title || title === this.lastSessionTitle) return;
+
+    this.lastSessionTitle = title;
+    try {
+      this.options.onSessionTitle(title);
+    } catch (error) {
+      console.error('[acp] onSessionTitle failed:', error);
+    } finally {
+      this.endTitleLinger();
+    }
+  }
+
   /** Serialize a payload as one JSONL line into the adapter pipeline and emit the result. */
   protected async pushToPipeline(payload: unknown): Promise<void> {
     if (this.hostClosed) return;
@@ -374,7 +521,7 @@ export abstract class AcpAgentSession<
   }
 
   protected async emitEvents(events: AgentStreamEvent[]): Promise<void> {
-    if (!this.hostClosed && !this.cacheKeepalive && events.length > 0) {
+    if (!this.hostClosed && !this.cacheKeepalive && !this.titleLingering && events.length > 0) {
       await this.options.onEvents(events);
     }
   }

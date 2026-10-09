@@ -3,6 +3,7 @@ import { INSERT_MENTION_COMMAND } from '@lobehub/editor';
 import { Editor, useEditorState } from '@lobehub/editor/react';
 import { isDesktop } from '@orvilo/const';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
+import { escapeXml } from '@orvilo/prompts';
 import { isCommandPressed } from '@orvilo/utils';
 import { css, cx } from 'antd-style';
 import Fuse from 'fuse.js';
@@ -246,7 +247,7 @@ const InputEditor = memo<{
   // --- Stable mentionOption & slashOption to prevent infinite re-render on paste ---
   const mentionMarkdownWriter = useCallback((mention: any) => {
     if (mention.metadata?.type === 'topic') {
-      return `<refer_topic name="${mention.metadata.topicTitle}" id="${mention.metadata.topicId}" />`;
+      return `<refer_topic name="${escapeXml(mention.metadata.topicTitle)}" id="${mention.metadata.topicId}" />`;
     }
     // localFile references are their own node (LocalFileTagNode) and serialize
     // via that plugin's always-registered markdown writer — they never reach this

@@ -57,6 +57,7 @@ const makeStore = (afterCompletionCallbacks?: Array<() => void>) => {
     dbMessagesMap: {},
     drainQueuedMessages: vi.fn<ChatStore['drainQueuedMessages']>(() => []),
     failOperation: vi.fn(),
+    applyAutoTopicTitle: vi.fn(),
     internal_updateTopic: vi.fn(),
     markTopicUnread: vi.fn(),
     messagesMap: {},
@@ -601,7 +602,7 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title timing', (
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
   });
 
-  it('dev-slice title update uses internal_updateTopic without a summary call', async () => {
+  it('dev-slice title update goes through the auto-title writer without a summary call', async () => {
     const previous = process.env.NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC;
     process.env.NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC = '1';
 
@@ -619,9 +620,10 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title timing', (
         }),
       );
 
-      expect(store.internal_updateTopic).toHaveBeenCalledWith('t1', {
-        title: '阅读下面的材料，根据要求写作。',
-      });
+      expect(store.applyAutoTopicTitle).toHaveBeenCalledWith(
+        't1',
+        '阅读下面的材料，根据要求写作。',
+      );
       expect(store.summaryTopicTitle).not.toHaveBeenCalled();
     } finally {
       if (previous === undefined) {

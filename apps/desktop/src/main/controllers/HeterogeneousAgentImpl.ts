@@ -420,6 +420,16 @@ export default class HeterogeneousAgentCtr {
   }
 
   private sessions = new Map<string, AgentSession>();
+  /**
+   * ACP sessions whose run is over and that only wait for the agent's title,
+   * by IPC session id. `stopSession` already dropped them from `sessions`, so
+   * cancel / quit / a new prompt must find them here. An entry is removed by
+   * the session's own `onTitleWindowEnd`, the moment the linger ends.
+   */
+  private lingeringAcpSessions = new Map<
+    string,
+    { acpSession: { close: () => void }; agentSessionId?: string }
+  >();
   /** Device-gateway CLI wrappers keyed by their server operation id. */
   private orviloHeteroExecTasks = new Map<string, OrviloHeteroExecTask>();
   /**
@@ -1013,6 +1023,26 @@ export default class HeterogeneousAgentCtr {
     }
   }
 
+  /**
+   * Forward the title an ACP agent reported for its session
+   * (`session_info_update`). A dedicated channel, not `heteroAgentEvent`: it is
+   * about the session rather than the turn, and the event stream is also
+   * ingested server-side, whose schema rejects unknown event types.
+   */
+  private broadcastSessionTitle(sessionId: string, title: string) {
+    this.broadcast('heteroAgentSessionTitle', { sessionId, title });
+  }
+
+  /**
+   * The session can no longer report a title (delivered, linger cap, or the
+   * process is closing): stop tracking it and tell the renderer to drop its
+   * title-only listener.
+   */
+  private endSessionTitleWindow(sessionId: string) {
+    this.lingeringAcpSessions.delete(sessionId);
+    this.broadcast('heteroAgentSessionTitleEnd', { sessionId });
+  }
+
   // ─── AskUserQuestion MCP server () ───
 
   /** Register and broadcast a native ACP intervention without starting an MCP server. */
@@ -1187,6 +1217,11 @@ export default class HeterogeneousAgentCtr {
    */
   async sendPrompt(params: SendPromptParams): Promise<void> {
     const session = this.sessions.get(params.sessionId);
+    // A new turn on the same native session must not race a bridge still
+    // waiting for the previous turn's title.
+    if (session?.agentSessionId) {
+      this.closeLingeringAcpSessions({ agentSessionId: session.agentSessionId });
+    }
     if (session) session.cancelledByUs = false;
     return this.sendPromptImpl(params);
   }
@@ -1330,6 +1365,8 @@ export default class HeterogeneousAgentCtr {
         }
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
+      onTitleWindowEnd: () => this.endSessionTitleWindow(session.sessionId),
       onRuntimeStatus: (status) => {
         this.broadcast('heteroAgentRuntimeStatus', status);
       },
@@ -1381,6 +1418,7 @@ export default class HeterogeneousAgentCtr {
         cause: error,
       });
     } finally {
+      this.trackLingeringAcpSession(session, acpSession);
       if (session.grokAcpSession === acpSession) session.grokAcpSession = undefined;
     }
   }
@@ -1432,6 +1470,8 @@ export default class HeterogeneousAgentCtr {
         }
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
+      onTitleWindowEnd: () => this.endSessionTitleWindow(session.sessionId),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1511,6 +1551,8 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = 'droid-acp';
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
+      onTitleWindowEnd: () => this.endSessionTitleWindow(session.sessionId),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1561,6 +1603,7 @@ export default class HeterogeneousAgentCtr {
         cause: error,
       });
     } finally {
+      this.trackLingeringAcpSession(session, droidAcpSession);
       await intervention.cleanup();
       if (session.droidAcpSession === droidAcpSession) session.droidAcpSession = undefined;
     }
@@ -1625,6 +1668,8 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = 'devin-acp';
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
+      onTitleWindowEnd: () => this.endSessionTitleWindow(session.sessionId),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1708,6 +1753,7 @@ export default class HeterogeneousAgentCtr {
         cause: error,
       });
     } finally {
+      this.trackLingeringAcpSession(session, acpSession);
       await cleanup?.();
       // A session that armed its cache keep-alive stays referenced so the
       // keeper's disarm → close path (and cancel/stop) can still reach it;
@@ -1788,6 +1834,8 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = 'trae-acp';
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
+      onTitleWindowEnd: () => this.endSessionTitleWindow(session.sessionId),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1943,6 +1991,8 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = transport;
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
+      onTitleWindowEnd: () => this.endSessionTitleWindow(session.sessionId),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -2181,7 +2231,50 @@ export default class HeterogeneousAgentCtr {
    * Expects:
    * - `params.sessionId` identifies a session owned by this controller.
    */
+  /**
+   * Graceful close, used only by the renderer's post-run `stopSession`:
+   * `release()` keeps a bridge that still waits for its title alive. Every
+   * "stop now" path (cancel, quit, signal, new prompt) forces instead.
+   */
+  private releaseAcpSession(session: AgentSession, acpSession: { release: () => void }) {
+    acpSession.release();
+  }
+
+  /**
+   * Called when a run's `run()` has settled: if the bridge was kept alive only
+   * for its title, remember it by IPC session id (the run's session reference
+   * is cleared right after, and the renderer's `stopSession` finds nothing).
+   * The session's own `onTitleWindowEnd` removes the entry.
+   */
+  private trackLingeringAcpSession(
+    session: AgentSession,
+    acpSession: { close: () => void; titleLingering: boolean },
+  ) {
+    if (!acpSession.titleLingering) return;
+    this.lingeringAcpSessions.set(session.sessionId, {
+      acpSession,
+      agentSessionId: session.agentSessionId,
+    });
+  }
+
+  /**
+   * Forced stop of lingering sessions: all of them, one IPC session, or those
+   * of one native agent session. Every "stop now" path goes through here.
+   */
+  private closeLingeringAcpSessions(match?: { agentSessionId?: string; sessionId?: string }) {
+    for (const [sessionId, entry] of this.lingeringAcpSessions) {
+      if (match?.sessionId !== undefined && sessionId !== match.sessionId) continue;
+      if (match?.agentSessionId !== undefined && entry.agentSessionId !== match.agentSessionId) {
+        continue;
+      }
+      entry.acpSession.close();
+      this.lingeringAcpSessions.delete(sessionId);
+    }
+  }
+
   async cancelSession(params: CancelSessionParams): Promise<void> {
+    // A finished run still waiting for its title is no longer in `sessions`.
+    this.closeLingeringAcpSessions({ sessionId: params.sessionId });
     const session = this.sessions.get(params.sessionId);
     if (!session) return;
 
@@ -2214,32 +2307,32 @@ export default class HeterogeneousAgentCtr {
 
     if (session.devinAcpSession) {
       session.cancelledByUs = true;
-      session.devinAcpSession.close();
+      this.releaseAcpSession(session, session.devinAcpSession);
     }
 
     if (session.grokAcpSession) {
       session.cancelledByUs = true;
-      session.grokAcpSession.close();
+      this.releaseAcpSession(session, session.grokAcpSession);
     }
 
     if (session.cursorAcpSession) {
       session.cancelledByUs = true;
-      session.cursorAcpSession.close();
+      this.releaseAcpSession(session, session.cursorAcpSession);
     }
 
     if (session.droidAcpSession) {
       session.cancelledByUs = true;
-      session.droidAcpSession.close();
+      this.releaseAcpSession(session, session.droidAcpSession);
     }
 
     if (session.traeAcpSession) {
       session.cancelledByUs = true;
-      session.traeAcpSession.close();
+      this.releaseAcpSession(session, session.traeAcpSession);
     }
 
     if (session.standardAcpSession) {
       session.cancelledByUs = true;
-      session.standardAcpSession.close();
+      this.releaseAcpSession(session, session.standardAcpSession);
     }
 
     this.sessions.delete(params.sessionId);
@@ -2277,6 +2370,7 @@ export default class HeterogeneousAgentCtr {
    */
   afterAppReady() {
     electronApp.on('before-quit', () => {
+      this.closeLingeringAcpSessions();
       for (const [, session] of this.sessions) {
         if (session.devinAcpSession) {
           session.cancelledByUs = true;
@@ -2314,6 +2408,8 @@ export default class HeterogeneousAgentCtr {
     });
 
     const onSignal = (signal: NodeJS.Signals) => {
+      // Do not rely on the quit flow alone to reap a bridge kept for its title.
+      this.closeLingeringAcpSessions();
       // Defer to Electron's normal quit flow so the rest of the app gets a
       // chance to tear down. The `before-quit` handler above is idempotent.
       try {

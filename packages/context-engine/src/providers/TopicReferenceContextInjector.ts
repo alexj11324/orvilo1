@@ -1,3 +1,4 @@
+import { escapeXml } from '@orvilo/prompts';
 import debug from 'debug';
 
 import { BaseLastUserContentProvider } from '../base/BaseLastUserContentProvider';
@@ -57,7 +58,7 @@ function formatTopicReferences(items: TopicReferenceItem[]): string | null {
   ];
 
   for (const item of withContext) {
-    const title = item.topicTitle ? ` title="${item.topicTitle}"` : '';
+    const title = item.topicTitle ? ` title="${escapeXml(item.topicTitle)}"` : '';
     const type = item.summary ? 'summary' : 'recent_messages';
     lines.push(`<topic id="${item.topicId}"${title} type="${type}">`);
     if (item.summary) {
@@ -73,7 +74,7 @@ function formatTopicReferences(items: TopicReferenceItem[]): string | null {
       '<pending_topics hint="No context available for the following topics. Use the getTopicContext tool to retrieve their conversation history.">',
     );
     for (const item of withoutContext) {
-      const title = item.topicTitle ? ` title="${item.topicTitle}"` : '';
+      const title = item.topicTitle ? ` title="${escapeXml(item.topicTitle)}"` : '';
       lines.push(`<topic id="${item.topicId}"${title} />`);
     }
     lines.push('</pending_topics>');

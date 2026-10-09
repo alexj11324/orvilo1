@@ -1,5 +1,7 @@
 import { memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useChatStore } from '@/store/chat';
@@ -11,6 +13,7 @@ interface EditingProps {
 }
 
 const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
+  const { t } = useTranslation('common');
   const [newTitle, setNewTitle] = useState(title);
   const [editing, updateTopicTitle] = useChatStore((s) => [
     s.topicRenamingId === id,
@@ -19,10 +22,15 @@ const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
 
   const handleUpdate = useCallback(async () => {
     if (newTitle && title !== newTitle) {
-      await updateTopicTitle(id, newTitle);
+      try {
+        await updateTopicTitle(id, newTitle);
+      } catch (error) {
+        console.error('[TopicEditing] rename failed:', error);
+        toast.error(t('operationFailed'));
+      }
     }
     toggleEditing(false);
-  }, [newTitle, title, id, updateTopicTitle, toggleEditing]);
+  }, [newTitle, title, id, updateTopicTitle, toggleEditing, t]);
 
   return (
     <Popover

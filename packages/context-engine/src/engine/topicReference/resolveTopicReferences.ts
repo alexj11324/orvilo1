@@ -1,3 +1,5 @@
+import { unescapeXml } from '@orvilo/prompts';
+
 import type { TopicReferenceItem } from '../../providers/TopicReferenceContextInjector';
 
 /**
@@ -50,7 +52,7 @@ export function parseReferTopicTags(
       const nameMatch = /name="([^"]*)"/.exec(attrs);
       if (idMatch) {
         topicIds.add(idMatch[1]);
-        if (nameMatch) topicNames.set(idMatch[1], nameMatch[1]);
+        if (nameMatch) topicNames.set(idMatch[1], unescapeXml(nameMatch[1]));
       }
     }
   }

@@ -1,3 +1,4 @@
+import { unescapeXml } from '@orvilo/prompts';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -52,7 +53,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 export const getHistoryPreviewText = (markdown: string): string =>
   markdown
     .replaceAll(/<mention\s[^>]*name="([^"]*)"[^>]*>/g, '@$1')
-    .replaceAll(/<refer_topic\s[^>]*name="([^"]*)"[^>]*>/g, '#$1')
+    .replaceAll(
+      /<refer_topic\s[^>]*name="([^"]*)"[^>]*>/g,
+      (_match, name: string) => `#${unescapeXml(name)}`,
+    )
     .replaceAll(/<localFile\s[^>]*name="([^"]*)"[^>]*>/g, '$1')
     .replaceAll(/<[^>]+>/g, ' ')
     .replaceAll(/\s+/g, ' ')

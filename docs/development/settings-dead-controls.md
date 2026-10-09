@@ -29,3 +29,9 @@
 ## 验证
 
 `bun run check`（lint + 相关测试）通过。未在 Electron 上验证：Web 与桌面快捷键页差异、更新渠道与 Shell 模式失败回滚、设备详情失败提示、旧存储链接重定向。
+
+## 延迟失败与新草稿
+
+设备名称或默认目录的失败回滚只在当前草稿仍等于该次提交值时执行，保留等待期间继续输入的新草稿。Electron 原生 ModalHost 挂载交付的 DeviceDetailPanel，通过 bridge 前 fixture-only fetch 拦截延迟失败，名称 / 目录各覆盖新草稿与未改草稿：旧实现 4 cases 重现新草稿丢失；修复后 4 cases 保留新草稿、未改草稿回滚。所有设备写入均未转发。仅组件级原生回归证明，不声称完整设备路由、设备持久化或网关连接验收。
+
+现有相关测试 5 文件 46 cases 通过；共享 node_modules 的 hotkey package 路径用临时本地别名校正，未改项目测试配置。

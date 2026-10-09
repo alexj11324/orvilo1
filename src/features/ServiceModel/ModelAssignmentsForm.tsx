@@ -23,7 +23,7 @@ import { serviceModelFormStyles as styles } from './styles';
 
 type ModelAssignmentItemKey = Exclude<
   UserServiceModelConfigKey,
-  'onboardingTaskRecommender' | 'onboardingUnderstanding'
+  'onboardingTaskRecommender' | 'onboardingUnderstanding' | 'topic'
 >;
 
 interface SystemAgentModelItem {
@@ -39,7 +39,6 @@ type SavingGroup = 'assignments' | 'memory' | 'optional';
 const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [
   { key: 'expertise' },
   { key: 'goal' },
-  { key: 'topic' },
   { key: 'generationTopic' },
   { key: 'translation' },
   { key: 'historyCompress' },
@@ -161,9 +160,10 @@ const ModelAssignmentsForm = memo(() => {
         </Flexbox>
       </Tooltip>
     ),
-    // No `desc` here or on the rows below: in Model Assignments the label plus
-    // the picker already say what the row does, and a line of prose per row
-    // just pushes the list apart. The other groups keep theirs.
+    // Only this row carries a `desc`: "Default" is a model value an Agent can
+    // pick, and the row is the only place that says what it resolves to. The
+    // rows below stay description-free — label plus picker already say it.
+    desc: t('defaultAgent.desc'),
     label: t('defaultAgent.title'),
   };
 

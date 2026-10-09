@@ -812,9 +812,10 @@ export default {
   'danger.reset.desc': "Restore all settings to defaults. Your data won't be deleted.",
   'danger.reset.success': 'All settings have been reset',
   'danger.reset.title': 'Reset All Settings',
+  'defaultAgent.desc': 'Used by agents whose model is set to Default.',
   'defaultAgent.model.desc': 'Model used when creating new agents',
   'defaultAgent.model.title': 'Model',
-  'defaultAgent.title': 'New Agent',
+  'defaultAgent.title': 'Default model',
   'group.aiConfig': 'Agent & runtime',
   'group.channels': 'Notifications & channels',
   'group.data': 'Data',
@@ -1744,9 +1745,6 @@ export default {
   'systemAgent.thread.modelDesc': 'Model used to rename subtopics',
   'systemAgent.thread.title': 'Subtopic Auto-Naming',
   'systemAgent.title': 'System Tasks',
-  'systemAgent.topic.label': 'Model',
-  'systemAgent.topic.modelDesc': 'Model used to rename topics',
-  'systemAgent.topic.title': 'Topic Auto-Naming',
   'systemAgent.topicAutoSummary.modelDesc':
     'Writes a short description and a reusable conversation summary after a topic becomes inactive.',
   'systemAgent.topicAutoSummary.promptPlaceholder':

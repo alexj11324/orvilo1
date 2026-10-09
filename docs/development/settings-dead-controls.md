@@ -39,3 +39,12 @@
 ## Workspace route parity integration
 
 The retired workspace Storage URL remains a bookmark redirect to the workspace settings index. It is deliberately excluded from automatic workspace prefixing, so personal storage stays personal. The shared Web/Electron parity test now compares registered tabs against both live workspace tabs and declared legacy aliases; existing alias tests still assert their exact redirect destinations. The prior owning CI failed both parity cases for the additional `storage` redirect; the scoped shared-router and alias suites pass all 81 cases after this correction. Canonical Issue hotkey copy is preserved while dead delete actions are removed.
+
+## 2026/10/09 Service model: topic naming follows the agent
+
+- **Topic titles follow the conversation's agent.** `summaryTopicTitle` no longer reads `systemAgent.topic`. The model comes from the topic's agent (`topic.agentId`, else the active agent) via `resolveTopicTitleModel` (`src/store/chat/slices/topic/topicTitle.ts`). A built-in Orvilo agent with its own model/provider names the topic through the same `generateJSON` path as before; a heterogeneous (CLI/ACP) agent, a missing agent or a model-less agent never calls an Orvilo cloud model and gets `sliceTopicTitle` (first user message, plain text, 80 chars) instead. A failed generation falls back to the same slice. The dev-only fast path in `buildRunLifecycle.ts` reuses the helper. `summaryThreadTitle` uses `systemAgent.thread`, not `topic`, and is unchanged.
+- **Removed the "Topic Auto-Naming" row** (`SYSTEM_AGENT_MODEL_ITEMS`), the `systemAgentSelectors.topic` selector, its `systemAgent.topic.*` locale keys and the settings-search keyword. `topic` joins the `Exclude` list of `ModelAssignmentItemKey`.
+- **"New Agent" is now "Default model".** The control and its field (`settings.defaultAgent.config`) are live: the server merges it under any personal agent whose model is empty. Only the copy changed, plus a one-line description.
+- Anti-resurrection assertions live in `retiredSettingsSurfaces.test.ts`.
+
+Backend follow-up (not touched here): the persisted `systemAgent.topic` field and its default, and the `taskReview` reader in `apps/server/src/services/taskReview/index.ts`, remain server-side.

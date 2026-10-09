@@ -11,15 +11,15 @@ import {
  * ReUI's Timeline sizes its indicator for a 16px dot and tints the rail with
  * `primary`. The feed uses a 28px bordered slot (one 14px mark inside) with a
  * neutral rail, so the slot, the rail's start and its length are re-stated
- * here once instead of at every call site. `ms-10` + `-left-[26px]` keep the
+ * here once instead of at every call site. `ms-10` + `-left-6.5` keep the
  * slot flush with the timeline's left edge and 12px from the text.
  */
 const ITEM =
   'group-data-[orientation=vertical]/timeline:ms-10 group-data-[orientation=vertical]/timeline:not-last:pb-4';
 const INDICATOR =
-  'flex size-7 items-center justify-center overflow-hidden border border-border bg-background text-muted-foreground group-data-[orientation=vertical]/timeline:-left-[26px]';
+  'flex size-7 items-center justify-center overflow-hidden border border-border bg-background text-muted-foreground group-data-[orientation=vertical]/timeline:-left-6.5';
 const SEPARATOR =
-  'bg-border group-data-[orientation=vertical]/timeline:-left-[26px] group-data-[orientation=vertical]/timeline:h-[calc(100%-2rem)] group-data-[orientation=vertical]/timeline:translate-y-[30px]';
+  'bg-border group-data-[orientation=vertical]/timeline:-left-6.5 group-data-[orientation=vertical]/timeline:h-[calc(100%-2rem)] group-data-[orientation=vertical]/timeline:translate-y-7.5'; // linear-token-override: variable-height rail leaves 8 spacing units for the indicator clearance.
 
 interface ActivityTimelineItemProps {
   children: ReactNode;
@@ -43,7 +43,7 @@ export const ActivityTimelineItem = ({
     <TimelineContent
       className={
         inline
-          ? 'pt-[3px] text-sm leading-[22px] text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground'
+          ? 'pt-0.75 text-sm leading-5.5 text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground'
           : undefined
       }
     >

@@ -14,10 +14,11 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { builtinModules, createRequire } from 'node:module';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import * as esbuild from 'esbuild';
 
-const HERE = path.dirname(new URL(import.meta.url).pathname);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PKG = path.resolve(HERE, '..');
 const ROOT = path.resolve(PKG, '../..');
 const VENDOR = path.join(ROOT, 'vendor/prime');

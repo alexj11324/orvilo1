@@ -1,0 +1,50 @@
+{
+  "accent": "rgba(255, 255, 255, 0.06)",
+  "background": "rgba(255, 255, 255, 0.06)",
+  "classes": "group/button inline-flex shrink-0 items-center justify-center rounded-(--radius-button) border bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity,transform] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-accent [&:is(a):hover]:bg-accent! hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+  "hovered": true,
+  "rules": [
+    {
+      "selector": ":where(.css-dev-only-do-not-override-ch9ese) a",
+      "bg": "transparent",
+      "priority": "",
+      "layer": "unlayered"
+    },
+    {
+      "selector": ".bg-background",
+      "bg": "var(--background)",
+      "priority": "",
+      "layer": "utilities"
+    },
+    {
+      "selector": ".hover\\:bg-accent:hover",
+      "bg": "var(--accent)",
+      "priority": "",
+      "layer": "utilities"
+    },
+    {
+      "selector": ".dark\\:bg-input\\/30:is(.dark *, [data-theme=\"dark\"] *)",
+      "bg": "var(--input)",
+      "priority": "",
+      "layer": "utilities"
+    },
+    {
+      "selector": ".dark\\:hover\\:bg-input\\/50:is(.dark *, [data-theme=\"dark\"] *):hover",
+      "bg": "var(--input)",
+      "priority": "",
+      "layer": "utilities"
+    },
+    {
+      "selector": ".dark\\:hover\\:bg-input\\/50:is(.dark *, [data-theme=\"dark\"] *):hover",
+      "bg": "color-mix(in oklab, var(--input) 50%, transparent)",
+      "priority": "",
+      "layer": "utilities"
+    },
+    {
+      "selector": ".\\[\\&\\:is\\(a\\)\\:hover\\]\\:bg-accent\\!:is(a):hover",
+      "bg": "var(--accent)",
+      "priority": "important",
+      "layer": "utilities"
+    }
+  ]
+}

@@ -27,10 +27,10 @@ export const useFetchSlackChannels = (workspaceId: string, enabled: boolean) => 
     (index, previous) =>
       !enabled || (index > 0 && !previous?.nextCursor)
         ? null
-        : augmentKey(
+        : (augmentKey(
             ['slack-integration', workspaceId, 'channels', previous?.nextCursor || ''],
             workspaceId,
-          ),
+          ) as string[]),
     (key: unknown) => {
       // augmentKey appends scope after the four domain key fields.
       const cursor = (key as string[])[3];

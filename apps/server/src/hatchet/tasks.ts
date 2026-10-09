@@ -82,7 +82,7 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
       maxRuns: 1,
     },
     executionTimeout: '5m',
-    fn: runSlackIntegrationEvent,
+    fn: (input: z.infer<typeof slackEventInput> & InputType) => runSlackIntegrationEvent(input),
     inputValidator: slackEventInput,
     retries: 0,
   });

@@ -1,17 +1,6 @@
 'use client';
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bot,
-  Cable,
-  Check,
-  Hash,
-  Pencil,
-  Plus,
-  Slack,
-  Trash2,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Cable, Check, Hash, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
@@ -22,6 +11,7 @@ import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { COMPOSIO_APP_TYPES } from '@/const/composio';
 import type { SlackOAuthMode } from '@/services/slackIntegration';
 import { slackIntegrationService } from '@/services/slackIntegration';
 
@@ -35,9 +25,11 @@ type OAuthErrorKey =
   | 'integrations.slack.oauth.timedOut'
   | 'integrations.slack.oauth.dismissed';
 
+const slackLogo = COMPOSIO_APP_TYPES.find((app) => app.identifier === 'slack')?.icon;
+
 const SlackMark = () => (
   <div className="flex size-12 flex-none items-center justify-center rounded-lg border border-border bg-background">
-    <Slack aria-hidden className="size-7 text-foreground" />
+    <img alt="" className="size-7" src={typeof slackLogo === 'string' ? slackLogo : undefined} />
   </div>
 );
 export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) => {

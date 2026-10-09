@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { parseOpenCodeGlob } from './glob';
+import { parseOpenCodeGlob } from './parseGlob';
 
 it('renders actual absolute glob matches including spaces', () => {
   expect(parseOpenCodeGlob('/repo/a.ts\n/repo/my file.txt')).toEqual([

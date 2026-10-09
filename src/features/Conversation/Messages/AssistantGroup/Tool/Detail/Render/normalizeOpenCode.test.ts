@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildReadFileState } from '../../../../../../../../packages/builtin-tool-local-system/src/client/Render/ReadLocalFile/buildReadFileState';
 import { parseOpenCodeReadContent } from '../../../../../../../../packages/builtin-tool-local-system/src/client/Render/ReadLocalFile/parseReadContent';
-import { parseTestReport } from '../../../../../../../../packages/shared-tool-ui/src/Render/RunCommand/structuredOutput';
+import { parseTestReport } from '../../../../../../../../packages/shared-tool-ui/src/Render/RunCommand/parseStructuredOutput';
 import { normalizeOpenCodeRender } from './normalizeOpenCode';
 
 describe('OpenCode ACP render input', () => {

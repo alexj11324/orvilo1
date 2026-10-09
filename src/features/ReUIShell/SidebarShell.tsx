@@ -13,12 +13,11 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { isMacOS } from '@/utils/platform';
 
 import { AppSidebar } from './AppSidebar';
-import { SHELL9_SIDEBAR_ICON_WIDTH, SHELL9_SIDEBAR_WIDTH } from './constants';
+import { SHELL9_SIDEBAR_WIDTH } from './constants';
 
 const SIDEBAR_STYLE = {
   '--header-height': '50px',
   '--sidebar-width': `${SHELL9_SIDEBAR_WIDTH}px`,
-  '--sidebar-width-icon': `${SHELL9_SIDEBAR_ICON_WIDTH}px`,
 };
 
 const useNativeTransparency = isDesktop && isMacOS();

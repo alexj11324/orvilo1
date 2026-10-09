@@ -2,7 +2,6 @@
 
 import { Fragment, useSyncExternalStore } from 'react';
 
-import { useSidebar } from '@/components/ui/sidebar';
 import Body from '@/features/HomeSidebar/Body';
 import {
   DEFAULT_NAV_SKELETON_SHAPE,
@@ -37,21 +36,16 @@ const PANEL_KEYS = new Set([
  */
 export function NavMain() {
   const activeNavKey = useActiveNavKey();
-  const { state, isMobile } = useSidebar();
   const getContent = () => getNavPanelRegistrySnapshot().get(activeNavKey)?.node;
   const content = useSyncExternalStore(subscribeNavPanelRegistry, getContent, getContent);
 
-  // Settings owns an icon-aware search/category rail and must stay mounted to
-  // preserve its query. Other full-column panels use global navigation when
-  // collapsed. Mobile drawers always have room for the full route panel.
-  const collapsed = !isMobile && state === 'collapsed';
-  const showRoutePanel = !collapsed || activeNavKey === 'settings';
-
+  // The panel stays mounted while the sidebar is collapsed (the column is only
+  // moved off screen), so its scroll position and search query survive.
   // Keyed by navKey: unkeyed reuse would let one panel's component state bleed
   // into the next panel when their trees share a component type.
-  if (content && showRoutePanel) return <Fragment key={activeNavKey}>{content}</Fragment>;
+  if (content) return <Fragment key={activeNavKey}>{content}</Fragment>;
 
-  if (showRoutePanel && PANEL_KEYS.has(activeNavKey)) {
+  if (PANEL_KEYS.has(activeNavKey)) {
     return (
       <NavSideBarSkeleton {...(NAV_SKELETON_SHAPES[activeNavKey] ?? DEFAULT_NAV_SKELETON_SHAPE)} />
     );

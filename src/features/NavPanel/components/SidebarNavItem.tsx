@@ -125,7 +125,7 @@ const SidebarNavItem = memo(
           </span>
         )}
         {slots?.iconPostfix}
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden group-data-[collapsible=icon]:hidden">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {slots?.titlePrefix}
           {description ? (
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">

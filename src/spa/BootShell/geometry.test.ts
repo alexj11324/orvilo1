@@ -27,9 +27,9 @@ describe('readBootShellGeometry', () => {
     expect(geometry.showLeftPanel).toBe(true);
   });
 
-  it('uses the 66px inset rail when the persisted open state is collapsed', () => {
+  it('reserves no width when the persisted open state is collapsed', () => {
     setStatus({ leftPanelWidth: 9999, showLeftPanel: false });
-    expect(readBootShellGeometry().navPanelWidth).toBe(66);
+    expect(readBootShellGeometry().navPanelWidth).toBe(0);
   });
 
   it('follows the theme already resolved onto the document', () => {

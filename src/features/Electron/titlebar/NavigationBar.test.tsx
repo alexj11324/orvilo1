@@ -57,7 +57,7 @@ describe('NavigationBar tray broadcasts', () => {
 
   it.each([
     [true, '250'],
-    [false, '66'],
+    [false, '0'],
   ])('aligns the titlebar with the App Shell 9 frame when open=%s', (open, width) => {
     mocks.showLeftPanel = open;
     const { container } = render(<NavigationBar />);

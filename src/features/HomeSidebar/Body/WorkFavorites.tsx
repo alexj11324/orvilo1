@@ -179,7 +179,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ open = true, onOpenChange }) =
   return (
     <Collapsible
       open={open}
-      render={<SidebarGroup className="group/section group-data-[collapsible=icon]:hidden" />}
+      render={<SidebarGroup className="group/section" />}
       onOpenChange={(next) => onOpenChange?.(next)}
     >
       <SectionHeader moreLabel={t('navPanel.more')} moreMenu={dropdownMenu}>

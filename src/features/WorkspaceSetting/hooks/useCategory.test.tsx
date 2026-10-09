@@ -239,4 +239,30 @@ describe('workspace settings useCategory', () => {
     expect(itemKeys).toContain(WorkspaceSettingsTabs.Plans);
     expect(itemKeys).toContain(WorkspaceSettingsTabs.Usage);
   });
+
+  // Provider bindings and default-model assignments are per-user, so they
+  // belong to the personal sidebar only; admins get no workspace copy.
+  it('never lists the provider and service-model tabs, even for admins', () => {
+    for (const renderWrapper of [wrapper, businessWrapper]) {
+      const itemKeys = getItemKeys(renderWrapper);
+
+      expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Provider);
+      expect(itemKeys).not.toContain(WorkspaceSettingsTabs.ServiceModel);
+    }
+  });
+
+  // Nothing in the open-source build reads the workspace notification
+  // preferences, so the switches only appear where the business overlay does.
+  it('lists Notification only when business features are on', () => {
+    expect(getItemKeys()).not.toContain(WorkspaceSettingsTabs.Notification);
+    expect(getItemKeys(businessWrapper)).toContain(WorkspaceSettingsTabs.Notification);
+  });
+
+  it('files Imports under the workspace group with the other data management', () => {
+    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+    const groupOf = (tab: WorkspaceSettingsTabs) =>
+      result.current.find((group) => group.items.some((item) => item.key === tab))?.key;
+
+    expect(groupOf(WorkspaceSettingsTabs.Imports)).toBe(WorkspaceSettingsGroupKey.General);
+  });
 });

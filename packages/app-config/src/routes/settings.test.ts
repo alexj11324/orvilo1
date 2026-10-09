@@ -199,10 +199,9 @@ describe('WORKSPACE_SETTINGS_ALIASES', () => {
     const aliases = WORKSPACE_SETTINGS_ALIASES.map((entry) => entry.alias);
 
     expect(new Set(aliases).size).toBe(aliases.length);
-    // `provider` and `service-model` are live workspace tabs (restored P30
-    // provider surface) — they resolve through the leaves registry, so an
-    // alias here would shadow the real pages.
-    expect(aliases).not.toContain('provider');
-    expect(aliases).not.toContain('service-model');
+    // The workspace copies are retired; the aliases send them to the
+    // personal pages that own provider bindings and model assignments.
+    expect(aliases).toContain('provider');
+    expect(aliases).toContain('service-model');
   });
 });

@@ -16,9 +16,9 @@ import { mobileRoutes } from './mobileRouter.config';
  * `WORKSPACE_SETTINGS_ALIASES` now, and these tests pin that every entry
  * actually reaches a router.
  *
- * `provider` and `service-model` are NOT aliases: they are live workspace tabs
- * again (restored P30 provider surface), so a redirect entry would shadow the
- * real pages.
+ * `provider` and `service-model` are aliases onto the personal pages (absolute
+ * targets): provider bindings and model assignments are per-user, so the
+ * workspace copies were retired.
  */
 type Routes = Parameters<typeof matchRoutes>[0];
 
@@ -37,6 +37,11 @@ const surfaces: Array<[string, Routes]> = [
  * set (see `mobileRouter.workspaceSettings.test.ts`).
  */
 
+const expectedRedirect = (target: string) => {
+  if (target === 'root') return '..';
+  return target.startsWith('/') ? target : `../${target}`;
+};
+
 const leafOf = (routes: Routes, pathname: string) => matchRoutes(routes, pathname)?.at(-1)?.route;
 
 const redirectOf = (routes: Routes, pathname: string) =>
@@ -50,15 +55,14 @@ describe('workspace settings legacy aliases', () => {
     expect(aliases).toContain('stats');
     // The retired workspace Storage page keeps answering old bookmarks.
     expect(aliases).toContain('storage');
-    // Live restored tabs must stay alias-free or the redirect would shadow them.
-    expect(aliases).not.toContain('provider');
-    expect(aliases).not.toContain('service-model');
+    expect(aliases).toContain('provider');
+    expect(aliases).toContain('service-model');
   });
 
   it.each(surfaces)('%s redirects every alias to its live workspace tab', (_, routes) => {
     for (const { alias, target } of WORKSPACE_SETTINGS_ALIASES) {
       const pathname = `/acme/settings/${alias}`;
-      const expected = target === 'root' ? '..' : `../${target}`;
+      const expected = expectedRedirect(target);
 
       expect(redirectOf(routes, pathname)?.props?.to, `${pathname} does not redirect`).toBe(
         expected,
@@ -71,7 +75,7 @@ describe('workspace settings legacy aliases', () => {
       if (!subPaths) continue;
 
       const pathname = `/acme/settings/${alias}/client-1`;
-      const expected = target === 'root' ? '..' : `../${target}`;
+      const expected = expectedRedirect(target);
 
       expect(redirectOf(routes, pathname)?.props?.to, `${pathname} does not redirect`).toBe(
         expected,
@@ -84,11 +88,26 @@ describe('workspace settings legacy aliases', () => {
     // legacy spelling. Only the first may render — an alias that outranked its
     // own target would make the page unreachable.
     for (const { target } of WORKSPACE_SETTINGS_ALIASES) {
-      if (target === 'root') continue;
+      // Root and absolute (personal-page) targets are not workspace tabs.
+      if (target === 'root' || target.startsWith('/')) continue;
 
       expect(leafOf(routes, `/acme/settings/${target}`)?.path, `${target} is shadowed`).toBe(
         target,
       );
     }
   });
+
+  it.each(surfaces)(
+    '%s sends the retired provider and model pages to the personal ones',
+    (_, routes) => {
+      expect(redirectOf(routes, '/acme/settings/provider')?.props?.to).toBe('/settings/provider');
+      expect(redirectOf(routes, '/acme/settings/service-model')?.props?.to).toBe(
+        '/settings/service-model',
+      );
+      // The provider id survives the move.
+      const detail = redirectOf(routes, '/acme/settings/provider/openai') as
+        { type?: { displayName?: string } } | undefined;
+      expect(detail?.type?.displayName).toBe('WorkspaceProviderRedirect');
+    },
+  );
 });

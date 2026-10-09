@@ -302,15 +302,23 @@ export interface WorkspaceSettingsAlias {
   alias: string;
   /** Keep `<alias>/:sub` deep links too. */
   subPaths?: boolean;
-  /** Live workspace tab to land on, or `root` for the workspace settings index. */
+  /**
+   * Where the alias lands: a live workspace tab, `root` for the workspace
+   * settings index, or an absolute path (leading `/`) that leaves the
+   * workspace for a personal page.
+   */
   target: string | 'root';
 }
 
 export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   { alias: 'creds', target: 'credential' },
-  // `provider` and `service-model` are live workspace tabs again (restored P30
-  // provider surface), so they are registered by the leaves list, not here —
-  // an alias redirect would shadow the real pages.
+  // Provider bindings and the default-model assignments are per-user (they are
+  // written through the caller's personal settings and `provider_bindings`), so
+  // the workspace copies were retired and the old URLs land on the personal
+  // pages that actually own them. `provider/:providerId` deep links are handled
+  // by `WorkspaceProviderRedirect`, which keeps the provider id.
+  { alias: 'provider', target: '/settings/provider' },
+  { alias: 'service-model', target: '/settings/service-model' },
   //
   // The skill marketplace and the OAuth-app console are deliberately absent:
   // nothing succeeded them. A redirect to the settings root would imply the
@@ -322,3 +330,37 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   // controls, so it was retired. Old bookmarks land on the settings index.
   { alias: 'storage', target: 'root' },
 ];
+
+/**
+ * Workspace settings tabs that only exist where the business overlay ships
+ * (`enableBusinessFeatures`). The open-source build has no page behind them —
+ * the business slot resolves to an empty component or to switches nothing reads
+ * — so a direct visit must behave like an unknown tab, not render a blank pane.
+ *
+ * Unlike the personal `Notification` tab, the workspace one gets no desktop
+ * exception: the local OS-notification page is personal, and the workspace tab
+ * is always the business component.
+ */
+const BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
+  'billing',
+  'budget',
+  'credits',
+  'notification',
+  'plans',
+  'usage',
+]);
+
+export interface WorkspaceSettingsCapabilityContext {
+  /** The deployment ships the business (subscription / usage / billing) pages. */
+  enableBusinessFeatures: boolean;
+}
+
+/**
+ * Whether `/:workspaceSlug/settings/<tab>` may render in this deployment. Only
+ * answers for the deployment-level business gate; role checks stay with the
+ * pages and the nav.
+ */
+export const isWorkspaceSettingsTabAvailable = (
+  tab: string,
+  { enableBusinessFeatures }: WorkspaceSettingsCapabilityContext,
+): boolean => enableBusinessFeatures || !BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS.has(tab);

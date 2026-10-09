@@ -108,17 +108,27 @@ describe('buildWorkspaceAwarePath', () => {
     );
     // Legacy alias — prefixed, then the router redirects to `statistics`.
     expect(buildWorkspaceAwarePath('/settings/stats', 'acme')).toBe('/acme/settings/stats');
+  });
+
+  // Provider bindings and default-model assignments are per-user, so the
+  // workspace copies are retired: these links must reach the personal pages
+  // instead of being rewritten onto a workspace path that only redirects back.
+  it('leaves the personal provider and service-model pages unprefixed', () => {
+    expect(buildWorkspaceAwarePath('/settings/provider', 'acme')).toBe('/settings/provider');
     expect(buildWorkspaceAwarePath('/settings/provider/openai', 'acme')).toBe(
-      '/acme/settings/provider/openai',
+      '/settings/provider/openai',
+    );
+    expect(buildWorkspaceAwarePath('/settings/service-model', 'acme')).toBe(
+      '/settings/service-model',
     );
   });
 
   // The OAuth-app console, the skill marketplace and the audit-log viewer
   // all had a workspace mirror; with their pages and routes gone the sub-path
   // is personal-only, like every other retired tab. None gets a redirect
-  // route the way `provider` / `service-model` did — those had a successor
-  // capability to land on, these have none, so the honest answer is the same
-  // not-found the personal settings render.
+  // route the way `provider` / `service-model` did (aliases onto the personal
+  // pages) — those had a successor capability to land on, these have none, so
+  // the honest answer is the same not-found the personal settings render.
   it('leaves the retired settings sub-paths unprefixed', () => {
     expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe('/settings/oauth-apps');
     expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(

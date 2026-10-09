@@ -87,6 +87,7 @@ import {
   type SharedWorkspaceSettingsLeaf,
   sharedWorkspaceSettingsLeaves,
   sharedWorkspaceSettingsRedirects,
+  workspaceSettingsLeafElement,
 } from '@/spa/router/sharedMainAreaLeaves';
 import { SettingsTabs } from '@/store/global/initialState';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
@@ -193,7 +194,11 @@ const desktopLeaf = (leaf: SharedRouteLeaf) =>
   leafElement(leaf, `Desktop > ${leaf.name}`, leaf.preloadId);
 
 const desktopWorkspaceSettingsLeaf = (leaf: SharedWorkspaceSettingsLeaf): RouteObject => ({
-  element: leafElement(leaf, `Desktop > Workspace > Settings > ${leaf.name}`, 'settings'),
+  element: workspaceSettingsLeafElement(
+    leaf,
+    `Desktop > Workspace > Settings > ${leaf.name}`,
+    'settings',
+  ),
   handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton(leaf.skeleton) }) },
   path: leaf.path,
 });

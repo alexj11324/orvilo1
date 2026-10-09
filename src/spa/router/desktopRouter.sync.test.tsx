@@ -784,7 +784,7 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
-    '%s keeps workspace provider deep-links inside the workspace',
+    '%s routes workspace provider deep-links to the personal provider page',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
       const listMatches = matchRoutes(routes, '/acme/settings/provider');

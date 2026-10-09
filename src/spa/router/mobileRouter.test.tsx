@@ -78,14 +78,12 @@ describe('mobileRouter workspace provider routes', () => {
 
     // Without these, workspace-aware provider links (`/:slug/settings/provider/:id`)
     // fall through to the mobile `*` route and kick the user out of the workspace.
-    expect(leaves).toContain("import('@/routes/(main)/[workspaceSlug]/settings/provider')");
-    // The mobile route must use the mobile variant, otherwise the page renders
-    // the desktop 280px provider menu layout on phones.
-    expect(leaves).toContain('m.WorkspaceProviderSettingMobile');
+    // The workspace provider page is retired: the bare path is an alias onto
+    // the personal page, so no leaf (and no mobile variant) is registered.
+    expect(leaves).not.toContain("import('@/routes/(main)/[workspaceSlug]/settings/provider')");
     // The redirect is statically imported: lazy-loading it would flash the
     // generic brand loader before redirecting.
     expect(leaves).toContain("from '@/features/WorkspaceSetting/ProviderRedirect'");
-    expect(leaves).toContain("path: 'provider'");
     expect(leaves).toContain("path: 'provider/:providerId'");
     // Mobile registers the shared leaves through its mobile-chrome mapper.
     expect(config).toContain('sharedWorkspaceSettingsLeaves.map(mobileWorkspaceSettingsLeaf)');

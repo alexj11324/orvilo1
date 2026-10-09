@@ -12,13 +12,17 @@ import {
   linearInstallations,
   projectAgents,
   projects,
+  resourcePermissions,
   taskDispatches,
   taskPlanningRevisions,
   tasks,
   users,
+  workspaceMembers,
   workspaces,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { processPlanningTaskDispatchStart } from '@/server/services/taskDispatchStart';
+import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { LinearPlanningWorker } from './planning';
 
@@ -39,16 +43,19 @@ vi.mock('@/server/services/taskRunner', () => ({
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'planning-apply-user';
+const memberId = 'planning-apply-member';
 const workspaceId = 'planning-apply-workspace';
 let projectSequence = 0;
 
 const cleanup = async () => {
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(users).where(eq(users.id, userId));
+  await db.delete(users).where(eq(users.id, memberId));
 };
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  caidAdmission.allowed.mockResolvedValue(true);
   runTask.mockResolvedValue({ success: true });
   await cleanup();
   await db.insert(users).values({ id: userId });
@@ -58,6 +65,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
   // Project creation provisions a coordinator via Prime inheritance; strict
   // admission requires an executable workspace-scoped runtime first.
   await seedPrimeRuntime(db, { userId, workspaceId });
@@ -145,6 +153,115 @@ const createRevision = async (name: string, requiresApproval: boolean, projectSc
 };
 
 describe('LinearPlanningWorker.applyProposal', () => {
+  const privateResume = async (selected: boolean) => {
+    const { project, revision, task } = await createRevision('Private resume', false, true);
+    await db.insert(users).values({ id: memberId });
+    await db.insert(workspaceMembers).values({ workspaceId, userId: memberId, role: 'member' });
+    const agentId = 'private-planning-agent';
+    await db.insert(agents).values({ id: agentId, userId, workspaceId, visibility: 'private' });
+    if (selected)
+      await db.insert(resourcePermissions).values({
+        resourceType: 'agent',
+        resourceId: agentId,
+        userId: memberId,
+        workspaceId,
+        accessLevel: 'use',
+        createdBy: userId,
+      });
+    await db
+      .insert(projectAgents)
+      .values({ agentId, enabled: true, projectId: project!.id, workspaceId });
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project!.orchestrationPolicy,
+          autoDispatch: true,
+          replanMode: 'apply',
+        },
+      })
+      .where(eq(projects.id, project!.id));
+    const [assigned] = await db
+      .update(tasks)
+      .set({ assigneeAgentId: agentId })
+      .where(eq(tasks.id, task.id))
+      .returning();
+    await db
+      .update(taskPlanningRevisions)
+      .set({
+        inputSnapshot: {
+          consistency: {
+            bindingVersion: 1,
+            orchestrationPolicyRevision: project!.orchestrationPolicyRevision,
+          },
+          tasks: [{ id: task.id, updatedAt: assigned.updatedAt.toISOString() }],
+        },
+        proposal: {
+          actions: [
+            {
+              action: 'request_resume',
+              taskId: task.id,
+              instruction: 'Resume authorized private Agent',
+              reason: 'Ready',
+            },
+          ],
+          explanation: 'Resume',
+          requiresApproval: false,
+        },
+      })
+      .where(eq(taskPlanningRevisions.id, revision.id));
+    return { revision, task, agentId };
+  };
+
+  it('persists the actual noncreator planner actor and wakes its private Agent through the durable sweep', async () => {
+    caidAdmission.allowed.mockResolvedValue(false);
+    const { revision, task, agentId } = await privateResume(true);
+    await new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, memberId, true);
+    const [dispatch] = await db
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.taskId, task.id));
+    expect(dispatch).toMatchObject({ initiator: memberId, agentId, phase: 'requested' });
+    expect(runTask).not.toHaveBeenCalled();
+    const candidate = (await TaskDispatchModel.findPlanningStartCandidates(db)).find(
+      (row) => row.dispatchId === dispatch.id,
+    )!;
+    caidAdmission.allowed.mockResolvedValue(true);
+    await expect(processPlanningTaskDispatchStart({ db, candidate })).resolves.toMatchObject({
+      outcome: 'started',
+    });
+    expect(TaskRunnerService).toHaveBeenCalledWith(db, memberId, workspaceId);
+    expect(runTask).toHaveBeenCalledTimes(1);
+    runTask.mockClear();
+    await db.delete(resourcePermissions).where(eq(resourcePermissions.resourceId, agentId));
+    await expect(processPlanningTaskDispatchStart({ db, candidate })).resolves.toMatchObject({
+      outcome: 'waiting',
+      reason: 'agent_use_denied',
+    });
+    expect(runTask).not.toHaveBeenCalled();
+  });
+
+  it('denies a planner without Use before reserving a dispatch or advancing generation', async () => {
+    const { revision, task } = await privateResume(false);
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, memberId, true),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(
+      await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
+    ).toEqual([]);
+    expect(
+      (await db.select().from(tasks).where(eq(tasks.id, task.id)))[0].executionGeneration,
+    ).toBe(0);
+    expect(
+      (
+        await db
+          .select()
+          .from(taskPlanningRevisions)
+          .where(eq(taskPlanningRevisions.id, revision.id))
+      )[0].status,
+    ).toBe('proposed');
+    expect(runTask).not.toHaveBeenCalled();
+  });
   it('rejects request_resume outside a project planning scope', async () => {
     const { revision, task } = await createRevision('Workspace resume', false);
     await db
@@ -177,6 +294,14 @@ describe('LinearPlanningWorker.applyProposal', () => {
     const { project, revision, task } = await createRevision('Resume intent', false, true);
     const agentId = 'planning-resume-agent';
     await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db.insert(resourcePermissions).values({
+      resourceType: 'agent',
+      resourceId: agentId,
+      workspaceId,
+      userId,
+      accessLevel: 'use',
+      createdBy: userId,
+    });
     await db.insert(projectAgents).values({
       agentId,
       enabled: true,
@@ -246,6 +371,8 @@ describe('LinearPlanningWorker.applyProposal', () => {
       }),
     ]);
     await expect(TaskDispatchModel.findPlanningStartCandidates(db)).resolves.toContainEqual({
+      agentId,
+      initiator: userId,
       dispatchId: expect.any(String),
       idempotencyKey: `planning:${revision.id}:resume:${task.id}`,
       planRevision: revision.inputRevision,
@@ -269,6 +396,14 @@ describe('LinearPlanningWorker.applyProposal', () => {
     const { project, revision, task } = await createRevision('Resume intent gated', false, true);
     const agentId = 'planning-resume-agent';
     await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db.insert(resourcePermissions).values({
+      resourceType: 'agent',
+      resourceId: agentId,
+      workspaceId,
+      userId,
+      accessLevel: 'use',
+      createdBy: userId,
+    });
     await db.insert(projectAgents).values({
       agentId,
       enabled: true,

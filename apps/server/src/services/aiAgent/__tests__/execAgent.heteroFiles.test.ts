@@ -1,6 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 
+import { getTestDB } from '@/database/core/getTestDB';
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import {
+  agentOperations,
+  agents,
+  resourcePermissions,
+  topics,
+  users,
+  workspaceMembers,
+  workspaces,
+  workspaceUserSettings,
+} from '@/database/schemas';
+import type { OrviloDatabase } from '@/database/type';
 import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import {
@@ -23,6 +45,7 @@ vi.mock('@/server/featureFlags', async (importOriginal) => ({
 const {
   mockDeviceFindByDeviceId,
   mockDeviceFindWorkspaceDeviceById,
+  mockQueryPersonalDevices,
   mockBuildRemoteDeviceHeteroContext,
   mockCreateOperationMetadata,
   mockDispatchAgentRun,
@@ -42,6 +65,7 @@ const {
   mockCreateOperationMetadata: vi.fn().mockResolvedValue(undefined),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
+  mockQueryPersonalDevices: vi.fn(),
   mockDispatchAgentRun: vi.fn().mockResolvedValue({ success: true }),
   mockExecuteToolCall: vi.fn().mockResolvedValue({ success: true }),
   mockInterruptOperation: vi.fn().mockResolvedValue(true),
@@ -147,7 +171,7 @@ vi.mock('@/database/models/device', () => ({
       findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — `device-1` is the
       // registered personal device this suite routes to.
-      queryPersonal: vi.fn().mockResolvedValue([{ deviceId: 'device-1' }]),
+      queryPersonal: mockQueryPersonalDevices,
       queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
     };
   }),
@@ -307,6 +331,49 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
   const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
+  let workspaceDb: OrviloDatabase | undefined;
+
+  const createWorkspaceService = async (actorId = userId, ownerId = userId) => {
+    workspaceDb = await getTestDB();
+    const workspaceId = 'workspace-a';
+    await workspaceDb.insert(users).values([...new Set([actorId, ownerId])].map((id) => ({ id })));
+    await workspaceDb.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Hetero file workspace',
+      slug: workspaceId,
+      primaryOwnerId: ownerId,
+    });
+    await workspaceDb
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId: ownerId, workspaceId },
+        ...(actorId === ownerId ? [] : [{ role: 'member', userId: actorId, workspaceId }]),
+      ]);
+    await workspaceDb.insert(agents).values({ id: 'agent-1', userId: ownerId, workspaceId });
+    await workspaceDb.insert(resourcePermissions).values({
+      accessLevel: 'use',
+      createdBy: ownerId,
+      resourceId: 'agent-1',
+      resourceType: 'agent',
+      userId: actorId,
+      workspaceId,
+    });
+    await workspaceDb
+      .insert(topics)
+      .values({ id: 'topic-1', userId: actorId, agentId: 'agent-1', workspaceId });
+    await workspaceDb.insert(agentOperations).values({
+      id: 'op-123',
+      userId: actorId,
+      workspaceId,
+      agentId: 'agent-1',
+      topicId: 'topic-1',
+      status: 'running',
+    });
+    (heteroAgentConfig as any).userId = ownerId;
+    (heteroAgentConfig as any).visibility = 'public';
+    (heteroAgentConfig as any).workspaceId = workspaceId;
+    return new AiAgentService(workspaceDb, actorId, { workspaceId });
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -332,6 +399,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     mockBuildRemoteDeviceHeteroContext.mockImplementation(function ({ conversationHistory }) {
       return conversationHistory ? 'device recovery context' : 'device context';
     });
+    mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'device-1' }]);
     mockDeviceFindByDeviceId.mockResolvedValue({ defaultCwd: '/Users/alice/repo' });
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     mockCreateOperationMetadata.mockResolvedValue(undefined);
@@ -349,7 +417,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     service = new AiAgentService(mockDb, userId);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (workspaceDb) {
+      await workspaceDb.delete(workspaces).where(eq(workspaces.id, 'workspace-a'));
+      await workspaceDb.delete(users).where(eq(users.id, userId));
+      await workspaceDb.delete(users).where(eq(users.id, 'member-user'));
+      await workspaceDb.delete(users).where(eq(users.id, 'author-user'));
+      workspaceDb = undefined;
+    }
     recordStartSpy.mockRestore();
     vi.clearAllMocks();
   });
@@ -1413,6 +1488,10 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
   // runningOperation.hooks in serialized (webhook-only) form on BOTH dispatch
   // targets.
   describe('terminal hook seeding onto runningOperation (regression guard)', () => {
+    beforeAll(async () => {
+      await getTestDB();
+    });
+
     const taskHook = {
       handler: async () => {},
       id: 'task-on-complete',
@@ -1648,13 +1727,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         executionTarget: 'device',
         heterogeneousProvider: { type: 'claude-code' },
       } as any;
-      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });
+      service = await createWorkspaceService();
 
-      await service.execAgent({
+      const result = await service.execAgent({
         agentId: 'agent-1',
         prompt: 'do the task on my device',
       } as any);
 
+      expect(result.success).toBe(true);
       expect(mockDispatchAgentRun).toHaveBeenCalledWith(
         expect.objectContaining({ ingestWorkspaceId: 'workspace-a' }),
       );
@@ -1665,13 +1745,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         executionTarget: 'sandbox',
         heterogeneousProvider: { type: 'claude-code' },
       } as any;
-      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });
+      service = await createWorkspaceService();
 
-      await service.execAgent({
+      const result = await service.execAgent({
         agentId: 'agent-1',
         prompt: 'do the task in the cloud sandbox',
       } as any);
 
+      expect(result.success).toBe(true);
       expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceId: 'workspace-a' }),
       );
@@ -1685,14 +1766,16 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       (heteroAgentConfig as any).userId = userId;
       (heteroAgentConfig as any).visibility = 'public';
       (heteroAgentConfig as any).workspaceId = 'workspace-a';
-      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });
+      service = await createWorkspaceService();
+      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'personal-desktop' }]);
 
-      await service.execAgent({
+      const result = await service.execAgent({
         agentId: 'agent-1',
         localDeviceId: 'personal-desktop',
         prompt: 'do the task on this computer',
       } as any);
 
+      expect(result.success).toBe(true);
       expect(mockExecuteToolCall).toHaveBeenCalledWith(
         {
           deviceId: 'personal-desktop',
@@ -1723,36 +1806,89 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       );
     });
 
-    it("routes a legacy author binding through the author's personal principal", async () => {
+    it.each(['revoked', 'viewer'] as const)(
+      'does not dispatch a workspace Agent when the actual caller is %s',
+      async (denial) => {
+        service = await createWorkspaceService('member-user', 'author-user');
+        if (denial === 'revoked') {
+          await workspaceDb!
+            .delete(resourcePermissions)
+            .where(eq(resourcePermissions.userId, 'member-user'));
+        } else {
+          await workspaceDb!
+            .update(workspaceMembers)
+            .set({ role: 'viewer' })
+            .where(eq(workspaceMembers.userId, 'member-user'));
+        }
+        const result = await service.execAgent({
+          agentId: 'agent-1',
+          prompt: 'Do not start',
+        } as any);
+        expect(result).toMatchObject({ success: false, error: 'AGENT_USE_FORBIDDEN' });
+        expect(mockExecuteToolCall).not.toHaveBeenCalled();
+        expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+        expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      },
+    );
+
+    it('denies an author-only Device binding for a Member with Agent Use', async () => {
       heteroAgentConfig.agencyConfig = {
         boundDeviceId: 'author-desktop',
+        executionTarget: 'device',
+        executionTargetSelectionPolicy: 'fixed',
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
-      (heteroAgentConfig as any).userId = 'author-user';
-      (heteroAgentConfig as any).visibility = 'public';
-      (heteroAgentConfig as any).workspaceId = 'workspace-a';
-      service = new AiAgentService(mockDb, 'member-user', { workspaceId: 'workspace-a' });
+      service = await createWorkspaceService('member-user', 'author-user');
+      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
+      mockDeviceFindByDeviceId.mockResolvedValue(undefined);
 
-      await service.execAgent({
+      const result = await service.execAgent({
         agentId: 'agent-1',
         localDeviceId: 'member-desktop',
         prompt: 'run the legacy-bound task',
       } as any);
 
+      expect(result).toMatchObject({
+        success: false,
+        errorData: { code: 'DEVICE_BINDING_INVALID' },
+      });
+      expect(mockExecuteToolCall).not.toHaveBeenCalled();
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    });
+
+    it('routes an authorized Member Device through the actual caller personal principal', async () => {
+      heteroAgentConfig.agencyConfig = {
+        executionTarget: 'local',
+        heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
+      } as any;
+      service = await createWorkspaceService('member-user', 'author-user');
+      await workspaceDb!.insert(workspaceUserSettings).values({
+        userId: 'member-user',
+        workspaceId: 'workspace-a',
+        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } },
+      });
+      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        localDeviceId: 'member-desktop',
+        prompt: 'run the Member-authorized task',
+      } as any);
+
+      expect(result).toMatchObject({ success: true });
       expect(mockExecuteToolCall).toHaveBeenCalledWith(
-        {
-          deviceId: 'author-desktop',
-          userId: 'author-user',
-          workspaceId: undefined,
-        },
+        { deviceId: 'member-desktop', userId: 'member-user', workspaceId: undefined },
         expect.objectContaining({ apiName: 'runHeteroTask' }),
         120_000,
       );
+      const toolCall = mockExecuteToolCall.mock.calls.at(-1)?.[1];
+      expect(JSON.parse(toolCall.arguments)).toMatchObject({ workspaceId: 'workspace-a' });
       const seed = findRunningOpSeed();
       expect(seed.runningOperation).toEqual(
         expect.objectContaining({
-          deviceId: 'author-desktop',
-          deviceUserId: 'author-user',
+          deviceId: 'member-desktop',
+          deviceUserId: 'member-user',
           heteroType: 'openclaw',
         }),
       );

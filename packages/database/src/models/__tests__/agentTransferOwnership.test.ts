@@ -33,6 +33,7 @@ import {
   userConnectors,
   userConnectorTools,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -77,8 +78,18 @@ const withRuntime = async (
     },
   };
 };
-const createOwnerAgent = async (config: Parameters<AgentModel['create']>[0]) =>
-  ownerModel.create(await withRuntime(config));
+const createOwnerAgent = async (config: Parameters<AgentModel['create']>[0]) => {
+  const agent = await ownerModel.create(await withRuntime({ ...config, visibility: 'public' }));
+  if (config.visibility !== 'private') return agent;
+
+  // Historical private Agents remain supported; new standalone creation is public.
+  const [legacyAgent] = await serverDB
+    .update(agents)
+    .set({ visibility: 'private' })
+    .where(eq(agents.id, agent.id))
+    .returning();
+  return legacyAgent;
+};
 
 const handover = (params: Parameters<AgentModel['transferAgentOwnership']>[1]) =>
   serverDB.transaction(async (trx) => recipientModel.transferAgentOwnership(trx, params));
@@ -94,6 +105,11 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'Handover WS', primaryOwnerId: ownerId, slug: 'handover-ws' }]);
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId: ownerId, workspaceId: wsId },
+    { role: 'member', userId: recipientId, workspaceId: wsId },
+    { role: 'member', userId: teammateId, workspaceId: wsId },
+  ]);
 });
 
 afterEach(async () => {

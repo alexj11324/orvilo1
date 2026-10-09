@@ -168,6 +168,7 @@ const TaskDetailHeaderActions = () => {
   const taskId = useTaskDetailTaskId();
   const copy = useTaskCopyActions();
   const task = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const canDeleteTask = canEditTask && task?.capabilities?.canDelete === true;
   const taskUuid = task?.id;
   const domainRevision = task?.domainRevision;
   const isClosed = task?.workflowCategory === 'canceled' || task?.workflowCategory === 'done';
@@ -560,12 +561,12 @@ const TaskDetailHeaderActions = () => {
     },
     {
       danger: true,
-      disabled: !canEditTask,
+      disabled: !canDeleteTask,
       icon: <Trash />,
       key: 'delete',
       label: t('delete', { ns: 'common' }),
       onClick: () => {
-        if (!canEditTask) return;
+        if (!canDeleteTask) return;
         confirmModal({
           content: t('taskDetail.deleteConfirm.content'),
           okButtonProps: { danger: true },

@@ -1,6 +1,5 @@
 'use client';
 
-import { isDesktop } from '@orvilo/const';
 import type { DeviceListItem } from '@orvilo/types';
 import { TriangleAlertIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -13,7 +12,6 @@ import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useDeviceSelectorState } from '@/features/DeviceManager/useDeviceSelectorState';
 import {
   ExecutionTargetDeviceStatus,
@@ -22,15 +20,12 @@ import {
   parseExecutionTargetValue,
   resolveExecutionTargetSelection,
 } from '@/features/ExecutionTargetPicker';
-import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import { isHeterogeneousSandboxExecutionAvailable } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { usePermission } from '@/hooks/usePermission';
 import { useSelectAgentDevice } from '@/hooks/useSelectAgentDevice';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
+import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 import { resolveAgentDeviceSettingsState } from './agentDeviceSettingsState';
 import { SettingsGroup, SettingsRow, settingsStyles } from './SettingsGroup';
@@ -78,7 +73,6 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat']);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const agent = useAgentStore(agentByIdSelectors.getAgentById(agentId));
-  const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
   const {
     agencyConfig,
     canSelectExecutionTarget,
@@ -87,23 +81,16 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     memberSelectedDeviceId,
   } = useEffectiveAgencyConfig(agentId);
   const selectAgentDevice = useSelectAgentDevice(agentId);
-  const { mutate: retryDevices } = useDeviceList();
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
 
   const isWorkspaceAgent = Boolean(agent?.workspaceId);
-  const heterogeneousType = config?.agencyConfig?.heterogeneousProvider?.type;
-  const externalHarness = !!heterogeneousType && !isBuiltinEngineType(heterogeneousType);
-  const enableCloudSandbox = useServerConfigStore(
-    (s) => featureFlagsSelectors(s).enableCloudSandbox === true,
-  );
-  const supportsSandbox =
-    enableCloudSandbox && isHeterogeneousSandboxExecutionAvailable(heterogeneousType);
 
   // A workspace member's device pick is their own preference write — the
   // shared `edit_own_content` gate applies to personal agents only.
   const canSelectDevice = canSelectExecutionTarget && (isWorkspaceAgent || canEdit);
 
   const state = useDeviceSelectorState({
+    agentId,
     boundDeviceId: agencyConfig?.boundDeviceId,
     canSelectDevice,
     canSelectPersonalDevice,
@@ -117,52 +104,15 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     deviceInventoryError,
     selectableDevices,
     showDeviceSelector,
+    refreshDevices: retryDevices,
+    runtimeInventoryUnverified,
+    runtimeInventoryOfflineOnly,
   } = state;
 
   const boundDevice = useMemo(
     () => selectableDevices.find((d) => d.deviceId === agencyConfig?.boundDeviceId),
     [agencyConfig?.boundDeviceId, selectableDevices],
   );
-
-  const sharedTargets = useMemo<SelectOptions>(() => {
-    if (!externalHarness) return [];
-    const offlineLabel = t('chat:heteroAgent.executionTarget.offline');
-    const onlineLabel = t('chat:heteroAgent.executionTarget.online');
-    return [
-      ...(isDesktop
-        ? [
-            {
-              label: (
-                <DeviceOptionLabel
-                  label={t('chat:heteroAgent.executionTarget.local')}
-                  offlineLabel={offlineLabel}
-                  onlineLabel={onlineLabel}
-                  target={'local'}
-                />
-              ),
-              title: t('chat:heteroAgent.executionTarget.local'),
-              value: executionTargetValue('local'),
-            },
-          ]
-        : []),
-      ...(supportsSandbox
-        ? [
-            {
-              label: (
-                <DeviceOptionLabel
-                  label={t('chat:heteroAgent.executionTarget.sandbox')}
-                  offlineLabel={offlineLabel}
-                  onlineLabel={onlineLabel}
-                  target={'sandbox'}
-                />
-              ),
-              title: t('chat:heteroAgent.executionTarget.sandbox'),
-              value: executionTargetValue('sandbox'),
-            },
-          ]
-        : []),
-    ];
-  }, [externalHarness, supportsSandbox, t]);
 
   const deviceOptions = useMemo<SelectOptions>(() => {
     const offlineLabel = t('chat:heteroAgent.executionTarget.offline');
@@ -172,6 +122,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
       const isThisMachine = device.deviceId === currentDeviceId;
       const name = device.friendlyName || device.hostname || device.deviceId;
       return {
+        disabled: !device.online,
         label: (
           <DeviceOptionLabel
             device={device}
@@ -193,8 +144,14 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     devices: selectableDevices,
     isHeterogeneous: true,
   });
-  const selectedValue = selected
-    ? executionTargetValue(selected.target, selected.deviceId)
+  const selectedDeviceId =
+    selected?.target === 'local'
+      ? agencyConfig?.executionTargetSelectionPolicy === 'fixed'
+        ? agencyConfig.boundDeviceId
+        : (currentDeviceId ?? agencyConfig?.boundDeviceId)
+      : selected?.deviceId;
+  const selectedValue = selectableDevices.some((device) => device.deviceId === selectedDeviceId)
+    ? executionTargetValue('device', selectedDeviceId)
     : undefined;
 
   const handleChange = (value: string) => {
@@ -211,15 +168,26 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     void selectAgentDevice({ boundDeviceId: device.deviceId, executionTarget: 'device' });
   };
 
-  const { showOfflineNotice, showReadOnlyBinding, showRepairPrompt, showZeroDeviceNotice } =
-    resolveAgentDeviceSettingsState({
-      bindingState,
-      boundDevice,
-      canSelectDevice,
-      deviceInventoryComplete,
-      isPreferenceLoading,
-      selectableDeviceCount: selectableDevices.length,
-    });
+  const {
+    showDeviceGroup,
+    showOfflineNotice,
+    showReadOnlyBinding,
+    showRepairPrompt,
+    showZeroDeviceNotice,
+  } = resolveAgentDeviceSettingsState({
+    bindingState,
+    runtimeInventoryOfflineOnly,
+    explicitLocalDeviceIsEligible:
+      agencyConfig?.executionTarget === 'local' &&
+      selectableDevices.some((device) => device.deviceId === selectedDeviceId),
+    boundDevice,
+    canSelectDevice,
+    deviceInventoryComplete,
+    isPreferenceLoading,
+    selectableDeviceCount: selectableDevices.length,
+  });
+
+  if (!showDeviceGroup) return null;
 
   return (
     <SettingsGroup title={t('settingAgent.execution.target')}>
@@ -233,6 +201,16 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
           <AsyncError
             error={deviceInventoryError}
             variant={'inline'}
+            description={
+              runtimeInventoryUnverified
+                ? t('settingAgent.deviceSettings.runtimeUnverifiedDesc')
+                : undefined
+            }
+            title={
+              runtimeInventoryUnverified
+                ? t('settingAgent.deviceSettings.runtimeUnverifiedTitle')
+                : undefined
+            }
             onRetry={() => void retryDevices()}
           />
         </SettingsRow>
@@ -241,7 +219,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
       {showDeviceSelector ? (
         <SettingsRow label={t('settingAgent.deviceSettings.deviceLabel')}>
           <Select
-            items={selectItems([...sharedTargets, ...deviceOptions])}
+            items={selectItems(deviceOptions)}
             value={selectedValue}
             onValueChange={(value) => {
               if (typeof value === 'string') handleChange(value);
@@ -251,7 +229,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
               <SelectValue placeholder={t('settingAgent.devicePolicy.selectTarget')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectOptionItems options={[...sharedTargets, ...deviceOptions]} />
+              <SelectOptionItems options={deviceOptions} />
             </SelectContent>
           </Select>
         </SettingsRow>
@@ -296,7 +274,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
                 <div className="flex flex-wrap gap-2">
                   {selectableDevices.map((device) => (
                     <Button
-                      disabled={!canSelectDevice}
+                      disabled={!canSelectDevice || !device.online}
                       key={device.deviceId}
                       size="sm"
                       variant="outline"

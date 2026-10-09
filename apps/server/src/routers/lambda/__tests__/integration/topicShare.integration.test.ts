@@ -4,6 +4,7 @@ import {
   agents,
   chatGroups,
   chatGroupsAgents,
+  resourcePermissions,
   topics,
   workspaceAuditLogs,
   workspaceMembers,
@@ -75,8 +76,8 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
     ]);
 
     // Share management follows the topic's conversation, so the topics must be
-    // bound to one: a shared agent (every member holds `use` by default) and a
-    // private one (nobody but its creator can reach it).
+    // bound to one: a shared agent with explicit Use for these collaborators
+    // and a private one with only its creator granted Use.
     const [sharedAgent] = await serverDB
       .insert(agents)
       .values({
@@ -95,6 +96,25 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
         workspaceId,
       })
       .returning();
+
+    await serverDB.insert(resourcePermissions).values([
+      ...[creatorId, memberId, ownerId].map((userId) => ({
+        accessLevel: 'use' as const,
+        createdBy: creatorId,
+        resourceId: sharedAgent.id,
+        resourceType: 'agent' as const,
+        userId,
+        workspaceId,
+      })),
+      {
+        accessLevel: 'use',
+        createdBy: creatorId,
+        resourceId: privateAgent.id,
+        resourceType: 'agent',
+        userId: creatorId,
+        workspaceId,
+      },
+    ]);
 
     const [topic] = await serverDB
       .insert(topics)
@@ -235,6 +255,17 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
           workspaceId,
         })
         .returning();
+
+      await serverDB.insert(resourcePermissions).values(
+        [creatorId, memberId, ownerId].map((userId) => ({
+          accessLevel: 'use' as const,
+          createdBy: params.agentUserId,
+          resourceId: agent.id,
+          resourceType: 'agent' as const,
+          userId,
+          workspaceId,
+        })),
+      );
 
       const [topic] = await serverDB
         .insert(topics)

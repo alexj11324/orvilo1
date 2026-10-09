@@ -656,6 +656,15 @@ describe('Task Router Integration', () => {
         ...createTestContext(otherUserId),
         workspaceId,
       });
+      const { resourcePermissions } = await import('@/database/schemas');
+      await serverDB.insert(resourcePermissions).values({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: wsAgentId,
+        resourceType: 'agent',
+        userId: otherUserId!,
+        workspaceId,
+      });
       const originalPrepare = TaskDispatchService.prototype.prepare;
       const kickoff = vi.spyOn(TaskModel.prototype, 'claimRunKickoff');
       const provision = vi.spyOn(TaskWorkspaceService.prototype, 'provision');
@@ -691,7 +700,7 @@ describe('Task Router Integration', () => {
         expect.soft(kickoff).not.toHaveBeenCalled();
         expect.soft(provision).not.toHaveBeenCalled();
         expect.soft(mockExecAgent).not.toHaveBeenCalled();
-        expect.soft(result).toMatchObject({ code: 'NOT_FOUND' });
+        expect.soft(result).toMatchObject({ code: 'FORBIDDEN' });
       } finally {
         prepare.mockRestore();
         kickoff.mockRestore();
@@ -720,7 +729,7 @@ describe('Task Router Integration', () => {
       const beforeRun = await teammate.findById(created.data.id);
 
       await expect(memberCaller.run({ id: created.data.id })).rejects.toMatchObject({
-        code: 'NOT_FOUND',
+        code: 'FORBIDDEN',
       });
       expect(await teammate.findById(created.data.id)).toEqual(beforeRun);
       expect(
@@ -1114,17 +1123,32 @@ describe('Task Router Integration', () => {
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
       ).toBe(before?.requirementRevision);
+      const agentText = await new TaskModel(serverDB, userId).findCommentById(comment.data.id);
+      await expect(
+        caller.updateComment({ commentId: comment.data.id, content: 'Human rewrites Agent text' }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(await new TaskModel(serverDB, userId).findCommentById(comment.data.id)).toEqual(
+        agentText,
+      );
+      expect(
+        (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
+      ).toBe(before?.requirementRevision);
+      const humanComment = await caller.addComment({
+        content: 'Human requirement',
+        id: task.data.id,
+      });
+      const humanBefore = await new TaskModel(serverDB, userId).findById(task.data.id);
       await caller.updateComment({
-        commentId: comment.data.id,
+        commentId: humanComment.data.id,
         content: 'Human changes the requirement',
       });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
-      ).toBe((before?.requirementRevision ?? 0) + 1);
-      await caller.deleteComment({ commentId: comment.data.id });
+      ).toBe((humanBefore?.requirementRevision ?? 0) + 1);
+      await caller.deleteComment({ commentId: humanComment.data.id });
       expect(
         (await new TaskModel(serverDB, userId).findById(task.data.id))?.requirementRevision,
-      ).toBe((before?.requirementRevision ?? 0) + 2);
+      ).toBe((humanBefore?.requirementRevision ?? 0) + 2);
     });
 
     it('should add agent-authored comments and support update/delete', async () => {
@@ -1140,6 +1164,7 @@ describe('Task Router Integration', () => {
       expect(added.data.authorUserId).toBeNull();
 
       await caller.updateComment({
+        actorAgentId: testAgentId,
         commentId: added.data.id,
         content: 'Updated progress note',
       });
@@ -1149,7 +1174,7 @@ describe('Task Router Integration', () => {
       expect(updatedComment?.content).toBe('Updated progress note');
       expect(updatedComment?.agentId).toBe(testAgentId);
 
-      await caller.deleteComment({ commentId: added.data.id });
+      await caller.deleteComment({ actorAgentId: testAgentId, commentId: added.data.id });
 
       const deletedDetail = await caller.detail({ id: task.data.identifier });
       expect(deletedDetail.data.activities?.some((a) => a.id === added.data.id)).toBe(false);
@@ -1291,6 +1316,15 @@ describe('Task Router Integration', () => {
         .insert(agents)
         .values({ id: wsAgentId, slug: wsAgentId, userId, workspaceId })
         .onConflictDoNothing();
+      const { resourcePermissions } = await import('@/database/schemas');
+      await serverDB.insert(resourcePermissions).values({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: wsAgentId,
+        resourceType: 'agent',
+        userId,
+        workspaceId,
+      });
       await flushAfterResponse();
       mockNotifyTaskCommentActivity.mockClear();
       await wsCaller.addComment({
@@ -1351,7 +1385,7 @@ describe('Task Router Integration', () => {
       expect(mockNotifyTaskCommentActivity).toHaveBeenCalledTimes(1);
     });
 
-    it('never notifies workspace members who cannot open a private-team task', async () => {
+    it('notifies active workspace readers of private-team Issues and excludes inactive recipients', async () => {
       otherUserId = await createTestUser(serverDB);
       const thirdUserId = await createTestUser(serverDB);
       const { wsCaller, workspaceId } = await setupWorkspace();
@@ -1374,15 +1408,16 @@ describe('Task Router Integration', () => {
         visibility: 'private',
       });
 
-      // The mention must not leak the task's title and link to a member who
-      // cannot open it — neither on a new comment nor on an edit.
+      // Workspace Issue read is independent of private Team participation.
       const comment = await wsCaller.addComment({
         content: '@Member',
         editorData: editorDataWith(otherUserId!),
         id: task.data.id,
       });
       await flushAfterResponse();
-      expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      expect(mockNotifyTaskCommentActivity).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipients: [{ kind: 'mentioned', userId: otherUserId }] }),
+      );
 
       await wsCaller.updateComment({
         commentId: comment.data.id,
@@ -1390,7 +1425,32 @@ describe('Task Router Integration', () => {
         editorData: editorDataWith(otherUserId!, thirdUserId),
       });
       await flushAfterResponse();
-      expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      expect(mockNotifyTaskCommentActivity).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipients: [{ kind: 'mentioned', userId: thirdUserId }] }),
+      );
+
+      mockNotifyTaskCommentActivity.mockClear();
+      await serverDB
+        .update(workspaceMembers)
+        .set({ suspendedAt: new Date() })
+        .where(eq(workspaceMembers.userId, otherUserId!));
+      await serverDB
+        .update(workspaceMembers)
+        .set({ deletedAt: new Date() })
+        .where(eq(workspaceMembers.userId, thirdUserId));
+      const foreignId = await createTestUser(serverDB);
+      try {
+        await wsCaller.addComment({
+          content: '@Suspended @Removed @Foreign',
+          editorData: editorDataWith(otherUserId!, thirdUserId, foreignId),
+          id: task.data.id,
+        });
+        await flushAfterResponse();
+        expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      } finally {
+        await cleanupTestUser(serverDB, foreignId);
+        await cleanupTestUser(serverDB, thirdUserId);
+      }
     });
 
     it('should never notify in personal mode', async () => {

@@ -1,10 +1,10 @@
 import type { DeviceListItem } from '@orvilo/types';
-import { shouldShowDeviceSelector } from '@orvilo/types';
+import { isSelectableDevice, shouldShowDeviceSelector } from '@orvilo/types';
 import { useMemo } from 'react';
 
 import { executionTargetDeviceCandidates } from '@/helpers/executionTarget';
 
-import { useDeviceList } from './useDeviceList';
+import { useAgentDeviceCandidates, useDeviceList } from './useDeviceList';
 
 /**
  * The device-selection states the shared execution contract defines
@@ -28,8 +28,12 @@ export interface DeviceSelectorState {
   deviceInventoryError: unknown;
   /** `canSelectDevice` and friends could be evaluated (permissions loaded). */
   permissionsLoaded: boolean;
+  /** Revalidate this surface’s scoped device/runtime evidence. */
+  refreshDevices: () => Promise<unknown>;
   /** Online subset of `selectableDevices` — devices that can start right now. */
   runnableDevices: DeviceListItem[];
+  runtimeInventoryOfflineOnly: boolean;
+  runtimeInventoryUnverified: boolean;
   /**
    * Devices the principal may execute on — legal scope only. Offline devices
    * STAY in this set (offline ≠ removed from config); they just cannot start.
@@ -44,6 +48,8 @@ export interface DeviceSelectorState {
 }
 
 export interface UseDeviceSelectorStateOptions {
+  /** Agent settings opt into server-owned installed-runtime eligibility. */
+  agentId?: string;
   /** Currently persisted binding, if any. */
   boundDeviceId?: string;
   /** Caller-side permission/policy result (`useEffectiveAgencyConfig`). */
@@ -69,6 +75,7 @@ export interface UseDeviceSelectorStateOptions {
  * pass `permissionsReady` so a still-resolving policy never looks like a deny.
  */
 export const useDeviceSelectorState = ({
+  agentId,
   boundDeviceId,
   canSelectDevice,
   canSelectPersonalDevice = false,
@@ -76,8 +83,20 @@ export const useDeviceSelectorState = ({
   permissionsLoaded = true,
   scope,
 }: UseDeviceSelectorStateOptions & { permissionsLoaded?: boolean }): DeviceSelectorState => {
-  const { data: devices, error, isLoading } = useDeviceList();
-  const deviceInventoryComplete = !isLoading && !error;
+  const { data: devices, error, isLoading, mutate: refreshList } = useDeviceList();
+  const runtimeInventory = useAgentDeviceCandidates(permissionsLoaded ? agentId : undefined);
+  const runtimeInventoryUnverified =
+    !!agentId && !!runtimeInventory.data && !runtimeInventory.data.inventoryComplete;
+  const deviceInventoryError =
+    error ??
+    (agentId ? runtimeInventory.error : undefined) ??
+    (runtimeInventoryUnverified
+      ? (runtimeInventory.data?.runtimeInventoryError ?? 'Device runtime verification incomplete')
+      : undefined);
+  const deviceInventoryComplete =
+    !isLoading &&
+    !deviceInventoryError &&
+    (!agentId || runtimeInventory.data?.inventoryComplete === true);
 
   const { selectableDevices, runnableDevices } = useMemo(() => {
     // ONE candidate set shared with the chat switcher, connect flow and the
@@ -95,12 +114,24 @@ export const useDeviceSelectorState = ({
                 (device.deviceId === boundDeviceId && memberSelectedDeviceId === boundDeviceId)),
           )
         : [];
-    const selectable = [...scoped, ...personal];
+    const authorized = [...scoped, ...personal];
+    const runtimeIds = agentId
+      ? new Set(
+          runtimeInventory.data?.candidates
+            .filter(isSelectableDevice)
+            .map((candidate) => candidate.deviceId),
+        )
+      : undefined;
+    const selectable = runtimeIds
+      ? (devices ?? []).filter((device) => runtimeIds.has(device.deviceId))
+      : authorized;
     return {
       runnableDevices: selectable.filter((device) => device.online),
       selectableDevices: selectable,
     };
   }, [
+    agentId,
+    runtimeInventory.data,
     boundDeviceId,
     canSelectDevice,
     canSelectPersonalDevice,
@@ -121,8 +152,14 @@ export const useDeviceSelectorState = ({
     bindingState,
     canSelectDevice,
     deviceInventoryComplete,
-    deviceInventoryError: error,
+    deviceInventoryError,
     permissionsLoaded,
+    refreshDevices: async () => {
+      await Promise.all([refreshList(), ...(agentId ? [runtimeInventory.mutate()] : [])]);
+    },
+    runtimeInventoryUnverified,
+    runtimeInventoryOfflineOnly:
+      !!agentId && runtimeInventory.data?.runtimeInventoryOfflineOnly === true,
     runnableDevices,
     selectableDevices,
     // The contract formula verbatim — shared with every resolution surface

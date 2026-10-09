@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -10,6 +10,7 @@ import {
   tasks,
   teams,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -28,6 +29,12 @@ beforeEach(async () => {
   await db.insert(workspaces).values([
     { id: workspaceA, name: 'Draft A', primaryOwnerId: alice, slug: workspaceA },
     { id: workspaceB, name: 'Draft B', primaryOwnerId: alice, slug: workspaceB },
+  ]);
+  await db.insert(workspaceMembers).values([
+    { role: 'owner', userId: alice, workspaceId: workspaceA },
+    { role: 'owner', userId: alice, workspaceId: workspaceB },
+    { role: 'member', userId: bob, workspaceId: workspaceA },
+    { role: 'member', userId: bob, workspaceId: workspaceB },
   ]);
 });
 
@@ -150,7 +157,7 @@ describe('TaskCommentDraftModel', () => {
     expect(await bobA.count()).toBe(1);
   });
 
-  it('hides a draft after task access is revoked and rejects further writes', async () => {
+  it('keeps non-Team member drafts readable for shared Issues, then denies writes after suspension', async () => {
     const task = await new TaskModel(db, alice, workspaceA).create({
       instruction: 'Shared task',
       name: 'Shared task',
@@ -168,7 +175,13 @@ describe('TaskCommentDraftModel', () => {
       visibility: 'private',
     });
     await db.update(tasks).set({ teamId }).where(eq(tasks.id, task.id));
+    expect(await bobDrafts.get(task.id)).toMatchObject({ content: 'Work in progress' });
+    expect(await bobDrafts.count()).toBe(1);
 
+    await db
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(and(eq(workspaceMembers.userId, bob), eq(workspaceMembers.workspaceId, workspaceA)));
     expect(await bobDrafts.get(task.id)).toBeNull();
     expect(await bobDrafts.list()).toEqual([]);
     expect(await bobDrafts.count()).toBe(0);

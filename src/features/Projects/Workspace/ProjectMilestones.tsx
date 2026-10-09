@@ -35,8 +35,6 @@ import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 type Milestone = NonNullable<ProjectDetail['milestones']>[number];
 type ProjectTask = NonNullable<ProjectDetail['tasks']>[number];
@@ -354,10 +352,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
   const unassignedTasks = useMemo(() => tasks.filter((task) => !task.projectMilestoneId), [tasks]);
   const unassignedProgress = projectIssueProgress(unassignedTasks);
 
-  const userId = useUserStore(userProfileSelectors.userId);
-  // `manageable()` on the server is `projects.userId = me`; ProjectLinks gates
-  // the same affordances off the same check.
-  const canEdit = !!project.userId && userId === project.userId;
+  const canEdit = detail.capabilities?.canEdit === true;
 
   const createMilestone = useProjectStore((s) => s.createMilestone);
   const updateMilestone = useProjectStore((s) => s.updateMilestone);

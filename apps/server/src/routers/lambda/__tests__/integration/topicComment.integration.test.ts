@@ -206,6 +206,14 @@ describe('topicCommentRouter integration', () => {
       workspaceId,
     });
 
+    const permissions = new ResourcePermissionModel(db, workspaceId);
+    await permissions.upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: adminId,
+      resourceId: agentId,
+      resourceType: 'agent',
+      userIds: [memberId, ownerId],
+    });
     const member = topicCommentRouter.createCaller(context(memberId, workspaceId));
     const owner = topicCommentRouter.createCaller(context(ownerId, workspaceId));
     const created = await member.create({
@@ -213,12 +221,13 @@ describe('topicCommentRouter integration', () => {
       content: 'original',
       topicId: agentTopicId,
     });
-    await new ResourcePermissionModel(db, workspaceId).setAccessLevel(
-      'agent',
-      agentId,
-      'view',
-      adminId,
-    );
+    await permissions.upsertCollaborators({
+      accessLevel: 'view',
+      createdBy: adminId,
+      resourceId: agentId,
+      resourceType: 'agent',
+      userIds: [memberId],
+    });
 
     await expect(member.get({ id: created.comment.id })).resolves.toMatchObject({
       canDelete: false,
@@ -245,6 +254,7 @@ describe('topicCommentRouter integration', () => {
       mode: 'moderated',
     });
     await db.update(agents).set({ visibility: 'private' }).where(eq(agents.id, agentId));
+    await permissions.removeCollaborators('agent', agentId, [ownerId]);
     notifyTopicCommentModeration.mockClear();
     await expect(owner.restore({ id: created.comment.id })).rejects.toMatchObject({
       code: 'FORBIDDEN',
@@ -284,6 +294,14 @@ describe('topicCommentRouter integration', () => {
       topicId: privateTopicId,
       userId: memberId,
       workspaceId,
+    });
+
+    await new ResourcePermissionModel(db, workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: memberId,
+      resourceId: privateAgentId,
+      resourceType: 'agent',
+      userIds: [memberId],
     });
 
     const admin = topicCommentRouter.createCaller(context(adminId, workspaceId));
@@ -512,6 +530,14 @@ describe('topicCommentRouter integration', () => {
       title: 'Private Topic',
       userId: memberId,
       workspaceId,
+    });
+
+    await new ResourcePermissionModel(db, workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: memberId,
+      resourceId: privateAgentId,
+      resourceType: 'agent',
+      userIds: [memberId],
     });
 
     await member.create({

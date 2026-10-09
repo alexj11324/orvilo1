@@ -1,12 +1,19 @@
 // @vitest-environment node
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { type OrviloDatabase } from '@orvilo/database';
-import { topics, workspaceMembers, workspaces } from '@orvilo/database/schemas';
+import {
+  agents,
+  resourcePermissions,
+  topics,
+  workspaceMembers,
+  workspaces,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { LOCAL_HETEROGENEOUS_AGENT_TYPES } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import type * as OperationPrincipalModule from '@/server/services/heterogeneousAgent/operationPrincipal';
 import { HeteroOperationPrincipalError } from '@/server/services/heterogeneousAgent/operationPrincipal';
 
@@ -45,6 +52,10 @@ vi.mock('@/server/services/heterogeneousAgent', () => ({
   }),
 }));
 
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
+
 // AgentRuntimeService and AiChatService are constructed by the procedure
 // middleware too — stub to keep the test isolated.
 vi.mock('@/server/services/agentExecution', () => ({
@@ -78,6 +89,7 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
       { id: 'topic-1', title: 'Personal topic 1', userId },
       { id: 'topic-2', title: 'Personal topic 2', userId },
     ]);
+    vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
     mockHeteroIngest.mockReset();
     mockHeteroFinish.mockReset();
     mockHeteroIngest.mockResolvedValue(undefined);
@@ -190,7 +202,7 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
       ).rejects.toThrow();
     });
 
-    it("accepts a device user ingesting and finishing another member's workspace topic", async () => {
+    it('accepts a verified producer finishing after its Agent Use row is revoked', async () => {
       const creatorId = await createTestUser(serverDB);
       const [workspace] = await serverDB
         .insert(workspaces)
@@ -206,6 +218,27 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
           { role: 'owner', userId: creatorId, workspaceId: workspace.id },
           { role: 'member', userId, workspaceId: workspace.id },
         ]);
+        const [agent] = await serverDB
+          .insert(agents)
+          .values({
+            userId: creatorId,
+            workspaceId: workspace.id,
+            visibility: 'public',
+            title: 'Running Agent',
+          })
+          .returning();
+        await serverDB.insert(resourcePermissions).values({
+          resourceType: 'agent',
+          resourceId: agent.id,
+          workspaceId: workspace.id,
+          userId,
+          createdBy: creatorId,
+          accessLevel: 'use',
+        });
+        await serverDB
+          .delete(resourcePermissions)
+          .where(eq(resourcePermissions.resourceId, agent.id));
+        vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValue(new Error('Agent Use revoked'));
         await serverDB.insert(topics).values({
           id: 'workspace-topic',
           title: 'Created by another member',
@@ -213,7 +246,7 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
           workspaceId: workspace.id,
         });
 
-        const caller = createCaller({ authKind: 'user' });
+        const caller = createCaller({ authKind: 'operation' });
         const ingestResult = await caller.heteroIngest({
           agentType: 'claude-code',
           events: [buildEvent('stream_chunk', 0)],
@@ -229,6 +262,7 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
 
         expect(ingestResult).toEqual({ ack: true });
         expect(finishResult).toEqual({ ack: true });
+        expect(assertCanUseWorkspaceAgent).not.toHaveBeenCalled();
         expect(mockHeteroIngest).toHaveBeenCalledWith(
           expect.objectContaining({ topicId: 'workspace-topic' }),
         );

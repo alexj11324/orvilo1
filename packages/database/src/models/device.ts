@@ -1,4 +1,4 @@
-import type { WorkingDirEntry } from '@orvilo/types';
+import type { DeviceCapabilitySnapshot, WorkingDirEntry } from '@orvilo/types';
 import { and, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { DeviceItem } from '../schemas';
@@ -244,15 +244,42 @@ export class DeviceModel {
    */
   updateCapabilityEvidence = async (
     deviceId: string,
-    capabilitySnapshot: { supportedTools?: string[] },
+    capabilitySnapshot: Pick<DeviceCapabilitySnapshot, 'supportedTools'>,
   ) => {
     const scopes = [and(eq(devices.userId, this.userId), isNull(devices.workspaceId))];
     if (this.workspaceId) scopes.push(eq(devices.workspaceId, this.workspaceId));
 
     await this.db
       .update(devices)
-      .set({ capabilitySnapshot, lastVerifiedAt: new Date() })
+      .set({
+        capabilitySnapshot: sql`coalesce(${devices.capabilitySnapshot}, '{}'::jsonb)
+          || ${JSON.stringify(capabilitySnapshot)}::jsonb`,
+        lastVerifiedAt: new Date(),
+      })
       .where(and(eq(devices.deviceId, deviceId), or(...scopes)));
+  };
+
+  /** Merge host scan facts into the exact personal/workspace enrollment. */
+  updateRuntimeInstallationEvidence = async (
+    deviceId: string,
+    installedRuntimes: NonNullable<DeviceCapabilitySnapshot['installedRuntimes']>,
+  ) => {
+    await this.db
+      .update(devices)
+      .set({
+        capabilitySnapshot: sql`coalesce(${devices.capabilitySnapshot}, '{}'::jsonb)
+          || jsonb_build_object('installedRuntimes',
+            coalesce(${devices.capabilitySnapshot}->'installedRuntimes', '{}'::jsonb)
+            || ${JSON.stringify(installedRuntimes)}::jsonb)`,
+      })
+      .where(
+        and(
+          eq(devices.deviceId, deviceId),
+          this.workspaceId
+            ? eq(devices.workspaceId, this.workspaceId)
+            : and(eq(devices.userId, this.userId), isNull(devices.workspaceId)),
+        ),
+      );
   };
 
   query = async (): Promise<DeviceItem[]> => {
@@ -337,7 +364,11 @@ export class DeviceModel {
 
   findByDeviceId = async (deviceId: string) => {
     return this.db.query.devices.findFirst({
-      where: and(eq(devices.userId, this.userId), eq(devices.deviceId, deviceId)),
+      where: and(
+        eq(devices.userId, this.userId),
+        eq(devices.deviceId, deviceId),
+        isNull(devices.workspaceId),
+      ),
     });
   };
 

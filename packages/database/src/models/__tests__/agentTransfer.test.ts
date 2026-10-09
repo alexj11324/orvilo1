@@ -40,6 +40,7 @@ import {
   userConnectors,
   userConnectorTools,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -65,6 +66,12 @@ beforeEach(async () => {
   await serverDB.insert(workspaces).values([
     { id: wsId1, name: 'WS 1', slug: 'ws-1', primaryOwnerId: userId },
     { id: wsId2, name: 'WS 2', slug: 'ws-2', primaryOwnerId: targetUserId },
+  ]);
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId, workspaceId: wsId1 },
+    { role: 'member', userId: targetUserId, workspaceId: wsId1 },
+    { role: 'member', userId, workspaceId: wsId2 },
+    { role: 'owner', userId: targetUserId, workspaceId: wsId2 },
   ]);
   // Runtime creation admission requires a resolvable bound host. Personal
   // agents bind the actor's unfiled device; workspace-public agents bind a

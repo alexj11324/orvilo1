@@ -439,39 +439,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   const currentDeviceId = isDesktop ? gatewayDeviceInfo?.deviceId : undefined;
   const [reconnectingDeviceId, setReconnectingDeviceId] = useState<string>();
 
-  const handleReconnectDevice = useCallback(
-    async (deviceId: string) => {
-      setReconnectingDeviceId(deviceId);
-      try {
-        if (isDesktop && deviceId === currentDeviceId) {
-          await useElectronStore.getState().connectGateway();
-        } else {
-          window.location.href = `orvilo://device/reconnect?deviceId=${encodeURIComponent(deviceId)}`;
-        }
-
-        // The deep link crosses browser → desktop → gateway → server, so give
-        // the live device registry a short window to converge instead of
-        // making the user close and reopen the picker to see the result.
-        let connected = false;
-        for (let attempt = 0; attempt < 8; attempt += 1) {
-          const nextDevices = await refreshDevices();
-          if (nextDevices?.some((device) => device.deviceId === deviceId && device.online)) {
-            connected = true;
-            break;
-          }
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-        if (!connected) toast.error(t('heteroAgent.executionTarget.reconnectFailed'));
-      } catch (error) {
-        console.error('Device reconnect failed:', error);
-        toast.error(t('heteroAgent.executionTarget.reconnectFailed'));
-      } finally {
-        setReconnectingDeviceId(undefined);
-      }
-    },
-    [currentDeviceId, refreshDevices, t],
-  );
-
   // A member's explicit target override may resolve `local`; without one the
   // raw shared fallback stays workspace-scoped so a legacy `local` value keeps
   // routing to its bound workspace device rather than this member's desktop.
@@ -500,9 +467,11 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     bindingState: deviceBindingState,
     deviceInventoryComplete,
     deviceInventoryError,
+    refreshDevices: refreshDeviceInventory,
     selectableDevices,
     showDeviceSelector,
   } = useDeviceSelectorState({
+    agentId,
     boundDeviceId,
     canSelectDevice: canSelectExecutionTarget,
     canSelectPersonalDevice,
@@ -510,6 +479,40 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     permissionsLoaded: !isWorkspacePreferenceLoading && !isAccessLoading,
     scope: isWorkspaceAgent ? 'workspace' : 'personal',
   });
+
+  const handleReconnectDevice = useCallback(
+    async (deviceId: string) => {
+      setReconnectingDeviceId(deviceId);
+      try {
+        if (isDesktop && deviceId === currentDeviceId) {
+          await useElectronStore.getState().connectGateway();
+        } else {
+          window.location.href = `orvilo://device/reconnect?deviceId=${encodeURIComponent(deviceId)}`;
+        }
+
+        // The deep link crosses browser → desktop → gateway → server, so give
+        // the live device registry a short window to converge instead of
+        // making the user close and reopen the picker to see the result.
+        let connected = false;
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          const nextDevices = await refreshDevices();
+          if (nextDevices?.some((device) => device.deviceId === deviceId && device.online)) {
+            connected = true;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        if (connected) await refreshDeviceInventory();
+        if (!connected) toast.error(t('heteroAgent.executionTarget.reconnectFailed'));
+      } catch (error) {
+        console.error('Device reconnect failed:', error);
+        toast.error(t('heteroAgent.executionTarget.reconnectFailed'));
+      } finally {
+        setReconnectingDeviceId(undefined);
+      }
+    },
+    [currentDeviceId, refreshDeviceInventory, refreshDevices, t],
+  );
 
   // A stored binding that names a device outside this agent's legal pool is
   // invalid — deleted, scope-revoked, or re-homed. The contract forbids a
@@ -941,7 +944,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
         <AsyncError
           error={deviceInventoryError}
           variant={'inline'}
-          onRetry={() => void refreshDevices()}
+          onRetry={() => void refreshDeviceInventory()}
         />
       ) : null}
       {devicesLoading ? (

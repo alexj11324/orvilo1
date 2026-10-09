@@ -31,7 +31,15 @@ const WRITE_APIS = new Set<string>([
 ]);
 
 const runtime = new AgentManagerRuntime({
-  agentService,
+  agentService: {
+    countAgents: agentService.countAgents,
+    createAgent: agentService.createAgent,
+    duplicateAgent: agentService.duplicateAgent,
+    getAgentConfigById: agentService.getAgentFullConfigById,
+    getRuntimeForCreation: agentService.getRuntimeForCreation,
+    queryAgents: agentService.queryAgents,
+    removeAgent: agentService.removeAgent,
+  },
   discoverService,
 });
 

@@ -28,7 +28,8 @@ import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
@@ -238,12 +239,25 @@ export class TaskRunnerService {
     }
     // Reading a shared task does not grant use of its owner's personal Agent.
     // Validate the actual executor before mutating task policy or dispatch state.
-    const assignedExecutor = delegation?.agentId ?? resolvedTask.assigneeAgentId;
+    const fallbackAgent =
+      !delegation &&
+      !resolvedTask.assigneeAgentId &&
+      TaskDispatchService.allowsInboxFallback(resolvedTask, trigger)
+        ? await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID)
+        : undefined;
+    const assignedExecutor =
+      delegation?.agentId ?? resolvedTask.assigneeAgentId ?? fallbackAgent?.id;
     if (assignedExecutor) {
-      await assertAgentUsableBy(this.db, assignedExecutor, {
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      });
+      if (this.workspaceId) {
+        await assertCanUseWorkspaceAgent({
+          agentId: assignedExecutor,
+          db: this.db,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
+      } else {
+        await assertAgentVisibleTo(this.db, assignedExecutor, { userId: this.userId });
+      }
     }
     let task: TaskItem = resolvedTask;
     if (
@@ -350,7 +364,9 @@ export class TaskRunnerService {
     if (modelSnapshotAgentId) {
       const taskConfig = (task.config ?? {}) as Record<string, unknown>;
       if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
-        const snapshot = await this.agentModel.getAgentModelConfig(modelSnapshotAgentId);
+        const snapshot = this.workspaceId
+          ? await this.agentModel.getAgentModelConfigForExecution(modelSnapshotAgentId)
+          : await this.agentModel.getAgentModelConfig(modelSnapshotAgentId);
         if (snapshot) {
           const updated = await this.taskModel.updateTaskConfig(task.id, snapshot);
           if (updated) task = updated;
@@ -368,7 +384,7 @@ export class TaskRunnerService {
           // Raw actor persisted separately from the `trigger:actor` audit
           // string — the persisted origin's initiator is what the final
           // admission re-check authorizes against.
-          initiator: requestedBy,
+          initiator: this.userId,
           // Execution origin for the shared admission boundary. `internal`
           // requires verified settlement evidence (verify association, not
           // marker presence); anything else reaching a CAID-orchestrated
@@ -439,7 +455,8 @@ export class TaskRunnerService {
       // delegate the grant was minted for.
       let executingAgentId = delegation?.agentId ?? task.assigneeAgentId;
       if (!executingAgentId) {
-        const inboxAgent = await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+        const inboxAgent =
+          fallbackAgent ?? (await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID));
         if (!inboxAgent) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
@@ -463,6 +480,12 @@ export class TaskRunnerService {
             { executionTransfer: true },
           );
         }
+        await assertCanUseWorkspaceAgent({
+          agentId: inboxAgent.id,
+          db: this.db,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
         task.assigneeAgentId = inboxAgent.id;
         executingAgentId = inboxAgent.id;
         await this.taskDispatch.transition(preparedDispatch!, {
@@ -803,7 +826,9 @@ export class TaskRunnerService {
       const pinnedDeviceId = (task.config as { automationDeviceId?: string } | null)
         ?.automationDeviceId;
       if (pinnedDeviceId) {
-        const executionAgent = await this.agentModel.getAgentConfig(executingAgentId);
+        const executionAgent = this.workspaceId
+          ? await this.agentModel.getAgentConfigForExecution(executingAgentId)
+          : await this.agentModel.getAgentConfig(executingAgentId);
         const agency = executionAgent?.agencyConfig;
         if (
           !executionAgent ||

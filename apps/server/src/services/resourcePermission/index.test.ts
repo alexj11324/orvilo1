@@ -20,6 +20,7 @@ const teamReadMock = vi.hoisted(() => vi.fn());
 const teamWriteMock = vi.hoisted(() => vi.fn());
 const teamAdminMock = vi.hoisted(() => vi.fn());
 const activeWorkspaceMemberMock = vi.hoisted(() => vi.fn());
+const activeWorkspaceRoleMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/database/models/team', () => ({
   TeamModel: class {
@@ -29,6 +30,7 @@ vi.mock('@/database/models/team', () => ({
   },
 }));
 vi.mock('@/database/models/workspace', () => ({
+  getActiveWorkspaceMembershipRole: activeWorkspaceRoleMock,
   hasActiveWorkspaceMembership: activeWorkspaceMemberMock,
 }));
 
@@ -73,10 +75,130 @@ describe('canPerformResourceAction', () => {
     explicitAccessMock.mockResolvedValue(null);
     grantedLevelMock.mockResolvedValue(null);
     activeWorkspaceMemberMock.mockResolvedValue(true);
+    activeWorkspaceRoleMock.mockResolvedValue('member');
     teamReadMock.mockResolvedValue(false);
     teamWriteMock.mockResolvedValue(false);
     teamAdminMock.mockResolvedValue(false);
   });
+
+  it.each(['public', 'private'])(
+    'requires an explicit Agent Use member grant for a %s Agent',
+    async (visibility) => {
+      permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+      effectiveAccessMock.mockResolvedValue('edit');
+      const params = {
+        action: 'use' as const,
+        db,
+        meta: { ...meta, visibility },
+        resourceId: 'agent-1',
+        resourceType: 'agent' as const,
+        userId: 'member',
+        workspaceId: 'ws-1',
+      };
+      await expect(canPerformResourceAction(params)).resolves.toBe(false);
+      grantedLevelMock.mockResolvedValue('use');
+      await expect(canPerformResourceAction(params)).resolves.toBe(true);
+      activeWorkspaceMemberMock.mockResolvedValue(false);
+      activeWorkspaceRoleMock.mockResolvedValue(null);
+      await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    },
+  );
+
+  it('allows the creator to cancel and restore their own explicit Use grant', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    const params = {
+      action: 'use' as const,
+      db,
+      meta,
+      resourceId: 'agent-1',
+      resourceType: 'agent' as const,
+      userId: 'creator',
+      workspaceId: 'ws-1',
+    };
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    grantedLevelMock.mockResolvedValue('use');
+    await expect(canPerformResourceAction(params)).resolves.toBe(true);
+    grantedLevelMock.mockResolvedValue(null);
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+  });
+
+  it('keeps the Viewer ceiling even when a Use row and invoke capability exist', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    activeWorkspaceRoleMock.mockResolvedValue('viewer');
+    grantedLevelMock.mockResolvedValue('use');
+    await expect(
+      canPerformResourceAction({
+        action: 'use',
+        db,
+        meta,
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'member',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it('keeps Agent Use separate from management and workspace-wide levels', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
+    grantedLevelMock.mockResolvedValue('use');
+    await expect(
+      canPerformResourceAction({
+        action: 'use',
+        db,
+        meta,
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'member',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      canPerformResourceAction({
+        action: 'manage',
+        db,
+        meta,
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'member',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it.each(['use', 'edit'])(
+    'does not grant ordinary Agent management from a member %s row or global edit',
+    async (grant) => {
+      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
+      grantedLevelMock.mockResolvedValue(grant);
+      effectiveAccessMock.mockResolvedValue('edit');
+      const params = {
+        db,
+        meta,
+        resourceId: 'agent-1',
+        resourceType: 'agent' as const,
+        userId: 'member',
+        workspaceId: 'ws-1',
+      };
+      await expect(canPerformResourceAction({ ...params, action: 'use' })).resolves.toBe(
+        grant === 'use',
+      );
+      await expect(canPerformResourceAction({ ...params, action: 'edit' })).resolves.toBe(false);
+      await expect(canPerformResourceAction({ ...params, action: 'manage' })).resolves.toBe(false);
+      await expect(
+        canPerformResourceAction({ ...params, action: 'edit', userId: 'creator' }),
+      ).resolves.toBe(true);
+      permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+      grantedLevelMock.mockResolvedValue(null);
+      activeWorkspaceRoleMock.mockResolvedValue('admin');
+      await expect(
+        canPerformResourceAction({ ...params, action: 'edit', userId: 'admin' }),
+      ).resolves.toBe(true);
+      await expect(
+        canPerformResourceAction({ ...params, action: 'use', userId: 'admin' }),
+      ).resolves.toBe(false);
+    },
+  );
 
   it('grants team Page viewing and editing only through current team access and document RBAC', async () => {
     permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
@@ -125,6 +247,7 @@ describe('canPerformResourceAction', () => {
       }),
     ).resolves.toBe(false);
     activeWorkspaceMemberMock.mockResolvedValue(false);
+    activeWorkspaceRoleMock.mockResolvedValue(null);
     await expect(
       canPerformResourceAction({
         action: 'view',
@@ -138,7 +261,7 @@ describe('canPerformResourceAction', () => {
     ).resolves.toBe(false);
   });
 
-  it('lets a Workspace admin bypass view-only Member Permissions', async () => {
+  it('does not infer Agent Use from workspace management authority', async () => {
     permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
     effectiveAccessMock.mockResolvedValue('view');
 
@@ -152,7 +275,7 @@ describe('canPerformResourceAction', () => {
         userId: 'workspace-admin',
         workspaceId: 'ws-1',
       }),
-    ).resolves.toBe(true);
+    ).resolves.toBe(false);
     expect(effectiveAccessMock).not.toHaveBeenCalled();
   });
 
@@ -228,6 +351,21 @@ describe('canPerformResourceAction', () => {
   // Union-scope admission (buildWorkspaceWhere): the caller's own unfiled row
   // is inside their workspace scope — activating a workspace must not lock the
   // owner out of pre-provisioning data. A teammate's unfiled row stays closed.
+  it('does not let a personal Agent reference bypass an inactive workspace actor ceiling', async () => {
+    activeWorkspaceRoleMock.mockResolvedValue(null);
+    await expect(
+      canPerformResourceAction({
+        action: 'use',
+        db,
+        meta: { ...meta, workspaceId: null },
+        resourceId: 'personal-agent',
+        resourceType: 'agent',
+        userId: 'creator',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
+  });
+
   it('lets the author keep editing their own unfiled agent inside a workspace', async () => {
     permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
     effectiveAccessMock.mockResolvedValue('edit');
@@ -316,7 +454,6 @@ describe('canPerformResourceAction', () => {
     ).resolves.toBe(false);
     expect(permissionMatchesMock.mock.calls.map(([input]) => input.action)).toEqual([
       'AI_MODEL_INVOKE',
-      'AGENT_UPDATE',
     ]);
   });
 
@@ -360,10 +497,11 @@ describe('canPerformResourceAction', () => {
         workspaceId: 'ws-1',
       }),
     ).resolves.toBe(false);
-    expect(effectiveAccessMock).toHaveBeenCalledTimes(1);
+    expect(effectiveAccessMock).not.toHaveBeenCalled();
+    expect(grantedLevelMock).toHaveBeenCalledWith('agent', 'agent-1', 'member');
   });
 
-  it('reads the caller grants once even when two actions are matched', async () => {
+  it('requires only invocation capability before the Agent Use member lookup', async () => {
     permissionMatchesMock
       .mockResolvedValueOnce({ hasAllScope: true, hasOwnerScope: false })
       .mockResolvedValueOnce({ hasAllScope: false, hasOwnerScope: true });
@@ -379,394 +517,69 @@ describe('canPerformResourceAction', () => {
       workspaceId: 'ws-1',
     });
 
-    expect(resolveGrantsMock).toHaveBeenCalledTimes(1);
+    expect(permissionMatchesMock).toHaveBeenCalledTimes(1);
     expect(permissionMatchesMock.mock.calls.map(([input]) => input.grantedPermissions)).toEqual([
-      ['ai_model:invoke:all'],
-      ['ai_model:invoke:all'],
+      undefined,
     ]);
   });
 
-  // workspace-level builtin agents (Orvilo AI inbox, the builders) are
-  // created lazily by whoever opens the workspace first, so their `user_id` is an
-  // accident of timing and they never get a `resource_permissions` row. Members
-  // must still be able to configure them.
-  describe('builtin workspace agents', () => {
-    const builtinMeta = {
-      slug: 'agent-builder',
-      userId: 'someone-else',
-      // provisioning always writes `virtual: true`
-      virtual: true,
-      visibility: 'public',
+  it.each(['inbox', 'agent-builder', 'group-agent-builder', 'page-agent'])(
+    'does not expose shared builtin %s config through a member slug bypass',
+    async (slug) => {
+      permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+      const params = {
+        db,
+        meta: { ...meta, slug, virtual: true },
+        resourceId: 'builtin-1',
+        resourceType: 'agent' as const,
+        userId: 'member',
+        workspaceId: 'ws-1',
+      };
+      await expect(canPerformResourceAction({ ...params, action: 'view' })).resolves.toBe(true);
+      for (const action of ['edit', 'manage', 'delete', 'use'] as const)
+        await expect(canPerformResourceAction({ ...params, action })).resolves.toBe(false);
+      await expect(isResourceAuthorOrAdmin(params)).resolves.toBe(false);
+    },
+  );
+
+  it('grants ordinary Agent Manage only to an active writable creator or actual Admin/Owner', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    const params = {
+      db,
+      meta,
+      resourceId: 'agent-1',
+      resourceType: 'agent' as const,
+      userId: 'member',
       workspaceId: 'ws-1',
     };
+    for (const role of ['member', 'viewer', null]) {
+      activeWorkspaceRoleMock.mockResolvedValue(role);
+      await expect(canPerformResourceAction({ ...params, action: 'manage' })).resolves.toBe(false);
+      await expect(isResourceAuthorOrAdmin(params)).resolves.toBe(false);
+    }
+    for (const role of ['admin', 'owner']) {
+      activeWorkspaceRoleMock.mockResolvedValue(role);
+      await expect(canPerformResourceAction({ ...params, action: 'manage' })).resolves.toBe(true);
+      await expect(isResourceAuthorOrAdmin(params)).resolves.toBe(true);
+      await expect(canPerformResourceAction({ ...params, action: 'use' })).resolves.toBe(false);
+    }
+    activeWorkspaceRoleMock.mockResolvedValue('viewer');
+    await expect(
+      canPerformResourceAction({ ...params, action: 'manage', userId: 'creator' }),
+    ).resolves.toBe(false);
+  });
 
-    it.each(['edit', 'use', 'view'] as const)(
-      'lets a member %s a builtin workspace agent created by someone else',
-      async (action) => {
-        permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-        effectiveAccessMock.mockResolvedValue('use');
-
-        await expect(
-          canPerformResourceAction({
-            action,
-            db,
-            meta: builtinMeta,
-            resourceId: 'agent-builder-1',
-            resourceType: 'agent',
-            userId: 'member',
-            workspaceId: 'ws-1',
-          }),
-        ).resolves.toBe(true);
-      },
-    );
-
-    // `manage` authorizes ACL writes (`setGeneralAccess`) and, on the client, whether
-    // model/mode/device picks mutate the shared row. A member holding it could persist
-    // an explicit `use` level and lock everyone else out again.
-    it('keeps manage out of a member’s reach on a collaborative builtin', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'manage',
-          db,
-          meta: builtinMeta,
-          resourceId: 'agent-builder-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it('keeps deleting a builtin workspace agent out of a member’s reach', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'delete',
-          db,
-          meta: builtinMeta,
-          resourceId: 'agent-builder-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it('still rejects a viewer, who holds no agent:update capability at all', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: false });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          meta: builtinMeta,
-          resourceId: 'agent-builder-1',
-          resourceType: 'agent',
-          userId: 'viewer',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it.each(['inbox', 'agent-builder', 'group-agent-builder', 'page-agent'])(
-      'covers the %s collaborative builtin slug',
-      async (slug) => {
-        permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-        effectiveAccessMock.mockResolvedValue('use');
-
-        await expect(
-          canPerformResourceAction({
-            action: 'edit',
-            db,
-            meta: { ...builtinMeta, slug },
-            resourceId: 'builtin-1',
-            resourceType: 'agent',
-            userId: 'member',
-            workspaceId: 'ws-1',
-          }),
-        ).resolves.toBe(true);
-      },
-    );
-
-    // Internal automation agents have no configuration surface, so a member must
-    // not be able to repoint their model and break background jobs workspace-wide.
-    it.each([
-      'nightly-review',
-      'self-reflection',
-      'self-feedback-intent',
-      'skill-management',
-      'verify-agent',
-      'task-agent',
-      'group-supervisor',
-      'onboarding-understanding',
-    ])('keeps the %s internal builtin out of the bypass', async (slug) => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          meta: { ...builtinMeta, slug },
-          resourceId: 'builtin-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it('still lets every member use an internal builtin at use-level access', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'use',
-          db,
-          meta: { ...builtinMeta, slug: 'nightly-review' },
-          resourceId: 'builtin-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(true);
-    });
-
-    it('never treats an agentGroup as builtin, even with a builtin-looking slug', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          meta: { ...builtinMeta, slug: 'inbox' },
-          resourceId: 'group-1',
-          resourceType: 'agentGroup',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it('does not treat a personal (workspace-less) builtin agent as workspace-managed', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          // `meta.workspaceId` must match the caller's workspace to get this far,
-          // so a null-workspace row is rejected earlier; assert the guard anyway.
-          meta: { ...builtinMeta, workspaceId: null },
-          resourceId: 'builtin-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    // The agent-run path hand-builds `meta` from a config it already loaded, so a
-    // missing slug must be resolved rather than silently downgrading the row —
-    // otherwise execution classifies a member differently from configuration.
-    it('resolves a missing slug instead of misclassifying the row', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-      let call = 0;
-      const dbWithSlug = {
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              // 1st query resolves the builtin markers, 2nd checks group membership
-              limit: async () => (call++ === 0 ? [{ slug: 'agent-builder', virtual: true }] : []),
-            }),
-          }),
-        }),
-      } as unknown as OrviloDatabase;
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db: dbWithSlug,
-          // markers absent entirely, as a hand-built meta leaves them
-          meta: { userId: 'someone-else', visibility: 'public', workspaceId: 'ws-1' },
-          resourceId: 'agent-builder-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(true);
-    });
-
-    // Legacy rows could hold a reserved slug (the passthrough config endpoint used
-    // to allow it), so the slug alone must not grant the bypass.
-    it('does not bypass for a non-provisioned row holding a reserved slug', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'manage',
-          db,
-          meta: { ...builtinMeta, virtual: false },
-          resourceId: 'squatter-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    // Linking the real inbox into an agent group is supported, so a linked builtin
-    // must keep the bypass — excluding group members would reproduce for
-    // that workspace.
-    it('keeps the bypass for a builtin that is linked into an agent group', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db: emptyQueryDb([{ agentId: 'inbox-1' }]),
-          meta: { ...builtinMeta, slug: 'inbox' },
-          resourceId: 'inbox-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(true);
-    });
-
-    it('does not re-fetch when the caller passed an explicit null slug', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-      // An explicit `slug: null` is an ordinary agent, so the evaluator must not
-      // resolve markers — and never reaches the membership check either.
-      const dbThatWouldThrow = {
-        select: () => {
-          throw new Error('should not query when the markers are explicit');
-        },
-      } as unknown as OrviloDatabase;
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db: dbThatWouldThrow,
-          meta: {
-            slug: null,
-            userId: 'someone-else',
-            virtual: false,
-            visibility: 'public',
-            workspaceId: 'ws-1',
-          },
-          resourceId: 'agent-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    // Configuration and execution ask different questions of the same row: a
-    // member may configure a collaborative builtin, but the run must still honor
-    // that member's own model / device / mode overrides.
-    it('separates configuration authority from author/admin execution management', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          meta: builtinMeta,
-          resourceId: 'agent-builder-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(true);
-
-      await expect(
-        isResourceAuthorOrAdmin({
-          db,
-          meta: builtinMeta,
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it('still reports author and admin as execution managers', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
-
-      await expect(
-        isResourceAuthorOrAdmin({
-          db,
-          meta: builtinMeta,
-          resourceType: 'agent',
-          userId: 'someone-else',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(true);
-
-      await expect(
-        isResourceAuthorOrAdmin({
-          db,
-          meta: builtinMeta,
-          resourceType: 'agent',
-          userId: 'workspace-admin',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(true);
-    });
-
-    // The bypass covers the *implicit* resource default only. An owner who explicitly
-    // narrows General access means it — otherwise that control would persist a value
-    // it never enforces.
-    it('enforces an explicitly configured access level on a collaborative builtin', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      explicitAccessMock.mockResolvedValue('view');
-      effectiveAccessMock.mockResolvedValue('view');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          meta: builtinMeta,
-          resourceId: 'agent-builder-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
-
-    it('does not treat an ordinary agent whose slug is user-generated as builtin', async () => {
-      permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
-      effectiveAccessMock.mockResolvedValue('use');
-
-      await expect(
-        canPerformResourceAction({
-          action: 'edit',
-          db,
-          meta: { ...builtinMeta, slug: 'religious-having-instrument' },
-          resourceId: 'agent-1',
-          resourceType: 'agent',
-          userId: 'member',
-          workspaceId: 'ws-1',
-        }),
-      ).resolves.toBe(false);
-    });
+  it('retains personal Agent owner Use outside the workspace roster', async () => {
+    const params = {
+      db,
+      meta: { ...meta, workspaceId: null },
+      resourceId: 'personal-1',
+      resourceType: 'agent' as const,
+      action: 'use' as const,
+      workspaceId: 'ws-1',
+    };
+    await expect(canPerformResourceAction({ ...params, userId: 'creator' })).resolves.toBe(true);
+    await expect(canPerformResourceAction({ ...params, userId: 'member' })).resolves.toBe(false);
   });
 
   // Knowledge bases invert the usual ordering: browsing the internal file list

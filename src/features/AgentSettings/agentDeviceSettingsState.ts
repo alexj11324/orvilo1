@@ -7,11 +7,14 @@ export interface AgentDeviceSettingsStateInput {
   boundDevice?: DeviceListItem;
   canSelectDevice: boolean;
   deviceInventoryComplete: boolean;
+  explicitLocalDeviceIsEligible?: boolean;
   isPreferenceLoading: boolean;
+  runtimeInventoryOfflineOnly?: boolean;
   selectableDeviceCount: number;
 }
 
 export interface AgentDeviceSettingsState {
+  showDeviceGroup: boolean;
   showOfflineNotice: boolean;
   showReadOnlyBinding: boolean;
   showRepairPrompt: boolean;
@@ -32,12 +35,20 @@ export interface AgentDeviceSettingsState {
  */
 export const resolveAgentDeviceSettingsState = ({
   bindingState,
+  explicitLocalDeviceIsEligible,
+  runtimeInventoryOfflineOnly,
   boundDevice,
   canSelectDevice,
   deviceInventoryComplete,
   isPreferenceLoading,
   selectableDeviceCount,
 }: AgentDeviceSettingsStateInput): AgentDeviceSettingsState => ({
+  showDeviceGroup: !(
+    !isPreferenceLoading &&
+    selectableDeviceCount === 1 &&
+    bindingState !== 'invalid' &&
+    (deviceInventoryComplete || (runtimeInventoryOfflineOnly && explicitLocalDeviceIsEligible))
+  ),
   showOfflineNotice: bindingState === 'valid' && !!boundDevice && !boundDevice.online,
 
   // The principal has a resolved binding but may not change it (policy-fixed

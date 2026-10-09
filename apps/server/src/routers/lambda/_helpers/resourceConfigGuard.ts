@@ -128,6 +128,7 @@ const pick = <T extends Record<string, any>>(source: T, keys: readonly string[])
 };
 
 const AGENT_PROFILE_KEYS = [
+  'heterogeneousType',
   'avatar',
   'backgroundColor',
   'createdAt',
@@ -151,7 +152,14 @@ const AGENT_PROFILE_KEYS = [
 
 /** Return only identity/display fields and a safe runtime summary; deliberately use a whitelist. */
 export const redactAgentConfig = <T extends Record<string, any>>(agent: T): T => {
-  const result = pick(agent, AGENT_PROFILE_KEYS) as Record<string, any>;
+  // Legacy private profile text remains unpublished until its record is approved.
+  const profileKeys =
+    agent.visibility === 'private'
+      ? AGENT_PROFILE_KEYS.filter(
+          (key) => !['description', 'openingMessage', 'openingQuestions'].includes(key),
+        )
+      : AGENT_PROFILE_KEYS;
+  const result = pick(agent, profileKeys) as Record<string, any>;
   const agencyConfig = agent.agencyConfig as Record<string, any> | null | undefined;
 
   // Selection policies are authorization metadata, not executable Agent

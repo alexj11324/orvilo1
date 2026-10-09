@@ -108,3 +108,58 @@ describe('resolveAgentDeviceSettingsState', () => {
     ).toBe(false);
   });
 });
+
+describe('minimal Device section visibility', () => {
+  it('hides the entire settled singleton group without writing a binding', () => {
+    for (const bindingState of ['unset', 'valid'] as const) {
+      expect(
+        resolveAgentDeviceSettingsState(input({ selectableDeviceCount: 1, bindingState }))
+          .showDeviceGroup,
+      ).toBe(false);
+    }
+  });
+  it('keeps loading, zero/many candidates and invalid binding repair visible', () => {
+    for (const state of [
+      { selectableDeviceCount: 0 },
+      { selectableDeviceCount: 2 },
+      { selectableDeviceCount: 1, deviceInventoryComplete: false },
+      { selectableDeviceCount: 1, bindingState: 'invalid' as const },
+    ])
+      expect(resolveAgentDeviceSettingsState(input(state)).showDeviceGroup).toBe(true);
+  });
+});
+
+describe('confirmed explicit local choice with optional unverified hosts', () => {
+  it('hides the singleton Device group without pretending the inventory is complete', () => {
+    const state = input({
+      bindingState: 'pending',
+      selectableDeviceCount: 1,
+      deviceInventoryComplete: false,
+      explicitLocalDeviceIsEligible: true,
+      runtimeInventoryOfflineOnly: true,
+    });
+    expect(resolveAgentDeviceSettingsState(state).showDeviceGroup).toBe(false);
+    expect(state.deviceInventoryComplete).toBe(false);
+  });
+  it('keeps failed online verification and truly unbound uncertainty visible', () => {
+    const pending = input({
+      bindingState: 'pending',
+      selectableDeviceCount: 1,
+      deviceInventoryComplete: false,
+    });
+    expect(
+      resolveAgentDeviceSettingsState({
+        ...pending,
+        explicitLocalDeviceIsEligible: true,
+        runtimeInventoryOfflineOnly: false,
+      }).showDeviceGroup,
+    ).toBe(true);
+    expect(
+      resolveAgentDeviceSettingsState({
+        ...pending,
+        runtimeInventoryOfflineOnly: true,
+        explicitLocalDeviceIsEligible: false,
+      }).showDeviceGroup,
+    ).toBe(true);
+  });
+});

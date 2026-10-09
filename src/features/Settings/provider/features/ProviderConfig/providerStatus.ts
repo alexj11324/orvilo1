@@ -37,11 +37,17 @@ const pickLive = <T>(live: T | undefined, stored: T | undefined) =>
 const pickBaseURL = (live?: string | null, stored?: string | null) =>
   live && !isValidBaseURL(live) ? stored : pickLive(live, stored);
 
-export const hasEndpoint = (live: CredentialValues, stored: CredentialValues = {}) =>
-  !!pickBaseURL(live.baseURL, stored.baseURL) || !!pickLive(live.endpoint, stored.endpoint);
+/**
+ * The form's watched value is `undefined` or `null` until the form has filled,
+ * and the stored config can be missing for a provider that was never saved.
+ */
+type MaybeCredentialValues = CredentialValues | null | undefined;
 
-export const hasApiCredential = (live: CredentialValues, stored: CredentialValues = {}) => {
-  const read = (key: keyof CredentialValues) => pickLive(live[key], stored[key]);
+export const hasEndpoint = (live: MaybeCredentialValues, stored?: MaybeCredentialValues) =>
+  !!pickBaseURL(live?.baseURL, stored?.baseURL) || !!pickLive(live?.endpoint, stored?.endpoint);
+
+export const hasApiCredential = (live: MaybeCredentialValues, stored?: MaybeCredentialValues) => {
+  const read = (key: keyof CredentialValues) => pickLive(live?.[key], stored?.[key]);
 
   return !!(
     read('apiKey') ||

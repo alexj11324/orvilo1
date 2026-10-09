@@ -139,3 +139,21 @@ Defects measured on the real app after the three PRs merged:
 
 Left as is (decisions, see the PR): rail row height and focus ring come from the shared `NavItem`, which the doc
 keeps unchanged; the rail keeps one tab stop per row because no list in the app, Plane or Multica uses roving focus.
+
+### Unconfigured provider null credentials
+
+Coordinator Electron acceptance of the original `ee8370929a7a18e889e7d46b1741803ed80c15c4`
+provider-status helper hit a real detail-page crash after selecting an unconfigured builtin provider:
+the form passed watched fields as an object, while saved `keyVaults` was `null`. A default parameter
+of `{}` only covers `undefined`, so reading `stored.baseURL` threw; credential reads had the same gap.
+
+The author repair at `bbd25dedcbcd4e681e780e05732885b3a5d718c0` accepts absent/null live and
+stored values and reads their fields optionally. It preserves intentional live clears and the
+stored-value fallback for invalid live proxy URLs. Existing-file regressions additionally cover
+the observed live-object/stored-null shape in both helpers, valid live values, empty clears, and
+an invalid live URL with no stored fallback. Against the original helper these tests fail with
+the real `baseURL`/`apiKey` null-read exceptions; with the repaired helper all 14 status tests and
+4 existing provider-filter tests pass with one worker.
+
+These are utility tests, not fresh Electron acceptance of the repaired source. The corrected
+unconfigured-provider route and complete provider verification remain pending coordinator acceptance.

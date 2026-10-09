@@ -3,17 +3,18 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Textarea } from '@/components/ui/textarea';
-import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { styles } from '../shared/style';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import { useIssueDetailCapabilities } from './useIssueDetailActions';
 import { useTaskTitleAutosave } from './useTaskTitleAutosave';
 
 const TaskDetailTitleInput = memo(() => {
   const { t } = useTranslation('chat');
-  const { allowed: canEditTask } = usePermission('create_content');
+  const { readOnly } = useIssueDetailCapabilities();
+  const canEditTask = !readOnly;
   const name = useTaskDetailSelector(taskDetailSelectors.taskName);
   const taskId = useTaskDetailTaskId();
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -42,10 +43,18 @@ const TaskDetailTitleInput = memo(() => {
     [notifyTitleEdit],
   );
 
+  // A reader gets the title as text, not a disabled field (Plane does the same).
+  if (readOnly) {
+    return (
+      <h1 className={cn(styles.titleText, !name && 'text-muted-foreground')}>
+        {name || t('taskDetail.titlePlaceholder')}
+      </h1>
+    );
+  }
+
   return (
     <Textarea
       className={cn(styles.titleInput, 'min-h-0')}
-      disabled={!canEditTask}
       placeholder={t('taskDetail.titlePlaceholder')}
       rows={1}
       value={localName}

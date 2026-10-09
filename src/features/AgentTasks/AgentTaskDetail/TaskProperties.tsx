@@ -47,6 +47,7 @@ import {
   revealProperty,
 } from './taskPropertyReveal';
 import TaskScheduleConfig from './TaskScheduleConfig';
+import { useIssueDetailCapabilities } from './useIssueDetailActions';
 
 interface PriorityMeta {
   labelKey: string;
@@ -74,6 +75,7 @@ const PropertyRow = ({ children, label }: { children: ReactNode; label: string }
 
 const TaskProperties = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
+  const { readOnly } = useIssueDetailCapabilities();
   const taskId = useTaskDetailTaskId();
   // Optional fields the user asked to add while they are still unset. They
   // belong to one Issue: a peek pane keeps this instance mounted while the
@@ -172,7 +174,9 @@ const TaskProperties = memo(() => {
   return (
     // Plane's property order for the fields we share: State, Assignee,
     // Priority, Due date, Labels. Reviewer and Schedule stay after those.
-    <div className={styles.railSection}>
+    // A reader sees the values but cannot open any picker: `inert` drops every
+    // control in the rail from pointer and keyboard in one attribute.
+    <div className={cn(styles.railSection, readOnly && 'opacity-60')} inert={readOnly}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
         <PropertyRow label={t('taskDetail.property.state')}>
@@ -356,7 +360,7 @@ const TaskProperties = memo(() => {
             Related — one flag-marked field per kind. */}
         <TaskPrerequisites revealedKinds={revealed} />
 
-        {addableFields.some((field) => !field.shown) && (
+        {!readOnly && addableFields.some((field) => !field.shown) && (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={

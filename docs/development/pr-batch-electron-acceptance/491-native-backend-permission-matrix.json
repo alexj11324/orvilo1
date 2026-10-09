@@ -1,0 +1,479 @@
+{
+  "candidate": "18e83f00e16d61d787bfdea74f155b811f9b99d4",
+  "candidateBackendSourceFilesVerified": 62,
+  "caseCount": 50,
+  "cases": [
+    {
+      "case": "owner public read",
+      "role": "owner",
+      "procedure": "project.find",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "admin public read",
+      "role": "admin",
+      "procedure": "project.find",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "member public read",
+      "role": "member",
+      "procedure": "project.find",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "viewer public read",
+      "role": "viewer",
+      "procedure": "project.find",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "foreign workspace read denied",
+      "role": "foreign",
+      "procedure": "project.find",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "owner ordinary shared project edit",
+      "role": "owner",
+      "procedure": "project.update",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "admin ordinary shared project edit",
+      "role": "admin",
+      "procedure": "project.update",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "member ordinary shared project edit",
+      "role": "member",
+      "procedure": "project.update",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "viewer shared edit denied",
+      "role": "viewer",
+      "procedure": "project.update",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "foreign shared edit denied",
+      "role": "foreign",
+      "procedure": "project.update",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Owner creates public Agent with removable initial Use",
+      "role": "owner",
+      "procedure": "agent.createAgent",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Creator permission state",
+      "role": "owner",
+      "procedure": "resourcePermission.getGeneralAccess",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Admin permission state without Use",
+      "role": "admin",
+      "procedure": "resourcePermission.getGeneralAccess",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Admin edits Agent without acquiring Use",
+      "role": "admin",
+      "procedure": "agent.updateAgentConfig",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Admin cannot grant unsupported Agent edit collaboration",
+      "role": "admin",
+      "procedure": "resourcePermission.addCollaborators",
+      "expected": "bad-request",
+      "httpStatus": 400,
+      "errorCode": "BAD_REQUEST",
+      "passed": true
+    },
+    {
+      "case": "Owner grants Member explicit Use",
+      "role": "owner",
+      "procedure": "resourcePermission.addCollaborators",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Member explicit Use state",
+      "role": "member",
+      "procedure": "resourcePermission.getGeneralAccess",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Use does not grant Agent config editing",
+      "role": "member",
+      "procedure": "agent.updateAgentConfig",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Owner grants Viewer explicit Use row",
+      "role": "owner",
+      "procedure": "resourcePermission.addCollaborators",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Viewer role ceiling over explicit Use",
+      "role": "viewer",
+      "procedure": "resourcePermission.getGeneralAccess",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Authorized creator creates real ordinary Topic",
+      "role": "owner",
+      "procedure": "topic.createTopic",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Authorized Member writes actual shared conversation",
+      "role": "member",
+      "procedure": "message.createMessage",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Owner creates actual Agent-assigned Issue",
+      "role": "owner",
+      "procedure": "task.create",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Creator removes own Use",
+      "role": "owner",
+      "procedure": "resourcePermission.removeCollaborator",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Owner removes Member Use",
+      "role": "owner",
+      "procedure": "resourcePermission.removeCollaborator",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "owner Send denied without current Use",
+      "role": "owner",
+      "procedure": "message.createMessage",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "owner Run denied without current Use",
+      "role": "owner",
+      "procedure": "task.run",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "admin Send denied without current Use",
+      "role": "admin",
+      "procedure": "message.createMessage",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "admin Run denied without current Use",
+      "role": "admin",
+      "procedure": "task.run",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "member Send denied without current Use",
+      "role": "member",
+      "procedure": "message.createMessage",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "member Run denied without current Use",
+      "role": "member",
+      "procedure": "task.run",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "viewer Send denied without current Use",
+      "role": "viewer",
+      "procedure": "message.createMessage",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "viewer Run denied without current Use",
+      "role": "viewer",
+      "procedure": "task.run",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Creator self-revocation remains removed",
+      "role": "owner",
+      "procedure": "resourcePermission.getGeneralAccess",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Member publishes without Project membership",
+      "role": "member",
+      "procedure": "project.createUpdate",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Member edits own text",
+      "role": "member",
+      "procedure": "project.updateUpdate",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Owner cannot rewrite another author",
+      "role": "owner",
+      "procedure": "project.updateUpdate",
+      "expected": "deny",
+      "httpStatus": 404,
+      "errorCode": "NOT_FOUND",
+      "passed": true
+    },
+    {
+      "case": "Admin cannot rewrite another author",
+      "role": "admin",
+      "procedure": "project.updateUpdate",
+      "expected": "deny",
+      "httpStatus": 404,
+      "errorCode": "NOT_FOUND",
+      "passed": true
+    },
+    {
+      "case": "Viewer cannot publish",
+      "role": "viewer",
+      "procedure": "project.createUpdate",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Member cannot delete governed Project",
+      "role": "member",
+      "procedure": "project.delete",
+      "expected": "deny",
+      "httpStatus": 404,
+      "errorCode": "NOT_FOUND",
+      "passed": true
+    },
+    {
+      "case": "Member cannot suspend workspace members",
+      "role": "member",
+      "procedure": "workspaceMember.suspend",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Admin can suspend Member",
+      "role": "admin",
+      "procedure": "workspaceMember.suspend",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Suspended Member read denied",
+      "role": "member",
+      "procedure": "project.find",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Suspended Member write denied",
+      "role": "member",
+      "procedure": "project.update",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Owner can resume Member",
+      "role": "owner",
+      "procedure": "workspaceMember.resume",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Resumed Member reads",
+      "role": "member",
+      "procedure": "project.find",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Admin governance deletes another author comment",
+      "role": "admin",
+      "procedure": "project.deleteUpdate",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Owner removes Viewer",
+      "role": "owner",
+      "procedure": "workspaceMember.remove",
+      "expected": "allow",
+      "httpStatus": 200,
+      "errorCode": null,
+      "passed": true
+    },
+    {
+      "case": "Removed Viewer read denied",
+      "role": "viewer",
+      "procedure": "project.find",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "case": "Removed Viewer write denied",
+      "role": "viewer",
+      "procedure": "project.update",
+      "expected": "deny",
+      "httpStatus": 403,
+      "errorCode": "FORBIDDEN",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "name": "Idle Issue paused status update",
+      "status": 200,
+      "liveProducer": false,
+      "interpretation": "Separate Issue state observation; no live Pause/Stop execution-control denial claimed"
+    }
+  ],
+  "passed": true,
+  "persistentAssertions": {
+    "deniedWritesAbsent": true,
+    "adminDeletePersisted": true,
+    "memberHadNoProjectMembership": true,
+    "disposableRoleFixturesRestored": true
+  },
+  "remaining": [
+    "Candidate Electron four-role UI and normal PKCE identities",
+    "Actual Device/root/readiness envelope",
+    "Live Pause/Stop/Answer denial and original producer completion after revocation",
+    "Fresh exact-head full CI"
+  ],
+  "scope": "Isolated local candidate backend acceptance. Actual application session verifier, TRPC requests and PostgreSQL; separate synthetic fixture sessions with the local external-auth fixture. This is not native PKCE or cloud deployment evidence."
+}

@@ -1,0 +1,14 @@
+{
+  "canonicalConsumerResult": {
+    "dispatched": 2,
+    "projected": 2,
+    "realtime": 0
+  },
+  "episodeActivityVersion": 2,
+  "hatchetAutomaticSchedulingVerified": false,
+  "idleRealtimeVerified": false,
+  "notificationType": "task_comment",
+  "outboxCommentEventCount": 2,
+  "source": "real authenticated human backend task.addComment -> one manual canonical CollaborationOutboxProjector.projectPending; normal publisher; no worker, fake publisher or direct notification insertion",
+  "writerUIVerified": false
+}

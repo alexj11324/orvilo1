@@ -1,0 +1,45 @@
+{
+  "cases": [
+    {
+      "field": "friendlyName",
+      "newerDraft": true,
+      "expected": "New draft B",
+      "actual": "New draft B",
+      "writesForwarded": 0
+    },
+    {
+      "field": "friendlyName",
+      "newerDraft": false,
+      "expected": "Saved baseline",
+      "actual": "Saved baseline",
+      "writesForwarded": 0
+    },
+    {
+      "field": "defaultCwd",
+      "newerDraft": true,
+      "expected": "/new/draft/B",
+      "actual": "/new/draft/B",
+      "writesForwarded": 0
+    },
+    {
+      "field": "defaultCwd",
+      "newerDraft": false,
+      "expected": "/saved/baseline",
+      "actual": "/saved/baseline",
+      "writesForwarded": 0
+    }
+  ],
+  "componentRevision": "1b807192ad7d85dd3c9c0814c7cb87a7df965372",
+  "componentSourceSha256": "1fe25b3df670d0bcbbc54a1c55e8af47c322a36d595eb4271f58ab1c0cb4505d",
+  "limitations": [
+    "Actual DeviceDetailPanel mounted through the native product ModalHost with a personal-device fixture.",
+    "Deferred mutation failures are intercepted before forwarding. This proves editable-draft rollback behavior, not device persistence or gateway connectivity."
+  ],
+  "metadataCorrection": "The original script variable called the component PR pin rendererRevision. Corrected field labels only; unchanged native outcomes and component bytes. GREEN final commit was created after native and its component hash was verified identical.",
+  "nativeModuleSha256": "b89f51e59ff9417401dd128f9c895bc25c72333d62ac1e40375d480debc64744",
+  "originallyRecordedRevision": "6848628c4ab995cb473c464bc73cb711eda6bc8f-plus-draft-guard",
+  "platform": "native Electron app://",
+  "rendererBaseHead": "43a541e5e26f7bcf9fe7a3f79735bbe58ac6b99c",
+  "rendererSourceState": "Shared candidate renderer with other authorized overlays. This proof isolates immutable DeviceDetailPanel and its source hash; it is not a complete-HEAD or routed-device-page proof.",
+  "stage": "GREEN"
+}

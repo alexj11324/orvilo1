@@ -1,0 +1,26 @@
+{
+  "actualUIDismissedVersion2": true,
+  "agentQuestionProducerVerified": false,
+  "automaticOutboxSchedulingVerified": false,
+  "dismissStayedAbsentAfterReload": true,
+  "idleRealtimeVerified": false,
+  "issueDetailCommentsVisible": true,
+  "nativeQuestionDismissalReceiptVerified": false,
+  "observedActivityVersion": 2,
+  "openIssuePath": "/ws-usere2etestu/task/task_qkkwNvBw7361/native-inbox-comment-acceptance-544",
+  "prHead": "97cbc37bc771a959877e134f7bc826c32537e299",
+  "producerClaim": "real human backend comments and recipient Electron Inbox only; no native Agent question/Issue-run proof",
+  "recipientNativeUI": true,
+  "reloadIssueDetailPersisted": true,
+  "rendererCommit": "43a541e5e26f7bcf9fe7a3f79735bbe58ac6b99c",
+  "rowText": "NR\n\nNative reader fixture Native 544 human update T-5.\n\nT-5 Native Inbox comment acceptance 544\n3m",
+  "staleDismiss": {
+    "expectedVersion": 1,
+    "actualVersion": 2,
+    "message": "Notification changed or is no longer available",
+    "code": "CONFLICT"
+  },
+  "staleDismissPreservedRow": true,
+  "writerSource": "normal authenticated task.addComment API from local fixture002; author identity verified from actual comment row; native writer UI not covered",
+  "writerUIVerified": false
+}

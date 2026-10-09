@@ -1,0 +1,14 @@
+{
+  "assistantReply": "OPENCODE_STEP5_OK",
+  "cli": "official unmodified opencode-ai 1.18.35",
+  "configuration": "ordinary default tools and permissions; only main/small model selected",
+  "elapsedSeconds": 6.96,
+  "errors": [],
+  "eventTypes": ["step_start", "text", "step_finish"],
+  "exactReplyMatched": true,
+  "exitCode": 0,
+  "model": "opencode/step-5-preview-free",
+  "paidOrOtherModelFallback": false,
+  "prompt": "Reply with exactly OPENCODE_STEP5_OK and nothing else.",
+  "usedOrviloCode": false
+}

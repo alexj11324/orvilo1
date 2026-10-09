@@ -1,0 +1,50 @@
+{
+  "findings": [
+    {
+      "pr": 561,
+      "reviewedHead": "9fedefce5d105b59e5fd107f7d75b289b8d7cb3b",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    },
+    {
+      "pr": 569,
+      "reviewedHead": "436b59328c9483a8e9fdf8606136a7ab44b91781",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    },
+    {
+      "pr": 570,
+      "reviewedHead": "a4da57a8711f71679fb2f828732d25fbc317cf35",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    },
+    {
+      "pr": 571,
+      "reviewedHead": "1b807192ad7d85dd3c9c0814c7cb87a7df965372",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    },
+    {
+      "pr": 573,
+      "reviewedHead": "74c0c66d598f5bc88abc8f98674f0d777f0661be",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    },
+    {
+      "pr": 574,
+      "reviewedHead": "869d54f622e5b56f01225763ade338ea270c40a2",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    },
+    {
+      "pr": 578,
+      "reviewedHead": "6da2a839c489bd1e9216270569c33710919afffb",
+      "result": "resolved in source",
+      "confirmedRegression": false
+    }
+  ],
+  "readonly": true,
+  "releaseConfirmations": "CI remains separate. Native computed switch names for 578, original Issue question flow for 544, and live native permission controls for 491 remain pending. 571 evidence is a mounted actual component with intercepted failed mutations, not routed persistence. 574 evidence discloses synthetic operations and inference/persistence limits.",
+  "reviewMode": "independent LIGHT initial reviews and one bounded followup per logical scope",
+  "reviewerRanElectron": false
+}

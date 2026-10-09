@@ -1,0 +1,35 @@
+{
+  "model": "opencode/step-5-preview-free",
+  "officialVersion": "1.18.35",
+  "onlyChangedConfiguration": "permission wildcard deny vs normal default",
+  "results": [
+    {
+      "label": "control_all_tools_denied",
+      "denyAllTools": true,
+      "exitCode": 1,
+      "elapsedSeconds": 5.41,
+      "eventTypes": ["error"],
+      "reply": "",
+      "exactReplyMatched": false,
+      "errors": [
+        {
+          "name": "APIError",
+          "message": "OpenCode's free tier can only be used from within OpenCode",
+          "statusCode": 403
+        }
+      ]
+    },
+    {
+      "label": "control_default_tools",
+      "denyAllTools": false,
+      "exitCode": 0,
+      "elapsedSeconds": 7.85,
+      "eventTypes": ["step_start", "text", "step_finish"],
+      "reply": "OPENCODE_STEP5_OK",
+      "exactReplyMatched": true,
+      "errors": []
+    }
+  ],
+  "sameWorkspaceAndState": true,
+  "usedOrviloCode": false
+}

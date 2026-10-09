@@ -1,0 +1,26 @@
+{
+  "assistantReply": "NATIVE_STEP5_OK",
+  "configuration": "default tools/permissions; only main/small model fixed to opencode/step-5-preview-free",
+  "errors": [],
+  "eventTypes": [
+    "stream_start",
+    "stream_chunk",
+    "stream_chunk",
+    "stream_chunk",
+    "stream_chunk",
+    "stream_chunk",
+    "stream_end",
+    "visible_output_end",
+    "step_complete",
+    "agent_runtime_end"
+  ],
+  "exactReplyMatched": true,
+  "issueProducerVerified": false,
+  "model": "opencode/step-5-preview-free",
+  "paidOrOtherModelFallback": false,
+  "prHead": "97cbc37bc771a959877e134f7bc826c32537e299",
+  "rendererCommit": "43a541e5e26f7bcf9fe7a3f79735bbe58ac6b99c",
+  "sessionIdentifiers": "retained privately; omitted from this public receipt",
+  "sessionStopped": true,
+  "source": "real Electron guarded IPC -> installed unmodified official OpenCode 1.18.35 ACP"
+}

@@ -3,7 +3,7 @@
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { LucideIcon } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ComponentType, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import KanbanColumn, { CollapsedKanbanColumn } from './KanbanColumn';
@@ -42,6 +42,11 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('react-router', () => ({
+  Link: ({ to, children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
   useNavigate: () => mocks.navigate,
 }));
 
@@ -333,6 +338,34 @@ describe('TaskBoardCard', () => {
       taskId: 'T-22',
       title: 'Run me',
     });
+  });
+
+  it('exposes a focusable issue link without triggering the card click twice', () => {
+    render(<TaskBoardCard task={createTask()} />);
+    const link = screen.getByRole('link', { name: /T-22/ });
+    expect(link).toHaveAttribute('href', '/agent/agt_owner/task/T-22/hourly-trend-update');
+    link.focus();
+    expect(link).toHaveFocus();
+    fireEvent.click(link);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps title keyboard activation out of the sortable card listener', () => {
+    const startDrag = vi.fn();
+    render(
+      <div onKeyDown={startDrag}>
+        <TaskBoardCard task={createTask()} />
+      </div>,
+    );
+    const link = screen.getByRole('link', { name: /T-22/ });
+    expect(fireEvent.keyDown(link, { key: 'Enter' })).toBe(true);
+    expect(fireEvent.keyDown(link, { key: ' ' })).toBe(true);
+    expect(startDrag).not.toHaveBeenCalled();
+  });
+
+  it('does not add a duplicate focus stop to the drag overlay', () => {
+    const { container } = render(<TaskBoardCard overlay task={createTask()} />);
+    expect(container.querySelector('a')).toBeNull();
   });
 
   it('navigates to the task detail on click', () => {

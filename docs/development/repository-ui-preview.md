@@ -1,0 +1,5 @@
+# Repository UI preview
+
+The dedicated fixture-backed Vite preview imports the existing SPA after fixture installation. Only the preview mode installs fixture service bindings and replaces realtime subscriptions. Fixture dates and supported optimistic writes persist locally; unsupported backend writes and execution fail explicitly. Issue-card title links retain keyboard navigation and surrounding drag/card behavior. This draft preview uses a dedicated deployment target and still needs the documented responsive and real-write acceptance; a loaded fixture page is not evidence that backend execution works. Loading layouts are inherited from the existing SPA.
+
+The isolated transport honors Agent, Member and Priority board groupings and per-column limits. My Work scopes distinguish assigned, created and delegated fixtures; delegation is honestly empty until represented. Subtasks resolve parent identifiers to stored IDs and survive detail/tree reloads; topic pagination counts only the selected agent. Same-origin webapi and oidc endpoints are blocked with 501 alongside other unsupported backend routes. These fixture results do not prove real agent execution.

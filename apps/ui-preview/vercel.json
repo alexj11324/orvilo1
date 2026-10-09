@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "framework": null,
+  "headers": [
+    { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }
+  ],
+  "installCommand": "cd ../.. && npx pnpm@12.4.1 install --no-frozen-lockfile --ignore-scripts",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+}

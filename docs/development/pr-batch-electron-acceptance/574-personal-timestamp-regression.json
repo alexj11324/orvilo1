@@ -1,0 +1,16 @@
+{
+  "after": "PASS: 8/8 existing-file tests",
+  "afterHead": "74ba7e4d910b1553427a341a5208da67b748963f",
+  "beforeHead": "3a3a43e2b4dc8d9e29adf375858bb9da09a31668",
+  "beforeRecentTimestamp": "FAIL: Unable to find published-date",
+  "file": "src/features/Conversation/ChatItem/components/ErrorContent.test.tsx",
+  "limits": [
+    "Scoped unit harness mocks Message/Avatar/MessageContent/actions/store while rendering real ChatItem header and Title.",
+    "Original zero-timestamp visibility assertion was corrected because shared formatter already treats zero as empty.",
+    "Actual native RED/GREEN and broader current-source layout acceptance remain pending."
+  ],
+  "lint": "PASS: 2 files",
+  "normalHooks": "PASS",
+  "pr": 574,
+  "regression": "Personal message with showAvatar=false/showTitle=false/provided recent timestamp cannot find published-date on the pre-fix ChatItem; present after one-line header condition."
+}

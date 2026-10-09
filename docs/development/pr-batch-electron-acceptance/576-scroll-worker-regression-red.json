@@ -1,0 +1,34 @@
+{
+  "actualFunctionsExecuted": ["fetchLatestUserMessageId", "runState"],
+  "at": "2026-10-09T04:40:56.188Z",
+  "cases": [
+    {
+      "name": "Overlapping same-prompt sends from two workers",
+      "selectedOwner": "other",
+      "observedRunState": "done",
+      "expectedOwnRunState": "running",
+      "regressionReproduced": true
+    },
+    {
+      "name": "Own message remains selectable when sibling is absent",
+      "passed": true
+    },
+    {
+      "name": "Sibling-only message cannot stand in for an absent own send",
+      "regressionReproduced": true,
+      "passed": false
+    }
+  ],
+  "compilationTransform": "Unchanged complete source compiled with appended test exports; Cucumber registration only replaced with no-op. Actual worker-scoped TEST_USER module and PostgreSQL driver used.",
+  "database": "Local dedicated acceptance PostgreSQL, transaction-local temporary tables shadow only messages and agent_operations",
+  "limitations": [
+    "Controlled database regression, not a full routed Web/Electron scrolling pass",
+    "Old CI lacks a selected-message/user receipt, so historical cross-worker selection is a demonstrated possible cause rather than proven historic ID attribution"
+  ],
+  "mode": "red",
+  "publicApplicationRowsTouched": false,
+  "sourcePath": "e2e/src/steps/agent/scroll.steps.ts",
+  "sourceRevision": "d2403da76c095a86fb276665a45984b61389b787",
+  "sourceSha256": "1393b696eee479b6ae734f066c323fa3f67eacb37b78650fefbc73f562569e03",
+  "workerIsolation": "E2E_RUN_ID plus CUCUMBER_WORKER_ID controls TEST_USER.id; production CI uses E2E_PARALLEL=3 and each worker executes scenarios sequentially"
+}

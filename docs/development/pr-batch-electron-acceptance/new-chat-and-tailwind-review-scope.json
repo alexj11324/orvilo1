@@ -1,0 +1,39 @@
+{
+  "electronOperatedByReviewer": false,
+  "limits": [
+    "Source review and disclosed author evidence are distinct from new native acceptance.",
+    "Old #574 d5 layout captures do not establish changed 3a attachment/Artifact states.",
+    "#581 motion-policy change is deliberate and still requires actual native acceptance."
+  ],
+  "mode": "LIGHT",
+  "readOnly": true,
+  "reviewer": "independent expanded_pr_review",
+  "scopes": [
+    {
+      "pr": 574,
+      "initialHead": "3a3a43e2b4dc8d9e29adf375858bb9da09a31668",
+      "followupHead": "74ba7e4d910b1553427a341a5208da67b748963f",
+      "finding": "Personal timestamp suppressed when sender header hidden",
+      "findingStatus": "resolved",
+      "boundedFollowupsUsed": 1,
+      "nativeCurrentLayoutAcceptance": "pending"
+    },
+    {
+      "pr": 580,
+      "initialHead": "637addf8964005459ee0faa7ece4b28c91a7025d",
+      "base": "74ba7e4d910b1553427a341a5208da67b748963f",
+      "confirmedIntroducedP0P1P2": 0,
+      "authorNativeEvidenceProductSourceEquivalent": true,
+      "realStep5Verified": false
+    },
+    {
+      "pr": 581,
+      "initialHead": "392a3edfb4f8b192be2d7a24eb9669d36521f7a0",
+      "base": "637addf8964005459ee0faa7ece4b28c91a7025d",
+      "confirmedIntroducedP0P1P2": 0,
+      "nativeSampleAcceptance": "pending",
+      "phase1Authorized": false
+    }
+  ],
+  "testsExecutedByReviewer": false
+}

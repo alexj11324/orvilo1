@@ -52,3 +52,32 @@ shown. Model counts are not in the list payload either and are omitted.
 - The content column keeps the shared 1024px max width (mockup: 1100px list, 960px detail) because the container
   is shared with the detail page.
 - Groups can collapse and the "All providers" row keeps its icon; the mockup draws neither.
+
+## PR 2: detail header and credentials
+
+- `ProviderConfig` keeps all form logic (antd form instance, debounced autosave, pre-check save, OAuth state) and
+  only changes what it renders: `ProviderHeader` (identity, status badge, description, doc link, builtin notice,
+  edit-info button for custom providers, enable switch), then a "Credentials" section.
+- `CredentialsPanel` renders any `FormItemProps[]` as `Frame` rows (`FieldRow`: label and description left, control
+  right, 60px min height). Rows bind with `Form.Item` the way `GroupForm` does, so every provider page that supplies
+  `apiKeyItems` (azure, azureai, bedrock, cloudflare, comfyui, github, vertexai, ...) keeps working unchanged. Antd
+  switches go through `FormSwitch` (`valuePropName: 'checked'`).
+- `Checker` is a `FieldRow` of its own: result badge, model select (local `Select`, searchable), Check button, and the
+  error detail (`CheckErrorRender` slot still used by ollama and unsloth) in a full-width footer.
+- The OAuth card is untouched apart from receiving the new identity and actions.
+
+### Status data (detail)
+
+The detail page has what the list lacks: the stored key vault and the live form values. The badge shows
+"Enabled" when switched on, "Disabled" when off but an API key, endpoint or OAuth login exists, and "Not configured"
+when off and none of those exist. A persisted "connection failed" still has no source: the check result lives in the
+`Checker` component state and is lost on navigation. Showing it would need the last check result stored per provider
+(for example on the provider config row), which is a backend change and out of scope here.
+
+### Deviations from the mockup (PR 2)
+
+- No "more actions" menu in the header: the only provider-level action is the edit-info button for custom providers,
+  which stays as a gear button. There is no other action to put in a menu.
+- The credentials section has no "stored only under your account" subtitle. Whether provider keys are per-user or
+  per-workspace depends on scope, so the claim is not made. The existing AES-GCM notice stays under the panel.
+- The result of a passing check is a badge next to the select; the button keeps its "Check" label.

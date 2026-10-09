@@ -108,3 +108,26 @@ revision; DOM regression tests do not establish native split-view acceptance.
   close the empty pane (there is no peeked Issue); use the header close button.
 - `J` / `K` while that empty pane is open move focus only; the pane starts
   following once an Issue is peeked.
+
+## Overlay guard, row keys, list freshness
+
+- **Open overlays only.** `Modal` mounts every popup with `keepMounted`, so a
+  closed dialog stays in the DOM with `role="dialog"`. Base UI marks it
+  `data-closed`; the guard (`isOpenIssueOverlay`) ignores anything that is
+  `data-closed` (itself or via an ancestor) or hidden, and only treats a trigger
+  as an open overlay when it is a popup trigger (`aria-haspopup` +
+  `data-popup-open`), so a hovered tooltip trigger does not block the keys.
+- **Rows are addressed by key, not identifier.** A list that can show an Issue
+  twice wraps each row in `data-issue-slot="<section>:<id>"` and passes the keys
+  as `ids` plus `idOf`. `workQueryVirtualPeekRows` / `taskListPeekRows` emit one
+  key per rendered row (a collapsed section emits none); focus, reveal and the
+  peek's follow behaviour all use that key. Lists without slots keep identifier
+  keys. The attention group axis itself puts each Issue in exactly one group
+  (`attentionGroupExpr` CASE in `packages/database/src/models/workQuery.ts`).
+- **Edits reach the list.** `refreshTaskList` also revalidates the work-query
+  roots (`isWorkQueryTaskRowsKey`), and `updateTask` refreshes the lists after a
+  rename or due-date change. Deleting an Issue goes through `refreshTaskList`,
+  so My issues / saved views / team lists drop the row.
+- **Narrow rows.** `AgentTaskItem` is an `issue-row` size container: labels hide
+  below 760px, the milestone below 640px and the project chip below 540px, so
+  chips never overlap the identifier and title when the peek narrows the list.

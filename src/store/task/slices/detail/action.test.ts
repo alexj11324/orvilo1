@@ -334,6 +334,21 @@ describe('TaskDetailSliceAction', () => {
       expect(useTaskStore.getState().taskDetailMap['T-1'].domainRevision).toBe(5);
     });
 
+    it('refreshes the list caches after a rename or due-date edit, which only list rows show', async () => {
+      const refreshTaskList = vi.fn().mockResolvedValue(undefined);
+      useTaskStore.setState({
+        refreshTaskList,
+        taskDetailMap: { 'T-1': { identifier: 'T-1', instruction: 'x', name: 'Old' } },
+      } as any);
+      vi.mocked(taskService.update).mockResolvedValue({ success: true } as any);
+
+      await useTaskStore.getState().updateTask('T-1', { name: 'Renamed' });
+      expect(refreshTaskList).toHaveBeenCalledTimes(1);
+
+      await useTaskStore.getState().updateTask('T-1', { instruction: 'Only the body' });
+      expect(refreshTaskList).toHaveBeenCalledTimes(1);
+    });
+
     it('should optimistically update taskDetailMap', async () => {
       useTaskStore.setState({
         activeTaskId: 'T-1',

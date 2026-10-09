@@ -34,7 +34,7 @@ import {
 import TaskGroupLabel from './TaskGroupLabel';
 import TaskItemSkeleton from './TaskItemSkeleton';
 import type { TaskListGroupEntry, TaskListVirtualItem } from './taskListVirtualModel';
-import { flattenTaskListEntries, taskListRowIdentifiers } from './taskListVirtualModel';
+import { flattenTaskListEntries, taskListPeekRows } from './taskListVirtualModel';
 import TaskRowIndent from './TaskRowIndent';
 import { useClosestScrollParent } from './useClosestScrollParent';
 
@@ -306,10 +306,10 @@ const TaskList = memo<TaskListProps>((props) => {
   const peekArmed = Boolean(peekOnSelect && onSelectTask);
 
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const peekRows = useMemo(() => taskListRowIdentifiers(virtualItems), [virtualItems]);
+  const peekRows = useMemo(() => taskListPeekRows(virtualItems), [virtualItems]);
   const revealRow = useCallback(
-    (identifier: string) => {
-      const index = peekRows.indexOf.get(identifier);
+    (rowKey: string) => {
+      const index = peekRows.indexOf.get(rowKey);
       if (index !== undefined) virtuosoRef.current?.scrollToIndex({ align: 'center', index });
     },
     [peekRows],
@@ -319,6 +319,7 @@ const TaskList = memo<TaskListProps>((props) => {
   useIssuePeekKeyboard({
     scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
     enabled: Boolean(onPeekTask),
+    idOf: (rowKey) => peekRows.idOf.get(rowKey) ?? rowKey,
     ids: peekRows.ids,
     onOpenPage: onOpenTask
       ? (identifier) => {
@@ -350,6 +351,7 @@ const TaskList = memo<TaskListProps>((props) => {
         <div
           aria-current={selected ? 'true' : undefined}
           data-issue-context={item.row.isParentContext || undefined}
+          data-issue-slot={item.key}
           style={{
             borderRadius: 6,
             paddingBlock: 1,

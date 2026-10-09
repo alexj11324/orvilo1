@@ -114,22 +114,24 @@ export const flattenTaskListEntries = (
 };
 
 /**
- * Issue identifiers of the rows the list renders, in order, with each row's
- * index in the virtual window — the walk order for keyboard navigation and the
- * scroll target when the next row is not mounted. Collapsed groups contribute
- * no rows; muted parent-context repeats are skipped.
+ * Row keys of the rows the list renders, in order — the walk order for
+ * keyboard navigation — with each key's Issue identifier (`idOf`) and index in
+ * the virtual window (`indexOf`, the scroll target when the row is not
+ * mounted). A key is the item's own key (section + Issue), so an Issue listed
+ * in two sections is two rows. Collapsed groups contribute no rows; muted
+ * parent-context repeats are skipped.
  */
-export const taskListRowIdentifiers = (
+export const taskListPeekRows = (
   items: readonly TaskListVirtualItem[],
-): { ids: string[]; indexOf: Map<string, number> } => {
+): { idOf: Map<string, string>; ids: string[]; indexOf: Map<string, number> } => {
   const ids: string[] = [];
+  const idOf = new Map<string, string>();
   const indexOf = new Map<string, number>();
   items.forEach((item, index) => {
-    if (item.kind !== 'row' || item.row.isParentContext) return;
-    const { identifier } = item.row.task;
-    if (indexOf.has(identifier)) return;
-    ids.push(identifier);
-    indexOf.set(identifier, index);
+    if (item.kind !== 'row' || item.row.isParentContext || indexOf.has(item.key)) return;
+    ids.push(item.key);
+    idOf.set(item.key, item.row.task.identifier);
+    indexOf.set(item.key, index);
   });
-  return { ids, indexOf };
+  return { idOf, ids, indexOf };
 };

@@ -5,7 +5,7 @@ import {
   flattenTaskListEntries,
   taskGroupCollapseKey,
   type TaskListGroupEntry,
-  taskListRowIdentifiers,
+  taskListPeekRows,
   taskSubGroupCollapseKey,
 } from './taskListVirtualModel';
 
@@ -20,7 +20,7 @@ const entry = (
   subGroups: TaskListGroupEntry['subGroups'] = [],
 ): TaskListGroupEntry => ({ count: rows.length, meta: meta(key), rows, subGroups });
 
-describe('taskListRowIdentifiers', () => {
+describe('taskListPeekRows', () => {
   it('walks visible rows in order and skips collapsed groups and context repeats', () => {
     const items = flattenTaskListEntries(
       [
@@ -30,11 +30,22 @@ describe('taskListRowIdentifiers', () => {
       ],
       { collapsed: new Set([taskGroupCollapseKey('backlog')]), grouped: true },
     );
-    const { ids, indexOf } = taskListRowIdentifiers(items);
-    expect(ids).toEqual(['T-1', 'T-2', 'T-4']);
+    const { idOf, ids, indexOf } = taskListPeekRows(items);
+    expect(ids).toEqual(['running:T-1', 'running:T-2', 'done:T-4']);
+    expect(ids.map((key) => idOf.get(key))).toEqual(['T-1', 'T-2', 'T-4']);
     // Window index counts group headers too — it is what Virtuoso scrolls to.
-    expect(indexOf.get('T-1')).toBe(1);
-    expect(indexOf.get('T-2')).toBe(3);
+    expect(indexOf.get('running:T-1')).toBe(1);
+    expect(indexOf.get('running:T-2')).toBe(3);
+  });
+
+  it('keeps an Issue listed in two groups as two rows', () => {
+    const items = flattenTaskListEntries(
+      [entry('a', [row('T-1')]), entry('b', [row('T-1'), row('T-2')])],
+      { collapsed: new Set(), grouped: true },
+    );
+    const { idOf, ids } = taskListPeekRows(items);
+    expect(ids).toEqual(['a:T-1', 'b:T-1', 'b:T-2']);
+    expect(idOf.get('b:T-1')).toBe('T-1');
   });
 });
 

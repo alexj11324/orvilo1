@@ -95,3 +95,12 @@ exposed as `role="button"` with Enter / Space handling, because buttons cannot n
 - Favourites: dnd-kit's `tabindex="0"` (and `role`) on the sortable `li` are dropped via
   `withoutRowTabStop`, so each row keeps one tab stop, the link with its focus ring.
   Keyboard reordering is the row menu's Move up / Move down items.
+
+## Round 4 follow-ups
+
+- Favourite rows keep two tab stops (row link plus the "More" `SidebarMenuAction`). Team rows
+  (`TeamsSection.tsx`) and the project rows (`Body/index.tsx`) use the same `SidebarMenuAction`
+  button, so favourites are consistent; no change.
+- One key chip: `Kbd variant="raised"` (`bg-sidebar-border`) is used by both the sidebar search
+  `⌘K` chip and the workspace-menu Settings chips. The default `bg-muted` equals
+  `--sidebar-accent`, so it would vanish on the search button.

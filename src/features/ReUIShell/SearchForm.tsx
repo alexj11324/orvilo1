@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { SidebarGroup, SidebarGroupContent } from '@/components/ui/sidebar';
 import { useGlobalStore } from '@/store/global';
+import { isMacOS } from '@/utils/platform';
 
 /** Shell 9 search control, connected to Orvilo's existing command palette. */
 export function SearchForm(props: ComponentProps<'form'>) {
@@ -39,7 +40,7 @@ export function SearchForm(props: ComponentProps<'form'>) {
             className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none"
           />
           <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 bg-sidebar-border text-sidebar-foreground in-data-[state=collapsed]:hidden">
-            ⌘K
+            {isMacOS() ? '⌘K' : 'Ctrl K'}
           </Kbd>
         </SidebarGroupContent>
       </SidebarGroup>

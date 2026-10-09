@@ -375,9 +375,12 @@ interface OrviloHeteroExecTask {
 
 interface InteractiveAcpSession {
   cacheKeepaliveTelemetry?: HeterogeneousAgentCacheKeepaliveStatus;
+  close: () => void;
   /** True while the session's cache keep-alive holds the child alive post-run. */
   keepaliveArmed?: boolean;
   run: () => Promise<void>;
+  /** True while the session outlives its run to catch the agent's late title. */
+  titleLingering: boolean;
 }
 
 /**

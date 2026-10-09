@@ -1,15 +1,15 @@
 'use client';
 
-import { Flexbox, TooltipGroup } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { ToggleRightIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 
+import GroupHeader from './GroupHeader';
 import ModelItem from './ModelItem';
 
 const SearchResult = memo(() => {
@@ -26,12 +26,9 @@ const SearchResult = memo(() => {
   const isEmpty = filteredModels.length === 0;
   return (
     <>
-      <Flexbox horizontal justify={'space-between'}>
-        <Text style={{ fontSize: 12, marginTop: 8 }} type={'secondary'}>
-          {t('providerModels.list.searchResult', { count: filteredModels.length })}
-        </Text>
-        {!isEmpty && (
-          <Flexbox horizontal>
+      <GroupHeader
+        actions={
+          !isEmpty && (
             <ActionIcon
               disabled={!canManageProvider}
               icon={ToggleRightIcon}
@@ -52,22 +49,18 @@ const SearchResult = memo(() => {
                 }
               }}
             />
-          </Flexbox>
-        )}
-      </Flexbox>
+          )
+        }
+      >
+        {t('providerModels.list.searchResult', { count: filteredModels.length })}
+      </GroupHeader>
 
       {searchKeyword && isEmpty ? (
-        <Flexbox align="center" justify="center" padding={16}>
+        <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
           {t('providerModels.searchNotFound')}
-        </Flexbox>
+        </div>
       ) : (
-        <TooltipGroup>
-          <Flexbox gap={4}>
-            {filteredModels.map((item) => (
-              <ModelItem {...item} key={`${item.id}-${item.enabled}`} />
-            ))}
-          </Flexbox>
-        </TooltipGroup>
+        filteredModels.map((item) => <ModelItem {...item} key={`${item.id}-${item.enabled}`} />)
       )}
     </>
   );

@@ -1,51 +1,15 @@
-import { Center, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { toast } from '@lobehub/ui/base-ui';
 import { BrainIcon, LucideRefreshCcwDot, PlusIcon } from 'lucide-react';
-import { memo, use, useState } from 'react';
+import { memo, type ReactNode, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';
 
 import { createCreateNewModelModal } from './CreateNewModelModal';
 import { ProviderSettingsContext } from './ProviderSettingsContext';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  circle: css`
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: ${cssVar.colorFillSecondary};
-  `,
-  container: css`
-    width: 100%;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: 12px;
-    background: ${cssVar.colorBgContainer};
-  `,
-  description: css`
-    max-width: 280px;
-
-    font-size: ${cssVar.fontSize};
-    color: ${cssVar.colorTextDescription};
-    text-align: center;
-    text-wrap: balance;
-  `,
-  iconWrapper: css`
-    position: relative;
-    width: 64px;
-    height: 64px;
-  `,
-  sparklesIcon: css`
-    font-size: 40px;
-    color: ${cssVar.colorText};
-  `,
-  title: css`
-    font-size: ${cssVar.fontSizeLG};
-    font-weight: 500;
-  `,
-}));
 
 const EmptyState = memo<{ provider: string }>(({ provider }) => {
   const { t } = useTranslation('modelProvider');
@@ -57,21 +21,34 @@ const EmptyState = memo<{ provider: string }>(({ provider }) => {
   const [fetchRemoteModelsLoading, setFetchRemoteModelsLoading] = useState(false);
   const { showDeployName } = use(ProviderSettingsContext);
 
-  return (
-    <Center className={styles.container} gap={24} paddingBlock={40}>
-      <Center className={styles.circle}>
-        <Icon className={styles.sparklesIcon} icon={BrainIcon} />
-      </Center>
-      <Flexbox align={'center'} gap={8}>
-        <div className={styles.title}>{t('providerModels.list.empty.title')}</div>
-        <div className={styles.description}>{t('providerModels.list.empty.desc')}</div>
-      </Flexbox>
+  // A disabled button swallows pointer events, so the tooltip trigger is a wrapper span.
+  const withReason = (node: ReactNode) =>
+    canManageProvider ? (
+      node
+    ) : (
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex" />}>{node}</TooltipTrigger>
+        <TooltipContent>{reason}</TooltipContent>
+      </Tooltip>
+    );
 
-      <Flexbox horizontal gap={8}>
-        <Tooltip title={canManageProvider ? undefined : reason}>
+  return (
+    <div className="flex flex-col items-center gap-6 px-4 py-10">
+      <div className="flex size-20 items-center justify-center rounded-full bg-selected">
+        <BrainIcon className="size-10 text-foreground" />
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <div className="text-base font-medium">{t('providerModels.list.empty.title')}</div>
+        <div className="max-w-[280px] text-center text-sm text-balance text-muted-foreground">
+          {t('providerModels.list.empty.desc')}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        {withReason(
           <Button
             disabled={!canManageProvider}
-            icon={PlusIcon}
+            variant="outline"
             onClick={() => {
               if (!canManageProvider) return;
               createCreateNewModelModal({
@@ -82,15 +59,14 @@ const EmptyState = memo<{ provider: string }>(({ provider }) => {
               });
             }}
           >
+            <PlusIcon />
             {t('providerModels.list.addNew')}
-          </Button>
-        </Tooltip>
-        <Tooltip title={canManageProvider ? undefined : reason}>
+          </Button>,
+        )}
+        {withReason(
           <Button
             disabled={!canManageProvider}
-            icon={<Icon icon={LucideRefreshCcwDot} />}
             loading={fetchRemoteModelsLoading}
-            type={'primary'}
             onClick={async () => {
               if (!canManageProvider) return;
               setFetchRemoteModelsLoading(true);
@@ -114,13 +90,14 @@ const EmptyState = memo<{ provider: string }>(({ provider }) => {
               }
             }}
           >
+            {!fetchRemoteModelsLoading && <LucideRefreshCcwDot />}
             {fetchRemoteModelsLoading
               ? t('providerModels.list.fetcher.fetching')
               : t('providerModels.list.fetcher.fetch')}
-          </Button>
-        </Tooltip>
-      </Flexbox>
-    </Center>
+          </Button>,
+        )}
+      </div>
+    </div>
   );
 });
 

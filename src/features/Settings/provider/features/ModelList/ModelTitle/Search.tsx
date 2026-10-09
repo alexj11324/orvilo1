@@ -1,15 +1,16 @@
-import { SearchBar } from '@lobehub/ui';
 import { useDebounce } from 'ahooks';
-import { type ComponentProps, memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SearchBar from '@/components/SearchBar';
+
 interface SearchProps {
+  className?: string;
   onChange: (value: string) => void;
   value: string;
-  variant?: ComponentProps<typeof SearchBar>['variant'];
 }
 
-const Search = memo<SearchProps>(({ value, onChange, variant }) => {
+const Search = memo<SearchProps>(({ className, value, onChange }) => {
   const { t } = useTranslation('modelProvider');
   const [localValue, setLocalValue] = useState(value);
   const debouncedValue = useDebounce(localValue, { wait: 200 });
@@ -40,12 +41,10 @@ const Search = memo<SearchProps>(({ value, onChange, variant }) => {
 
   return (
     <SearchBar
-      allowClear
+      className={className}
       placeholder={t('providerModels.list.search')}
-      size={'small'}
       value={localValue}
-      variant={variant}
-      onInputChange={setLocalValue}
+      onChange={(e) => setLocalValue(e.target.value)}
     />
   );
 });

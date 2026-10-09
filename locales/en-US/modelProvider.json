@@ -326,6 +326,7 @@
   "providerModels.list.enabledActions.disableAll": "Disable All",
   "providerModels.list.enabledActions.enableAll": "Enable All",
   "providerModels.list.enabledActions.sort": "Custom Model Sorting",
+  "providerModels.list.enabledCount": "{{count}} enabled",
   "providerModels.list.enabledEmpty": "No models enabled yet — enable one from the list below.",
   "providerModels.list.fetcher.clear": "Clear fetched models",
   "providerModels.list.fetcher.duplicatesRemoved": "Duplicate entries removed ({{count}}): {{ids}}",

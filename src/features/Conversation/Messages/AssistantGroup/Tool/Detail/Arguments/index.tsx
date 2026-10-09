@@ -1,4 +1,3 @@
-import { cssVar, cx } from 'antd-style';
 import { WrapText } from 'lucide-react';
 import { parse } from 'partial-json';
 import type { ReactNode } from 'react';
@@ -6,25 +5,13 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import type { DescriptionItem } from '@/components/Descriptions';
-import Descriptions from '@/components/Descriptions';
-import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
-import { Separator } from '@/components/ui/separator';
-import { useYamlArguments } from '@/hooks/useYamlArguments';
-import { shinyTextStyles } from '@/styles';
-
-const formatValue = (value: any): string => {
-  if (Array.isArray(value)) {
-    return value.map((v) => (typeof v === 'object' ? JSON.stringify(v) : v)).join(', ');
-  }
-
-  if (typeof value === 'object' && value !== null) {
-    return Object.entries(value)
-      .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-      .join(', ');
-  }
-  return String(value);
-};
+import { ToolInput } from '@/components/ai-elements/tool';
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockLanguage,
+} from '@/components/ui/code-block';
 
 export interface ArgumentsProps {
   actions?: ReactNode;
@@ -33,87 +20,43 @@ export interface ArgumentsProps {
 }
 
 const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions }) => {
-  const { t } = useTranslation('plugin');
+  const { t } = useTranslation('chat');
   const [wrap, setWrap] = useState(false);
-
   const displayArgs = useMemo(() => {
+    if (!args.trim()) return {};
     try {
-      const obj = parse(args);
-      if (Object.keys(obj).length === 0) return {};
-      return obj;
+      return parse(args);
     } catch {
       return args;
     }
   }, [args]);
-
-  const yaml = useYamlArguments(args);
-
-  let contentNode;
-
-  if (typeof displayArgs === 'string') {
-    contentNode = !!yaml && (
-      <CodeBlock
-        className="[&_[data-slot=code-block-line]]:px-4"
-        code={yaml}
-        language="yaml"
-        variant="ghost"
-        wrap={wrap}
-      >
-        <CodeBlockCopyButton />
-      </CodeBlock>
-    );
-  } else if (Object.keys(displayArgs).length === 0) {
-    contentNode = null;
-  } else {
-    const items: DescriptionItem[] = Object.entries(displayArgs).map(([key, value]) => ({
-      copyable: true,
-      key,
-      label: key,
-      value: formatValue(value),
-    }));
-
-    contentNode = (
-      <div className="flex flex-col py-3 px-4">
-        <Descriptions
-          bordered={false}
-          items={items}
-          labelWidth={140}
-          maxItemWidth={'100%'}
-          wrap={wrap}
-          classNames={{
-            label: cx(loading && shinyTextStyles.shinyText),
-          }}
-          styles={{
-            label: loading
-              ? { color: `color-mix(in srgb, ${cssVar.colorText} 33%, transparent)` }
-              : {},
-          }}
-        />
-      </div>
-    );
-  }
+  const code = typeof displayArgs === 'string' ? displayArgs : JSON.stringify(displayArgs, null, 2);
 
   return (
-    <>
-      <div className="flex min-h-10 items-center gap-1 justify-between py-2 px-4">
-        <div>{t('arguments.title')}</div>
-        <div className="flex gap-1">
+    <ToolInput input={displayArgs}>
+      <CodeBlock
+        code={code ?? ''}
+        language={typeof displayArgs === 'string' ? 'text' : 'json'}
+        streaming={loading}
+        style={{ maxHeight: 300, overflow: 'auto' }}
+        wrap={wrap}
+      >
+        <CodeBlockHeader>
+          <CodeBlockLanguage />
           <ActionIcon
             active={wrap}
             icon={WrapText}
-            size={'small'}
+            size="small"
             title={t(
               wrap ? 'workingPanel.review.wordWrap.disable' : 'workingPanel.review.wordWrap.enable',
-              { ns: 'chat' },
             )}
             onClick={() => setWrap((value) => !value)}
           />
+          <CodeBlockCopyButton />
           {actions}
-        </div>
-      </div>
-      {contentNode && <Separator style={{ marginBlock: 0 }} />}
-      {contentNode}
-    </>
+        </CodeBlockHeader>
+      </CodeBlock>
+    </ToolInput>
   );
 });
 

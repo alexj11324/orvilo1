@@ -56,11 +56,7 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
 
   return (
     <Task open={expanded} onOpenChange={setExpanded}>
-      <TaskTrigger
-        className="hover:no-underline"
-        style={{ paddingBlock: 4, paddingInline: 4 }}
-        title={title || ''}
-      >
+      <TaskTrigger title={title || ''}>
         {
           <TaskTitle
             agent={agent ? { id: agentId } : undefined}

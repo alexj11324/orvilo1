@@ -34,6 +34,8 @@ export type ToolHeaderProps = {
   title?: ReactNode;
   children?: ReactNode;
   hideChevron?: boolean;
+  statusLabel?: string;
+  statusIcon?: ReactNode;
   className?: string;
 } & (
   | { type: ToolUIPart['type']; state: ToolUIPart['state']; toolName?: never }
@@ -64,9 +66,13 @@ const statusIcons: Record<ToolPart['state'], ReactNode> = {
   'output-error': <XCircleIcon className="size-4 text-destructive" />,
 };
 
-export const getStatusBadge = (status: ToolPart['state'], label: string) => (
+export const getStatusBadge = (
+  status: ToolPart['state'],
+  label: string,
+  icon = statusIcons[status],
+) => (
   <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
-    {statusIcons[status]}
+    {icon}
     {label}
   </Badge>
 );
@@ -75,6 +81,8 @@ export const ToolHeader = ({
   className,
   children,
   hideChevron,
+  statusLabel,
+  statusIcon,
   title,
   type,
   state,
@@ -93,10 +101,14 @@ export const ToolHeader = ({
       {...props}
     >
       {children ?? (
-        <div className="flex min-w-0 items-center gap-2">
-          <WrenchIcon className="size-4 text-muted-foreground" />
-          <span className="font-medium text-sm">{title ?? derivedName}</span>
-          {getStatusBadge(state, t(`components.aiElements.tool.${statusKeys[state]}`))}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <WrenchIcon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 break-words font-medium text-sm">{title ?? derivedName}</span>
+          {getStatusBadge(
+            state,
+            statusLabel ?? t(`components.aiElements.tool.${statusKeys[state]}`),
+            statusIcon,
+          )}
         </div>
       )}
       {!hideChevron && (
@@ -122,7 +134,7 @@ export type ToolInputProps = ComponentProps<'div'> & {
   input: ToolPart['input'];
 };
 
-export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
+export const ToolInput = ({ className, input, children, ...props }: ToolInputProps) => {
   const { t } = useTranslation('chat');
   return (
     <div className={cn('space-y-2 overflow-hidden', className)} {...props}>
@@ -130,7 +142,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
         {t('components.aiElements.tool.parameters')}
       </h4>
       <div className="rounded-md bg-muted/50">
-        <CodeBlock code={JSON.stringify(input, null, 2) ?? ''} language="json" />
+        {children ?? <CodeBlock code={JSON.stringify(input, null, 2) ?? ''} language="json" />}
       </div>
     </div>
   );
@@ -152,7 +164,7 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
   if (typeof output === 'object' && !isValidElement(output)) {
     Output = <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />;
   } else if (typeof output === 'string') {
-    Output = <CodeBlock code={output} language="json" />;
+    Output = <CodeBlock code={output} language="text" />;
   }
 
   return (

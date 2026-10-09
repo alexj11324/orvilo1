@@ -66,19 +66,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     background: ${cssVar.colorBgContainer};
   `,
-  leftActions: css`
-    flex: none;
-    min-width: 0;
-
-    > * {
-      flex: none !important;
-    }
-  `,
-  leftSlot: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
 }));
 
 interface DesktopChatInputProps extends ActionToolbarProps {
@@ -219,32 +206,19 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
       <Skeleton style={{ height: 32, minWidth: 64, width: 64, borderRadius: 999 }} />
     ) : null;
     const noticeNode = !isConfigLoading && <ChatInputNotice />;
-    // The action bar is `width: 100%`, so a sibling placed *inside* its
-    // shrink-to-fit box is pushed past the bar's right edge and leaves a
-    // one-slot hole between the last action and the expand toggle. Keep the
-    // toggle in a row outside that box.
-    const leftSlotContent = (
-      <div className="flex flex-row items-center flex-none gap-0.5">
-        <div className={cx('flex flex-row items-center', styles.leftActions)}>
-          {leftContent ?? (
-            <ActionBar
-              disableCollapse
-              borderRadius={borderRadius}
-              dropdownPlacement={dropdownPlacement}
-              extraActionItems={extraActionItems}
-            />
-          )}
-        </div>
+    const leftSlot = (
+      <>
+        {leftContent ?? (
+          <ActionBar
+            disableCollapse
+            borderRadius={borderRadius}
+            dropdownPlacement={dropdownPlacement}
+            extraActionItems={extraActionItems}
+          />
+        )}
         <ComposerExpandButton />
-      </div>
-    );
-    const leftSlot = noticeNode ? (
-      <div className={cx('flex flex-row items-center gap-1', styles.leftSlot)}>
-        {leftSlotContent}
         {noticeNode}
-      </div>
-    ) : (
-      leftSlotContent
+      </>
     );
 
     // The control bar's home: a sibling under the card by default, or the
@@ -275,8 +249,10 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
                 if (canUseResource && !isAccessLoading) handleSendButton();
               },
             }}
+            // An empty draft disables Send, not the entire editable surface.
+            // Override InputGroup's descendant-disabled wash for this composite control.
             groupClassName={cx(
-              'h-auto flex-col overflow-visible bg-background',
+              'h-auto flex-col overflow-visible rounded-[12px] border-border bg-card text-card-foreground shadow-sm has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
               expand && 'min-h-0 flex-1 rounded-none',
               inputContainerProps?.className,
             )}

@@ -63,10 +63,12 @@ export const ChainOfThought = memo(
   },
 );
 
-export type ChainOfThoughtHeaderProps = ComponentProps<typeof CollapsibleTrigger>;
+export type ChainOfThoughtHeaderProps = ComponentProps<typeof CollapsibleTrigger> & {
+  icon?: ReactNode;
+};
 
 export const ChainOfThoughtHeader = memo(
-  ({ className, children, ...props }: ChainOfThoughtHeaderProps) => {
+  ({ className, children, icon, ...props }: ChainOfThoughtHeaderProps) => {
     const { isOpen } = useChainOfThought();
 
     return (
@@ -77,7 +79,7 @@ export const ChainOfThoughtHeader = memo(
         )}
         {...props}
       >
-        <BrainIcon className="size-4" />
+        {icon ?? <BrainIcon className="size-4" />}
         <span className="flex-1 text-left">{children ?? 'Chain of Thought'}</span>
         <ChevronDownIcon
           className={cn('size-4 transition-transform', isOpen ? 'rotate-180' : 'rotate-0')}
@@ -89,7 +91,7 @@ export const ChainOfThoughtHeader = memo(
 
 export type ChainOfThoughtStepProps = ComponentProps<'div'> & {
   icon?: LucideIcon;
-  label: ReactNode;
+  label?: ReactNode;
   description?: ReactNode;
   status?: 'complete' | 'active' | 'pending';
 };
@@ -124,7 +126,7 @@ export const ChainOfThoughtStep = memo(
         <div className="absolute top-7 bottom-0 left-1/2 -mx-px w-px bg-border" />
       </div>
       <div className="flex-1 space-y-2 overflow-hidden">
-        <div>{label}</div>
+        {label != null && <div>{label}</div>}
         {description && <div className="text-muted-foreground text-xs">{description}</div>}
         {children}
       </div>

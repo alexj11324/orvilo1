@@ -1,12 +1,19 @@
 import { registerPendingHotkeyCard } from '@orvilo/shared-tool-ui/pending-hotkeys';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
-import { CircleStop, CornerDownLeft } from 'lucide-react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { ChevronDownIcon, CircleStop } from 'lucide-react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfirmationAction } from '@/components/ai-elements/confirmation';
+import {
+  Confirmation,
+  ConfirmationAction,
+  ConfirmationActions,
+  ConfirmationRequest,
+  ConfirmationTitle,
+} from '@/components/ai-elements/confirmation';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 
 import { useConversationResourceAccess } from '../../../../../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../../../../../store';
@@ -16,7 +23,9 @@ interface ApprovalActionsProps {
   apiName: string;
   approvalMode: ApprovalMode;
   assistantGroupId?: string;
+  children?: ReactNode;
   identifier: string;
+  label?: string;
   messageId: string;
   /**
    * Callback to be called before approve action
@@ -24,116 +33,29 @@ interface ApprovalActionsProps {
    */
   onBeforeApprove?: () =>
     Promise<Record<string, unknown> | undefined> | Record<string, unknown> | undefined;
+  requestArgs?: Record<string, unknown>;
   toolCallId: string;
 }
 
 type Choice = 'approve' | 'approve-remember' | 'reject';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    width: 100%;
-  `,
-  footer: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-end;
-
-    margin-block-start: 8px;
-  `,
-  number: css`
-    flex-shrink: 0;
-    width: 18px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  option: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-height: 40px;
-    padding-block: 7px;
-    padding-inline: 16px;
-    border-radius: calc(${cssVar.borderRadiusLG} - 2px);
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition:
-      background 120ms,
-      color 120ms;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  optionLabel: css`
-    flex: 1;
-    line-height: 1.4;
-  `,
-  optionList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  `,
-  optionSelected: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  rejectInput: css`
-    flex: 1;
-
-    width: 100%;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    &::placeholder {
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    &:focus,
-    &:focus-visible {
-      outline: none;
-    }
-
-    &:disabled {
-      cursor: pointer;
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  shortcutHint: css`
-    display: inline-flex;
-    align-items: center;
-    margin-inline-start: 6px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  submitButton: css`
-    min-width: 88px;
-    height: 36px;
-    border-radius: calc(${cssVar.borderRadiusLG} - 2px);
-  `,
-}));
-
 const ApprovalActions = memo<ApprovalActionsProps>(
-  ({ approvalMode, apiName, assistantGroupId, identifier, messageId, onBeforeApprove }) => {
+  ({
+    approvalMode,
+    apiName,
+    assistantGroupId,
+    identifier,
+    messageId,
+    onBeforeApprove,
+    toolCallId,
+    children,
+    requestArgs,
+    label,
+  }) => {
     const { t } = useTranslation('chat');
     const [choice, setChoice] = useState<Choice>('approve');
     const [reason, setReason] = useState('');
+    const [detailsOpen, setDetailsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const rejectInputRef = useRef<HTMLInputElement>(null);
 
@@ -143,9 +65,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
     // teammate's running conversation — they must not drive its tool approvals.
     const { canUseResource } = useConversationResourceAccess();
 
-    // Ordered choices drive both the numbered rows and the 1/2/3 shortcuts.
-    // "Approve & don't ask again" is a first-class option (allow-list only)
-    // rather than a checkbox nested under approve.
+    // Keep the existing 1/2/3 and arrow-key choices; pointer actions submit directly.
     const choices = useMemo<Choice[]>(
       () => (isAllowListMode ? ['approve', 'approve-remember', 'reject'] : ['approve', 'reject']),
       [isAllowListMode],
@@ -160,7 +80,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
     const [stopping, setStopping] = useState(false);
 
     /**
-     * "Stop here — don't continue." Sits beside Submit because it answers the
+     * "Stop here — don't continue." Sits beside the approval buttons because it answers the
      * same question the card is asking; splitting the two across the bar makes
      * the user hunt for the one they want.
      *
@@ -183,47 +103,43 @@ const ApprovalActions = memo<ApprovalActionsProps>(
       stopPendingApprovalForCard,
       messageId,
     ]);
-    const handleSubmit = useCallback(async () => {
-      if (loading || isMessageCreating || !canUseResource) return;
-      setLoading(true);
-      try {
-        if (choice === 'reject') {
-          await rejectAndContinueToolCall(messageId, reason.trim() || undefined);
-        } else {
-          const editedArguments = await onBeforeApprove?.();
-          await approveToolCall(messageId, assistantGroupId ?? '', {
-            editedArguments,
-            ...(isAllowListMode && choice === 'approve-remember'
-              ? { rememberToolKey: `${identifier}/${apiName}` }
-              : {}),
-          });
+    const handleSubmit = useCallback(
+      async (selectedChoice: Choice = choice) => {
+        if (loading || stopping || isMessageCreating || !canUseResource) return;
+        setLoading(true);
+        try {
+          if (selectedChoice === 'reject') {
+            await rejectAndContinueToolCall(messageId, reason.trim() || undefined);
+          } else {
+            const editedArguments = await onBeforeApprove?.();
+            await approveToolCall(messageId, assistantGroupId ?? '', {
+              editedArguments,
+              ...(isAllowListMode && selectedChoice === 'approve-remember'
+                ? { rememberToolKey: `${identifier}/${apiName}` }
+                : {}),
+            });
+          }
+        } finally {
+          setLoading(false);
         }
-      } finally {
-        setLoading(false);
-      }
-    }, [
-      apiName,
-      approveToolCall,
-      assistantGroupId,
-      canUseResource,
-      choice,
-      identifier,
-      isAllowListMode,
-      isMessageCreating,
-      loading,
-      messageId,
-      onBeforeApprove,
-      reason,
-      rejectAndContinueToolCall,
-    ]);
-
-    // When choice flips to reject (via click on row, '2', or arrow), pull focus
-    // into the inline input so the user can start typing the reason immediately.
-    useEffect(() => {
-      if (choice === 'reject') {
-        rejectInputRef.current?.focus();
-      }
-    }, [choice]);
+      },
+      [
+        apiName,
+        approveToolCall,
+        assistantGroupId,
+        canUseResource,
+        choice,
+        identifier,
+        isAllowListMode,
+        isMessageCreating,
+        loading,
+        stopping,
+        messageId,
+        onBeforeApprove,
+        reason,
+        rejectAndContinueToolCall,
+      ],
+    );
 
     // Page-level keyboard: 1/2/↑/↓ to switch, Enter to submit. Skip while
     // typing anywhere on the page so we never hijack the main chat composer.
@@ -232,6 +148,23 @@ const ApprovalActions = memo<ApprovalActionsProps>(
     // Kept fresh in a ref so the shared-arbiter registration below stays
     // mount-stable while the handler always sees current state.
     const containerRef = useRef<HTMLDivElement>(null);
+    const selectChoice = useCallback((next: Choice) => {
+      setChoice(next);
+      if (next === 'reject' || next === 'approve-remember') setDetailsOpen(true);
+      if (next === 'reject') rejectInputRef.current?.focus();
+      else
+        containerRef.current
+          ?.querySelector<HTMLButtonElement>(`[data-approval-choice="${next}"]`)
+          ?.focus();
+    }, []);
+    useEffect(() => {
+      if (!detailsOpen) return;
+      if (choice === 'reject') rejectInputRef.current?.focus();
+      else if (choice === 'approve-remember')
+        containerRef.current
+          ?.querySelector<HTMLButtonElement>('[data-approval-choice="approve-remember"]')
+          ?.focus();
+    }, [detailsOpen, choice]);
     const onKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
     useEffect(() => {
       onKeyDownRef.current = (e: KeyboardEvent) => {
@@ -240,14 +173,16 @@ const ApprovalActions = memo<ApprovalActionsProps>(
         if (target) {
           const tag = target.tagName;
           if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return;
+          // Native buttons own Enter/Space; do not submit the last keyboard choice instead.
+          if (target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
         }
         if (e.metaKey || e.ctrlKey || e.altKey) return;
-        // Digit keys select the matching numbered row directly.
+        // Preserve digit shortcuts without restoring the old numbered option rows.
         if (/^[1-9]$/.test(e.key)) {
           const next = choices[Number(e.key) - 1];
           if (next) {
             e.preventDefault();
-            setChoice(next);
+            selectChoice(next);
           }
           return;
         }
@@ -255,12 +190,9 @@ const ApprovalActions = memo<ApprovalActionsProps>(
           case 'ArrowUp':
           case 'ArrowDown': {
             e.preventDefault();
-            setChoice((c) => {
-              const idx = choices.indexOf(c);
-              const delta = e.key === 'ArrowUp' ? -1 : 1;
-              const nextIdx = (idx + delta + choices.length) % choices.length;
-              return choices[nextIdx];
-            });
+            const idx = choices.indexOf(choice);
+            const delta = e.key === 'ArrowUp' ? -1 : 1;
+            selectChoice(choices[(idx + delta + choices.length) % choices.length]);
             break;
           }
           case 'Enter': {
@@ -272,7 +204,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
           // No default
         }
       };
-    }, [choices, handleSubmit]);
+    }, [choice, choices, handleSubmit, selectChoice]);
 
     // One registration per mount: the shared arbiter dispatches each keypress
     // to exactly one pending card (containment first, then newest
@@ -303,96 +235,112 @@ const ApprovalActions = memo<ApprovalActionsProps>(
         e.preventDefault();
         const idx = choices.indexOf('reject');
         const prev = choices[idx - 1];
-        if (prev) setChoice(prev);
-        rejectInputRef.current?.blur();
+        if (prev) selectChoice(prev);
       }
     };
 
-    const rejectNumber = choices.indexOf('reject') + 1;
-
-    const approveLabel: Record<'approve' | 'approve-remember', string> = {
-      'approve': t('tool.intervention.optionApprove'),
-      'approve-remember': t('tool.intervention.optionApproveRemember'),
-    };
-
-    // View-only members see the pending intervention but get no approval
-    // controls — the run belongs to a member who can use the agent.
-    if (!canUseResource) return null;
+    const busy = loading || stopping || isMessageCreating;
+    const argumentPreview = [
+      requestArgs?.command,
+      requestArgs?.path,
+      requestArgs?.file_path,
+      requestArgs?.filePath,
+      requestArgs?.url,
+    ].find((value): value is string => typeof value === 'string' && value.length > 0);
+    const operationLabel =
+      label ??
+      t(`builtins.${identifier}.apiName.${apiName}`, { ns: 'plugin', defaultValue: apiName });
 
     return (
-      <div className={cn('flex flex-col', styles.container)} ref={containerRef}>
-        <div className={styles.optionList} role="radiogroup">
-          {choices.map((c, index) => {
-            if (c === 'reject') {
-              return (
-                <div
-                  aria-checked={choice === 'reject'}
-                  className={cx(styles.option, choice === 'reject' && styles.optionSelected)}
-                  key={c}
-                  role="radio"
-                  onClick={() => {
-                    setChoice('reject');
-                    rejectInputRef.current?.focus();
-                  }}
+      <Confirmation
+        data-pending-hotkey-scope
+        approval={{ id: toolCallId }}
+        className="gap-2"
+        ref={containerRef}
+        state="approval-requested"
+      >
+        <ConfirmationTitle>
+          <ConfirmationRequest>
+            {operationLabel}
+            {argumentPreview && (
+              <>
+                {' '}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm break-all">
+                  {argumentPreview.length > 160
+                    ? `${argumentPreview.slice(0, 160)}…`
+                    : argumentPreview}
+                </code>
+              </>
+            )}{' '}
+            {t('tool.intervention.confirmAction')}
+          </ConfirmationRequest>
+        </ConfirmationTitle>
+        <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CollapsibleTrigger render={<Button size="sm" variant="ghost" />}>
+              {t('tool.intervention.details')}
+              <ChevronDownIcon className={detailsOpen ? 'size-3.5 rotate-180' : 'size-3.5'} />
+            </CollapsibleTrigger>
+            {canUseResource && (
+              <ConfirmationActions>
+                <ConfirmationAction
+                  data-approval-choice="reject"
+                  disabled={busy}
+                  variant="outline"
+                  onClick={() => handleSubmit('reject')}
                 >
-                  <span className={styles.number}>{rejectNumber}.</span>
-                  <input
-                    aria-label={t('tool.intervention.rejectReasonPlaceholder')}
-                    className={styles.rejectInput}
-                    disabled={loading || isMessageCreating}
-                    placeholder={t('tool.intervention.rejectReasonPlaceholder')}
-                    ref={rejectInputRef}
-                    type="text"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    onFocus={() => setChoice('reject')}
-                    onKeyDown={handleRejectInputKeyDown}
-                  />
+                  {t('tool.intervention.reject')}
+                </ConfirmationAction>
+                <ConfirmationAction
+                  data-approval-choice="approve"
+                  disabled={busy}
+                  loading={loading}
+                  onClick={() => handleSubmit('approve')}
+                >
+                  {t('tool.intervention.optionApprove')}
+                </ConfirmationAction>
+              </ConfirmationActions>
+            )}
+          </div>
+          <CollapsibleContent
+            keepMounted
+            className="mt-3 max-h-[40vh] space-y-3 overflow-y-auto border-t border-border pt-3"
+            hidden={!detailsOpen}
+          >
+            {children}
+            {canUseResource && (
+              <>
+                <Input
+                  aria-label={t('tool.intervention.rejectReasonPlaceholder')}
+                  disabled={busy}
+                  placeholder={t('tool.intervention.rejectReasonPlaceholder')}
+                  ref={rejectInputRef}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  onFocus={() => setChoice('reject')}
+                  onKeyDown={handleRejectInputKeyDown}
+                />
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <ConfirmationAction disabled={busy} variant="ghost" onClick={handleStop}>
+                    <CircleStop data-icon="inline-start" /> {t('tool.intervention.stop')}
+                  </ConfirmationAction>
+                  {isAllowListMode && (
+                    <ConfirmationAction
+                      className="h-auto min-h-8 whitespace-normal text-left"
+                      data-approval-choice="approve-remember"
+                      disabled={busy}
+                      variant="outline"
+                      onClick={() => handleSubmit('approve-remember')}
+                    >
+                      {t('tool.intervention.optionApproveRemember')}
+                    </ConfirmationAction>
+                  )}
                 </div>
-              );
-            }
-
-            return (
-              <div
-                aria-checked={choice === c}
-                className={cx(styles.option, choice === c && styles.optionSelected)}
-                key={c}
-                role="radio"
-                onClick={() => setChoice(c)}
-              >
-                <span className={styles.number}>{index + 1}.</span>
-                <span className={styles.optionLabel}>{approveLabel[c]}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className={styles.footer}>
-          <ConfirmationAction
-            disabled={loading || isMessageCreating}
-            loading={stopping}
-            size="default"
-            variant="ghost"
-            onClick={handleStop}
-          >
-            <CircleStop data-icon="inline-start" /> {t('tool.intervention.stop')}
-          </ConfirmationAction>
-          <ConfirmationAction
-            className={styles.submitButton}
-            disabled={isMessageCreating}
-            loading={loading}
-            size="default"
-            variant="default"
-            onClick={handleSubmit}
-          >
-            {t('tool.intervention.submit')}
-            <span className={styles.shortcutHint}>
-              <CornerDownLeft size={12} />
-            </span>
-          </ConfirmationAction>
-        </div>
-      </div>
+              </>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+      </Confirmation>
     );
   },
 );

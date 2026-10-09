@@ -17,6 +17,7 @@ import {
   inputSelectors,
   messageStateSelectors,
   useConversationStore,
+  useConversationStoreApi,
   virtuaListSelectors,
 } from '../../store';
 import {
@@ -25,7 +26,7 @@ import {
 } from '../hooks/useConversationScroll';
 import { useSelectionMessageIds } from '../hooks/useSelectionMessageIds';
 import { useTopicScrollPersist } from '../hooks/useTopicScrollPersist';
-import type { ResolvedMessageDeepLink } from '../utils/messageDeepLink';
+import { type ResolvedMessageDeepLink, resolveMessageDeepLink } from '../utils/messageDeepLink';
 import AutoScroll from './AutoScroll';
 import { AT_BOTTOM_THRESHOLD } from './AutoScroll/const';
 import { useAutoScrollEnabled } from './AutoScroll/useAutoScrollEnabled';
@@ -53,6 +54,9 @@ interface VirtualizedListProps {
  */
 const VirtualizedList = memo<VirtualizedListProps>(
   ({ dataSource, footerSlot, headerSlot, itemContent, messageDeepLink }) => {
+    const storeApi = useConversationStoreApi();
+    const dataSourceRef = useRef(dataSource);
+    dataSourceRef.current = dataSource;
     const virtuaRef = useRef<VListHandle>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,6 +216,18 @@ const VirtualizedList = memo<VirtualizedListProps>(
           getTotalCount: () => totalCountRef.current,
           getViewportSize: () => ref.viewportSize,
           scrollTo: (offset) => ref.scrollTo(offset),
+          scrollToMessage: (messageId) => {
+            const target = resolveMessageDeepLink(
+              storeApi.getState().displayMessages,
+              dataSourceRef.current,
+              { id: messageId, navigationKey: messageId },
+            );
+            if (target)
+              ref.scrollToIndex(target.index + headerOffsetRef.current, {
+                align: 'start',
+                smooth: false,
+              });
+          },
           scrollToIndex: (index, options) =>
             ref.scrollToIndex(index + headerOffsetRef.current, options),
         });
@@ -228,7 +244,7 @@ const VirtualizedList = memo<VirtualizedListProps>(
       return () => {
         registerVirtuaScrollMethods(null);
       };
-    }, [registerVirtuaScrollMethods, setActiveIndex]);
+    }, [registerVirtuaScrollMethods, setActiveIndex, storeApi]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -381,7 +397,14 @@ const VirtualizedList = memo<VirtualizedListProps>(
             if (isAgentCouncil) {
               // AgentCouncil needs full width for horizontal scroll
               return (
-                <div key={messageId} style={{ position: 'relative', width: '100%' }}>
+                <div
+                  key={messageId}
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    paddingBottom: isLastItem ? 0 : 32,
+                  }}
+                >
                   {content}
                   {/* AutoScroll is placed inside the last Item so it only triggers when the last Item is visible */}
                   {isLastItem && isAutoScrollEnabled && !spacerActive && <AutoScroll />}
@@ -393,7 +416,13 @@ const VirtualizedList = memo<VirtualizedListProps>(
               <WideScreenContainer
                 fullWidth={isSelectionMode}
                 key={messageId}
-                style={{ position: 'relative' }}
+                // ConversationContent owns the upstream 16px inset; virtual
+                // rows implement its 32px gap without creating another scroller.
+                style={{
+                  position: 'relative',
+                  paddingInline: 0,
+                  paddingBottom: isLastItem ? 0 : 32,
+                }}
               >
                 {content}
                 {isLastItem && isAutoScrollEnabled && !spacerActive && <AutoScroll />}

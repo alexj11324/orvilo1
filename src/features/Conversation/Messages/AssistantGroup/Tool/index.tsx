@@ -1,8 +1,9 @@
-import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { getBuiltinStreaming } from '@orvilo/builtin-tools/streamings';
 import { LOADING_FLAT } from '@orvilo/const';
 import isEqual from 'fast-deep-equal';
+import { CircleStopIcon, CornerUpRightIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Tool as ToolShell, ToolContent, ToolHeader } from '@/components/ai-elements/tool';
 import SafeBoundary from '@/components/ErrorBoundary';
@@ -14,13 +15,7 @@ import { useToolStore } from '@/store/tool';
 import { toolSelectors } from '@/store/tool/selectors';
 
 import { dataSelectors, useConversationStore } from '../../../store';
-import Actions from './Actions';
-import Inspectors from './Inspector';
-
-const Debug = dynamic(() => import('./Debug'), {
-  loading: () => <Skeleton style={{ height: 300, width: '100%' }} />,
-  ssr: false,
-});
+import { getToolDisplayName } from '../toolDisplayNames';
 
 const Detail = dynamic(() => import('./Detail'), {
   loading: () => <Skeleton style={{ height: 120, width: '100%' }} />,
@@ -34,6 +29,7 @@ export interface GroupToolProps {
 }
 
 const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) => {
+  const { t } = useTranslation('plugin');
   // Subscribe directly to this tool's data so a streaming chunk that only
   // updates a sibling tool does not push new props through this subtree.
   const tool = useConversationStore(dataSelectors.getToolInBlock(assistantMessageId, id), isEqual);
@@ -54,10 +50,7 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
   const renderDisplayControl = useToolStore(
     toolSelectors.getRenderDisplayControl(identifier, apiName, result?.state),
   );
-  const [showDebug, setShowDebug] = useState(false);
   const [showToolRender, setShowToolRender] = useState(false);
-  // Controls switching between custom render and fallback ArgumentRender
-  const [showCustomToolRender, setShowCustomToolRender] = useState(true);
 
   const isPending = intervention?.status === 'pending';
   const isReject = intervention?.status === 'rejected';
@@ -96,23 +89,12 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
   const looksLikeWaitingForToolResult = !hasError && !isArgumentsStreaming && !hasFinishedResult;
   const isToolCallingFallback = looksLikeWaitingForToolResult && isAssistantMessageBusy;
   const isToolCalling = !hasFinishedResult && (isToolCallingFromOperation || isToolCallingFallback);
-  const toolCallStartTime = useConversationStore(
-    dataSelectors.getToolMessageCreatedAt(toolMessageId),
-  );
-
-  const hasCustomRender = !!getBuiltinRender(identifier, apiName);
-  // Only allow toggle when has custom render and not in pending/reject/abort state
-  const canToggleCustomToolRender = hasCustomRender && !isPending && !isReject && !isAbort;
 
   // Handle expand state changes
   const handleExpand = (expand?: boolean) => {
     // Block collapse action when alwaysExpand is set
     if (isAlwaysExpand && expand === false) {
       return;
-    }
-    // When collapsing, also turn off debug mode so the accordion can actually collapse
-    if (expand === false) {
-      setShowDebug(false);
     }
     setShowToolRender(!!expand);
   };
@@ -126,76 +108,51 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
 
   if (!tool) return null;
 
-  const isToolDetailExpand = forceShowStreamingRender || showToolRender || showDebug;
+  const isToolDetailExpand = forceShowStreamingRender || showToolRender;
 
   return (
     <ToolShell className="mb-0" open={isToolDetailExpand} onOpenChange={handleExpand}>
-      <div className="flex items-center">
-        <div className="min-w-0 flex-1">
-          <ToolHeader
-            hideChevron={isAlwaysExpand}
-            toolName={apiName}
-            type="dynamic-tool"
-            state={
-              isPending
-                ? 'approval-requested'
-                : isReject || isAbort
-                  ? 'output-denied'
-                  : hasError
-                    ? 'output-error'
-                    : isArgumentsStreaming
-                      ? 'input-streaming'
-                      : isToolCalling
-                        ? 'input-available'
-                        : 'output-available'
-            }
-          >
-            {
-              <Inspectors
-                apiName={apiName}
-                arguments={requestArgs}
-                identifier={identifier}
-                intervention={intervention}
-                isArgumentsStreaming={isArgumentsStreaming}
-                isExpanded={isToolDetailExpand}
-                isToolCalling={isToolCalling}
-                result={result}
-                toolCallId={id}
-                toolCallStartTime={toolCallStartTime}
-              />
-            }
-          </ToolHeader>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {!disableEditing && (
-            <Actions
-              assistantMessageId={assistantMessageId}
-              canToggleCustomToolRender={canToggleCustomToolRender}
-              identifier={identifier}
-              setShowCustomToolRender={setShowCustomToolRender}
-              setShowDebug={setShowDebug}
-              showCustomToolRender={showCustomToolRender}
-              showDebug={showDebug}
-            />
-          )}
-        </div>
-      </div>
+      <ToolHeader
+        hideChevron={isAlwaysExpand}
+        toolName={apiName}
+        type="dynamic-tool"
+        state={
+          isPending
+            ? 'approval-requested'
+            : isReject || isAbort
+              ? 'output-denied'
+              : hasError
+                ? 'output-error'
+                : isArgumentsStreaming
+                  ? 'input-streaming'
+                  : isToolCalling
+                    ? 'input-available'
+                    : 'output-available'
+        }
+        statusIcon={
+          intervention?.status === 'aborted' ? (
+            <CircleStopIcon className="size-4 text-muted-foreground" />
+          ) : intervention?.skipped ? (
+            <CornerUpRightIcon className="size-4 text-muted-foreground" />
+          ) : undefined
+        }
+        statusLabel={
+          intervention?.status === 'aborted'
+            ? t('components.aiElements.tool.stopped', { ns: 'chat' })
+            : intervention?.skipped
+              ? t('components.aiElements.tool.skipped', { ns: 'chat' })
+              : undefined
+        }
+        title={t(`builtins.${identifier}.apiName.${apiName}`, {
+          defaultValue: getToolDisplayName(apiName),
+        })}
+      />
       <ToolContent className="pt-0">
         {
           <div className="flex flex-col gap-2 py-2">
-            {showDebug && (
-              <Debug
-                apiName={apiName}
-                identifier={identifier}
-                intervention={intervention}
-                requestArgs={requestArgs}
-                result={result}
-                toolCallId={id}
-                type={type}
-              />
-            )}
             <SafeBoundary alertTitle={`${identifier} / ${apiName}`} variant="alert">
               <Detail
+                showCustomToolRender
                 apiName={apiName}
                 arguments={requestArgs}
                 disableEditing={disableEditing}
@@ -205,7 +162,6 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
                 isToolCalling={isToolCalling}
                 messageId={assistantMessageId}
                 result={result}
-                showCustomToolRender={showCustomToolRender}
                 toolCallId={id}
                 toolMessageId={toolMessageId}
                 type={type}

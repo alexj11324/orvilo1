@@ -324,9 +324,7 @@ const ChatList = memo<ChatListProps>(
             key={agentId}
           />
         ))}
-        <ConversationContent className="gap-0 p-0" scrollMode="external">
-          {content}
-        </ConversationContent>
+        <ConversationContent scrollMode="external">{content}</ConversationContent>
         {feedback.showBackgroundError && (
           <RefreshError
             error={refreshError.error}

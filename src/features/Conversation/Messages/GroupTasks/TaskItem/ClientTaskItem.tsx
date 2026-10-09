@@ -132,11 +132,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
 
   return (
     <Task open={expanded} onOpenChange={setExpanded}>
-      <TaskTrigger
-        className="hover:no-underline"
-        style={{ paddingBlock: 4, paddingInline: 4 }}
-        title={title || ''}
-      >
+      <TaskTrigger title={title || ''}>
         {
           <TaskTitle
             agent={agent ? { id: agentId } : undefined}
@@ -150,7 +146,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
         {
           <div className="flex flex-col gap-4">
             {instruction && (
-              <div className="flex flex-col p-3">
+              <div className="flex flex-col">
                 <div className="text-sm text-muted-foreground">{instruction}</div>
               </div>
             )}

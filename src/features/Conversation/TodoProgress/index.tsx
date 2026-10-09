@@ -60,14 +60,14 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
 
   return (
     <Plan
-      className={cn('gap-2 rounded-b-none', topAttached && 'rounded-t-none', className)}
+      className={cn('rounded-b-none', topAttached && 'rounded-t-none', className)}
       isStreaming={isAIGenerating}
       open={expanded}
       onOpenChange={setExpanded}
     >
-      <PlanHeader className="items-center gap-2">
+      <PlanHeader>
         <div className="min-w-0 flex-1 space-y-2">
-          <PlanTitle className="truncate text-sm">
+          <PlanTitle className="truncate">
             {currentPendingTask?.text || t('todoProgress.allCompleted')}
           </PlanTitle>
           <Progress aria-label={t('todoProgress.title')} value={(completed / total) * 100} />

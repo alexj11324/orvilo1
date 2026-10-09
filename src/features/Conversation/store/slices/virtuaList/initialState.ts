@@ -24,6 +24,8 @@ export interface VirtuaScrollMethods {
     index: number,
     options?: { align?: 'start' | 'center' | 'end'; smooth?: boolean },
   ) => void;
+  /** Resolve database message IDs through the actual rendered rows, including folded turns. */
+  scrollToMessage?: (messageId: string) => void;
 }
 
 /**

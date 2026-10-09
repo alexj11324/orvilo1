@@ -1,7 +1,6 @@
 'use client';
 
 import { ThreadStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { Footprints, ListChecksIcon, Wrench, XIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,31 +43,16 @@ const TaskStatusIndicator = memo<{ status?: ThreadStatus }>(({ status }) => {
   let icon;
 
   if (isCompleted) {
-    icon = <ListChecksIcon color={cssVar.colorSuccess} />;
+    icon = <ListChecksIcon className="size-4 text-success" />;
   } else if (isError) {
-    icon = <XIcon color={cssVar.colorError} />;
+    icon = <XIcon className="size-4 text-destructive" />;
   } else if (isProcessing || isInitializing) {
     icon = <NeuralNetworkLoading size={16} />;
   } else {
     return null;
   }
 
-  return (
-    <div
-      className="flex items-center gap-1 justify-center"
-      style={{
-        flex: 'none',
-        height: 24,
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
-        width: 24,
-
-        fontSize: 12,
-      }}
-    >
-      {icon}
-    </div>
-  );
+  return <span className="inline-flex size-4 shrink-0 items-center justify-center">{icon}</span>;
 });
 
 TaskStatusIndicator.displayName = 'TaskStatusIndicator';
@@ -118,20 +102,20 @@ const MetricsDisplay = memo<MetricsDisplayProps>(({ metrics, status }) => {
       {/* Steps */}
       {hasSteps && (
         <div className="flex items-center gap-0.5">
-          <Footprints color={cssVar.colorTextTertiary} size={12} />
-          <div className="text-[12px] text-muted-foreground">{steps}</div>
+          <Footprints className="text-muted-foreground" size={12} />
+          <div className="text-xs text-muted-foreground">{steps}</div>
         </div>
       )}
       {/* Tool calls */}
       {hasToolCalls && (
         <div className="flex items-center gap-0.5">
-          <Wrench color={cssVar.colorTextTertiary} size={12} />
-          <div className="text-[12px] text-muted-foreground">{toolCalls}</div>
+          <Wrench className="text-muted-foreground" size={12} />
+          <div className="text-xs text-muted-foreground">{toolCalls}</div>
         </div>
       )}
       {/* Time */}
       {hasTime && (
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {isProcessing
             ? formatElapsedTime(elapsedTime)
             : duration
@@ -147,10 +131,10 @@ MetricsDisplay.displayName = 'MetricsDisplay';
 
 const TaskTitle = memo<TaskTitleProps>(({ title, status, metrics, agent }) => {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       <TaskStatusIndicator status={status} />
       {agent && <AssigneeAvatar agentId={agent.id} size={20} />}
-      <div className="truncate text-[14px]">{title}</div>
+      <div className="truncate text-sm">{title}</div>
       {metrics && <MetricsDisplay metrics={metrics} status={status} />}
     </div>
   );

@@ -10,7 +10,6 @@ import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronRight, Edit3Icon } from 'lucide-react';
 import { createElement, memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
@@ -71,7 +70,7 @@ interface FallbackInterventionProps {
 }
 
 const FallbackIntervention = memo<FallbackInterventionProps>(
-  ({ requestArgs, id, identifier, apiName, toolCallId, assistantGroupId, actionsPortalTarget }) => {
+  ({ requestArgs, id, identifier, apiName, toolCallId, assistantGroupId }) => {
     const { t } = useTranslation(['chat', 'plugin', 'common']);
     const approvalMode = useUserStore(toolInterventionSelectors.approvalMode);
     const [isEditing, setIsEditing] = useState(false);
@@ -175,22 +174,18 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
         </Suspense>
       );
 
-    const actions = (
-      <div className="flex justify-end">
-        <ApprovalActions
-          apiName={apiName}
-          approvalMode={approvalMode}
-          assistantGroupId={assistantGroupId}
-          identifier={identifier}
-          messageId={id}
-          toolCallId={toolCallId}
-          onBeforeApprove={() => pendingEditedArgumentsRef.current}
-        />
-      </div>
-    );
-
     return (
-      <div className="flex flex-col gap-1">
+      <ApprovalActions
+        apiName={apiName}
+        approvalMode={approvalMode}
+        assistantGroupId={assistantGroupId}
+        identifier={identifier}
+        label={`${actionTitle}${actionTitleSuffix}`}
+        messageId={id}
+        requestArgs={parsedArgs}
+        toolCallId={toolCallId}
+        onBeforeApprove={() => pendingEditedArgumentsRef.current}
+      >
         <div className={cn('flex items-center gap-1.5', styles.description)}>
           {pluginMeta?.avatar && (
             <Avatar
@@ -241,9 +236,7 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
             {showArgs && <Arguments arguments={renderedArgs} />}
           </>
         )}
-
-        {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
-      </div>
+      </ApprovalActions>
     );
   },
 );

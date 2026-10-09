@@ -142,16 +142,17 @@ export const Reasoning = memo(
 );
 
 export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger> & {
+  icon?: ReactNode;
   getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
 };
 
 export const ReasoningTrigger = memo(
-  ({ className, children, getThinkingMessage, ...props }: ReasoningTriggerProps) => {
+  ({ className, children, getThinkingMessage, icon, ...props }: ReasoningTriggerProps) => {
     const { isStreaming, isOpen, duration } = useReasoning();
     const { t } = useTranslation('chat');
     const thinkingMessage = getThinkingMessage ? (
       getThinkingMessage(isStreaming, duration)
-    ) : isStreaming || duration === 0 ? (
+    ) : isStreaming ? (
       <Shimmer duration={1}>{t('components.aiElements.reasoning.thinking')}</Shimmer>
     ) : (
       <span>
@@ -171,7 +172,7 @@ export const ReasoningTrigger = memo(
       >
         {children ?? (
           <>
-            <BrainIcon className="size-4" />
+            {icon ?? <BrainIcon className="size-4" />}
             {thinkingMessage}
           </>
         )}

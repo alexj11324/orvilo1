@@ -1,7 +1,5 @@
 'use client';
 import { type AssistantContentBlock, type UIChatMessage } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import { ScrollText, Workflow } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,13 +17,6 @@ import { resolveAssistantGroupFromMessages } from '../../AssistantGroup/utils/re
 import Usage from '../../components/Extras/Usage';
 import AnimatedNumber from '../../components/Extras/Usage/UsageDetail/AnimatedNumber';
 import { accumulateUsage, formatDuration, formatElapsedTime } from './utils';
-
-const styles = createStaticStyles(({ css }) => ({
-  instructionContent: css`
-    overflow: auto;
-    max-height: 300px;
-  `,
-}));
 
 /**
  * InstructionAccordion - Shows the task instruction in a collapsible accordion
@@ -49,40 +40,17 @@ const InstructionAccordion = memo<{ childrenCount: number; instruction: string }
         open={expandedKeys.includes('instruction')}
         onOpenChange={(open) => setExpandedKeys(open ? ['instruction'] : [])}
       >
-        <TaskTrigger
-          className="hover:no-underline"
-          style={{ paddingBlock: 4, paddingInline: 4 }}
-          title={t('task.instruction')}
-        >
+        <TaskTrigger title={t('task.instruction')}>
           {
             <div className="flex items-center gap-2">
-              <div
-                className="flex items-center gap-1 justify-center"
-                style={{
-                  flex: 'none',
-                  height: 24,
-                  border: `1px solid ${cssVar.colorBorder}`,
-                  borderRadius: cssVar.borderRadiusLG,
-                  width: 24,
-                  fontSize: 12,
-                }}
-              >
-                <ScrollText color={cssVar.colorTextSecondary} />
-              </div>
+              <ScrollText className="size-4 shrink-0" />
               <span className="text-muted-foreground">{t('task.instruction')}</span>
             </div>
           }
         </TaskTrigger>
         <TaskContent>
           {
-            <div
-              className={cn('flex flex-col p-3', styles.instructionContent)}
-              style={{
-                border: `1px solid ${cssVar.colorBorder}`,
-                borderRadius: cssVar.borderRadiusLG,
-                marginBlock: 8,
-              }}
-            >
+            <div className="max-h-75 overflow-auto">
               <Markdown variant={'chat'}>{instruction}</Markdown>
             </div>
           }
@@ -166,17 +134,7 @@ const ProcessingView = memo<{
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 px-1">
-        <div
-          className="flex items-center gap-1 justify-center"
-          style={{
-            flex: 'none',
-            height: 24,
-            border: `1px solid ${cssVar.colorBorder}`,
-            borderRadius: cssVar.borderRadiusLG,
-            width: 24,
-            fontSize: 12,
-          }}
-        >
+        <div className="flex size-4 shrink-0 items-center justify-center">
           <NeuralNetworkLoading size={16} />
         </div>
         <div className="flex items-center gap-1">
@@ -242,19 +200,7 @@ const CompletedView = memo<{
 
   const title = (
     <div className="flex items-center gap-2">
-      <div
-        className="flex items-center gap-1 justify-center"
-        style={{
-          flex: 'none',
-          height: 24,
-          border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
-          width: 24,
-          fontSize: 12,
-        }}
-      >
-        <Workflow color={cssVar.colorTextSecondary} />
-      </div>
+      <Workflow className="size-4 shrink-0" />
       <div className="flex items-center gap-1">
         <span className="text-muted-foreground font-medium">{totalToolCalls}</span>
         <span className="text-muted-foreground">{t('task.metrics.toolCallsShort')}</span>
@@ -273,16 +219,10 @@ const CompletedView = memo<{
       {/* Intermediate steps - collapsed by default */}
       {intermediateBlocks.length > 0 && (
         <Task defaultOpen={false}>
-          <TaskTrigger
-            className="hover:no-underline"
-            style={{ paddingBlock: 4, paddingInline: 4 }}
-            title={t('task.metrics.stepsShort')}
-          >
-            {title}
-          </TaskTrigger>
+          <TaskTrigger title={t('task.metrics.stepsShort')}>{title}</TaskTrigger>
           <TaskContent>
             {
-              <div className="flex flex-col gap-2 px-1" style={{ marginTop: 8 }}>
+              <div className="flex flex-col gap-2">
                 {intermediateBlocks.map((block) => (
                   <ContentBlock
                     {...block}

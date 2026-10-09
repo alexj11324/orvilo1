@@ -11,32 +11,29 @@ import WorkflowCollapse from './WorkflowCollapse';
 
 let mockIsGenerating = true;
 
-vi.mock('@/components/ui/accordion', () => ({
-  Accordion: ({
+vi.mock('@/components/ai-elements/chain-of-thought', () => ({
+  ChainOfThought: ({
     children,
-    onValueChange,
-    value,
+    onOpenChange,
+    open,
   }: {
     children?: ReactNode;
-    onValueChange?: (keys: string[]) => void;
-    value?: string[];
-  }) => {
-    const isExpanded = (value ?? []).includes('workflow');
-    return (
-      <div data-expanded-keys={JSON.stringify(value ?? [])} data-testid="workflow-accordion">
-        <button
-          aria-label="toggle-accordion-header"
-          type="button"
-          onClick={() => onValueChange?.(isExpanded ? [] : ['workflow'])}
-        />
-        {children}
-      </div>
-    );
-  },
-  AccordionContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  AccordionItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  AccordionTrigger: ({ children }: { children?: ReactNode }) => (
+    onOpenChange?: (open: boolean) => void;
+    open?: boolean;
+  }) => (
+    <div data-expanded-keys={JSON.stringify(open ? ['workflow'] : [])} data-testid="workflow-chain">
+      <button
+        aria-label="toggle-chain-header"
+        type="button"
+        onClick={() => onOpenChange?.(!open)}
+      />
+      {children}
+    </div>
+  ),
+  ChainOfThoughtContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  ChainOfThoughtHeader: ({ children, icon }: { children?: ReactNode; icon?: ReactNode }) => (
     <button data-testid="workflow-trigger" type="button">
+      {icon}
       {children}
     </button>
   ),
@@ -118,7 +115,7 @@ const makeBlocks = (toolOverrides: Record<string, unknown> = {}): AssistantConte
 ];
 
 const getExpandedKeys = () =>
-  screen.getByTestId('workflow-accordion').getAttribute('data-expanded-keys');
+  screen.getByTestId('workflow-chain').getAttribute('data-expanded-keys');
 
 describe('WorkflowCollapse', () => {
   afterEach(() => {
@@ -340,7 +337,7 @@ describe('WorkflowCollapse', () => {
     expect(screen.queryByRole('button', { name: 'Collapse' })).not.toBeInTheDocument();
 
     act(() => {
-      screen.getByRole('button', { name: 'toggle-accordion-header' }).click();
+      screen.getByRole('button', { name: 'toggle-chain-header' }).click();
     });
 
     expect(getExpandedKeys()).toBe('["workflow"]');
@@ -361,7 +358,7 @@ describe('WorkflowCollapse', () => {
     expect(getExpandedKeys()).toBe('[]');
 
     act(() => {
-      screen.getByRole('button', { name: 'toggle-accordion-header' }).click();
+      screen.getByRole('button', { name: 'toggle-chain-header' }).click();
     });
 
     expect(getExpandedKeys()).toBe('["workflow"]');
@@ -417,7 +414,7 @@ describe('WorkflowCollapse', () => {
     expect(container.querySelector('svg.lucide-check')).not.toBeNull();
   });
 
-  it('shows only a check when some tools fail after completion', () => {
+  it('marks partial tool failure distinctly from successful completion', () => {
     mockIsGenerating = false;
     const blocks: AssistantContentBlock[] = [
       {
@@ -445,8 +442,8 @@ describe('WorkflowCollapse', () => {
     ];
 
     const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    expect(container.querySelector('svg.lucide-check')).not.toBeNull();
-    expect(container.querySelector('svg.lucide-triangle-alert')).toBeNull();
+    expect(container.querySelector('svg.lucide-check')).toBeNull();
+    expect(container.querySelector('svg.lucide-triangle-alert')).not.toBeNull();
   });
 
   it('shows red x when all tools fail after completion', () => {

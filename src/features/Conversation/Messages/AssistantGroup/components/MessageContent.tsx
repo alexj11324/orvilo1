@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 import { LOADING_FLAT } from '@/const/message';
@@ -9,13 +8,6 @@ import { dataSelectors, useConversationStore } from '../../../store';
 import { normalizeThinkTags, processWithArtifact } from '../../../utils/markdown';
 import { useMarkdown } from '../useMarkdown';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    pWithTool: css`
-      color: ${cssVar.colorTextTertiary};
-    `,
-  };
-});
 interface MessageContentProps {
   contentOverride?: string;
   disableStreaming?: boolean;
@@ -55,16 +47,11 @@ const MessageContent = memo<MessageContentProps>(
       return <ContentLoading id={id} startTime={createdAt} />;
     }
 
-    const isSingleLine = (message || '').split('\n').length <= 2;
-    const isToolSingleLine = hasTools && isSingleLine;
-
     return (
       content && (
         <>
           {drawer}
-          <MarkdownMessage {...markdownProps} className={cx(isToolSingleLine && styles.pWithTool)}>
-            {message}
-          </MarkdownMessage>
+          <MarkdownMessage {...markdownProps}>{message}</MarkdownMessage>
         </>
       )
     );

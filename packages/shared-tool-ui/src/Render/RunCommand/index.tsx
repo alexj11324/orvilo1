@@ -2,8 +2,6 @@
 
 import type { RunCommandState } from '@orvilo/tool-runtime';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,13 +24,6 @@ import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 import { getRunCommandDisplayCommand } from '../../utils/runCommand';
 import AnsiOutput from './AnsiOutput';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    padding-inline: 8px 0;
-  `,
-}));
-
 interface RunCommandArgs {
   background?: boolean;
   command: string;
@@ -48,7 +39,7 @@ const RunCommand = memo<BuiltinRenderProps<RunCommandArgs, RunCommandState>>(
     const command = getRunCommandDisplayCommand(args?.command);
 
     return (
-      <div className={cn('flex', 'flex-col', 'gap-2', styles.container)}>
+      <div className="flex min-w-0 flex-col gap-2">
         <div className="flex min-w-0 flex-col gap-2">
           {command.includes('\n') ? (
             <CodeBlock
@@ -61,7 +52,7 @@ const RunCommand = memo<BuiltinRenderProps<RunCommandArgs, RunCommandState>>(
               <CodeBlockCopyButton />
             </CodeBlock>
           ) : (
-            <Snippet code={command}>
+            <Snippet className="border-border bg-muted/50 dark:bg-muted/50" code={command}>
               <SnippetInput aria-label={t('components.aiElements.terminal.command')} />
               <SnippetAddon align="inline-end">
                 <SnippetCopyButton />

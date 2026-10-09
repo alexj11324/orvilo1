@@ -2,7 +2,6 @@
  * @vitest-environment happy-dom
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FallbackArgumentRender } from '../Render/FallbacktArgumentRender';
@@ -25,28 +24,14 @@ vi.mock('@/components/ActionIcon', async (importOriginal) => ({
   ),
 }));
 
-vi.mock('@/components/Descriptions', () => ({
-  default: ({
-    items,
-    wrap,
-  }: {
-    items: Array<{ key: string; value: ReactNode }>;
-    wrap?: boolean;
-  }) => (
-    <div data-testid="descriptions" data-wrap={String(Boolean(wrap))}>
-      {items.map((item) => (
-        <span key={item.key}>{item.value}</span>
-      ))}
-    </div>
-  ),
-}));
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { ns?: string }) =>
       (
         ({
-          'arguments.title': 'Arguments',
+          'components.aiElements.tool.parameters': 'Parameters',
+          'components.aiElements.tool.result': 'Result',
+          'components.aiElements.tool.error': 'Error',
           'workingPanel.review.wordWrap.disable': 'Disable word wrap',
           'workingPanel.review.wordWrap.enable': 'Enable word wrap',
         }) as Record<string, string>
@@ -55,8 +40,8 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('Arguments', () => {
-  it.each(['', '{}'])('keeps one divider before a result when arguments are empty (%s)', (args) => {
-    const { container } = render(
+  it.each(['', '{}'])('keeps empty parameters and the actual result readable (%s)', (args) => {
+    render(
       <FallbackArgumentRender
         content={'"Tool finished"'}
         requestArgs={args}
@@ -64,23 +49,46 @@ describe('Arguments', () => {
       />,
     );
 
-    expect(screen.getByText('Arguments')).toBeInTheDocument();
-    expect(screen.getByText('debug.response')).toBeInTheDocument();
+    expect(screen.getByText('Parameters')).toBeInTheDocument();
+    expect(screen.getByText('Result')).toBeInTheDocument();
     expect(screen.getByText('Tool finished')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-slot="separator"]')).toHaveLength(1);
   });
 
   it('keeps argument values collapsed by default and toggles wrapping', () => {
-    render(<Arguments arguments={JSON.stringify({ file_path: '/very/long/path/to/file.ts' })} />);
+    const { container } = render(
+      <Arguments arguments={JSON.stringify({ file_path: '/very/long/path/to/file.ts' })} />,
+    );
 
-    expect(screen.getByTestId('descriptions')).toHaveAttribute('data-wrap', 'false');
+    expect(container.querySelector('[data-wrap]')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /enable word wrap/i }));
 
-    expect(screen.getByTestId('descriptions')).toHaveAttribute('data-wrap', 'true');
+    expect(container.querySelector('[data-wrap]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /disable word wrap/i })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
+  });
+  it.each(['0', 'false', 'null'])('preserves legitimate primitive tool result %s', (content) => {
+    render(<FallbackArgumentRender content={content} requestArgs="{}" toolCallId="primitive" />);
+    expect(screen.getByText(content)).toBeInTheDocument();
+  });
+
+  it('surfaces error text even when the tool returned no output body', () => {
+    render(
+      <FallbackArgumentRender
+        content=""
+        errorText="Connection timed out"
+        requestArgs="{}"
+        toolCallId="error"
+      />,
+    );
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('Connection timed out')).toBeInTheDocument();
+  });
+
+  it('keeps partial streaming parameters visible', () => {
+    render(<Arguments loading arguments={'{"path":"/tmp/example"'} />);
+    expect(screen.getByText(/\/tmp\/example/)).toBeInTheDocument();
   });
 });

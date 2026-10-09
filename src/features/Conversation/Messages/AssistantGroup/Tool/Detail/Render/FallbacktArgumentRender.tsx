@@ -1,68 +1,32 @@
-import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/ui/code-block';
-import { Separator } from '@/components/ui/separator';
+import { ToolOutput } from '@/components/ai-elements/tool';
 
 import Arguments from '../Arguments';
 
 interface FallbackArgumentRenderProps {
   content: string;
+  errorText?: string;
   requestArgs?: string;
   toolCallId: string;
 }
 
 export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
-  ({ toolCallId, content, requestArgs }) => {
-    const { t } = useTranslation('plugin');
-
-    // Parse and display result content
-    const { data, language } = useMemo(() => {
+  ({ toolCallId, content, errorText, requestArgs }) => {
+    const output = useMemo(() => {
       try {
-        const parsed = JSON.parse(content || '');
-        // If parsed result is a string, return it directly
-        if (typeof parsed === 'string') {
-          return { data: parsed, language: 'plaintext' };
-        }
-        return { data: JSON.stringify(parsed, null, 2), language: 'json' };
+        const parsed = JSON.parse(content);
+        // Keep a literal JSON null visible rather than treating it as absent output.
+        return parsed === null ? 'null' : parsed;
       } catch {
-        return { data: content || '', language: 'plaintext' };
+        return content;
       }
     }, [content]);
 
-    // Default render: show arguments and result
     return (
-      <div
-        className="flex flex-col overflow-hidden"
-        id={toolCallId}
-        style={{
-          border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
-          width: '100%',
-        }}
-      >
+      <div className="space-y-4" id={toolCallId}>
         <Arguments arguments={requestArgs} />
-        {content && (
-          <>
-            <Separator style={{ marginBlock: 0 }} />
-            <div className="flex min-h-10 items-center py-2 px-4">
-              <div>{t('debug.response')}</div>
-            </div>
-            <CodeBlock
-              className="[&_[data-slot=code-block-line]]:px-4"
-              code={data}
-              language={language}
-              variant="ghost"
-              style={{
-                background: 'transparent',
-                borderRadius: 0,
-                maxHeight: 300,
-                overflow: 'auto',
-              }}
-            />
-          </>
-        )}
+        {(content !== '' || errorText) && <ToolOutput errorText={errorText} output={output} />}
       </div>
     );
   },

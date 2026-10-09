@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
@@ -18,20 +17,6 @@ import { type ChatItemProps } from '../../type';
 
 export const MSG_CONTENT_CLASSNAME = 'msg_content_flag';
 
-export const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    disabled: css`
-      user-select: ${'none'};
-      color: ${cssVar.colorTextSecondary};
-    `,
-    message: css`
-      position: relative;
-      overflow: hidden;
-      max-width: 100%;
-    `,
-  };
-});
-
 export interface MessageContentProps {
   children?: ReactNode;
   className?: string;
@@ -41,21 +26,10 @@ export interface MessageContentProps {
   message?: ReactNode;
   messageExtra?: ChatItemProps['messageExtra'];
   onDoubleClick?: ChatItemProps['onDoubleClick'];
-  variant?: 'bubble' | 'default';
 }
 
 const MessageContent = memo<MessageContentProps>(
-  ({
-    editing,
-    id,
-    message,
-    messageExtra,
-    children,
-    onDoubleClick,
-    disabled,
-    className,
-    variant,
-  }) => {
+  ({ editing, id, message, messageExtra, children, onDoubleClick, disabled, className }) => {
     const [toggleMessageEditing, updateMessageContent, regenerateUserMessage] =
       useConversationStore((s) => [
         s.toggleMessageEditing,
@@ -127,8 +101,9 @@ const MessageContent = memo<MessageContentProps>(
     return (
       <AIMessageContent
         className={cn(
-          variant !== 'bubble' && 'w-full',
-          cx(MSG_CONTENT_CLASSNAME, styles.message, disabled && styles.disabled, className),
+          MSG_CONTENT_CLASSNAME,
+          disabled && 'select-none text-muted-foreground',
+          className,
         )}
         onDoubleClick={onDoubleClick}
       >

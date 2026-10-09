@@ -46,8 +46,6 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
   return (
     <Task open={expanded} onOpenChange={setExpanded}>
       <TaskTrigger
-        className="hover:no-underline"
-        style={{ paddingBlock: 4, paddingInline: 4 }}
         title={title || ''}
       >
         <TaskTitle metrics={metrics} status={status} title={title} />

@@ -21,11 +21,7 @@ const Actions = memo<ActionsProps>(({ actionAddon, placement, actions }) => {
 
   const isUser = placement === 'right';
   return (
-    <MessageActions
-      style={{
-        alignSelf: isUser ? 'flex-end' : 'flex-start',
-      }}
-    >
+    <MessageActions className={isUser ? 'self-end' : undefined}>
       {!isUser && actionAddon}
       {actions}
       {isUser && actionAddon}

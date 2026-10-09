@@ -1,4 +1,3 @@
-import { ChevronDownIcon, GlobeIcon, ImagesIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +5,9 @@ import {
   InlineCitationCard,
   InlineCitationCardBody,
   InlineCitationCardTrigger,
+  InlineCitationCarousel,
+  InlineCitationCarouselContent,
+  InlineCitationCarouselItem,
   InlineCitationSource,
 } from '@/components/ai-elements/inline-citation';
 import { Source, Sources, SourcesContent, SourcesTrigger } from '@/components/ai-elements/sources';
@@ -33,14 +35,13 @@ const SearchGrounding = memo<GroundingSearch>(
     const count = hasWebResults ? validCitations.length : (imageResults?.length ?? 0);
     return (
       <Sources>
-        <SourcesTrigger className="group" count={count}>
-          {hasWebResults ? <GlobeIcon className="size-4" /> : <ImagesIcon className="size-4" />}
-          <span className="font-medium">
-            {t(hasWebResults ? 'search.grounding.title' : 'search.grounding.imageTitle', { count })}
-          </span>
-          <ChevronDownIcon className="size-4 transition-transform group-data-open:rotate-180" />
-        </SourcesTrigger>
-        <SourcesContent className="w-full gap-3">
+        <SourcesTrigger
+          count={count}
+          label={t(hasWebResults ? 'search.grounding.title' : 'search.grounding.imageTitle', {
+            count,
+          })}
+        />
+        <SourcesContent>
           {!!searchQueries?.length && (
             <div className="flex flex-wrap items-center gap-2">
               <span>{t('search.grounding.searchQueries')}</span>
@@ -56,8 +57,14 @@ const SearchGrounding = memo<GroundingSearch>(
               <Source href={citation.url} title={citation.title || citation.url} />
               <InlineCitationCard>
                 <InlineCitationCardTrigger sources={[citation.url]} />
-                <InlineCitationCardBody className="p-4">
-                  <InlineCitationSource title={citation.title} url={citation.url} />
+                <InlineCitationCardBody>
+                  <InlineCitationCarousel>
+                    <InlineCitationCarouselContent>
+                      <InlineCitationCarouselItem>
+                        <InlineCitationSource title={citation.title} url={citation.url} />
+                      </InlineCitationCarouselItem>
+                    </InlineCitationCarouselContent>
+                  </InlineCitationCarousel>
                 </InlineCitationCardBody>
               </InlineCitationCard>
             </div>

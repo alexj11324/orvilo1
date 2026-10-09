@@ -1,7 +1,7 @@
 'use client';
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { type VoiceMessageRecording } from '@orvilo/types';
+import { classifyToolInterventionPresentation, type VoiceMessageRecording } from '@orvilo/types';
 import debug from 'debug';
 import { Info, X } from 'lucide-react';
 import { type ReactNode } from 'react';
@@ -278,6 +278,20 @@ const ChatInput = memo<ChatInputProps>(
       },
     );
     const hasPendingInterventions = pendingInterventions.length > 0;
+    const hasBottomInterventions = pendingInterventions.some(
+      ({ identifier, apiName }) =>
+        classifyToolInterventionPresentation(identifier, apiName).surface !== 'binary',
+    );
+    const reviewInlineIntervention = useCallback(
+      (toolCallId: string) => {
+        const state = storeApi.getState();
+        const intervention = dataSelectors
+          .pendingInterventions(state)
+          .find((item) => item.toolCallId === toolCallId);
+        if (intervention) state.virtuaScrollMethods?.scrollToMessage?.(intervention.toolMessageId);
+      },
+      [storeApi],
+    );
 
     // Send message error from ConversationStore
     const sendMessageErrorMsg = useConversationStore(messageStateSelectors.sendMessageError);
@@ -460,10 +474,15 @@ const ChatInput = memo<ChatInputProps>(
       <WideScreenContainer
         style={{ position: 'relative', ...(skipScrollMarginWithList ? { marginTop: -12 } : null) }}
       >
-        {hasPendingInterventions && <InterventionBar interventions={pendingInterventions} />}
+        {hasPendingInterventions && (
+          <InterventionBar
+            interventions={pendingInterventions}
+            onReviewInline={reviewInlineIntervention}
+          />
+        )}
         {/* Keep the chat input mounted while an intervention panel is showing —
             unmounting would wipe the Lexical editor's in-memory document. */}
-        <div style={{ display: hasPendingInterventions ? 'none' : 'contents' }}>
+        <div style={{ display: hasBottomInterventions ? 'none' : 'contents' }}>
           {sendMessageErrorMsg && (
             <div className="flex flex-col px-3" style={{ paddingBlock: '0 6px' }}>
               <Alert variant="default">
@@ -509,7 +528,7 @@ const ChatInput = memo<ChatInputProps>(
             controlBarInCard={controlBarInCard}
             controlBarSlot={controlBarSlot}
             editorDefaultRows={editorDefaultRows}
-            hidden={hasPendingInterventions}
+            hidden={hasBottomInterventions}
             isConfigLoading={isConfigLoading}
             leftContent={leftContent}
             placeholderVariant={placeholderVariant}

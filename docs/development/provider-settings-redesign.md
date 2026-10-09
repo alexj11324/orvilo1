@@ -85,3 +85,14 @@ when off and none of those exist. A persisted "connection failed" still has no s
 ### Form switch names
 
 Client request mode and Responses API controls pass their existing localized row titles as aria-label to FormSwitch. The CredentialsPanel visual row label is a separate div, so it does not name the embedded switch automatically. The true-parent rebase preserves the current save-error toast and its locale keys. Native computed-name verification remains required before claiming product acceptance.
+
+## Carried over from canary
+
+Canary changed these files while the redesign was in flight; the behaviour was re-applied to the new markup:
+
+- Card keyboard access and focus ring (`clickableProps`): the card is a real stretched `button`, so it is focusable, activates on Enter and Space, and shows the `Button` focus ring.
+- Rail "more" menu: accessible name `common:more` (the tooltip keeps the sort label).
+- Edit-info button: accessible name `common:settings`.
+- Autosave: a rejected `updateAiProviderConfig` shows an error toast (`providerModels.config.saveFailed`, or the error message) instead of an unhandled rejection.
+- Connectivity check busy indicator: the local `Spinner` (the new select uses `loading`).
+- Ollama close button name and OAuth card `Spinner` merged unchanged.

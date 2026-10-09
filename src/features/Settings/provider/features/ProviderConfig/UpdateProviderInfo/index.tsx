@@ -14,6 +14,7 @@ import { createSettingModal } from './SettingModal';
 
 const UpdateProviderInfo = memo(() => {
   const { t } = useTranslation('modelProvider');
+  const { t: tCommon } = useTranslation('common');
 
   const providerConfig = useAiInfraStore(aiProviderSelectors.activeProviderConfig, isEqual);
   const { allowed: canManageProvider, reason } = usePermission('manage_provider_key');
@@ -23,7 +24,7 @@ const UpdateProviderInfo = memo(() => {
     <Tooltip>
       <TooltipTrigger render={<span className="inline-flex" />}>
         <Button
-          aria-label={label}
+          aria-label={tCommon('settings')}
           disabled={!canManageProvider}
           size="icon"
           variant="ghost"

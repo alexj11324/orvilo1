@@ -16,8 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useCalendarLocale } from './calendarLocale';
 
@@ -277,24 +277,24 @@ const DatePicker = memo<DatePickerProps>(
           {display || placeholder}
         </span>
         {allowClear && currentValue ? (
-            <span
-              {...clickableProps()}
-              aria-label={t('datePicker.clear')}
-              className={cn(
-                'flex items-center rounded-sm text-muted-foreground hover:text-foreground',
-                CLICKABLE_FOCUS_RING,
-              )}
-              onClick={clearValue}
-              onKeyDown={(e) => {
-                if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
-                // The span sits inside the trigger button: keep Enter/Space from opening the popover.
-                e.preventDefault();
-                e.stopPropagation();
-                clearValue(e);
-              }}
-            >
-              <X size={13} />
-            </span>
+          <span
+            {...clickableProps()}
+            aria-label={t('datePicker.clear')}
+            className={cn(
+              'flex items-center rounded-sm text-muted-foreground hover:text-foreground',
+              CLICKABLE_FOCUS_RING,
+            )}
+            onClick={clearValue}
+            onKeyDown={(e) => {
+              if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+              // The span sits inside the trigger button: keep Enter/Space from opening the popover.
+              e.preventDefault();
+              e.stopPropagation();
+              clearValue(e);
+            }}
+          >
+            <X size={13} />
+          </span>
         ) : suffixIcon === null ? null : (
           (suffixIcon ?? null)
         )}

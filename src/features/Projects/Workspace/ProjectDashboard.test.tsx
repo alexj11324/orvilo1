@@ -24,6 +24,7 @@ import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
+import { ProjectDateField } from './ProjectPlanningFields';
 import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
@@ -81,6 +82,7 @@ const mocks = vi.hoisted(() => ({
   // Milestone store actions, spied so writes can be asserted directly.
   createMilestone: vi.fn(),
   updateMilestone: vi.fn(),
+  updateProject: vi.fn(),
   deleteMilestone: vi.fn(),
   reorderMilestones: vi.fn(),
   setTaskMilestone: vi.fn(),
@@ -328,6 +330,7 @@ vi.mock('@/store/project', () => ({
         reorderMilestones: mocks.reorderMilestones,
         setTaskMilestone: mocks.setTaskMilestone,
         updateMilestone: mocks.updateMilestone,
+        updateProject: mocks.updateProject,
       } as Record<string, unknown>,
       { get: (target, prop) => (prop in target ? target[prop as string] : fallback) },
     );
@@ -461,6 +464,7 @@ beforeEach(() => {
   mocks.detailTasks = [];
   mocks.createMilestone.mockReset().mockResolvedValue({ id: 'ms_new' });
   mocks.updateMilestone.mockReset().mockResolvedValue({ id: 'ms_1' });
+  mocks.updateProject.mockReset().mockResolvedValue(undefined);
   mocks.deleteMilestone.mockReset().mockResolvedValue(undefined);
   mocks.reorderMilestones.mockReset().mockResolvedValue([]);
   mocks.setTaskMilestone.mockReset().mockResolvedValue({ id: 'task_1' });
@@ -1110,6 +1114,20 @@ describe('project milestone management', () => {
     expect(mocks.deleteMilestone).toHaveBeenCalledWith('prj_1', 'ms_1');
   });
 
+  it('normalizes shared picker array selections before saving a milestone date', async () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    const picker = () =>
+      mocks.datePickerProps.find((props) => props['aria-label'] === 'overview.milestoneChooseDate');
+    await act(async () => {
+      (picker()!.onChange as (value: unknown) => void)([dayjs('2026-12-24'), dayjs('2026-12-25')]);
+    });
+    expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', { date: '2026-12-24' });
+    await act(async () => {
+      (picker()!.onChange as (value: unknown) => void)([]);
+    });
+    expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', { date: null });
+  });
+
   it('writes a picked target date, and a cleared one, through the update action', async () => {
     render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
     const picker = () =>
@@ -1569,4 +1587,32 @@ describe('project properties planning metadata', () => {
     expect(screen.getByText('UI parity')).toBeInTheDocument();
     expect(screen.getByText('orvilo')).toBeInTheDocument();
   });
+});
+
+describe('project planning date picker values', () => {
+  it.each(['startDate', 'targetDate'] as const)(
+    'normalizes %s array selections and empty arrays',
+    async (kind) => {
+      render(<ProjectDateField kind={kind} project={detail.project} />);
+      const picker = () =>
+        mocks.datePickerProps.findLast((props) => props['aria-label'] === `create.${kind}`);
+      await act(async () => {
+        (picker()!.onChange as (value: unknown) => void)([
+          dayjs('2026-12-24'),
+          dayjs('2026-12-25'),
+        ]);
+      });
+      expect(mocks.updateProject).toHaveBeenCalledWith('prj_1', {
+        [kind]: '2026-12-24',
+        [`${kind}Precision`]: 'day',
+      });
+      await act(async () => {
+        (picker()!.onChange as (value: unknown) => void)([]);
+      });
+      expect(mocks.updateProject).toHaveBeenCalledWith('prj_1', {
+        [kind]: null,
+        [`${kind}Precision`]: null,
+      });
+    },
+  );
 });

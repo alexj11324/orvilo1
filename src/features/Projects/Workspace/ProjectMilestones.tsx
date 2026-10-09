@@ -377,7 +377,7 @@ function MilestoneDateControl({
           {panel}
         </>
       )}
-      onChange={commit}
+      onChange={(value) => commit(Array.isArray(value) ? (value[0] ?? null) : value)}
       onOpenChange={setOpen}
     />
   );

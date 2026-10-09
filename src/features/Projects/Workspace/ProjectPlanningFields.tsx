@@ -450,7 +450,7 @@ export function ProjectDateField({
           {panel}
         </>
       )}
-      onChange={commit}
+      onChange={(value) => commit(Array.isArray(value) ? (value[0] ?? null) : value)}
       onOpenChange={(next) => {
         setOpen(next);
         if (next) setPrecision(storedPrecision);

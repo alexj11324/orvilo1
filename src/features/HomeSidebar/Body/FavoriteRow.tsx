@@ -16,7 +16,7 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { FAVORITE_TARGET_ICONS } from './favoriteIcon';
 import { favoriteLabel } from './favoriteLabel';
 import { isFavoriteReorderDownDisabled, isFavoriteReorderUpDisabled } from './favoriteOverflow';
-import { favoriteKey } from './favoriteReorder';
+import { favoriteKey, withoutRowTabStop } from './favoriteReorder';
 import { useFavoritePointerDragGuard } from './useFavoritePointerDragGuard';
 import { workTargetPath } from './workTargetPath';
 
@@ -107,8 +107,8 @@ export const SortableFavoriteRow = ({ suppressClickRef, ...props }: SortableFavo
   });
 
   // The row's li is the sortable node, so the menu stays a valid ul > li list.
-  // dnd-kit's role="button" is dropped for the same reason.
-  const { role: _role, ...sortableAttributes } = attributes;
+  // dnd-kit's role="button" and tabindex="0" are dropped for the same reason.
+  const sortableAttributes = withoutRowTabStop(attributes);
 
   return (
     <FavoriteRow

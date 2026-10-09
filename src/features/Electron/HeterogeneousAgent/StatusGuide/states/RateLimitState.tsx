@@ -1,3 +1,4 @@
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { CalendarClock, Play, RotateCcw } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,14 +46,8 @@ const RateLimitState = ({
         weekday: 'short',
       }).format(new Date(effectiveResetsAt * 1000));
     } catch {
-      try {
-        return new Intl.DateTimeFormat(dateLocale, {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        }).format(new Date(effectiveResetsAt * 1000));
-      } catch {
-        return;
-      }
+      // The reported timezone was rejected: fall back to a numeric local date-time.
+      return formatAbsoluteDateTime(effectiveResetsAt * 1000) || undefined;
     }
   }, [dateLocale, effectiveResetsAt, timezoneLabel]);
   const rateLimitTypeLabel = useMemo(() => {

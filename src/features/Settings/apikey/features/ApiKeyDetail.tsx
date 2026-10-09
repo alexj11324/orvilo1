@@ -1,4 +1,5 @@
 'use client';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { Pencil, Trash } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -209,7 +210,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                   {t('apikey.detail.createdAt')}
                 </span>
                 <span className="flex items-center overflow-hidden text-[13px]">
-                  {apiKey.createdAt.toLocaleString()}
+                  {formatAbsoluteDateTime(apiKey.createdAt)}
                 </span>
               </div>
 
@@ -218,7 +219,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                   {t('apikey.list.columns.lastUsedAt')}
                 </span>
                 <span className="flex items-center overflow-hidden text-[13px]">
-                  {apiKey.lastUsedAt?.toLocaleString() || t('apikey.display.neverUsed')}
+                  {formatAbsoluteDateTime(apiKey.lastUsedAt) || t('apikey.display.neverUsed')}
                 </span>
               </div>
 

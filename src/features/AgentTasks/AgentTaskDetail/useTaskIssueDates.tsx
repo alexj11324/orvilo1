@@ -1,3 +1,4 @@
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { format } from 'date-fns';
 import { BellIcon, CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -124,7 +125,7 @@ export const useTaskIssueDates = ({
   open: boolean;
   taskId?: string;
 }) => {
-  const { t, i18n } = useTranslation(['chat', 'common']);
+  const { t } = useTranslation(['chat', 'common']);
   const updateTask = useTaskStore((s) => s.updateTask);
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
@@ -171,11 +172,6 @@ export const useTaskIssueDates = ({
     });
   const dateSearch = parseIssueMenuDate(dateQuery);
   const reminderSearch = parseIssueMenuDate(reminderQuery);
-  const dateFormat = new Intl.DateTimeFormat(i18n.language, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
   const dueDateItem: SidebarMenuItemData = {
     key: 'dueDate',
     icon: <CalendarIcon />,
@@ -207,7 +203,7 @@ export const useTaskIssueDates = ({
           ? [
               {
                 key: 'due-search',
-                label: dateFormat.format(dateSearch),
+                label: formatAbsoluteDate(dateSearch),
                 onClick: () => void apply(() => saveDueDate(dateSearch)),
               },
             ]
@@ -217,7 +213,7 @@ export const useTaskIssueDates = ({
       ...(['tomorrow', 'weekEnd', 'week'] as const).map((key) => ({
         key: `due-${key}`,
         label: t(`taskDetail.menu.date.${key}`),
-        extra: dateFormat.format(new Date(`${issueDueDatePreset(key)}T00:00:00`)),
+        extra: formatAbsoluteDate(new Date(`${issueDueDatePreset(key)}T00:00:00`)),
         onClick: () =>
           void apply(() => saveDueDate(new Date(`${issueDueDatePreset(key)}T00:00:00`))),
       })),
@@ -228,9 +224,7 @@ export const useTaskIssueDates = ({
     icon: <BellIcon />,
     label: t('taskDetail.menu.remindMe'),
     disabled: pending || !taskId,
-    extra: reminder?.data?.remindAt
-      ? format(new Date(reminder.data.remindAt), 'MMM d, HH:mm')
-      : undefined,
+    extra: reminder?.data?.remindAt ? formatAbsoluteDateTime(reminder.data.remindAt) : undefined,
     children: [
       {
         type: 'group',
@@ -262,7 +256,7 @@ export const useTaskIssueDates = ({
             ? [
                 {
                   key: 'reminder-search',
-                  label: reminderSearch.toLocaleString(i18n.language),
+                  label: formatAbsoluteDateTime(reminderSearch),
                   onClick: () => void apply(() => saveReminder(reminderSearch)),
                 },
               ]

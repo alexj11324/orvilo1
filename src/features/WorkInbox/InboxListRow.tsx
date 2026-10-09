@@ -1,5 +1,6 @@
 'use client';
 import type { NotificationFeedCard } from '@orvilo/types';
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -208,7 +209,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             <span className="text-muted-foreground">{card.content}</span>
             {'.'}
           </p>
-          <div className="hidden shrink-0 items-center gap-2 group-focus-within:flex group-hover:flex">
+          {/* The snooze menu popup is portaled out of this row, so once the pointer or focus
+              moves into it the row stops matching `group-hover` / `group-focus-within`; without
+              `has-data-popup-open` the container goes back to `display: none`, the trigger's
+              rect collapses to 0x0 and the popup jumps away (the next click then lands on the
+              row beneath). Base UI marks the open trigger with `data-popup-open`. */}
+          <div className="hidden shrink-0 items-center gap-2 group-focus-within:flex group-hover:flex has-data-popup-open:flex">
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -303,6 +309,9 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                   <DropdownMenuItem
                     onClick={(event) => {
                       stopRowClick(event);
+                      // Same as the Issue header menu's Custom entries: the modal is
+                      // imperative (rendered by ModalHost, not under this row), so it
+                      // survives the menu closing.
                       onCustomSnooze(card);
                     }}
                   >
@@ -325,12 +334,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
               <>
                 <ClockIcon aria-hidden className="size-3" />
                 {t('inbox.snoozeUntil', {
-                  date: dayjs(card.snoozedUntil).format('MMM D'),
+                  date: formatAbsoluteDate(card.snoozedUntil),
                   time: dayjs(card.snoozedUntil).format('HH:mm'),
                 })}
               </>
             ) : (
-              <span title={dayjs(card.lastActivityAt).format('LLL')}>
+              <span title={formatAbsoluteDateTime(card.lastActivityAt)}>
                 {formatInboxAge(card.lastActivityAt, { locale: i18n.language })}
               </span>
             )}

@@ -5,11 +5,11 @@ import { formatTaskItemDate } from './formatTaskItemDate';
 
 describe('formatTaskItemDate', () => {
   it('formats current-year dates with day precision', () => {
-    expect(formatTaskItemDate('2026-04-24', { now: '2026-05-01' })).toBe('Apr 24');
+    expect(formatTaskItemDate('2026-04-24', { now: '2026-05-01' })).toBe('2026/04/24');
   });
 
   it('formats dates from other years with the year included', () => {
-    expect(formatTaskItemDate('2025-04-24', { now: '2026-05-01' })).toBe('Apr 24, 2025');
+    expect(formatTaskItemDate('2025-04-24', { now: '2026-05-01' })).toBe('2025/04/24');
   });
 
   it('returns an empty string for invalid input', () => {
@@ -30,9 +30,12 @@ describe('formatTaskItemDate', () => {
       dayjs.locale('en');
     });
 
-    it('renders English month names when locale is en-US, regardless of dayjs global', () => {
+    it('renders numeric days in every language, regardless of dayjs global', () => {
       expect(formatTaskItemDate('2026-05-12', { locale: 'en-US', now: '2026-05-20' })).toBe(
-        'May 12',
+        '2026/05/12',
+      );
+      expect(formatTaskItemDate('2026-05-12', { locale: 'zh-CN', now: '2026-05-20' })).toBe(
+        '2026/05/12',
       );
     });
 

@@ -1,6 +1,7 @@
 'use client';
 import { Freeze } from '@lobehub/ui';
 import type { VerifyCodingScope } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { TFunction } from 'i18next';
@@ -190,7 +191,7 @@ export const getPreviewData = async (
       const scope = [
         codingScope?.branch,
         codingScope?.commit?.slice(0, 10),
-        testedAt ? new Date(testedAt).toLocaleString() : null,
+        testedAt ? formatAbsoluteDateTime(testedAt) : null,
       ].filter(Boolean);
 
       return {

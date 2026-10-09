@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { addDays, format } from 'date-fns';
 import {
   BellIcon,
@@ -184,10 +185,6 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
     );
 
     const selectedDate = parseDateString(dueDate);
-    const dateFormat = useMemo(
-      () => new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }),
-      [i18n.language],
-    );
 
     const shortcuts = [
       {
@@ -195,21 +192,21 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
         id: 'today',
         label: t('taskList.schedule.today', { defaultValue: 'Today' }),
         resolve: () => new Date(),
-        sublabel: dateFormat.format(new Date()),
+        sublabel: formatAbsoluteDate(new Date()),
       },
       {
         icon: <ClockIcon />,
         id: 'tomorrow',
         label: t('taskList.schedule.tomorrow', { defaultValue: 'Tomorrow' }),
         resolve: () => addDays(new Date(), 1),
-        sublabel: dateFormat.format(addDays(new Date(), 1)),
+        sublabel: formatAbsoluteDate(addDays(new Date(), 1)),
       },
       {
         icon: <CalendarPlusIcon />,
         id: 'week',
         label: t('taskList.schedule.inOneWeek', { defaultValue: 'In one week' }),
         resolve: () => addDays(new Date(), 7),
-        sublabel: dateFormat.format(addDays(new Date(), 7)),
+        sublabel: formatAbsoluteDate(addDays(new Date(), 7)),
       },
     ];
 
@@ -259,7 +256,7 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
               </ItemContent>
               <ItemActions>
                 <span className="text-muted-foreground text-xs">
-                  {format(selectedDate!, 'yyyy-MM-dd')}
+                  {formatAbsoluteDate(selectedDate)}
                 </span>
               </ItemActions>
             </Item>
@@ -351,7 +348,7 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
             <BellIcon size={12} />
             {t('taskList.schedule.remindMe', { defaultValue: 'Remind me' })}
             {reminderLoaded && remindAt ? (
-              <span className="text-foreground">{format(remindAt, 'MMM d, HH:mm')}</span>
+              <span className="text-foreground">{formatAbsoluteDateTime(remindAt)}</span>
             ) : null}
           </div>
           {reminderPresets.map((preset) => {

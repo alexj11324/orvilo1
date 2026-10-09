@@ -1,4 +1,5 @@
 'use client';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { UsersIcon } from 'lucide-react';
@@ -118,7 +119,7 @@ const TeamHomeMembers = memo<TeamHomeMembersProps>(({ error, isLoading, members,
           {member.role === 'lead' ? <Badge variant="secondary">{t('teams.roleLead')}</Badge> : null}
           {member.joinedAt ? (
             <span className={cn('text-sm', styles.joined)}>
-              {new Date(member.joinedAt).toLocaleDateString()}
+              {formatAbsoluteDate(member.joinedAt)}
             </span>
           ) : null}
         </div>

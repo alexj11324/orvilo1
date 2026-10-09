@@ -1585,7 +1585,7 @@ export default {
   'taskSchedule.maxExecutionsPlaceholder': 'Unlimited',
   'taskSchedule.minutes': 'Minutes',
   'taskSchedule.nextRun': 'Next run',
-  'taskSchedule.nextRun.format': 'MMM D HH:mm',
+  'taskSchedule.nextRun.format': 'YYYY/MM/DD HH:mm',
   'taskSchedule.scheduleType.daily': 'Daily',
   'taskSchedule.scheduleType.hourly': 'Hourly',
   'taskSchedule.scheduleType.weekly': 'Weekly',

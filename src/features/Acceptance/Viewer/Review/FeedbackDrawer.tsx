@@ -1,9 +1,9 @@
 'use client';
 
 import type { AcceptanceAttachment } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -92,7 +92,7 @@ const EntryRow = memo<{
     entry.annotationCount
       ? t('acceptance.feedback.annotations', { count: entry.annotationCount })
       : null,
-    `${t('acceptance.round', { round: entry.roundIndex })} · ${dayjs(entry.createdAt).format('MM-DD HH:mm')}`,
+    `${t('acceptance.round', { round: entry.roundIndex })} · ${formatAbsoluteDateTime(entry.createdAt)}`,
   ].filter(Boolean);
 
   return (

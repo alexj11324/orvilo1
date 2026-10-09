@@ -2,9 +2,9 @@
 
 import { Image } from '@lobehub/ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cssVar } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { BadgeCheck, Ban, MessageSquareX } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +33,7 @@ export const AcceptedNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revi
       <BadgeCheck color={cssVar.colorTextQuaternary} size={13} />
       <div className="text-[12px] text-muted-foreground">
         {t('acceptance.review.acceptedNote', {
-          time: hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : '',
+          time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
         })}
       </div>
     </div>
@@ -48,7 +48,7 @@ export const IgnoredNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revie
       <Ban color={cssVar.colorTextQuaternary} size={13} />
       <div className="text-[12px] text-muted-foreground">
         {t('acceptance.review.ignoredNote', {
-          time: hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : '',
+          time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
         })}
       </div>
     </div>
@@ -87,7 +87,7 @@ export const FeedbackCard = memo<{
           {t('acceptance.review.feedbackLabel')}
         </div>
         <div className="text-[12px] text-muted-foreground">
-          {hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : null}
+          {hydrated ? formatAbsoluteDateTime(review.createdAt) : null}
         </div>
       </div>
       {review.comment && <div style={{ fontSize: 12 }}>{review.comment}</div>}

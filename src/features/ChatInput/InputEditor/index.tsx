@@ -7,6 +7,7 @@ import { HotkeyEnum, KeyEnum } from '@orvilo/const/hotkeys';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import {
   chainInputCompletion,
+  escapeXml,
   INPUT_COMPLETION_PROMPT_VERSION,
   INPUT_COMPLETION_SCHEMA_NAME,
 } from '@orvilo/prompts';
@@ -446,7 +447,7 @@ const InputEditor = memo<{
   // --- Stable mentionOption & slashOption to prevent infinite re-render on paste ---
   const mentionMarkdownWriter = useCallback((mention: any) => {
     if (mention.metadata?.type === 'topic') {
-      return `<refer_topic name="${mention.metadata.topicTitle}" id="${mention.metadata.topicId}" />`;
+      return `<refer_topic name="${escapeXml(mention.metadata.topicTitle)}" id="${mention.metadata.topicId}" />`;
     }
     // localFile references are their own node (LocalFileTagNode) and serialize
     // via that plugin's always-registered markdown writer — they never reach this

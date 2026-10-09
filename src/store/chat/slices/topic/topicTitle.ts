@@ -63,12 +63,11 @@ export const resolveTopicTitleSource = (
  * Whether an agent-reported title may replace the topic's current title.
  *
  * Order of authority: user > agent > auto (model / first-message slice).
- * `origin` is the in-memory record of the last write in this session. Without
- * one (after a reload: the marker is not persisted) a title is only replaceable
+ * `origin` is the recorded source (the in-memory last write, else the persisted
+ * `metadata.titleSource`). Without one (topics titled before it existed) a title is only replaceable
  * if it is clearly Orvilo's own placeholder: empty, one of the placeholder /
  * default titles, or the slice of the first user message. Anything else is
- * assumed to be user-set. This is a heuristic, so it also protects an earlier
- * agent title after a reload.
+ * assumed to be user-set (a heuristic for legacy topics).
  */
 export const canAgentRetitleTopic = ({
   currentTitle,

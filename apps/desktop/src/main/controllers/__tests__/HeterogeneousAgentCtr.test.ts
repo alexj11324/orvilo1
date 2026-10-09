@@ -124,6 +124,8 @@ const {
   grokAcpSessionRunMock,
   resolveAcpSpawnTargetMock,
   standardAcpSessionCloseMock,
+  standardAcpSessionLingerMock,
+  standardAcpSessionReleaseMock,
   standardAcpSessionConstructMock,
   standardAcpSessionInterruptMock,
   standardAcpSessionRunMock,
@@ -150,6 +152,8 @@ const {
   grokAcpSessionRunMock: vi.fn(),
   resolveAcpSpawnTargetMock: vi.fn(),
   standardAcpSessionCloseMock: vi.fn(),
+  standardAcpSessionLingerMock: vi.fn(() => false),
+  standardAcpSessionReleaseMock: vi.fn(),
   standardAcpSessionConstructMock: vi.fn(),
   standardAcpSessionInterruptMock: vi.fn(),
   standardAcpSessionRunMock: vi.fn(),
@@ -176,8 +180,23 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
       standardAcpSessionConstructMock(this.config.agentType, this.options, this.config);
     }
 
+    /** Scripted by tests: whether this stand-in is still waiting for its title. */
+    titleLingering = false;
+
     close() {
       standardAcpSessionCloseMock();
+      this.titleLingering = false;
+      this.options.onTitleWindowEnd?.();
+    }
+
+    release() {
+      standardAcpSessionReleaseMock();
+      if (!this.titleLingering) this.close();
+    }
+
+    /** Mirrors the real session: lingers when scripted, until the window ends. */
+    startLinger() {
+      this.titleLingering = standardAcpSessionLingerMock();
     }
 
     interrupt() {
@@ -188,6 +207,7 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
       if (standardAcpSessionRunMock.getMockImplementation()) {
         return standardAcpSessionRunMock(this.options, this.config);
       }
+      this.startLinger();
       const now = Date.now();
       const transport = this.config.spec.transport;
       this.options.onRuntimeStatus({
@@ -224,6 +244,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
       grokAcpSessionConstructMock(options);
     }
 
+    release() {
+      this.close();
+    }
+
     close() {
       grokAcpSessionCloseMock();
     }
@@ -240,6 +264,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
   class MockCursorAcpSession {
     constructor(private readonly options: any) {
       cursorAcpSessionConstructMock(options);
+    }
+
+    release() {
+      this.close();
     }
 
     close() {
@@ -287,6 +315,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
   class MockDevinAcpSession {
     constructor(private readonly options: any) {
       devinAcpSessionConstructMock(options);
+    }
+
+    release() {
+      this.close();
     }
 
     close() {
@@ -337,6 +369,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
       traeAcpSessionConstructMock(options);
     }
 
+    release() {
+      this.close();
+    }
+
     close() {
       traeAcpSessionCloseMock();
     }
@@ -382,6 +418,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
   class MockDroidAcpSession {
     constructor(private readonly options: any) {
       droidAcpSessionConstructMock(options);
+    }
+
+    release() {
+      this.close();
     }
 
     close() {
@@ -481,6 +521,9 @@ describe('HeterogeneousAgentCtr', () => {
     consumeCodexRateLimitResetCreditMock.mockReset();
     fetchCodexQuotaMock.mockReset();
     standardAcpSessionCloseMock.mockReset();
+    standardAcpSessionReleaseMock.mockReset();
+    standardAcpSessionLingerMock.mockReset();
+    standardAcpSessionLingerMock.mockReturnValue(false);
     standardAcpSessionConstructMock.mockReset();
     standardAcpSessionInterruptMock.mockReset();
     standardAcpSessionInterruptMock.mockResolvedValue(true);
@@ -566,6 +609,72 @@ describe('HeterogeneousAgentCtr', () => {
 
   afterEach(async () => {
     await rm(appStoragePath, { force: true, recursive: true });
+  });
+
+  describe('title linger', () => {
+    const setupLingering = async () => {
+      const send = vi.fn();
+      mockGetAllWindows.mockReturnValue([{ isDestroyed: () => false, webContents: { send } }]);
+      standardAcpSessionLingerMock.mockReturnValue(true);
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({ agentType: 'claude-code', command: 'claude' });
+      await ctr.sendPrompt({ operationId: 'op-linger', prompt: 'hi', sessionId });
+      await ctr.stopSession({ sessionId });
+      return { ctr, send, sessionId };
+    };
+
+    it('keeps a lingering session reachable for a forced stop after the run settled', async () => {
+      const { ctr, sessionId } = await setupLingering();
+
+      // The renderer's post-run stopSession must not kill the title wait.
+      expect(standardAcpSessionCloseMock).not.toHaveBeenCalled();
+
+      await ctr.cancelSession({ sessionId });
+      expect(standardAcpSessionCloseMock).toHaveBeenCalledOnce();
+    });
+
+    it('announces the end of the title window and stops tracking the session', async () => {
+      const { ctr, send, sessionId } = await setupLingering();
+      const options = standardAcpSessionConstructMock.mock.calls.at(-1)![1];
+
+      options.onTitleWindowEnd();
+
+      expect(send).toHaveBeenCalledWith('heteroAgentSessionTitleEnd', { sessionId });
+      await ctr.cancelSession({ sessionId });
+      expect(standardAcpSessionCloseMock).not.toHaveBeenCalled();
+    });
+
+    it('forwards the title on its own channel', async () => {
+      const { send, sessionId } = await setupLingering();
+      const options = standardAcpSessionConstructMock.mock.calls.at(-1)![1];
+
+      options.onSessionTitle('Agent title');
+
+      expect(send).toHaveBeenCalledWith('heteroAgentSessionTitle', {
+        sessionId,
+        title: 'Agent title',
+      });
+    });
+
+    it('a new prompt on the same native session force-closes the lingering one', async () => {
+      const { ctr } = await setupLingering();
+      // the lingering session was created fresh (no resume id); give the next
+      // run the native id the first one reported
+      const options = standardAcpSessionConstructMock.mock.calls.at(-1)![1];
+      expect(options.sessionId).toBeDefined();
+      standardAcpSessionLingerMock.mockReturnValue(false);
+      const second = await ctr.startSession({
+        agentType: 'claude-code',
+        command: 'claude',
+        resumeSessionId: 'claude-code-native-session',
+      });
+      await ctr.sendPrompt({ operationId: 'op-2', prompt: 'again', sessionId: second.sessionId });
+
+      expect(standardAcpSessionCloseMock).toHaveBeenCalledOnce();
+    });
   });
 
   describe('cancelSession', () => {
@@ -3238,7 +3347,10 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
       const { sessionId } = await ctr.startSession({ agentType: 'trae', command: 'traecli' });
       const session = (ctr as any).sessions.get(sessionId);
-      session.traeAcpSession = { close: traeAcpSessionCloseMock };
+      session.traeAcpSession = {
+        close: traeAcpSessionCloseMock,
+        release: traeAcpSessionCloseMock,
+      };
 
       ctr.afterAppReady();
       const beforeQuit = captureRegisteredHandler(electron.app.on, 'before-quit');
@@ -3247,6 +3359,25 @@ describe('HeterogeneousAgentCtr', () => {
       expect(traeAcpSessionCloseMock).toHaveBeenCalledOnce();
       expect(session.cancelledByUs).toBe(true);
       expect((ctr as any).sessions.has(sessionId)).toBe(false);
+    });
+
+    it('before-quit force-closes a session that only waits for its title', async () => {
+      const electron = (await import('electron')) as any;
+      electron.app.on.mockClear();
+      standardAcpSessionLingerMock.mockReturnValue(true);
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({ agentType: 'claude-code', command: 'claude' });
+      await ctr.sendPrompt({ operationId: 'op-quit', prompt: 'hi', sessionId });
+      await ctr.stopSession({ sessionId });
+      expect(standardAcpSessionCloseMock).not.toHaveBeenCalled();
+
+      ctr.afterAppReady();
+      captureRegisteredHandler(electron.app.on, 'before-quit')();
+
+      expect(standardAcpSessionCloseMock).toHaveBeenCalledOnce();
     });
 
     it('before-quit closes a running standard ACP session', async () => {
@@ -3258,7 +3389,10 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
       const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
       const session = (ctr as any).sessions.get(sessionId);
-      session.standardAcpSession = { close: standardAcpSessionCloseMock };
+      session.standardAcpSession = {
+        close: standardAcpSessionCloseMock,
+        release: standardAcpSessionCloseMock,
+      };
 
       ctr.afterAppReady();
       const beforeQuit = captureRegisteredHandler(electron.app.on, 'before-quit');
@@ -3276,7 +3410,10 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
       const { sessionId } = await ctr.startSession({ agentType: 'codex', command: 'codex' });
       const session = (ctr as any).sessions.get(sessionId);
-      session.standardAcpSession = { close: standardAcpSessionCloseMock };
+      session.standardAcpSession = {
+        close: standardAcpSessionCloseMock,
+        release: standardAcpSessionCloseMock,
+      };
 
       await ctr.stopSession({ sessionId });
 

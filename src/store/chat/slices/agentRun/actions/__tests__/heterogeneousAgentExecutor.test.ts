@@ -708,6 +708,14 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
   it('releases all IPC subscriptions after a run settles', async () => {
     await runWithEvents([ccInit(), ccResult()]);
 
+    // Only the title-only listeners outlive the run, until main ends the
+    // title window (or the safety timeout; see sessionTitleWatcher.test.ts).
+    expect([...ipc.getListeners().keys()].toSorted()).toEqual([
+      'heteroAgentSessionTitle',
+      'heteroAgentSessionTitleEnd',
+    ]);
+
+    ipc.getListeners().get('heteroAgentSessionTitleEnd')?.(null, { sessionId: 'ipc-sess-1' });
     expect([...ipc.getListeners().keys()]).toEqual([]);
   });
 
@@ -1714,6 +1722,56 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
         'Fix the login loop',
       ]);
       expect(summaryTopicTitle).not.toHaveBeenCalled();
+    });
+
+    it('retitles the topic with a title that arrives after the run finished', async () => {
+      const applyAgentTopicTitle = vi.fn().mockResolvedValue(undefined);
+      const store = createMockStore({ applyAgentTopicTitle });
+
+      await runWithEvents([ccInit(), ccResult()], { store });
+      // the run's own teardown is done; its stream listeners are gone
+      expect(ipc.getListeners().has('heteroAgentEvent')).toBe(false);
+      expect(applyAgentTopicTitle).not.toHaveBeenCalled();
+
+      emitTitle('ipc-sess-1', 'Generated two seconds later')();
+
+      expect(applyAgentTopicTitle).toHaveBeenCalledTimes(1);
+      expect(applyAgentTopicTitle.mock.calls[0].slice(0, 2)).toEqual([
+        'topic-1',
+        'Generated two seconds later',
+      ]);
+    });
+
+    it('drops the title listener when main reports the end of the title window', async () => {
+      const store = createMockStore({ applyAgentTopicTitle: vi.fn() });
+
+      await runWithEvents([ccInit(), ccResult()], { store });
+      expect(ipc.getListeners().has('heteroAgentSessionTitle')).toBe(true);
+
+      ipc.getListeners().get('heteroAgentSessionTitleEnd')?.(null, { sessionId: 'other' });
+      expect(ipc.getListeners().has('heteroAgentSessionTitle')).toBe(true);
+
+      ipc.getListeners().get('heteroAgentSessionTitleEnd')?.(null, { sessionId: 'ipc-sess-1' });
+      expect(ipc.getListeners().has('heteroAgentSessionTitle')).toBe(false);
+      expect(ipc.getListeners().has('heteroAgentSessionTitleEnd')).toBe(false);
+    });
+
+    it('releases the listener at once when the window ended before the run finished', async () => {
+      const store = createMockStore({ applyAgentTopicTitle: vi.fn() });
+
+      await runWithEvents(
+        [
+          ccInit(),
+          () =>
+            ipc.getListeners().get('heteroAgentSessionTitleEnd')?.(null, {
+              sessionId: 'ipc-sess-1',
+            }),
+          ccResult(),
+        ],
+        { store },
+      );
+
+      expect(ipc.getListeners().has('heteroAgentSessionTitle')).toBe(false);
     });
 
     it('ignores a title reported for another session', async () => {

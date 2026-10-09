@@ -3,7 +3,7 @@ import { isRecord } from '@orvilo/utils/object';
 
 import { parseAcpSessionTitleMessage } from '../adapters/acpCommon';
 import type { AcpRpcMessage } from './acpStdioClient';
-import { AcpStdioClient } from './acpStdioClient';
+import { AcpServerRequestError, AcpStdioClient } from './acpStdioClient';
 import type { AgentStreamPipelineOptions } from './agentStreamPipeline';
 import { AgentStreamPipeline } from './agentStreamPipeline';
 import {
@@ -88,6 +88,12 @@ export interface AcpAgentSessionOptions {
    */
   onSessionTitle?: (title: string) => void;
   onStderr: (data: string) => Promise<void> | void;
+  /**
+   * The window in which `onSessionTitle` can still fire is over: the process
+   * is closing (title delivered, linger cap reached, forced close, or the
+   * session ended with nothing to wait for). Called at most once.
+   */
+  onTitleWindowEnd?: () => void;
   operationId: string;
   requestTimeoutMs?: number;
   resumeSessionId?: string;
@@ -136,6 +142,7 @@ export abstract class AcpAgentSession<
   private lastSessionTitle?: string;
   private titleLingerTimer?: ReturnType<typeof setTimeout>;
   private interruptRequested = false;
+  private titleWindowEnded = false;
   /** Set once `session/prompt` is about to be sent; earlier updates are `session/load` replay. */
   private promptStarted = false;
   private lastStatus?: HeterogeneousAgentRuntimeStatus['state'];
@@ -158,10 +165,16 @@ export abstract class AcpAgentSession<
       env: options.env,
       onMessage: (message) => {
         this.forwardSessionTitle(message);
+        // A lingering child only waits for its title: nothing else it sends
+        // may reach the pipeline, whatever the subclass does.
+        if (this.titleLingering) return;
         return this.handleAgentMessage(message);
       },
       onRawMessage: options.onRawMessage,
-      onServerRequest: (message) => this.handleServerRequest(message),
+      onServerRequest: (message) =>
+        this.titleLingering
+          ? this.refuseLingeringRequest(message)
+          : this.handleServerRequest(message),
       onStderr: options.onStderr,
       processLabel: config.processLabel,
       requestTimeoutMs: options.requestTimeoutMs,
@@ -235,6 +248,7 @@ export abstract class AcpAgentSession<
         else {
           this.client.close();
           this.emitStatus('closed');
+          this.notifyTitleWindowEnd();
         }
       }
     }
@@ -299,6 +313,7 @@ export abstract class AcpAgentSession<
     this.onHostClose?.();
     this.client.close(signal);
     this.emitStatus('closed');
+    this.notifyTitleWindowEnd();
   }
 
   /** True while a finished turn's process is kept alive only to wait for the session title. */
@@ -346,6 +361,32 @@ export abstract class AcpAgentSession<
     this.hostClosed = true;
     this.client.close();
     this.emitStatus('closed');
+    this.notifyTitleWindowEnd();
+  }
+
+  private notifyTitleWindowEnd(): void {
+    if (this.titleWindowEnded) return;
+    this.titleWindowEnded = true;
+    try {
+      this.options.onTitleWindowEnd?.();
+    } catch (error) {
+      console.error('[acp] onTitleWindowEnd failed:', error);
+    }
+  }
+
+  /** Answer a reverse request from a lingering child: nothing is ever granted. */
+  private refuseLingeringRequest(message: AcpRpcMessage): unknown {
+    switch (message.method) {
+      case 'session/request_permission': {
+        return { outcome: { outcome: 'cancelled' } };
+      }
+      case 'elicitation/create': {
+        return { action: 'cancel' };
+      }
+      default: {
+        throw new AcpServerRequestError(-32_000, 'The session has ended');
+      }
+    }
   }
 
   /**
@@ -387,6 +428,7 @@ export abstract class AcpAgentSession<
     this.hostClosed = true;
     this.client.close();
     this.emitStatus('closed', { cacheKeepalive: this.cacheKeepaliveStats });
+    this.notifyTitleWindowEnd();
   }
 
   /**
@@ -479,7 +521,7 @@ export abstract class AcpAgentSession<
   }
 
   protected async emitEvents(events: AgentStreamEvent[]): Promise<void> {
-    if (!this.hostClosed && !this.cacheKeepalive && events.length > 0) {
+    if (!this.hostClosed && !this.cacheKeepalive && !this.titleLingering && events.length > 0) {
       await this.options.onEvents(events);
     }
   }

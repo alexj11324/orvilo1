@@ -22,7 +22,8 @@ title" lives in `canAgentRetitleTopic` (`src/store/chat/slices/topic/topicTitle.
 bridge stdout -> AcpAgentSession.forwardSessionTitle (packages/heterogeneous-agents)
   -> options.onSessionTitle -> HeterogeneousAgentImpl.broadcastSessionTitle
   -> IPC 'heteroAgentSessionTitle' { sessionId, title }
-  -> heterogeneousAgentExecutor onSessionTitle -> chat store applyAgentTopicTitle
+  -> sessionTitleWatcher (renderer, outlives the run) -> chat store applyAgentTopicTitle
+main -> IPC 'heteroAgentSessionTitleEnd' { sessionId } when no title can arrive any more
 ```
 
 - One parser, `parseAcpSessionTitle` (`adapters/acpCommon.ts`): only a non-blank string title
@@ -48,8 +49,16 @@ listed in `chatTopicMetadataUpdateSchema` (`packages/types/src/topic/topic.ts`).
 `updateTopicTitle` -> `user`, `applyAgentTopicTitle` -> `agent`, model / slice paths -> `auto`.
 The marker is written before the title (a hand rename is protected from the first moment) and only
 when it differs from the stored one, an unset value counting as `auto`, so ordinary automatic
-titling costs no extra request. A failed marker write is logged and the title is still saved.
+titling costs no extra request. A failed marker write is retried once. If it still fails, an
+automatic or agent title is saved anyway (the heuristic covers it), but a `user` rename fails
+without writing the title, so a hand rename is never left unprotected after a reload (the title and
+the marker cannot share one request: `topic.updateTopic` does not accept metadata).
 The in-memory `#topicTitleOrigins` map mirrors it for topics outside the loaded lists.
+
+`summaryTopicTitle` (run-completion and lifecycle summarise) returns before any write or model call
+when the in-memory source or the stored marker is `user` or `agent`; only the explicit "auto rename"
+menu action passes `force`. The dev slice path goes through `applyAutoTopicTitle`, which follows the
+same rule.
 
 On load the marker is read back from `topic.metadata.titleSource`. Topics titled before this change
 have none; for those `canAgentRetitleTopic` keeps a heuristic: only an empty title, the
@@ -66,46 +75,78 @@ process per turn, so the process now lingers briefly (`AcpAgentSession`):
 - **When:** the prompt ended with `stopReason: 'end_turn'`, `onSessionTitle` is set, no title has
   been delivered for this session yet, and no cache keep-alive is armed (a keep-alive already keeps
   the process alive).
-- **How long:** until the first title arrives or `SESSION_TITLE_LINGER_MS` (5000 ms), then the
-  child closes exactly as before. The timer is `unref`'d and cleared on every exit path; the child
-  is closed even if the title callback throws.
+- **How long:** until the first title or `SESSION_TITLE_LINGER_MS` (5000 ms), then the child closes
+  as before. The timer is `unref`'d and cleared on every exit path; the child is closed even if the
+  title callback throws.
 - **Never delays the UI:** the linger is a timer inside the `run()` `finally`, not an `await`, so
   `run()` resolves, the result/terminal events are flushed, and `heteroAgentSessionComplete` is
-  broadcast first; the renderer marks the run finished and calls `stopSession` while the child is
+  broadcast first. The renderer marks the run finished and calls `stopSession` while the child is
   still alive.
-- **Graceful vs forced:** `release()` (used by main `stopSession`) joins a pending linger, never
-  cuts it short or restarts it. `close()` is forced and kills at once; it is used by cancel /
-  `interrupt()`, the `before-quit` handler, and a new `sendPrompt` for the same native agent
-  session (`HeterogeneousAgentImpl.closeLingeringAcpSessions`, which tracks sessions that
-  `stopSession` already dropped from its map).
-- Failed, cancelled or aborted turns, and turns whose title already arrived, close immediately.
+- **Inert while lingering:** in the base class, every `session/update` except the title is ignored
+  (not pushed to the pipeline, nothing emitted), every reverse request is refused (permission and
+  elicitation cancelled, anything else answered with an error), and no prompt is sent. Subclasses
+  cannot forget this: the gate wraps `handleAgentMessage` / `handleServerRequest`.
+- **End signal:** `onTitleWindowEnd` fires once when the window is over (title delivered, cap, forced
+  close, keep-alive disarm, or a turn with nothing to wait for). Main forwards it as
+  `heteroAgentSessionTitleEnd` and forgets the session.
+- **Renderer:** the title-only listener (`sessionTitleWatcher.ts`) is separate from the run's
+  stream subscription. The run's `finally` keeps it alive until the end signal, with a safety
+  timeout (7 s, above the 5 s cap) so it cannot leak. A late title goes to the run's topic through
+  `applyAgentTopicTitle`, which respects the user/agent markers and drops a topic that no longer
+  exists.
+
+### Graceful vs forced stop
+
+`release()` joins a pending linger and is used only by the renderer's post-run `stopSession`.
+`close()` and `interrupt()` kill at once. Because the run's session reference is cleared when
+`run()` settles, main tracks a lingering session by IPC session id (`lingeringAcpSessions`) and
+removes it from the session's own `onTitleWindowEnd`.
+
+| Caller                                                                                               | Mode                                                       |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| renderer `heterogeneousAgentExecutor` `finally` -> `stopSession`                                     | graceful (`release()`; a no-op for a lingering session)    |
+| renderer user cancel -> `cancelSession`                                                              | forced (also closes a lingering session of that id)        |
+| main `before-quit` handler (also reached by `window-all-closed` and SIGTERM/SIGINT via `app.quit()`) | forced, including lingering sessions                       |
+| main SIGTERM / SIGINT handler                                                                        | forced for lingering sessions directly, then the quit flow |
+| a new `sendPrompt` whose session has the same native `agentSessionId`                                | forced for the lingering one                               |
+
+There is no other stop/close-all path in the desktop main process (no sign-out, workspace switch or
+device-unregister caller of these sessions exists; they were searched for).
 
 ## Threat model: the title is untrusted text
 
 The title is produced by an external agent that may have been steered by untrusted repository or
 web content, is stored as the topic title, shown in the UI, and can reach other agents' context.
 
-Mitigation in `parseAcpSessionTitle`: single line (all whitespace collapsed), C0/C1 controls,
-zero-width characters (U+200B-U+200D, U+2060, U+FEFF), bidi embedding/override/isolate characters
-(U+202A-U+202E, U+2066-U+2069) and lone surrogates removed before trimming and measuring, capped at
-100 code points without splitting a surrogate pair, and rejected (the slice title stays) when
-nothing printable remains. It stays a plain string. Sidebar rows render the title as a React text
-child (no `dangerouslySetInnerHTML` outside the SVG artifact and analytics snippets), so markup in
-a title is shown literally.
+Mitigation in `parseAcpSessionTitle`: single line (tab / newline / CR become one space), then every
+invisible character is **removed** (not replaced by a space): all of Unicode `\p{C}` (controls,
+format characters such as zero-width, bidi and tag characters, lone surrogates, private use,
+unassigned), `\p{Zl}`, `\p{Zp}`, plus U+034F, the Hangul fillers (U+115F, U+1160, U+3164, U+FFA0),
+U+180B-U+180F and the blank Braille pattern U+2800. Whitespace runs are collapsed, the result is
+trimmed, capped at 100 code points (no split surrogate pair), and rejected (the slice title stays)
+unless it contains a letter, number, punctuation mark or symbol.
 
-What the parser cannot do is make a title safe to splice into a prompt. Client-side places where a
-topic title reaches model context:
+Emoji: variation selectors (U+FE0F) are kept. A ZWJ is kept only between two pictographs, so a
+family emoji survives while a hidden joiner in text is removed. Tag-sequence flags (England,
+Scotland) lose their tag characters and show as a plain black flag.
 
-| Place                                                                                                                                                                                                                                      | Delimited as data?                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| `src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts:516-518` builds `<refer_topic name="${topicTitle}" .../>` into the user message                                                                                   | No: raw interpolation into an attribute, `"` and `/>` are not escaped |
-| `src/features/ChatInput/InputEditor/index.tsx:449` and `ReferTopic/ReferTopicPlugin.ts:66` serialise the same tag from the title                                                                                                           | No: same raw interpolation                                            |
-| `packages/context-engine/src/providers/TopicReferenceContextInjector.ts:60,76` writes `title="${item.topicTitle}"` into `<referred_topics>` / `<pending_topics>` (title comes from `resolveTopicReferences.ts:89`, the live `topic.title`) | No: raw attribute, not escaped                                        |
-| `packages/memory-user-memory/src/providers/chatTopic.ts:98` `x('topic_title', title)`                                                                                                                                                      | Yes: built with `xast-util-to-xml`, which escapes                     |
+The title stays a plain string. Sidebar rows render it as a React text child (no
+`dangerouslySetInnerHTML` outside the SVG artifact and analytics snippets), so markup in a title is
+shown literally.
 
-The first three are reported, not changed here: the title can carry a `"` followed by arbitrary
-attribute-looking text. Escaping `&`, `<`, `>` and `"` where the tag is built is the follow-up.
-Server prompts were not reviewed.
+A sanitised title is still not safe to splice into a prompt. Client-side places where a topic title
+reaches model context, all now escaped with `escapeXml` (`& < > " '`) from `@orvilo/prompts`, and
+`parseReferTopicTags` unescapes the name it reads back (`unescapeXml`):
+
+| Place                                                                                                                            | Delimited as data?               |
+| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts` `<refer_topic name=...>` in the user message           | Yes (escaped attribute)          |
+| `src/features/ChatInput/InputEditor/index.tsx` and `ReferTopic/ReferTopicPlugin.ts`, same tag                                    | Yes (escaped attribute)          |
+| `packages/context-engine/src/providers/TopicReferenceContextInjector.ts` `title=...` in `<referred_topics>` / `<pending_topics>` | Yes (escaped attribute)          |
+| `packages/memory-user-memory/src/providers/chatTopic.ts` `x('topic_title', ...)`                                                 | Yes (`xast-util-to-xml` escapes) |
+
+Server prompts were not reviewed. Escaping stops a title from leaving its attribute; the text of a
+title is still read by the model as data inside that attribute.
 
 ## Verification by reading source
 

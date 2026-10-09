@@ -163,14 +163,95 @@ describe('applyAgentTopicTitle', () => {
       expect(titleOf('p3')).toBe('Later');
     });
 
-    it('still saves the title when persisting the marker fails', async () => {
+    it('retries the marker once, then fails a user rename instead of leaving it unprotected', async () => {
       seedTopic('p5', 'Old');
       vi.mocked(topicService.updateTopicMetadata).mockRejectedValueOnce(new Error('offline'));
+      await useChatStore.getState().updateTopicTitle('p5', 'Mine');
+      expect(topicService.updateTopicMetadata).toHaveBeenCalledTimes(2);
+      expect(titleOf('p5')).toBe('Mine');
+
+      seedTopic('p6', 'Old');
+      vi.mocked(topicService.updateTopicMetadata).mockClear();
+      vi.mocked(topicService.updateTopicMetadata).mockRejectedValue(new Error('offline'));
+      vi.mocked(topicService.updateTopic).mockClear();
+
+      await expect(useChatStore.getState().updateTopicTitle('p6', 'Mine')).rejects.toThrow(
+        'offline',
+      );
+
+      expect(topicService.updateTopic).not.toHaveBeenCalled();
+      vi.mocked(topicService.updateTopicMetadata).mockReset();
+    });
+
+    it('still saves an agent title when persisting the marker fails', async () => {
+      seedTopic('p7', sliceTopicTitle(messages));
+      vi.mocked(topicService.updateTopicMetadata).mockRejectedValue(new Error('offline'));
       vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await useChatStore.getState().updateTopicTitle('p5', 'Mine');
+      await useChatStore.getState().applyAgentTopicTitle('p7', 'Agent title', messages);
 
-      expect(topicService.updateTopic).toHaveBeenCalledWith('p5', { title: 'Mine' });
+      expect(topicService.updateTopic).toHaveBeenCalledWith('p7', { title: 'Agent title' });
+      vi.mocked(topicService.updateTopicMetadata).mockReset();
+    });
+  });
+
+  describe('automatic titling never clobbers an agent or user title', () => {
+    const generateSpy = () =>
+      vi.spyOn(aiChatService, 'generateJSON').mockResolvedValue({
+        data: { title: 'Model title' },
+        tracingId: 't',
+      } as any);
+
+    it('keeps an agent title received mid-turn when the run-completion summary runs', async () => {
+      seedTopic('s1', sliceTopicTitle(messages));
+      const generate = generateSpy();
+      await useChatStore.getState().applyAgentTopicTitle('s1', 'Agent title', messages);
+
+      await useChatStore.getState().summaryTopicTitle('s1', messages);
+
+      expect(titleOf('s1')).toBe('Agent title');
+      expect(generate).not.toHaveBeenCalled();
+    });
+
+    it('keeps a user rename, for a built-in agent with a model too', async () => {
+      seedTopic('s2', 'Old', { agentId: 'builtin' });
+      const generate = generateSpy();
+      await useChatStore.getState().updateTopicTitle('s2', 'Mine');
+
+      await useChatStore.getState().summaryTopicTitle('s2', messages);
+
+      expect(titleOf('s2')).toBe('Mine');
+      expect(generate).not.toHaveBeenCalled();
+    });
+
+    it('honours a stored marker after a reload', async () => {
+      seedTopic('s3', 'Stored name', { metadata: { titleSource: 'user' } });
+      const generate = generateSpy();
+
+      await useChatStore.getState().summaryTopicTitle('s3', messages);
+
+      expect(titleOf('s3')).toBe('Stored name');
+      expect(generate).not.toHaveBeenCalled();
+    });
+
+    it('still titles an untouched topic, and an explicit forced rename overrides', async () => {
+      seedTopic('s4', '');
+      await useChatStore.getState().summaryTopicTitle('s4', messages);
+      expect(titleOf('s4')).toBe(sliceTopicTitle(messages));
+
+      seedTopic('s5', 'Mine', { metadata: { titleSource: 'user' } });
+      await useChatStore.getState().summaryTopicTitle('s5', messages, { force: true });
+      expect(titleOf('s5')).toBe(sliceTopicTitle(messages));
+    });
+
+    it('applyAutoTopicTitle (dev slice path) marks `auto` and respects protection', async () => {
+      seedTopic('s6', '');
+      await useChatStore.getState().applyAutoTopicTitle('s6', 'Sliced');
+      expect(titleOf('s6')).toBe('Sliced');
+
+      await useChatStore.getState().applyAgentTopicTitle('s6', 'Agent', messages);
+      await useChatStore.getState().applyAutoTopicTitle('s6', 'Sliced again');
+      expect(titleOf('s6')).toBe('Agent');
     });
   });
 });

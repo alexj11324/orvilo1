@@ -33,3 +33,17 @@ export const escapeXmlContent = (text: string | undefined | null): string => {
   if (!text) return '';
   return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 };
+
+/**
+ * Inverse of {@link escapeXml} for text read back out of an attribute we wrote
+ * ourselves. `&amp;` goes last so `&amp;lt;` decodes to `&lt;`, not `<`.
+ */
+export const unescapeXml = (text: string | undefined | null): string => {
+  if (!text) return '';
+  return text
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&amp;', '&');
+};

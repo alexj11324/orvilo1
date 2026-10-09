@@ -83,16 +83,27 @@ export const acpEventIdOf = (raw: unknown): string | undefined => {
 /** Longest session title forwarded from an agent; longer text is cut. */
 export const MAX_ACP_SESSION_TITLE_LENGTH = 100;
 
-/**
- * C0/C1 controls, zero-width characters (U+200B-U+200D, U+2060, U+FEFF) and
- * bidi embedding/override/isolate characters (U+202A-U+202E, U+2066-U+2069).
- */
-/* eslint-disable no-control-regex */
-const INVISIBLE_TITLE_CHARS =
-  /[\u0000-\u001F\u007F-\u009F\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/g;
-/* eslint-enable no-control-regex */
+/** Whitespace-like controls that separate words: become one space, never vanish. */
+const TITLE_SEPARATORS = /[\t\n\v\f\r\u0085\u2028\u2029]/gu;
 
-const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+/**
+ * Everything invisible, removed outright (`a<ZWSP>b` -> `ab`): all of
+ * \p{C} (controls, format incl. zero-width / bidi / tag characters, lone
+ * surrogates, private use, unassigned), line/paragraph separators, and the
+ * invisible fillers and joiners outside those categories (CGJ, Hangul fillers,
+ * Mongolian variation selectors). A ZWJ is kept only between two pictographs,
+ * so a family emoji survives while a hidden joiner in text does not.
+ */
+/* eslint-disable no-misleading-character-class -- the class deliberately lists combining marks (U+034F, U+180B-U+180F) to remove them */
+const INVISIBLE_CLASS = String.raw`\p{C}\p{Zl}\p{Zp}\u034F\u115F\u1160\u3164\uFFA0\u180B-\u180F\u2800`;
+const INVISIBLE_TITLE_CHARS = new RegExp(
+  String.raw`(?<keep>(?<=\p{Extended_Pictographic}\uFE0F?)\u200D(?=\p{Extended_Pictographic}))|[${INVISIBLE_CLASS}]`,
+  'gu',
+);
+/* eslint-enable no-misleading-character-class */
+
+/** A title must show at least one letter, number, punctuation mark or symbol (emoji count). */
+const VISIBLE_TITLE_CHAR = /[\p{L}\p{N}\p{P}\p{S}]/u;
 
 /**
  * Title carried by an ACP `session_info_update` (`sessionUpdate` payload).
@@ -108,16 +119,20 @@ export const parseAcpSessionTitle = (update: unknown): string | undefined => {
   if (record?.sessionUpdate !== 'session_info_update') return undefined;
   if (typeof record.title !== 'string') return undefined;
 
-  // Strip invisible / direction-changing characters first (they would survive
-  // whitespace collapsing and could hide or reorder text), then flatten
-  // whitespace, then cap by code points so no surrogate pair is split.
+  // Word separators first, then drop invisible characters (they would
+  // survive whitespace collapsing and could hide or reorder text), collapse
+  // whitespace, and cap by code points so no surrogate pair is split.
   const printable = record.title
-    .replaceAll(INVISIBLE_TITLE_CHARS, ' ')
-    .replaceAll(LONE_SURROGATE, '');
-  const title = [...printable.replaceAll(/\s+/g, ' ').trim()]
+    .replaceAll(TITLE_SEPARATORS, ' ')
+    .replaceAll(INVISIBLE_TITLE_CHARS, (match, ...rest) => {
+      const groups = rest.at(-1) as { keep?: string };
+      return groups.keep ? match : '';
+    });
+  const title = [...printable.replaceAll(/\s+/gu, ' ').trim()]
     .slice(0, MAX_ACP_SESSION_TITLE_LENGTH)
     .join('')
     .trim();
+  if (!VISIBLE_TITLE_CHAR.test(title)) return undefined;
   return title || undefined;
 };
 

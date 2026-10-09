@@ -1,3 +1,4 @@
+import { escapeXml } from '@orvilo/prompts';
 import { describe, expect, it, vi } from 'vitest';
 
 import { parseReferTopicTags, resolveTopicReferences } from '../resolveTopicReferences';
@@ -274,5 +275,17 @@ describe('resolveTopicReferences', () => {
 
     expect(result![0].summary).toBeUndefined();
     expect(result![0].recentMessages).toBeUndefined();
+  });
+});
+
+describe('parseReferTopicTags title escaping', () => {
+  it('unescapes the title written by the escaping tag builders', () => {
+    const title = 'A "quoted" <b>tag</b> & more\' /> end';
+    const escaped = escapeXml(title);
+    const [ref] = parseReferTopicTags([
+      { content: `<refer_topic name="${escaped}" id="topic-1" />\nHello` },
+    ]);
+
+    expect(ref).toEqual({ topicId: 'topic-1', topicTitle: title });
   });
 });

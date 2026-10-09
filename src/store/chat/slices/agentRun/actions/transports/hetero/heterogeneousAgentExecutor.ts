@@ -84,6 +84,7 @@ import { createMessageWriteBatcher, type ToolMessageUpdateOperation } from './me
 import { createPendingCreateLedger } from './pendingCreateLedger';
 import { buildResumeReplayMessages } from './resumeReplay';
 import { buildOrviloSessionEnv } from './sessionEnv';
+import { type SessionTitleWatcher, watchSessionTitle } from './sessionTitleWatcher';
 
 /** Mirrors `idGenerator('threads', 16)` on the server so sync-allocated ids have the same shape. */
 const generateThreadId = () => `thd_${createNanoId(16)()}`;
@@ -309,8 +310,6 @@ const subscribeBroadcasts = (
   callbacks: {
     onComplete: () => void;
     onError: (error: HeterogeneousAgentSessionError | string) => void;
-    /** Title the ACP agent reported for its session; not part of the event stream. */
-    onSessionTitle?: (title: string) => void;
     onStreamEvent: (event: AgentStreamEvent) => void;
   },
 ): (() => void) => {
@@ -331,20 +330,14 @@ const subscribeBroadcasts = (
     if (data.sessionId === sessionId) callbacks.onError(data.error);
   };
 
-  const onSessionTitle = (_e: any, data: { sessionId: string; title: string }) => {
-    if (data.sessionId === sessionId) callbacks.onSessionTitle?.(data.title);
-  };
-
   const unsubscribeStreamEvent = ipc.on('heteroAgentEvent' as any, onStreamEvent);
   const unsubscribeComplete = ipc.on('heteroAgentSessionComplete' as any, onComplete);
   const unsubscribeError = ipc.on('heteroAgentSessionError' as any, onError);
-  const unsubscribeSessionTitle = ipc.on('heteroAgentSessionTitle' as any, onSessionTitle);
 
   return () => {
     unsubscribeStreamEvent();
     unsubscribeComplete();
     unsubscribeError();
-    unsubscribeSessionTitle();
   };
 };
 
@@ -617,6 +610,7 @@ export const executeHeterogeneousAgent = async (
 
   let ipcRunSessionId: string | undefined;
   let unsubscribe: (() => void) | undefined;
+  let titleWatcher: SessionTitleWatcher | undefined;
   let completed = false;
   let fallbackPromise: Promise<void> | undefined;
   let resumeFallbackTriggered = false;
@@ -2225,24 +2219,26 @@ export const executeHeterogeneousAgent = async (
       }
     };
 
+    // The agent names its own session, possibly after the run has ended: this
+    // listener outlives the run's own subscription (see sessionTitleWatcher).
+    // Deliberately not gated on `isAborted()`; a cancelled run's title still
+    // belongs to the topic, and a deleted topic is dropped by the store action.
+    titleWatcher = watchSessionTitle(ipcRunSessionId, (title) => {
+      if (!context.topicId) return;
+      void get()
+        .applyAgentTopicTitle(
+          context.topicId,
+          title,
+          (get().dbMessagesMap?.[messageMapKey(context)] ??
+            get().messagesMap?.[messageMapKey(context)]) as UIChatMessage[] | undefined,
+        )
+        .catch((err: unknown) => {
+          console.error('[HeterogeneousAgent] Failed to apply the agent session title:', err);
+        });
+    });
+
     unsubscribe = subscribeBroadcasts(ipcRunSessionId, {
       onStreamEvent: handleStreamEvent,
-
-      // The agent named its own session. Deliberately not gated on
-      // `isAborted()`: a cancelled run's title still belongs to the topic.
-      onSessionTitle: (title) => {
-        if (!context.topicId) return;
-        void get()
-          .applyAgentTopicTitle(
-            context.topicId,
-            title,
-            (get().dbMessagesMap?.[messageMapKey(context)] ??
-              get().messagesMap?.[messageMapKey(context)]) as UIChatMessage[] | undefined,
-          )
-          .catch((err: unknown) => {
-            console.error('[HeterogeneousAgent] Failed to apply the agent session title:', err);
-          });
-      },
 
       onComplete: () => {
         void runCompletionCallback(async () => {
@@ -2628,6 +2624,8 @@ export const executeHeterogeneousAgent = async (
   } finally {
     await waitForCompletionCallback();
     unsubscribe?.();
+    // Keep listening for a title that is still to come; main ends the window.
+    titleWatcher?.detachAfterRun();
     // The desktop IPC session only owns this run's config and process handles.
     // Multi-turn resume uses the native agentSessionId persisted above, so the
     // IPC session must be released after every run instead of accumulating in

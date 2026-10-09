@@ -382,25 +382,62 @@ export class ChatTopicActionImpl {
    * Write a topic title and record who wrote it. The source is persisted in
    * `metadata.titleSource` (only when it differs from what is stored, with an
    * unset source counting as `auto`), BEFORE the title, so a hand rename is
-   * protected from the first moment. A failed marker write is logged, not fatal.
+   * protected from the first moment. A failed marker write is retried once; it fails a `user` rename (see below) and is only logged otherwise.
    */
   #writeTopicTitle = async (id: string, title: string, origin: TopicTitleOrigin): Promise<void> => {
+    const previousOrigin = this.#topicTitleOrigins.get(id);
     this.#topicTitleOrigins.set(id, origin);
     const stored = topicSelectors.getTopicById(id)(this.#get())?.metadata?.titleSource;
     if ((stored ?? 'auto') !== origin) {
-      await this.#get()
-        .updateTopicMetadata(id, { titleSource: origin })
-        .catch((error: unknown) => {
-          console.error('[topicTitle] failed to persist the title source:', error);
-        });
+      const persist = () => this.#get().updateTopicMetadata(id, { titleSource: origin });
+      try {
+        await persist().catch(() => persist());
+      } catch (error) {
+        // A hand rename whose marker is not stored would lose its protection
+        // on reload, so it fails instead of half-succeeding. Automatic titles
+        // can live without the marker (the heuristic covers them).
+        if (origin === 'user') {
+          if (previousOrigin) this.#topicTitleOrigins.set(id, previousOrigin);
+          else this.#topicTitleOrigins.delete(id);
+          throw error;
+        }
+        console.error('[topicTitle] failed to persist the title source:', error);
+      }
     }
     await this.#get().internal_updateTopic(id, { title });
   };
 
-  summaryTopicTitle = async (topicId: string, messages: UIChatMessage[]): Promise<void> => {
+  /** Whether a user or the agent named the topic; automatic titling must leave it alone. */
+  #isTitleProtected = (topicId: string): boolean => {
+    const topic = topicSelectors.getTopicById(topicId)(this.#get());
+    const origin = this.#topicTitleOrigins.get(topicId) ?? topic?.metadata?.titleSource;
+    return origin === 'user' || origin === 'agent';
+  };
+
+  /**
+   * Set a deterministic automatic title (dev slice path). Never replaces a
+   * title the user or the agent set.
+   */
+  applyAutoTopicTitle = async (topicId: string, title: string): Promise<void> => {
+    if (this.#isTitleProtected(topicId)) return;
+    await this.#writeTopicTitle(topicId, title, 'auto');
+  };
+
+  /**
+   * Name a topic with its owning agent's model, or a slice of the first
+   * message. Automatic: it returns before any write or model call when the
+   * user or the agent already named the topic. Only the explicit
+   * "auto rename" menu action passes `force`.
+   */
+  summaryTopicTitle = async (
+    topicId: string,
+    messages: UIChatMessage[],
+    options?: { force?: boolean },
+  ): Promise<void> => {
     const { internal_updateTopicTitleInSummary } = this.#get();
     const topic = topicSelectors.getTopicById(topicId)(this.#get());
     if (!topic) return;
+    if (!options?.force && this.#isTitleProtected(topicId)) return;
 
     const messagesForTitle = normalizeTopicTitleMessages(messages);
 
@@ -427,7 +464,7 @@ export class ChatTopicActionImpl {
       ? agentSelectors.getAgentConfigById(agentId)(agentState)
       : undefined;
     // An agent-reported title (ACP `session_info_update`) arrives later, after
-    // this placeholder, through `applyAgentTopicTitle` — never through here.
+    // this placeholder, through `applyAgentTopicTitle`, never through here.
     const titleSource = resolveTopicTitleSource(
       agentId
         ? {
@@ -442,11 +479,7 @@ export class ChatTopicActionImpl {
 
     if (titleSource.kind !== 'model') {
       try {
-        await this.#writeTopicTitle(
-          topicId,
-          titleSource.kind === 'agent' ? titleSource.title : sliceTopicTitle(messagesForTitle),
-          'auto',
-        );
+        await this.#writeTopicTitle(topicId, sliceTopicTitle(messagesForTitle), 'auto');
       } finally {
         this.#summarizingTopicTitleIds.delete(topicId);
       }
@@ -493,6 +526,7 @@ export class ChatTopicActionImpl {
       // otherwise stay in the sidebar forever.
       if (!title) return restorePreviousTitle();
 
+      if (!options?.force && this.#isTitleProtected(topicId)) return;
       await this.#writeTopicTitle(topicId, title, 'auto');
     } catch (error) {
       console.error('[summaryTopicTitle] failed to generate a title:', error);
@@ -1391,7 +1425,7 @@ export class ChatTopicActionImpl {
 
     const messages = await messageService.getMessages({ agentId, topicId: id });
 
-    await summaryTopicTitle(id, messages);
+    await summaryTopicTitle(id, messages, { force: true });
   };
 
   useFetchTopics = (

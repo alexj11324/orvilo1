@@ -41,6 +41,7 @@ const createAcpProcess = (script: {
 }) => {
   const child = new EventEmitter() as ChildProcess;
   const stdout = new PassThrough();
+  const written: Record<string, any>[] = [];
   const send: Send = (message) =>
     void stdout.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
 
@@ -56,6 +57,7 @@ const createAcpProcess = (script: {
       once: vi.fn(),
       write: vi.fn((chunk: string) => {
         const message = JSON.parse(chunk.trim()) as RpcMessage;
+        written.push(message as Record<string, any>);
         if (!message.method) return true;
         queueMicrotask(() => {
           switch (message.method) {
@@ -87,7 +89,7 @@ const createAcpProcess = (script: {
     },
     stdout,
   });
-  return { child, send };
+  return { child, send, written };
 };
 
 const createOptions = (overrides: Partial<StandardAcpSessionOptions> = {}) => {
@@ -371,5 +373,93 @@ describe('AcpAgentSession title linger', () => {
     await vi.waitFor(() => expect(fake.child.kill).toHaveBeenCalledTimes(1));
 
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('ignores every non-title update while lingering', async () => {
+    const events: unknown[] = [];
+    const { fake, session } = setup(
+      {},
+      {
+        onEvents: (batch: unknown[]) => {
+          events.push(...batch);
+        },
+      },
+    );
+    await session.run();
+    const atTurnEnd = events.length;
+
+    fake.send(
+      update({ content: { text: 'late', type: 'text' }, sessionUpdate: 'agent_message_chunk' }),
+    );
+    fake.send(update({ sessionUpdate: 'tool_call', title: 'Run', toolCallId: 't1' }));
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+
+    expect(events).toHaveLength(atTurnEnd);
+    session.close();
+  });
+
+  it('refuses every server request while lingering and sends no further prompt', async () => {
+    const { fake, session } = setup();
+    await session.run();
+    const promptsBefore = fake.written.filter((m) => m.method === 'session/prompt').length;
+
+    fake.send({
+      id: 'perm-1',
+      method: 'session/request_permission',
+      params: {
+        options: [{ kind: 'allow_always', name: 'Allow', optionId: 'allow' }],
+        sessionId: 'cc-session-1',
+        toolCall: { title: 'rm -rf', toolCallId: 'x' },
+      },
+    });
+    fake.send({ id: 'elic-1', method: 'elicitation/create', params: {} });
+    fake.send({ id: 'fs-1', method: 'fs/read_text_file', params: { path: '/etc/passwd' } });
+    await vi.waitFor(() =>
+      expect(fake.written.filter((m) => ['perm-1', 'elic-1', 'fs-1'].includes(m.id))).toHaveLength(
+        3,
+      ),
+    );
+
+    const answer = (id: string) => fake.written.find((m) => m.id === id)!;
+    expect(answer('perm-1').result).toEqual({ outcome: { outcome: 'cancelled' } });
+    expect(answer('elic-1').result).toEqual({ action: 'cancel' });
+    expect(answer('fs-1').error).toBeDefined();
+    expect(fake.written.filter((m) => m.method === 'session/prompt')).toHaveLength(promptsBefore);
+    session.close();
+  });
+
+  it('reports the end of the title window exactly once on every path', async () => {
+    // title delivered
+    const a = setup({}, { onTitleWindowEnd: vi.fn() });
+    await a.session.run();
+    a.fake.send(update({ sessionUpdate: 'session_info_update', title: 'T' }));
+    await vi.waitFor(() => expect(a.fake.child.kill).toHaveBeenCalled());
+    // cap
+    spawnMock.mockReset();
+    const endCap = vi.fn();
+    const b = setup({}, { onTitleWindowEnd: endCap });
+    await b.session.run();
+    expect(endCap).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(SESSION_TITLE_LINGER_MS);
+    expect(endCap).toHaveBeenCalledTimes(1);
+    // forced close, then a second close
+    spawnMock.mockReset();
+    const endForced = vi.fn();
+    const c = setup({}, { onTitleWindowEnd: endForced });
+    await c.session.run();
+    c.session.close();
+    c.session.close();
+    expect(endForced).toHaveBeenCalledTimes(1);
+    // nothing to wait for
+    spawnMock.mockReset();
+    const endNow = vi.fn();
+    const d = setup({ stopReason: 'cancelled' }, { onTitleWindowEnd: endNow });
+    await d.session.run();
+    expect(endNow).toHaveBeenCalledTimes(1);
   });
 });

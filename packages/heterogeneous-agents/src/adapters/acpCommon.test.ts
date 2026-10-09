@@ -46,22 +46,72 @@ describe('parseAcpSessionTitle', () => {
     expect(long).toHaveLength(MAX_ACP_SESSION_TITLE_LENGTH);
   });
 
-  it('strips control, zero-width and bidi characters before trimming', () => {
+  it('strips control, zero-width and bidi characters', () => {
     expect(parseAcpSessionTitle(infoUpdate({ title: '\u0007\u0000Fix\u001B[31m bug\u0085' }))).toBe(
-      'Fix [31m bug',
+      'Fix[31m bug',
     );
     expect(parseAcpSessionTitle(infoUpdate({ title: '\u200B\u200C\u200D\u2060\uFEFF Hi' }))).toBe(
       'Hi',
     );
-    expect(parseAcpSessionTitle(infoUpdate({ title: 'abc\u202Edef\u2066ghi\u2069' }))).toBe(
-      'abc def ghi',
+    expect(parseAcpSessionTitle(infoUpdate({ title: '\u202Eabc\u2066def\u2069' }))).toBe('abcdef');
+  });
+
+  it.each([
+    ['LRM/RLM', 'a\u200Eb\u200Fc'],
+    ['soft hyphen', 'a\u00ADb\u00ADc'],
+    ['invisible separator', 'a\u2063b\u2063c'],
+    ['deprecated format controls', 'a\u206Ab\u206Fc'],
+    ['arabic letter mark', 'a\u061Cb\u061Cc'],
+    ['interlinear annotation', 'a\uFFF9b\uFFFBc'],
+    ['mongolian selectors', 'a\u180Bb\u180Fc'],
+    ['combining grapheme joiner', 'a\u034Fb\u034Fc'],
+    ['hangul fillers', 'a\u115Fb\u1160c\u3164\uFFA0'],
+    ['private use', 'a\uE000b\uF8FFc'],
+    ['tag characters', 'a\u{E0041}b\u{E0042}c'],
+    ['unassigned code point', 'a\u0378b\u0378c'],
+  ])('removes %s without leaving a gap', (_name, title) => {
+    const cleaned = parseAcpSessionTitle(infoUpdate({ title }));
+    expect(cleaned?.slice(0, 3)).toBe('abc');
+  });
+
+  it('removes a hidden tag-character payload entirely', () => {
+    const payload = [...'IGNORE']
+      .map((c) => String.fromCodePoint(0xe0000 + c.charCodeAt(0)))
+      .join('');
+    expect(parseAcpSessionTitle(infoUpdate({ title: `Fix bug${payload}` }))).toBe('Fix bug');
+  });
+
+  it('still separates words with tabs, newlines and carriage returns', () => {
+    expect(parseAcpSessionTitle(infoUpdate({ title: 'a\tb\nc\r\nd\u2028e' }))).toBe('a b c d e');
+  });
+
+  it('cleans a bidi-prefixed title', () => {
+    expect(parseAcpSessionTitle(infoUpdate({ title: '\u202E\u2067Fix login\u2069\u202C' }))).toBe(
+      'Fix login',
     );
   });
 
-  it('rejects a title with nothing printable left', () => {
-    expect(
-      parseAcpSessionTitle(infoUpdate({ title: '\u200B\u202E\u0000\uFEFF \n' })),
-    ).toBeUndefined();
+  it('rejects a title that is invisible only', () => {
+    for (const title of [
+      '\u200E\u200F',
+      '\u00AD\u2063\u206A',
+      '\u{E0041}\u{E0042}',
+      '\u3164\uFFA0\u115F',
+      '\u0301\u0301',
+      '\uE000',
+      '\u2800\u2800',
+      ' \u00A0 ',
+    ]) {
+      expect(parseAcpSessionTitle(infoUpdate({ title }))).toBeUndefined();
+    }
+  });
+
+  it('keeps emoji, including a ZWJ family sequence (ZWJ is kept only between pictographs)', () => {
+    expect(parseAcpSessionTitle(infoUpdate({ title: '🚀 Launch ❤️' }))).toBe('🚀 Launch ❤️');
+    const family = '👨\u200D👩\u200D👧';
+    expect(parseAcpSessionTitle(infoUpdate({ title: `${family} trip` }))).toBe(`${family} trip`);
+    // a ZWJ hidden in text is not between pictographs, so it goes
+    expect(parseAcpSessionTitle(infoUpdate({ title: 'a\u200Db' }))).toBe('ab');
   });
 
   it('caps at 100 characters on a code point boundary', () => {

@@ -171,7 +171,7 @@ export function NotificationsPopover() {
   const trigger = (
     <Button
       aria-label={t('reuiShell9.notifications')}
-      className="relative focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      className="relative focus-visible:border-transparent focus-visible:ring-inset"
       size="icon-sm"
       variant="ghost"
     />

@@ -57,11 +57,10 @@ const hostStyles = createStaticStyles(({ css }) => ({
       transition-property: margin, opacity;
     }
 
-    /* One focus indicator, the Button primitive's ring (3px at 50% of '--ring'), drawn
-       inset to match NavItem and survive clipping wrappers. The outline is the primitive's
-       'outline-hidden'; the box-shadow restates the ring as the whole property, so no
-       second ring (a host anchor outline, a Button's 'ring-3', a drop shadow) can stack
-       on top of it. */
+    /* The ring itself (3px at 50% of '--ring', inset) is defined once, by the primitive's
+       'focus-visible:ring-3 ring-ring/50 ring-inset'. This rule only hands back what the
+       unlayered host reset takes: its anchor ':focus-visible' outline and a Button's
+       'focus-visible:border-ring'. No box-shadow here, so there is one ring definition. */
     :is(
       [data-sidebar='menu-button'],
       [data-sidebar='menu-sub-button'],
@@ -73,7 +72,6 @@ const hostStyles = createStaticStyles(({ css }) => ({
       border-color: transparent;
       outline: 2px solid transparent;
       outline-offset: 2px;
-      box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
     }
 
     /* Leading icons rest dimmed; a trailing affordance (the switcher chevron) opts out. */

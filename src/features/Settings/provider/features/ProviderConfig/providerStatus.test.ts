@@ -57,6 +57,22 @@ describe('before the form has filled', () => {
     expect(hasEndpoint(undefined, undefined)).toBe(false);
     expect(hasApiCredential(null, null)).toBe(false);
   });
+
+  it('handles an unconfigured provider with watched fields and null stored key vaults', () => {
+    expect(hasEndpoint({ baseURL: undefined, endpoint: undefined }, null)).toBe(false);
+    expect(hasEndpoint({ baseURL: 'https://proxy.example.com/v1' }, null)).toBe(true);
+  });
+
+  it('reads live credentials without requiring stored key vaults', () => {
+    expect(hasApiCredential({ apiKey: undefined }, null)).toBe(false);
+    expect(hasApiCredential({ apiKey: 'dummy-credential' }, null)).toBe(true);
+    expect(hasApiCredential({ apiKey: '', password: '', username: '' }, null)).toBe(false);
+  });
+
+  it('keeps cleared credentials and invalid live URLs unconfigured with null key vaults', () => {
+    expect(hasEndpoint({ baseURL: '', endpoint: '' }, null)).toBe(false);
+    expect(hasEndpoint({ baseURL: 'invalid-url' }, null)).toBe(false);
+  });
 });
 
 describe('resolveProviderStatus', () => {

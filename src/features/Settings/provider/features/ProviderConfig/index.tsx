@@ -5,6 +5,7 @@ import { Center, Flexbox, Form, Icon, stopPropagation, Tooltip } from '@lobehub/
 import { Avatar, Skeleton, Switch } from '@lobehub/ui/base-ui';
 import { BRANDING_PROVIDER } from '@orvilo/business-const';
 import { AES_GCM_URL, BASE_PROVIDER_DOC_URL, FORM_STYLE } from '@orvilo/const';
+import { errorMessageFrom } from '@orvilo/utils/error';
 import { useDebounceFn } from 'ahooks';
 import { Form as AntdForm } from 'antd';
 import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
@@ -18,6 +19,7 @@ import urlJoin from 'url-join';
 import { FormInput, FormPassword } from '@/components/FormInput';
 import { ProviderCombine, ProviderIcon } from '@/components/OrviloIcons';
 import { SkeletonInput, SkeletonSwitch } from '@/components/Skeleton';
+import { toast } from '@/components/toast';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -251,9 +253,13 @@ const ProviderConfig = memo<ProviderConfigProps>(
         // updateAiProviderConfig has already been triggered once during the connection test, so it should not be updated again
         if (isCheckingConnection.current) return;
 
-        updateAiProviderConfig(...params);
+        // Autosave runs from a debounce, so a rejection has nowhere to go but
+        // an unhandled promise — tell the user the change did not stick.
+        updateAiProviderConfig(...params).catch((error: unknown) => {
+          toast.error(errorMessageFrom(error) || t('providerModels.config.saveFailed'));
+        });
       },
-      [updateAiProviderConfig],
+      [t, updateAiProviderConfig],
     );
 
     const normalizeValues = useCallback(

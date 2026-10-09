@@ -33,6 +33,24 @@ describe('AiProviderAction', () => {
     });
   });
 
+  describe('updateAiProviderConfig', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      useAiInfraStore.setState({ aiProviderConfigUpdatingIds: [] });
+    });
+
+    it('clears the updating state and rethrows when the write is rejected', async () => {
+      const error = new Error('update failed');
+      vi.spyOn(aiProviderService, 'updateAiProviderConfig').mockRejectedValue(error);
+
+      await expect(
+        useAiInfraStore.getState().updateAiProviderConfig('openai', { keyVaults: {} } as never),
+      ).rejects.toBe(error);
+
+      expect(useAiInfraStore.getState().aiProviderConfigUpdatingIds).toEqual([]);
+    });
+  });
+
   describe('ensureAiProviderRuntimeStateReady', () => {
     afterEach(() => {
       vi.restoreAllMocks();

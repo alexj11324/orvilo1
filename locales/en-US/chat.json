@@ -110,6 +110,8 @@
   "chatMode.chat": "Chat",
   "chatMode.chatDesc": "Talks only — cannot run tasks; uses fewer tokens",
   "chatMode.select": "Switch Mode",
+  "chatbot.description": "Ask a question or choose a suggestion to get started.",
+  "chatbot.welcome": "How can I help you?",
   "claudeCodeInstallGuide.actions.openDocs": "Open Install Guide",
   "claudeCodeInstallGuide.actions.openSystemTools": "Open System Tools",
   "claudeCodeInstallGuide.afterInstall": "After installing, run Claude Code once to sign in, then retry your message or click Re-detect in System Tools.",

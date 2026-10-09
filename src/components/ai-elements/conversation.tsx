@@ -87,36 +87,60 @@ export const ConversationEmptyState = ({
   </div>
 );
 
-export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
+export type ConversationScrollAdapter = {
+  isAtBottom: boolean;
+  scrollToBottom: () => void;
+};
 
-export const ConversationScrollButton = ({
+export type ConversationScrollButtonProps = ComponentProps<typeof Button> & {
+  /** Controlled adapter for externally owned scroll containers such as virtua. */
+  externalScroll?: ConversationScrollAdapter;
+};
+
+const ConversationScrollControl = ({
   className,
+  isAtBottom,
+  scrollToBottom,
   ...props
-}: ConversationScrollButtonProps) => {
+}: ComponentProps<typeof Button> & ConversationScrollAdapter) =>
+  !isAtBottom && (
+    <Button
+      size="icon"
+      type="button"
+      variant="outline"
+      className={cn(
+        'absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted',
+        className,
+      )}
+      onClick={scrollToBottom}
+      {...props}
+    >
+      <ArrowDownIcon className="size-4" />
+    </Button>
+  );
+
+const InternalConversationScrollButton = (props: ComponentProps<typeof Button>) => {
   const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
-
   return (
-    !isAtBottom && (
-      <Button
-        size="icon"
-        type="button"
-        variant="outline"
-        className={cn(
-          'absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted',
-          className,
-        )}
-        onClick={handleScrollToBottom}
-        {...props}
-      >
-        <ArrowDownIcon className="size-4" />
-      </Button>
-    )
+    <ConversationScrollControl
+      {...props}
+      isAtBottom={isAtBottom}
+      scrollToBottom={() => {
+        scrollToBottom();
+      }}
+    />
   );
 };
+
+export const ConversationScrollButton = ({
+  externalScroll,
+  ...props
+}: ConversationScrollButtonProps) =>
+  externalScroll ? (
+    <ConversationScrollControl {...props} {...externalScroll} />
+  ) : (
+    <InternalConversationScrollButton {...props} />
+  );
 
 const getMessageText = (message: UIMessage): string =>
   message.parts

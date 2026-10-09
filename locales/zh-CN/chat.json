@@ -110,6 +110,8 @@
   "chatMode.chat": "对话",
   "chatMode.chatDesc": "只聊天，不能执行任务；消耗更少 token",
   "chatMode.select": "切换模式",
+  "chatbot.description": "输入问题，或选择一个建议开始对话。",
+  "chatbot.welcome": "有什么可以帮你？",
   "claudeCodeInstallGuide.actions.openDocs": "打开安装指南",
   "claudeCodeInstallGuide.actions.openSystemTools": "打开系统工具",
   "claudeCodeInstallGuide.afterInstall": "安装完成后，请先运行一次 Claude Code 完成登录，然后重试刚才的消息，或在系统工具中点击“重新检测”。",

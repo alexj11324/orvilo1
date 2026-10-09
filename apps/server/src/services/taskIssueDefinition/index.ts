@@ -170,7 +170,7 @@ export class TaskIssueDefinitionService {
       for (const original of originals) {
         const definition = await service.definition(
           original,
-          input.copyAssignees === true,
+          input.copyAssignees !== false,
           input.copyLabels !== false,
         );
         if (input.copyProject === false) definition.projectId = null;

@@ -70,39 +70,59 @@ describe('TaskIssueDefinitionService', () => {
     expect(await model.findById(source.id)).toMatchObject({ instruction: 'Keep' });
   });
 
-  it('copies an explicitly selected Agent assignee without copying or starting its execution', async () => {
-    const [agent] = await db
-      .insert(agents)
-      .values({ userId, workspaceId, title: 'Assigned Agent', model: 'gpt-4', provider: 'openai' })
-      .returning();
-    const source = await model.create({
-      instruction: 'Assigned issue',
-      assigneeAgentId: agent.id,
-      assigneeUserId: userId,
-      workflowCategory: 'done',
-      config: { producerToken: 'old-run-private' },
-    });
-    const copied = await service.copyIssue({
-      id: source.id,
-      expectedDomainRevision: source.domainRevision,
-      copyAssignees: true,
-    });
-    expect(await model.findById(copied.rootId)).toMatchObject({
-      assigneeAgentId: agent.id,
-      assigneeUserId: userId,
-      workflowCategory: 'todo',
-      currentTopicId: null,
-      runReservationId: null,
-      context: {},
-    });
-    expect((await model.findById(copied.rootId))?.config).not.toHaveProperty('producerToken');
-    expect(
-      await db.select().from(agentOperations).where(eq(agentOperations.taskId, copied.rootId)),
-    ).toHaveLength(0);
-    expect(
-      await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, copied.rootId)),
-    ).toHaveLength(0);
-  });
+  it.each([undefined, true])(
+    'copies an Agent assignee with copyAssignees=%s without starting execution',
+    async (copyAssignees) => {
+      const [agent] = await db
+        .insert(agents)
+        .values({
+          userId,
+          workspaceId,
+          title: 'Assigned Agent',
+          model: 'gpt-4',
+          provider: 'openai',
+        })
+        .returning();
+      const source = await model.create({
+        instruction: 'Assigned issue',
+        assigneeAgentId: agent.id,
+        assigneeUserId: userId,
+        workflowCategory: 'done',
+        config: { producerToken: 'old-run-private' },
+      });
+      const copied = await service.copyIssue({
+        id: source.id,
+        expectedDomainRevision: source.domainRevision,
+        copyAssignees,
+      });
+      expect(await model.findById(copied.rootId)).toMatchObject({
+        assigneeAgentId: agent.id,
+        assigneeUserId: userId,
+        workflowCategory: 'todo',
+        currentTopicId: null,
+        runReservationId: null,
+        context: {},
+      });
+      expect((await model.findById(copied.rootId))?.config).not.toHaveProperty('producerToken');
+      expect(
+        await db.select().from(agentOperations).where(eq(agentOperations.taskId, copied.rootId)),
+      ).toHaveLength(0);
+      expect(
+        await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, copied.rootId)),
+      ).toHaveLength(0);
+      const unassigned = await service.copyIssue({
+        id: source.id,
+        expectedDomainRevision: source.domainRevision,
+        copyAssignees: false,
+      });
+      expect(await model.findById(unassigned.rootId)).toMatchObject({
+        assigneeAgentId: null,
+        assigneeUserId: null,
+        workflowCategory: 'todo',
+        currentTopicId: null,
+      });
+    },
+  );
   it('copies selected issue fields/sub-issues with fresh IDs while resetting all execution and automation state', async () => {
     const editorData = { root: { children: [{ type: 'paragraph', text: 'Body' }] } };
     const source = await model.create({

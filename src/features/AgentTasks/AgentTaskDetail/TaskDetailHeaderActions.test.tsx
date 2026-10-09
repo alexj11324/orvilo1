@@ -677,7 +677,7 @@ describe('TaskDetailHeaderActions', () => {
   });
 
   describe('definitions', () => {
-    it('submits Make a copy with an unassigned default and opens the persisted issue', async () => {
+    it('submits Make a copy preserving assignees by default and opens the persisted issue', async () => {
       render(<TaskDetailHeaderActions />);
       item('makeCopy')?.onClick?.();
       render(mocks.createModal.mock.calls[0][0].content);
@@ -687,7 +687,7 @@ describe('TaskDetailHeaderActions', () => {
       await waitFor(() =>
         expect(mocks.copyIssue).toHaveBeenCalledWith(
           expect.objectContaining({
-            copyAssignees: false,
+            copyAssignees: true,
             expectedDomainRevision: 3,
             id: 'task-uuid-1',
           }),

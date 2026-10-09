@@ -1,11 +1,10 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermission } from '@/hooks/usePermission';
 
 import { createCreateNewProviderModal } from '../features/CreateNewProvider';
@@ -13,21 +12,29 @@ import { createCreateNewProviderModal } from '../features/CreateNewProvider';
 const AddNewProvider = () => {
   const { t } = useTranslation('modelProvider');
   const { allowed: canManageProvider, reason } = usePermission('manage_provider_key');
+  const label = t('menu.addCustomProvider');
 
-  const button = (
-    <ActionIcon
-      disabled={!canManageProvider}
-      icon={PlusIcon}
-      size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-      title={canManageProvider ? t('menu.addCustomProvider') : undefined}
-      onClick={() => {
-        if (!canManageProvider) return;
-        createCreateNewProviderModal();
-      }}
-    />
+  // A disabled button swallows pointer events, so the tooltip trigger is a
+  // wrapper span that keeps the permission reason hoverable.
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex flex-none" />}>
+        <Button
+          aria-label={label}
+          disabled={!canManageProvider}
+          size="icon"
+          variant="outline"
+          onClick={() => {
+            if (!canManageProvider) return;
+            createCreateNewProviderModal();
+          }}
+        >
+          <PlusIcon />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{canManageProvider ? label : reason}</TooltipContent>
+    </Tooltip>
   );
-
-  return canManageProvider ? button : <Tooltip title={reason}>{button}</Tooltip>;
 };
 
 export default AddNewProvider;

@@ -121,6 +121,7 @@
   "huggingface.accessToken.desc": "Enter your HuggingFace Token, click [here](https://huggingface.co/settings/tokens) to create one",
   "huggingface.accessToken.placeholder": "hf_xxxxxxxxx",
   "huggingface.accessToken.title": "HuggingFace Token",
+  "list.header.desc": "Connect model providers and choose the models your agents can use.",
   "list.title.custom": "Custom provider not enabled",
   "list.title.disabled": "Disabled",
   "list.title.enabled": "Enabled",

@@ -49,6 +49,7 @@ export const useMcpPresetConnect = ({
   const createConnector = useToolStore((s) => s.createConnector);
   const startConnectorOAuth = useToolStore((s) => s.startConnectorOAuth);
   const fetchConnectors = useToolStore((s) => s.fetchConnectors);
+  const updateConnector = useToolStore((s) => s.updateConnector);
 
   const busy = Boolean(isConnecting || connecting);
   const canConnect = canCreate && canEdit && canManage;
@@ -72,10 +73,10 @@ export const useMcpPresetConnect = ({
     const currentConnector = connectorSelectors
       .customConnectors(currentState)
       .find((candidate) => matchMcpPresetByConnector(candidate, [preset]));
-    if (currentConnector?.status === 'connected') return;
+    if (currentConnector?.status === 'connected' && currentConnector.isEnabled) return;
     setIsConnecting(true);
     try {
-      const result = await connectLinearMcpPreset(preset, currentConnector?.id, {
+      const result = await connectLinearMcpPreset(preset, currentConnector, {
         checkStatus: async (connectorId) => {
           await fetchConnectors();
           return (
@@ -91,6 +92,7 @@ export const useMcpPresetConnect = ({
           },
         }),
         startConnectorOAuth,
+        updateConnector,
       });
       if (result.status === 'blocked') {
         toast.error(t('tools.mcpPreset.popupBlocked'));

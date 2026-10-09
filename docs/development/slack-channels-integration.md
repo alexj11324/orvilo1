@@ -86,7 +86,14 @@ Set server-only `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and
 `SLACK_SIGNING_SECRET` through the deployment's secret store. Set
 `COPILOTKIT_TELEMETRY_DISABLED=true` for this integration. The app and Hatchet
 worker must run the same revision and use the same database and Redis namespace.
-Database migrations run through the normal deployment startup.
+Database migrations run through the normal deployment startup. Slack migration
+`0211_slack_integration` was normally regenerated after the published
+`0210_task_completion_live_executor` migration merged. Its generated snapshot
+retains all 249 preceding tables, adds the three Slack tables, and links to the
+unchanged 0210 snapshot; the 0210 SQL and existing journal entries remain intact.
+The regenerated SQL retains the reviewed idempotent table, foreign-key, and
+unique-index clauses. This source integration does not claim production migration
+application or real Slack OAuth/message delivery.
 
 The Slack App uses HTTP events (Socket Mode off) with OAuth redirect
 `<APP_URL>/oauth/slack/callback`. Events and Interactivity both target

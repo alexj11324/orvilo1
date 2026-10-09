@@ -276,14 +276,11 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
             !resource.ownedByTeam ||
             (!documentsOnly && sections.length > 0)) && (
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <button
-                  aria-label={t('teams.resources.moreActions')}
-                  className={styles.iconButton}
-                  type="button"
-                >
-                  <MoreHorizontalIcon size={16} />
-                </button>
+              <DropdownMenuTrigger
+                aria-label={t('teams.resources.moreActions')}
+                className={styles.iconButton}
+              >
+                <MoreHorizontalIcon size={16} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className={styles.menu} side="bottom" sideOffset={4}>
                 {resource.kind === 'link' && (
@@ -334,15 +331,12 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         <div className={styles.actions}>
           {(canWrite || canCreateDocument) && (
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger>
-                <button
-                  aria-label={t('teams.resources.addResources')}
-                  className={styles.iconButton}
-                  disabled={pending}
-                  type="button"
-                >
-                  <PlusIcon size={16} />
-                </button>
+              <DropdownMenuTrigger
+                aria-label={t('teams.resources.addResources')}
+                className={styles.iconButton}
+                disabled={pending}
+              >
+                <PlusIcon size={16} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className={styles.menu} side="bottom" sideOffset={5}>
                 {canCreateDocument && (
@@ -435,14 +429,11 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                 )}
                 {canWrite && (
                   <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <button
-                        aria-label={t('teams.resources.sectionActions', { name: section.name })}
-                        className={styles.iconButton}
-                        type="button"
-                      >
-                        <MoreHorizontalIcon size={14} />
-                      </button>
+                    <DropdownMenuTrigger
+                      aria-label={t('teams.resources.sectionActions', { name: section.name })}
+                      className={styles.iconButton}
+                    >
+                      <MoreHorizontalIcon size={14} />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"

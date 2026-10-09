@@ -16,6 +16,7 @@ import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
 import CustomConnectorModal from '../CustomConnectorModal';
+import { getConnectorLifecycleActions } from './lifecycleActions';
 import { getLocalizedConnectorDetail } from './localization';
 import ToolPermissionGroup from './ToolPermissionGroup';
 
@@ -75,6 +76,12 @@ interface ConnectorDetailProps {
    * removes its tool from that agent.
    */
   agentTitle?: string | null;
+  /**
+   * Connect entry shown instead of Disconnect while a user-added connector is
+   * not connected. The settings page supplies the flow that fits the connector
+   * (e.g. the Linear / GitHub OAuth start); without one, none is offered.
+   */
+  connectAction?: ReactNode;
   connectorId: string;
   lifecycleActions?: ReactNode;
   /**
@@ -104,7 +111,7 @@ const ManageTooltip = ({ children, title }: { children: ReactNode; title?: strin
   );
 
 const ConnectorDetail = memo<ConnectorDetailProps>(
-  ({ agentTitle, connectorId, lifecycleActions, middleSlot, onDelete }) => {
+  ({ agentTitle, connectAction, connectorId, lifecycleActions, middleSlot, onDelete }) => {
     const { t } = useTranslation('tool');
     const { t: ts } = useTranslation('setting');
 
@@ -226,6 +233,12 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
 
     if (!connector) return null;
 
+    const lifecycle = getConnectorLifecycleActions({
+      isEnabled: connector.isEnabled,
+      sourceType: connector.sourceType as 'builtin' | 'custom' | 'marketplace',
+      status: connector.status,
+    });
+
     const orviloProvider = isMarketplace
       ? getOrviloSkillProviderById(connector.identifier)
       : undefined;
@@ -312,25 +325,28 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
               lifecycleActions
             ) : (
               <>
-                {/* Disconnect / Delete for custom MCP connectors */}
-                {isMcpConnector && (
+                {/* Connect / Disconnect follow the connection state; Delete is for connectors the user added */}
+                {lifecycle.connect && connectAction}
+                {lifecycle.disconnect && (
+                  <ManageTooltip title={manageTooltip}>
+                    <Button
+                      disabled={!canManage}
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        try {
+                          await disconnectConnector(connectorId);
+                        } catch (error) {
+                          notifyActionError(error);
+                        }
+                      }}
+                    >
+                      {t('connector.disconnect', 'Disconnect')}
+                    </Button>
+                  </ManageTooltip>
+                )}
+                {lifecycle.delete && (
                   <>
-                    <ManageTooltip title={manageTooltip}>
-                      <Button
-                        disabled={!canManage}
-                        size="sm"
-                        variant="destructive"
-                        onClick={async () => {
-                          try {
-                            await disconnectConnector(connectorId);
-                          } catch (error) {
-                            notifyActionError(error);
-                          }
-                        }}
-                      >
-                        {t('connector.disconnect', 'Disconnect')}
-                      </Button>
-                    </ManageTooltip>
                     <ManageTooltip title={manageTooltip}>
                       <Button
                         disabled={!canManage}
@@ -359,7 +375,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
                   </>
                 )}
                 {/* Uninstall for builtin and marketplace tools */}
-                {(isBuiltin || isMarketplace) && (
+                {lifecycle.uninstall && (
                   <ManageTooltip title={manageTooltip}>
                     <Button
                       disabled={!canManage}

@@ -1,9 +1,9 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { FileText, Film, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -133,7 +133,7 @@ const AcceptanceResources = () => {
             const name = evidence.fileName ?? evidence.description ?? check;
             const captured =
               hydrated && evidence.capturedAt
-                ? dayjs(evidence.capturedAt).format('MM-DD HH:mm')
+                ? formatAbsoluteDateTime(evidence.capturedAt)
                 : undefined;
             const visual = isVisual(evidence.type) && Boolean(evidence.fileUrl);
 

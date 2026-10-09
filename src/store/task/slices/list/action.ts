@@ -7,6 +7,7 @@ import {
   isMyTaskListKey,
   isScheduledTaskListKey,
   isTaskListKey,
+  isWorkQueryTaskRowsKey,
   taskKeys,
 } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
@@ -247,6 +248,10 @@ export class TaskListSliceActionImpl {
       // boundaries (touching reorders `updatedAt`, scheduling flips the
       // automation filter), so they are invalidated by root, not enumerated.
       mutate(isTaskListKey),
+      // My issues, saved views, reviews and team lists read rows through the
+      // work-query path, not `task:list`; a peek (or any edit) beside one of
+      // them must not leave its row stale.
+      mutate(isWorkQueryTaskRowsKey),
       mutate(
         taskKeys.groupList(
           listAgentId,

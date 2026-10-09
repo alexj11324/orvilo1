@@ -170,7 +170,7 @@ const styles = createStaticStyles(({ css }) => ({
 /* ---------------------------------- Root ---------------------------------- */
 
 const WorkSurface = memo<ComponentProps<'div'>>(({ children, className, ...rest }) => (
-  <div className={cx(styles.root, className)} {...rest}>
+  <div className={cx(styles.root, className)} data-work-surface="" {...rest}>
     {children}
   </div>
 ));

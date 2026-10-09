@@ -40,7 +40,7 @@ const ProviderSection = ({
 }: ProviderSectionProps) => {
   const header = (
     <div className="mt-2 flex h-7 items-center pr-1">
-      <CollapsibleTrigger className="group/trigger flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
+      <CollapsibleTrigger className="group/trigger flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset">
         <span className="truncate">{title}</span>
         <span className="font-normal tabular-nums">{count}</span>
         <ChevronRightIcon

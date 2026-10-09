@@ -15,9 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import EnableSwitch from './EnableSwitch';
+import { type ProviderStatus } from './providerStatus';
 import UpdateProviderInfo from './UpdateProviderInfo';
-
-export type ProviderStatus = 'disabled' | 'enabled' | 'notConfigured';
 
 /** Identity block (logo and name) shared by the page header and the OAuth card. */
 export const ProviderIdentity = ({
@@ -142,7 +141,7 @@ export const ProviderHeaderActions = ({
             <Tooltip>
               <TooltipTrigger
                 aria-label={t('providerModels.config.builtinNotice')}
-                className="inline-flex text-muted-foreground"
+                className="inline-flex rounded-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 render={<span tabIndex={0} />}
               >
                 <InfoIcon className="size-4" />

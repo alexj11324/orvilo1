@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -119,7 +120,7 @@ export function StructuredOutput({ view }: StructuredOutputProps) {
                   <CommitHash>{commit.hash.slice(0, 8)}</CommitHash>
                   <CommitAuthor>{commit.author}</CommitAuthor>
                   <time dateTime={commit.date.toISOString()}>
-                    {commit.date.toLocaleDateString()}
+                    {formatAbsoluteDate(commit.date)}
                   </time>
                 </CommitMetadata>
               </CommitInfo>

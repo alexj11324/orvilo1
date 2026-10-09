@@ -1,11 +1,12 @@
 import { cn } from 'cn';
-import { memo } from 'react';
+import { memo, useRef, useState } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
+import TaskDetailAddActions from './TaskDetailAddActions';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
@@ -26,6 +27,13 @@ import TaskSubtasks from './TaskSubtasks';
  */
 const TaskDetailSections = memo(() => {
   const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
+  // The add row and the Sub-issues section share one composer.
+  const [subIssueComposerOpen, setSubIssueComposerOpen] = useState(false);
+  const composerTaskRef = useRef(taskId);
+  if (composerTaskRef.current !== taskId) {
+    composerTaskRef.current = taskId;
+    setSubIssueComposerOpen(false);
+  }
 
   return (
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
@@ -44,12 +52,16 @@ const TaskDetailSections = memo(() => {
               <TaskProjectSection />
             </div>
           </div>
-          <div className={styles.description}>
+          <div className={cn('flex flex-col gap-3', styles.description)}>
             <TaskInstruction />
+            <TaskDetailAddActions onAddSubIssue={() => setSubIssueComposerOpen(true)} />
           </div>
           <div className={cn('flex flex-col gap-6', styles.body)}>
             <TaskBlockedNotice />
-            <TaskSubtasks />
+            <TaskSubtasks
+              composerOpen={subIssueComposerOpen}
+              onComposerOpenChange={setSubIssueComposerOpen}
+            />
             <TaskArtifacts />
             <TaskIssueResources />
             <TaskActivities />

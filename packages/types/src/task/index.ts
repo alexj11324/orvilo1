@@ -1299,6 +1299,8 @@ export interface TaskDetailActivity {
   /** Topic-only: what opened this round — `goal` marks a coordinator-started attempt. */
   trigger?: TaskRunTrigger | null;
   type: TaskActivityType;
+  /** Comment-only: ISO timestamp of the latest persisted edit. */
+  updatedAt?: string;
   userId?: string | null;
   /**
    * Topic-only: the verification bound to this run. Present as soon as a

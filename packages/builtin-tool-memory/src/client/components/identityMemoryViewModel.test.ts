@@ -39,7 +39,7 @@ describe('getIdentityMemoryViewModel', () => {
     expect(vm).toMatchObject({
       confidence: 90,
       description: 'Maintains the Orvilo monorepo and reviews most infra PRs.',
-      episodicDate: '2026-08-03',
+      episodicDate: '2026/08/03',
       hasIdentityContent: true,
       identityType: 'professional',
       isEmpty: false,

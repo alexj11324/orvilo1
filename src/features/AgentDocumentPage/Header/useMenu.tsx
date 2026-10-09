@@ -38,13 +38,12 @@ export const useMenu = ({
   title,
   updatedAt,
 }: UseMenuParams): { menuItems: DropdownItem[] } => {
-  const { i18n, t } = useTranslation(['file', 'common', 'chat']);
+  const { t } = useTranslation(['file', 'common', 'chat']);
 
   const { lg = true } = useResponsive();
   const editor = useEditor();
   const appOrigin = useAppOrigin();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
-  const dateLocale = i18n.resolvedLanguage || i18n.language;
 
   const [wideScreen, toggleWideScreen] = useGlobalStore((s) => [
     systemStatusSelectors.wideScreen(s),
@@ -161,7 +160,7 @@ export const useMenu = ({
           label: (
             <span style={{ color: cssVar.colorTextTertiary, fontSize: 12, lineHeight: 1.6 }}>
               {t('pageEditor.editedAt', {
-                time: formatPageEditorInfoTime(updatedAt, dateLocale),
+                time: formatPageEditorInfoTime(updatedAt),
               })}
             </span>
           ),
@@ -178,7 +177,6 @@ export const useMenu = ({
     documentId,
     editor,
     lg,
-    dateLocale,
     onDeleted,
     t,
     title,

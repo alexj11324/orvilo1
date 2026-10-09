@@ -56,10 +56,11 @@ beforeEach(() => {
 
 describe('messagesForLocale', () => {
   it('routes every zh spelling to zh-Hans and the rest to en', () => {
-    expect(messagesForLocale('zh-CN').login).toBe('登录');
-    expect(messagesForLocale('zh-Hans').login).toBe('登录');
-    expect(messagesForLocale('en-US').login).toBe('Login');
-    expect(messagesForLocale('ja-JP').login).toBe('Login');
+    // `login` is the same brand line in every locale, so it cannot tell them apart.
+    expect(messagesForLocale('zh-CN').back).toBe('返回');
+    expect(messagesForLocale('zh-Hans').back).toBe('返回');
+    expect(messagesForLocale('en-US').back).toBe('Back');
+    expect(messagesForLocale('ja-JP').back).toBe('Back');
   });
 });
 

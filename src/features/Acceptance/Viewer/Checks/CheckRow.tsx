@@ -1,9 +1,9 @@
 'use client';
 
 import type { AcceptanceCommentThread } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cssVar, cx, useResponsive } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import {
   AudioLines,
   BadgeCheck,
@@ -510,7 +510,7 @@ export const AcceptanceCheckRow = memo<{
                   />
                   <TooltipContent>
                     {t('acceptance.review.acceptedNote', {
-                      time: dayjs(check.userReview!.createdAt).format('MM-DD HH:mm'),
+                      time: formatAbsoluteDateTime(check.userReview!.createdAt),
                     })}
                   </TooltipContent>
                 </Tooltip>

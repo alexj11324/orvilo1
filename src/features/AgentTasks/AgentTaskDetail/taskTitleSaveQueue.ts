@@ -37,6 +37,16 @@ interface TitleSaveEntry {
 export class TaskTitleSaveQueue {
   #editSequence = 0;
   #entries = new Map<string, TitleSaveEntry>();
+  #listeners = new Set<() => void>();
+
+  subscribe = (listener: () => void) => {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  };
+
+  #notify = () => this.#listeners.forEach((listener) => listener());
 
   /**
    * True while an unsent or unacknowledged edit exists for the task — the
@@ -46,6 +56,12 @@ export class TaskTitleSaveQueue {
   hasPending = (taskId: string): boolean => {
     const entry = this.#entries.get(taskId);
     return Boolean(entry && (entry.pending || entry.inFlight !== null));
+  };
+
+  /** A captured draft can be sent now, rather than duplicating an in-flight write. */
+  canRetry = (taskId: string): boolean => {
+    const entry = this.#entries.get(taskId);
+    return Boolean(entry?.pending && entry.inFlight === null);
   };
 
   /**
@@ -62,6 +78,7 @@ export class TaskTitleSaveQueue {
       entry.timer = undefined;
       void this.#flush(taskId, updateTask);
     }, DEBOUNCE_MS);
+    this.#notify();
   };
 
   /**
@@ -95,6 +112,7 @@ export class TaskTitleSaveQueue {
     if (!entry || entry.inFlight !== null || !entry.pending) return;
     const pending = entry.pending;
     entry.inFlight = pending.editSequence;
+    this.#notify();
     try {
       await updateTask(taskId, { name: pending.value });
       // Only the edit this request carried is consumed — a newer one typed
@@ -125,6 +143,7 @@ export class TaskTitleSaveQueue {
       if (!entry.pending && entry.inFlight === null && !entry.timer) {
         this.#entries.delete(taskId);
       }
+      this.#notify();
     }
   };
 }

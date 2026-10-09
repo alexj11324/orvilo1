@@ -2,9 +2,9 @@
 
 import { cn } from 'cn';
 import {
-  type ComponentType,
   createElement,
   type CSSProperties,
+  type ElementType,
   isValidElement,
   type Key,
   memo,
@@ -113,9 +113,7 @@ const getLinkLabel = (label: ReactNode) => {
 
 const renderIcon = (icon: RenderableItem['icon']) => {
   if (!icon) return null;
-  return typeof icon === 'function'
-    ? createElement(icon as ComponentType<{ 'aria-hidden': boolean }>, { 'aria-hidden': true })
-    : icon;
+  return isValidElement(icon) ? icon : createElement(icon as ElementType, { 'aria-hidden': true });
 };
 
 const renderContent = (item: RenderableItem, label: ReactNode) => (

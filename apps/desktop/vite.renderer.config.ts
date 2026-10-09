@@ -171,6 +171,10 @@ export default defineConfig(async (env) => {
     // `app://` protocol handler resolves absolute `/assets/...` correctly
     // regardless of URL depth.
     base: '/',
+    // Web and Electron share ROOT_DIR but compile different platform branches.
+    // Separate optimizer caches so opening the web OAuth flow cannot invalidate
+    // dependencies already loaded by the desktop renderer.
+    cacheDir: path.resolve(ROOT_DIR, 'node_modules/.vite-electron'),
     build: {
       minify: true,
       modulePreload: { ...sharedModulePreload, polyfill: false },

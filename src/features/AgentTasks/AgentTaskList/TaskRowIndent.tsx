@@ -35,8 +35,17 @@ const styles = createStaticStyles(({ css, cssVar }) => {
         border-end-start-radius: 4px;
       }
     `,
+    // Context-only rows are dimmed without fading the text: a row-level opacity
+    // took the secondary text to ~2.1:1 on light. The title steps down to the
+    // secondary text role (the identifier/date are already there, ~5.7:1) and only
+    // the glyphs and avatars, which carry no text, are faded.
     muted: css`
-      opacity: 0.5;
+      color: ${cssVar.colorTextSecondary};
+
+      & svg,
+      & [data-slot='avatar'] {
+        opacity: 0.5;
+      }
     `,
   };
 });

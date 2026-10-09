@@ -12,7 +12,9 @@ export const taskInstructionStyles = createStaticStyles(({ css }) => ({
       h1,
       h2,
       h3,
-      h4 {
+      h4,
+      h5,
+      h6 {
         margin-block: 16px 8px;
         font-weight: 600;
         line-height: 1.4;
@@ -27,7 +29,9 @@ export const taskInstructionStyles = createStaticStyles(({ css }) => ({
       }
 
       h3,
-      h4 {
+      h4,
+      h5,
+      h6 {
         font-size: 15px;
       }
     }

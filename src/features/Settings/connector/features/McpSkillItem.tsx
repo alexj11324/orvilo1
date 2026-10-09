@@ -4,7 +4,8 @@ import { McpIcon } from '@lobehub/ui/icons';
 import { createElement, memo } from 'react';
 
 import Avatar from '@/components/Avatar';
-import NavItem from '@/features/NavPanel/components/NavItem';
+
+import ConnectorRow from './ConnectorRow';
 
 interface McpSkillItemProps {
   avatar?: string;
@@ -19,17 +20,17 @@ interface McpSkillItemProps {
  * migration entry both live in the detail panel.
  */
 const McpSkillItem = memo<McpSkillItemProps>(({ title, avatar, isSelected, onSelect }) => (
-  <NavItem
+  <ConnectorRow
     active={isSelected}
     title={title}
-    icon={() =>
+    icon={
       avatar && avatar !== 'MCP_AVATAR' ? (
         <Avatar avatar={avatar} shape="square" size={18} />
       ) : (
         createElement(McpIcon, { size: 18 })
       )
     }
-    onClick={onSelect}
+    onSelect={onSelect}
   />
 ));
 

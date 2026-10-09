@@ -1,8 +1,8 @@
 'use client';
 
 import { type AgentLabelListItem } from '@orvilo/types';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
-import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
 import {
   ArchiveIcon,
@@ -223,7 +223,7 @@ const LabelRow = memo<LabelRowProps>(
             width: CREATED_COL_WIDTH,
           }}
         >
-          {dayjs(label.createdAt).format('YYYY-MM-DD')}
+          {formatAbsoluteDate(label.createdAt)}
         </span>
         <div
           style={{

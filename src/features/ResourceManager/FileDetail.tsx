@@ -1,6 +1,6 @@
 'use client';
 
-import dayjs from 'dayjs';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { BoltIcon, DownloadIcon } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
@@ -63,12 +63,12 @@ const FileDetail = memo<FileDetailProps>((props) => {
     },
 
     {
-      children: dayjs(createdAt).format('YYYY-MM-DD HH:mm'),
+      children: formatAbsoluteDateTime(createdAt),
       key: 'createdAt',
       label: t('detail.basic.createdAt'),
     },
     {
-      children: dayjs(updatedAt).format('YYYY-MM-DD HH:mm'),
+      children: formatAbsoluteDateTime(updatedAt),
       key: 'updatedAt',
       label: t('detail.basic.updatedAt'),
     },

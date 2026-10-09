@@ -27,6 +27,7 @@ import { CommandItem } from './components';
 import ContextCommands from './ContextCommands';
 import RecentsCommands from './RecentsCommands';
 import { useCommandMenu } from './useCommandMenu';
+import { routeSearchKeywords } from './utils/routeKeywords';
 
 const MainMenu = memo(() => {
   const { pathname, menuContext, setPages, pages, onClose, onCreateView } = useCommandMenuContext();
@@ -144,9 +145,11 @@ const MainMenu = memo(() => {
       <Command.Group heading={t('cmdk.navigate')}>
         {navigableRoutes.map((route) => {
           const RouteIcon = route.icon;
-          const keywords = route.keywordsKey
+          const label = t(route.cmdkKey as any);
+          const aliases = route.keywordsKey
             ? t(route.keywordsKey as any).split(' ')
             : route.keywords;
+          const keywords = routeSearchKeywords(label, aliases);
           return (
             !pathname?.startsWith(route.pathPrefix) && (
               <CommandItem
@@ -156,7 +159,7 @@ const MainMenu = memo(() => {
                 value={route.id}
                 onSelect={() => handleNavigate(route.path)}
               >
-                {t(route.cmdkKey as any)}
+                {label}
               </CommandItem>
             )
           );

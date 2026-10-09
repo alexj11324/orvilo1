@@ -30,22 +30,19 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
 import { useTaskProjectChange } from '../shared/useTaskProjectChange';
+import { RAIL_CONTROL_CLASS } from './railControl';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 /**
- * A rail row drawn on the local 28px Button so it is focusable and keyboard
- * operable. `railRow` owns the geometry; the utilities only undo the Button's
- * centred, bordered label layout.
- */
-const railRowButtonClass = cn('justify-start gap-2 border-0 font-normal', styles.railRow);
-
-/**
  * Read-only rows navigate, so they stay real links (role and href intact) and
- * only borrow the same Button look.
+ * only borrow the rail control's Button look. The rows used to carry the
+ * unlayered `railRow` antd-style class, whose `&& { background }` outranked
+ * the Button's `hover:bg-accent` utility, so the hover wash never showed —
+ * the shared `RAIL_CONTROL_CLASS` has no such rule to beat.
  */
-const railRowLinkClass = cn(buttonVariants({ size: 'sm', variant: 'ghost' }), railRowButtonClass);
+const railRowLinkClass = cn(buttonVariants({ size: 'sm', variant: 'ghost' }), RAIL_CONTROL_CLASS);
 
 /**
  * The rail's "Project" group — Linear files every issue under a project or a
@@ -155,8 +152,7 @@ const TaskProjectSection = memo(() => {
         <DropdownMenuTrigger
           render={
             <Button
-              className={railRowButtonClass}
-              size="sm"
+              className={RAIL_CONTROL_CLASS}
               title={t('taskDetail.milestone.hint')}
               variant="ghost"
             />
@@ -234,8 +230,7 @@ const TaskProjectSection = memo(() => {
         <DropdownMenuTrigger
           render={
             <Button
-              className={cn(railRowButtonClass, 'min-w-0 flex-1 shrink')}
-              size="sm"
+              className={cn(RAIL_CONTROL_CLASS, 'flex-1 shrink')}
               title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
               variant="ghost"
             />

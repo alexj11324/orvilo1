@@ -1,7 +1,7 @@
 import { AGENT_CHAT_TOPIC_URL, GROUP_CHAT_TOPIC_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { Command } from 'cmdk';
-import dayjs from 'dayjs';
 import {
   Brain,
   FileText,
@@ -245,7 +245,7 @@ const SearchResults = memo<SearchResultsProps>(
       // Topic results: prefix with agent identity (avatar + title) so users can
       // distinguish topics with the same name (e.g. customer email) across agents.
       if (result.type === 'topic') {
-        const formattedDate = dayjs(result.createdAt).format('MMM D, YYYY');
+        const formattedDate = formatAbsoluteDate(result.createdAt);
         if (!result.agent) {
           return description ? `${description} · ${formattedDate}` : formattedDate;
         }
@@ -271,7 +271,7 @@ const SearchResults = memo<SearchResultsProps>(
 
       // For message results, append creation date
       if (result.type === 'message') {
-        const formattedDate = dayjs(result.createdAt).format('MMM D, YYYY');
+        const formattedDate = formatAbsoluteDate(result.createdAt);
         if (description) {
           return `${description} · ${formattedDate}`;
         }

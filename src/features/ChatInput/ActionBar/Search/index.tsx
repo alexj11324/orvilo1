@@ -24,7 +24,7 @@ const Search = memo(() => {
   const isAgentEnableSearch = useAgentEnableSearch();
   const isMobile = useIsMobile();
 
-  if (isLoading) return <ChatInputAction disabled icon={GlobeOff} />;
+  if (isLoading) return <ChatInputAction disabled icon={GlobeOff} title={t('search.title')} />;
 
   return (
     <ChatInputAction

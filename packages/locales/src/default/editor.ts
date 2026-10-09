@@ -9,6 +9,7 @@ export default {
   'autoSave.retry': 'Retry',
   'autoSave.saved': 'Saved',
   'autoSave.saving': 'Auto-saving...',
+  'autoSave.savingShort': 'Saving…',
   'cancel': 'Cancel',
   'codemirror.copyFailed': 'Copy failed',
   'codemirror.copySuccess': 'Code copied to clipboard',

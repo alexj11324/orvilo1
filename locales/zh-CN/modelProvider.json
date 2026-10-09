@@ -182,6 +182,7 @@
   "providerModels.config.builtinNotice": "内置服务商不可从列表中移除，不使用时将其禁用即可。",
   "providerModels.config.checker.button": "检查",
   "providerModels.config.checker.desc": "测试 Api Key 与代理地址是否正确填写",
+  "providerModels.config.checker.missingCredentials": "请先填写 API Key 或接口地址，再检查连接。",
   "providerModels.config.checker.pass": "检查通过",
   "providerModels.config.checker.title": "连通性检查",
   "providerModels.config.credentials.title": "凭据",

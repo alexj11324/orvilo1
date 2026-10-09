@@ -24,8 +24,8 @@ mocked. Every database write targeted the disposable local DB.
   [assertions](standalone-inbox.txt).
 - **#556:** An active second member with an explicit Agent Use grant could not
   answer the owner's operation: `FORBIDDEN`, `Operation is outside the caller
-scope`. An ordinary Agent edit was also refused, with canary's opaque
-  `NOT_FOUND`. [Results](standalone-member.json). Viewer template reads succeeded
+scope`. An ordinary Agent edit was also refused with `FORBIDDEN` ("You do not have
+  permission to edit this resource"). [Results](standalone-member.json). Viewer template reads succeeded
   while copying was forbidden; suspension then denied template reads too.
   [Membership results](standalone-membership.txt).
 - **#559:** The actual copy dialog defaults **Assignees** to checked. Normal UI

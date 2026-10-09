@@ -1,8 +1,8 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -60,7 +60,7 @@ const WorkspaceGeneral = memo(() => {
       </GeneralField>
       <GeneralField label={t('workspaceSetting.general.created', { defaultValue: 'Created' })}>
         <div className="text-[13px] text-muted-foreground">
-          {workspace?.createdAt ? dayjs(workspace.createdAt).format('YYYY/MM/DD') : '—'}
+          {workspace?.createdAt ? formatAbsoluteDate(workspace.createdAt) : '—'}
         </div>
       </GeneralField>
     </div>

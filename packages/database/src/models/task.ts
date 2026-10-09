@@ -234,6 +234,12 @@ export interface TaskMutationContext {
   suppressLinearOutbox?: boolean;
 }
 
+/** Resolved by the transport; an Agent actor never falls back to its user owner. */
+export interface TaskCommentActor {
+  agentId?: string | null;
+  userId: string;
+}
+
 /**
  * Extra columns a status transition may write atomically with `status`.
  * The workflow fields let a settlement write update the legacy projection
@@ -862,7 +868,9 @@ export class TaskModel {
   // Resolve id or identifier (e.g. 'T-1') to a task
   async resolve(idOrIdentifier: string): Promise<TaskItem | null> {
     if (idOrIdentifier.startsWith('task_')) return this.findById(idOrIdentifier);
-    return this.findByIdentifier(idOrIdentifier.toUpperCase());
+    return (
+      (await this.findById(idOrIdentifier)) ?? this.findByIdentifier(idOrIdentifier.toUpperCase())
+    );
   }
 
   async findByIdentifier(identifier: string): Promise<TaskItem | null> {
@@ -3910,6 +3918,30 @@ export class TaskModel {
 
   private commentsOwnership = () => this.metadataOwnership(taskComments);
 
+  private commentAuthorPredicate(actor?: TaskCommentActor): SQL | undefined {
+    // Linear's controlled integration service constructs a managed-subject model.
+    // Its inbound reconciliation is not an interactive comment-author operation.
+    if (!actor && this.managedSubject) return undefined;
+    return actor?.agentId
+      ? eq(taskComments.authorAgentId, actor.agentId)
+      : and(
+          isNull(taskComments.authorAgentId),
+          eq(taskComments.authorUserId, actor?.userId ?? this.userId),
+        );
+  }
+
+  assertCommentAuthor(comment: TaskCommentItem, actor?: TaskCommentActor): void {
+    if (!actor && this.managedSubject) return;
+    const isAuthor = actor?.agentId
+      ? comment.authorAgentId === actor.agentId
+      : !comment.authorAgentId && comment.authorUserId === (actor?.userId ?? this.userId);
+    if (!isAuthor)
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only the comment author may edit or delete it',
+      });
+  }
+
   private async recordCommentMutation(
     runner: OrviloDatabase,
     input: {
@@ -4045,15 +4077,33 @@ export class TaskModel {
       .orderBy(taskComments.createdAt);
   }
 
-  async deleteComment(id: string, mutation: TaskMutationContext = {}): Promise<boolean> {
+  async deleteComment(
+    id: string,
+    mutation: TaskMutationContext = {},
+    actor?: TaskCommentActor,
+  ): Promise<boolean> {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      const [previous] = await runner
+        .select()
+        .from(taskComments)
+        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .for('update')
+        .limit(1);
+      if (!previous) return false;
+      this.assertCommentAuthor(previous, actor);
       const externalMapping = this.workspaceId
         ? await new LinearSyncModel(runner, this.workspaceId).findExternalCommentByLocalId(id)
         : null;
       const [comment] = await runner
         .delete(taskComments)
-        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .where(
+          and(
+            eq(taskComments.id, id),
+            this.commentsOwnership(),
+            this.commentAuthorPredicate(actor),
+          ),
+        )
         .returning();
       if (!comment) return false;
       await this.recordCommentMutation(runner, {
@@ -4072,17 +4122,18 @@ export class TaskModel {
   async updateComment(
     id: string,
     content: string,
-    opts?: { editorData?: unknown; mutation?: TaskMutationContext },
+    opts?: { actor?: TaskCommentActor; editorData?: unknown; mutation?: TaskMutationContext },
   ): Promise<TaskCommentItem | undefined> {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const [previous] = await runner
-        .select({ editorData: taskComments.editorData })
+        .select()
         .from(taskComments)
         .where(and(eq(taskComments.id, id), this.commentsOwnership()))
         .for('update')
         .limit(1);
       if (!previous) return undefined;
+      this.assertCommentAuthor(previous, opts?.actor);
       const [comment] = await runner
         .update(taskComments)
         .set({
@@ -4090,7 +4141,13 @@ export class TaskModel {
           ...(opts?.editorData !== undefined ? { editorData: opts.editorData as never } : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(taskComments.id, id), this.commentsOwnership()))
+        .where(
+          and(
+            eq(taskComments.id, id),
+            this.commentsOwnership(),
+            this.commentAuthorPredicate(opts?.actor),
+          ),
+        )
         .returning();
       if (!comment) return undefined;
       await this.recordCommentMutation(runner, {

@@ -201,6 +201,18 @@ describe('Desktop onboarding LoginStep', () => {
     expect(screen.queryByRole('button', { name: 'Sign in Cloud' })).not.toBeInTheDocument();
   });
 
+  it('lists the cloud sign-in first and self-hosting as the outline method under it', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    await renderLoginStep();
+
+    const [cloud, selfhost] = screen.getAllByRole('button');
+    expect(cloud).toHaveAccessibleName('Sign in Cloud');
+    expect(selfhost).toHaveAccessibleName('Use self-hosted server');
+    // Only the primary method is filled; the outline variant carries a visible border.
+    expect(cloud).not.toHaveClass('border-border');
+    expect(selfhost).toHaveClass('border-border');
+  });
+
   it('opens self-host connection as a labeled form and submits its address', async () => {
     mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
     await renderLoginStep();

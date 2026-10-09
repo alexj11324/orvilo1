@@ -3,15 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { formatPageEditorInfoTime } from './formatPageEditorInfoTime';
 
 describe('formatPageEditorInfoTime', () => {
-  it('formats page info time with the active locale', () => {
-    const date = new Date(2026, 6, 1, 12, 16);
-
-    expect(formatPageEditorInfoTime(date, 'zh-CN')).toBe('2026年7月1日 12:16');
-    expect(formatPageEditorInfoTime(date, 'en-US')).toBe('Jul 1, 2026, 12:16 PM');
+  it('formats page info time as a numeric date and time in every language', () => {
+    expect(formatPageEditorInfoTime(new Date(2026, 6, 1, 12, 16))).toBe('2026/07/01 12:16');
   });
 
   it('returns empty text for missing or invalid values', () => {
-    expect(formatPageEditorInfoTime(undefined, 'zh-CN')).toBe('');
-    expect(formatPageEditorInfoTime('invalid', 'zh-CN')).toBe('');
+    expect(formatPageEditorInfoTime(undefined)).toBe('');
+    expect(formatPageEditorInfoTime('invalid')).toBe('');
   });
 });

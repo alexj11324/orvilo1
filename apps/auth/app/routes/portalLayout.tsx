@@ -1,6 +1,6 @@
-import '../portal/styles.css';
-
 import { Outlet } from 'react-router';
+
+import NextThemeProvider from '@/layout/GlobalProvider/NextThemeProvider';
 
 import { resolveAuthLocale } from '../lib/locale';
 import { resolvePortalLocale } from '../portal/locale';
@@ -8,8 +8,8 @@ import { PortalMessagesProvider } from '../portal/messagesContext';
 import { readPortalConfig } from '../portal/portalConfig';
 import { RuntimeClerkProvider } from '../portal/RuntimeClerkProvider';
 
-// Bare: skips AuthAppShell — the portal owns its chrome (matches the Cordy
-// portal's full-bleed two-panel layout).
+// Bare: skips AuthAppShell's provider stack. The portal renders the shared
+// EntryShell itself and only needs the theme attribute around it.
 export const handle = { bare: true };
 
 export default function PortalLayout() {
@@ -17,7 +17,7 @@ export default function PortalLayout() {
   const config = readPortalConfig();
 
   return (
-    <div className="accounts-portal-root">
+    <NextThemeProvider>
       <PortalMessagesProvider locale={locale}>
         <RuntimeClerkProvider
           productOrigin={config.productOrigin}
@@ -27,6 +27,6 @@ export default function PortalLayout() {
           <Outlet />
         </RuntimeClerkProvider>
       </PortalMessagesProvider>
-    </div>
+    </NextThemeProvider>
   );
 }

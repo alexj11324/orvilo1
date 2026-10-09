@@ -8,14 +8,15 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { openDocumentModal } from '@/features/DocumentModal/loader';
 import Time from '@/features/Home/components/Time';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
-import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 
 const flattenWorkspace = (nodes: TaskDetailWorkspaceNode[]): TaskDetailWorkspaceNode[] =>
   nodes.flatMap((node) => [
@@ -63,54 +64,51 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
   );
 
   return (
+    // The document-opening button and the menu trigger are siblings: a button
+    // must not contain another interactive control.
     <div
-      className="flex items-center gap-2.5 px-3 py-2"
-      style={{
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
-        cursor: 'pointer',
-      }}
-      onClick={() => void openDocumentModal(node.documentId)}
+      className="flex items-center gap-1 pr-2"
+      style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
     >
-      {createElement(inaccessible ? FileLock2Icon : FileTextIcon, {
-        color: cssVar.colorTextSecondary,
-        size: 18,
-        strokeWidth: 1.5,
-        style: { flexShrink: 0 },
-      })}
-      <div
-        className={cn('truncate', 'block', inaccessible ? 'text-muted-foreground' : undefined)}
-        style={{ flex: 1, minWidth: 0 }}
+      <Button
+        className="h-auto min-w-0 flex-1 justify-start gap-2.5 rounded-lg py-2 pr-1 pl-3 text-left font-normal"
+        variant="ghost"
+        onClick={() => void openDocumentModal(node.documentId)}
       >
-        {title}
-      </div>
-      {sizeLabel && (
-        <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
-          {sizeLabel}
-        </div>
-      )}
-      {node.sourceTaskIdentifier && (
-        <Tag size="sm" style={{ flexShrink: 0 }}>
-          {node.sourceTaskIdentifier}
-        </Tag>
-      )}
-      {/* Which run produced this — the plan's "trace an artifact back to the
+        {createElement(inaccessible ? FileLock2Icon : FileTextIcon, {
+          color: cssVar.colorTextSecondary,
+          size: 18,
+          strokeWidth: 1.5,
+          style: { flexShrink: 0 },
+        })}
+        <span
+          className={cn('truncate', 'block', inaccessible ? 'text-muted-foreground' : undefined)}
+          style={{ flex: 1, minWidth: 0 }}
+        >
+          {title}
+        </span>
+        {sizeLabel && (
+          <span className="text-xs text-muted-foreground" style={{ flexShrink: 0 }}>
+            {sizeLabel}
+          </span>
+        )}
+        {node.sourceTaskIdentifier && (
+          <Tag size="sm" style={{ flexShrink: 0 }}>
+            {node.sourceTaskIdentifier}
+          </Tag>
+        )}
+        {/* Which run produced this — the plan's "trace an artifact back to the
           specific run". Information only: linking into the conversation needs the
           run's agent id, which the projection does not carry yet. */}
-      {node.sourceTopicTitle && (
-        <Tag size="sm" style={{ flexShrink: 0 }} title={node.sourceTopicTitle}>
-          {node.sourceTopicTitle}
-        </Tag>
-      )}
-      {node.createdAt && <Time date={node.createdAt} />}
+        {node.sourceTopicTitle && (
+          <Tag size="sm" style={{ flexShrink: 0 }} title={node.sourceTopicTitle}>
+            {node.sourceTopicTitle}
+          </Tag>
+        )}
+        {node.createdAt && <Time date={node.createdAt} />}
+      </Button>
       <SidebarDropdownMenu items={menuItems}>
-        <ActionIcon
-          icon={MoreHorizontal}
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        />
+        <ActionIcon aria-label={t('more', { ns: 'common' })} icon={MoreHorizontal} size="small" />
       </SidebarDropdownMenu>
     </div>
   );
@@ -135,20 +133,13 @@ const TaskArtifacts = memo(() => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div
-          className="flex items-center gap-2 px-2 py-1"
-          style={{ cursor: 'pointer', width: 'fit-content' }}
-          onClick={() => setIsExpanded((prev) => !prev)}
-        >
-          <Package color={cssVar.colorTextDescription} size={16} />
-          <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
-            {t('taskDetail.artifacts')}
-          </div>
-          <Tag size="sm">{items.length}</Tag>
-          <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-        </div>
-      </div>
+      <TaskDetailSectionHeader
+        count={items.length}
+        icon={Package}
+        open={isExpanded}
+        title={t('taskDetail.artifacts')}
+        onToggle={() => setIsExpanded((prev) => !prev)}
+      />
       {isExpanded && (
         <div className="flex flex-col gap-2 px-3">
           {items.map((node) => (

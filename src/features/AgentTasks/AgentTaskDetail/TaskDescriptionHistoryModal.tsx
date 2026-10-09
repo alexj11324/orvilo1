@@ -1,4 +1,5 @@
 import { Markdown } from '@lobehub/ui';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
@@ -171,7 +172,7 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
               variant={index === position + 1 ? 'secondary' : 'ghost'}
               onClick={() => setIndex(position + 1)}
             >
-              <span>{new Date(version.createdAt).toLocaleString()}</span>
+              <span>{formatAbsoluteDateTime(version.createdAt)}</span>
               <HistoryAuthor userId={version.authorUserId} />
               {version.captureSource === 'baseline' ? (
                 <span className="text-muted-foreground">

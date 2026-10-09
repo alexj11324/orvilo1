@@ -9,11 +9,12 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePermission } from '@/hooks/usePermission';
 import { useToolStore } from '@/store/tool';
 import { type ComposioServer } from '@/store/tool/slices/composioStore';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
+
+import ConnectorRow from './ConnectorRow';
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 15_000;
@@ -28,9 +29,9 @@ interface ComposioSkillItemProps {
 /**
  * A row for a Composio OAuth connector in the Connector settings list.
  *
- * The row owns the inline connect / re-authorize affordance for the same reason
- * as the Orvilo row: a not-yet-connected connector must not open a blank detail
- * panel.
+ * The row keeps the inline connect / re-authorize affordance as a sibling of
+ * the select control; selecting a not-connected connector opens a detail pane
+ * that explains the state and repeats the action.
  */
 const ComposioSkillItem = memo<ComposioSkillItemProps>(
   ({ serverType, server, isSelected, onSelect }) => {
@@ -189,8 +190,7 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
 
     // Compact connect/status control for the list row. Mirrors the ChatInput
     // skills dropdown UX: connected → green check; pending/errored →
-    // Re-authorize; not connected → Connect. All open the OAuth flow inline so
-    // users can tell what is connected instead of hitting a blank detail panel.
+    // Re-authorize; not connected → Connect. All open the OAuth flow inline.
     const renderNavExtra = () => {
       if (isConnecting || isWaitingAuth) {
         return (
@@ -274,17 +274,13 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
     };
 
     return (
-      <NavItem
+      <ConnectorRow
+        action={renderNavExtra()}
         active={isSelected}
-        extra={renderNavExtra()}
-        icon={renderNavIcon}
+        icon={renderNavIcon()}
+        muted={!isConnected}
         title={serverType.label}
-        titleColor={!isConnected ? cssVar.colorTextDescription : undefined}
-        // Only connected connectors open the detail panel. When not active
-        // (disconnected / pending / error) the row is inert and the only
-        // affordance is the inline Connect / Re-authorize button — otherwise
-        // clicking opens a blank detail panel that reads as a bug.
-        onClick={isConnected ? onSelect : undefined}
+        onSelect={onSelect}
       />
     );
   },

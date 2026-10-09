@@ -1,4 +1,5 @@
 import { TRPCClientError } from '@trpc/client';
+import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 
 import type { ProjectPriority, ProjectStatus } from './createProjectForm';
@@ -9,7 +10,12 @@ import {
   isProjectIdentifierValid,
   isProjectSlugValid,
 } from './createProjectForm';
-import { formatProjectDate, getProjectDatePickerMode } from './projectPlanningDate';
+import {
+  formatProjectActivityTime,
+  formatProjectDate,
+  getProjectDatePickerMode,
+  snapProjectDateToPrecision,
+} from './projectPlanningDate';
 
 describe('createProjectForm', () => {
   it('defaults project creation to private while preserving an explicit public choice', () => {
@@ -117,10 +123,28 @@ describe('createProjectForm', () => {
     ['day', 'date'],
     ['month', 'month'],
     ['quarter', 'quarter'],
-    ['halfYear', 'month'],
+    ['halfYear', 'halfYear'],
     ['year', 'year'],
   ] as const)('maps %s precision to its date input mode', (precision, pickerMode) => {
     expect(getProjectDatePickerMode(precision)).toBe(pickerMode);
+  });
+
+  it.each([
+    ['day', '2026-09-23', '2026-09-23'],
+    ['month', '2026-09-23', '2026-09-01'],
+    ['quarter', '2026-08-23', '2026-07-01'],
+    ['halfYear', '2026-09-23', '2026-07-01'],
+    ['halfYear', '2026-03-23', '2026-01-01'],
+    ['year', '2026-09-23', '2026-01-01'],
+  ] as const)('snaps %s precision %s to %s', (precision, input, expected) => {
+    expect(snapProjectDateToPrecision(dayjs(input), precision).format('YYYY-MM-DD')).toBe(expected);
+  });
+
+  it('formats activity timestamps as numeric days once they are older than a day', () => {
+    const now = new Date(2026, 9, 9, 12);
+    expect(formatProjectActivityTime(new Date(2026, 8, 23, 9), now).text).toBe('2026/09/23');
+    expect(formatProjectActivityTime(new Date(2025, 11, 5, 9), now).text).toBe('2025/12/05');
+    expect(formatProjectActivityTime(new Date(2026, 9, 9, 9), now).text).not.toContain('/');
   });
 
   it.each(['completed', 'reviewing'] as const)(

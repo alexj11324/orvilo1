@@ -1,3 +1,4 @@
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +52,7 @@ export function ProjectCreationActivity({ project }: { project: ProjectDetail['p
       <span className={styles.event}>
         {creator ? t('activity.createdBy', { name: creator }) : t('activity.created')}
         {' · '}
-        <time dateTime={date.toISOString()} title={date.format('YYYY-MM-DD HH:mm')}>
+        <time dateTime={date.toISOString()} title={formatAbsoluteDateTime(date)}>
           {formatProjectDay(date)}
         </time>
       </span>

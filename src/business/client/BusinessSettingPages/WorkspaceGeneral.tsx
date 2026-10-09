@@ -60,7 +60,7 @@ const WorkspaceGeneral = memo(() => {
       </GeneralField>
       <GeneralField label={t('workspaceSetting.general.created', { defaultValue: 'Created' })}>
         <div className="text-[13px] text-muted-foreground">
-          {workspace?.createdAt ? dayjs(workspace.createdAt).format('MMM D, YYYY') : '—'}
+          {workspace?.createdAt ? dayjs(workspace.createdAt).format('YYYY/MM/DD') : '—'}
         </div>
       </GeneralField>
     </div>

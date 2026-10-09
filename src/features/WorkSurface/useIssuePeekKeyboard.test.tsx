@@ -73,16 +73,23 @@ describe('resolveIssueKeyScope', () => {
 
   it('yields while a menu, dialog, listbox or popup trigger is open', () => {
     for (const overlay of [
-      '<div role="menu"></div>',
-      '<div role="dialog"></div>',
-      '<div role="listbox"></div>',
+      '<div role="menu" data-open></div>',
+      '<div role="dialog" data-open></div>',
+      '<div role="listbox" data-open></div>',
       '<div cmdk-root=""></div>',
-      '<button data-popup-open>open</button>',
+      '<button aria-haspopup="menu" data-popup-open>open</button>',
     ]) {
       const host = mount(`${rowsHtml}${overlay}`);
       expect(resolveIssueKeyScope(host.querySelector('[data-issue-row="T-1"]'))).toBeNull();
       host.remove();
     }
+  });
+
+  it('ignores kept-mounted closed overlays (Base UI marks them data-closed)', () => {
+    const host = mount(
+      `${rowsHtml}<div role="dialog" data-closed style="width:0;height:0"></div><div role="menu" data-closed></div><div data-closed><div cmdk-root=""></div></div>`,
+    );
+    expect(resolveIssueKeyScope(host.querySelector('[data-issue-row="T-1"]'))).not.toBeNull();
   });
 });
 
@@ -166,6 +173,27 @@ describe('useIssuePeekKeyboard', () => {
     );
     expect(revealLeft).toHaveBeenCalledWith('T-2');
     expect(revealRight).not.toHaveBeenCalled();
+  });
+
+  it('addresses rows by slot key when an Issue is listed in two sections', async () => {
+    const slot = (key: string, id: string) =>
+      `<div data-issue-slot="${key}"><div data-issue-row="${id}" role="button" tabindex="0"></div></div>`;
+    const host = mount(
+      `${slot('a:T-1', 'T-1')}${slot('a:T-2', 'T-2')}${slot('b:T-1', 'T-1')}${slot('b:T-3', 'T-3')}`,
+    );
+    const ids = ['a:T-1', 'a:T-2', 'b:T-1', 'b:T-3'];
+    setup('T-1', { idOf: (key) => key.split(':')[1]!, ids, scopeRoot: host });
+    const second = host.querySelector<HTMLElement>('[data-issue-slot="b:T-1"] [data-issue-row]')!;
+    press(second, 'j');
+    // From the second copy of T-1 the next row is T-3, not T-2 after the first copy.
+    expect(onPeek).toHaveBeenCalledWith('T-3');
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        host.querySelector('[data-issue-slot="b:T-3"] [data-issue-row]'),
+      ),
+    );
+    press(second, ' ');
+    expect(onPeek).toHaveBeenLastCalledWith(null);
   });
 
   it('Space on a focused row toggles the peek and stops the row from navigating', () => {

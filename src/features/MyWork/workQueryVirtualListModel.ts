@@ -322,23 +322,27 @@ export const flattenWorkQueryFlatItems = (
 };
 
 /**
- * Issue identifiers of the rows a virtual window renders, in order, plus each
- * row's index in the window — what keyboard navigation walks (`ids`) and what
- * it scrolls to when the next row is not mounted (`indexOf`). Muted
+ * Row keys of the rows a virtual window renders, in order — what keyboard
+ * navigation walks (`ids`) — with each key's Issue identifier (`idOf`) and
+ * window index (`indexOf`, what it scrolls to when the row is not mounted).
+ * A key is the window item's own key (section + Issue): an Issue listed in two
+ * sections is two rows, and a collapsed section contributes none. Muted
  * parent-context repeats are skipped: they are not rows a user moves through.
  */
-export const workQueryVirtualRowIdentifiers = (
+export const workQueryVirtualPeekRows = (
   windowItems: readonly WorkQueryVirtualItem[],
   taskById: ReadonlyMap<string, WorkQueryResultTask>,
-): { ids: string[]; indexOf: Map<string, number> } => {
+): { idOf: Map<string, string>; ids: string[]; indexOf: Map<string, number> } => {
   const ids: string[] = [];
+  const idOf = new Map<string, string>();
   const indexOf = new Map<string, number>();
   windowItems.forEach((item, index) => {
     if (item.kind !== 'row' || item.parentContext || !item.taskId) return;
     const identifier = taskById.get(item.taskId)?.identifier;
-    if (!identifier || indexOf.has(identifier)) return;
-    ids.push(identifier);
-    indexOf.set(identifier, index);
+    if (!identifier || indexOf.has(item.key)) return;
+    ids.push(item.key);
+    idOf.set(item.key, identifier);
+    indexOf.set(item.key, index);
   });
-  return { ids, indexOf };
+  return { idOf, ids, indexOf };
 };

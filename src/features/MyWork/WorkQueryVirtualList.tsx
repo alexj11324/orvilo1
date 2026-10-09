@@ -38,7 +38,7 @@ import {
   nestWorkQueryListGroups,
   stickyVirtualSections,
   type WorkQueryVirtualItem,
-  workQueryVirtualRowIdentifiers,
+  workQueryVirtualPeekRows,
 } from './workQueryVirtualListModel';
 
 const DEFAULT_ROW_HEIGHT = 44;
@@ -184,12 +184,12 @@ const WorkQueryVirtualList = ({
 
   const virtuosoRef = useRef<GroupedVirtuosoHandle | VirtuosoHandle>(null);
   const peekRows = useMemo(
-    () => workQueryVirtualRowIdentifiers(sections ? sections.items : items, taskById),
+    () => workQueryVirtualPeekRows(sections ? sections.items : items, taskById),
     [items, sections, taskById],
   );
   const revealRow = useCallback(
-    (identifier: string) => {
-      const index = peekRows.indexOf.get(identifier);
+    (rowKey: string) => {
+      const index = peekRows.indexOf.get(rowKey);
       if (index !== undefined) virtuosoRef.current?.scrollToIndex({ align: 'center', index });
     },
     [peekRows],
@@ -197,6 +197,7 @@ const WorkQueryVirtualList = ({
   useIssuePeekKeyboard({
     scopeRoot: anchorNode?.closest<HTMLElement>('[data-work-surface]') ?? null,
     enabled: Boolean(peekKeys),
+    idOf: (rowKey) => peekRows.idOf.get(rowKey) ?? rowKey,
     ids: peekRows.ids,
     onOpenPage: peekKeys?.onOpen,
     onPeek: peekKeys?.onPeek ?? noopPeek,

@@ -7,7 +7,7 @@ import {
   indexWorkQueryVirtualTasks,
   nestWorkQueryListGroups,
   stickyVirtualSections,
-  workQueryVirtualRowIdentifiers,
+  workQueryVirtualPeekRows,
 } from './workQueryVirtualListModel';
 
 const task = (id: string) => ({ id, identifier: id, parentTaskId: null }) as never;
@@ -181,37 +181,57 @@ describe('stickyVirtualSections', () => {
   });
 });
 
-describe('workQueryVirtualRowIdentifiers', () => {
-  const rowItem = (taskId: string, parentContext = false) =>
-    ({ kind: 'row', parentContext, taskId }) as never;
+describe('workQueryVirtualPeekRows', () => {
+  const rowItem = (taskId: string, key = `row:${taskId}`, parentContext = false) =>
+    ({ key, kind: 'row', parentContext, taskId }) as never;
   const header = { kind: 'header' } as never;
   const taskById = new Map([
     ['a', { id: 'a', identifier: 'T-1' }],
     ['b', { id: 'b', identifier: 'T-2' }],
   ]) as never;
 
-  it('lists row identifiers in window order with their window index', () => {
-    const { ids, indexOf } = workQueryVirtualRowIdentifiers(
+  it('lists row keys in window order with identifier and window index', () => {
+    const { idOf, ids, indexOf } = workQueryVirtualPeekRows(
       [header, rowItem('a'), header, rowItem('b')],
       taskById,
     );
-    expect(ids).toEqual(['T-1', 'T-2']);
-    expect(indexOf.get('T-1')).toBe(1);
-    expect(indexOf.get('T-2')).toBe(3);
+    expect(ids).toEqual(['row:a', 'row:b']);
+    expect(idOf.get('row:b')).toBe('T-2');
+    expect(indexOf.get('row:a')).toBe(1);
+    expect(indexOf.get('row:b')).toBe(3);
   });
 
   it('skips parent-context repeats, load-more rows and unresolved tasks', () => {
-    const { ids } = workQueryVirtualRowIdentifiers(
-      [rowItem('a', true), { kind: 'loadMore' } as never, rowItem('missing'), rowItem('b')],
+    const { ids } = workQueryVirtualPeekRows(
+      [rowItem('a', 'ctx', true), { kind: 'loadMore' } as never, rowItem('missing'), rowItem('b')],
       taskById,
     );
-    expect(ids).toEqual(['T-2']);
+    expect(ids).toEqual(['row:b']);
   });
 
-  it('keeps only the first occurrence of an Issue', () => {
-    const { ids, indexOf } = workQueryVirtualRowIdentifiers([rowItem('a'), rowItem('a')], taskById);
-    expect(ids).toEqual(['T-1']);
-    expect(indexOf.get('T-1')).toBe(0);
+  it('keeps an Issue listed in two sections as two rows with distinct positions', () => {
+    const { idOf, ids, indexOf } = workQueryVirtualPeekRows(
+      [header, rowItem('a', 'x:row:a'), rowItem('b', 'x:row:b'), header, rowItem('a', 'y:row:a')],
+      taskById,
+    );
+    expect(ids).toEqual(['x:row:a', 'x:row:b', 'y:row:a']);
+    expect(idOf.get('y:row:a')).toBe('T-1');
+    expect(indexOf.get('y:row:a')).toBe(4);
+  });
+
+  it('contributes no rows for a collapsed section', () => {
+    const { items } = flattenWorkQueryVirtualItems({
+      allTasks: [],
+      collapsed: new Set(['blocking']),
+      groups: [
+        { children: [], hasMore: false, key: 'urgent', tasks: [task('a')], total: 1 },
+        { children: [], hasMore: false, key: 'blocking', tasks: [task('b')], total: 1 },
+      ],
+      nestRows: false,
+      primaryAxis: 'attention',
+    });
+    const { ids } = workQueryVirtualPeekRows(items, taskById);
+    expect(ids).toEqual(['urgent:row:a']);
   });
 });
 

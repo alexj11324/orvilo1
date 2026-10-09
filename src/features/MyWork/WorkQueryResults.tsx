@@ -292,6 +292,7 @@ export const WorkQueryTaskRow = memo(
     rangeIds,
     rowExtras,
     selected,
+    slotKey,
     task,
     muted,
   }: {
@@ -318,6 +319,8 @@ export const WorkQueryTaskRow = memo(
     rangeIds?: readonly string[];
     rowExtras?: (task: WorkQueryResultTask) => ReactNode;
     selected?: boolean;
+    /** The list's row key, for keyboard navigation across duplicate Issues. */
+    slotKey?: string;
     task: WorkQueryResultTask;
     muted?: boolean;
   }) => {
@@ -385,6 +388,7 @@ export const WorkQueryTaskRow = memo(
         data-bulk-row-id={onBulkSelectTask ? task.id : undefined}
         data-bulk-selected={bulkSelected || undefined}
         data-issue-context={muted || undefined}
+        data-issue-slot={slotKey}
         className={cn(
           'group/work-row relative flex items-center rounded-lg pe-2',
           selected && 'bg-accent',
@@ -1033,6 +1037,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   muted={item.parentContext}
                   rangeIds={orderedIds}
                   selected={rowSelected(task)}
+                  slotKey={item.key}
                   task={task}
                   {...rowProps}
                 />

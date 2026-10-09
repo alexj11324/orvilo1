@@ -50,6 +50,13 @@ export const ROW_INTERACTIVE_SELECTOR = [
  */
 export const ISSUE_ROW_ATTRIBUTE = 'data-issue-row';
 
+/**
+ * Wrapper around one rendered row, valued with the list's row key (section +
+ * Issue). An Issue can be listed in more than one section, so keyboard
+ * navigation addresses a row by this key, not by the Issue identifier.
+ */
+export const ISSUE_SLOT_ATTRIBUTE = 'data-issue-slot';
+
 export const isInteractiveRowClick = (target: unknown): boolean => {
   if (typeof Element === 'undefined' || !(target instanceof Element)) return false;
   const hit = target.closest(ROW_INTERACTIVE_SELECTOR);

@@ -12,7 +12,13 @@ import {
 export interface UseIssuePeekKeyboardOptions {
   /** Off when the list has no peek (board layout, no project scope...). */
   enabled?: boolean;
-  /** Visible Issue identifiers in render order. */
+  /** Issue identifier of a row key. Default: the key is the identifier. */
+  idOf?: (key: string) => string;
+  /**
+   * Visible row keys in render order. A key is the Issue identifier unless the
+   * list can show an Issue twice (several sections): then it is a per-row key
+   * and `idOf` maps it back, and rows carry `data-issue-slot`.
+   */
   ids: readonly string[];
   /** Full Issue page for the row. Absent: Enter keeps the row's own navigation. */
   onOpenPage?: (id: string) => void;
@@ -106,7 +112,16 @@ export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void
       if (!key) return;
       const scope = resolveIssueKeyScope(event.target, scopeRoot);
       if (!scope) return;
-      const { ids, onOpenPage, onPeek, peekId } = latest.current;
+      const { idOf, ids, onOpenPage, onPeek, peekId } = latest.current;
+      const toId = (rowKey: string) => idOf?.(rowKey) ?? rowKey;
+      // The reducer works in row keys. The peeked Issue is the focused row when
+      // that row shows it (any section's copy), else its first listed row.
+      const peekKey =
+        peekId === null
+          ? null
+          : scope.rowId && toId(scope.rowId) === peekId
+            ? scope.rowId
+            : (ids.find((rowKey) => toId(rowKey) === peekId) ?? peekId);
 
       // Space / Enter on a button or link keeps its native meaning; the arrow
       // keys scroll the peek pane, so only J / K drive the list from there.
@@ -124,17 +139,22 @@ export const useIssuePeekKeyboard = (options: UseIssuePeekKeyboardOptions): void
         return;
       }
 
-      const result = reduceIssuePeekKey({ currentId: scope.rowId ?? peekId, ids, peekId }, key);
+      const result = reduceIssuePeekKey(
+        { currentId: scope.rowId ?? peekKey, ids, peekId: peekKey },
+        key,
+      );
       if (!result) return;
 
       event.preventDefault();
       event.stopPropagation();
 
-      if (result.peekId !== undefined) onPeek(result.peekId);
-      if (result.openPageId) onOpenPage?.(result.openPageId);
+      if (result.peekId !== undefined) {
+        onPeek(result.peekId === null ? null : toId(result.peekId));
+      }
+      if (result.openPageId) onOpenPage?.(toId(result.openPageId));
       // Focus stays on (or returns to) the list: the peek never takes it, so
       // J / K keep working, and closing hands it back to the peeked row.
-      const focusId = result.focusId ?? result.peekId ?? (result.peekId === null ? peekId : null);
+      const focusId = result.focusId ?? result.peekId ?? (result.peekId === null ? peekKey : null);
       if (focusId) focusIssueRow(focusId, scopeRoot);
     };
 

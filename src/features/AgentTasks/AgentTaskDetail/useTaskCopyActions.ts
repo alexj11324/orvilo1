@@ -13,10 +13,7 @@ import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import { escapeMarkdownText, markdownLink, taskMarkdownDocument } from './taskMarkdown';
 
 /**
- * Clipboard actions for the active task. Shared by the rail's round quick
- * buttons (`TaskRailActions`) and the header overflow menu so both copy
- * byte-for-byte the same values. The title / Markdown / prompt variants are
- * menu-only.
+ * Clipboard actions for the active task, used by the header overflow menu.
  */
 export const useTaskCopyActions = () => {
   const { t } = useTranslation(['chat', 'common']);

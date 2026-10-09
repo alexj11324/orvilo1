@@ -86,8 +86,8 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
               <Breadcrumb taskId={taskId} />
               {/* Reference: the star and overflow sit inline right after the
                 issue crumb — both rendered by TaskDetailHeaderActions so they
-                share one favourite identity. The copy buttons live in the
-                rail's round action row (TaskRailActions), so the header's
+                share one favourite identity. The copy actions live in the
+                same overflow menu, so the header's
                 right side keeps task execution and the agent-panel toggle. */}
               <TaskDetailHeaderActions />
               {saveStatus === 'saving' || saveStatus === 'failed' ? (

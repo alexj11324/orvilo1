@@ -23,3 +23,11 @@
 - 需要产品判断或先核实上游：GroupForm 折叠与分隔线、Profile “账户” 标题、“渠道” 组合并、Devices 分组归属、语言下拉搜索、凭据空状态插图。
 
 变基集成保留 busy 状态的既有 Spinner 导入；初始加载使用 SettingsSectionSkeleton。两处 busy Spinner 导入遗漏由本次 CI Typecheck 的 TS2304 证实并补回，最终类型结果仍由修复后 CI 负责。
+
+## CI 滚动场景隔离
+
+本分支的 Web E2E 在 `AGENT-SCROLL-001` 的贴底断言失败，实际自动滚动设置已在聊天页确认开启。这不是 API 配额错误。排查发现滚动 fixture 按相同提示词和时间查找消息，却没有限定用户；CI 三个 Cucumber worker 共用数据库，可能误读另一 worker 的消息，再把另一轮的已完成状态当成当前轮完成。
+
+消息查询现在同时限定 `TEST_USER.id`，它由 run ID 和 `CUCUMBER_WORKER_ID` 派生；worker 内场景顺序执行。真实本地 PostgreSQL 使用事务内临时表运行原函数：两个用户发送同一提示词，旧代码选择另一用户的消息并读取 `done`，修复后选择当前用户消息并保留 `running`。另验证当前用户独有消息可读、只有另一用户消息时不冒充当前发送；事务最终回滚，没有写应用数据。
+
+这是已复现的 fixture 竞态；旧 CI 未记录被选消息所属用户，不能据此断言历史失败一定由它造成，也不能声称滚动产品行为已通过。修复后的 owning Web E2E 仍须通过。

@@ -8,7 +8,12 @@ import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { FORM_STYLE } from '@/const/layoutTokens';
-import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/DeviceManager';
+import {
+  DeviceConnectModal,
+  DeviceManager,
+  LocalDeviceStatus,
+  useDeviceList,
+} from '@/features/DeviceManager';
 
 import OsPermissionsPanel, { useIsMacOsDevice } from './OsPermissionsPanel';
 
@@ -38,7 +43,12 @@ const Page = memo(() => {
         variant={'filled'}
         items={[
           {
-            children: <DeviceManager scope={'personal'} onConnect={handleConnect} />,
+            children: (
+              <div className={'flex flex-col gap-3'}>
+                <LocalDeviceStatus />
+                <DeviceManager scope={'personal'} onConnect={handleConnect} />
+              </div>
+            ),
             extra: (
               <div
                 className={'flex min-w-0'}

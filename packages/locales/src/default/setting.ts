@@ -745,6 +745,19 @@ export default {
   'devices.fallbackTooltip':
     "This device couldn't be identified by its machine ID, so reinstalling the app may create a duplicate entry.",
   'devices.lastSeen': 'Last connected {{time}}',
+  'devices.local.phase.disabled': 'Device connection is turned off.',
+  'devices.local.phase.notConfigured': 'No server is set up for this app.',
+  'devices.local.phase.signInRequired':
+    'Sign-in required. Your session has expired or you are signed out.',
+  'devices.local.phase.registering': 'Registering this device…',
+  'devices.local.phase.registerFailed':
+    'Connected, but the server did not register this device, so it is not in the list.',
+  'devices.local.phase.connecting': 'Connecting…',
+  'devices.local.phase.connected': 'Connected.',
+  'devices.local.phase.gatewayUnreachable': 'Cannot reach the device gateway.',
+  'devices.local.reason': 'Reason: {{reason}}',
+  'devices.local.retry': 'Retry',
+  'devices.local.signIn': 'Sign in again',
   'devices.osPermissions.actions.grant': 'Grant Access',
   'devices.osPermissions.actions.granted': 'Access Granted',
   'devices.osPermissions.actions.openSettings': 'Open Settings',

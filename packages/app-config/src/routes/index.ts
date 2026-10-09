@@ -131,7 +131,7 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
     tier: 'primary',
   },
   {
-    cmdkKey: 'cmdk.myWork',
+    cmdkKey: 'tab.myWork',
     icon: SquareUser,
     id: 'myWork',
     keywords: ['my work', 'assigned', 'review'],

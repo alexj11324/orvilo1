@@ -97,6 +97,12 @@ describe('getNavigableRoutes', () => {
     }
   });
 
+  it('labels My issues with the sidebar string, not a palette-only copy', () => {
+    const myWork = NAVIGATION_ROUTES.find((route) => route.id === 'myWork');
+
+    expect(myWork?.cmdkKey).toBe('tab.myWork');
+  });
+
   it('offers the primary working destinations', () => {
     const offered = getNavigableRoutes().map((route) => route.id);
 

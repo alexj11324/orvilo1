@@ -67,6 +67,7 @@ const SearchSection = memo<PropsWithChildren>(({ children }) => {
                 className="placeholder:text-[var(--sidebar-muted)]"
                 placeholder={t('settingsSearch.placeholder')}
                 ref={inputRef}
+                type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={(event) => {

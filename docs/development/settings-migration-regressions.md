@@ -31,3 +31,7 @@
 消息查询现在同时限定 `TEST_USER.id`，它由 run ID 和 `CUCUMBER_WORKER_ID` 派生；worker 内场景顺序执行。真实本地 PostgreSQL 使用事务内临时表运行原函数：两个用户发送同一提示词，旧代码选择另一用户的消息并读取 `done`，修复后选择当前用户消息并保留 `running`。另验证当前用户独有消息可读、只有另一用户消息时不冒充当前发送；事务最终回滚，没有写应用数据。
 
 这是已复现的 fixture 竞态；旧 CI 未记录被选消息所属用户，不能据此断言历史失败一定由它造成，也不能声称滚动产品行为已通过。修复后的 owning Web E2E 仍须通过。
+
+## 侧栏搜索语义回归
+
+Owning CI 的现有 `AppSidebar.test.tsx` 四个侧栏键盘与查询保留用例失败：输入组未传 `type="search"`，实际可访问角色成为 textbox。现在仅在原 `InputGroupInput` 上恢复 search 类型，保留原断言与完整行为测试。本地修复前四例失败，修复后同一文件全部 26 例通过，包含键盘展开 / 聚焦和折叠后查询保留。此前消息隔离修复后的 owning Web E2E 已通过 36 scenarios / 221 steps；这项搜索语义修复仍须由新的 owning CI 验证。

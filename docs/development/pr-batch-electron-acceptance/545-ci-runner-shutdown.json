@@ -1,0 +1,24 @@
+{
+  "databaseCause": "Runner shutdown; lint/typecheck process received SIGTERM before Database coverage ran.",
+  "databaseConclusion": "failure",
+  "databaseCoverageExecuted": false,
+  "databaseJob": 113641733530,
+  "databaseLogExcerpt": [
+    "2026-10-09T02:35:54.2273834Z ✖ 119 problems (0 errors, 119 warnings)",
+    "2026-10-09T02:38:16.9259125Z $ node scripts/type-check.mjs tsgo --noEmit",
+    "2026-10-09T02:41:46.8129271Z error: script \"lint\" was terminated by signal SIGTERM (Polite quit request)",
+    "2026-10-09T02:41:46.8141083Z error: script \"type-check\" was terminated by signal SIGTERM (Polite quit request)",
+    "2026-10-09T02:41:46.8665040Z ##[error]The runner has received a shutdown signal. This can happen when the runner service is stopped, or a manually started runner is canceled.",
+    "2026-10-09T02:41:48.8052710Z ##[error]The operation was canceled."
+  ],
+  "head": "2657cc25300c1305bb15031717dd0e263ff45db1",
+  "productSourceFix": false,
+  "rerunAttempt": {
+    "jobId": 113641733530,
+    "result": "403 workflow run containing this job is already running"
+  },
+  "runId": 37875010751,
+  "typecheckCause": "Unclassified while job logs are unavailable; not presumed same as Database shutdown.",
+  "typecheckJob": 113641733552,
+  "typecheckObservedStep": "Typecheck completed failure; Complete job in_progress; downloadable log not yet uploaded (404 BlobNotFound)."
+}

@@ -1,0 +1,95 @@
+{
+  "currentHead": "2657cc25300c1305bb15031717dd0e263ff45db1",
+  "evidenceCommit": "4f35cc455d6c05f44dce09ff7b833eb0f9cda10d",
+  "files": [
+    {
+      "path": "src/features/CreateGroupChat/index.tsx",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/features/CreateGroupChat/useGroupChatCreation.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/features/GroupProfile/index.tsx",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/routes/(main)/group/profile/features/GroupProfile/index.tsx",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/routes/(main)/group/profile/features/GroupProfile/useBasicSettingsDraft.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/routes/(main)/group/features/GroupIndex/index.tsx",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/services/chatGroup/index.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/store/agentGroup/slices/lifecycle.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "apps/server/src/routers/lambda/agentGroup.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "apps/server/src/routers/lambda/_helpers/resourceConfigGuard.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "apps/server/src/services/agentGroup/index.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "apps/server/src/services/toolExecution/serverRuntimes/groupAgentBuilder.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "packages/database/src/repositories/agentGroup/index.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "packages/database/src/models/chatGroup.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "packages/database/src/utils/groupMembership.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "packages/heterogeneous-agents/src/spawn/builtinToolMount.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "apps/server/src/routers/lambda/agent.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/services/agent.ts",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/features/HomeSidebar/Body/Agent/List/AgentGroupItem/index.tsx",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/features/HomeSidebar/Body/Agent/List/AgentGroupItem/useDropdownMenu.tsx",
+      "identicalToNativeEvidenceHead": true
+    },
+    {
+      "path": "src/store/home/slices/sidebarUI/action.ts",
+      "identicalToNativeEvidenceHead": true
+    }
+  ],
+  "freshScopedGroupTests": "5 files,16 passed",
+  "nativeEvidenceHead": "e4db867730c779305a3b5ffc6cb5feee55c73071",
+  "newIndependentReview": false,
+  "parentCanary": "ab23ec9c919ca8db2284ce0a380ada5cd1f55390",
+  "reusedNative": true
+}

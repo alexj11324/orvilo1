@@ -43,7 +43,8 @@ const styles = createStaticStyles(({ css, cssVar }) => {
       color: ${cssVar.colorTextSecondary};
 
       & svg,
-      & [data-slot='avatar'] {
+      & [data-slot='avatar'],
+      & .orvilo-avatar {
         opacity: 0.5;
       }
     `,

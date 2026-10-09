@@ -13,6 +13,8 @@ import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 import { useGlobalStore } from '@/store/global';
 
+import { toolbarActionLabel } from './toolbarActionLabel';
+
 const Toolbar = memo(() => {
   // The `topic` namespace is fetched lazily; `t` returns the raw key until it lands, so
   // every label below waits for `ready` instead of flashing a key string.
@@ -58,7 +60,7 @@ const Toolbar = memo(() => {
           <ActionIcon
             icon={PlusIcon}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-            title={ready ? t('actions.addNewTopic') : undefined}
+            {...toolbarActionLabel(ready, t('actions.addNewTopic'), 'Start New Topic')}
             onClick={handleCreate}
           />
           <Popover
@@ -72,7 +74,7 @@ const Toolbar = memo(() => {
                   icon={Clock3Icon}
                   loading={isLoadingTopics}
                   size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                  title={ready ? t('actions.showTopics') : undefined}
+                  {...toolbarActionLabel(ready, t('actions.showTopics'), 'Topics')}
                 />
               }
             />

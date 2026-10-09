@@ -16,7 +16,7 @@ const Actions = memo(() => {
     <SidebarDropdownMenu items={menuItems} open={open} onOpenChange={setOpen}>
       <ActionIcon
         active={open}
-        className="data-[popup-open]:bg-muted data-[popup-open]:hover:bg-muted data-[popup-open]:text-foreground"
+        className="data-[popup-open]:bg-muted data-[popup-open]:hover:bg-accent data-[popup-open]:text-foreground"
         icon={MoreHorizontal}
         size={'small'}
         title={t('more')}

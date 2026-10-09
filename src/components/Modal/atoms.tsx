@@ -129,7 +129,7 @@ const AlertModalClose = ({ className, children, style, ...rest }: AlertModalClos
     aria-label={t('close', { ns: 'common' })}
     style={{ ...modalCloseStyle, ...style }}
     className={cn(
-      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-(--radius-button) border-none bg-transparent p-0 text-muted-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:scale-[1.04] hover:bg-muted hover:text-foreground',
+      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-(--radius-button) border-none bg-transparent p-0 text-muted-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:scale-[1.04] hover:bg-accent hover:text-foreground',
       className,
     )}
     {...rest}
@@ -146,7 +146,7 @@ const ModalClose = ({ className, children, style, ...rest }: ModalCloseProps) =>
     aria-label={t('close', { ns: 'common' })}
     style={{ ...modalCloseStyle, ...style }}
     className={cn(
-      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-(--radius-button) border-none bg-transparent p-0 text-muted-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:scale-[1.04] hover:bg-muted hover:text-foreground',
+      'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-(--radius-button) border-none bg-transparent p-0 text-muted-foreground transition-[color,background-color,border-color,box-shadow,opacity,transform] hover:scale-[1.04] hover:bg-accent hover:text-foreground',
       className,
     )}
     {...rest}

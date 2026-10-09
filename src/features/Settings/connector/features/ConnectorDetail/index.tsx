@@ -360,22 +360,15 @@ const ConnectorDetailBody = memo<ConnectorDetailProps>(
       );
     }
 
-    const matchedPreset =
-      type === 'mcp-connector'
-        ? matchMcpPresetByConnector(connector, visibleMcpPresets)
-        : undefined;
-
     return (
       <ConnectorDetail
         connectorId={connector.id}
         lifecycleActions={renderOrviloConnectorAction(() => setNoManifest(true))}
         connectAction={
-          matchedPreset ? (
-            <PresetConnectButton
-              connector={connector}
-              preset={matchedPreset}
-              presetActions={presetActions}
-            />
+          type === 'mcp-connector' ? (
+            <Suspense fallback={null}>
+              <PresetConnectButton connector={connector} presetActions={presetActions} />
+            </Suspense>
           ) : undefined
         }
         onDelete={onDelete}

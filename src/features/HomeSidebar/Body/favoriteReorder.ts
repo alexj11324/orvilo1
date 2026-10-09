@@ -51,3 +51,16 @@ export const favoriteReorderMove = (items: ReorderableFavorite[], from: number, 
     })),
   };
 };
+
+/**
+ * dnd-kit hands the sortable node `role="button"` and `tabindex="0"`. The row's `li` is a
+ * plain list item whose real tab stop is the link inside it, so both are dropped: keeping
+ * the tabindex adds a ring-less phantom stop before the link. Keyboard reordering goes
+ * through the row menu's move up/down items instead of dnd-kit's keyboard activator.
+ */
+export const withoutRowTabStop = <T extends { role?: unknown; tabIndex?: unknown }>(
+  attributes: T,
+): Omit<T, 'role' | 'tabIndex'> => {
+  const { role: _role, tabIndex: _tabIndex, ...rest } = attributes;
+  return rest;
+};

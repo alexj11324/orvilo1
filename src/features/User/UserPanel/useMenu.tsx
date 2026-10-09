@@ -1,3 +1,4 @@
+import { Hotkey } from '@lobehub/ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
@@ -9,7 +10,6 @@ import useBusinessMenuItems from '@/business/client/features/User/useBusinessMen
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import type { ItemType, MenuProps } from '@/components/Menu';
 import { Badge } from '@/components/reui/badge';
-import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { DEFAULT_DESKTOP_HOTKEY_CONFIG } from '@/const/desktop';
 import { OFFICIAL_URL } from '@/const/url';
 import DataImporter from '@/features/DataImporter';
@@ -60,13 +60,8 @@ export const useMenu = () => {
   const settings: MenuProps['items'] = [
     {
       extra: isDesktop ? (
-        <div>
-          <KbdGroup>
-            {DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings.split('+').map((k) => (
-              <Kbd key={k}>{k}</Kbd>
-            ))}
-          </KbdGroup>
-        </div>
+        // Hotkey resolves `mod`/`comma` to the platform glyphs (⌘ and , on macOS, Ctrl on others).
+        <Hotkey compact keys={DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings} variant="borderless" />
       ) : undefined,
       icon: <Settings2 />,
       key: 'setting',

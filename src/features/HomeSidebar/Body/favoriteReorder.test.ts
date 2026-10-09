@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { favoriteReorderMove } from './favoriteReorder';
+import { favoriteReorderMove, withoutRowTabStop } from './favoriteReorder';
 
 const item = (id: string, rank: number, version = 1) => ({
   rank,
@@ -47,5 +47,23 @@ describe('favoriteReorderMove', () => {
     expect(favoriteReorderMove(items, 0, 0)).toBeNull();
     expect(favoriteReorderMove(items, -1, 1)).toBeNull();
     expect(favoriteReorderMove(items, 1, 2)).toBeNull();
+  });
+});
+
+describe('withoutRowTabStop', () => {
+  it('drops the role and tabindex dnd-kit puts on the sortable li but keeps aria wiring', () => {
+    const attributes = {
+      'aria-describedby': 'DndDescribedBy-0',
+      'aria-disabled': false,
+      'aria-roledescription': 'sortable',
+      'role': 'button' as const,
+      'tabIndex': 0,
+    };
+
+    expect(withoutRowTabStop(attributes)).toEqual({
+      'aria-describedby': 'DndDescribedBy-0',
+      'aria-disabled': false,
+      'aria-roledescription': 'sortable',
+    });
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckIcon, TriangleAlertIcon } from 'lucide-react';
-import { memo, useEffect, useReducer } from 'react';
+import { memo, useEffect, useReducer, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { initialSaveIndicator, reduceSaveIndicator, SAVED_VISIBLE_MS } from './saveIndicator';
-import { retryFailedTaskSave } from './taskSaveRetry';
+import { hasTaskSaveRetry, retryFailedTaskSave, subscribeTaskSaveRetry } from './taskSaveRetry';
 
 interface IssueSaveStatusProps {
   taskId: string;
@@ -19,7 +19,7 @@ interface IssueSaveStatusProps {
 /**
  * The issue's one save status for title and description: "Saving…", then
  * "Saved" for about two seconds, then nothing. A failed write stays with a
- * Retry that re-sends it. Mount it keyed by task so a stale status never
+ * Retry when a failed title or description write can be re-sent. Mount it keyed by task so a stale status never
  * carries across issues.
  */
 const IssueSaveStatus = memo<IssueSaveStatusProps>(({ taskId }) => {
@@ -27,8 +27,16 @@ const IssueSaveStatus = memo<IssueSaveStatusProps>(({ taskId }) => {
   const status = useTaskStore((s) => taskDetailSelectors.taskSaveStatusFor(s, taskId));
   const updateTask = useTaskStore((s) => s.updateTask);
   const [indicator, dispatch] = useReducer(reduceSaveIndicator, status, initialSaveIndicator);
+  const previousStatus = useRef(status);
+  const canRetry = useSyncExternalStore(
+    subscribeTaskSaveRetry,
+    () => hasTaskSaveRetry(taskId),
+    () => false,
+  );
 
   useEffect(() => {
+    if (previousStatus.current === status) return;
+    previousStatus.current = status;
     dispatch({ status, type: 'status' });
   }, [status]);
 
@@ -45,14 +53,16 @@ const IssueSaveStatus = memo<IssueSaveStatusProps>(({ taskId }) => {
       <span className="flex min-w-0 shrink-0 items-center gap-1 text-xs text-destructive-text">
         <TriangleAlertIcon aria-hidden className="size-3.5 shrink-0" />
         <span className="truncate">{t('autoSave.failed')}</span>
-        <Button
-          className="h-5 px-1 text-xs"
-          size="sm"
-          variant="ghost"
-          onClick={() => retryFailedTaskSave(taskId, updateTask)}
-        >
-          {t('autoSave.retry')}
-        </Button>
+        {canRetry && (
+          <Button
+            className="h-5 px-1 text-xs"
+            size="sm"
+            variant="ghost"
+            onClick={() => retryFailedTaskSave(taskId, updateTask)}
+          >
+            {t('autoSave.retry')}
+          </Button>
+        )}
       </span>
     );
   }

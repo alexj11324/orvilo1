@@ -4,6 +4,20 @@ import { taskTitleSaveQueue } from './taskTitleSaveQueue';
 
 /** Per task: re-sends the description write that last failed. */
 const descriptionRetries = new Map<string, () => void>();
+const retryListeners = new Set<() => void>();
+const notifyRetryAvailability = () => retryListeners.forEach((listener) => listener());
+
+export const hasTaskSaveRetry = (taskId: string): boolean =>
+  taskTitleSaveQueue.canRetry(taskId) || descriptionRetries.has(taskId);
+
+export const subscribeTaskSaveRetry = (listener: () => void) => {
+  retryListeners.add(listener);
+  const unsubscribeTitle = taskTitleSaveQueue.subscribe(listener);
+  return () => {
+    unsubscribeTitle();
+    retryListeners.delete(listener);
+  };
+};
 
 /**
  * Run a description write and remember how to re-send it if it fails, so the
@@ -19,9 +33,11 @@ export const runTrackedDescriptionSave = (
   send(retrying).then(
     () => {
       descriptionRetries.delete(taskId);
+      notifyRetryAvailability();
     },
     (error: unknown) => {
       descriptionRetries.set(taskId, () => void runTrackedDescriptionSave(taskId, send, true));
+      notifyRetryAvailability();
       console.error('[TaskInstruction] Failed to save:', error);
     },
   );
@@ -32,5 +48,10 @@ export const runTrackedDescriptionSave = (
  */
 export const retryFailedTaskSave = (taskId: string, updateTask: TaskStore['updateTask']): void => {
   taskTitleSaveQueue.flush(taskId, updateTask);
-  descriptionRetries.get(taskId)?.();
+  const resendDescription = descriptionRetries.get(taskId);
+  if (resendDescription) {
+    descriptionRetries.delete(taskId);
+    notifyRetryAvailability();
+    resendDescription();
+  }
 };

@@ -12,8 +12,10 @@ export class TaskResourceModel {
     private readonly workspaceId?: string,
   ) {}
 
-  private async resolve(taskId: string) {
-    const task = await new TaskModel(this.db, this.userId, this.workspaceId).resolve(taskId);
+  private async resolve(taskId: string, write = false) {
+    const model = new TaskModel(this.db, this.userId, this.workspaceId);
+    await model.assertWorkspaceAccess(write);
+    const task = await model.resolve(taskId);
     if (!task || task.isDeleted) throw new Error('Task not found');
     return task;
   }
@@ -28,8 +30,7 @@ export class TaskResourceModel {
   }
 
   async add(taskId: string, input: { kind: TaskResourceKind; title?: string; url: string }) {
-    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
-    const task = await this.resolve(taskId);
+    const task = await this.resolve(taskId, true);
     const url = new URL(input.url);
     if (
       !['http:', 'https:'].includes(url.protocol) ||
@@ -64,8 +65,7 @@ export class TaskResourceModel {
   }
 
   async remove(taskId: string, resourceId: string) {
-    await new TaskModel(this.db, this.userId, this.workspaceId).assertWorkspaceAccess(true);
-    const task = await this.resolve(taskId);
+    const task = await this.resolve(taskId, true);
     const rows = await this.db
       .delete(taskResources)
       .where(and(eq(taskResources.taskId, task.id), eq(taskResources.id, resourceId)))

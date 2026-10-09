@@ -540,10 +540,33 @@ describe('AI Agent Router Integration Tests', () => {
   });
 
   describe('startExecution', () => {
-    const operationId = 'op_contract_test';
+    let operationId: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      operationId = `op_contract_${userId}`;
       mockStartExecution.mockReset();
+      await serverDB.insert(agentOperations).values({ id: operationId, status: 'running', userId });
+    });
+
+    afterEach(async () => {
+      await serverDB.delete(agentOperations).where(eq(agentOperations.id, operationId));
+    });
+
+    it('rejects starting another user operation before runtime dispatch', async () => {
+      const otherUserId = await createTestUser(serverDB);
+      try {
+        await serverDB
+          .update(agentOperations)
+          .set({ userId: otherUserId })
+          .where(eq(agentOperations.id, operationId));
+        const caller = aiAgentRouter.createCaller(createTestContext());
+        await expect(caller.startExecution({ operationId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        expect(mockStartExecution).not.toHaveBeenCalled();
+      } finally {
+        await cleanupTestUser(serverDB, otherUserId);
+      }
     });
 
     it('acknowledges an already-running run idempotently instead of a second start', async () => {

@@ -52,7 +52,7 @@ describe('TaskResourceModel', () => {
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(reader.remove(task.id, link.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, readerId));
-    await expect(reader.list(task.id)).rejects.toThrow('Task not found');
+    await expect(reader.list(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(reader.remove(task.id, link.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(await model.list(task.id)).toHaveLength(1);
   });

@@ -62,6 +62,7 @@ describe('TaskIssueRecurrenceModel', () => {
     await expect(viewer.setEnabled(task.id, false)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(viewer.remove(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, otherId));
+    await expect(viewer.findForTask(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(viewer.setEnabled(task.id, false)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(await owner.findForTask(task.id)).toMatchObject({ enabled: true, interval: 1 });
   });

@@ -2279,8 +2279,8 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     it("rejects an owner token reading another user's operation", async () => {
       const otherUserId = await createTestUser(serverDB);
       await insertOperation('op-others', otherUserId);
-      // The victim's answer lands on the stream…
-      await userCaller().submitHeteroIntervention({
+      // The operation owner publishes their own answer; a different user cannot.
+      await ownerTokenCaller(otherUserId).submitHeteroIntervention({
         operationId: 'op-others',
         result: { secret: 'leak me' },
         toolCallId: 't-victim',

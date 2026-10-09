@@ -48,6 +48,7 @@ describe('TaskDescriptionHistoryModel', () => {
       viewer.restore(task.id, versions[1].id, edited.domainRevision),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, readerId));
+    await expect(viewer.list(task.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(
       viewer.restore(task.id, versions[1].id, edited.domainRevision),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });

@@ -1,11 +1,9 @@
-import '../portal/styles.css';
-
 import { useAuth, useClerk } from '@clerk/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { AccountsLoginForm } from '../portal/AccountsLoginForm';
-import { AuthShell } from '../portal/AuthShell';
+import { AuthNotice, AuthShell } from '../portal/AuthShell';
 import { AUTH_CONTRACT } from '../portal/contract';
 import { documentPortalMessages } from '../portal/messagesContext';
 import { resolveStandaloneReturnUrl } from '../portal/redirect';
@@ -86,7 +84,7 @@ export default function PortalLoginPage() {
   if (!prepared) {
     return (
       <AuthShell>
-        <p role="status">{messages.preparing}</p>
+        <AuthNotice>{messages.preparing}</AuthNotice>
       </AuthShell>
     );
   }
@@ -94,8 +92,10 @@ export default function PortalLoginPage() {
   if (exchangeError) {
     return (
       <AuthShell>
-        <p role="alert">{exchangeError}</p>
-        <AccountsLoginForm returnUrl={returnUrl} />
+        <div className="flex w-full flex-col items-center gap-6">
+          <AuthNotice error>{exchangeError}</AuthNotice>
+          <AccountsLoginForm returnUrl={returnUrl} />
+        </div>
       </AuthShell>
     );
   }

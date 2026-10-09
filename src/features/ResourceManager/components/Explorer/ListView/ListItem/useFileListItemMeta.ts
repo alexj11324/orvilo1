@@ -1,4 +1,5 @@
 import { CUSTOM_FOLDER_FILE_TYPE, DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 
@@ -39,7 +40,7 @@ export const useFileListItemMeta = ({
       displayTime:
         dayjs().diff(dayjs(createdAt), 'd') < 7
           ? dayjs(createdAt).fromNow()
-          : dayjs(createdAt).format('YYYY-MM-DD'),
+          : formatAbsoluteDate(createdAt),
       emoji:
         sourceType === DERIVED_DOCUMENT_SOURCE_TYPE || fileType === PAGE_FILE_TYPE
           ? metadata?.emoji

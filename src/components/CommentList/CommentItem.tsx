@@ -2,6 +2,7 @@
 
 import { AgentIcon } from '@lobehub/icons';
 import { Markdown } from '@lobehub/ui';
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
@@ -82,19 +83,15 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 const CommentItem = memo<{ item: SkillCommentItem }>(({ item }) => {
-  const { i18n, t } = useTranslation('discover');
+  const { t } = useTranslation('discover');
   const author = item.author;
   const createdAt = useMemo(() => {
     const date = new Date(item.createdAt);
 
     if (Number.isNaN(date.getTime())) return item.createdAt;
 
-    return new Intl.DateTimeFormat(i18n.language, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(date);
-  }, [i18n.language, item.createdAt]);
+    return formatAbsoluteDate(date);
+  }, [item.createdAt]);
 
   const authorName = useMemo(() => {
     const displayName = author?.displayName?.trim();

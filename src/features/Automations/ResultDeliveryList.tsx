@@ -1,3 +1,4 @@
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -69,7 +70,7 @@ export default function ResultDeliveryList({
               {t(`result.delivery.${row.status}`)}
             </span>
             <time className="text-xs text-muted-foreground" dateTime={row.payload.completedAt}>
-              {new Date(row.payload.completedAt).toLocaleString()}
+              {formatAbsoluteDateTime(row.payload.completedAt)}
             </time>
             <p className="whitespace-pre-wrap break-words">{row.payload.summary}</p>
             {row.error ? <span className="text-xs text-muted-foreground">{row.error}</span> : null}

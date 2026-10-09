@@ -1,3 +1,4 @@
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -287,7 +288,7 @@ const AutomationRunsPage = memo(() => {
                 </div>
                 <div
                   className="truncate min-w-0 text-[12px] text-muted-foreground"
-                  title={run.createdAt ? dayjs(run.createdAt).format('LLL') : undefined}
+                  title={run.createdAt ? formatAbsoluteDateTime(run.createdAt) : undefined}
                 >
                   {run.createdAt ? dayjs(run.createdAt).fromNow() : '—'}
                 </div>

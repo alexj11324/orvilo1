@@ -1,8 +1,8 @@
 'use client';
 
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -206,7 +206,7 @@ const PullRequestRow = memo<{
         <Tag variant="destructive-light">{t('reviews.decision.changesRequested')}</Tag>
       ) : null}
       {item.updatedAt ? (
-        <div className={cn(styles.meta)} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
+        <div className={cn(styles.meta)} title={formatAbsoluteDateTime(item.updatedAt)}>
           {reviewRelativeTime(item.updatedAt)}
         </div>
       ) : null}

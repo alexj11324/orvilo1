@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -21,17 +21,24 @@ export interface IssueContentProps {
    * embedding a whole page.
    */
   detail?: ActiveTaskDetailState;
+  /**
+   * Replaces the default "Issue not found" page (whose only exit is the task
+   * list) when the host has its own way out, e.g. the inbox pane.
+   */
+  notFound?: ReactNode;
   taskId: string;
 }
 
-const IssueContentOwned = memo<Omit<IssueContentProps, 'detail'>>(({ taskId }) => {
+const IssueContentOwned = memo<Omit<IssueContentProps, 'detail'>>(({ notFound, taskId }) => {
   const detail = useActiveTaskDetail(taskId);
-  return <IssueContentBody detail={detail} />;
+  return <IssueContentBody detail={detail} notFound={notFound} />;
 });
 
 IssueContentOwned.displayName = 'IssueContentOwned';
 
-const IssueContentBody = memo<Required<Pick<IssueContentProps, 'detail'>>>(({ detail }) => {
+const IssueContentBody = memo<
+  Required<Pick<IssueContentProps, 'detail'>> & Pick<IssueContentProps, 'notFound'>
+>(({ detail, notFound }) => {
   const { t } = useTranslation('chat');
   const { isInitialLoading, isNotFound, error, onRetry } = detail;
 
@@ -40,6 +47,7 @@ const IssueContentBody = memo<Required<Pick<IssueContentProps, 'detail'>>>(({ de
   }
 
   if (isNotFound) {
+    if (notFound) return notFound;
     return (
       <NotFound
         desc={t('taskDetail.notFound.desc')}
@@ -66,9 +74,13 @@ IssueContentBody.displayName = 'IssueContentBody';
  * pane must NOT wrap it in another scroll host level of its own — mount it
  * directly in the pane's scroll owner.
  */
-const IssueContent = memo<IssueContentProps>(({ detail, taskId }) => (
+const IssueContent = memo<IssueContentProps>(({ detail, notFound, taskId }) => (
   <TaskDetailScope taskId={taskId}>
-    {detail ? <IssueContentBody detail={detail} /> : <IssueContentOwned taskId={taskId} />}
+    {detail ? (
+      <IssueContentBody detail={detail} notFound={notFound} />
+    ) : (
+      <IssueContentOwned notFound={notFound} taskId={taskId} />
+    )}
   </TaskDetailScope>
 ));
 

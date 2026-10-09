@@ -1,6 +1,7 @@
 export {
   AgentScopedTaskDetailPage,
   IssueContent,
+  IssuePeekActions,
   RoutedTaskDetailPage,
   TaskDetailPage,
   TaskDetailScope,

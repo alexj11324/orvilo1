@@ -1,3 +1,4 @@
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import dayjs from 'dayjs';
 import { Clock3Icon, UsersIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -58,7 +59,7 @@ const WorkspaceWelcome = memo<{ mobile?: boolean }>(({ mobile }) => {
       <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
         <TimeLabel date={String(memberCount)} icon={UsersIcon} />
         <TimeLabel
-          date={dayjs(workspace.createdAt).format('YYYY-MM-DD')}
+          date={formatAbsoluteDate(workspace.createdAt)}
           icon={Clock3Icon}
           title={t('stats.createdAt')}
         />

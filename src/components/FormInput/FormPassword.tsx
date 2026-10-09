@@ -2,6 +2,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 
@@ -27,11 +28,11 @@ const FormPassword = memo<FormPasswordProps>(
     }, [defaultValue]);
 
     return (
-      <div className="relative">
+      <div className="relative w-full">
         <Input
           aria-invalid={status === 'error' || undefined}
           autoComplete="new-password"
-          className="pr-8"
+          className="pr-10"
           ref={ref}
           type={visible ? 'text' : 'password'}
           onBlur={() => {
@@ -48,16 +49,19 @@ const FormPassword = memo<FormPasswordProps>(
           {...props}
           value={value}
         />
-        <button
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        <Button
+          aria-pressed={visible}
+          className="absolute inset-y-0 right-1 my-auto text-muted-foreground hover:text-foreground"
+          size="icon-sm"
           type="button"
+          variant="ghost"
           aria-label={
             visible ? t('betterAuth.signin.hidePassword') : t('betterAuth.signin.showPassword')
           }
           onClick={() => setVisible((prev) => !prev)}
         >
           {visible ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
+        </Button>
       </div>
     );
   },

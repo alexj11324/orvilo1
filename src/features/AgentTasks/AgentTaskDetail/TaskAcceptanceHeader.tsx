@@ -1,6 +1,7 @@
 'use client';
 
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ShieldCheck } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge as Tag } from '@/components/reui/badge';
 
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
+import { PRESSABLE_FOCUS_CLASS, pressableProps } from '../shared/pressableProps';
 
 interface TaskAcceptanceHeaderProps {
   count?: number;
@@ -24,9 +26,10 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
 
     const toggle = (
       <div
-        className="flex items-center gap-2 px-2 py-1"
+        aria-expanded={isOpen}
+        className={cn('flex items-center gap-2 px-2 py-1', PRESSABLE_FOCUS_CLASS)}
         style={{ cursor: 'pointer', width: 'fit-content' }}
-        onClick={onToggle}
+        {...pressableProps(onToggle)}
       >
         <ShieldCheck color={cssVar.colorTextDescription} size={16} />
         <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>

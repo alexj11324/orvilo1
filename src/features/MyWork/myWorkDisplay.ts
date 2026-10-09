@@ -612,34 +612,12 @@ export const MY_WORK_PRIORITY_LABEL_KEYS: Record<number, string> = {
 
 /* ------------------------------- row clicks ------------------------------- */
 
-/**
- * Descendants that own their click (status/priority menus, assignee popovers,
- * action icons, links). Peek mode intercepts row clicks in the capture phase,
- * so it must let these through — base-ui Menu/Popover triggers expose
- * `aria-haspopup`, and `data-popup-open` marks the open ones.
- */
-export const ROW_INTERACTIVE_SELECTOR = [
-  'a[href]',
-  'button',
-  'input',
-  'select',
-  'textarea',
-  '[contenteditable="true"]',
-  '[role="button"]',
-  '[role="link"]',
-  '[role="menuitem"]',
-  '[role="option"]',
-  '[role="switch"]',
-  '[role="tab"]',
-  '[aria-haspopup]',
-  '[data-popup-open]',
-  '[data-row-interactive]',
-].join(', ');
-
-export const isInteractiveRowClick = (target: unknown): boolean =>
-  typeof Element !== 'undefined' &&
-  target instanceof Element &&
-  Boolean(target.closest(ROW_INTERACTIVE_SELECTOR));
+// One owner for the interactive-descendant guard (it was duplicated here and
+// in `WorkSurface/peekTrigger`; the copies must not drift).
+export {
+  isInteractiveRowClick,
+  ROW_INTERACTIVE_SELECTOR,
+} from '@/features/WorkSurface/peekTrigger';
 
 /** Labels for the ordering dropdown — `default` varies by tab in Linear. */
 export const myWorkOrderingDefaultKey = (mode: MyWorkMode): string => {

@@ -25,6 +25,7 @@ import InlineToolbar from './InlineToolbar';
 import LinearFilePlugin from './LinearFilePlugin';
 import { registerAttachmentClickOpen } from './registerAttachmentClickOpen';
 import { registerBlockDecoratorCaretGuard } from './registerBlockDecoratorCaretGuard';
+import { registerTabFocusEscape } from './registerTabFocusEscape';
 import { needsImageRehost, rehostImage } from './rehostImage';
 import { useFileUpload, useImageUpload } from './useImageUpload';
 
@@ -126,6 +127,7 @@ const InternalEditor = memo<InternalEditorProps>(
     plugins: customPlugins,
     slashItems,
     style,
+    tabMovesFocus = false,
     toolbarExtraItems,
   }) => {
     const { t } = useTranslation('file');
@@ -243,6 +245,13 @@ const InternalEditor = memo<InternalEditorProps>(
       const unregister = registerBlockDecoratorCaretGuard(editor);
       return () => unregister?.();
     }, [blockImageCaretGuard, editor]);
+
+    // Opt-in (composers): Tab leaves the editor so it never traps keyboard focus.
+    useEffect(() => {
+      if (!editor || !tabMovesFocus) return;
+      const unregister = registerTabFocusEscape(editor);
+      return () => unregister?.();
+    }, [editor, tabMovesFocus]);
 
     const onInitRef = useRef(onInit);
     const initializedEditorRef = useRef<IEditor | null>(null);

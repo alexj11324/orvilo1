@@ -1,3 +1,4 @@
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 
@@ -30,9 +31,9 @@ export function ProjectCreationTimelineItem({
       <TimelineDate
         className="mb-0 inline font-normal"
         dateTime={date.toISOString()}
-        title={date.format('YYYY-MM-DD HH:mm')}
+        title={formatAbsoluteDateTime(date)}
       >
-        {date.format('MMM D')}
+        {formatAbsoluteDate(date)}
       </TimelineDate>
     </ActivityTimelineItem>
   );

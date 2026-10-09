@@ -36,6 +36,7 @@
   "actions.moveToAgent": "移动到其他智能体",
   "actions.openInNewTab": "在新标签页中打开",
   "actions.openInNewWindow": "打开独立窗口",
+  "actions.recentTopics": "最近话题",
   "actions.removeAll": "删除全部话题",
   "actions.removeAllOwn": "删除我的话题",
   "actions.removeAllWorkspace": "删除全部话题",
@@ -77,6 +78,7 @@
   "filter.sort": "排序",
   "filter.sortBy.createdAt": "按创建时间",
   "filter.sortBy.updatedAt": "按更新时间",
+  "filter.title": "筛选话题",
   "groupTitle.byProject.noProject": "无目录",
   "groupTitle.byStatus.active": "活跃",
   "groupTitle.byStatus.archived": "已归档",
@@ -182,7 +184,7 @@
   "taskManager.agent": "任务智能体",
   "taskManager.agentSelector.privateGroup": "私人",
   "taskManager.agentSelector.workspaceGroup": "工作区",
-  "taskManager.welcome": "问我关于你的任务",
+  "taskManager.welcome": "问我关于你的 Issue",
   "temp": "临时",
   "title": "话题"
 }

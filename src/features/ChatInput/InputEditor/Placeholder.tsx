@@ -39,7 +39,7 @@ const Placeholder = memo<PlaceholderProps>(
 
     if (variant === 'followUp') {
       return (
-        <span>
+        <span className="text-muted-foreground">
           {t(isHeterogeneous ? 'followUpPlaceholderHeterogeneous' : 'followUpPlaceholder')}
         </span>
       );
@@ -56,7 +56,7 @@ const Placeholder = memo<PlaceholderProps>(
           : 'sendPlaceholderChat';
 
     return (
-      <span className="flex flex-row items-center gap-1 flex-wrap">
+      <span className="flex flex-row flex-wrap items-center gap-1 text-muted-foreground">
         <Trans
           i18nKey={i18nKey}
           ns={'chat'}

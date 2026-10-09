@@ -1,31 +1,21 @@
 'use client';
 
-import { isDesktop, matchMcpPresetByConnector, type McpPresetConnector } from '@orvilo/const';
+import { type McpPresetConnector } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { CircleCheck, SquareArrowOutUpRight } from 'lucide-react';
-import { createElement, memo, useState } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  getActiveWorkspaceId,
-  useActiveWorkspaceId,
-} from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
-import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import NavItem from '@/features/NavPanel/components/NavItem';
-import { usePermission } from '@/hooks/usePermission';
-import { useResourceManageable } from '@/hooks/useResourceManageable';
-import { getHostPort } from '@/platform';
-import { useToolStore } from '@/store/tool';
-import { connectorSelectors } from '@/store/tool/slices/connector';
 import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import { connectLinearMcpPreset } from './connectLinearMcpPreset';
+import ConnectorRow from './ConnectorRow';
 import { isMcpPresetConnected } from './githubMcpDisplayState';
+import { useMcpPresetConnect } from './useMcpPresetConnect';
 
 interface McpPresetItemProps {
   connecting?: boolean;
@@ -50,7 +40,8 @@ interface McpPresetItemProps {
 
 /**
  * A row for a curated hosted MCP server (GitHub, Linear, Notion, …) in the
- * Connector settings list. Linear uses MCP OAuth directly; GitHub reuses the
+ * Connector settings list. The row always selects; a preset without a connector
+ * opens a not-connected detail pane. Linear uses MCP OAuth directly; GitHub reuses the
  * existing GitHub App grant. Other presets retain the custom connector form.
  */
 const McpPresetItem = memo<McpPresetItemProps>(
@@ -66,91 +57,22 @@ const McpPresetItem = memo<McpPresetItemProps>(
     tokenSetup,
   }) => {
     const { t } = useTranslation('setting');
-    const { t: tt } = useTranslation('tool');
-    const { allowed: canCreate, reason: createReason } = usePermission('create_content');
-    const { allowed: canEdit, reason: editReason } = usePermission('edit_own_content');
-    const canManage = useResourceManageable(connector?.userId);
     const currentUserId = useUserStore(userProfileSelectors.userId);
-    const [isConnecting, setIsConnecting] = useState(false);
-    const activeWorkspaceId = useActiveWorkspaceId();
-    const isListReady = useToolStore(connectorSelectors.isConnectorListReady(activeWorkspaceId));
-    const createConnector = useToolStore((s) => s.createConnector);
-    const startConnectorOAuth = useToolStore((s) => s.startConnectorOAuth);
-    const fetchConnectors = useToolStore((s) => s.fetchConnectors);
+    const { busy, connect, disabled, disabledReason } = useMcpPresetConnect({
+      connecting,
+      connector,
+      onAdd,
+      preset,
+    });
 
-    const isAdded = Boolean(connector);
     const isConnected = isMcpPresetConnected({
       connector,
       currentUserId,
       managedAuth: preset.managedAuth,
       providerConnected,
     });
-    const canConnect = canCreate && canEdit && canManage;
 
-    const handleConnect = async () => {
-      if (preset.id !== 'linear') {
-        onAdd();
-        return;
-      }
-
-      // Recheck at click time as well as render time: a workspace switch can
-      // happen before React commits the disabled state for the new scope.
-      const currentState = useToolStore.getState();
-      if (!connectorSelectors.isConnectorListReady(getActiveWorkspaceId())(currentState)) return;
-      const currentConnector = connectorSelectors
-        .customConnectors(currentState)
-        .find((candidate) => matchMcpPresetByConnector(candidate, [preset]));
-      if (currentConnector?.status === 'connected') return;
-      setIsConnecting(true);
-      try {
-        const result = await connectLinearMcpPreset(preset, currentConnector?.id, {
-          checkStatus: async (connectorId) => {
-            await fetchConnectors();
-            return (
-              connectorSelectors.connectorById(connectorId)(useToolStore.getState())?.status ===
-              'connected'
-            );
-          },
-          createConnector,
-          fetchConnectors,
-          ...(isDesktop && {
-            openExternalLink: async (url: string) => {
-              await getHostPort().openExternal(url);
-            },
-          }),
-          startConnectorOAuth,
-        });
-        if (result.status === 'blocked') {
-          toast.error(t('tools.mcpPreset.popupBlocked'));
-        } else if (result.status === 'external') {
-          toast.info(t('tools.mcpPreset.externalAuthPending'));
-        } else if (result.status === 'success') {
-          if (result.synced === false) toast.warning(t('tools.mcpPreset.syncFailed'));
-          else toast.success(t('tools.mcpPreset.success'));
-          if (result.refreshFailed) toast.error(t('tools.mcpPreset.refreshFailed'));
-        } else if (result.status === 'error') {
-          toast.error(
-            t('tools.mcpPreset.authError', {
-              reason: result.error || t('tools.mcpPreset.unknownError'),
-            }),
-          );
-        } else if (result.status === 'timed-out') {
-          toast.warning(t('tools.mcpPreset.timedOut'));
-        } else if (result.status === 'dismissed' || result.status === 'cancelled') {
-          toast.warning(t('tools.mcpPreset.cancelled'));
-        }
-      } catch (error) {
-        toast.error(
-          t('tools.mcpPreset.authError', {
-            reason: error instanceof Error ? error.message : t('tools.mcpPreset.unknownError'),
-          }),
-        );
-      } finally {
-        setIsConnecting(false);
-      }
-    };
-
-    const renderNavExtra = () => {
+    const renderAction = () => {
       if (isConnected) {
         return (
           <Tooltip>
@@ -178,18 +100,13 @@ const McpPresetItem = memo<McpPresetItemProps>(
             render={
               <span className="inline-flex min-w-0">
                 <Button
-                  loading={isConnecting || connecting}
+                  disabled={disabled}
+                  loading={busy}
                   size="sm"
                   variant="ghost"
-                  disabled={
-                    !canConnect ||
-                    (preset.id === 'linear' && !isListReady) ||
-                    isConnecting ||
-                    connecting
-                  }
-                  onClick={handleConnect}
+                  onClick={connect}
                 >
-                  {!(isConnecting || connecting) && createElement(SquareArrowOutUpRight)}
+                  {!busy && createElement(SquareArrowOutUpRight)}
                   {timedOut
                     ? t('tools.mcpPreset.checkStatus', 'Check status')
                     : tokenSetup
@@ -199,33 +116,25 @@ const McpPresetItem = memo<McpPresetItemProps>(
               </span>
             }
           />
-          <TooltipContent side="top">
-            {!canManage
-              ? tt('connector.manageOnlyCreator')
-              : !canCreate
-                ? createReason
-                : editReason}
-          </TooltipContent>
+          <TooltipContent side="top">{disabledReason}</TooltipContent>
         </Tooltip>
       );
     };
 
-    const renderNavIcon = () => {
+    const renderIcon = () => {
       const { icon, label } = preset;
       if (typeof icon === 'string') return <Avatar alt={label} avatar={icon} size={18} />;
       return createElement(icon, { fill: cssVar.colorText, size: 18 });
     };
 
     return (
-      <NavItem
+      <ConnectorRow
+        action={renderAction()}
         active={isSelected}
-        extra={renderNavExtra()}
-        icon={renderNavIcon}
+        icon={renderIcon()}
+        muted={!isConnected}
         title={preset.label}
-        titleColor={!isConnected ? cssVar.colorTextDescription : undefined}
-        // Same contract as OrviloSkillItem: only added connectors open the
-        // detail panel; otherwise the inline Connect button is the affordance.
-        onClick={isAdded ? onSelect : undefined}
+        onSelect={onSelect}
       />
     );
   },

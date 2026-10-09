@@ -1,10 +1,10 @@
-import '../portal/styles.css';
-
 import { useAuth, useClerk } from '@clerk/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { AuthShell } from '../portal/AuthShell';
+import { Button } from '@/components/ui/button';
+
+import { AuthNotice, AuthShell } from '../portal/AuthShell';
 import { hasClerkOAuthReturn, startGoogleOAuth } from '../portal/googleOAuth';
 import { documentPortalMessages } from '../portal/messagesContext';
 import { resolveStandaloneReturnUrl } from '../portal/redirect';
@@ -58,8 +58,14 @@ export default function PortalOauthGooglePage() {
 
   return (
     <AuthShell>
-      <p role={error ? 'alert' : 'status'}>{error ? messages.startFailed : messages.starting}</p>
-      {error && <button onClick={() => window.location.reload()}>{messages.retry}</button>}
+      <div className="flex flex-col items-center gap-4">
+        <AuthNotice error={error}>{error ? messages.startFailed : messages.starting}</AuthNotice>
+        {error && (
+          <Button size="lg" variant="outline" onClick={() => window.location.reload()}>
+            {messages.retry}
+          </Button>
+        )}
+      </div>
     </AuthShell>
   );
 }

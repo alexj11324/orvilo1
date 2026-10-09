@@ -206,6 +206,18 @@ describe('TaskDetailSliceAction', () => {
       });
     };
 
+    it('returns the committed comment when only the follow-up refresh fails', async () => {
+      seed();
+      const committed = { data: { id: 'cmt_committed' } };
+      vi.mocked(taskService.addComment).mockResolvedValue(committed as any);
+      const { mutate } = await import('@/libs/swr');
+      vi.mocked(mutate).mockRejectedValue(new Error('refresh offline'));
+
+      await expect(useTaskStore.getState().addComment('T-1', 'Saved')).resolves.toBe(committed);
+      expect(taskService.addComment).toHaveBeenCalledTimes(1);
+      expect(useTaskStore.getState().taskDetailMap['T-1'].activities).toHaveLength(1);
+    });
+
     it('shows the comment on send, before the mutation resolves', async () => {
       seed();
       let release!: () => void;
@@ -332,6 +344,21 @@ describe('TaskDetailSliceAction', () => {
         expect.objectContaining({ dueDate: '2026-10-09' }),
       );
       expect(useTaskStore.getState().taskDetailMap['T-1'].domainRevision).toBe(5);
+    });
+
+    it('refreshes the list caches after a rename or due-date edit, which only list rows show', async () => {
+      const refreshTaskList = vi.fn().mockResolvedValue(undefined);
+      useTaskStore.setState({
+        refreshTaskList,
+        taskDetailMap: { 'T-1': { identifier: 'T-1', instruction: 'x', name: 'Old' } },
+      } as any);
+      vi.mocked(taskService.update).mockResolvedValue({ success: true } as any);
+
+      await useTaskStore.getState().updateTask('T-1', { name: 'Renamed' });
+      expect(refreshTaskList).toHaveBeenCalledTimes(1);
+
+      await useTaskStore.getState().updateTask('T-1', { instruction: 'Only the body' });
+      expect(refreshTaskList).toHaveBeenCalledTimes(1);
     });
 
     it('should optimistically update taskDetailMap', async () => {

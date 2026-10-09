@@ -1,7 +1,6 @@
 import { type TreeDataNode } from '@lobehub/ui/base-ui';
 import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { ListTodoIcon, PlayCircle, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -11,7 +10,6 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { SidebarContextMenuPopup } from '@/features/NavPanel/components/SidebarContextMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -33,12 +31,12 @@ import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTaskContextMenuActions } from '../features/useTaskItemContextMenu';
-import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import RunSubtasksPreview from './RunSubtasksPreview';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 
 type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
 
@@ -167,7 +165,13 @@ const toTreeData = (tree: TaskTreeNode[]): TreeDataNode[] => {
   }));
 };
 
-const TaskSubtasks = memo(() => {
+interface TaskSubtasksProps {
+  /** The sub-issue composer is open. Owned by the host when the add row lives elsewhere. */
+  composerOpen?: boolean;
+  onComposerOpenChange?: (open: boolean) => void;
+}
+
+const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChange }) => {
   const { t } = useTranslation('chat');
 
   const navigate = useWorkspaceAwareNavigate();
@@ -183,7 +187,16 @@ const TaskSubtasks = memo(() => {
 
   const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions();
 
-  const [isCreating, setIsCreating] = useState(false);
+  const [localCreating, setLocalCreating] = useState(false);
+  const isCreating = composerOpen ?? localCreating;
+  const setIsCreating = useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      const value = typeof next === 'function' ? next(isCreating) : next;
+      setLocalCreating(value);
+      onComposerOpenChange?.(value);
+    },
+    [isCreating, onComposerOpenChange],
+  );
   const [isExpanded, setIsExpanded] = useState(true);
   const [isPlanning, setIsPlanning] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -257,7 +270,7 @@ const TaskSubtasks = memo(() => {
   const toggleCreating = useCallback(() => {
     if (!canEditTask) return;
     setIsCreating((prev) => !prev);
-  }, [canEditTask]);
+  }, [canEditTask, setIsCreating]);
 
   const handleRunAll = useCallback(async () => {
     if (!canEditTask) return;
@@ -316,53 +329,48 @@ const TaskSubtasks = memo(() => {
   if (!taskId) return null;
 
   const hasSubtasks = subtasks.length > 0;
+  // Nothing to show until there is a sub-issue or the composer is open.
+  if (!hasSubtasks && !isCreating) return null;
 
   return (
     <div className="flex flex-col gap-2">
       {hasSubtasks ? (
         <>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                aria-expanded={isExpanded}
-                className="gap-2 text-sm font-medium text-muted-foreground"
-                size="sm"
-                type="button"
-                variant="ghost"
-                onClick={() => setIsExpanded((prev) => !prev)}
-              >
-                <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
-                <span>{t('taskDetail.subtasks')}</span>
-                <AccordionArrowIcon
-                  isOpen={isExpanded}
-                  style={{ color: cssVar.colorTextDescription }}
+          <TaskDetailSectionHeader
+            count={subtasks.length}
+            icon={ListTodoIcon}
+            open={isExpanded}
+            title={t('taskDetail.subtasks')}
+            actions={
+              <>
+                <ActionIcon
+                  disabled={!canEditTask || isPlanning}
+                  icon={PlayCircle}
+                  loading={isPlanning}
+                  size="small"
+                  title={canEditTask ? t('taskDetail.runAll') : reason}
+                  onClick={handleRunAll}
                 />
-              </Button>
+                <ActionIcon
+                  aria-label={t('taskDetail.addSubtask')}
+                  disabled={!canEditTask}
+                  icon={Plus}
+                  size="small"
+                  title={canEditTask ? t('taskDetail.addSubtask') : reason}
+                  onClick={toggleCreating}
+                />
+              </>
+            }
+            trailing={
               <TaskSubtaskProgressTag
                 currentIdentifier={taskId}
                 subtasks={subtasks}
                 onSubtaskClick={handleNavigate}
               />
-            </div>
-            <div className="flex items-center gap-1">
-              <ActionIcon
-                disabled={!canEditTask || isPlanning}
-                icon={PlayCircle}
-                loading={isPlanning}
-                size="small"
-                title={canEditTask ? t('taskDetail.runAll') : reason}
-                onClick={handleRunAll}
-              />
-              <ActionIcon
-                disabled={!canEditTask}
-                icon={Plus}
-                size="small"
-                title={canEditTask ? t('taskDetail.addSubtask') : reason}
-                onClick={toggleCreating}
-              />
-            </div>
-          </div>
-          <Collapsible open={isExpanded}>
+            }
+            onToggle={() => setIsExpanded((prev) => !prev)}
+          />
+          <Collapsible open={isExpanded || isCreating}>
             <CollapsibleContent>
               <div className="flex flex-col gap-2">
                 {isCreating && (
@@ -400,32 +408,19 @@ const TaskSubtasks = memo(() => {
             </CollapsibleContent>
           </Collapsible>
         </>
-      ) : (
-        <>
-          <Button
-            className="w-fit gap-2 text-sm font-medium text-muted-foreground"
-            size="sm"
-            title={canEditTask ? undefined : reason}
-            type="button"
-            variant="ghost"
-            onClick={toggleCreating}
-          >
-            <Plus color={cssVar.colorTextDescription} size={16} />
-            <span>{t('taskDetail.addSubtask')}</span>
-          </Button>
-          {isCreating && (
-            <CreateTaskInlineEntry
-              autoFocus
-              agentId={agentId ?? undefined}
-              defaultVisibility={parentVisibility}
-              parentTaskId={taskId}
-              placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-              onCollapse={() => setIsCreating(false)}
-              onCreated={() => setIsCreating(false)}
-            />
-          )}
-        </>
-      )}
+      ) : isCreating ? (
+        // No sub-issues yet: the add row under the description opens the
+        // composer, and the section only exists while it is open.
+        <CreateTaskInlineEntry
+          autoFocus
+          agentId={agentId ?? undefined}
+          defaultVisibility={parentVisibility}
+          parentTaskId={taskId}
+          placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
+          onCollapse={() => setIsCreating(false)}
+          onCreated={() => setIsCreating(false)}
+        />
+      ) : null}
     </div>
   );
 });

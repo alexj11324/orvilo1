@@ -1192,6 +1192,7 @@ describe('TaskService', () => {
           authorUserId: 'user_bob',
           content: 'User comment',
           createdAt: new Date('2024-01-02T00:00:00Z'),
+          updatedAt: new Date('2024-01-03T00:00:00Z'),
         },
       ];
 
@@ -1228,6 +1229,7 @@ describe('TaskService', () => {
 
       // Comment should have user author
       const commentActivity = result?.activities?.find((a) => a.type === 'comment');
+      expect(commentActivity?.updatedAt).toBe('2024-01-03T00:00:00.000Z');
       expect(commentActivity?.author).toEqual({
         avatar: 'https://example.com/bob.png',
         id: 'user_bob',

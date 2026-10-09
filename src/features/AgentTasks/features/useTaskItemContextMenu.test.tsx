@@ -20,6 +20,7 @@ import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 
 const memberDirectoryMock = vi.hoisted(() => ({
+  role: 'member',
   workspaceId: 'workspace-1' as string | undefined,
 }));
 
@@ -38,6 +39,13 @@ vi.mock('@/business/client/hooks/useWorkspaceMembers', () => ({
     { role: 'member', userId: 'member-2' },
     { role: 'viewer', userId: 'viewer-3' },
   ],
+}));
+
+vi.mock('@/business/client/hooks/useFetchWorkspaces', () => ({
+  useFetchWorkspaces: () => ({
+    data: [{ id: memberDirectoryMock.workspaceId, role: memberDirectoryMock.role }],
+    isLoading: false,
+  }),
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -170,6 +178,7 @@ describe('task member privacy compatibility', () => {
 describe('useTaskItemContextMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    memberDirectoryMock.role = 'member';
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText: mocks.copyToClipboard },
@@ -265,6 +274,28 @@ describe('useTaskItemContextMenu', () => {
     });
 
     expect(mocks.closeContextMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Viewer workflow items and keyboard shortcuts denied', async () => {
+    memberDirectoryMock.role = 'viewer';
+    const { result } = renderHook(() =>
+      useTaskItemContextMenu({ identifier: 'T-1', priority: 0, status: 'backlog' }),
+    );
+    const statusItem = result.current.items.find(
+      (item) => item && 'key' in item && item.key === 'status',
+    ) as {
+      children: Array<{ disabled?: boolean; onClick: (info: unknown) => void }>;
+      onTitleMouseEnter?: () => void;
+    };
+    expect(statusItem.children.every((child) => child.disabled)).toBe(true);
+    await act(async () => {
+      result.current.onContextMenu();
+      statusItem.onTitleMouseEnter?.();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }));
+      await statusItem.children[0].onClick({ domEvent: { stopPropagation: vi.fn() } });
+    });
+    expect(mocks.closeContextMenu).not.toHaveBeenCalled();
+    expect(mocks.moveWorkflow).not.toHaveBeenCalled();
   });
 
   it('offers the seven workflow columns in order — execution states are never picks', () => {

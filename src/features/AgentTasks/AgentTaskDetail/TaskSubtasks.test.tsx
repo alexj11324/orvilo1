@@ -10,6 +10,7 @@ import TaskSubtasks from './TaskSubtasks';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
+  workspaceRole: 'member',
   buildContextMenuItems: vi.fn(() => []),
   installKeyboardHandlers: vi.fn(),
   navigate: vi.fn(),
@@ -51,6 +52,13 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) =
   // useWorkspaceAwareNavigate reads them on every navigate.
   ...(await importOriginal<object>()),
   useActiveWorkspaceId: () => mocks.activeWorkspaceId,
+}));
+
+vi.mock('@/business/client/hooks/useFetchWorkspaces', () => ({
+  useFetchWorkspaces: () => ({
+    data: [{ id: mocks.activeWorkspaceId, role: mocks.workspaceRole }],
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
@@ -183,6 +191,7 @@ vi.mock('./RunSubtasksPreview', () => ({
 describe('TaskSubtasks', () => {
   beforeEach(() => {
     mocks.activeWorkspaceId = 'workspace-1';
+    mocks.workspaceRole = 'member';
     mocks.buildContextMenuItems.mockClear();
     mocks.installKeyboardHandlers.mockClear();
     mocks.navigate.mockClear();
@@ -239,6 +248,15 @@ describe('TaskSubtasks', () => {
       expectedTarget,
       expect.any(Function),
     );
+  });
+
+  it('keeps Viewer subtask context-menu actions denied', () => {
+    mocks.workspaceRole = 'viewer';
+    render(<TaskSubtasks />);
+    fireEvent.contextMenu(screen.getByTestId('subtask-tree-node'));
+    expect(mocks.buildContextMenuItems).not.toHaveBeenCalled();
+    expect(mocks.showContextMenuWithFallback).not.toHaveBeenCalled();
+    expect(mocks.installKeyboardHandlers).not.toHaveBeenCalled();
   });
 
   it('shows the responsible assignee on an automated subtask', () => {

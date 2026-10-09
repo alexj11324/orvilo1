@@ -1,8 +1,9 @@
 import { cssVar } from 'antd-style';
-import { CircleAlertIcon, CircleCheck, Loader2Icon } from 'lucide-react';
+import { CircleAlertIcon, CircleCheck } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { type FileUploadState, type FileUploadStatus } from '@/types/files/upload';
 import { formatSize } from '@/utils/format';
 
@@ -44,9 +45,7 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'pending': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <span className="anticon animate-spin" role="img">
-            <Loader2Icon fill={'transparent'} height={12} size={12} width={12} />
-          </span>
+          <Spinner className="size-3" />
           <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {t('upload.preview.status.pending')}
           </div>

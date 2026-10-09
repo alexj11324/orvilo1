@@ -3,24 +3,26 @@
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import Avatar from '@/components/Avatar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import { type SidebarAgentItem } from '@/database/repositories/home';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const VISIBLE_LIMIT = 5;
 const AVATAR_SIZE = 30;
@@ -209,12 +211,7 @@ const QuickChatAgentSwitcher = memo(() => {
                     type={'button'}
                     onClick={() => handleSelect(item)}
                   >
-                    <Avatar
-                      avatar={item.avatar}
-                      background={item.background}
-                      shape={'square'}
-                      size={AVATAR_SIZE}
-                    />
+                    <AssigneeAvatar agentId={item.id} size={AVATAR_SIZE} />
                   </button>
                 </span>
               }
@@ -249,16 +246,12 @@ const QuickChatAgentSwitcher = memo(() => {
                 ) : (
                   filteredRemaining.map((item) => (
                     <div
-                      className={styles.popoverRow}
+                      {...clickableProps()}
+                      className={cn(styles.popoverRow, CLICKABLE_FOCUS_RING)}
                       key={item.id}
                       onClick={() => handleSelect(item)}
                     >
-                      <Avatar
-                        avatar={item.avatar}
-                        background={item.background}
-                        shape={'square'}
-                        size={22}
-                      />
+                      <AssigneeAvatar agentId={item.id} size={22} />
                       <span
                         style={{
                           overflow: 'hidden',

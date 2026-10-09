@@ -8,12 +8,14 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import { isInboxAgentId } from './isInboxAgent';
 
 interface AgentDisplayMeta {
   avatar: string;
   backgroundColor: string;
+  runtimeType: string | null;
   title: string;
 }
 
@@ -35,6 +37,9 @@ export const useAgentDisplayMeta = (
   const meta = useAgentStore((s) =>
     agentId ? agentSelectors.getAgentMetaById(agentId)(s) : undefined,
   );
+  const config = useAgentStore((s) =>
+    agentId ? agentSelectors.getAgentConfigById(agentId)(s) : undefined,
+  );
   const sidebarAgent = useHomeStore(homeAgentListSelectors.getAgentById(agentId ?? ''));
 
   if (!agentId) return undefined;
@@ -51,6 +56,13 @@ export const useAgentDisplayMeta = (
   if (!fallbackToDefault && !hasResolvedMeta) return undefined;
 
   return {
+    runtimeType: config
+      ? resolveAgentRuntimeType(config)
+      : sidebarAgent?.type === 'agent'
+        ? sidebarAgent.heterogeneousType || 'orvilo'
+        : isInbox
+          ? 'orvilo'
+          : null,
     avatar: meta?.avatar || sidebarAvatar || (isInbox ? DEFAULT_INBOX_AVATAR : DEFAULT_AVATAR),
     backgroundColor:
       meta?.backgroundColor || sidebarAgent?.backgroundColor || cssVar.colorBgContainer,

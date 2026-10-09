@@ -17,6 +17,7 @@ import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { oneLineEllipsis } from '@/styles';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useMenu } from './useMenu';
 
@@ -54,7 +55,8 @@ const Header = memo<HeaderProps>(
           <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
             {/* Breadcrumb: agent → document. The agent label returns to chat. */}
             <div
-              className="flex items-center"
+              {...clickableProps()}
+              className={cn('flex items-center', CLICKABLE_FOCUS_RING)}
               style={{ cursor: 'pointer', flexShrink: 0 }}
               onClick={onBack}
             >
@@ -70,7 +72,11 @@ const Header = memo<HeaderProps>(
               {resolvedTitle}
             </div>
             <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
-              <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+              <ActionIcon
+                aria-label={t('more', { ns: 'common' })}
+                icon={MoreHorizontal}
+                size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              />
             </DropdownMenu>
           </div>
         }

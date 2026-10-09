@@ -398,7 +398,7 @@ jobs:
     outputs:
       digest: ${{ steps.gateway-image.outputs.digest }}
     env:
-      QA_CANDIDATE_SHA: c02d5592605fe56b73b1dd6289ff6e661f5326c9
+      QA_CANDIDATE_SHA: 56eb1e0b3e1d1d39af4c64ce84d717b7599e9c71
       QA_IMAGE_REF: ghcr.io/alexj11324/orvilo1@sha256:0000000000000000000000000000000000000000000000000000000000000000
       INPUT_BUILD: ${{ inputs.build }}
       INPUT_DEPLOY: ${{ inputs.deploy }}
@@ -420,7 +420,7 @@ jobs:
       - name: Require candidate quality gate
         uses: ./.github/actions/require-quality-gate
         with:
-          sha: c02d5592605fe56b73b1dd6289ff6e661f5326c9
+          sha: 56eb1e0b3e1d1d39af4c64ce84d717b7599e9c71
       - name: Require harness quality gate
         uses: ./.github/actions/require-quality-gate
         with:

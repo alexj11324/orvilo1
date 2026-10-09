@@ -1,6 +1,6 @@
 import type { IconType } from '@lobehub/icons';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2Icon } from 'lucide-react';
+import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,9 +14,11 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
@@ -97,6 +99,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface TaskPriorityTagProps {
   children?: ReactNode;
   disableDropdown?: boolean;
+  /** Matches native button children; the default icon trigger is a span. */
+  nativeButton?: boolean;
   onChange?: (priority: number) => void;
   priority?: number | null;
   size?: number;
@@ -104,7 +108,15 @@ interface TaskPriorityTagProps {
 }
 
 const TaskPriorityTag = memo<TaskPriorityTagProps>(
-  ({ children, disableDropdown, onChange, size = 16, priority, taskIdentifier }) => {
+  ({
+    children,
+    disableDropdown,
+    nativeButton = false,
+    onChange,
+    size = 16,
+    priority,
+    taskIdentifier,
+  }) => {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
@@ -154,11 +166,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       children ||
       (loading ? (
         <span className={styles.trigger}>
-          <Loader2Icon
-            className="animate-spin"
-            size={size}
-            style={{ color: cssVar.colorTextDescription }}
-          />
+          <Spinner style={{ height: size, width: size }} />
         </span>
       ) : (
         <span
@@ -179,8 +187,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       return (
         <SimpleTooltip title={reason}>
           <span
-            className={styles.triggerDisabled}
-            style={{ display: 'inline-flex' }}
+            className={cn(styles.triggerDisabled, 'inline-flex')}
             onClick={(e) => e.stopPropagation()}
           >
             {triggerNode}
@@ -191,7 +198,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     return (
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger
-          nativeButton={false}
+          nativeButton={nativeButton}
           render={triggerNode as ReactElement}
           onClick={(event) => event.stopPropagation()}
         />
@@ -220,22 +227,24 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
                 })
               : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
           </div>
-          {filteredLevels.map((level, index) => {
-            const ItemIcon = PRIORITY_META[level].icon;
-            return (
-              <DropdownMenuItem
-                key={level}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handlePriorityChange(level);
-                }}
-              >
-                <ItemIcon color={getPriorityIconColor(level)} size={16} />
-                <span className="flex-1">{levelLabel(level)}</span>
-                {renderMenuExtra(String(index + 1), level === currentLevel)}
-              </DropdownMenuItem>
-            );
-          })}
+          <DropdownMenuGroup>
+            {filteredLevels.map((level, index) => {
+              const ItemIcon = PRIORITY_META[level].icon;
+              return (
+                <DropdownMenuItem
+                  key={level}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handlePriorityChange(level);
+                  }}
+                >
+                  <ItemIcon color={getPriorityIconColor(level)} size={16} />
+                  <span className="flex-1">{levelLabel(level)}</span>
+                  {renderMenuExtra(String(index + 1), level === currentLevel)}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     );

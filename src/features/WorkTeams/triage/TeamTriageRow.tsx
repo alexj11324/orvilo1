@@ -6,13 +6,11 @@ import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
@@ -195,26 +193,22 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       <div className={cn('flex flex-row items-center gap-2', styles.row)}>
         <WorkspaceLink className={styles.link} to={teamTaskDetailPath(task)}>
           <PriorityIcon priority={task.priority} size={16} />
-          {workflowGlyph ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span className="inline-flex">
-                      {createElement(workflowGlyph.icon, {
-                        'aria-hidden': true,
-                        'className': 'size-4 shrink-0',
-                        'color': workflowGlyph.color,
-                      })}
-                    </span>
-                  }
-                />
-                <TooltipContent>{workflowGlyph.label}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="inline-flex">
+                    {createElement(workflowGlyph.icon, {
+                      'aria-hidden': true,
+                      'className': 'size-4 shrink-0',
+                      'color': workflowGlyph.color,
+                    })}
+                  </span>
+                }
+              />
+              <TooltipContent>{workflowGlyph.label}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {task.identifier ? (
             <span className={cn('text-sm', styles.identifier)}>{task.identifier}</span>
           ) : null}

@@ -18,7 +18,9 @@ const migrations = readMigrationFiles({
 // 0201_retire_task_status_parked_backfill (parked-marker/workflow convergence),
 // plus 0202_pr_delivery_gate_workflow_category (gate trigger rebind), plus
 // 0203_device_capability_snapshot (devices capability evidence columns).
-const additions = migrations.slice(197);
+// Reapplication belongs to this bounded, idempotent repair sequence. Later
+// migrations use the normal migration ledger and may create tables only once.
+const additions = migrations.slice(197, 204);
 const db = new PGlite({ extensions: { vector } });
 const applyAdditions = async () => {
   for (const migration of additions) {

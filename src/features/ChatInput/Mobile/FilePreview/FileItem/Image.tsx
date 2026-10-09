@@ -2,6 +2,7 @@ import { Image } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { RotateCw, Trash } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
 import ActionIcon from '@/components/ActionIcon';
@@ -40,6 +41,7 @@ interface FileItemProps {
 
 const FileItem = memo<FileItemProps>(
   ({ alt, error, errorCode, onRemove, onRetry, src, loading }) => {
+    const { t: tCommon } = useTranslation('common');
     const IMAGE_SIZE = MIN_IMAGE_SIZE;
 
     return (
@@ -59,6 +61,7 @@ const FileItem = memo<FileItemProps>(
               <FileUploadErrorActions compact code={errorCode} />
             ) : error ? (
               <ActionIcon
+                aria-label={tCommon('refresh')}
                 className={styles.deleteButton}
                 icon={RotateCw}
                 size={'small'}
@@ -69,6 +72,7 @@ const FileItem = memo<FileItemProps>(
               />
             ) : null}
             <ActionIcon
+              aria-label={tCommon('delete')}
               className={styles.deleteButton}
               icon={Trash}
               size={'small'}

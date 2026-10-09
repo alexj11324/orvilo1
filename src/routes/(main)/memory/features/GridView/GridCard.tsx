@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { memo } from 'react';
 
 import { Badge } from '@/components/reui/badge';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import HashTags from '../HashTags';
 import Time from '../Time';
@@ -61,7 +62,8 @@ const GridCard = memo<GridCardProps>(
     const cateColor = useCateColor(cate);
     return (
       <div
-        className={cn('flex flex-col gap-1 p-1', styles.masonryCard)}
+        {...clickableProps()}
+        className={cn(cn('flex flex-col gap-1 p-1', styles.masonryCard), CLICKABLE_FOCUS_RING)}
         style={{
           height: '100%',
           background: cateColor?.backgroundColor,

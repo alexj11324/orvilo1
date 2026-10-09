@@ -7,8 +7,6 @@ import {
   type ReactNode,
   Suspense,
   use,
-  useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -16,11 +14,7 @@ import {
 
 import { type ModalInstance } from '@/components/Modal';
 import EditingPopover from '@/features/EditingPopover';
-import type { OpenCreateAgentModalOptions } from '@/features/HomeSidebar/hooks/useCreateModal';
 import { openLabelFormModal } from '@/features/WorkspaceSetting/Labels/LabelFormModal';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
-import { useHomeStore } from '@/store/home';
 
 import ConfigGroupModal from './Modals/ConfigGroupModal';
 import { openCreateGroupModal } from './Modals/CreateGroupModal';
@@ -37,18 +31,6 @@ const MemberSelectionModal = lazy(() =>
   })),
 );
 
-interface OpenCreateModalOptions {
-  groupId?: string;
-  /**
-   * Threaded into the create flow so the resulting agent / group lands in the
-   * Private bucket of the sidebar. Omitted means "public" — the existing
-   * default. Honored by the inner CreateModalRenderer when it calls
-   * `storeCreateAgent` (the chat-group path defers to its own
-   * publish-to-workspace toggle inside the profile page).
-   */
-  visibility?: 'private' | 'public';
-}
-
 interface AgentModalContextValue {
   closeAllModals: () => void;
   closeConfigGroupModal: () => void;
@@ -63,12 +45,6 @@ interface AgentModalContextValue {
    * agent right after creation.
    */
   openCreateLabelModal: (assignTo?: { agentId: string; currentLabelIds: string[] }) => void;
-  /**
-   * The written-description create modal — groups only. Agent creation is
-   * one-click (docs/development/device-execution-contract.md): no purpose
-   * field, no Agent Builder, so there is no `'agent'` type left to pass.
-   */
-  openCreateModal: (type: 'group', options?: OpenCreateModalOptions) => void;
   openGroupWizardModal: (callbacks: GroupWizardCallbacks) => void;
   openMemberSelectionModal: (callbacks: MemberSelectionCallbacks) => void;
   setGroupWizardLoading: (loading: boolean) => void;
@@ -99,60 +75,6 @@ export const useOptionalAgentModal = () => {
   return use(AgentModalContext);
 };
 
-interface CreateModalRendererProps {
-  groupId?: string;
-  onClose: () => void;
-  visibility?: 'private' | 'public';
-}
-
-// The description-driven create modal now only serves groups — agent
-// creation went one-click with no purpose prompt.
-const CreateModalRenderer = memo<CreateModalRendererProps>(({ groupId, onClose, visibility }) => {
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const sendAsGroup = useHomeStore((s) => s.sendAsGroup);
-
-  const handleSubmit = useCallback(
-    async (prompt: string) => {
-      await sendAsGroup({ groupId, message: prompt, visibility });
-    },
-    [sendAsGroup, groupId, visibility],
-  );
-
-  const handleCreateBlank = useCallback(async () => {
-    await sendAsGroup({ groupId, message: '', visibility });
-  }, [sendAsGroup, groupId, visibility]);
-
-  // Mounted only while the modal should be open, so the open/close bridge is
-  // just this component's lifetime — the panel itself lives in the ModalHost.
-  const openArgsRef = useRef<OpenCreateAgentModalOptions>(undefined);
-  openArgsRef.current = {
-    agentId: inboxAgentId,
-    type: 'group',
-    onClosed: onClose,
-    onCreateBlank: handleCreateBlank,
-    onSubmit: handleSubmit,
-  };
-
-  useEffect(() => {
-    // Imported here rather than at module scope so the create-agent chunk (it
-    // pulls in the whole ChatInput stack) still loads only when the modal opens.
-    let cancelled = false;
-    let instance: ModalInstance | undefined;
-
-    void import('@/features/HomeSidebar/hooks/useCreateModal').then(({ openCreateAgentModal }) => {
-      if (cancelled) return;
-      instance = openCreateAgentModal(openArgsRef.current!);
-    });
-
-    return () => {
-      cancelled = true;
-      instance?.close();
-    };
-  }, []);
-
-  return null;
-});
-
 interface AgentModalProviderProps {
   children: ReactNode;
 }
@@ -176,13 +98,6 @@ export const AgentModalProvider = memo<AgentModalProviderProps>(({ children }) =
   const [memberSelectionCallbacks, setMemberSelectionCallbacks] =
     useState<MemberSelectionCallbacks>({});
 
-  // CreateAgentModal state
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [createModalGroupId, setCreateModalGroupId] = useState<string | undefined>(undefined);
-  const [createModalVisibility, setCreateModalVisibility] = useState<
-    'private' | 'public' | undefined
-  >(undefined);
-
   const contextValue = useMemo<AgentModalContextValue>(
     () => ({
       closeAllModals: () => {
@@ -190,7 +105,6 @@ export const AgentModalProvider = memo<AgentModalProviderProps>(({ children }) =
         setConfigGroupModalOpen(false);
         setGroupWizardOpen(false);
         setMemberSelectionOpen(false);
-        setCreateModalOpen(false);
       },
       closeConfigGroupModal: () => setConfigGroupModalOpen(false),
       closeCreateGroupModal: () => createGroupModalRef.current?.close(),
@@ -205,11 +119,6 @@ export const AgentModalProvider = memo<AgentModalProviderProps>(({ children }) =
       },
       openCreateLabelModal: (assignTo?: { agentId: string; currentLabelIds: string[] }) => {
         openLabelFormModal({ assignTo });
-      },
-      openCreateModal: (_type: 'group', options?: OpenCreateModalOptions) => {
-        setCreateModalGroupId(options?.groupId);
-        setCreateModalVisibility(options?.visibility);
-        setCreateModalOpen(true);
       },
       openGroupWizardModal: (callbacks: GroupWizardCallbacks) => {
         setGroupWizardCallbacks(callbacks);
@@ -226,13 +135,6 @@ export const AgentModalProvider = memo<AgentModalProviderProps>(({ children }) =
 
   return (
     <AgentModalContext value={contextValue}>
-      {createModalOpen && (
-        <CreateModalRenderer
-          groupId={createModalGroupId}
-          visibility={createModalVisibility}
-          onClose={() => setCreateModalOpen(false)}
-        />
-      )}
       {children}
 
       <ConfigGroupModal

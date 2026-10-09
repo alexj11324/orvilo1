@@ -2,6 +2,7 @@ import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { createElement, memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,8 +11,10 @@ import ActionIcon from '@/components/ActionIcon';
 import type { StatusVisual } from '@/components/ExecutionStatus';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
+import { shouldOpenCardOnKey } from './boardKeyboard';
 import {
   COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
@@ -57,6 +60,18 @@ const SortableTaskCard = memo<{
       }}
       {...listeners}
       {...attributes}
+      onKeyDown={(event) => {
+        listeners?.onKeyDown?.(event);
+        if (
+          shouldOpenCardOnKey({
+            isDragging,
+            key: event.key,
+            targetIsCard: event.target === event.currentTarget,
+          })
+        ) {
+          event.currentTarget.querySelector<HTMLElement>('[data-task-board-card]')?.click();
+        }
+      }}
     >
       <TaskBoardCard
         hiddenProperties={hiddenProperties}
@@ -418,7 +433,13 @@ const KanbanColumn = memo<KanbanColumnProps>(
               ))}
             </SortableContext>
           ) : onCreate ? (
-            <div className={styles.addPill} title={t('taskList.kanban.addTask')} onClick={onCreate}>
+            <div
+              {...clickableProps()}
+              aria-label={t('taskList.kanban.addTask')}
+              className={cn(styles.addPill, CLICKABLE_FOCUS_RING)}
+              title={t('taskList.kanban.addTask')}
+              onClick={onCreate}
+            >
               <Plus size={16} />
             </div>
           ) : null}

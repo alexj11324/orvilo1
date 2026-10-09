@@ -4,7 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { createContext, use, useCallback, useMemo, useState } from 'react';
 
 import type { CommandMenuWorkResult, MenuContext, PageType, SelectedAgent } from './types';
-import { detectContext } from './utils/context';
+import { detectContext, getContextAgentId } from './utils/context';
 import type { ValidSearchType } from './utils/queryParser';
 import { parseSearchQuery } from './utils/queryParser';
 import { isResultActionsPage, RESULT_ACTIONS_PAGE } from './utils/resultActions';
@@ -72,11 +72,7 @@ export const CommandMenuProvider = ({
 
   // Memoize derived values
   const menuContext = useMemo(() => detectContext(pathname ?? '/'), [pathname]);
-  const activeAgentId = useMemo(() => {
-    if (menuContext !== 'agent') return undefined;
-    const match = pathname?.match(/^\/agent\/([^/?]+)/);
-    return match?.[1] || undefined;
-  }, [menuContext, pathname]);
+  const activeAgentId = useMemo(() => getContextAgentId(pathname ?? '/'), [pathname]);
   const page = pages.at(-1);
   const viewMode: MenuViewMode = search.trim().length > 0 ? 'search' : 'default';
 

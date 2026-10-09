@@ -1,11 +1,13 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { CheckProposal } from './proposal';
 
@@ -102,7 +104,11 @@ const ProposalCard = memo<ProposalCardProps>(
 
     return (
       <div className={`flex flex-col ${styles.card}`} style={{ gap: open ? 8 : 0 }}>
-        <div className={`flex items-center gap-1.5 ${styles.head}`} onClick={() => onToggle(!open)}>
+        <div
+          {...clickableProps()}
+          className={cn(`flex items-center gap-1.5 ${styles.head}`, CLICKABLE_FOCUS_RING)}
+          onClick={() => onToggle(!open)}
+        >
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <Sparkles size={12} />
           <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>

@@ -9,6 +9,7 @@ import { BrandingProviderCard } from '@/business/client/features/BrandingProvide
 import { ProviderCombine, ProviderIcon } from '@/components/OrviloIcons';
 import { useIsDark } from '@/hooks/useIsDark';
 import { type AiProviderListItem } from '@/types/aiProvider';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import EnableSwitch from './EnableSwitch';
 import { styles } from './style';
@@ -51,6 +52,8 @@ const ProviderCard = memo<ProviderCardProps>(
       <Flexbox className={cx(isDarkMode ? styles.containerDark : styles.containerLight)} gap={24}>
         <Flexbox gap={12} padding={16} width={'100%'}>
           <div
+            {...clickableProps()}
+            className={CLICKABLE_FOCUS_RING}
             style={{ cursor: 'pointer' }}
             onClick={() => {
               onProviderSelect(id);

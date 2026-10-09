@@ -348,6 +348,39 @@ describe('TaskService', () => {
   });
 
   describe('getTaskDetail', () => {
+    it.each([
+      [
+        { identifier: 'TASK-2', name: 'Canonical', isDeleted: false },
+        { identifier: 'TASK-2', name: 'Canonical' },
+      ],
+      [null, { unavailable: true }],
+      [{ identifier: 'TASK-2', name: 'Deleted secret', isDeleted: true }, { unavailable: true }],
+    ])('projects only the ACL-readable direct duplicate target', async (target, expected) => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'task_001',
+        identifier: 'TASK-1',
+        instruction: 'Duplicate',
+        duplicateOfTaskId: 'private-target-id',
+        workflowCategory: 'canceled',
+        status: 'canceled',
+        totalTopics: 0,
+      });
+      mockTaskModel.findById.mockResolvedValue(target);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getDependencies.mockResolvedValue([]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+      mockBriefModel.findByTaskId.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+      expect(result?.duplicateOf).toEqual(expected);
+      expect(JSON.stringify(result)).not.toContain('private-target-id');
+      expect(mockTaskModel.findById).toHaveBeenCalledWith('private-target-id');
+    });
+
     it('should return null when task is not found', async () => {
       mockTaskModel.resolve.mockResolvedValue(null);
 

@@ -63,11 +63,13 @@ import {
   tasks,
   taskTopics,
 } from '../schemas/task';
+import { taskDescriptionHistories } from '../schemas/taskDescriptionHistory';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
+import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { LinearSyncModel } from './linearSync';
@@ -151,6 +153,7 @@ const TASK_DOMAIN_COLUMNS = [
   'cycleRefId',
   'description',
   'duplicateOfTaskId',
+  'dueDate',
   'editorData',
   'heartbeatInterval',
   'heartbeatTimeout',
@@ -617,10 +620,7 @@ export class TaskModel {
    * races. Acquire it BEFORE task row locks to keep lock ordering consistent.
    */
   private async lockDependencyGraph(): Promise<void> {
-    const scope = this.workspaceId ? `workspace:${this.workspaceId}` : `user:${this.userId}`;
-    await this.db.execute(
-      sql`select pg_advisory_xact_lock(hashtext('task-prerequisites'), hashtext(${scope}))`,
-    );
+    await lockTaskDependencyGraph(this.db, this.userId, this.workspaceId);
   }
 
   private async withDependencyLock<T>(work: (model: TaskModel) => Promise<T>): Promise<T> {
@@ -1024,6 +1024,27 @@ export class TaskModel {
 
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      // Description history: lock the row first so the captured "before"
+      // snapshot is exactly what this write replaces.
+      const descriptionChanged = data.instruction !== undefined || data.editorData !== undefined;
+      const before = descriptionChanged
+        ? (
+            await runner
+              .select({
+                createdByUserId: tasks.createdByUserId,
+                domainRevision: tasks.domainRevision,
+                editorData: tasks.editorData,
+                id: tasks.id,
+                instruction: tasks.instruction,
+                visibility: taskVisibilitySql(),
+                workspaceId: tasks.workspaceId,
+              })
+              .from(tasks)
+              .where(and(...updateWhere))
+              .for('update')
+              .limit(1)
+          )[0]
+        : undefined;
       const [updated] = await runner
         .update(tasks)
         .set({
@@ -1042,6 +1063,52 @@ export class TaskModel {
         .returning(taskRowColumns);
       const task = await resolveUpdate(runner, updated);
       if (!task) return null;
+
+      if (
+        before &&
+        (before.instruction !== task.instruction ||
+          JSON.stringify(before.editorData) !== JSON.stringify(task.editorData))
+      ) {
+        const existingHistory = await runner
+          .select({ id: taskDescriptionHistories.id })
+          .from(taskDescriptionHistories)
+          .where(eq(taskDescriptionHistories.taskId, task.id))
+          .limit(1);
+        // The first captured edit also records the description it replaced;
+        // older revisions are never reconstructed.
+        const baseline = existingHistory.length
+          ? []
+          : [
+              {
+                taskId: before.id,
+                userId: before.createdByUserId,
+                workspaceId: before.workspaceId,
+                authorUserId: null,
+                domainRevision: before.domainRevision,
+                instruction: before.instruction,
+                editorData: before.editorData,
+                captureSource: 'baseline' as const,
+                visibility: before.visibility,
+              },
+            ];
+        await runner
+          .insert(taskDescriptionHistories)
+          .values([
+            ...baseline,
+            {
+              taskId: task.id,
+              userId: task.createdByUserId,
+              workspaceId: task.workspaceId,
+              authorUserId: mutation.source === 'user' ? this.userId : null,
+              domainRevision: task.domainRevision,
+              instruction: task.instruction,
+              editorData: task.editorData,
+              captureSource: 'edit',
+              visibility: task.visibility,
+            },
+          ])
+          .onConflictDoNothing();
+      }
 
       if (this.workspaceId && !mutation.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {

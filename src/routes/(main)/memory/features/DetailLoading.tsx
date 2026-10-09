@@ -15,12 +15,12 @@ const DetailLoading = memo(() => {
         <Skeleton style={{ height: 22, borderRadius: 4, width: 48 }} />
         <Skeleton style={{ height: 22, borderRadius: 4, width: 48 }} />
       </div>
-      <Skeleton style={{ height: 21, marginBlock: 2, width: '100%' }} />
-      <Skeleton style={{ height: 21, marginBlock: 2, width: '100%' }} />
-      <Skeleton style={{ height: 21, marginBlock: 2, width: '100%' }} />
-      <Skeleton style={{ height: 21, marginBlock: 2, width: '100%' }} />
-      <Skeleton style={{ height: 21, marginBlock: 2, width: '100%' }} />
-      <Skeleton style={{ height: 21, marginBlock: 2, width: '66%' }} />
+      <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+      <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+      <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+      <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+      <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+      <Skeleton style={{ height: 18, marginBlock: 2, width: '66%' }} />
     </>
   );
 });

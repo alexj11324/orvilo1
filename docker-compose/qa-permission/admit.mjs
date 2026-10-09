@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
-export const candidateSha = 'c02d5592605fe56b73b1dd6289ff6e661f5326c9';
+export const candidateSha = '56eb1e0b3e1d1d39af4c64ce84d717b7599e9c71';
 export const qaRef = 'refs/heads/codex/permission-qa-current';
 export const toolingPaths = [
   '.github/workflows/deploy-orvilo1.yml',

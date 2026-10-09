@@ -4,6 +4,7 @@ import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import type { AcceptanceCommentReaction } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 /** The ten GitHub offers, in GitHub's order — the shortcut covers nearly every click. */
 const QUICK_REACTIONS = ['👍', '👎', '😄', '🎉', '😕', '❤️', '🚀', '👀', '🙏', '🔥'];
@@ -167,11 +169,20 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
   ) : (
     <div className="flex gap-0.5 flex-wrap" style={{ padding: 4 }}>
       {QUICK_REACTIONS.map((emoji) => (
-        <div className={styles.emojiButton} key={emoji} onClick={() => pick(emoji)}>
+        <div
+          {...clickableProps()}
+          className={cn(styles.emojiButton, CLICKABLE_FOCUS_RING)}
+          key={emoji}
+          onClick={() => pick(emoji)}
+        >
           {emoji}
         </div>
       ))}
-      <div className={styles.moreButton} onClick={() => setFull(true)}>
+      <div
+        {...clickableProps()}
+        className={cn(styles.moreButton, CLICKABLE_FOCUS_RING)}
+        onClick={() => setFull(true)}
+      >
         <PlusIcon size={15} />
       </div>
     </div>
@@ -213,8 +224,12 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
             render={
               <span>
                 <span
-                  className={cx(styles.chip, reaction.mine && styles.chipMine)}
+                  {...clickableProps(onReact)}
                   style={onReact ? undefined : { cursor: 'default' }}
+                  className={cn(
+                    cx(styles.chip, reaction.mine && styles.chipMine),
+                    CLICKABLE_FOCUS_RING,
+                  )}
                   onClick={onReact ? () => void fire(reaction.emoji, !reaction.mine) : undefined}
                 >
                   <span>{reaction.emoji}</span>

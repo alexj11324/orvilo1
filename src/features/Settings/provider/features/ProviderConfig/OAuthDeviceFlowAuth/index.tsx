@@ -5,16 +5,16 @@ import { CopyButton, Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Button, confirmModal, Modal, Text } from '@lobehub/ui/base-ui';
 import { MAX_WIDTH } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2Icon, LogOutIcon, UnplugIcon } from 'lucide-react';
+import { LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
 
 import { useOAuthDeviceFlow } from './useOAuthDeviceFlow';
-
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   card: css`
@@ -232,7 +232,7 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
       if (state === 'requesting' || !deviceCodeInfo)
         return (
           <div className={styles.content}>
-            <Icon spin icon={Loader2Icon} size={24} />
+            <Spinner className="size-6" />
             <Text type="secondary">{t('providerModels.config.oauth.connecting')}</Text>
           </div>
         );
@@ -276,7 +276,7 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
           </Flexbox>
 
           <div className={styles.pollingHint}>
-            <Icon spin icon={Loader2Icon} />
+            <Spinner />
             <span>{t('providerModels.config.oauth.polling')}</span>
           </div>
         </div>

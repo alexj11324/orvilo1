@@ -2,12 +2,13 @@
 
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { CheckCircle2, Copy, Loader2 } from 'lucide-react';
+import { CheckCircle2, Copy } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form from '@/components/GroupForm';
 import { useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -57,6 +58,13 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
   // Filled once creation succeeds; flips the modal to the copy-now step.
   const [createdKey, setCreatedKey] = useState<string>();
 
+  const handleCopy = async () => {
+    if (!createdKey) return;
+    const copied = await copyToClipboard(createdKey);
+    if (copied) toast.success(t('apikey.display.copySuccess'));
+    else toast.error(t('apikey.display.copyError'));
+  };
+
   const scopeMissing = !fullAccess && selectedScopes.length === 0;
   // "Custom date" without a date would silently fall back to never-expires.
   const customDateMissing = expiryPreset === 'custom' && !customDate;
@@ -105,7 +113,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
             title={t('apikey.display.copy')}
             type="button"
             variant="ghost"
-            onClick={() => void copyToClipboard(createdKey)}
+            onClick={() => void handleCopy()}
           >
             <Copy />
           </Button>
@@ -186,11 +194,11 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         <Button
           className="w-full"
           disabled={loading || scopeMissing || customDateMissing}
+          loading={loading}
           size="lg"
           type={'submit'}
           variant="default"
         >
-          {loading && <Loader2 className="animate-spin" />}
           {t('apikey.form.submit')}
         </Button>
       </div>

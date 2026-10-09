@@ -2,6 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +12,7 @@ import TaskProperties from './TaskProperties';
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
   moveWorkflow: vi.fn(),
+  openTaskScheduleDialog: vi.fn(),
   taskState: {
     activeTaskId: 'T-1',
     taskDetailMap: {
@@ -73,6 +75,10 @@ vi.mock('../features/TaskPriorityTag', () => ({
   default: () => <span>priority</span>,
 }));
 
+vi.mock('../features/TaskScheduleDialog', () => ({
+  openTaskScheduleDialog: mocks.openTaskScheduleDialog,
+}));
+
 vi.mock('../features/TaskTriggerTag', () => ({
   default: () => <span>trigger</span>,
 }));
@@ -110,11 +116,43 @@ describe('TaskProperties', () => {
   beforeEach(() => {
     mocks.activeWorkspaceId = 'workspace-1';
     mocks.moveWorkflow.mockClear();
+    mocks.openTaskScheduleDialog.mockClear();
   });
 
   afterEach(() => {
     cleanup();
   });
+
+  it.each(['{Enter}', ' '])(
+    'opens the detail status trigger once with %s and commits a workflow pick',
+    async (key) => {
+      const user = userEvent.setup();
+      const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        render(<TaskProperties />);
+        const trigger = screen.getByRole('button', {
+          name: 'taskDetail.workflow.category.backlog',
+        });
+        const click = vi.fn();
+        trigger.addEventListener('click', click);
+        trigger.focus();
+        await user.keyboard(key);
+        expect(await screen.findByRole('menu')).toBeVisible();
+        expect(screen.getAllByRole('menu')).toHaveLength(1);
+        expect(trigger).toHaveAttribute('aria-expanded', 'true');
+        expect(click).toHaveBeenCalledOnce();
+        expect(errorLog).not.toHaveBeenCalled();
+        await user.click(screen.getByRole('menuitem', { name: /taskList.kanban.todo/ }));
+        await waitFor(() => expect(mocks.moveWorkflow).toHaveBeenCalledOnce());
+        expect(mocks.moveWorkflow).toHaveBeenCalledWith({
+          taskIdentifier: 'T-1',
+          target: { category: 'todo', workflowStateRefId: undefined },
+        });
+      } finally {
+        errorLog.mockRestore();
+      }
+    },
+  );
 
   // The status chip is the menu's trigger element — a wrapper that swallows
   // the props the menu clones on (e.g. a title-less Tooltip) leaves a dead
@@ -130,7 +168,11 @@ describe('TaskProperties', () => {
 
     // The seven workflow categories — execution run states (running,
     // paused, …) are never a status pick anymore.
-    const columnLabels = screen.getAllByText(/^taskList\.kanban\./).map((node) => node.textContent);
+    const statusRows = screen.getAllByText(/^taskList\.kanban\./);
+    for (const row of statusRows) {
+      expect(row.parentElement?.querySelector('[data-workflow-icon]')).toBeTruthy();
+    }
+    const columnLabels = statusRows.map((node) => node.textContent);
     expect(columnLabels).toEqual([
       'taskList.kanban.triage',
       'taskList.kanban.backlog',
@@ -157,6 +199,34 @@ describe('TaskProperties', () => {
         target: { category: 'in_progress', workflowStateRefId: undefined },
       });
     });
+  });
+
+  it('lets a pending-review issue move back to todo through the workflow command', async () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.workflowCategory = 'in_review';
+    detail.status = 'paused';
+    try {
+      const { container } = render(<TaskProperties />);
+      expect(
+        container.querySelector(
+          '[data-task-workflow-state="in_review"] [data-workflow-icon="in_review"]',
+        ),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByText('taskDetail.workflow.category.in_review'));
+      await waitFor(() => expect(screen.getByText('taskList.kanban.todo')).toBeTruthy());
+      fireEvent.click(screen.getByText('taskList.kanban.todo'));
+      await waitFor(() =>
+        expect(mocks.moveWorkflow).toHaveBeenCalledWith({
+          taskIdentifier: 'T-1',
+          target: { category: 'todo', workflowStateRefId: undefined },
+        }),
+      );
+    } finally {
+      delete detail.workflowCategory;
+      detail.status = 'backlog';
+    }
   });
 
   it('opens the status menu from a workflow-linked status chip', async () => {
@@ -197,9 +267,9 @@ describe('TaskProperties', () => {
     }
   });
 
-  it('fills the loaded no-execution property without changing compact badges or unknown state', () => {
+  it('leaves the idle execution property out of the rail without changing compact badges', () => {
     const { unmount } = render(<TaskProperties />);
-    expect(screen.getByText('goalProcess.summary.notStarted')).toBeTruthy();
+    expect(screen.queryByText('goalProcess.summary.notStarted')).toBeNull();
     unmount();
     for (const props of [{ status: 'backlog' }, { showLabel: true }]) {
       const { container, unmount: dispose } = render(<TaskExecutionBadge {...props} />);
@@ -217,21 +287,57 @@ describe('TaskProperties', () => {
     },
   );
 
-  it('renders a Plane label beside each property value', () => {
+  it('renders value-only rows named by their field, without a label column', () => {
     render(<TaskProperties />);
 
-    expect(screen.getByText('taskDetail.property.state')).toBeTruthy();
+    // Default set, like Linear: Status, Assignee, Priority.
+    for (const field of [
+      'taskDetail.property.state',
+      'taskDetail.assignee',
+      'taskDetail.property.priority',
+    ]) {
+      expect(screen.getByRole('group', { name: field })).toBeTruthy();
+      expect(screen.queryByText(field)).toBeNull();
+    }
+
     expect(screen.getByText('taskDetail.workflow.category.backlog')).toBeTruthy();
-    expect(screen.getByText('taskDetail.executionStatus')).toBeTruthy();
-    expect(screen.getByText('taskDetail.assignee')).toBeTruthy();
     expect(screen.getByText('taskDetail.property.addAssignee')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.priority')).toBeTruthy();
     expect(screen.getByText('priority')).toBeTruthy();
-    expect(screen.getByText('taskDetail.dueDate')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
-    expect(screen.getByText('taskDetail.labels.title')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.addLabels')).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.schedule')).toBeTruthy();
+  });
+
+  it('hides unset optional fields and reveals them from the add-property menu', async () => {
+    render(<TaskProperties />);
+
+    for (const field of [
+      'taskDetail.executionStatus',
+      'taskDetail.dueDate',
+      'taskDetail.labels.title',
+      'taskDetail.property.schedule',
+    ]) {
+      expect(screen.queryByRole('group', { name: field })).toBeNull();
+    }
     expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+    fireEvent.click(await screen.findByText('taskDetail.dueDate'));
+
+    expect(screen.getByRole('group', { name: 'taskDetail.dueDate' })).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
+  });
+
+  // The due date used to be a clickable <div>: no role, no tab stop, so the
+  // dialog could not be opened from the keyboard.
+  it('exposes the due date as a focusable button that opens the schedule dialog', async () => {
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+    fireEvent.click(await screen.findByText('taskDetail.dueDate'));
+
+    const dueDate = screen.getByRole('button', { name: 'taskDetail.property.addDueDate' });
+    expect(dueDate.tagName).toBe('BUTTON');
+    expect(dueDate.tabIndex).toBe(0);
+
+    fireEvent.click(dueDate);
+    expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
   });
 });

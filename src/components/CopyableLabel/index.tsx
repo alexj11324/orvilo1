@@ -2,6 +2,7 @@ import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -14,6 +15,7 @@ interface CopyableLabelProps {
 }
 
 const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--', wrap }) => {
+  const { t: tCommon } = useTranslation('common');
   if (wrap) {
     return (
       <div
@@ -35,6 +37,7 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
           {value || '--'}
         </div>
         <Button
+          aria-label={tCommon('copy')}
           className={'text-muted-foreground size-6'}
           size={'icon'}
           variant={'ghost'}
@@ -67,6 +70,7 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
         {value || '--'}
       </div>
       <Button
+        aria-label={tCommon('copy')}
         className={'text-muted-foreground size-6'}
         size={'icon'}
         variant={'ghost'}

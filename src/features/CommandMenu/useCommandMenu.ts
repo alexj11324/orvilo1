@@ -5,8 +5,7 @@ import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { isDesktop } from '@/const/version';
-import { createGoalModal } from '@/features/AgentGoals/CreateGoalModal';
-import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
+import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -35,7 +34,6 @@ const COMMAND_MENU_TYPED_LIMIT_PER_TYPE = 50;
  */
 export const useCommandMenu = () => {
   const [open] = useGlobalStore((s) => [s.status.showCommandMenu]);
-  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const {
     mounted,
     onClose,
@@ -57,7 +55,6 @@ export const useCommandMenu = () => {
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const { createAgent, createEmptyGroup } = useCreateMenuItems();
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
@@ -183,16 +180,6 @@ export const useCommandMenu = () => {
     }
   }, [selectedAgent, search, navigate, setSelectedAgent, onClose]);
 
-  const handleCreateSession = useCallback(async () => {
-    if (!canCreate) return;
-
-    // One-click Orvilo create — fixed type + idempotency key + deterministic
-    // naming + the openNewConversation destination all live in the shared
-    // create path (docs/development/device-execution-contract.md).
-    onClose();
-    await createAgent();
-  }, [canCreate, createAgent, onClose]);
-
   const openNewTopicOrSaveTopic = useChatStore((s) => s.openNewTopicOrSaveTopic);
 
   const handleCreateTopic = useCallback(() => {
@@ -220,13 +207,10 @@ export const useCommandMenu = () => {
   const handleCreateTask = useCallback(() => {
     if (!canCreate) return;
 
-    // Expanding the inline composer *before* navigating means the task page opens
-    // ready to type. This deliberately reuses the same status flag the task page's
-    // own "+" toggles, so there is no second task-creation path to keep in sync.
-    updateSystemStatus({ taskCreateInlineCollapsed: false }, 'expandTaskCreateInline');
     navigate('/tasks');
     onClose();
-  }, [canCreate, navigate, onClose, updateSystemStatus]);
+    createTaskModal();
+  }, [canCreate, navigate, onClose]);
 
   const handleCreateProject = useCallback(() => {
     if (!canCreate) return;
@@ -237,34 +221,19 @@ export const useCommandMenu = () => {
     openCreateProjectModal();
   }, [canCreate, onClose]);
 
-  const handleCreateAgentTeam = useCallback(async () => {
-    if (!canCreate) return;
-    onClose();
-    await createEmptyGroup();
-  }, [canCreate, onClose, createEmptyGroup]);
-
   const handleCreateConversation = useCallback(() => {
     if (!canCreate || topicSelectors.isNewTopicSendInFlight(useChatStore.getState())) return;
     onClose();
     navigate('/chat/new');
   }, [canCreate, onClose, navigate]);
 
-  const handleCreateGoal = useCallback(() => {
-    if (!canCreate) return;
-    onClose();
-    createGoalModal();
-  }, [canCreate, onClose]);
-
   return {
     closeCommandMenu,
     handleAskOrviloAI,
     handleBack,
-    handleCreateAgentTeam,
     handleCreateConversation,
-    handleCreateGoal,
     handleCreateLibrary,
     handleCreateProject,
-    handleCreateSession,
     handleCreateTask,
     handleCreateTopic,
     handleExternalLink,

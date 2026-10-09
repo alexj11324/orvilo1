@@ -144,6 +144,7 @@ const ModelTitle = memo<ModelFetcherProps>(
                 {showAddNewModel && (
                   <Tooltip title={canManageProvider ? undefined : reason}>
                     <Button
+                      aria-label={t('addNew', { ns: 'common' })}
                       disabled={!canManageProvider}
                       icon={PlusIcon}
                       size={'small'}
@@ -179,7 +180,11 @@ const ModelTitle = memo<ModelFetcherProps>(
                     },
                   ]}
                 >
-                  <Button icon={EllipsisVertical} size={'small'} />
+                  <Button
+                    aria-label={t('more', { ns: 'common' })}
+                    icon={EllipsisVertical}
+                    size={'small'}
+                  />
                 </DropdownMenu>
               </Flexbox>
             </Flexbox>

@@ -9,7 +9,6 @@ import {
   Forward,
   Hash,
   Link2,
-  LucideCopy,
   PanelRight,
   PanelTop,
   PencilLine,
@@ -70,7 +69,6 @@ export const useTopicItemDropdownMenu = ({
 
   const [
     autoRenameTopicTitle,
-    duplicateTopic,
     removeTopic,
     favoriteTopic,
     archiveTopic,
@@ -78,7 +76,6 @@ export const useTopicItemDropdownMenu = ({
     updateTopicTitle,
   ] = useChatStore((s) => [
     s.autoRenameTopicTitle,
-    s.duplicateTopic,
     s.removeTopic,
     s.favoriteTopic,
     s.archiveTopic,
@@ -237,15 +234,6 @@ export const useTopicItemDropdownMenu = ({
         type: 'divider' as const,
       },
       {
-        disabled: !canCreateTopic,
-        icon: <LucideCopy />,
-        key: 'duplicate',
-        label: t('actions.duplicate'),
-        onClick: () => {
-          duplicateTopic(id);
-        },
-      },
-      {
         disabled: !canCreateTopic || !activeAgentId,
         icon: <Forward />,
         key: 'forwardToAgent',
@@ -316,7 +304,6 @@ export const useTopicItemDropdownMenu = ({
     archiveTopic,
     unarchiveTopic,
     autoRenameTopicTitle,
-    duplicateTopic,
     favoriteTopic,
     removeTopic,
     updateTopicTitle,

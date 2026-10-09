@@ -3,7 +3,7 @@
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -16,13 +16,7 @@ const Title = memo(() => {
 
   return (
     <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
-      <Avatar
-        avatar={meta.avatar}
-        background={meta.backgroundColor}
-        name={displayName}
-        shape="square"
-        size={24}
-      />
+      <AssigneeAvatar agentId={agentId} size={24} />
       <div className="truncate min-w-0 font-medium">{displayName}</div>
     </div>
   );

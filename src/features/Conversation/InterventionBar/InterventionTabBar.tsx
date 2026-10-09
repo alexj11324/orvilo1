@@ -1,10 +1,12 @@
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCheck } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { type PendingIntervention } from '../store/slices/data/pendingInterventions';
 import { styles } from './style';
@@ -33,8 +35,12 @@ const InterventionTabBar = memo<InterventionTabBarProps>(
       <div className={styles.tabBar}>
         {interventions.map((item, index) => (
           <div
-            className={cx(styles.tab, index === activeIndex && styles.tabActive)}
+            {...clickableProps()}
             key={item.toolCallId}
+            className={cn(
+              cx(styles.tab, index === activeIndex && styles.tabActive),
+              CLICKABLE_FOCUS_RING,
+            )}
             onClick={() => onTabChange(index)}
           >
             🔧 {item.apiName}

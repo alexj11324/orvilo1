@@ -2,7 +2,7 @@
 set -euo pipefail
 umask 077
 mode="${1:?}" directory="${2:?}" candidate="${3:?}" harness="${4:?}" image="${5:?}"
-[[ "$directory" == /var/lib/orvilo1-qa-permission-20261008 && "$candidate" == c02d5592605fe56b73b1dd6289ff6e661f5326c9 ]]
+[[ "$directory" == /var/lib/orvilo1-qa-permission-20261008 && "$candidate" == 56eb1e0b3e1d1d39af4c64ce84d717b7599e9c71 ]]
 [[ "$harness" =~ ^[a-f0-9]{40}$ && "$harness" != "$candidate" ]]
 [[ "$image" =~ ^ghcr.io/alexj11324/orvilo1@sha256:[a-f0-9]{64}$ ]]
 [[ "$mode" == dry-run || "$mode" == activate ]]

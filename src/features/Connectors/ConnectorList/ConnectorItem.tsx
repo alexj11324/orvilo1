@@ -1,8 +1,10 @@
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { LinkIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import type { ConnectorWithTools } from '@/store/tool/slices/connector';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   active: css`
@@ -37,7 +39,7 @@ const ConnectorItem = memo<ConnectorItemProps>(({ connector, active, onClick }) 
   const itemClass = active ? `${styles.item} ${styles.active}` : styles.item;
 
   return (
-    <div className={itemClass} onClick={onClick}>
+    <div {...clickableProps()} className={cn(itemClass, CLICKABLE_FOCUS_RING)} onClick={onClick}>
       <LinkIcon size={14} />
       <span style={{ flex: 1, fontSize: 14 }}>{connector.name}</span>
     </div>

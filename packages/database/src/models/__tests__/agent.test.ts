@@ -3079,6 +3079,7 @@ describe('AgentModel', () => {
         name: 'JA',
         avatar: 'JV',
         virtual: false,
+        // Replay stored pre-migration JSON without weakening the current config type.
         agencyConfig: sql`${JSON.stringify({ heterogeneousProvider: { command: 'codex' } })}::jsonb`,
       });
       const result = await agentModel.queryAgents();

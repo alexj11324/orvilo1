@@ -2,6 +2,7 @@ import type { RecentItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { BookmarkIcon, FileTextIcon, HashIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import InlineRename from '@/components/InlineRename';
@@ -24,6 +25,7 @@ const TYPE_ICON_MAP: Partial<Record<RecentItem['type'], typeof FileTextIcon>> = 
 };
 
 const RecentListItem = memo<RecentItem>((item) => {
+  const { t: tCommon } = useTranslation('common');
   const { title, type, agentId, id, status } = item;
   const IconComponent = TYPE_ICON_MAP[type] || FileTextIcon;
   const [editing, setEditing] = useState(false);
@@ -61,7 +63,12 @@ const RecentListItem = memo<RecentItem>((item) => {
         actions={
           hasOverflowMenu ? (
             <SidebarDropdownMenu items={menuItems}>
-              <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
+              <ActionIcon
+                aria-label={tCommon('more')}
+                icon={MoreHorizontalIcon}
+                size={'small'}
+                style={{ flex: 'none' }}
+              />
             </SidebarDropdownMenu>
           ) : undefined
         }

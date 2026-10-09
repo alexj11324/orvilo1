@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useConversationStore } from '../../store';
 import { pickArmedMessage } from './armedMessage';
@@ -147,7 +148,11 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
       )}
     >
       <div
-        className={cn('flex items-center gap-2 justify-between', styles.head)}
+        {...clickableProps()}
+        className={cn(
+          cn('flex items-center gap-2 justify-between', styles.head),
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={() => setOpen(!open)}
       >
         <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
@@ -181,6 +186,7 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
                     render={
                       <span style={{ display: 'inline-flex' }}>
                         <ActionIcon
+                          aria-label={t('edit', { ns: 'common' })}
                           className={cx('verify-tray-goal-edit', styles.rowEdit)}
                           icon={PencilIcon}
                           size={'small'}

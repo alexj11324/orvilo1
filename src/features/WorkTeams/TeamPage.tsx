@@ -7,6 +7,7 @@ import { useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { Skeleton } from '@/components/ui/skeleton';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
@@ -255,20 +256,15 @@ const TeamPage = memo(() => {
 
               {teamTab === 'projects' ? (
                 isTeamProjectsLoading ? (
-                  <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+                  <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-0.5">
                     {Array.from({ length: 4 }, (_, index) => (
-                      <Skeleton className="h-10 w-full" key={index} />
+                      <Skeleton className="h-11 w-full" key={index} />
                     ))}
                   </div>
                 ) : teamProjectsError && teamProjects.length === 0 ? (
                   <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
                 ) : teamProjects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center flex-1 p-12">
-                    <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-                      <PROJECT_ENTITY_ICON aria-hidden className="size-8" />
-                      <p>{t('teams.projectsEmpty')}</p>
-                    </div>
-                  </div>
+                  <SimpleEmpty description={t('teams.projectsEmpty')} icon={PROJECT_ENTITY_ICON} />
                 ) : (
                   <div className="flex flex-col" style={{ gap: 2 }}>
                     {teamProjectsError ? (

@@ -47,6 +47,7 @@ const TopicCommentsSidebar = memo(() => {
     <div className={cx('flex flex-col', styles.container)}>
       <div className={cx('flex flex-row items-center gap-1', styles.subheader)}>
         <ActionIcon
+          aria-label={t('back', { ns: 'common' })}
           icon={ArrowLeft}
           size={DESKTOP_HEADER_ICON_SMALL_SIZE}
           onClick={isThread ? goBack : () => openTopicComments(view.topicId)}

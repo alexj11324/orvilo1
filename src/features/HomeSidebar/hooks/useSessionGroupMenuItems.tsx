@@ -3,16 +3,13 @@ import { FolderCogIcon, FolderPenIcon, Trash } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import { type ItemType } from '@/components/Menu';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
-import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { requestAgentRuntime } from '@/features/CreateAgent';
 import { openEditingPopover } from '@/features/EditingPopover/store';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
-import { useAgentGroupStore } from '@/store/agentGroup';
 import { useHomeStore } from '@/store/home';
 
 type MenuItem = NonNullable<ItemType> & { sfSymbol?: SFSymbol };
@@ -24,7 +21,6 @@ type MenuItem = NonNullable<ItemType> & { sfSymbol?: SFSymbol };
 export const useSessionGroupMenuItems = () => {
   const { t } = useTranslation(['chat', 'common']);
 
-  const groupTemplates = useGroupTemplates();
   const { allowed: canCreate } = usePermission('create_content');
   const { allowed: canEdit } = usePermission('edit_own_content');
 
@@ -34,10 +30,8 @@ export const useSessionGroupMenuItems = () => {
     s.refreshAgentList,
     s.privateAgentGroups,
   ]);
-  const [createGroup] = useAgentGroupStore((s) => [s.createGroup]);
 
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
   /**
    * Rename group menu item
@@ -172,182 +166,11 @@ export const useSessionGroupMenuItems = () => {
     [canCreate, t, storeCreateAgent, refreshAgentList, privateGroups],
   );
 
-  /**
-   * Create group chat in group menu item
-   * Opens member selection modal
-   */
-  const createGroupChatInGroupMenuItem = useCallback(
-    (
-      _groupId: string,
-      onOpenMemberSelection: (callbacks: {
-        onCancel: () => void;
-        onConfirm: (selectedAgents: string[]) => Promise<void>;
-      }) => void,
-    ): MenuItem => {
-      const iconElement = <FolderPenIcon size={14} />;
-      return {
-        disabled: !canCreate,
-        icon: iconElement,
-        key: 'createGroupChat',
-        label: t('newGroupChat'),
-        sfSymbol: 'person.2',
-        onClick: async (info: any) => {
-          info.domEvent?.stopPropagation();
-          if (!canCreate) return;
-
-          onOpenMemberSelection({
-            onCancel: () => {},
-            onConfirm: async (selectedAgents) => {
-              setIsCreatingGroup(true);
-              try {
-                await createGroup(
-                  {
-                    config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
-                    title: t('newGroupTitle'),
-                  },
-                  selectedAgents,
-                );
-              } catch (error) {
-                console.error('Failed to create group:', error);
-                toast.error(t('sessionGroup.createGroupFailed'));
-              } finally {
-                setIsCreatingGroup(false);
-              }
-            },
-          });
-        },
-      };
-    },
-    [canCreate, t, createGroup],
-  );
-
-  /**
-   * Create group from template
-   * Internal helper function used by create menu items
-   */
-  const createGroupFromTemplate = useCallback(
-    async (
-      templateId: string,
-      selectedMemberTitles?: string[],
-      options?: { groupId?: string; visibility?: 'private' | 'public' },
-    ) => {
-      if (!canCreate) return false;
-
-      setIsCreatingGroup(true);
-      try {
-        const template = groupTemplates.find((t) => t.id === templateId);
-        if (!template) {
-          throw new Error(`Template ${templateId} not found`);
-        }
-
-        const membersToCreate =
-          typeof selectedMemberTitles === 'undefined'
-            ? template.members
-            : template.members.filter((m) => selectedMemberTitles.includes(m.title));
-
-        const visibility = options?.groupId
-          ? privateGroups.some((group) => group.id === options.groupId)
-            ? 'private'
-            : 'public'
-          : options?.visibility;
-        const runtimeConfig = await requestAgentRuntime({ visibility });
-        if (!runtimeConfig) return false;
-
-        const memberAgentIds: string[] = [];
-        for (const member of membersToCreate) {
-          const result = await storeCreateAgent({
-            config: {
-              ...runtimeConfig,
-              // MetaData fields
-              avatar: member.avatar,
-
-              backgroundColor: member.backgroundColor,
-
-              description: `${member.title} - ${template.description}`,
-
-              plugins: member.plugins,
-              systemRole: member.systemRole,
-              title: member.title,
-              virtual: true,
-            },
-            visibility,
-          });
-
-          await refreshAgentList();
-
-          // Get agentId directly from createAgent result
-          if (result.agentId) {
-            memberAgentIds.push(result.agentId);
-          }
-        }
-
-        await new Promise<void>((resolve) => {
-          setTimeout(() => resolve(), 1000);
-        });
-
-        await createGroup(
-          {
-            config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
-            title: template.title,
-            groupId: options?.groupId,
-            visibility,
-          },
-          memberAgentIds,
-        );
-
-        return true;
-      } catch (error) {
-        console.error('Failed to create group from template:', error);
-        toast.error(t('sessionGroup.createGroupFailed'));
-        return false;
-      } finally {
-        setIsCreatingGroup(false);
-      }
-    },
-    [canCreate, groupTemplates, storeCreateAgent, refreshAgentList, createGroup, privateGroups, t],
-  );
-
-  /**
-   * Create group with members
-   * Internal helper function used by create menu items
-   */
-  const createGroupWithMembers = useCallback(
-    async (selectedAgents: string[], groupTitle?: string) => {
-      if (!canCreate) return false;
-
-      setIsCreatingGroup(true);
-      try {
-        const title = groupTitle || t('defaultGroupChat');
-
-        await createGroup(
-          {
-            config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
-            title,
-          },
-          selectedAgents,
-        );
-
-        return true;
-      } catch (error) {
-        console.error('Failed to create group:', error);
-        toast.error(t('sessionGroup.createGroupFailed'));
-        return false;
-      } finally {
-        setIsCreatingGroup(false);
-      }
-    },
-    [canCreate, createGroup, t],
-  );
-
   return {
     configGroupMenuItem,
     createAgentInGroupMenuItem,
-    createGroupChatInGroupMenuItem,
-    createGroupFromTemplate,
-    createGroupWithMembers,
     deleteGroupMenuItem,
     isCreatingAgent,
-    isCreatingGroup,
     renameGroupMenuItem,
   };
 };

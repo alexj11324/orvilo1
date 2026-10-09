@@ -113,6 +113,7 @@ const OpeningQuestions = memo(() => {
             }}
           />
           <Button
+            aria-label={t('addNew', { ns: 'common' })}
             // don't allow repeat
             disabled={disabled || openingQuestions.includes(questionInput.trim())}
             size={'icon'}
@@ -143,6 +144,7 @@ const OpeningQuestions = memo(() => {
                 {!disabled && <SortableItemHandle />}
                 <div className={styles.questionItemContent}>{item.content}</div>
                 <ActionIcon
+                  aria-label={t('delete', { ns: 'common' })}
                   disabled={disabled}
                   icon={Trash}
                   size={'small'}

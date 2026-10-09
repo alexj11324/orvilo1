@@ -167,26 +167,15 @@ describe('Agent topic list', () => {
     chatStoreStateMock.allTopicsDrawerOpen = false;
   });
 
-  it('opens the agent chat route from the empty start topic entry', () => {
-    render(<TopicList />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
-
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1');
-  });
-
-  it('disables the empty start topic entry for workspace viewers', () => {
-    permissionMock.create_content = false;
-
-    render(<TopicList />);
-
-    const startButton = screen.getByRole('button', { name: 'actions.addNewTopic' });
-    expect(startButton).toBeDisabled();
-
-    fireEvent.click(startButton);
-
-    expect(pushMock).not.toHaveBeenCalled();
-  });
+  it.each([true, false])(
+    'does not create conversations from the empty sidebar (permission=%s)',
+    (allowed) => {
+      permissionMock.create_content = allowed;
+      render(<TopicList />);
+      expect(screen.queryByRole('button', { name: 'actions.addNewTopic' })).not.toBeInTheDocument();
+      expect(pushMock).not.toHaveBeenCalled();
+    },
+  );
 
   it('opens the all-topics drawer from the load-more entry', () => {
     render(<TopicList />);

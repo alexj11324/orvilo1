@@ -259,8 +259,8 @@ const LINE_DIFF_CLASS = [
   '[[data-code-line-numbers]_&]:data-[diff]:after:-left-(--code-block-gutter-gap)',
   '[[data-code-line-numbers]_&]:data-[diff]:after:w-(--code-block-gutter-gap)',
   'data-[diff]:after:select-none',
-  'data-[diff=add]:after:text-success',
-  'data-[diff=remove]:after:text-destructive',
+  'data-[diff=add]:after:text-success-text',
+  'data-[diff=remove]:after:text-destructive-text',
   "data-[diff=add]:after:content-['+']",
   "data-[diff=remove]:after:content-['-']",
 ].join(' ');
@@ -273,10 +273,10 @@ const LINE_STATE_CLASS = [
   'data-[level=error]:bg-(--code-block-error-bg)',
   'data-[level=warning]:bg-(--code-block-warning-bg)',
   'data-[level=info]:bg-(--code-block-info-bg)',
-  'data-[selected]:bg-accent',
+  'data-[selected]:bg-selected',
   /* Arrow navigation needs a visible position (WCAG 2.4.7); gated on the
      selectable listbox so plain blocks stay inert on hover. */
-  '[[data-selectable]_&]:data-[active]:bg-muted/40',
+  '[[data-selectable]_&]:data-[active]:bg-accent',
 ].join(' ');
 
 /**
@@ -546,14 +546,14 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
           }
           className={cn(
             /* Styled as a ghost xs button rather than composed from Button:
-               the ghost variant paints aria-expanded:bg-muted, which would
+               the ghost variant paints aria-expanded:bg-accent, which would
                keep every UNFOLDED toggle lit, and its icon rungs do not fit
                an 18px channel. Hover feedback only; folded state reads
                through color. */
             /* Square, centred in the line box: height matches the width and
                the translate makes up the difference to the 24px line. Open
                regions read darker than folded ones. */
-            'text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-[4px] align-top outline-none focus-visible:ring-2',
+            'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-[4px] align-top outline-none focus-visible:ring-2',
             /* Margins cancel: -(4px + width) then +4px, so the toggle paints
                in the channel, sits 4px from the code, and the code still
                starts where a row without a toggle does. An uncancelled
@@ -631,7 +631,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
              the source. The copy button reads the raw code and never sees it. */
           <button
             aria-label={`Unfold ${hiddenCount} hidden lines`}
-            className="bg-muted/80 text-muted-foreground hover:bg-muted ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-sm px-1.5 align-top text-[0.8em] leading-none select-none"
+            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-sm px-1.5 align-top text-[0.8em] leading-none select-none"
             data-slot="code-block-fold-marker"
             tabIndex={selectable ? -1 : undefined}
             type="button"

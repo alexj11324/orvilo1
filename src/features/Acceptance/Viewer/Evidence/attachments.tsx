@@ -3,12 +3,13 @@
 import { Image } from '@lobehub/ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
-import { ImagePlus, Loader2, X } from 'lucide-react';
+import { ImagePlus, X } from 'lucide-react';
 import { type ClipboardEvent, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Upload } from '@/components/Upload';
 import { useFileStore } from '@/store/file';
 
@@ -229,7 +230,7 @@ export const AttachmentStrip = memo<AttachmentStripProps>(
         ))}
         {uploading && (
           <div className={cx(styles.thumb, styles.thumbLoading)}>
-            <Loader2 className="animate-spin" size={16} />
+            <Spinner />
           </div>
         )}
       </div>

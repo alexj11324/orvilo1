@@ -1,9 +1,11 @@
 'use client';
 
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useEffect, useRef } from 'react';
 
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { ApiEntry } from './useDevtoolsEntries';
 
@@ -143,10 +145,14 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
           const { head, tail } = splitName(api.apiName);
           return (
             <div
-              className={cx(cx(styles.item, active && styles.itemActive), 'flex')}
+              {...clickableProps()}
               data-api={api.apiName}
               key={api.apiName}
               title={api.apiName}
+              className={cn(
+                cx(cx(styles.item, active && styles.itemActive), 'flex'),
+                CLICKABLE_FOCUS_RING,
+              )}
               onClick={() => onSelect(api.apiName)}
             >
               <span className={cx(styles.dot, api.render && styles.dotActive)} />

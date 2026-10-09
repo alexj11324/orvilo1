@@ -1,5 +1,6 @@
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const ChatHeaderTitle = memo(() => {
   const { t } = useTranslation(['chat', 'topic']);
@@ -31,7 +33,11 @@ const ChatHeaderTitle = memo(() => {
   return (
     <ChatHeader.Title
       desc={
-        <div className="flex items-center gap-1" onClick={() => toggleConfig()}>
+        <div
+          {...clickableProps()}
+          className={cn('flex items-center gap-1', CLICKABLE_FOCUS_RING)}
+          onClick={() => toggleConfig()}
+        >
           <span
             style={{
               maxWidth: '60vw',
@@ -44,6 +50,7 @@ const ChatHeaderTitle = memo(() => {
           </span>
           <ActionIcon
             active
+            aria-label={t('toggle', { ns: 'common' })}
             icon={ChevronDown}
             size={{ blockSize: 14, borderRadius: '50%', size: 12 }}
             style={{
@@ -55,6 +62,8 @@ const ChatHeaderTitle = memo(() => {
       }
       title={
         <div
+          {...clickableProps()}
+          className={CLICKABLE_FOCUS_RING}
           style={{
             marginRight: '8px',
             maxWidth: '64vw',

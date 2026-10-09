@@ -1,6 +1,7 @@
 import { BrainOffIcon } from '@lobehub/ui/icons';
 import { type UserMemoryEffort } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
 import { Brain } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -11,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
@@ -69,9 +71,10 @@ const ToggleItem = memo<ToggleOption>(({ value, description, icon, label }) => {
 
   return (
     <div
-      className={cx(
-        'flex flex-row items-start gap-3',
-        cx(styles.option, isActive && styles.active),
+      {...clickableProps()}
+      className={cn(
+        cx('flex flex-row items-start gap-3', cx(styles.option, isActive && styles.active)),
+        CLICKABLE_FOCUS_RING,
       )}
       style={{
         cursor: canCreate ? undefined : 'not-allowed',

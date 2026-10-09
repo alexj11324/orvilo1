@@ -76,6 +76,8 @@ export function ProjectOverviewField({
         aria-busy={saving || undefined}
         aria-invalid={failed || undefined}
         aria-label={t(kind === 'name' ? 'rename.nameLabel' : 'overview.projectSummary')}
+        // Inline-edit heading: no field chrome until focused, like the issue title.
+        className={`${styles.input} rounded-none border-0 px-0 shadow-none focus-visible:ring-0 dark:bg-transparent`}
 
         maxLength={kind === 'name' ? 255 : 280}
         placeholder={kind === 'summary' ? t('create.summaryPlaceholder') : undefined}

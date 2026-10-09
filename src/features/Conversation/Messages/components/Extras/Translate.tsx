@@ -52,6 +52,7 @@ const Translate = memo<TranslateProps>(({ content = '', from, to, id, loading })
             }}
           />
           <ActionIcon
+            aria-label={t('toggle')}
             icon={show ? ChevronDown : ChevronUp}
             size={'small'}
             onClick={() => {

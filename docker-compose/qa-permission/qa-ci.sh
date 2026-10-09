@@ -10,7 +10,7 @@ python3 - "$SSH_HOST" <<'PY'
 import ipaddress, sys
 ipaddress.IPv4Address(sys.argv[1])
 PY
-candidate=c02d5592605fe56b73b1dd6289ff6e661f5326c9
+candidate=56eb1e0b3e1d1d39af4c64ce84d717b7599e9c71
 state="$RUNNER_TEMP/qa-permission-state"
 secret_dir="$RUNNER_TEMP/qa-env-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 bundle="$RUNNER_TEMP/qa-permission-bundle"

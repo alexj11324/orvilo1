@@ -16,13 +16,7 @@ import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -31,7 +25,7 @@ import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import NavHeader from '@/features/NavHeader';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
@@ -40,6 +34,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import AgentCard, { cardStyles } from './AgentCard';
 import AgentRow, { type AgentRowAuthor } from './AgentRow';
@@ -102,12 +97,16 @@ const groupHeaderStyles = createStaticStyles(({ css, cssVar }) => ({
 const GroupHeader = memo<GroupHeaderProps>(
   ({ avatar, collapsed, color, count, index, label, onToggle }) => (
     <div
+      {...clickableProps()}
       className={cn(
-        'flex items-center gap-2',
-        cx(
-          groupHeaderStyles.bar,
-          index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
+        cn(
+          'flex items-center gap-2',
+          cx(
+            groupHeaderStyles.bar,
+            index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
+          ),
         ),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={onToggle}
     >
@@ -403,13 +402,7 @@ const AgentViewAllPage = memo(() => {
   );
 
   const { allowed: canCreate, reason: createBlockedReason } = usePermission('create_content');
-  const {
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-    isMutatingAgent,
-  } = useCreateMenuItems();
+  const { createAgentMenuItem, createConnectAgentMenuItem, isMutatingAgent } = useCreateMenuItems();
 
   // Creating from the Private tab lands the item in the private bucket, so
   // the new row appears in the list the user is currently looking at.
@@ -425,30 +418,19 @@ const AgentViewAllPage = memo(() => {
   // very page.
   const createMenuItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem(createOptions);
-    const groupFromDescription = createGroupFromDescriptionMenuItem(createOptions);
     return [
       createAgentMenuItem(createOptions),
-      createGroupChatMenuItem(createOptions),
-      // Optional secondary: template generation stays available but never gates
-      // the direct-create path above.
-      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
     ];
-  }, [
-    createAgentMenuItem,
-    createConnectAgentMenuItem,
-    createGroupChatMenuItem,
-    createGroupFromDescriptionMenuItem,
-    createOptions,
-  ]);
+  }, [createAgentMenuItem, createConnectAgentMenuItem, createOptions]);
 
   const { errorProps, view: listView } = useAgentListView(filteredItems.length);
 
   return (
-    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
+    <WorkSurface>
       <NavHeader
         left={
-          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
+          <div className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
             {t('agentViewAll.title')}
           </div>
         }
@@ -462,7 +444,7 @@ const AgentViewAllPage = memo(() => {
           />
         }
       />
-      <WideScreenContainer className="gap-4 py-4" wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+      <WorkSurfaceCollection className="flex flex-col gap-4">
         {/* Mobile widths wrap the search/create cluster onto its own line
             rather than forcing the controls past the viewport. */}
         <div className="flex items-center gap-3 justify-between flex-wrap">
@@ -508,7 +490,7 @@ const AgentViewAllPage = memo(() => {
             )}
             {canCreate ? (
               <SidebarDropdownMenu items={createMenuItems}>
-                <Button loading={isMutatingAgent}>
+                <Button aria-label={t('agentViewAll.createAgent')} loading={isMutatingAgent}>
                   <PlusIcon data-icon="inline-start" />
                   <ChevronDownIcon size={14} />
                 </Button>
@@ -519,7 +501,7 @@ const AgentViewAllPage = memo(() => {
                   <TooltipTrigger
                     render={
                       <span style={{ display: 'inline-flex' }}>
-                        <Button disabled>
+                        <Button disabled aria-label={t('agentViewAll.createAgent')}>
                           <PlusIcon data-icon="inline-start" />
                           <ChevronDownIcon size={14} />
                         </Button>
@@ -543,11 +525,17 @@ const AgentViewAllPage = memo(() => {
                 <EmptyMedia variant="icon">
                   <Search />
                 </EmptyMedia>
-                <EmptyTitle />
-                <EmptyDescription>
+                <EmptyTitle>
                   {keyword.trim() ? t('navPanel.searchResultEmpty') : t('agentViewAll.empty')}
-                </EmptyDescription>
+                </EmptyTitle>
               </EmptyHeader>
+              {keyword.trim() ? (
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => setKeyword('')}>
+                    {t('agentViewAll.clearSearch')}
+                  </Button>
+                </EmptyContent>
+              ) : null}
             </Empty>
           </div>
         ) : viewMode === 'card' ? (
@@ -603,8 +591,8 @@ const AgentViewAllPage = memo(() => {
               : filteredItems.map(renderRow)}
           </div>
         )}
-      </WideScreenContainer>
-    </div>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

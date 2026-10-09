@@ -77,6 +77,8 @@ export const useGitHubConnection = (onConnected: () => void | Promise<void>) => 
   }, [checkConnection, t, waiting]);
 
   const connect = async () => {
+    // No `noopener` here: the hook drives this handle (`location.href`,
+    // `closed`) and the OAuth callback page reports back via `window.opener`.
     popup.current = isDesktop ? null : window.open('', '_blank', 'width=600,height=700');
     if (!isDesktop && !popup.current) {
       toast.error(t('reviews.connectGitHubFailed'));
@@ -93,7 +95,7 @@ export const useGitHubConnection = (onConnected: () => void | Promise<void>) => 
         // opens that same account's hosted Reviews page, then observes its
         // server-side connection when the user returns to the app.
         const serverUrl = electronSyncSelectors.remoteServerUrl(useElectronStore.getState());
-        window.open(new URL('/reviews', serverUrl).toString(), '_blank');
+        window.open(new URL('/reviews', serverUrl).toString(), '_blank', 'noopener,noreferrer');
         setWaiting(true);
         return;
       }

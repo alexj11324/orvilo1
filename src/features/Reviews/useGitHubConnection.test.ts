@@ -112,4 +112,33 @@ describe('useGitHubConnection', () => {
     expect(result.current.waiting).toBe(false);
     vi.useRealTimers();
   });
+
+  it('hands the desktop Reviews page to the system browser without an opener', async () => {
+    vi.resetModules();
+    vi.doMock('@orvilo/const', () => ({ isDesktop: true }));
+    vi.doMock('@/store/electron/selectors', () => ({
+      electronSyncSelectors: { remoteServerUrl: () => 'https://orvilo.example.com' },
+    }));
+    try {
+      const { useGitHubConnection: useDesktopConnection } = await import('./useGitHubConnection');
+      status.mockResolvedValue({ data: { connected: false } });
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      const { result } = renderHook(() => useDesktopConnection(vi.fn()));
+
+      await act(async () => {
+        await result.current.connect();
+      });
+
+      expect(open).toHaveBeenCalledExactlyOnceWith(
+        'https://orvilo.example.com/reviews',
+        '_blank',
+        'noopener,noreferrer',
+      );
+      expect(result.current.waiting).toBe(true);
+    } finally {
+      vi.doUnmock('@orvilo/const');
+      vi.doUnmock('@/store/electron/selectors');
+      vi.resetModules();
+    }
+  });
 });

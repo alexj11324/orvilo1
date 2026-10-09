@@ -22,6 +22,7 @@ import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import SocialConnectButton from './SocialConnectButton';
 import { type MarketUserProfile } from './types';
@@ -585,6 +586,8 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   {bannerUrl && (
                     <div className="flex items-center justify-end gap-2">
                       <div
+                        {...clickableProps()}
+                        className={CLICKABLE_FOCUS_RING}
                         style={{
                           color: cssVar.colorError,
                           cursor: 'pointer',

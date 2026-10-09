@@ -1,12 +1,14 @@
 'use client';
 
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors } from '@/store/chat/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   item: css`
@@ -109,8 +111,12 @@ const ThreadSwitcher = memo<ThreadSwitcherProps>(({ title }) => {
     >
       {threads.map((thread) => (
         <div
-          className={cx(styles.item, thread.id === activeThreadId && styles.itemActive)}
+          {...clickableProps()}
           key={thread.id}
+          className={cn(
+            cx(styles.item, thread.id === activeThreadId && styles.itemActive),
+            CLICKABLE_FOCUS_RING,
+          )}
           onClick={() => handleSwitch(thread.id)}
         >
           {thread.title || t('thread.title')}

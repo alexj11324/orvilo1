@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { useNavLayout } from './useNavLayout';
+
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: { toggleCommandMenu: () => void }) => unknown) =>
     selector({ toggleCommandMenu: vi.fn() }),
@@ -22,7 +24,8 @@ const RETIRED_SIDEBAR_KEYS = [
   'memory',
   'pages',
   'home',
-  'tasks',
+  'reviews',
+  'create',
   'automations',
   'resource',
   'recents',
@@ -31,28 +34,26 @@ const RETIRED_SIDEBAR_KEYS = [
   'views',
 ];
 
-const renderedKeys = async () => {
-  const { useNavLayout } = await import('./useNavLayout');
+const renderedKeys = () => {
   const { result } = renderHook(() => useNavLayout());
   return [...result.current.topNavItems, ...result.current.bottomMenuItems].map((item) => item.key);
 };
 
 describe('useNavLayout', () => {
-  it.each(RETIRED_SIDEBAR_KEYS)('never renders the retired "%s" destination', async (key) => {
-    expect(await renderedKeys()).not.toContain(key);
+  it.each(RETIRED_SIDEBAR_KEYS)('never renders the retired "%s" destination', (key) => {
+    expect(renderedKeys()).not.toContain(key);
   });
 
-  it('keeps the fixed primary entries: inbox, my work, reviews, agent, groups', async () => {
-    const { useNavLayout } = await import('./useNavLayout');
+  it('keeps the fixed primary entries: Issues, inbox, my work, agent, groups', () => {
     const { result } = renderHook(() => useNavLayout());
     const keys = result.current.topNavItems.map((item) => item.key);
 
-    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'group']);
+    expect(keys).toEqual(['tasks', 'inbox', 'my-work', 'agent', 'group']);
     expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
     expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
       '/my-issues',
     );
-    expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe('/reviews');
+    expect(result.current.topNavItems.find((item) => item.key === 'tasks')?.url).toBe('/tasks');
     // Agent lands on the workspace session (builtin inbox agent), not the
     // agents view-all list — `/agent` alone has no index and redirects away.
     expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe(

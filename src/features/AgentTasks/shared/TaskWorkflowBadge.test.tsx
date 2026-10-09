@@ -70,6 +70,13 @@ describe('TaskWorkflowBadge', () => {
     expect(container.querySelector('[data-task-workflow-state="in_progress"]')).toBeInTheDocument();
   });
 
+  it('reads a task without a category as backlog, so the slot always holds one mark', () => {
+    const { container } = render(<TaskWorkflowBadge executionStatus={'running'} />);
+
+    expect(container.querySelector('[data-task-workflow-state="backlog"]')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toHaveAttribute('data-workflow-icon', 'backlog');
+  });
+
   it('keeps external Done separate from an unverified delivery', () => {
     render(
       <TaskWorkflowBadge

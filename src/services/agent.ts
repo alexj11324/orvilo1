@@ -10,6 +10,8 @@ export interface AvailableAgentItem {
   avatar: string | null;
   backgroundColor: string | null;
   description: string | null;
+  /** Runtime branding from the stored config; normal built-in Agents carry `orvilo`. */
+  heterogeneousType: string;
   id: string;
   /** Personal name; resolve the label with `agentDisplayName(item, fallback)`. */
   name: string | null;

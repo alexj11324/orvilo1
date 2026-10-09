@@ -99,7 +99,12 @@ const SearchInput = memo(() => {
         </div>
       </div>
       {showIcon && (
-        <ActionIcon icon={SearchIcon} style={{ marginRight: 4 }} onClick={handleExpand} />
+        <ActionIcon
+          aria-label={t('search', { ns: 'common' })}
+          icon={SearchIcon}
+          style={{ marginRight: 4 }}
+          onClick={handleExpand}
+        />
       )}
     </>
   );

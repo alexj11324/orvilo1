@@ -484,6 +484,8 @@
   "detail.methodLlm": "LLM 判断",
   "detail.methodProgram": "程序化检查",
   "detail.model": "判断模型",
+  "detail.notFound.desc": "该检查项可能已被移除，或已无法访问。",
+  "detail.notFound.title": "未找到检查项",
   "detail.openTrace": "查看 Agent 执行轨迹",
   "detail.pending": "该检查项尚未运行。",
   "detail.reasoning": "判定依据",

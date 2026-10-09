@@ -1,5 +1,6 @@
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon, Folder } from 'lucide-react';
 import { memo } from 'react';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { formatSize } from '@/utils/format';
 import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
 
@@ -126,8 +128,12 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
             isSupportedForChunking && (
               <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
                 <div
-                  className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
+                  {...clickableProps()}
                   style={{ cursor: 'pointer' }}
+                  className={cn(
+                    cx('floatingChunkBadge', styles.floatingChunkBadge),
+                    CLICKABLE_FOCUS_RING,
+                  )}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!isCreatingFileParseTask) {
@@ -135,7 +141,12 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
                     }
                   }}
                 >
-                  <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                  <Button
+                    aria-label={t('FileManager.actions.chunkingTooltip')}
+                    loading={isCreatingFileParseTask}
+                    size="sm"
+                    variant="ghost"
+                  >
                     <FileBoxIcon data-icon="inline-start" />
                   </Button>
                 </div>

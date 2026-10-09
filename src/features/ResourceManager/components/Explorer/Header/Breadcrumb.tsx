@@ -1,4 +1,5 @@
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -10,6 +11,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useFileStore } from '@/store/file';
 import { knowledgeBaseSelectors, useKnowledgeBaseStore } from '@/store/library';
 import { FilesTabs } from '@/types/files';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   breadcrumb: css`
@@ -110,8 +112,12 @@ const Breadcrumb = memo<BreadcrumbProps>(({ category, fileName }) => {
   return (
     <div className={cx('flex flex-row items-center gap-0', styles.breadcrumb)}>
       <span
-        className={cx(styles.breadcrumbItem, isAtRoot && styles.currentItem)}
+        {...clickableProps()}
         style={{ cursor: isRootClickable ? 'pointer' : 'default' }}
+        className={cn(
+          cx(styles.breadcrumbItem, isAtRoot && styles.currentItem),
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={() => isRootClickable && handleNavigate(null)}
       >
         {knowledgeBaseName || <Skeleton style={{ height: 14, minWidth: 80, width: 80 }} />}
@@ -123,8 +129,12 @@ const Breadcrumb = memo<BreadcrumbProps>(({ category, fileName }) => {
           <div className="flex flex-row items-center gap-0" key={folder.id}>
             <span className={styles.separator}>/</span>
             <span
-              className={cx(styles.breadcrumbItem, isLast && styles.currentItem)}
+              {...clickableProps()}
               style={{ cursor: isLast ? 'default' : 'pointer' }}
+              className={cn(
+                cx(styles.breadcrumbItem, isLast && styles.currentItem),
+                CLICKABLE_FOCUS_RING,
+              )}
               onClick={() => !isLast && handleNavigate(folder.slug)}
             >
               {folder.name}

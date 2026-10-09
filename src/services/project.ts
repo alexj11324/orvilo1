@@ -1,7 +1,6 @@
 import type {
   ProjectDatePrecision,
   ProjectHealth,
-  ProjectOrchestrationPolicy,
   ProjectPriority,
   ProjectStatus,
   ProjectUpdateKind,
@@ -109,9 +108,6 @@ class ProjectService {
   setTaskMilestone = async (id: string, taskId: string, milestoneId: string | null) =>
     lambdaClient.project.setTaskMilestone.mutate({ id, milestoneId, taskId });
 
-  getOrchestrationPolicy = async (id: string) =>
-    lambdaClient.project.getOrchestrationPolicy.query({ id });
-
   delete = async (id: string) => lambdaClient.project.delete.mutate({ id });
 
   create = async (
@@ -173,15 +169,6 @@ class ProjectService {
       targetDatePrecision?: ProjectDatePrecision | null;
     },
   ) => lambdaClient.project.update.mutate({ id, ...input });
-
-  updateOrchestrationPolicy = async (
-    id: string,
-    input: {
-      coordinatorAgentId: string;
-      expectedRevision: number;
-      orchestrationPolicy: ProjectOrchestrationPolicy;
-    },
-  ) => lambdaClient.project.updateOrchestrationPolicy.mutate({ id, ...input });
 
   updateStatus = async (
     id: string,

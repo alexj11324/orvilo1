@@ -1,3 +1,5 @@
+import type { IEditor } from '@lobehub/editor';
+import * as editorReact from '@lobehub/editor/react';
 import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,6 +8,7 @@ import type { ReactNode } from 'react';
 import { act, useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getDraft, saveDraft } from '@/features/ChatInput/draftStorage';
 import { projectService } from '@/services/project';
 import type { ProjectDetail, ProjectListItem } from '@/store/project';
 
@@ -15,6 +18,7 @@ import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePane
 import ProjectTabsBar from '../Layout/TabsBar';
 import ProjectListPage from '../List';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
+import { projectUpdateDraftKey } from '../Updates/projectUpdateDraft';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
@@ -285,7 +289,9 @@ vi.mock('@/components/Avatar', () => ({
 vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => null }));
 vi.mock('@/features/AgentTasks/features/AssigneeUserAvatar', () => ({ default: () => null }));
 vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
-vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
+vi.mock('@/services/project', () => ({
+  projectService: { updateStatus: vi.fn(), createUpdate: vi.fn() },
+}));
 vi.mock('@/store/project', () => ({
   useCurrentProjectList: () => mocks.projectList,
   useCurrentProjectDetail: () => {
@@ -427,6 +433,10 @@ it('exposes project sections as destination links with one current page, not tab
 });
 
 beforeEach(() => {
+  window.localStorage.clear();
+  vi.mocked(projectService.createUpdate)
+    .mockReset()
+    .mockResolvedValue({ id: 'new-update' } as never);
   mocks.canManageMembers = false;
   mocks.canInvite = false;
   mocks.openInvite.mockClear();
@@ -609,9 +619,7 @@ describe('project membership editing', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
     await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
     expect(trigger).not.toHaveTextContent('New teammate');
-    expect(
-      screen.getAllByText('user_1').find((element) => element.closest('[data-slot=combobox-chip]')),
-    ).toBeInTheDocument();
+    expect(trigger).toHaveTextContent('user_1');
   });
 });
 
@@ -707,6 +715,115 @@ describe('project update composer controls', () => {
     expect(screen.getByText('Launch ready').tagName).toBe('STRONG');
     expect(screen.queryByText('**Launch ready**')).not.toBeInTheDocument();
   });
+  // The composer scopes drafts by user, workspace, project and target; the mocks
+  // above sign in `user_1` in workspace `ws_1`.
+  const newDraftKey = (projectId: string) =>
+    projectUpdateDraftKey({ projectId, userId: 'user_1', workspaceId: 'ws_1' })!;
+
+  it('restores a draft and keeps it when changing modes and remounting', async () => {
+    saveDraft(newDraftKey('draft-project'), {
+      body: 'Project draft',
+      mode: 'comment',
+      health: 'onTrack',
+    });
+    const view = render(
+      <ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="draft-project" />,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveTextContent(
+        'Project draft',
+      ),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /updateModeUpdate|Update/ }));
+    expect(screen.getByRole('textbox', { name: 'overview.updateEditor' })).toHaveTextContent(
+      'Project draft',
+    );
+    view.unmount();
+    render(<ProjectUpdateComposer defaultExpanded projectId="draft-project" />);
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'overview.updateEditor' })).toHaveTextContent(
+        'Project draft',
+      ),
+    );
+  });
+
+  it('keeps a failed post for retry and clears the saved draft only after success', async () => {
+    const draftKey = newDraftKey('retry-project');
+    saveDraft(draftKey, { body: 'Retry this comment', mode: 'comment' });
+    vi.mocked(projectService.createUpdate).mockRejectedValueOnce(new Error('Offline'));
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      render(<ProjectUpdateComposer defaultExpanded projectId="retry-project" />);
+      const editor = await screen.findByRole('textbox', { name: 'overview.commentEditor' });
+      await waitFor(() => expect(editor).toHaveTextContent('Retry this comment'));
+      await userEvent.click(screen.getByRole('button', { name: 'overview.postComment' }));
+      await waitFor(() => expect(mocks.toastError).toHaveBeenCalled());
+      expect(editor).toHaveTextContent('Retry this comment');
+      expect(getDraft(draftKey)?.body).toContain('Retry this comment');
+      await userEvent.click(screen.getByRole('button', { name: 'overview.postComment' }));
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'overview.commentEditor' }).textContent).toBe(
+          '',
+        ),
+      );
+      expect(getDraft(draftKey)).toBeUndefined();
+      expect(projectService.createUpdate).toHaveBeenLastCalledWith('retry-project', {
+        body: 'Retry this comment',
+        kind: 'comment',
+        health: undefined,
+      });
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
+
+  it('does not restore a posted draft after a pending old editor change and reload', async () => {
+    const draftKey = newDraftKey('sent-project');
+    saveDraft(draftKey, { body: 'Already posted comment', mode: 'comment' });
+    const originalUseEditor = editorReact.useEditor;
+    const editors = new Set<IEditor>();
+    const editorSpy = vi.spyOn(editorReact, 'useEditor').mockImplementation((...args) => {
+      const editor = originalUseEditor(...args);
+      editors.add(editor);
+      return editor;
+    });
+    try {
+      const view = render(<ProjectUpdateComposer defaultExpanded projectId="sent-project" />);
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveTextContent(
+          'Already posted comment',
+        ),
+      );
+      const oldEditor = [...editors][0];
+      vi.useFakeTimers();
+      await act(async () => {
+        oldEditor.setDocument('markdown', 'Already posted comment');
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'overview.postComment' }));
+      });
+      expect(getDraft(draftKey)).toBeUndefined();
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+      });
+      expect(getDraft(draftKey)).toBeUndefined();
+      view.unmount();
+      vi.useRealTimers();
+      render(
+        <ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="sent-project" />,
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('textbox', { name: 'overview.commentEditor' }).textContent).toBe(
+          '',
+        ),
+      );
+      expect(projectService.createUpdate).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+      editorSpy.mockRestore();
+    }
+  });
+
   it('starts in comment mode when Activity is opened without an update intent', () => {
     render(<ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="prj_1" />);
     expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveAttribute(
@@ -1374,7 +1491,7 @@ describe('project status glyph', () => {
         projectId={'prj_1'}
       />,
     );
-    return screen.getByText(`status.${status}`).querySelector('svg');
+    return screen.getByText(`status.${status}`).parentElement?.querySelector('svg');
   };
 
   /** The glyph the `/projects` list row draws in its Status column. */
@@ -1392,11 +1509,11 @@ describe('project status glyph', () => {
     expect(listGlyph(status)?.innerHTML).toBe(glyph);
   });
 
-  it('draws the measured 12px filled In Progress glyph in the rail', () => {
+  it('draws the measured 16px filled In Progress glyph in the rail', () => {
     railIcon('active');
     const svg = document.querySelector('svg[viewBox="-1 -1 16 16"]');
-    expect(svg).toHaveAttribute('height', '12');
-    expect(svg).toHaveAttribute('width', '12');
+    expect(svg).toHaveAttribute('height', '16');
+    expect(svg).toHaveAttribute('width', '16');
     expect(svg?.querySelector('path')).toHaveAttribute(
       'd',
       'M2.95778 3.02069L5.70777 1.36023C6.50244 0.88041 7.49756 0.88041 8.29223 1.36024L11.0422 3.02074C11.7918 3.47336 12.25 4.2852 12.25 5.16086V8.84803C12.25 9.7251 11.7904 10.5381 11.0388 10.9902L8.29114 12.6433C7.49693 13.1211 6.50355 13.1203 5.71011 12.6412L2.95775 10.9792C2.20815 10.5266 1.75 9.7148 1.75 8.83911V5.16082C1.75 4.28516 2.20816 3.47332 2.95778 3.02069Z',
@@ -1513,7 +1630,7 @@ describe('project properties planning metadata', () => {
     );
 
     expect(screen.getByText('create.priority.high')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'properties.priority' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'properties.priority' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.labels' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('Sep 2026');

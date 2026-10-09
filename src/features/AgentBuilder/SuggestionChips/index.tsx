@@ -1,6 +1,7 @@
 'use client';
 
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ import SuggestQuestions, { type SuggestMode } from '@/features/SuggestQuestions'
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useBuilderSuggestionFeedbackStore } from './feedbackStore';
 import { useBuilderContext } from './useBuilderContext';
@@ -37,7 +39,11 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
 
   return (
     <div
-      className="flex flex-col cursor-pointer rounded-md border border-border"
+      {...clickableProps()}
+      className={cn(
+        'flex flex-col cursor-pointer rounded-md border border-border',
+        CLICKABLE_FOCUS_RING,
+      )}
       style={{
         borderRadius: cssVar.borderRadiusLG,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -142,7 +148,8 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             ))}
           </div>
           <div
-            className="flex items-center gap-1"
+            {...clickableProps()}
+            className={cn('flex items-center gap-1', CLICKABLE_FOCUS_RING)}
             style={{
               cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: disabled ? 0.65 : undefined,

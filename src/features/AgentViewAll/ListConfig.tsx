@@ -90,6 +90,7 @@ const ListConfig = memo<ListConfigProps>(
         children: (
           <div className="flex items-center gap-2">
             <ActionIcon
+              aria-label={t('sort')}
               icon={options.orderDirection === 'asc' ? ArrowUpNarrowWide : ArrowDownWideNarrow}
               size={'small'}
               onClick={() => {
@@ -151,7 +152,13 @@ const ListConfig = memo<ListConfigProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
-          render={<ActionIcon icon={Settings2Icon} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />}
+          render={
+            <ActionIcon
+              aria-label={t('settings')}
+              icon={Settings2Icon}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            />
+          }
         />
         <PopoverContent align="end" side="bottom" style={{ padding: 12 }}>
           {panelContent}

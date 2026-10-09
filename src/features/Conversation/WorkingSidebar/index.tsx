@@ -1018,6 +1018,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               </DropdownMenu>
             </div>
             <ActionIcon
+              aria-label={t('close', { ns: 'common' })}
               className={styles.close}
               icon={PanelRightCloseIcon}
               size={DESKTOP_HEADER_ICON_SMALL_SIZE}

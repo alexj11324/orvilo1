@@ -1,16 +1,18 @@
 'use client';
 
 import { createStaticStyles, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { TriangleAlert, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { MANUAL_UPGRADE_URL } from '@/const/url';
 import { CURRENT_VERSION } from '@/const/version';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { useGlobalStore } from '@/store/global';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   closeButton: css`
@@ -102,7 +104,12 @@ const ServerVersionOutdatedAlert = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content} style={cssVariables}>
-        <div className={styles.closeButton} onClick={() => setDismissed(true)}>
+        <div
+          {...clickableProps()}
+          aria-label={t('close')}
+          className={cn(styles.closeButton, CLICKABLE_FOCUS_RING)}
+          onClick={() => setDismissed(true)}
+        >
           <X />
         </div>
 
@@ -119,10 +126,13 @@ const ServerVersionOutdatedAlert = () => {
           <div className={styles.warning}>{t('serverVersionOutdated.warning')}</div>
 
           <div className="flex justify-end gap-2" style={{ marginTop: 8 }}>
-            <a href={MANUAL_UPGRADE_URL} rel="noreferrer" target="_blank">
-              <Button size="sm" variant="default">
-                {t('serverVersionOutdated.upgrade')}
-              </Button>
+            <a
+              className={cn(buttonVariants({ size: 'sm', variant: 'default' }))}
+              href={MANUAL_UPGRADE_URL}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {t('serverVersionOutdated.upgrade')}
             </a>
             <Button size="sm" onClick={() => setDismissed(true)}>
               {t('serverVersionOutdated.dismiss')}

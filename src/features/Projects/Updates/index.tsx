@@ -6,9 +6,10 @@ import { cn } from 'cn';
 import dayjs from 'dayjs';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { createElement, memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
@@ -24,6 +25,14 @@ import { useCurrentProjectDetail } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import {
+  clearProjectUpdateDraft,
+  persistProjectUpdateDraft,
+  PROJECT_UPDATE_HEALTH_ORDER,
+  projectUpdateDraftKey,
+  readProjectUpdateDraft,
+  resolveProjectUpdateDraft,
+} from './projectUpdateDraft';
 import { ProjectUpdateEditor } from './ProjectUpdateEditor';
 
 /**
@@ -139,8 +148,6 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const PROJECT_UPDATE_HEALTH_ORDER: ProjectHealth[] = ['onTrack', 'atRisk', 'offTrack'];
-
 const toUpdate = (row: {
   authorAvatar?: null | string;
   authorId: string;
@@ -184,7 +191,7 @@ export const useCanModerateProjectUpdate = (project?: { id?: string } | null) =>
   );
 };
 
-export const ProjectUpdateComposer = memo<{
+interface ProjectUpdateComposerProps {
   defaultExpanded?: boolean;
   defaultMode?: ProjectUpdateKind;
   /** When set, the composer edits this row instead of posting a new one. */
@@ -194,10 +201,18 @@ export const ProjectUpdateComposer = memo<{
   onExpand?: () => void;
   onPosted?: () => void;
   projectId: string;
-}>(
+}
+
+/**
+ * One mount per draft scope: `draftKey` is fixed for the lifetime of this
+ * component (the wrapper below remounts it when the scope changes), so its
+ * state and draft writes can never land under another scope's key.
+ */
+const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey?: string }>(
   ({
     defaultExpanded,
     defaultMode = 'update',
+    draftKey,
     editingUpdate,
     emptyState,
     onCancelEdit,
@@ -210,14 +225,27 @@ export const ProjectUpdateComposer = memo<{
     const userId = useUserStore(userProfileSelectors.userId);
     const canPost = canComment && (!editingUpdate || editingUpdate.authorId === userId);
     const editing = !!editingUpdate;
-    const [body, setBody] = useState(editingUpdate?.body ?? '');
-    const [health, setHealth] = useState<ProjectHealth>(editingUpdate?.health ?? 'onTrack');
+    const [initial] = useState(() =>
+      resolveProjectUpdateDraft(readProjectUpdateDraft(draftKey), editingUpdate, defaultMode),
+    );
+    const [body, setBody] = useState(initial.body);
+    const [health, setHealth] = useState<ProjectHealth>(initial.health);
     const [posting, setPosting] = useState(false);
     const [editorRevision, setEditorRevision] = useState(0);
 
     const [expanded, setExpanded] = useState(defaultExpanded || editing);
     // `kind` is immutable once posted — edit mode never switches modes.
-    const [mode, setMode] = useState<ProjectUpdateKind>(editingUpdate?.kind ?? defaultMode);
+    const [mode, setMode] = useState<ProjectUpdateKind>(initial.mode);
+    // Set once the edit is saved or cancelled: nothing may be stored afterwards.
+    const settled = useRef(false);
+    useEffect(() => {
+      if (settled.current) return;
+      persistProjectUpdateDraft(draftKey, { body, health, mode }, editingUpdate);
+    }, [body, draftKey, editingUpdate, health, mode]);
+    const settle = () => {
+      settled.current = true;
+      clearProjectUpdateDraft(draftKey);
+    };
 
     const post = async () => {
       const content = body.trim();
@@ -229,6 +257,7 @@ export const ProjectUpdateComposer = memo<{
             body: content,
             health: mode === 'update' ? health : undefined,
           });
+          settle();
         } else {
           await projectService.createUpdate(projectId, {
             body: content,
@@ -238,6 +267,7 @@ export const ProjectUpdateComposer = memo<{
           setBody('');
           setEditorRevision((revision) => revision + 1);
           if (!defaultExpanded) setExpanded(false);
+          clearProjectUpdateDraft(draftKey);
         }
         onPosted?.();
       } catch (error) {
@@ -285,7 +315,7 @@ export const ProjectUpdateComposer = memo<{
     }
 
     return (
-      <div className={cn('flex flex-col', styles.composer)}>
+      <div className="flex flex-col gap-3">
         {/* A posted row keeps its kind — edit mode drops the Comment/Update tabs.
           Editing a comment leaves the header empty, so it is skipped entirely. */}
         {(!editing || mode === 'update') && (
@@ -303,7 +333,7 @@ export const ProjectUpdateComposer = memo<{
                     { key: 'comment', label: t('overview.updateModeComment') },
                     { key: 'update', label: t('overview.updateModeUpdate') },
                   ].map((item) => (
-                    <TabsTrigger key={item.key} value={item.key}>
+                    <TabsTrigger className={styles.modeTab} key={item.key} value={item.key}>
                       {item.label}
                     </TabsTrigger>
                   ))}
@@ -327,42 +357,74 @@ export const ProjectUpdateComposer = memo<{
             )}
           </div>
         )}
-        <ProjectUpdateEditor
-          disabled={!canPost || posting}
-          initialContent={editingUpdate?.body}
-          key={editorRevision}
-          label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
-          placeholder={t(
-            mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
-          )}
-          onChange={setBody}
-          onSubmit={() => void post()}
-        />
-        <div
-          className={cn('flex flex-row', styles.composerFooter)}
-          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
-        >
-          {editing && (
-            <Button disabled={!canPost || posting} variant="outline" onClick={onCancelEdit}>
-              {t('common:cancel')}
-            </Button>
-          )}
-          <Button
-            aria-busy={posting}
-            disabled={!canPost || !body.trim() || posting}
-            variant="default"
-            onClick={() => void post()}
+        <div className={cn('flex flex-col', styles.composer)}>
+          <ProjectUpdateEditor
+            disabled={!canPost || posting}
+            initialContent={editorRevision === 0 ? initial.body : ''}
+            key={editorRevision}
+            label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
+            placeholder={t(
+              mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
+            )}
+            onChange={setBody}
+            onSubmit={() => void post()}
+          />
+          <div
+            className={cn('flex flex-row', styles.composerFooter)}
+            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
           >
-            {posting && <Spinner />}
-            {editing
-              ? t('common:save')
-              : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
-          </Button>
+            {editing && (
+              <Button
+                disabled={posting}
+                variant="outline"
+                onClick={() => {
+                  settle();
+                  onCancelEdit?.();
+                }}
+              >
+                {t('common:cancel')}
+              </Button>
+            )}
+            <Button
+              aria-busy={posting}
+              disabled={!canPost || !body.trim() || posting}
+              variant="default"
+              onClick={() => void post()}
+            >
+              {posting && <Spinner />}
+              {editing
+                ? t('common:save')
+                : t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
+            </Button>
+          </div>
         </div>
       </div>
     );
   },
 );
+
+ScopedProjectUpdateComposer.displayName = 'ScopedProjectUpdateComposer';
+
+export const ProjectUpdateComposer = memo<ProjectUpdateComposerProps>((props) => {
+  const userId = useUserStore(userProfileSelectors.userId);
+  const workspaceId = useActiveWorkspaceId();
+  const { editingUpdate, projectId } = props;
+  const draftKey = projectUpdateDraftKey({
+    projectId,
+    updateId: editingUpdate?.id,
+    userId,
+    workspaceId,
+  });
+
+  // Signed out there is no draft key, yet a project or row change still remounts.
+  return (
+    <ScopedProjectUpdateComposer
+      {...props}
+      draftKey={draftKey}
+      key={draftKey ?? `${projectId}:${editingUpdate?.id ?? 'new'}`}
+    />
+  );
+});
 
 ProjectUpdateComposer.displayName = 'ProjectUpdateComposer';
 
@@ -471,7 +533,7 @@ export const ProjectUpdateRow = memo<{
             </div>
           )}
         </div>
-        <Markdown fontSize={15}>{update.body}</Markdown>
+        <Markdown fontSize={14}>{update.body}</Markdown>
       </div>
     </div>
   );

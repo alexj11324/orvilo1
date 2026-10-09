@@ -206,6 +206,7 @@ const GroupContent = memo<GroupContentProps>(
           }}
         />
         <ActionIcon
+          aria-label={t('save', { ns: 'common' })}
           data-testid="editing-popover-save"
           icon={Check}
           size={'small'}

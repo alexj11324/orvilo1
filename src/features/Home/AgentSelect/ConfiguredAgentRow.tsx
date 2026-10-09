@@ -89,7 +89,7 @@ export const ConfiguredAgentRow = ({
   const ready = status === 'ready';
 
   return (
-    <div className="flex items-center gap-1 rounded-md hover:bg-muted/50">
+    <div className="flex items-center gap-1 rounded-md hover:bg-accent">
       <Button
         aria-pressed={active}
         className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1.5 text-left"
@@ -97,7 +97,7 @@ export const ConfiguredAgentRow = ({
         variant="ghost"
         onClick={() => onSelect(row.id)}
       >
-        <AgentRuntimeIcon size={24} type={type ?? row.heterogeneousType} />
+        <AgentRuntimeIcon size={24} type={type || row.heterogeneousType || 'orvilo'} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{row.title}</span>
           {!ready && (

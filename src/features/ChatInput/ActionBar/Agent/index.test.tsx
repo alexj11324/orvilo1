@@ -329,12 +329,11 @@ describe('Agent action', () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it('opens unified Agent creation without selecting a detected install', () => {
-    const { getByText } = render(<Agent />);
-    fireEvent.click(getByText('+ newAgent'));
-    expect(mocks.createAgent).toHaveBeenCalledOnce();
-    expect(mocks.setState).not.toHaveBeenCalled();
-    expect(mocks.navigate).not.toHaveBeenCalled();
+  it('offers existing Agents without a creation action in the composer', () => {
+    const { queryByText, getByText } = render(<Agent />);
+    expect(queryByText('+ newAgent')).toBeNull();
+    expect(getByText('Other Agent')).toBeDefined();
+    expect(mocks.createAgent).not.toHaveBeenCalled();
   });
   it('shows Configure after a stale Agent profile settles to null', async () => {
     const { ConfiguredAgentRow } = await vi.importActual<{

@@ -1,6 +1,6 @@
 'use client';
 
-import { agentDisplayName, type UIChatMessage } from '@orvilo/types';
+import { type UIChatMessage } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +9,7 @@ import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import AgentAvatar from '../../ChatItem/components/Avatar';
 import { useAgentMeta } from '../../hooks';
 import ContentBlock from '../AssistantGroup/components/ContentBlock';
 import UserMessageContent from '../User/components/MessageContent';
@@ -54,7 +55,7 @@ const CompressedMessageItem = memo<CompressedMessageItemProps>(({ message }) => 
   if (role === 'assistant') {
     return (
       <div className="flex gap-2 py-1">
-        <Avatar {...agentAvatar} name={agentDisplayName(agentAvatar)} size={28} />
+        <AgentAvatar avatar={agentAvatar} size={28} />
         <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ContentBlock
             disableEditing
@@ -71,7 +72,7 @@ const CompressedMessageItem = memo<CompressedMessageItemProps>(({ message }) => 
   if (role === 'assistantGroup' && children) {
     return (
       <div className="flex gap-2 py-1">
-        <Avatar {...agentAvatar} name={agentDisplayName(agentAvatar)} size={28} />
+        <AgentAvatar avatar={agentAvatar} size={28} />
         <div className="flex flex-col flex-1 gap-2" style={{ overflow: 'hidden' }}>
           {children.map((block) => (
             <ContentBlock {...block} disableEditing assistantId={message.id} key={block.id} />

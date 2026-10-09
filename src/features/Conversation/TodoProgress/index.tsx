@@ -2,6 +2,7 @@
 
 import { type StepContextTodos } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronUp, CircleArrowRight } from 'lucide-react';
 import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import { Badge } from '@/components/reui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
 import { shinyTextStyles } from '@/styles';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../store';
 
@@ -170,7 +172,11 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
 
   return (
     <div
-      className={cx(styles.container, topAttached && styles.containerTopAttached, className)}
+      {...clickableProps()}
+      className={cn(
+        cx(styles.container, topAttached && styles.containerTopAttached, className),
+        CLICKABLE_FOCUS_RING,
+      )}
       onClick={toggleExpanded}
     >
       {/* Header */}

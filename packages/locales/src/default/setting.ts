@@ -685,6 +685,31 @@ export default {
   'devices.capabilities.title': 'What you can do once connected',
   'devices.capabilities.tools.desc': 'Connect local tools to extend what agents can do.',
   'devices.capabilities.tools.title': 'Call system tools',
+  'devices.connectWizard.desktop.connectThisComputer': 'Connect this computer',
+  'devices.connectWizard.desktop.thisComputer': 'This computer',
+  'devices.connectWizard.desktop.connectFailed':
+    'Could not connect this computer. Try connecting again.',
+  'devices.connectWizard.desktop.enrollFailed':
+    'Could not enroll this computer in the workspace. Try again.',
+  'devices.connectWizard.desktop.identityUnavailable':
+    'Could not read this computer’s identity. Try again.',
+  'devices.connectWizard.desktop.registrationPending':
+    'This computer is connected, but registration has not completed. Try again once it appears in your personal devices.',
+  'devices.connectWizard.desktop.workspaceRequired':
+    'Select a workspace before connecting this computer.',
+  'devices.connectWizard.desktop.personalDesc': 'Connect this computer to your personal devices.',
+  'devices.connectWizard.desktop.workspacePublic':
+    'Connect this computer and share it with workspace members. Members can run agents and tools on it.',
+  'devices.connectWizard.desktop.workspacePrivate':
+    'Connect this computer to this workspace for your use only.',
+  'devices.connectWizard.desktop.workspaceStep': 'Enroll your computer in this workspace',
+  'devices.connectWizard.desktop.workspaceStepDesc':
+    'In Orvilo Desktop, open this workspace’s Settings → Devices, choose Workspace or Private, then Connect Device → Via Desktop → Connect this computer.',
+  'devices.connectWizard.desktop.status.connected': 'Connected',
+  'devices.connectWizard.desktop.status.connecting': 'Connecting…',
+  'devices.connectWizard.desktop.status.authenticating': 'Signing in…',
+  'devices.connectWizard.desktop.status.reconnecting': 'Reconnecting…',
+  'devices.connectWizard.desktop.status.disconnected': 'Disconnected',
   'devices.connectWizard.button': 'Connect Device',
   'devices.connectWizard.cli.connectDesc':
     'Keep the helper running in the background so the device stays connected and ready for remote work.',

@@ -22,7 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { createGoalModal } from '@/features/AgentGoals/CreateGoalModal';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import {
   getAttachmentFileIdsFromEditor,
@@ -33,8 +32,6 @@ import { usePermission } from '@/hooks/usePermission';
 import { taskService } from '@/services/task';
 import { useGlobalStore } from '@/store/global';
 import { useTaskStore } from '@/store/task';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { shinyTextStyles } from '@/styles';
 
 import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
@@ -49,7 +46,6 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import {
   answeredClarifications,
   buildConfirmedDraft,
-  buildGoalSeed,
   type ClarificationAnswers,
   shouldConfirmIntent,
 } from './taskIntent';
@@ -118,7 +114,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
   // Reading the draft is what submit does now. It only stops for confirmation
   // when it found something the user alone can settle, so the escape hatch is
   // the dropdown's "create directly" rather than a setting nobody would find.
-  const canCreateGoal = useUserStore(labPreferSelectors.enableTopicAcceptance);
   const [analysis, setAnalysis] = useState<TaskIntentAnalysis | null>(null);
   const [intentTitle, setIntentTitle] = useState('');
   const [intentAnswers, setIntentAnswers] = useState<ClarificationAnswers>({});
@@ -554,39 +549,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     });
   }, [analysis, assigneeMeta?.title, intentAnswers, intentTitle, readDraft, submitDraft, t]);
 
-  // Hands the draft (and any answers already given) to the goal modal, then
-  // drops back to composing: the goal flow owns the outcome from here, and the
-  // untouched draft is still in the editor if the user backs out of it.
-  const handleSwitchToGoal = useCallback(() => {
-    const draft = readDraft();
-    if (!analysis || !draft) return;
-
-    const seed = buildGoalSeed({
-      analysis,
-      answers: intentAnswers,
-      heading: t('taskIntent.answersHeading'),
-      instruction: draft.instruction,
-    });
-
-    createGoalModal({
-      agentId: assigneeAgentId,
-      initialRequirement: seed.requirement,
-      initialTitle: intentTitle.trim() || seed.title,
-      onCreated: resetComposer,
-      projectId,
-    });
-    setAnalysis(null);
-  }, [
-    analysis,
-    assigneeAgentId,
-    intentAnswers,
-    intentTitle,
-    projectId,
-    readDraft,
-    resetComposer,
-    t,
-  ]);
-
   const isReviewing = Boolean(analysis);
 
   // Cmd+Enter means "the primary action of what is on screen": submit the
@@ -635,7 +597,6 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             onAnswerChange={handleAnswerChange}
             onBack={() => setAnalysis(null)}
             onConfirm={handleConfirmIntent}
-            onSwitchToGoal={canCreateGoal ? handleSwitchToGoal : undefined}
             onTitleChange={setIntentTitle}
           />
         )}

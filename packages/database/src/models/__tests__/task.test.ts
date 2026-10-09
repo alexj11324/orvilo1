@@ -21,6 +21,7 @@ import {
 import { taskActivities, taskComments, taskDispatches, taskTopics } from '../../schemas/task';
 import { works } from '../../schemas/work';
 import type { OrviloDatabase } from '../../type';
+import { DocumentModel } from '../document';
 import { ProjectModel } from '../project';
 import { taskActivityActor, TaskModel } from '../task';
 import { legacyStatusExpr } from '../taskExecutionSql';
@@ -3847,6 +3848,35 @@ describe('TaskModel', () => {
       const updated = await bob.update(secret.id, { name: 'Hacked' });
       expect(updated).toMatchObject({ name: 'Hacked' });
       expect((await alice.findById(secret.id))?.name).toBe('Hacked');
+    });
+
+    it('pins a creator-private draft on a private-team issue without publishing it', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team document notes',
+        teamId: privateTeamId,
+      });
+      const author = new DocumentModel(serverDB, userId, wsId);
+      const draft = await author.create({
+        content: 'Private team notes',
+        fileType: 'custom/document',
+        source: 'issue-menu',
+        sourceType: 'api',
+        title: 'Private team notes',
+        totalCharCount: 18,
+        totalLineCount: 1,
+      });
+      await alice.pinDocument(secret.id, draft.id);
+      expect((await alice.getPinnedDocuments(secret.id)).map((row) => row.documentId)).toContain(
+        draft.id,
+      );
+      expect(await author.findById(draft.id)).toMatchObject({ visibility: 'private' });
+      const outsider = new DocumentModel(serverDB, userId2, wsId);
+      expect(await outsider.findById(draft.id)).toBeUndefined();
+      expect((await outsider.query()).items.map((row) => row.id)).not.toContain(draft.id);
+      // Explicit publication is the disclosure boundary; attaching is not.
+      await author.setVisibility(draft.id, 'public');
+      expect((await outsider.findById(draft.id))?.id).toBe(draft.id);
     });
 
     it('still lets assignees, reviewers, team members, and workspace admins find the task', async () => {

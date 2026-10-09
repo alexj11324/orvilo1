@@ -1,6 +1,9 @@
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { previewStyles } from './styles';
 import { type MinimapIndicator } from './types';
@@ -24,11 +27,15 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
 
           return (
             <div
+              {...clickableProps()}
               aria-current={isActive ? 'true' : undefined}
               key={id}
-              className={cx(
-                cx(styles.item, isActive && styles.itemActive),
-                'flex items-center gap-2.5 justify-end',
+              className={cn(
+                cx(
+                  cx(styles.item, isActive && styles.itemActive),
+                  'flex items-center gap-2.5 justify-end',
+                ),
+                CLICKABLE_FOCUS_RING,
               )}
               onClick={() => onJump(virtuosoIndex)}
             >

@@ -1,4 +1,5 @@
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { BanIcon, CheckIcon, HandIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   btn: css`
@@ -117,7 +119,8 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
         }}
       >
         <div
-          className={btnClass(ConnectorToolPermission.auto)}
+          {...clickableProps()}
+          className={cn(btnClass(ConnectorToolPermission.auto), CLICKABLE_FOCUS_RING)}
           style={disabled ? { pointerEvents: 'none' } : undefined}
           title={t('connector.toolPermission.auto')}
           onClick={() => handleChange(ConnectorToolPermission.auto)}
@@ -125,7 +128,8 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
           <CheckIcon size={15} />
         </div>
         <div
-          className={btnClass(ConnectorToolPermission.needs_approval)}
+          {...clickableProps()}
+          className={cn(btnClass(ConnectorToolPermission.needs_approval), CLICKABLE_FOCUS_RING)}
           style={disabled ? { pointerEvents: 'none' } : undefined}
           title={t('connector.toolPermission.needsApproval')}
           onClick={() => handleChange(ConnectorToolPermission.needs_approval)}
@@ -133,7 +137,8 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
           <HandIcon size={15} />
         </div>
         <div
-          className={btnClass(ConnectorToolPermission.disabled)}
+          {...clickableProps()}
+          className={cn(btnClass(ConnectorToolPermission.disabled), CLICKABLE_FOCUS_RING)}
           style={disabled ? { pointerEvents: 'none' } : undefined}
           title={t('connector.toolPermission.disabled')}
           onClick={() => handleChange(ConnectorToolPermission.disabled)}

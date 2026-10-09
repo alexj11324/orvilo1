@@ -8,6 +8,7 @@ import { Badge } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   errorReason: css`
@@ -61,6 +62,8 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
               <Badge className={className} variant="destructive">
                 {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
                 <span
+                  {...clickableProps()}
+                  className={CLICKABLE_FOCUS_RING}
                   style={{ cursor: 'pointer' }}
                   title={t('retry', { ns: 'common' })}
                   onClick={() => {

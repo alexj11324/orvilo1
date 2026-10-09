@@ -1,6 +1,6 @@
 # Permission QA harness
 
-This temporary tooling target verifies product candidate `c02d5592605fe56b73b1dd6289ff6e661f5326c9` before protected merge. It does not publish historical private resources or change production grants. Production remains on its independently recorded deployment revision.
+This temporary tooling target verifies product candidate `56eb1e0b3e1d1d39af4c64ce84d717b7599e9c71` before protected merge. It does not publish historical private resources or change production grants. Production remains on its independently recorded deployment revision.
 
 The existing `deploy-orvilo1.yml` accepts `qa_permission: true` only on `codex/permission-qa-current`. Its normal build, promotion, retag and production deployment jobs are excluded in this mode. The QA admission rejects production switches, foreign/floating images, other refs and every source delta outside the enumerated tooling files. The harness revision and immutable candidate image digest are separate receipt fields.
 

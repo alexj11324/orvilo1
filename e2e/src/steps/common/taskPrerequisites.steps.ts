@@ -61,9 +61,11 @@ Then(
         .click();
     };
     const expectEmpty = async () => {
+      await expect(sidebar).toBeVisible({ timeout: 25_000 });
       for (const label of ['Blocked by', 'Blocks', 'Related']) {
-        await expect(sidebar.getByText(label, { exact: true })).toBeVisible({ timeout: 25_000 });
+        await expect(sidebar.getByText(label, { exact: true })).toHaveCount(0);
       }
+      await expect(sidebar.getByText('None', { exact: true })).toHaveCount(0);
       await expect(relationActions).toHaveCount(0);
     };
 

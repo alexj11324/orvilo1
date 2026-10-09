@@ -163,15 +163,18 @@ describe('human-readable model labels', () => {
 });
 
 describe('sidebar + topic-row chrome stays de-attributed', () => {
-  it('keeps a workspace-aware Home destination without restoring an agent breadcrumb', () => {
-    const header = read('src/features/AgentSidebar/Header/Nav.tsx');
+  it('keeps a workspace-aware Issues destination without restoring an agent breadcrumb', () => {
+    const header = read('src/features/AgentSidebar/Header/index.tsx');
+    const nav = read('src/features/AgentSidebar/Header/Nav.tsx');
 
-    expect(header).toContain("buildWorkspaceAwarePath('/', activeSlug)");
-    expect(header).toContain('href={homeHref}');
-    expect(header).toContain('icon={HomeIcon}');
-    expect(header).toContain("title={t('tab.home')}");
-    expect(header).not.toContain('AgentBreadcrumb');
-    expect(header).not.toContain('agentSelectors');
+    expect(header).toContain('<Nav />');
+    expect(nav).toContain("buildWorkspaceAwarePath('/tasks', activeSlug)");
+    expect(nav).toContain('href={issuesHref}');
+    expect(nav).toContain('icon={ListTodoIcon}');
+    expect(nav).toContain("title={t('common:tab.issues')}");
+    expect(`${header}\n${nav}`).not.toContain('AgentBreadcrumb');
+    expect(`${header}\n${nav}`).not.toContain('agentSelectors');
+    expect(`${header}\n${nav}`).not.toContain('HomeIcon');
   });
 
   it('carries no bound-agent node on topic list rows', () => {

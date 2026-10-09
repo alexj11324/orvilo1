@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -9,14 +9,10 @@ import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import type { AgentRuntimeConfig } from '@/features/CreateAgent';
-import CreateAgentPanel from '@/features/CreateAgent/CreateAgentPanel';
-import { CoordinatorSummary } from '@/features/GroupProfile/CoordinatorSummary';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
-import {
-  getConfiguredOrchestratorRuntime,
-  listConfiguredOrchestrators,
-} from '@/services/orchestrator';
+import { listConfiguredOrchestrators } from '@/services/orchestrator';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 export interface ConfiguredOrchestratorSelectorProps {
   disabled?: boolean;
@@ -32,7 +28,6 @@ const ConfiguredOrchestratorSelector = ({
   disabled,
   onSelect,
   onUnavailable,
-  onCreated,
   value,
   visibility = 'private',
   workspaceId: scope,
@@ -41,7 +36,6 @@ const ConfiguredOrchestratorSelector = ({
   const activeWorkspaceId = useActiveWorkspaceId();
   const workspaceId = scope === undefined ? activeWorkspaceId : scope;
   const navigate = useWorkspaceAwareNavigate();
-  const [creating, setCreating] = useState(false);
   const notified = useRef<string | undefined>(undefined);
   const notifiedRuntime = useRef<AgentRuntimeConfig | undefined>(undefined);
   const callback = useRef(onSelect);
@@ -91,7 +85,7 @@ const ConfiguredOrchestratorSelector = ({
               >
                 <AgentRuntimeIcon
                   size={24}
-                  type={runtime?.agencyConfig?.heterogeneousProvider?.type}
+                  type={runtime ? resolveAgentRuntimeType(runtime) : undefined}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{agent.name || agent.title}</span>
@@ -122,38 +116,8 @@ const ConfiguredOrchestratorSelector = ({
           )}
         </div>
       )}
-      {selected?.runtime && (
-        <CoordinatorSummary
-          config={{ ...selected.runtime, title: selected.agent.name || selected.agent.title }}
-        />
-      )}
       {value && data && !selected && (
         <p className="text-sm text-destructive">{t('orchestrator.selectionUnavailable')}</p>
-      )}
-      {creating ? (
-        <CreateAgentPanel
-          lockVisibility
-          visibility={visibility}
-          workspaceId={workspaceId}
-          onCancel={() => setCreating(false)}
-          onCreated={async (id) => {
-            await onCreated?.(id);
-            await mutate();
-            setCreating(false);
-            const runtime = await getConfiguredOrchestratorRuntime(id, workspaceId, visibility);
-            onSelect(id, { ...runtime, agencyConfig: runtime.agencyConfig ?? undefined }, true);
-          }}
-        />
-      ) : (
-        <Button
-          className="self-start"
-          disabled={disabled}
-          size="sm"
-          variant="outline"
-          onClick={() => setCreating(true)}
-        >
-          {t('orchestrator.create')}
-        </Button>
       )}
     </div>
   );

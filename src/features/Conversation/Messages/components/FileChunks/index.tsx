@@ -6,6 +6,7 @@ import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useIsDark } from '@/hooks/useIsDark';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import ChunkItem from './ChunkItem';
 
@@ -55,10 +56,14 @@ const FileChunks = memo<FileChunksProps>(({ data }) => {
 
   return (
     <div
+      {...clickableProps()}
       style={{ width: '100%' }}
       className={cn(
-        'flex flex-col gap-4',
-        cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+        cn(
+          'flex flex-col gap-4',
+          cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+        ),
+        CLICKABLE_FOCUS_RING,
       )}
       onClick={() => {
         setShowDetail(!showDetail);

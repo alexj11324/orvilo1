@@ -123,6 +123,19 @@ Use role names rather than raw values from the reference tables. Text, surfaces,
 
 Hover/active colors are state roles, not a universal “darker” function: the correct direction can differ by theme, library, fill, and wash. Map each variant intentionally and check the resulting pair on its actual background. Do not assume matching token names or fixed reference values prove contrast.
 
+### Local primitive fill roles
+
+Local primitives read these Tailwind roles. [themeRoles.ts](src/styles/themeRoles.ts) resolves them at runtime and [globals.css](src/app/globals.css) holds the matching fallbacks; change both together.
+
+| Tailwind role                        | Engine role             | Light / dark default                        | Use                                                                          |
+| ------------------------------------ | ----------------------- | ------------------------------------------- | ---------------------------------------------------------------------------- |
+| `--muted`, `--secondary`, `--accent` | `colorFillTertiary`     | `rgba(0,0,0,.03)` / `rgba(255,255,255,.06)` | Soft static fill, track, skeleton, secondary action fill, and the hover wash |
+| `--selected`                         | `colorFillSecondary`    | `rgba(0,0,0,.06)` / `rgba(255,255,255,.1)`  | Persistent selected, pressed, or active state; one step above hover          |
+| `--ring`                             | `colorText`             | `#080808` / `#ffffff`                       | Focus indicator, used at 50% by primitives                                   |
+| `--invert` / `--invert-foreground`   | `colorText` / container | `#080808` on `#ffffff` / reversed           | Inverse badge and alert                                                      |
+
+These fills are translucent washes, not surfaces: they stay visible on the page canvas, panels, and popovers alike. `colorBgContainerSecondary` remains an engine surface role and is no longer what `bg-muted` or `bg-secondary` paint. A sticky cell that must hide scrolling content keeps an opaque base and layers the wash as an image with the `wash-*` utility (`bg-background wash-muted`); never use a wash as the only paint there. Status colors used as text or icons take the `*-text` roles (`text-destructive-text`), not the fill roles. The mapping, consumer audit, and follow-ups are recorded in [semantic token roles](docs/development/semantic-token-roles.md).
+
 The local [Tooltip](src/components/ui/tooltip.tsx) uses the existing inverse **`bg-foreground` / `text-background`** pair, including its arrow. Preserve that tooltip contract. `colorBgSpotlight` remains a retained engine role; neither spotlight nor elevated is an instruction to recolor local tooltips.
 
 ## Typography
@@ -164,7 +177,7 @@ Map shape by purpose and **resolved pixels**, not by assumptions about Tailwind 
 
 Pills, avatars, and circular actions may be fully round. Role-specific shapes may coexist within one view. The current Tailwind base radius resolves to 10px, with `rounded-lg` at 10px and `rounded-xl` at 14px (at a 16px root size); these differ from the approved 8/12px button-card/overlay roles. Record and resolve that drift in a scoped migration. ProjectSidePanel's former 10px card radius was migrated to the 8px card role; its measured 11px inset remains a separate optical exception.
 
-Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another.
+Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another. In the dark theme dialogs take no shadow: the scrim and the 1px ring already define the edge.
 
 Preserve the native desktop glass/translucency boundary in [global styles](src/styles/global.ts) and the desktop shell. Theme-aware translucent surfaces must remain legible over the actual native backdrop; an opaque web reference is not authority to flatten native glass.
 

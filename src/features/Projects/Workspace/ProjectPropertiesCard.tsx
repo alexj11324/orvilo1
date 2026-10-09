@@ -1,12 +1,11 @@
 'use client';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
-import { ChevronDownIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { resolveProjectStatus } from '@/components/ExecutionStatus';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -65,12 +64,6 @@ const styles = createStaticStyles(({ css }) => ({
     display: flex;
     align-items: center;
     min-height: 28px;
-  `,
-  statusTrigger: css`
-    cursor: pointer;
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
   `,
   chipList: css`
     display: flex;
@@ -131,7 +124,6 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
 
   const project = detail.project;
   const resolvedStatus = resolveProjectStatus(project.status);
-  const statusVisual = PROJECT_STATUS_VISUALS[resolvedStatus];
   const teams = detail.teams ?? [];
 
   const changeStatus = useCallback(
@@ -151,7 +143,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const statusItems = useMemo(
     () =>
       WRITABLE_STATUSES.map((status) => ({
-        icon: <ProjectStatusIcon size={14} status={status} />,
+        icon: <ProjectStatusIcon size={16} status={status} />,
         key: status,
         label: t(`status.${status}`),
         onClick: () => void changeStatus(status),
@@ -171,22 +163,17 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         </span>
         <DropdownMenu items={statusItems}>
           <Button
-            className={styles.statusTrigger}
+            aria-label={t('properties.status')}
+            className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
             disabled={updatingStatus || !detail.capabilities?.canEdit}
-            style={{ padding: 0, height: 'auto' }}
             variant="ghost"
           >
-            <Badge radius="full" size="sm" style={{ color: statusVisual.color }} variant="outline">
-              <ProjectStatusIcon
-                percent={projectIssueProgressPercent(detail.tasks) ?? 0}
-                size={12}
-                status={resolvedStatus}
-              />
-              {t(`status.${project.status}`)}
-            </Badge>
-            {updatingStatus ? null : (
-              <ChevronDownIcon aria-hidden size={12} style={{ opacity: 0.5 }} />
-            )}
+            <ProjectStatusIcon
+              percent={projectIssueProgressPercent(detail.tasks) ?? 0}
+              size={16}
+              status={resolvedStatus}
+            />
+            <span>{t(`status.${project.status}`)}</span>
           </Button>
         </DropdownMenu>
       </div>

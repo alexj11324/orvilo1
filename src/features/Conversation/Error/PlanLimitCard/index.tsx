@@ -5,7 +5,7 @@ import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { formatIntergerNumber, formatNumber } from '@/utils/format';
 
 import { ErrorActionContainer, FormAction } from '../style';
@@ -151,14 +151,13 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
         <div className="flex flex-col gap-2" style={{ width: '100%' }}>
           {BRANDING_URL.subscription && (
             <a
+              className={cn(buttonVariants({ size: 'lg', variant: 'default' }), 'w-full')}
               href={BRANDING_URL.subscription}
               rel={'noopener noreferrer'}
               style={{ width: '100%' }}
               target={'_blank'}
             >
-              <Button className="w-full" size="lg" variant="default">
-                {upgradeLabel}
-              </Button>
+              {upgradeLabel}
             </a>
           )}
           <Button className="w-full" size="lg" onClick={onRetry}>

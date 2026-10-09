@@ -1,5 +1,6 @@
 import { type ChatPluginPayload } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CircuitBoard } from 'lucide-react';
 import { memo } from 'react';
@@ -10,6 +11,7 @@ import { useYamlArguments } from '@/hooks/useYamlArguments';
 import { useChatStore } from '@/store/chat';
 import { pluginHelpers, useToolStore } from '@/store/tool';
 import { toolSelectors } from '@/store/tool/selectors';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { styles } from './style';
 
@@ -29,7 +31,8 @@ const ArtifactItem = memo<ArtifactItemProps>(({ payload, messageId, identifier =
 
   return (
     <div
-      className={cx('flex flex-row items-center gap-2', styles.container)}
+      {...clickableProps()}
+      className={cn(cx('flex flex-row items-center gap-2', styles.container), CLICKABLE_FOCUS_RING)}
       onClick={() => {
         if (!isToolHasUI || !identifier) return;
 

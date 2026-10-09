@@ -69,6 +69,7 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
               <TooltipTrigger
                 render={
                   <ActionIcon
+                    aria-label={t('disconnect', { ns: 'common' })}
                     disabled={isDisabled}
                     icon={isDisconnecting ? Loader2 : Link2Off}
                     loading={isDisconnecting}

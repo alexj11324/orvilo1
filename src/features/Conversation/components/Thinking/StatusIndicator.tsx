@@ -1,6 +1,8 @@
 import { cssVar } from 'antd-style';
-import { AtomIcon, Loader2Icon } from 'lucide-react';
+import { AtomIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 interface StatusIndicatorProps {
   showDetail?: boolean;
@@ -11,7 +13,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(({ thinking, showDetail }) =>
   let icon;
 
   if (thinking) {
-    icon = <Loader2Icon className="animate-spin" color={cssVar.colorTextDescription} />;
+    icon = <Spinner className="text-muted-foreground" />;
   } else {
     icon = <AtomIcon color={showDetail ? cssVar.purple : cssVar.colorTextDescription} />;
   }

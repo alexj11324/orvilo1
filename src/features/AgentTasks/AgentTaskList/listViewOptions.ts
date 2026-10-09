@@ -30,10 +30,7 @@ export interface TaskListViewOptions {
   subGroupBy: TaskGroupBy;
 }
 
-export const HIDDEN_WHEN_COMPLETED_STATUSES: ReadonlyArray<NonNullable<TaskGroupMeta['status']>> = [
-  'completed',
-  'canceled',
-];
+export const HIDDEN_WHEN_COMPLETED_STATUSES: ReadonlyArray<TaskStatus> = ['completed', 'canceled'];
 
 /**
  * Server-side counterpart of `hideCompleted`: the statuses a paginated list
@@ -62,8 +59,7 @@ export interface TaskGroupMeta {
   /** The milestone's own `sortOrder` — groups follow the project's ordering. */
   milestoneOrder?: number;
   priority?: number;
-  status?: 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running' | 'scheduled';
-  /** A linked issue groups under its provider workflow state, like the board. */
+  /** A `status` group is the Issue's workflow category, like the board. */
   workflowCategory?: TaskWorkflowCategory;
 }
 
@@ -165,16 +161,6 @@ const PRIORITY_RANK_MAP: Record<number, number> = {
   4: 3,
 };
 
-const STATUS_GROUP_RANK_MAP: Record<NonNullable<TaskGroupMeta['status']>, number> = {
-  paused: 0,
-  failed: 1,
-  running: 2,
-  scheduled: 3,
-  backlog: 4,
-  completed: 5,
-  canceled: 6,
-};
-
 const WORKFLOW_GROUP_RANK_MAP: Record<TaskWorkflowCategory, number> = {
   triage: 0,
   backlog: 1,
@@ -185,22 +171,11 @@ const WORKFLOW_GROUP_RANK_MAP: Record<TaskWorkflowCategory, number> = {
   canceled: 6,
 };
 
-const TASK_STATUS_TO_GROUP_MAP: Record<string, NonNullable<TaskGroupMeta['status']>> = {
-  backlog: 'backlog',
-  canceled: 'canceled',
-  completed: 'completed',
-  failed: 'failed',
-  paused: 'paused',
-  running: 'running',
-  // Scheduled tasks are idle-until-next-run, not executing — keep them in their
-  // own group instead of folding into "running" ("In progress"), whose label
-  // would otherwise assert a state the task isn't in.
-  scheduled: 'scheduled',
-};
-
 const getPriorityValue = (task: TaskListItem) => task.priority ?? 0;
-const getTaskStatusGroup = (task: TaskListItem): NonNullable<TaskGroupMeta['status']> =>
-  TASK_STATUS_TO_GROUP_MAP[task.status] ?? 'backlog';
+// `workflowCategory` is NOT NULL on the server; the fallback only covers rows
+// cached before the column was projected.
+const getTaskWorkflowCategory = (task: TaskListItem): TaskWorkflowCategory =>
+  task.workflowCategory ?? 'backlog';
 
 export const getTaskAssigneeGroupMeta = (agentId: string | null | undefined): TaskGroupMeta => {
   if (agentId) {
@@ -332,7 +307,7 @@ const getComparableValue = (task: TaskListItem, orderBy: TaskOrderBy): number | 
       return PRIORITY_RANK_MAP[getPriorityValue(task)];
     }
     case 'status': {
-      return STATUS_GROUP_RANK_MAP[getTaskStatusGroup(task)];
+      return WORKFLOW_GROUP_RANK_MAP[getTaskWorkflowCategory(task)];
     }
     case 'title': {
       return task.name || task.identifier;
@@ -405,29 +380,12 @@ export const getTaskGroupMeta = (
       return getTaskPriorityGroupMeta(getPriorityValue(task));
     }
     case 'status': {
-      if (task.workflowCategory) {
-        return {
-          groupBy: 'status',
-          key: `workflow:${task.workflowCategory}`,
-          label: t(`taskDetail.workflow.category.${task.workflowCategory}`, { ns: 'chat' }),
-          workflowCategory: task.workflowCategory,
-        };
-      }
-      const groupedStatus = getTaskStatusGroup(task);
-      const labelKeyMap: Record<NonNullable<TaskGroupMeta['status']>, string> = {
-        backlog: 'taskDetail.status.backlog',
-        canceled: 'taskDetail.status.canceled',
-        completed: 'taskDetail.status.completed',
-        failed: 'taskDetail.status.failed',
-        paused: 'taskDetail.status.paused',
-        running: 'taskDetail.status.running',
-        scheduled: 'taskDetail.status.scheduled',
-      };
+      const category = getTaskWorkflowCategory(task);
       return {
         groupBy: 'status',
-        key: `status:${groupedStatus}`,
-        label: t(labelKeyMap[groupedStatus], { defaultValue: '', ns: 'chat' }),
-        status: groupedStatus,
+        key: `workflow:${category}`,
+        label: t(`taskDetail.workflow.category.${category}`, { ns: 'chat' }),
+        workflowCategory: category,
       };
     }
     case 'none': {
@@ -458,9 +416,9 @@ const getGroupRank = (group: TaskGroupMeta, groupBy: TaskGroupBy): number => {
       return PRIORITY_RANK_MAP[group.priority] ?? Number.MAX_SAFE_INTEGER;
     }
     case 'status': {
-      if (group.workflowCategory) return WORKFLOW_GROUP_RANK_MAP[group.workflowCategory];
-      if (!group.status) return Number.MAX_SAFE_INTEGER;
-      return STATUS_GROUP_RANK_MAP[group.status] ?? Number.MAX_SAFE_INTEGER;
+      return group.workflowCategory
+        ? WORKFLOW_GROUP_RANK_MAP[group.workflowCategory]
+        : Number.MAX_SAFE_INTEGER;
     }
     default: {
       return Number.MAX_SAFE_INTEGER;

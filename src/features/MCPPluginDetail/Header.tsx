@@ -6,11 +6,10 @@ import { CircleIcon, DotIcon, DownloadIcon, ScaleIcon, StarIcon } from 'lucide-r
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import OfficialIcon from '@/components/OfficialIcon';
 import { Badge } from '@/components/reui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
@@ -130,12 +129,14 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
               )}
               {github?.url && (
                 <a
+                  aria-label="GitHub"
+                  className={buttonVariants({ size: 'icon', variant: 'ghost' })}
                   href={github.url}
                   rel="noreferrer"
                   target={'_blank'}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <ActionIcon fill={cssVar.colorTextDescription} icon={Github} />
+                  <Github fill={cssVar.colorTextDescription} size={20} />
                 </a>
               )}
             </div>

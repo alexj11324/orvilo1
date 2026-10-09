@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
@@ -543,31 +544,28 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               <div
                 aria-busy
                 aria-label={t('teams.loading', { ns: 'common' })}
-                className="flex flex-col gap-2"
+                className="flex flex-col gap-0.5"
               >
                 {Array.from({ length: 8 }, (_, index) => (
-                  <Skeleton className="h-10 w-full" key={index} />
+                  <Skeleton className="h-11 w-full" key={index} />
                 ))}
               </div>
             ) : visibleProjects.length === 0 ? (
-              <div className="flex flex-col items-center justify-center flex-1 p-12">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-                    <PROJECT_ENTITY_ICON aria-hidden className="size-8" />
-                    <p>
-                      {filters.length > 0
-                        ? t('list.filter.noResults', { ns: 'project' })
-                        : t('teams.projectsEmpty', { ns: 'common' })}
-                    </p>
-                  </div>
-                  {filters.length === 0 ? (
-                    <Button variant="outline" onClick={() => openCreateProjectModal({ teamId })}>
-                      <PlusIcon aria-hidden className="size-4" />
-                      {t('create.title', { ns: 'project' })}
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
+              <SimpleEmpty
+                icon={PROJECT_ENTITY_ICON}
+                description={
+                  filters.length > 0
+                    ? t('list.filter.noResults', { ns: 'project' })
+                    : t('teams.projectsEmpty', { ns: 'common' })
+                }
+              >
+                {filters.length === 0 ? (
+                  <Button variant="outline" onClick={() => openCreateProjectModal({ teamId })}>
+                    <PlusIcon aria-hidden className="size-4" />
+                    {t('create.title', { ns: 'project' })}
+                  </Button>
+                ) : null}
+              </SimpleEmpty>
             ) : (
               <>
                 {projectsError ? (

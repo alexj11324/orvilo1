@@ -603,7 +603,7 @@ export class TaskDetailSliceActionImpl {
       if (revision !== undefined) payload.expectedDomainRevision = revision;
     }
 
-    await runMutation(this.#set, this.#get, {
+    const result = await runMutation(this.#set, this.#get, {
       mutate: () => taskService.update(id, payload),
       name: 'updateTask',
       // Rollback is a server-truth refetch (not a local snapshot), so the
@@ -624,6 +624,22 @@ export class TaskDetailSliceActionImpl {
       },
       setStatus: (status) => this.#get().internal_setTaskSaveStatus(id, status),
     });
+
+    // Definition/menu CAS must observe our completed edit without waiting for
+    // the next poll. UUID and identifier hosts can cache the same task.
+    const updated = result?.data;
+    if (updated?.domainRevision !== undefined) {
+      for (const [cacheId, detail] of Object.entries(this.#get().taskDetailMap)) {
+        const sameTask =
+          detail.id === updated.id || cacheId === updated.id || (cacheId === id && !detail.id);
+        if (!sameTask || updated.domainRevision <= (detail.domainRevision ?? 0)) continue;
+        this.internal_dispatchTaskDetail({
+          id: cacheId,
+          type: 'updateTaskDetail',
+          value: { domainRevision: updated.domainRevision },
+        });
+      }
+    }
 
     if (
       assigneeAgentId !== undefined ||

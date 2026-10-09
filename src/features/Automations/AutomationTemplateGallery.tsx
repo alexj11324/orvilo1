@@ -1,4 +1,5 @@
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { AlarmClockIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import {
   AUTOMATION_TEMPLATES,
@@ -111,8 +113,12 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
               const template = AUTOMATION_TEMPLATES[id];
               return (
                 <div
-                  className="flex flex-col gap-1 p-4 border cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]"
+                  {...clickableProps()}
                   key={id}
+                  className={cn(
+                    'flex flex-col gap-1 p-4 border cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]',
+                    CLICKABLE_FOCUS_RING,
+                  )}
                   style={{
                     borderColor: cssVar.colorBorderSecondary,
                     background: cssVar.colorBgContainer,

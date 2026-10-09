@@ -17,6 +17,7 @@ import {
   type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
+import { inboxRowSelectKeyDown } from '@/features/WorkInbox/inboxRowKeyboard';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
@@ -198,13 +199,6 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     [milestone, navigate, task.projectId],
   );
 
-  const scheduledBadge =
-    status === 'scheduled' ? (
-      <IssueRowChip>
-        {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-      </IssueRowChip>
-    ) : null;
-
   // Linear's issue-row milestone marker: `◆ name · Sep 30`, drawn with the
   // shared brand-indigo paint so it matches the overview/rail milestones.
   const milestoneBadge = milestone ? (
@@ -268,7 +262,6 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           </div>
         </>
       ) : null}
-      {scheduledBadge}
       <TaskSubtaskProgressTag
         currentIdentifier={task.identifier}
         progress={task.subtaskProgress}
@@ -388,6 +381,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
+        role="button"
+        tabIndex={0}
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -397,6 +392,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           paddingInline: `${insetStart}px 12px`,
         }}
         onClick={handleClick}
+        onKeyDown={(event) => inboxRowSelectKeyDown(event, handleClick)}
       >
         <div className="flex items-center justify-between gap-1">
           {titleRow}

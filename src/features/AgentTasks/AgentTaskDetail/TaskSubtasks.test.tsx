@@ -226,6 +226,19 @@ describe('TaskSubtasks', () => {
     expect(mocks.showContextMenuWithFallback).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps Viewer subtask context-menu mutations denied while allowing navigation', () => {
+    mocks.workspaceRole = 'viewer';
+    render(<TaskSubtasks />);
+
+    fireEvent.contextMenu(screen.getByTestId('subtask-tree-node'));
+    expect(mocks.showContextMenuWithFallback).not.toHaveBeenCalled();
+    expect(mocks.buildContextMenuItems).not.toHaveBeenCalled();
+    expect(mocks.installKeyboardHandlers).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('subtask-tree-node'));
+    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_child/task/T-child/child-task');
+  });
+
   it('forwards a member assignee to both subtask context-menu actions', () => {
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {
@@ -248,15 +261,6 @@ describe('TaskSubtasks', () => {
       expectedTarget,
       expect.any(Function),
     );
-  });
-
-  it('keeps Viewer subtask context-menu actions denied', () => {
-    mocks.workspaceRole = 'viewer';
-    render(<TaskSubtasks />);
-    fireEvent.contextMenu(screen.getByTestId('subtask-tree-node'));
-    expect(mocks.buildContextMenuItems).not.toHaveBeenCalled();
-    expect(mocks.showContextMenuWithFallback).not.toHaveBeenCalled();
-    expect(mocks.installKeyboardHandlers).not.toHaveBeenCalled();
   });
 
   it('shows the responsible assignee on an automated subtask', () => {
@@ -307,7 +311,7 @@ describe('TaskSubtasks', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/task/T-child/child-task');
   });
 
-  it('renders the read-only execution badge when a subtask has an active topic run', () => {
+  it('keeps one Issue status mark when a subtask has an active topic run', () => {
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {
         assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
@@ -320,7 +324,8 @@ describe('TaskSubtasks', () => {
 
     render(<TaskSubtasks />);
 
-    expect(screen.getByTestId('execution-badge')).toBeTruthy();
+    expect(screen.queryByTestId('execution-badge')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('issue-status-picker')).toHaveLength(1);
   });
 });
 

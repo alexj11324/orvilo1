@@ -148,15 +148,11 @@ describe('Project and Issue collaboration boundaries', () => {
   };
   const replaceCoordinator = async (projectId: string, agentId: string) => {
     await projectModel(member).addAgent(projectId, { agentId, role: 'coordinator' });
-    await projectModel(member).updateOrchestrationPolicy(projectId, {
-      coordinatorAgentId: agentId,
-      expectedRevision: 1,
-      orchestrationPolicy: {
-        autoDispatch: false,
-        replanMode: 'disabled',
-        requireHumanReview: true,
-      },
-    });
+    // Seed retained legacy linkage; the orchestration policy API has been retired.
+    await db
+      .update(projects)
+      .set({ coordinatorAgentId: agentId })
+      .where(eq(projects.id, projectId));
   };
   it.each(['builtin', 'former Project coordinator'] as const)(
     'retains independent %s Agent, session and history after a distinct manager deletes its new Project',
@@ -336,15 +332,11 @@ describe('Project and Issue collaboration boundaries', () => {
       role: 'coordinator',
       addedByUserId: member,
     });
-    await projectModel(manager).updateOrchestrationPolicy(project.id, {
-      coordinatorAgentId: independent.id,
-      expectedRevision: 1,
-      orchestrationPolicy: {
-        autoDispatch: false,
-        replanMode: 'disabled',
-        requireHumanReview: true,
-      },
-    });
+    // Seed retained legacy linkage; deletion still goes through the real governance path.
+    await db
+      .update(projects)
+      .set({ coordinatorAgentId: independent.id })
+      .where(eq(projects.id, project.id));
     expect(await projectModel(manager).delete(project.id)).toMatchObject({ id: project.id });
     expect(await projectModel(manager).findById(project.id)).toBeNull();
     expect(await db.select().from(agents).where(eq(agents.id, independent.id))).toHaveLength(1);

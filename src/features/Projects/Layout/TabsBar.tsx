@@ -170,7 +170,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             )}
           >
             <SidebarHeaderSelectTrigger
-              avatar={detail?.project.avatar || detail?.project.name || t('sidebar.title')}
+              avatar={detail?.project.avatar || undefined}
               name={detail?.project.name || t('sidebar.title')}
               title={detail?.project.name || t('sidebar.title')}
             />
@@ -186,7 +186,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
                 style={{ color: headerStatusVisual.color }}
                 variant="outline"
               >
-                <ProjectStatusIcon size={12} status={detail.project.status} />
+                <ProjectStatusIcon size={16} status={detail.project.status} />
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,
                 })}

@@ -2,6 +2,7 @@
 
 import type { AcceptanceGroupFeedback } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   BadgeCheck,
@@ -19,6 +20,7 @@ import ActionIcon from '@/components/ActionIcon';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { AttachmentThumbs } from '../Evidence/attachments';
 import { hasVisualEvidence } from '../Evidence/evidence';
@@ -207,7 +209,11 @@ const CheckList = memo<CheckListProps>(
           return (
             <Fragment key={key}>
               <div
-                className={`flex items-center gap-2 ${styles.groupHeader}`}
+                {...clickableProps()}
+                className={cn(
+                  `flex items-center gap-2 ${styles.groupHeader}`,
+                  CLICKABLE_FOCUS_RING,
+                )}
                 style={{
                   borderBlockStart:
                     groupIndex > 0 ? `1px solid ${cssVar.colorBorderSecondary}` : 'none',

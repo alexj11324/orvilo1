@@ -27,7 +27,7 @@ const personalCredsApi: CredsApi = {
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
     overflow: hidden;
-    width: '100%';
+    width: 100%;
     padding-block: 4px;
     padding-inline: 16px;
   `,

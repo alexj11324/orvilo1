@@ -5,14 +5,17 @@ import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import Link from '@/components/Link';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
@@ -61,16 +64,21 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: 12px;
     border-radius: 8px;
 
-    /* Linear: no stroke — a 0.5px hairline ring plus a soft drop shadow. */
-    background: ${cssVar.colorFillQuaternary};
-    box-shadow:
-      0 0 0 0.5px ${cssVar.colorBorder},
-      0 1px 2px rgb(0 0 0 / 30%);
+    /* Shared surface roles work in either theme, without a heavy black shadow. */
+    background: ${cssVar.colorBgContainer};
+    box-shadow: 0 0 0 1px ${cssVar.colorBorderSecondary};
 
-    transition: background 0.2s;
+    transition:
+      background 150ms,
+      box-shadow 150ms;
 
     &:hover {
-      background: ${cssVar.colorFillTertiary};
+      background: ${cssVar.colorBgElevated};
+      box-shadow: 0 0 0 1px ${cssVar.colorBorder};
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
     }
   `,
   cardOverlay: css`
@@ -91,7 +99,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     font-size: 12px;
     line-height: 18px;
-    color: ${cssVar.colorTextTertiary};
+    color: ${cssVar.colorTextSecondary};
   `,
   title: css`
     overflow: hidden;
@@ -103,7 +111,14 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-weight: 500;
     line-height: 20px;
     color: ${cssVar.colorText};
+    text-decoration: none;
     word-break: break-word;
+
+    &:focus-visible {
+      border-radius: 2px;
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 3px;
+    }
   `,
 }));
 
@@ -158,6 +173,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       useTaskItemContextMenu(task, routeScope, onStatusChange);
     const navigate = useWorkspaceAwareNavigate();
     const activeWorkspaceId = useActiveWorkspaceId();
+    const activeWorkspaceSlug = useActiveWorkspaceSlug();
     // Project chip: `projectId` resolves through the cached project list — an
     // unknown project renders no chip rather than a raw id (Linear honesty).
     useProjectStore((s) => s.useFetchProjectList)(Boolean(activeWorkspaceId && task.projectId));
@@ -167,6 +183,11 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       : undefined;
 
     const status = toTaskStatus(task.status);
+    // A stale `running` run state must not animate a card the Issue workflow has
+    // already moved out of progress (e.g. back to Todo).
+    const generating =
+      status === 'running' &&
+      (task.workflowCategory === 'in_progress' || task.workflowCategory === 'in_review');
     // One status mark per card: the workflow state when the task has one.
     const workflowGlyph = useTaskWorkflowGlyph({
       executionStatus: task.status,
@@ -179,6 +200,15 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       formatThisYear: t('time.formatThisYear'),
       locale: i18n.language,
     });
+
+    const detailHref = buildWorkspaceAwarePath(
+      taskDetailPath(
+        task.identifier,
+        routeScope === 'agent' ? (task.assigneeAgentId ?? undefined) : undefined,
+        task.name,
+      ),
+      activeWorkspaceSlug,
+    );
 
     const handleClick = useCallback(() => {
       navigate(
@@ -394,7 +424,19 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               )}
             </span>
           ) : null}
-          <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
+          {overlay ? (
+            <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
+          ) : (
+            <Link
+              aria-label={`${task.identifier} ${hasName ? task.name : ''}`.trim()}
+              className={styles.title}
+              href={detailHref}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {hasName ? task.name : task.identifier}
+            </Link>
+          )}
         </div>
 
         {/* Optional description preview (Cordy shows one muted line). */}
@@ -426,11 +468,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               schedulePattern={task.schedulePattern}
               scheduleTimezone={task.scheduleTimezone}
             />
-          ) : null}
-          {status === 'scheduled' ? (
-            <div className="text-xs text-muted-foreground">
-              {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-            </div>
           ) : null}
         </div>
 
@@ -472,13 +509,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
     // The overlay twin never opens menus — it only previews the dragged card.
     if (overlay) {
-      return <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
+      return <GeneratingBorder generating={generating}>{card}</GeneratingBorder>;
     }
 
     // The trigger has to clone the real DOM card: wrapping GeneratingBorder
     // (which does not forward props) drops the injected contextmenu handlers.
     return (
-      <GeneratingBorder generating={status === 'running'}>
+      <GeneratingBorder generating={generating}>
         <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
           {card}
         </SidebarContextMenu>

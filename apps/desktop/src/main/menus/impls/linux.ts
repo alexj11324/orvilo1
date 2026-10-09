@@ -81,25 +81,6 @@ export class LinuxMenu extends BaseMenuPlatform implements IMenuPlatform {
           },
           { type: 'separator' },
           {
-            accelerator: 'Alt+Ctrl+A',
-            click: () => {
-              const mainWindow = this.app.browserManager.getMainWindow();
-              mainWindow.show();
-              mainWindow.broadcast('createNewAgent');
-            },
-            label: t('file.newAgent'),
-          },
-          {
-            accelerator: 'Alt+Ctrl+G',
-            click: () => {
-              const mainWindow = this.app.browserManager.getMainWindow();
-              mainWindow.show();
-              mainWindow.broadcast('createNewAgentGroup');
-            },
-            label: t('file.newAgentGroup'),
-          },
-          { type: 'separator' },
-          {
             click: async () => {
               const mainWindow = this.app.browserManager.getMainWindow();
               mainWindow.show();

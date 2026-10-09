@@ -32,13 +32,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
+import AssigneeAvatar from '../features/AssigneeAvatar';
 import { styles } from '../shared/style';
 import RunIntegrationTag from './RunIntegrationTag';
 import RunReplyEditor from './RunReplyEditor';
@@ -283,17 +283,17 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
 
   const isAgent = activity.author?.type === 'agent';
 
-  // An agent that simply never set an avatar is still an agent — it gets the
-  // same default face it wears everywhere else, not a placeholder dot. The dot
-  // stays for rows with no author at all.
-  const avatarNode =
-    activity.author?.avatar || isAgent ? (
-      <Avatar avatar={activity.author?.avatar || DEFAULT_AVATAR} size={24} />
-    ) : (
-      <div className={styles.activityAvatar}>
-        <CircleDot size={12} />
-      </div>
-    );
+  // Agent authors share runtime identity with task assignees; human authors
+  // keep their profile avatar, and authorless rows keep the activity mark.
+  const avatarNode = isAgent ? (
+    <AssigneeAvatar agentId={activity.author?.id} size={24} />
+  ) : activity.author?.avatar ? (
+    <Avatar avatar={activity.author.avatar} size={24} />
+  ) : (
+    <div className={styles.activityAvatar}>
+      <CircleDot size={12} />
+    </div>
+  );
 
   return (
     // The primary result is not one card among many — it is the agent reporting

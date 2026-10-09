@@ -265,7 +265,12 @@ const CommentCard = memo<CommentCardProps>(
         {!editing && menuItems.length > 0 && (
           <div className={`${styles.cardActions} topic-comment-actions`}>
             <DropdownMenu items={menuItems}>
-              <ActionIcon icon={MoreHorizontal} loading={mutating} size={'small'} />
+              <ActionIcon
+                aria-label={t('more', { ns: 'common' })}
+                icon={MoreHorizontal}
+                loading={mutating}
+                size={'small'}
+              />
             </DropdownMenu>
           </div>
         )}

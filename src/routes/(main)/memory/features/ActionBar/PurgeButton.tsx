@@ -70,6 +70,7 @@ const PurgeButton = memo<Props>(({ iconOnly }) => {
               <span style={{ display: 'inline-flex' }}>
                 <ActionIcon
                   danger
+                  aria-label={t('delete')}
                   icon={Trash2Icon}
                   loading={loading}
                   size={DESKTOP_HEADER_ICON_SMALL_SIZE}

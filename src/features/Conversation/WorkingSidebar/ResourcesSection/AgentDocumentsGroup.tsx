@@ -40,6 +40,7 @@ import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocu
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { standardizeIdentifier } from '@/utils/identifier';
 
 import DeviceLevelSkills from './DeviceLevelSkills';
@@ -200,9 +201,13 @@ const DocumentItem = memo<DocumentItemProps>(
 
     return (
       <div
+        {...clickableProps()}
         className={cn(
-          'flex items-start gap-2',
-          `${styles.container} ${isActive ? styles.containerActive : ''}`,
+          cn(
+            'flex items-start gap-2',
+            `${styles.container} ${isActive ? styles.containerActive : ''}`,
+          ),
+          CLICKABLE_FOCUS_RING,
         )}
         onClick={handleOpen}
       >

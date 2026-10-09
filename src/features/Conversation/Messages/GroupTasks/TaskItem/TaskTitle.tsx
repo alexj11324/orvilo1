@@ -6,9 +6,8 @@ import { Footprints, ListChecksIcon, Wrench, XIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { DEFAULT_AVATAR } from '@/const/meta';
+import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 
 import { formatDuration, formatElapsedTime, isProcessingStatus } from '../../Tasks/shared';
 
@@ -28,8 +27,7 @@ export interface TaskMetrics {
 interface TaskTitleProps {
   /** Agent info for avatar display */
   agent?: {
-    avatar?: string;
-    backgroundColor?: string | null;
+    id?: string | null;
   };
   /** Metrics to display (steps, tool calls, elapsed time) */
   metrics?: TaskMetrics;
@@ -151,14 +149,7 @@ const TaskTitle = memo<TaskTitleProps>(({ title, status, metrics, agent }) => {
   return (
     <div className="flex items-center gap-1.5">
       <TaskStatusIndicator status={status} />
-      {agent && (
-        <Avatar
-          avatar={agent.avatar || DEFAULT_AVATAR}
-          background={agent.backgroundColor || undefined}
-          shape={'circle'}
-          size={20}
-        />
-      )}
+      {agent && <AssigneeAvatar agentId={agent.id} size={20} />}
       <div className="truncate text-[14px]">{title}</div>
       {metrics && <MetricsDisplay metrics={metrics} status={status} />}
     </div>

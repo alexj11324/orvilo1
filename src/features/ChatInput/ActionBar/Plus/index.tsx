@@ -18,7 +18,6 @@ import {
   PlusIcon,
   SearchCheck,
   Settings2Icon,
-  TargetIcon,
   TypeIcon,
 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
@@ -45,13 +44,12 @@ import {
   useServerConfigStore,
 } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors, settingsSelectors } from '@/store/user/selectors';
+import { settingsSelectors } from '@/store/user/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useChatInputResourceAccess } from '../../hooks/useChatInputResourceAccess';
 import { useEffectiveModel } from '../../hooks/useEffectiveModel';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
-import { insertGoalTag } from '../../InputEditor/ActionTag/goalTag';
 import { useChatInputStore } from '../../store';
 import { type ActionDropdownMenuItems } from '../components/ActionDropdown';
 import { ChatInputAction } from '../components/ChatInputAction';
@@ -343,9 +341,6 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
   const agentId = useAgentId();
   const { canConfigureResource } = useChatInputResourceAccess();
   const { updateAgentChatConfig } = useUpdateAgentConfig();
-
-  // Goal creation is lab-gated while the product surface is being rolled out.
-  const enableTopicAcceptance = useUserStore(labPreferSelectors.enableTopicAcceptance);
 
   const upload = useFileStore((s) => s.uploadChatFiles);
   const { enableKnowledgeBase } = useServerConfigStore(featureFlagsSelectors);
@@ -822,36 +817,9 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
         ]
       : uploadItems;
 
-    // Goal creation has one canonical entry: drop the goal chip at the head of
-    // the composer. The agent then plans and calls orvilo-goal.createGoal,
-    // regardless of whether this conversation already has a topic.
-    const acceptanceItems: ActionDropdownMenuItems = enableTopicAcceptance
-      ? [
-          {
-            icon: (
-              <span className="anticon" role="img">
-                <TargetIcon fill={'transparent'} height={20} size={20} width={20} />
-              </span>
-            ),
-            key: 'set-topic-goal',
-            // Same string as the chip it inserts: one label for the affordance,
-            // so the menu row and the chip can never drift apart.
-            label: tEditor('slash.goal'),
-            onClick: () => {
-              insertGoalTag(editor, tEditor('slash.goal'));
-            },
-          },
-        ]
-      : [];
-
     // Grouped with a single divider only between non-empty groups:
-    // [attachments] | [memory · search · skills] | [set goal] | [formatting · gateway · params]
-    const menuGroups: ActionDropdownMenuItems[] = [
-      attachmentsItems,
-      coreItems,
-      acceptanceItems,
-      formatItems,
-    ];
+    // [attachments] | [memory · search · skills] | [formatting · gateway · params]
+    const menuGroups: ActionDropdownMenuItems[] = [attachmentsItems, coreItems, formatItems];
     return menuGroups
       .filter((group) => group.length > 0)
       .flatMap((group, index) => (index === 0 ? group : [{ type: 'divider' as const }, ...group]));
@@ -859,7 +827,6 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
     agentId,
     activeSearchOption,
     canConfigureResource,
-    enableTopicAcceptance,
     canUploadImage,
     canUploadVideo,
     canUploadAudio,

@@ -21,6 +21,12 @@ share one SWR key. Backend follow-up (not changed here): `TaskModel.resolve` sho
 treated the store tag `TASK_NOT_FOUND` as "gone"; the tRPC error therefore rendered as a transient
 load failure (404 copy + a Retry that cannot succeed). `isTaskNotFound` now accepts both shapes.
 
-`IssueContent` takes an optional `notFound` slot. The Inbox pane passes a calm "This Issue was
-deleted" state under the notification's own title/text, with a dismiss action when the card offers
-one. Other hosts keep the default Issue-not-found page.
+`IssueContent` takes an optional `notFound` slot. The Inbox pane passes an "Issue unavailable"
+state under the notification's own title/text: the target may have been deleted or may no longer
+be accessible. `NOT_FOUND` also hides existing Issues this member cannot read, so the copy must
+not assert deletion or reveal existence. A dismiss action remains available when the card offers
+one. Other hosts keep the default Issue-not-found page; 500 and `FORBIDDEN` handling is unchanged.
+
+The wording follow-up changes only the English source, en-US/zh-CN translations, and explanatory
+comments/documentation. No error classification, permission check, attachment behavior, or dismiss
+handler changed. No new copy-only test was added; owning CI and Electron verification remain pending.

@@ -1275,9 +1275,9 @@ const WorkInboxPage = memo(() => {
             <LazyIssueContent
               taskId={selectedIssueTaskId}
               notFound={
-                // The Issue behind this notification was deleted. The notification's own
-                // text stays readable above; the pane offers a calm explanation and a way
-                // to clear the row, not a generic load failure with a Retry that cannot work.
+                // NOT_FOUND also hides Issues this member cannot read. Keep the explanation
+                // neutral; the notification's text stays readable above with a way to clear
+                // the row, without claiming the Issue was deleted.
                 <div
                   className="flex flex-col items-center gap-2 px-4 py-8 text-center"
                   role="status"

@@ -676,6 +676,7 @@ const CreateDomainPage = memo(() => {
                         />
                       </div>
                       <ActionIcon
+                        aria-label={t('delete', { ns: 'common' })}
                         icon={Trash2Icon}
                         size={'small'}
                         onClick={() =>
@@ -768,6 +769,7 @@ const CreateDomainPage = memo(() => {
                         />
                       </div>
                       <ActionIcon
+                        aria-label={t('delete', { ns: 'common' })}
                         icon={Trash2Icon}
                         size={'small'}
                         onClick={() => patch({ layers: draft.layers.filter((_, j) => j !== i) })}

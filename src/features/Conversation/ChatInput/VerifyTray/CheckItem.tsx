@@ -77,6 +77,7 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
                 render={
                   <span style={{ display: 'inline-flex' }}>
                     <ActionIcon
+                      aria-label={t('edit', { ns: 'common' })}
                       className={cx('verify-tray-row-edit', styles.rowEdit)}
                       icon={PencilIcon}
                       size={'small'}

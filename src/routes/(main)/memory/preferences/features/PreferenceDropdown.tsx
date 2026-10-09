@@ -61,7 +61,7 @@ const PreferenceDropdown = memo<PreferenceDropdownProps>(({ id, size = 'small' }
 
   return (
     <SidebarDropdownMenu items={menuItems}>
-      <ActionIcon icon={MoreHorizontal} size={size} />
+      <ActionIcon aria-label={t('more', { ns: 'common' })} icon={MoreHorizontal} size={size} />
     </SidebarDropdownMenu>
   );
 });

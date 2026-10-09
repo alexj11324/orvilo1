@@ -152,6 +152,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
                     {status.path}
                   </span>
                   <Button
+                    aria-label={t('copy', { ns: 'common' })}
                     size="icon-sm"
                     type="button"
                     variant="ghost"

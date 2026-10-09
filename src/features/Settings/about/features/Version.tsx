@@ -2,12 +2,13 @@ import { BRANDING_NAME } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import { type UpdaterState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
 import { Badge } from '@/components/reui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { CHANGELOG_URL, MANUAL_UPGRADE_URL, OFFICIAL_SITE } from '@/const/url';
 import { CURRENT_VERSION } from '@/const/version';
@@ -95,10 +96,14 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
     if (!isDesktop) {
       if (hasNewVersion && showManualUpgrade) {
         return (
-          <a href={MANUAL_UPGRADE_URL} rel="noreferrer" style={{ flex: 1 }} target="_blank">
-            <Button className={mobile ? 'w-full' : ''} variant="default">
-              {t('upgradeVersion.action')}
-            </Button>
+          <a
+            className={cn(buttonVariants({ variant: 'default' }), mobile ? 'w-full' : '')}
+            href={MANUAL_UPGRADE_URL}
+            rel="noreferrer"
+            style={{ flex: 1 }}
+            target="_blank"
+          >
+            {t('upgradeVersion.action')}
           </a>
         );
       }
@@ -241,10 +246,14 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', gap: 8, flex: mobile ? 1 : undefined }}
       >
-        <a href={CHANGELOG_URL} rel="noreferrer" style={{ flex: 1 }} target="_blank">
-          <Button className={mobile ? 'w-full' : ''} variant="outline">
-            {t('changelog')}
-          </Button>
+        <a
+          className={cn(buttonVariants({ variant: 'outline' }), mobile ? 'w-full' : '')}
+          href={CHANGELOG_URL}
+          rel="noreferrer"
+          style={{ flex: 1 }}
+          target="_blank"
+        >
+          {t('changelog')}
         </a>
         {renderUpdateButton()}
       </div>

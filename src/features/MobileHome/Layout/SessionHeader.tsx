@@ -5,6 +5,7 @@ import { AGENT_CHAT_URL } from '@orvilo/const';
 import { cx } from 'antd-style';
 import { MessageSquarePlus } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
@@ -20,6 +21,7 @@ import { mobileHeaderSticky } from '@/styles/mobileHeader';
 import { styles } from './SessionHeader/style';
 
 const Header = memo(() => {
+  const { t } = useTranslation('common');
   const navigate = useNavigate();
   const lastUsedAgentId = useLastUsedAgentId();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
@@ -42,7 +44,7 @@ const Header = memo(() => {
       }
       right={
         <ActionIcon
-          aria-label={'new conversation'}
+          aria-label={t('cmdk.newConversation')}
           icon={MessageSquarePlus}
           size={MOBILE_HEADER_ICON_SIZE}
           onClick={openNewConversation}

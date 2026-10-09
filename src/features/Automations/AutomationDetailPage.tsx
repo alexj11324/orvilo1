@@ -1,5 +1,6 @@
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ChevronRightIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
@@ -14,7 +15,7 @@ import { DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { SelectOptionItems } from '@/components/SelectOptions';
 import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -291,8 +292,11 @@ const AutomationDetailPage = memo(() => {
             desc={t('detail.not_found')}
             title={t('detail.not_found')}
             extra={
-              <WorkspaceLink to={'/automations'}>
-                <Button variant="outline">{t('page.back_to_automations')}</Button>
+              <WorkspaceLink
+                className={cn(buttonVariants({ variant: 'outline' }))}
+                to={'/automations'}
+              >
+                {t('page.back_to_automations')}
               </WorkspaceLink>
             }
           />

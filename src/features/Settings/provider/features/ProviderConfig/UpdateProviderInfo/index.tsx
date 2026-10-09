@@ -21,6 +21,7 @@ const UpdateProviderInfo = memo(() => {
   return (
     <Tooltip title={canManageProvider ? t('updateAiProvider.tooltip') : reason}>
       <Button
+        aria-label={t('settings', { ns: 'common' })}
         disabled={!canManageProvider}
         icon={SettingsIcon}
         size={'small'}

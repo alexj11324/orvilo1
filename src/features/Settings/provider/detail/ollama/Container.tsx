@@ -4,6 +4,7 @@ import { createStaticStyles, responsive } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   close: css`
@@ -35,12 +36,14 @@ const Container = ({
   children: ReactNode;
   setError: (error?: any) => void;
 }) => {
+  const { t: tCommon } = useTranslation('common');
   const [show, setShow] = useState(true);
 
   return (
     show && (
       <Flexbox className={styles.container}>
         <ActionIcon
+          aria-label={tCommon('close')}
           className={styles.close}
           icon={XIcon}
           onClick={() => {

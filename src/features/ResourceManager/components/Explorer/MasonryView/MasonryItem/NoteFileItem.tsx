@@ -159,7 +159,12 @@ const NoteFileItem = memo<NoteFileItemProps>(
                   }
                 }}
               >
-                <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                <Button
+                  aria-label={t('components:FileManager.actions.chunkingTooltip')}
+                  loading={isCreatingFileParseTask}
+                  size="sm"
+                  variant="ghost"
+                >
                   <FileBoxIcon data-icon="inline-start" />
                 </Button>
               </div>

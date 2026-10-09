@@ -89,7 +89,11 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
             },
           ]}
         >
-          <ActionIcon icon={MoreVerticalIcon} loading={loading} />
+          <ActionIcon
+            aria-label={t('more', { ns: 'common' })}
+            icon={MoreVerticalIcon}
+            loading={loading}
+          />
         </DropdownMenu>
       ) : (
         <Button

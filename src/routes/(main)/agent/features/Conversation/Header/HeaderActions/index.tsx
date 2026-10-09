@@ -2,6 +2,7 @@
 
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { renderMenuItems } from '@/components/ItemsMenu/menuItems';
@@ -17,13 +18,16 @@ import HeaderSlot from '@/routes/(main)/agent/(chat)/_layout/HeaderSlot';
 import { useMenu } from './useMenu';
 
 const HeaderActions = memo(() => {
+  const { t: tCommon } = useTranslation('common');
   const { menuHeader, menuItems } = useMenu();
 
   return (
     <>
       <HeaderSlot.Outlet />
       <DropdownMenu>
-        <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+        <DropdownMenuTrigger
+          render={<ActionIcon aria-label={tCommon('more')} icon={MoreHorizontal} size={'small'} />}
+        />
         <DropdownMenuContent align="end" side="bottom">
           {menuHeader && (
             <DropdownMenuGroup>

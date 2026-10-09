@@ -116,6 +116,7 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
               render={
                 <span style={{ display: 'inline-flex' }}>
                   <ActionIcon
+                    aria-label={t('history', { ns: 'common' })}
                     disabled={disabled || isEmpty}
                     icon={Clock3Icon}
                     size={DESKTOP_HEADER_ICON_SMALL_SIZE}

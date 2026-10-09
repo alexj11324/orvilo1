@@ -4,6 +4,7 @@ import { createStaticStyles, cx } from 'antd-style';
 import { ChevronDown, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
 import { createElement, memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 
@@ -58,6 +59,7 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
     selectedKey,
     onFolderClick,
   }) => {
+    const { t: tCommon } = useTranslation('common');
     const itemKey = item.slug || item.id;
     const isExpanded = expandedFolders.has(itemKey);
     // Compare selectedKey with item.id since selectedKey is always the ID
@@ -95,6 +97,7 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
             <ActionIcon
+              aria-label={tCommon('toggle')}
               icon={ChevronDown}
               size={'small'}
               onClick={(e) => {

@@ -1,5 +1,6 @@
 import { cn } from 'cn';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,6 +10,7 @@ import { useFileStore } from '@/store/file';
 import { oneLineEllipsis } from '@/styles';
 
 const Title = () => {
+  const { t: tCommon } = useTranslation('common');
   const [closeFilePreview, previewFileId] = useChatStore((s) => [
     s.closeFilePreview,
     chatPortalSelectors.previewFileId(s),
@@ -20,7 +22,12 @@ const Title = () => {
 
   return (
     <div className="flex flex-row items-center gap-1">
-      <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeFilePreview()} />
+      <ActionIcon
+        aria-label={tCommon('back')}
+        icon={ArrowLeft}
+        size={'small'}
+        onClick={() => closeFilePreview()}
+      />
 
       {isLoading ? (
         <Skeleton style={{ height: 28 }} />

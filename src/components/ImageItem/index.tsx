@@ -4,6 +4,7 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Trash } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { usePlatform } from '@/hooks/usePlatform';
@@ -59,6 +60,7 @@ const ImageItem = memo<ImageItemProps>(
     width,
     height,
   }) => {
+    const { t: tCommon } = useTranslation('common');
     const IMAGE_SIZE = editable ? MIN_IMAGE_SIZE : '100%';
     const { isSafari } = usePlatform();
     const aspectRatio =
@@ -81,6 +83,7 @@ const ImageItem = memo<ImageItemProps>(
         actions={
           editable && (
             <ActionIcon
+              aria-label={tCommon('delete')}
               className={styles.deleteButton}
               icon={Trash}
               size={'small'}

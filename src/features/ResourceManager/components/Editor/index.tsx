@@ -117,7 +117,7 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
                   }}
                 />
               )}
-              <ActionIcon icon={InfoIcon} onClick={openFileDetailModal} />
+              <ActionIcon aria-label={t('details')} icon={InfoIcon} onClick={openFileDetailModal} />
             </div>
           }
           style={{

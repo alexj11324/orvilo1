@@ -131,6 +131,7 @@ interface FullscreenContentProps {
 }
 
 const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPage }) => {
+  const { t: tCommon } = useTranslation('common');
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(initialPage);
 
@@ -166,6 +167,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
         <div className={styles.fullscreenNavigation}>
           <div className="flex flex-row items-center gap-3">
             <Button
+              aria-label={tCommon('previous')}
               className={cn(styles.fullscreenButton)}
               disabled={pageNumber <= 1}
               size="icon-sm"
@@ -189,6 +191,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
               <span className={styles.fullscreenPageText}>/ {numPages}</span>
             </div>
             <Button
+              aria-label={tCommon('next')}
               className={cn(styles.fullscreenButton)}
               disabled={pageNumber >= numPages}
               size="icon-sm"
@@ -295,6 +298,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
     <div className={localStyles.containerWrapper}>
       {pdfData && (
         <Button
+          aria-label={t('fullscreen', { ns: 'common' })}
           className={cn(localStyles.expandButton)}
           size="icon-sm"
           variant="ghost"
@@ -334,6 +338,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
         <div className={localStyles.footerNavigation}>
           <div className="flex flex-row items-center gap-2 justify-center">
             <Button
+              aria-label={t('previous', { ns: 'common' })}
               disabled={pageNumber <= 1}
               size="icon-sm"
               variant="ghost"
@@ -356,6 +361,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
               <span className={localStyles.pageNumberText}>/ {numPages}</span>
             </div>
             <Button
+              aria-label={t('next', { ns: 'common' })}
               disabled={pageNumber >= numPages}
               size="icon-sm"
               variant="ghost"

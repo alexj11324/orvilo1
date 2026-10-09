@@ -181,6 +181,7 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
                     render={
                       <span style={{ display: 'inline-flex' }}>
                         <ActionIcon
+                          aria-label={t('edit', { ns: 'common' })}
                           className={cx('verify-tray-goal-edit', styles.rowEdit)}
                           icon={PencilIcon}
                           size={'small'}

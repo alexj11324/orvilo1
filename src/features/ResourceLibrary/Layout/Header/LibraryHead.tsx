@@ -155,6 +155,7 @@ const Head = memo<{ id: string }>(({ id }) => {
               {name}
             </div>
             <ActionIcon
+              aria-label={t('switch')}
               icon={ChevronsUpDownIcon}
               style={{ width: 24 }}
               size={{

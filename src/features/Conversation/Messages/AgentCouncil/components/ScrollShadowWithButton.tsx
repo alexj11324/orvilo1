@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 
@@ -53,6 +54,7 @@ type ScrollShadowWithButtonProps = ComponentProps<'div'> & {
 
 const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
   ({ children, justify, style, ...rest }) => {
+    const { t: tCommon } = useTranslation('common');
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
@@ -99,6 +101,7 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
       >
         {canScrollLeft && (
           <Button
+            aria-label={tCommon('previous')}
             className={cx(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
             variant="outline"
             onClick={() => handleScroll('left')}
@@ -118,6 +121,7 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         </ScrollAreaPrimitive.Root>
         {canScrollRight && (
           <Button
+            aria-label={tCommon('next')}
             className={cx(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
             variant="outline"
             onClick={() => handleScroll('right')}

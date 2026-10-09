@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -10,32 +9,12 @@ import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import Avatar from '@/components/Avatar';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FORM_STYLE } from '@/const/layoutTokens';
 import { useSaveState } from '@/hooks/useSaveState';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
-
-const styles = createStaticStyles(({ css }) => ({
-  field: css`
-    display: grid;
-    gap: 12px 24px;
-    align-items: center;
-
-    padding-block: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    @container (min-width: 560px) {
-      grid-template-columns: 160px minmax(0, 1fr);
-    }
-  `,
-}));
-
-const GeneralField = ({ children, label }: { children: React.ReactNode; label: string }) => (
-  <div className={styles.field}>
-    <div className="text-sm font-medium">{label}</div>
-    <div className="flex min-w-0 items-center gap-3">{children}</div>
-  </div>
-);
 
 const WorkspaceGeneral = () => {
   const { t } = useTranslation(['setting', 'common']);
@@ -68,32 +47,52 @@ const WorkspaceGeneral = () => {
   );
 
   return (
-    <div className="@container mx-auto flex w-full min-w-0 max-w-160 flex-col gap-6">
-      <h1 className="m-0 text-xl font-semibold">
-        {t('workspaceSetting.tab.general', { defaultValue: 'General' })}
-      </h1>
-      <div>
-        <GeneralField label={t('workspaceSetting.general.logo', { defaultValue: 'Logo' })}>
-          <Avatar
-            avatar={current?.avatar ?? workspace?.avatar ?? undefined}
-            name={current?.name ?? workspace?.name ?? '?'}
-            shape={'square'}
-            size={36}
-          />
-          {field('avatar', t('workspaceSetting.general.logo'))}
-        </GeneralField>
-        <GeneralField label={t('workspaceSetting.general.name', { defaultValue: 'Name' })}>
-          {field('name', t('workspaceSetting.general.name'))}
-        </GeneralField>
-        <GeneralField label={t('workspaceSetting.general.url', { defaultValue: 'URL' })}>
-          {field('slug', t('workspaceSetting.general.url'))}
-        </GeneralField>
-        <GeneralField label={t('workspaceSetting.general.created', { defaultValue: 'Created' })}>
-          <div className="text-sm text-muted-foreground">
-            {workspace?.createdAt ? formatAbsoluteDate(workspace.createdAt) : '—'}
-          </div>
-        </GeneralField>
-      </div>
+    <>
+      {/* Same wide filled card as the personal settings pages. */}
+      <Form
+        collapsible={false}
+        itemMinWidth={FORM_STYLE.itemMinWidth}
+        itemsType={'group'}
+        style={FORM_STYLE.style}
+        variant={'filled'}
+        items={[
+          {
+            children: [
+              {
+                children: (
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar
+                      avatar={current?.avatar ?? workspace?.avatar ?? undefined}
+                      name={current?.name ?? workspace?.name ?? '?'}
+                      shape={'square'}
+                      size={36}
+                    />
+                    {field('avatar', t('workspaceSetting.general.logo'))}
+                  </div>
+                ),
+                label: t('workspaceSetting.general.logo', { defaultValue: 'Logo' }),
+              },
+              {
+                children: field('name', t('workspaceSetting.general.name')),
+                label: t('workspaceSetting.general.name', { defaultValue: 'Name' }),
+              },
+              {
+                children: field('slug', t('workspaceSetting.general.url')),
+                label: t('workspaceSetting.general.url', { defaultValue: 'URL' }),
+              },
+              {
+                children: (
+                  <div className="text-right text-sm text-muted-foreground">
+                    {workspace?.createdAt ? formatAbsoluteDate(workspace.createdAt) : '—'}
+                  </div>
+                ),
+                label: t('workspaceSetting.general.created', { defaultValue: 'Created' }),
+              },
+            ],
+            title: t('workspaceSetting.tab.general', { defaultValue: 'General' }),
+          },
+        ]}
+      />
       <div className="flex flex-wrap items-center justify-end gap-3">
         {status !== 'idle' && (
           <AutoSaveHint
@@ -120,7 +119,7 @@ const WorkspaceGeneral = () => {
           {t('save', { ns: 'common' })}
         </Button>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -3,7 +3,7 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 
-import { WorkspaceNotificationSkeleton } from '@/components/Skeleton/Settings/Notification';
+import NotificationSettingsSkeleton from '@/components/Skeleton/Settings/Notification';
 import WorkspaceGeneralSkeleton from '@/components/Skeleton/Settings/WorkspaceGeneral';
 import type { SurfaceSkeletonVariant } from '@/components/Skeleton/Surface';
 import { WORKSPACE_SETTINGS_ALIASES } from '@/config/routes/settings';
@@ -421,7 +421,7 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
   },
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
-    meta: routeMeta({ Skeleton: WorkspaceNotificationSkeleton }),
+    meta: routeMeta({ Skeleton: NotificationSettingsSkeleton }),
     name: 'Notification',
     path: 'notification',
     skeleton: 'form',
@@ -430,7 +430,7 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
   // reads the channel id from the `sub` route param.
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
-    meta: routeMeta({ Skeleton: WorkspaceNotificationSkeleton }),
+    meta: routeMeta({ Skeleton: NotificationSettingsSkeleton }),
     name: 'Notification > Channel',
     path: 'notification/:sub',
     skeleton: 'form',

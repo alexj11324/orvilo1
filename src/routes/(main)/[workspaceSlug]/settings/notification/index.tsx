@@ -1,5 +1,13 @@
 'use client';
 
-import WorkspaceNotification from '@/business/client/BusinessSettingPages/WorkspaceNotification';
+import { componentMap } from '@/features/Settings/features/componentMap';
+import { SettingsTabs } from '@/store/global/initialState';
 
-export default WorkspaceNotification;
+/**
+ * Notification preferences are personal: there is one set, not one per
+ * workspace. Like hotkeys and appearance, the workspace settings sidebar
+ * mirrors the personal page (the platform-specific one from `componentMap`).
+ */
+const WorkspaceNotificationSetting = componentMap[SettingsTabs.Notification];
+
+export default WorkspaceNotificationSetting;

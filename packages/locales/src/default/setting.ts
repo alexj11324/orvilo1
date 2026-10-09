@@ -951,6 +951,12 @@ export default {
   'notification.email.title': 'Email Notifications',
   'notification.inbox.desc': 'Show notifications in the in-app inbox',
   'notification.inbox.title': 'Inbox Notifications',
+  'notification.matrix.all': 'All notifications',
+  'notification.matrix.cell': '{{channel}}: {{event}}',
+  'notification.matrix.event': 'Event',
+  'notification.matrix.inbox': 'Inbox',
+  'notification.matrix.push': 'Desktop & mobile',
+  'notification.matrix.title': 'Event notifications',
   'notification.push.desc':
     'Send push notifications to your mobile devices (Orvilo mobile app required)',
   'notification.push.title': 'Mobile Push Notifications',

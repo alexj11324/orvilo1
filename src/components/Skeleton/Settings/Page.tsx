@@ -4,11 +4,9 @@ import { useLocation } from 'react-router';
 
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
-import { hasHostCapability } from '@/platform';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
 import SkeletonBar from '../Bar';
-import NotificationSettingsSkeleton, { NotificationSoundSkeleton } from './Notification';
 import SettingsProfileSkeleton from './Profile';
 import SettingsSectionSkeleton from './Section';
 
@@ -29,16 +27,7 @@ const SettingsPageSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
         </NavHeader>
       )}
       <SettingContainer maxWidth={1024} style={{ paddingBlock: '24px 128px', paddingInline: 24 }}>
-        {profile ? (
-          <SettingsProfileSkeleton />
-        ) : tab === 'notification' ? (
-          <div className="flex flex-col gap-8">
-            {hasHostCapability('notification.native') && <NotificationSoundSkeleton />}
-            <NotificationSettingsSkeleton />
-          </div>
-        ) : (
-          <SettingsSectionSkeleton />
-        )}
+        {profile ? <SettingsProfileSkeleton /> : <SettingsSectionSkeleton />}
       </SettingContainer>
     </div>
   );

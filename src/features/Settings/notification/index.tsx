@@ -8,9 +8,8 @@ import { createElement, useCallback, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BusinessNotification from '@/business/client/BusinessSettingPages/Notification';
-import { WorkspaceNotification } from '@/business/client/BusinessSettingPages/WorkspaceNotification';
 import Form from '@/components/GroupForm';
-import { NotificationSoundSkeleton } from '@/components/Skeleton/Settings/Notification';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Alert, AlertAction, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +27,8 @@ import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { getHostPort } from '@/platform';
 import { completionSoundService } from '@/services/electron/completionSound';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
+
+import PersonalNotificationSettings from './personal';
 
 const IMPORTED = 'imported';
 const IMPORT = 'import';
@@ -85,7 +86,7 @@ export const DesktopNotificationSettings = () => {
     });
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-160 flex-col gap-8">
+    <>
       {error && (
         <Alert variant="destructive">
           <CircleAlert />
@@ -100,21 +101,21 @@ export const DesktopNotificationSettings = () => {
         </Alert>
       )}
       {!settings ? (
-        !error && <NotificationSoundSkeleton />
+        !error && <SettingsSectionSkeleton />
       ) : (
         <Form
           collapsible={false}
-          itemMinWidth={0}
+          itemMinWidth={FORM_STYLE.itemMinWidth}
           itemsType={'group'}
           style={FORM_STYLE.style}
-          variant={'borderless'}
+          variant={'filled'}
           items={[
             {
               children: [
                 {
                   children: (
                     <div
-                      className={'flex min-w-0 shrink-0'}
+                      className={'flex min-w-0'}
                       style={{ flexDirection: 'row', justifyContent: 'flex-end' }}
                     >
                       <Switch
@@ -138,7 +139,7 @@ export const DesktopNotificationSettings = () => {
                 {
                   children: (
                     <div
-                      className={'flex min-w-0 shrink-0'}
+                      className={'flex min-w-0'}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -167,7 +168,7 @@ export const DesktopNotificationSettings = () => {
                             })(value);
                         }}
                       >
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -188,7 +189,7 @@ export const DesktopNotificationSettings = () => {
                       <Button
                         aria-label={t('completionSound.preview')}
                         disabled={settings.volume === 0}
-                        size="icon-lg"
+                        size="icon"
                         title={t('completionSound.preview')}
                         variant="outline"
                         onClick={() => report(() => completionSoundService.play({ preview: true }))}
@@ -226,7 +227,6 @@ export const DesktopNotificationSettings = () => {
                     />
                   ),
                   label: t('completionSound.volume'),
-                  minWidth: FORM_STYLE.itemMinWidth,
                 },
               ],
               title: t('completionSound.title'),
@@ -236,7 +236,7 @@ export const DesktopNotificationSettings = () => {
                 {
                   children: (
                     <div
-                      className={'flex min-w-0 shrink-0'}
+                      className={'flex min-w-0'}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -246,7 +246,7 @@ export const DesktopNotificationSettings = () => {
                     >
                       <Button
                         aria-label={t('completionSound.preview')}
-                        size="icon-lg"
+                        size="icon"
                         title={t('completionSound.preview')}
                         variant="outline"
                         onClick={previewBanner}
@@ -287,8 +287,8 @@ export const DesktopNotificationSettings = () => {
           ]}
         />
       )}
-      <WorkspaceNotification personal />
+      <PersonalNotificationSettings />
       {enableBusinessFeatures && <BusinessNotification />}
-    </div>
+    </>
   );
 };

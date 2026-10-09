@@ -21,13 +21,21 @@ import type { SystemAgentItem, UserServiceModelConfigKey } from '@/types/user/se
 
 import { serviceModelFormStyles as styles } from './styles';
 
-type ModelAssignmentItemKey = Exclude<
+// Only the rows this form renders. Listed positively so the locale keys
+// templated from them (`systemAgent.${key}.title`) all exist.
+type ModelAssignmentItemKey = Extract<
   UserServiceModelConfigKey,
-  | 'generationTopic'
-  | 'historyCompress'
-  | 'onboardingTaskRecommender'
-  | 'onboardingUnderstanding'
-  | 'promptRewrite'
+  | 'agentMeta'
+  | 'expertise'
+  | 'followUpAction'
+  | 'goal'
+  | 'inputCompletion'
+  | 'memoryAnalysisAgentConfig'
+  | 'topic'
+  | 'topicAutoSummary'
+  | 'translation'
+  | 'userMemoryEmbedding'
+  | 'userMemoryPersonaWriter'
 >;
 
 interface SystemAgentModelItem {

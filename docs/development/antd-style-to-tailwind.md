@@ -248,14 +248,25 @@ Independent light review caught the shared DevDock cascade issue described below
 the single follow-up verified its removal and found no new findings.
 These are presentation-only
 samples; source-string rendering tests would not prove CSS equivalence.
-**未做真机验证** for these five Tailwind samples. The Chatbot Electron evidence
-belongs to #580 and does not verify this follow-up. Do not claim visual parity.
-Frontend owner must verify each affected surface in Electron light/dark, including
-hover, open GuideModal, OAuth768px boundary, and normal/reduced/disabled motion.
+Native Electron acceptance completed for these five samples in light/dark.
+Actual product components were loaded under the existing native ModalHost: the
+ConnectorItem data/callbacks were presentation fixtures; GuideModal tested arbitrary
+cover/title h3/p descendants and normal cancel/OK callbacks with close; OAuthApplicationLogo's
+third-party connector measured 32/32/40px at native widths 767/768/769. The native
+window minimum was temporarily lowered through normal IPC and restored to 1000px.
+ContentLoading measured 800ms linear/infinite in normal motion, stopped under
+reduced motion and the actual Appearance Off setting, then restored that preference.
+SharePopover used a normal-API, self-owned temporary topic, verified 16px padding,
+12px hint text with inherited line-height, and Escape close; the topic and sharing
+record were removed. These checks cover delivered presentation and callbacks,
+not all OAuth/connector service flows or visual parity throughout the application.
+The frontend owner accepted this explicit reduced/disabled-motion correction;
+it does not authorize phase 1 or a global cascade flip.
 
-At inspection (2026-10-09), #565 and #573 are still open/unmerged. Phase1 must not
-start until both merge, ANTD_STYLE_LAYER_ENABLED is enabled, this sample passes
-owner Electron acceptance, and pending token/motion decisions are resolved.
+As of 2026-10-09, #565 and #573 are merged and the phase-0 samples have native
+owner acceptance. ANTD_STYLE_LAYER_ENABLED remains false. Phase 1 is still blocked
+until a separately accepted global rollout enables that flag and the pending token
+and motion decisions are resolved.
 Do not mutate protected Settings/provider or ModelSwitchPanel work. Subsequent
 PRs should be one feature directory, at most roughly40files, after checking for
 concurrent PRs. The user authorized a stack; this phase0 base is #580 rather than

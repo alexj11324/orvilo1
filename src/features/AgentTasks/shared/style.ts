@@ -1,6 +1,17 @@
 import { createStaticStyles } from 'antd-style';
 
 export const styles = createStaticStyles(({ css, cssVar }) => ({
+  /* The read-only title: same type as the field above, as plain text. */
+  titleText: css`
+    margin: 0;
+
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: ${cssVar.colorText};
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  `,
   titleInput: css`
     /* Plane's issue title: 20px medium, no field chrome. Doubled class so this
        beats the textarea primitive's border, padding and text-base utilities. */

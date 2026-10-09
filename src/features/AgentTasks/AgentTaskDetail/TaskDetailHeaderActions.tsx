@@ -1,7 +1,6 @@
 import {
   CopyIcon,
   CopyPlusIcon,
-  FilePlusIcon,
   GitBranchIcon,
   GitPullRequestIcon,
   HistoryIcon,
@@ -56,6 +55,7 @@ import {
 } from './TaskIssueDefinitionModal';
 import { type MarkIssueRelationKind, openTaskIssueRelationModal } from './TaskIssueRelationModal';
 import { openTaskPropertiesSetupModal } from './TaskPropertiesSetupModal';
+import { ISSUE_RESOURCE_KINDS } from './useIssueDetailActions';
 import { useTaskCopyActions } from './useTaskCopyActions';
 import { useTaskIssueDates } from './useTaskIssueDates';
 
@@ -76,11 +76,6 @@ const MARK_AS_KINDS = [
   'duplicateOf',
 ] as const;
 const CONVERT_KINDS = ['project', 'template', 'recurring'] as const;
-const RESOURCE_KINDS = [
-  ['link', LinkIcon],
-  ['pull_request', GitPullRequestIcon],
-  ['document', FilePlusIcon],
-] as const;
 
 /**
  * One entry per thing this issue is linked to — its parent, each direct
@@ -444,7 +439,7 @@ const TaskDetailHeaderActions = () => {
       },
     },
     dueDateItem,
-    ...RESOURCE_KINDS.map(([kind, Icon]) => ({
+    ...ISSUE_RESOURCE_KINDS.map(([kind, Icon]) => ({
       disabled: !editable,
       icon: <Icon />,
       key: `add-${kind}`,

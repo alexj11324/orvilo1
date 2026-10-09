@@ -25,7 +25,6 @@ import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import SimpleEmpty from '@/components/SimpleEmpty';
-import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -36,7 +35,6 @@ import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selecto
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { PRIORITY_META } from '../features/TaskPriorityTag';
-import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
 import { type ActivityFeedFilter, matchesActivityFilter } from './activityFeedFilter';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
@@ -45,6 +43,7 @@ import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 import TaskRunReport from './TaskRunReport';
 import TopicCard from './TopicCard';
 
@@ -524,36 +523,32 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-2 py-1" style={{ width: 'fit-content' }}>
-        <Button
-          aria-expanded={isExpanded}
-          className="gap-2 text-sm font-medium text-muted-foreground"
-          size="sm"
-          type="button"
-          variant="ghost"
-          onClick={() => setIsExpanded((prev) => !prev)}
-        >
-          <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
-          <span>{t('taskDetail.activities')}</span>
-          <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-        </Button>
-        <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
-        {(['all', 'comments', 'updates'] as const).map((filter) => (
-          <button
-            aria-pressed={feedFilter === filter}
-            className="text-xs"
-            key={filter}
-            type="button"
-            style={{
-              color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
-              fontWeight: feedFilter === filter ? 600 : 400,
-            }}
-            onClick={() => setFeedFilter(filter)}
-          >
-            {t(`taskDetail.activities.filter.${filter}`)}
-          </button>
-        ))}
-      </div>
+      <TaskDetailSectionHeader
+        icon={BotMessageSquare}
+        open={isExpanded}
+        title={t('taskDetail.activities')}
+        trailing={
+          <>
+            <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
+            {(['all', 'comments', 'updates'] as const).map((filter) => (
+              <button
+                aria-pressed={feedFilter === filter}
+                className="text-xs"
+                key={filter}
+                type="button"
+                style={{
+                  color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
+                  fontWeight: feedFilter === filter ? 600 : 400,
+                }}
+                onClick={() => setFeedFilter(filter)}
+              >
+                {t(`taskDetail.activities.filter.${filter}`)}
+              </button>
+            ))}
+          </>
+        }
+        onToggle={() => setIsExpanded((prev) => !prev)}
+      />
       {commentInput}
       <Collapsible open={isExpanded}>
         <CollapsibleContent>

@@ -74,7 +74,9 @@ export const useMenu = () => {
       extra: isDesktop ? (
         <KbdGroup>
           {hotkeyDisplayKeys(DEFAULT_DESKTOP_HOTKEY_CONFIG.openSettings, isMacOS()).map((key) => (
-            <Kbd key={key}>{key}</Kbd>
+            <Kbd key={key} variant="raised">
+              {key}
+            </Kbd>
           ))}
         </KbdGroup>
       ) : undefined,

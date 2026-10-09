@@ -80,7 +80,15 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
 
     setSubmitting(true);
     try {
-      await addComment(taskId, markdown, { editorData: json });
+      try {
+        await addComment(taskId, markdown, { editorData: json });
+      } catch (error) {
+        // The draft stays in the editor so the user can retry. The store has
+        // already rolled back the optimistic row; nothing else tells them.
+        console.error('[CommentInput] addComment failed', error);
+        toast.error(t('taskDetail.commentSendFailed'));
+        return;
+      }
       editor?.cleanDocument?.();
       setHasContent(false);
       setHasAttachments(false);
@@ -88,7 +96,7 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
     } finally {
       setSubmitting(false);
     }
-  }, [canEditTask, taskId, editor, addComment, clearAfterSend, submitting]);
+  }, [canEditTask, taskId, editor, addComment, clearAfterSend, submitting, t]);
 
   return (
     <div className={`flex flex-col gap-1.5 ${styles.commentInputCard}`} id="task-comment-composer">

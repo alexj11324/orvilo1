@@ -9,20 +9,25 @@ import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { toast } from '@/components/toast';
 import { Spinner } from '@/components/ui/spinner';
 import { DESKTOP_HOTKEYS_REGISTRATION } from '@/const/desktopGlobalShortcuts';
+import { HOTKEYS_REGISTRATION } from '@/const/hotkeys';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { useElectronStore } from '@/store/electron';
 import { desktopHotkeysSelectors } from '@/store/electron/selectors';
+import { useUserStore } from '@/store/user';
+import { settingsSelectors } from '@/store/user/selectors';
 import { type DesktopHotkeyItem } from '@/types/hotkey';
 
 import { desktopHotkeyDisplay } from './desktopHotkeyDisplay';
 import { hotkeyFormStyles } from './styles';
+import { getDesktopHotkeyConflicts } from './visibleHotkeys';
 
 const HotkeySetting = memo(() => {
   const { t } = useTranslation(['setting', 'hotkey']);
   const [form] = Form.useForm();
 
   const hotkeys = useElectronStore(desktopHotkeysSelectors.hotkeys, isEqual);
+  const { hotkey: appHotkeys } = useUserStore(settingsSelectors.currentSettings, isEqual);
 
   const [isHotkeysInit, updateDesktopHotkey, useFetchDesktopHotkeys] = useElectronStore((s) => [
     desktopHotkeysSelectors.isHotkeysInit(s),
@@ -36,7 +41,15 @@ const HotkeySetting = memo(() => {
 
   if (!isHotkeysInit) return <SettingsSectionSkeleton />;
 
+  const conflictsOf = (id: DesktopHotkeyItem['id']) =>
+    getDesktopHotkeyConflicts(hotkeys, id, appHotkeys, HOTKEYS_REGISTRATION);
+
   const updateHotkey = async (id: DesktopHotkeyItem['id'], value: string) => {
+    // The main process only knows other global shortcuts, not the in-app ones.
+    if (value && conflictsOf(id).includes(value)) {
+      toast.error(t('hotkey.errors.CONFLICT', { ns: 'setting' }));
+      return;
+    }
     setLoading(true);
     try {
       const result = await updateDesktopHotkey(id, value);
@@ -58,6 +71,7 @@ const HotkeySetting = memo(() => {
       <HotkeyInput
         allowClear={!item.nonEditable}
         disabled={item.nonEditable}
+        hotkeyConflicts={conflictsOf(item.id)}
         placeholder={t('hotkey.record')}
         resetValue={item.keys}
         texts={{ clear: t('hotkey.clearBinding') }}

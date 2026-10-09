@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -47,7 +48,7 @@ export const PeriodHeader = memo<PeriodHeaderProps>(({ periodKey, groupBy = 'day
   const periodName =
     groupBy === 'month'
       ? dayjs(`${periodKey}-01`).format('MMMM YYYY')
-      : dayjs(periodKey).format('MMMM D, YYYY');
+      : formatAbsoluteDate(periodKey);
 
   return (
     <div className={cn('flex items-center gap-3 py-2', styles.periodHeader)}>

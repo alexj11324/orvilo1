@@ -21,11 +21,14 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 
-import { blockedPickerTriggerStyle, pickerTriggerStyle } from './pickerTriggerStyles';
+import { type PickerControl, pickerTriggerRender } from './PickerTrigger';
+import { blockedPickerTriggerStyle } from './pickerTriggerStyles';
 import { SimpleTooltip } from './SimpleTooltip';
 
 interface AssigneeAgentSelectorProps {
   children: ReactNode;
+  /** Render the trigger as a real Button (the Issue rail's value cell). */
+  control?: PickerControl;
   currentAgentId?: string | null;
   disabled?: boolean;
   onChange?: (agentId: string | null) => void;
@@ -78,7 +81,7 @@ const matchesSearch = (agent: SidebarAgentItem, query: string) =>
   );
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
-  ({ children, currentAgentId, disabled, onChange, onHandoff, taskIdentifier }) => {
+  ({ children, control, currentAgentId, disabled, onChange, onHandoff, taskIdentifier }) => {
     const { t } = useTranslation(['chat', 'common', 'topic']);
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [open, setOpen] = useState(false);
@@ -309,14 +312,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          nativeButton={false}
-          render={
-            <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
-              {children}
-            </div>
-          }
-        />
+        <PopoverTrigger {...pickerTriggerRender(children, control)} />
         <PopoverContent align="start" className="w-65 gap-0 p-0">
           <Suspense fallback={<SkeletonList rows={6} />}>
             {isAgentListInit ? (

@@ -1,7 +1,7 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
 import type { HeteroSessionDigest } from '@orvilo/types';
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cx } from 'antd-style';
-import dayjs from 'dayjs';
 import { Check, RotateCcw, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -166,7 +166,7 @@ export const SessionRow = memo<SessionRowProps>(
           <div className="flex items-center gap-2.5">
             {digest.endAt && (
               <div className="text-[12px] text-muted-foreground">
-                {dayjs(digest.endAt).format('MM-DD HH:mm')}
+                {formatAbsoluteDateTime(digest.endAt)}
               </div>
             )}
             <div className="text-[12px] text-muted-foreground">

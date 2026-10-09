@@ -1,5 +1,6 @@
 'use client';
 import type { NotificationFeedCard } from '@orvilo/types';
+import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -11,7 +12,7 @@ import {
   MailOpenIcon,
   TimerOffIcon,
 } from 'lucide-react';
-import { createElement, memo, type MouseEvent } from 'react';
+import { createElement, memo, type MouseEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
@@ -69,6 +70,11 @@ const styles = createStaticStyles(({ css }) => ({
 
     &:focus-visible {
       box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
+    }
+
+    /* The Issue list row's hover wash; the selected row keeps its own fill. */
+    &:hover:not([data-active='true']) {
+      background: ${cssVar.colorFillTertiary};
     }
   `,
   unreadDot: css`
@@ -161,6 +167,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
     onCustomSnooze,
   } = props;
   const { i18n, t } = useTranslation('notification');
+  const customSnoozeRequested = useRef(false);
   const senderName = card.actor?.name ?? card.agent?.name;
 
   return (
@@ -256,7 +263,16 @@ const InboxListRow = memo((props: InboxListRowProps) => {
               </Tooltip>
             ) : null}
             {card.availableActions.includes('snooze') ? (
-              <DropdownMenu>
+              <DropdownMenu
+                // Open the custom-time dialog only once the menu has fully closed. Opening it
+                // inside the item's click lets the menu's teardown (focus return, dismissal
+                // bookkeeping) race the dialog's mount, which on a mouse click left no dialog.
+                onOpenChangeComplete={(open) => {
+                  if (open || !customSnoozeRequested.current) return;
+                  customSnoozeRequested.current = false;
+                  onCustomSnooze(card);
+                }}
+              >
                 <DropdownMenuTrigger
                   render={
                     <button
@@ -298,7 +314,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                   <DropdownMenuItem
                     onClick={(event) => {
                       stopRowClick(event);
-                      onCustomSnooze(card);
+                      customSnoozeRequested.current = true;
                     }}
                   >
                     {t('inbox.snoozePreset.custom')}
@@ -320,12 +336,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
               <>
                 <ClockIcon aria-hidden className="size-3" />
                 {t('inbox.snoozeUntil', {
-                  date: dayjs(card.snoozedUntil).format('MMM D'),
+                  date: formatAbsoluteDate(card.snoozedUntil),
                   time: dayjs(card.snoozedUntil).format('HH:mm'),
                 })}
               </>
             ) : (
-              <span title={dayjs(card.lastActivityAt).format('LLL')}>
+              <span title={formatAbsoluteDateTime(card.lastActivityAt)}>
                 {formatInboxAge(card.lastActivityAt, { locale: i18n.language })}
               </span>
             )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Ban, Mail } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -70,20 +71,15 @@ const STATUS_KEY = {
   revoked: 'workspaceSetting.invitations.status.revoked',
 } as const satisfies Record<WorkspaceInvitationSummary['status'], string>;
 
-const formatDate = (value: Date | string | null | undefined, locale: string): string => {
-  if (!value) return '—';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
-};
+const formatDate = (value: Date | string | null | undefined): string =>
+  formatAbsoluteDateTime(value) || '—';
 
 interface InvitationRowProps {
   canManage: boolean;
   invitation: WorkspaceInvitationSummary;
-  locale: string;
 }
 
-const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation, locale }) => {
+const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation }) => {
   const { t } = useTranslation('setting');
   const { resendInvitation, revokeInvitation } = useTeammateActions();
 
@@ -126,10 +122,10 @@ const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation, locale 
       </div>
       <div className={styles.meta}>
         {t('workspaceSetting.invitations.lastSent', {
-          date: formatDate(invitation.lastSentAt ?? invitation.createdAt, locale),
+          date: formatDate(invitation.lastSentAt ?? invitation.createdAt),
         })}
       </div>
-      <div className={styles.meta}>{formatDate(invitation.expiresAt, locale)}</div>
+      <div className={styles.meta}>{formatDate(invitation.expiresAt)}</div>
       <div>
         {menuItems.length > 0 && (
           <SidebarDropdownMenu items={menuItems}>
@@ -151,7 +147,7 @@ InvitationRow.displayName = 'InvitationRow';
  * leaves 'pending'.
  */
 export const InvitationsPanel = memo(() => {
-  const { t, i18n } = useTranslation('setting');
+  const { t } = useTranslation('setting');
   const capabilities = useWorkspaceCapabilities();
   const { data, error, isLoading, mutate } = useWorkspaceInvitationsQuery();
 
@@ -217,7 +213,6 @@ export const InvitationsPanel = memo(() => {
               canManage={capabilities.canInvite}
               invitation={invitation}
               key={invitation.id}
-              locale={i18n.language}
             />
           ))}
         </div>

@@ -19,11 +19,14 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { partitionSelfMember } from './assigneeMemberOptions';
+import { type PickerControl, pickerTriggerRender } from './PickerTrigger';
 import { blockedPickerContentStyle, pickerTriggerStyle } from './pickerTriggerStyles';
 import { SimpleTooltip } from './SimpleTooltip';
 
 interface AssigneeMemberSelectorProps {
   children: ReactNode;
+  /** Render the trigger as a real Button (the Issue rail's value cell). */
+  control?: PickerControl;
   currentUserId?: string | null;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -82,7 +85,7 @@ const matchesSearch = (member: WorkspaceMemberRow, query: string) =>
   );
 
 const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
-  ({ children, currentUserId, disabled, fullWidth, onChange, taskIdentifier }) => {
+  ({ children, control, currentUserId, disabled, fullWidth, onChange, taskIdentifier }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [open, setOpen] = useState(false);
@@ -262,14 +265,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          nativeButton={false}
-          render={
-            <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
-              {children}
-            </div>
-          }
-        />
+        <PopoverTrigger {...pickerTriggerRender(children, control, currentTriggerStyle)} />
         <PopoverContent
           align="start"
           className="w-65 gap-0 p-0"

@@ -4,7 +4,6 @@ import type { McpPresetConnector } from '@orvilo/const';
 import {
   getConnectorCatalog,
   matchMcpPresetByConnector,
-  MCP_PRESET_CONNECTORS,
   RECOMMENDED_SKILLS,
   RecommendedSkillType,
   resolveConnectorCatalogItem,
@@ -37,11 +36,13 @@ import {
   type ConnectorCatalogItem,
   getVisibleConnectorCatalog,
 } from './connectorCatalogVisibility';
-import type { ConnectorDetailType } from './ConnectorDetail';
+import type { ConnectorDetailType } from './connectorSelection';
+import { toMcpPresetSelectionId } from './connectorSelection';
 import McpPresetItem from './McpPresetItem';
 import McpSkillItem from './McpSkillItem';
 import OrviloSkillItem from './OrviloSkillItem';
 import { useScopeAwareConnectorFetch } from './useScopeAwareConnectorFetch';
+import { visibleMcpPresets } from './visibleMcpPresets';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -70,20 +71,13 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-// Keep the preset catalog focused while preserving any previously installed
-// connectors for the other services in the Custom Connectors section.
-const visibleMcpPresets = MCP_PRESET_CONNECTORS.filter((preset) =>
-  ['github', 'linear'].includes(preset.id),
-);
-
 interface ConnectorListProps {
   githubCapability?: 'pat_available' | 'not_configurable';
   githubConnecting?: boolean;
   githubGrantConnected?: boolean;
   githubTimedOut?: boolean;
-  /** Opens the custom-connector form pre-filled with a preset's URL and auth. */
+  /** Starts adding / connecting a preset (managed flow or pre-filled form). */
   onAddPreset: (preset: McpPresetConnector) => void;
-  onConnectGitHub: () => void;
   onSelect: (identifier: string, type: ConnectorDetailType) => void;
   selectedIdentifier?: string;
 }
@@ -100,7 +94,6 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
   const {
     onSelect,
     onAddPreset,
-    onConnectGitHub,
     githubCapability,
     githubConnecting,
     githubGrantConnected,
@@ -359,11 +352,14 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
         t('skillGroup.mcp', 'MCP'),
         visibleMcpPresets.map((preset) => {
           const connector = presetConnectorMap.get(preset.id);
+          // A preset without a connector is still a row: it selects a
+          // not-connected pane keyed by the preset id.
+          const presetSelectionId = connector?.identifier ?? toMcpPresetSelectionId(preset.id);
           return (
             <McpPresetItem
               connecting={preset.managedAuth === 'github-app' && githubConnecting}
               connector={connector}
-              isSelected={Boolean(connector) && selectedIdentifier === connector?.identifier}
+              isSelected={selectedIdentifier === presetSelectionId}
               key={preset.id}
               preset={preset}
               timedOut={preset.managedAuth === 'github-app' && githubTimedOut}
@@ -373,13 +369,9 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
               tokenSetup={
                 preset.managedAuth === 'github-app' && githubCapability === 'pat_available'
               }
-              onSelect={() => connector && onSelect(connector.identifier, 'mcp-connector')}
-              onAdd={() =>
-                preset.managedAuth === 'github-app'
-                  ? githubCapability === 'pat_available'
-                    ? onAddPreset(preset)
-                    : onConnectGitHub()
-                  : onAddPreset(preset)
+              onAdd={() => onAddPreset(preset)}
+              onSelect={() =>
+                onSelect(presetSelectionId, connector ? 'mcp-connector' : 'mcp-preset')
               }
             />
           );

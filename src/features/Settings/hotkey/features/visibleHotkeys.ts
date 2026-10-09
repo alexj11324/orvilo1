@@ -45,6 +45,20 @@ export const getHotkeyConflicts = (
   return [...inApp, ...external.filter((keys): keys is string => !!keys)];
 };
 
+/** Validate changes at the save boundary, including resets that HotkeyInput emits unchecked. */
+export const getHotkeyChangeConflict = (
+  changes: Readonly<Record<string, string | undefined>>,
+  stored: Readonly<Record<string, string | undefined>>,
+  registration: readonly HotkeyItem[],
+  external: readonly (string | undefined)[] = [],
+): HotkeyId | undefined => {
+  const next = { ...stored, ...changes };
+  return registration.find(({ id }) => {
+    const keys = changes[id];
+    return keys && getHotkeyConflicts(next, id, registration, external).includes(keys);
+  })?.id;
+};
+
 /** Electron global shortcuts as HotkeyInput key strings, skipping `exceptId` and empty bindings. */
 export const getDesktopBindingKeys = (
   desktopBindings: Readonly<Record<string, string | undefined>>,

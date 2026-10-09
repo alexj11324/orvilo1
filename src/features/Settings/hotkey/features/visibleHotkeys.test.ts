@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DESKTOP_ONLY_HOTKEY_IDS,
   getDesktopHotkeyConflicts,
+  getHotkeyChangeConflict,
   getHotkeyConflicts,
   getVisibleHotkeys,
 } from './visibleHotkeys';
@@ -36,6 +37,51 @@ describe('getVisibleHotkeys', () => {
       'switchAgent',
     ])
       expect(registered).not.toContain(id);
+  });
+});
+
+describe('getHotkeyChangeConflict', () => {
+  it.each([
+    { id: 'commandPalette', keys: 'mod+k' },
+    { id: 'saveTopic', keys: 'alt+n' },
+  ])('rejects resetting $id to a desktop binding', ({ id, keys }) => {
+    expect(
+      getHotkeyChangeConflict({ [id]: keys }, { [id]: 'mod+shift+x' }, HOTKEYS_REGISTRATION, [
+        keys,
+      ]),
+    ).toBe(id);
+  });
+
+  it('accepts resetting to an unassigned default', () => {
+    expect(
+      getHotkeyChangeConflict(
+        { commandPalette: 'mod+k' },
+        { commandPalette: 'mod+shift+x' },
+        HOTKEYS_REGISTRATION,
+        ['mod+j'],
+      ),
+    ).toBeUndefined();
+  });
+
+  it('allows clearing a conflicting binding', () => {
+    expect(
+      getHotkeyChangeConflict(
+        { commandPalette: '' },
+        { commandPalette: 'mod+k' },
+        HOTKEYS_REGISTRATION,
+        ['mod+k'],
+      ),
+    ).toBeUndefined();
+  });
+
+  it('checks a multi-field change against the resulting settings', () => {
+    expect(
+      getHotkeyChangeConflict(
+        { commandPalette: 'mod+s', saveTopic: 'mod+s' },
+        { commandPalette: 'mod+k', saveTopic: '' },
+        HOTKEYS_REGISTRATION,
+      ),
+    ).toBe('commandPalette');
   });
 });
 

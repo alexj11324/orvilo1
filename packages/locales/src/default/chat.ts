@@ -14,7 +14,7 @@ export default {
   'aiElementsMore.files': 'Files',
 
   'chatbot.welcome': 'How can I help you?',
-  'chatbot.description': 'Ask a question or choose a suggestion to get started.',
+  'chatbot.description': 'Ask a question to get started.',
   'creation.runtime.title': 'Configure Agent',
   'creation.runtime.description':
     'Choose which agent powers the new one — Orvilo AI on one of your machines, or a connected coding agent.',

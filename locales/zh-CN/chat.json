@@ -123,7 +123,7 @@
   "chatMode.chat": "对话",
   "chatMode.chatDesc": "只聊天，不能执行任务；消耗更少 token",
   "chatMode.select": "切换模式",
-  "chatbot.description": "输入问题，或选择一个建议开始对话。",
+  "chatbot.description": "输入问题开始对话。",
   "chatbot.welcome": "有什么可以帮你？",
   "claudeCodeInstallGuide.actions.openDocs": "打开安装指南",
   "claudeCodeInstallGuide.actions.openSystemTools": "打开系统工具",

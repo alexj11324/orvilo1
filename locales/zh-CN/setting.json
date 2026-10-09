@@ -857,7 +857,6 @@
   "serviceModel.memoryModels.title": "记忆",
   "serviceModel.modelAssignments.title": "通用",
   "serviceModel.optionalFeatures.title": "可选功能",
-  "serviceModel.topicAutoSummary.desc": "针对滚动 24 小时内创建、消息已停止更新一小时的话题自动生成摘要。",
   "settingAgent.accessSettings.managePermissions": "管理权限",
   "settingAgent.accessSettings.permissions": "资源权限",
   "settingAgent.accessSettings.shareManagers": "Agent 创建者与工作区所有者",

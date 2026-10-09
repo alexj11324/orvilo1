@@ -11,8 +11,6 @@ This package contains prompt chains and templates for the Orvilo application.
 ## Available Prompt Chains
 
 - `chainSummaryTitle` - Generate conversation titles
-- `chainLangDetect` - Detect language of input text
-- `chainTranslate` - Translate content between languages
 - `chainPickEmoji` - Select appropriate emojis for content
 - `chainAnswerWithContext` - Answer questions using knowledge base context
 - `chainAbstractChunkText` - Summarize text chunks

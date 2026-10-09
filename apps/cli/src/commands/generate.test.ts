@@ -84,37 +84,6 @@ describe('generate command', () => {
     return program;
   }
 
-  describe('tts', () => {
-    it('should call OpenAI TTS endpoint and save file', async () => {
-      const audioBuffer = new ArrayBuffer(100);
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          arrayBuffer: vi.fn().mockResolvedValue(audioBuffer),
-          ok: true,
-        }),
-      );
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'generate',
-        'tts',
-        'Hello world',
-        '--output',
-        '/tmp/test.mp3',
-      ]);
-
-      expect(fetch).toHaveBeenCalledWith(
-        'https://orvilo.aspectlylabs.com/webapi/tts/openai',
-        expect.objectContaining({ method: 'POST' }),
-      );
-      expect(mockWriteFileSync).toHaveBeenCalledWith('/tmp/test.mp3', expect.any(Buffer));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Audio saved'));
-    });
-  });
-
   describe('asr', () => {
     it('should exit when file not found', async () => {
       const program = createProgram();

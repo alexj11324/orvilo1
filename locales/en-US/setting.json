@@ -859,7 +859,6 @@
   "serviceModel.memoryModels.title": "Memory",
   "serviceModel.modelAssignments.title": "General",
   "serviceModel.optionalFeatures.title": "Optional Features",
-  "serviceModel.topicAutoSummary.desc": "Summarizes topics created in the rolling 24-hour window after one hour without message activity.",
   "settingAgent.accessSettings.managePermissions": "Manage permissions",
   "settingAgent.accessSettings.permissions": "Resource permissions",
   "settingAgent.accessSettings.shareManagers": "Agent creator and workspace owners",

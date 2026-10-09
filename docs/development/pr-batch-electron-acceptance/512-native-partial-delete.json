@@ -1,0 +1,7 @@
+{
+  "failedRowChecked": true,
+  "fixture": "Two dedicated local tasks created through the real native store; only the second delete mutation receives an injected HTTP 500. The first uses the real backend.",
+  "prRevision": "29de3f759e56b395255689b969a1289192cab327",
+  "remainingSelected": 1,
+  "rendererRevision": "1e1ae6654 with SidebarDropdownMenu overlay from 29de3f759e56b395255689b969a1289192cab327"
+}

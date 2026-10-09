@@ -1,0 +1,8 @@
+{
+  "controlKOpenedSearch": true,
+  "hint": "Ctrl K",
+  "limitation": "macOS hint was not exercised on this Linux host",
+  "platform": "Actual Electron 43.2.0 on Linux",
+  "prRevision": "30616d3e42e43a6581ca6a3d98effa84d0596aa7",
+  "rendererRevision": "010672630496715fb783f7a17ea5b06c6a073e13"
+}

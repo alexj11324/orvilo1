@@ -1,0 +1,26 @@
+{
+  "limitation": "Layout is measured relative to the actual active pane width after the fixed sidebar; no browser viewport emulation was used.",
+  "narrow": {
+    "viewport": 1000,
+    "pane": 740,
+    "header": 692,
+    "columns": "692px",
+    "headerTopPadding": "5px",
+    "sideColumn": "auto",
+    "sidePosition": "static",
+    "overflow": false
+  },
+  "nativeResizing": "Actual Electron IPC windows.setWindowSize; no browser viewport emulation",
+  "prRevision": "2d02ab77e83e3df3192ef9dae5fb8cab3b7b58e7",
+  "rendererRevision": "010672630496715fb783f7a17ea5b06c6a073e13",
+  "wide": {
+    "viewport": 1600,
+    "pane": 1340,
+    "header": 1120,
+    "columns": "848px 232px",
+    "headerTopPadding": "5px",
+    "sideColumn": "2",
+    "sidePosition": "sticky",
+    "overflow": false
+  }
+}

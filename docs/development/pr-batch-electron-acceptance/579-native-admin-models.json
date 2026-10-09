@@ -1,0 +1,63 @@
+{
+  "actualNativeAccountRole": "admin",
+  "candidateHead": "0668667df5bf5c7cd353dda6ed7dabb94dac3057",
+  "noModelWrites": true,
+  "routeKind": "actual canonical/workspace OpenAI provider settings with native permission ceiling",
+  "samples": [
+    {
+      "theme": "light",
+      "copiedModelId": "gpt-6-astra",
+      "clipboardVerified": true,
+      "checkFeedbackReset": true,
+      "keyboardActionsVisible": true,
+      "searchClear": true,
+      "tabNames": ["All (56)", "Chat (43)", "Embedding (2)", "ASR (3)", "TTS (3)"],
+      "switches": 34,
+      "canManageProvider": true,
+      "beforePaging": 34,
+      "afterPaging": 56,
+      "pagingUnique": true,
+      "configCanceled": true,
+      "sortClosedWithoutSaving": true,
+      "addCanceled": true,
+      "resetCanceled": true,
+      "deniedControlsVerified": false,
+      "dimensions": {
+        "clientWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "theme": "dark",
+      "copiedModelId": "gpt-6-astra",
+      "clipboardVerified": true,
+      "checkFeedbackReset": true,
+      "keyboardActionsVisible": true,
+      "searchClear": true,
+      "tabNames": ["All (56)", "Chat (43)", "Embedding (2)", "ASR (3)", "TTS (3)"],
+      "switches": 56,
+      "canManageProvider": true,
+      "beforePaging": 34,
+      "afterPaging": 56,
+      "pagingUnique": true,
+      "configCanceled": true,
+      "sortClosedWithoutSaving": true,
+      "addCanceled": true,
+      "resetCanceled": true,
+      "deniedControlsVerified": false,
+      "dimensions": {
+        "clientWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "nativeWindowResize": true,
+      "narrow": {
+        "windowWidth": 1000,
+        "clientWidth": 428,
+        "scrollWidth": 428,
+        "documentWidth": 1000
+      }
+    }
+  ]
+}

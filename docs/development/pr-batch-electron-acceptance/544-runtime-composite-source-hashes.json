@@ -1,0 +1,102 @@
+{
+  "at": 1791522067.1624749,
+  "method": "three-way composite; auth own guards preserved; ten unchanged auth paths equal feature; task/taskTopic composited",
+  "paths": [
+    {
+      "path": "apps/server/src/routers/lambda/notification.ts",
+      "authOwnDelta": false,
+      "actualSha256": "87710450d603dcd15ca550d71dbea4c3d1493975f7e6c523f95213ace23a7190",
+      "authSha256": "da71844899c6c8844c7a179004f725e0f46e813981dd43f9811d620a46638f1c",
+      "originalFeatureSha256": "87710450d603dcd15ca550d71dbea4c3d1493975f7e6c523f95213ace23a7190",
+      "exactFeature": true
+    },
+    {
+      "path": "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
+      "authOwnDelta": false,
+      "actualSha256": "da2b3c508b4a30cb59c1658ffa09d738cdcd07251a4132a5caf2a8efe612ea32",
+      "authSha256": "8529916f41de2dbc3a2560c2da3b517ef61b58392561e004dac47fc332ed055b",
+      "originalFeatureSha256": "da2b3c508b4a30cb59c1658ffa09d738cdcd07251a4132a5caf2a8efe612ea32",
+      "exactFeature": true
+    },
+    {
+      "path": "apps/server/src/services/message/index.ts",
+      "authOwnDelta": false,
+      "actualSha256": "19dc14dfbf7eae8bb02cd7486c09e5bc0b03d388f8da25638349844a40b78357",
+      "authSha256": "78aed69fcda0839b945a8d68d2896be2b2bea2cf6c398439cbfe8c6764265c1d",
+      "originalFeatureSha256": "19dc14dfbf7eae8bb02cd7486c09e5bc0b03d388f8da25638349844a40b78357",
+      "exactFeature": true
+    },
+    {
+      "path": "apps/server/src/services/workAttention/actionSources.ts",
+      "authOwnDelta": false,
+      "actualSha256": "e0de1e54683b491799c5aedc2acfd9c25fe49e7ab62f5e1a422c008aa7f09d3f",
+      "authSha256": "61e978bdca7f236fad9bf8f9cd25f0585f5a863accca8308d575b0731108db4a",
+      "originalFeatureSha256": "e0de1e54683b491799c5aedc2acfd9c25fe49e7ab62f5e1a422c008aa7f09d3f",
+      "exactFeature": true
+    },
+    {
+      "path": "apps/server/src/services/workAttention/feedCard.ts",
+      "authOwnDelta": false,
+      "actualSha256": "3bcafa4f8952c8744c44ba1a4b16cc1b6c195a92dd640a19b99613a16ec9a006",
+      "authSha256": "6eb1fcdea9eae7a3bd9abefd10794a8b4fbb174d8ca453116cf3c1ebfac73091",
+      "originalFeatureSha256": "3bcafa4f8952c8744c44ba1a4b16cc1b6c195a92dd640a19b99613a16ec9a006",
+      "exactFeature": true
+    },
+    {
+      "path": "apps/server/src/services/workAttention/notificationProjection.ts",
+      "authOwnDelta": false,
+      "actualSha256": "9f20039ba58cbb3f83a7ecc18558bb97b92a4fb1fe580ccaa79456c9eb5c6dde",
+      "authSha256": "d89959802ac089c43f8290d57aa912388892bb0dca231be0a64967570285caa3",
+      "originalFeatureSha256": "9f20039ba58cbb3f83a7ecc18558bb97b92a4fb1fe580ccaa79456c9eb5c6dde",
+      "exactFeature": true
+    },
+    {
+      "path": "packages/database/src/models/notification.ts",
+      "authOwnDelta": false,
+      "actualSha256": "c9d132aa40e29d33b2737d4ba2dcc0a09db2084bcd12599423ae9d511f15772d",
+      "authSha256": "eaf2a9624ec4ed80fd9cf5e8a37690259b6f5fb9a77f2101cff03eb29ffd97c8",
+      "originalFeatureSha256": "c9d132aa40e29d33b2737d4ba2dcc0a09db2084bcd12599423ae9d511f15772d",
+      "exactFeature": true
+    },
+    {
+      "path": "packages/database/src/models/task.ts",
+      "authOwnDelta": true,
+      "actualSha256": "7049d6cb70fec35391454a6b85cad70dfd988b9357d4060744958706b26d0d87",
+      "authSha256": "603ed2fb8a1b7fbbfa98c5e035f35dd48eac94ad99826316892e05fd0fb5faa3",
+      "originalFeatureSha256": "6b0fb41805b7792b1518f86ab01536250a0b57386b38477c687b99ac0db86b60",
+      "exactFeature": false
+    },
+    {
+      "path": "packages/database/src/models/taskTopic.ts",
+      "authOwnDelta": true,
+      "actualSha256": "c1f0b42617dcbbca243f1dda985e85aa69e346111e730b3dabed34dfc5d0a511",
+      "authSha256": "ab80648564dfee0532cb2d729feb095839bc0df671a174b7437af10f420dc797",
+      "originalFeatureSha256": "9978a94e74da69ef07005be876ef9d410876f931e0a6c429accab99961d7ae20",
+      "exactFeature": false
+    },
+    {
+      "path": "packages/types/src/notification.ts",
+      "authOwnDelta": false,
+      "actualSha256": "f755b8a5f8bde82319ae50618e29c7f3ae23029b44101fa9ed9363e8460edf79",
+      "authSha256": "91ebaecdbcb60c27a5515e9e4dcb75374c06dd6154a1c7301906fa257f11bdc6",
+      "originalFeatureSha256": "f755b8a5f8bde82319ae50618e29c7f3ae23029b44101fa9ed9363e8460edf79",
+      "exactFeature": true
+    },
+    {
+      "path": "packages/types/src/workAttention.ts",
+      "authOwnDelta": false,
+      "actualSha256": "99d002a1c8f88e68a7fd72e333a287cbf7d31889675af5a02967e2a0ec77d037",
+      "authSha256": "9b29ab7597105e0a53267961eb9f9e66a2a112e89073cac4496e52790e65cfe4",
+      "originalFeatureSha256": "99d002a1c8f88e68a7fd72e333a287cbf7d31889675af5a02967e2a0ec77d037",
+      "exactFeature": true
+    },
+    {
+      "path": "src/features/WorkInbox/InboxListRow.tsx",
+      "authOwnDelta": false,
+      "actualSha256": "423c0e704131637d76b256e780d7584ff72c42ac2e899ca4853bbb836caef60b",
+      "authSha256": "e545b1e21865220f34d6e1aa73727fb1e5a1c59b4efc65d1e106407176ae30da",
+      "originalFeatureSha256": "423c0e704131637d76b256e780d7584ff72c42ac2e899ca4853bbb836caef60b",
+      "exactFeature": true
+    }
+  ]
+}

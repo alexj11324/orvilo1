@@ -1,0 +1,11 @@
+{
+  "at": 1791523491.6354394,
+  "bundleBytes": 12849191,
+  "bundleSha256": "e2d620ce1fd23af040be41a7a649eba23558dc520d0fec567cb412114d4303df",
+  "bundler": "tsdown0.21.10/rolldown1.0.0-rc.17",
+  "desktopMainRebuilt": false,
+  "normalNativeLibraryStaging": "Previously installed/staged napi-rs keyring2.1.0 native libraries retained beside single updated CLI index bundle",
+  "primeBuilt": false,
+  "priorSha256": "5f5fdc72f2088d5fa32d7319dfe9389efc7356175adf771c5c7052f8464cdf0d",
+  "sourceHead": "c4c2cdd0dc84f5762282c4596f4fdac9448529f1"
+}

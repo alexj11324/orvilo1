@@ -1,0 +1,37 @@
+{
+  "assertions": [
+    "Allow and cancel use actual AskUserBridge promise contract",
+    "No MCP server passed to no-builtin OpenCode run",
+    "Real bridge request and response events reach normal ordered ingest",
+    "Request provider is opencode and native tool id is preserved",
+    "Allowed response preserves resolutionRequestId; cancel preserves user_cancelled reason"
+  ],
+  "baseHead": "97cbc37bc771a959877e134f7bc826c32537e299",
+  "change": "Construct native permission bridge independently of builtin MCP mount; reuse ordered server ingest and response polling; do not add an ask_user_question MCP tool",
+  "ci": "new exact-head CI pending",
+  "fixHead": "c4c2cdd0dc84f5762282c4596f4fdac9448529f1",
+  "green": {
+    "focusedCasesPassed": 2,
+    "fullExistingOwnerFileCasesPassed": 66,
+    "workers": 1,
+    "nodeMaxOldSpaceMb": 1024
+  },
+  "lint": "Two changed CLI files owner check --lint clean; normal commit hooks required",
+  "normalHooks": "stylelint, eslint, prettier, checkNativeControls and checkHostDeviceBoundaries all passed",
+  "owner": "apps/cli/src/commands/hetero.ts",
+  "pr": 544,
+  "pushedTo": "feat/inbox-native-agent-questions",
+  "red": {
+    "testFilter": "delivers server-ingest OpenCode permissions without builtin MCP",
+    "cases": 2,
+    "failed": 2,
+    "reason": "spawnAgent received askUserBridge: undefined for ordinary OpenCode without ORVILO_BUILTIN_TOOLS"
+  },
+  "regressionFile": "apps/cli/src/commands/hetero.test.ts",
+  "rootCause": "server-ingest standard ACP bridge construction required askSupported or at least one mounted builtin tool, so ordinary OpenCode had no interactive permission bridge",
+  "setupHistory": [
+    "Initial isolated worktree had missing existing commander/gpt-tokenizer links, so early setup failures ran no tests and are not RED",
+    "Full owner suite initially hit sandbox EPERM binding local MCP socket; normal scoped execution with localhost permission passed66",
+    "Owner lint initially hit sandbox EPERM for tsx local IPC, rerun with scoped local IPC permission passed"
+  ]
+}

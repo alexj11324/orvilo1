@@ -1,0 +1,63 @@
+{
+  "acceptance": "PASS for actual native ACP permission flow with Calculator builtin mounted (not invoked)",
+  "actualSleepToolMessage": {
+    "createdAt": "2026-10-09T05:09:29.033Z",
+    "updatedAt": "2026-10-09T05:10:14.817Z",
+    "elapsedMs": 45784,
+    "actualCommand": "sleep 45 && cat native-544-permission.txt",
+    "result": "NATIVE_PERMISSION_ACCEPTED"
+  },
+  "date": "2026-10-09",
+  "dismiss": {
+    "nativeUiDelete": true,
+    "projectionRepairAfterReload": true,
+    "presentAfterReload": false
+  },
+  "flow": [
+    "Normal authenticated API creates temporary Issue; actual Issue Run button starts TaskRunner and official OpenCode ACP",
+    "Actual request_permission persists as askUserQuestion interactionKind=permission and projects to Inbox with actual Issue link",
+    "Actual Inbox row opened; normal Collapse hides duplicate global approval floater",
+    "InboxNativeIntervention Allow once selected and Submit clicked",
+    "Producer ACK observed as approved intervention / resolved transition; actual native write returns Wrote file successfully",
+    "Same operation and vendor session execute sleep 45 && cat native-544-permission.txt",
+    "Normal resource roster revokes Use during actual running sleep; subsequent Send/Run/Pause/Stop and extra Issue-cancel/message-write requests are all FORBIDDEN 403",
+    "Original admitted operation completes with bash exit0, exact marker NATIVE_PERMISSION_ACCEPTED and assistant NATIVE_PERMISSION_CONTINUED while Use remains false / Manage true",
+    "Actual resolved_at persists after normal reload; historical resolved notification remains with once outcome rather than pending question form",
+    "Actual Delete notification followed by reload and ordinary projection repair leaves notification absent"
+  ],
+  "identityCorrelation": {
+    "sameOperationAcrossPermissionWriteSleepTerminal": true,
+    "sameToolCallPermissionToWrite": true,
+    "sameVendorSessionAcrossPermissionWriteSleepFinal": true,
+    "producerMessageAndIdsWereRealNotSeeded": true,
+    "idsRetainedInPrivateReceipts": true
+  },
+  "limits": [
+    "Official OpenCode ACP does not advertise a structured free-form Question/elicitation producer; this pass covers actual ACP permission, not arbitrary structured Question",
+    "Calculator was mounted to satisfy current CLI AskUserBridge construction condition but never invoked; ordinary no-builtin OpenCode bridge gap is traced separately, no generic no-plugin pass claimed",
+    "Dedicated local backend and personal device path; official gateway does not include workspace.patch, so no workspace-device namespace claim",
+    "Canonical collaboration outbox consumer was manually invoked for earlier human Inbox delivery; automatic Hatchet scheduling and idle realtime delivery remain unverified",
+    "Earlier runs include two pre-model ENOENT failures, natural permission timeout, and genuine OOM-interrupted run whose normal stop fails closed; those are not counted as full pass",
+    "Protected credential storage unavailable in this Linux runtime; native credential handling is memory-only and each main restart required normal PKCE login again",
+    "No paid fallback, no token/header/client-identity fabrication, no active run/database row seed"
+  ],
+  "nativeAnswerSubmittedAt": "2026-10-09T05:09:14.588Z",
+  "observedSleepAtEpochMs": 1791522582700,
+  "observedTerminalAtEpochMs": 1791522640237,
+  "pr": 544,
+  "prHead": "97cbc37bc771a959877e134f7bc826c32537e299",
+  "runtime": {
+    "electron": "43.2.0",
+    "officialOpenCode": "1.18.35",
+    "model": "opencode/step-5-preview-free",
+    "smallModel": "opencode/step-5-preview-free",
+    "auth": "Normal local fixture cookie session followed by actual OIDC PKCE/native credential handling, matching main and renderer user, registered personal device",
+    "gateway": "Official unmodified 0.4.0 amd64 localhost personal-device gateways",
+    "source": "43a541 / documentation descendant 36eaebc plus auth18e83 guards and 12-path three-way delivery composition; not whole-tree exact auth candidate"
+  },
+  "terminal": {
+    "status": "completed",
+    "runState": "succeeded",
+    "reply": "NATIVE_PERMISSION_CONTINUED"
+  }
+}

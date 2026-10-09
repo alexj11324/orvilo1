@@ -1,0 +1,8 @@
+{
+  "formMounted": false,
+  "guard": "actual product WorkspaceAdminOnly",
+  "noAccountSwitch": true,
+  "role": "member",
+  "stage": "baseline",
+  "workspaceProviderRouteForbidden": true
+}

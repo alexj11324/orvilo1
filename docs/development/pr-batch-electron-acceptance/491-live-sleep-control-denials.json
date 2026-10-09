@@ -1,0 +1,63 @@
+{
+  "actualInitialOperationStatus": "running",
+  "actualOperationStatusAfterDeniedActions": "running",
+  "actualResourcePinnedToCurrentNativeFixture": true,
+  "at": "2026-10-09T05:09:53.741Z",
+  "candidate": "18e83f00e16d61d787bfdea74f155b811f9b99d4",
+  "cases": [
+    {
+      "control": "Send",
+      "path": "aiAgent.execAgent",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "control": "Run",
+      "path": "task.run",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "control": "Pause",
+      "path": "task.updateStatus",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "control": "Stop",
+      "path": "aiAgent.interruptTask",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "control": "Issue topic cancel",
+      "path": "task.cancelTopic",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "control": "Conversation message write",
+      "path": "message.createMessage",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    }
+  ],
+  "currentUse": false,
+  "deniedMessageAbsent": true,
+  "limits": [
+    "This receipt proves revocation and denied new controls during the real producer sleep, not its terminal outcome.",
+    "The original producer terminal, elapsed time, and marker must be established by a separate real native receipt.",
+    "This is local acceptance, not the intended cloud deployment or historical data migration acceptance."
+  ],
+  "manageRetained": true,
+  "phase": "sleep",
+  "scope": "Dedicated local real native producer; Owner control attempts use actual authenticated application APIs. Current original operation and temporary Issue were verified against native fixture and actual database rows; no producer state was seeded.",
+  "sourceBoundary": "491 permission candidate with preserved 544 projection composite; current temporary Issue created via actual native task.create, no seeded operation",
+  "useRestored": false
+}

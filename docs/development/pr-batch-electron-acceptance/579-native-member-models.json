@@ -1,0 +1,44 @@
+{
+  "actualMemberAccountMaintained": true,
+  "candidateHead": "0668667df5bf5c7cd353dda6ed7dabb94dac3057",
+  "noModelWrites": true,
+  "routeKind": "actual canonical OpenAI provider settings with current native workspace permission ceiling",
+  "samples": [
+    {
+      "theme": "light",
+      "copiedModelId": "gpt-6-astra",
+      "clipboardVerified": true,
+      "checkFeedbackReset": true,
+      "keyboardActionsVisible": true,
+      "searchClear": true,
+      "tabNames": ["All (56)", "Chat (43)", "Embedding (2)", "ASR (3)", "TTS (3)"],
+      "switches": 34,
+      "canManageProvider": false,
+      "addCanceled": false,
+      "resetCanceled": false,
+      "deniedControlsVerified": true,
+      "dimensions": {
+        "clientWidth": 428,
+        "scrollWidth": 428
+      }
+    },
+    {
+      "theme": "dark",
+      "copiedModelId": "gpt-6-astra",
+      "clipboardVerified": true,
+      "checkFeedbackReset": true,
+      "keyboardActionsVisible": true,
+      "searchClear": true,
+      "tabNames": ["All (56)", "Chat (43)", "Embedding (2)", "ASR (3)", "TTS (3)"],
+      "switches": 34,
+      "canManageProvider": false,
+      "addCanceled": false,
+      "resetCanceled": false,
+      "deniedControlsVerified": true,
+      "dimensions": {
+        "clientWidth": 428,
+        "scrollWidth": 428
+      }
+    }
+  ]
+}

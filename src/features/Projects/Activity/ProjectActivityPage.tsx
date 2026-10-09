@@ -30,9 +30,9 @@ import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { getProjectOverviewPath } from '@/features/Projects/Layout/navigation';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { getMilestoneAnchorId } from '@/features/Projects/milestoneRow';
+import { formatProjectActivityTime } from '@/features/Projects/projectPlanningDate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
-import { useActivityTime } from '@/hooks/useActivityTime';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
@@ -187,7 +187,7 @@ const EVENT_ICON: Record<ProjectFeedEventType, typeof Archive> = {
 };
 
 const RelTime = memo<{ time: string }>(({ time }) => {
-  const { text, title } = useActivityTime(time);
+  const { text, title } = formatProjectActivityTime(time);
   return (
     <span className={styles.time} title={title}>
       {text}

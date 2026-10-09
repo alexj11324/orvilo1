@@ -309,7 +309,12 @@ const DatePicker = memo<DatePickerProps>(
 
     const trigger =
       variant === 'ghost' ? (
-        <Button className={className} type="button" variant="ghost" {...triggerProps} />
+        <Button
+          className={cn(!display && 'text-muted-foreground', className)}
+          type="button"
+          variant="ghost"
+          {...triggerProps}
+        />
       ) : (
         <Button
           type="button"

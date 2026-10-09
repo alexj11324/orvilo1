@@ -1,22 +1,31 @@
 import type { ProjectDatePrecision } from '@orvilo/types';
+import { formatActivityTime, type FormattedActivityTime } from '@orvilo/utils/time';
 import dayjs, { type Dayjs } from 'dayjs';
 
 export const PROJECT_DATE_PRECISIONS = ['day', 'month', 'quarter', 'halfYear', 'year'] as const;
 export type { ProjectDatePrecision };
 
-export type ProjectDatePickerMode = 'date' | 'month' | 'quarter' | 'year';
+export type ProjectDatePickerMode = 'date' | 'month' | 'quarter' | 'halfYear' | 'year';
 
 /**
- * Map the project planning precision to the date picker input mode.
- * Half-year has no native picker mode, so it uses month input and retains
- * the half-year precision in the saved draft.
+ * Map the project planning precision to the date picker grid. Every precision
+ * has its own grid (half-year renders the two-cell H1 / H2 grid).
  */
 export const getProjectDatePickerMode = (
   precision: ProjectDatePrecision,
 ): ProjectDatePickerMode => {
   if (precision === 'day') return 'date';
-  if (precision === 'halfYear') return 'month';
   return precision;
+};
+
+/**
+ * Snap a picked day to the first day of the period the precision selects
+ * (month, quarter, half-year or year). Day precision keeps the day.
+ */
+export const snapProjectDateToPrecision = (date: Dayjs, precision: ProjectDatePrecision): Dayjs => {
+  if (precision === 'day') return date;
+  const span = { halfYear: 6, month: 1, quarter: 3, year: 12 }[precision];
+  return date.date(1).month(Math.floor(date.month() / span) * span);
 };
 
 /** Numeric day format shared by every project date display (`2026/09/21`). */
@@ -31,6 +40,21 @@ export const formatProjectDay = (date: string | Date | Dayjs | null | undefined)
   const value = dayjs(date);
   return value.isValid() ? value.format(PROJECT_DAY_FORMAT) : '';
 };
+
+/**
+ * Activity timestamp: relative within a day, then the numeric project day
+ * (`2026/09/23`) for both this year and other years, so the activity feed
+ * matches the comment cards and never shows a month name.
+ */
+export const formatProjectActivityTime = (
+  time: string | Date | number | null | undefined,
+  now?: Date | string | number,
+): FormattedActivityTime =>
+  formatActivityTime(time, {
+    formatOtherYear: PROJECT_DAY_FORMAT,
+    formatThisYear: PROJECT_DAY_FORMAT,
+    now,
+  });
 
 const TYPED_DAY_PATTERN = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/;
 

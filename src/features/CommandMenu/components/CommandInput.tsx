@@ -6,6 +6,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -98,13 +99,16 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
           <Tag>
             <AssigneeAvatar agentId={selectedAgent.id} size={14} />
             {agentDisplayName(selectedAgent)}
-            <button
+            <Button
               aria-label={t('close', { ns: 'common' })}
+              className="size-4 rounded-sm"
+              size="icon-xs"
               type="button"
+              variant="ghost"
               onClick={() => setSelectedAgent(undefined)}
             >
               <XIcon size={12} />
-            </button>
+            </Button>
           </Tag>
         )}
         <Command.Input

@@ -31,6 +31,7 @@ import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -1609,11 +1610,11 @@ const LinearWorkspaceSettings = memo(() => {
               key={team.id}
               style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}
             >
-              <input
+              <Checkbox
+                aria-label={team.name}
                 checked={approved(team.id)}
                 disabled={!canManage || importing}
-                type={'checkbox'}
-                onChange={(event) => toggleTeam(team.id, event.target.checked)}
+                onCheckedChange={(checked) => toggleTeam(team.id, checked)}
               />
               <span>
                 {team.name} ({team.key})
@@ -1628,11 +1629,11 @@ const LinearWorkspaceSettings = memo(() => {
         </div>
         <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24 }}>
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <input
+            <Checkbox
+              aria-label={t('workspaceSetting.linear.includeProjectlessIssues')}
               checked={scopeIncludeProjectless}
               disabled={!canManage || importing}
-              type={'checkbox'}
-              onChange={(event) => setScopeIncludeProjectless(event.target.checked)}
+              onCheckedChange={(checked) => setScopeIncludeProjectless(checked)}
             />
             <span style={{ color: 'var(--muted-foreground)' }}>
               {t('workspaceSetting.linear.includeProjectlessIssues')}

@@ -6,6 +6,7 @@ import { SearchIcon, X } from 'lucide-react';
 import { type ChangeEvent, memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
 import { Spinner } from '@/components/ui/spinner';
@@ -81,13 +82,15 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
           <Kbd className="pointer-events-none">{hotkey.toUpperCase()}</Kbd>
         )}
         {!!keywords && (
-          <button
+          <Button
             aria-label={t('clear', { ns: 'common', defaultValue: 'Clear' })}
+            size="icon-xs"
             type="button"
+            variant="ghost"
             onClick={() => updateSearchKeywords('')}
           >
             <X size={14} style={{ color: cssVar.colorTextTertiary }} />
-          </button>
+          </Button>
         )}
       </div>
     </div>

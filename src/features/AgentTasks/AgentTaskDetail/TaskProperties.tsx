@@ -39,6 +39,11 @@ import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskPrerequisites from './TaskPrerequisites';
+import {
+  createPropertyRevealState,
+  reconcilePropertyReveal,
+  revealProperty,
+} from './taskPropertyReveal';
 import TaskScheduleConfig from './TaskScheduleConfig';
 
 interface PriorityMeta {
@@ -67,10 +72,16 @@ const PropertyRow = ({ children, label }: { children: ReactNode; label: string }
 
 const TaskProperties = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
-  // Optional fields the user asked to add while they are still unset.
-  const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
-
   const taskId = useTaskDetailTaskId();
+  // Optional fields the user asked to add while they are still unset. They
+  // belong to one Issue: a peek pane keeps this instance mounted while the
+  // taskId changes, so the state is reset during render (no effect, no frame
+  // of the previous Issue's fields).
+  const [revealState, setRevealState] = useState(() => createPropertyRevealState(taskId));
+  const currentReveal = reconcilePropertyReveal(revealState, taskId);
+  if (currentReveal !== revealState) setRevealState(currentReveal);
+  const revealed = currentReveal.keys;
+
   const dispatchPhase = useTaskDetailSelector(taskDetailSelectors.taskDispatchPhase);
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
   const workflowCategory = useTaskDetailSelector(taskDetailSelectors.taskWorkflowCategory);
@@ -139,7 +150,8 @@ const TaskProperties = memo(() => {
       shown: revealed.has(kind),
     })),
   ];
-  const reveal = (key: string) => setRevealed((prev) => new Set(prev).add(key));
+  const reveal = (key: string) =>
+    setRevealState((prev) => revealProperty(reconcilePropertyReveal(prev, taskId), key));
 
   const statusValue = (
     <div

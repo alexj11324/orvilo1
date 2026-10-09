@@ -79,12 +79,12 @@ describe('useActiveTaskDetail', () => {
     expect(result.current.isNotFound).toBe(false);
   });
 
-  it('keeps the skeleton up while the assignee config fetch is genuinely in-flight', () => {
+  it('does not hold the page while the assignee config fetch is in-flight', () => {
     mocks.agentState = buildAgentState({ inMap: false, isLoading: true });
 
     const { result } = renderHook(() => useActiveTaskDetail('T-194'));
 
-    expect(result.current.isInitialLoading).toBe(true);
+    expect(result.current.isInitialLoading).toBe(false);
   });
 
   it('releases once the assignee config is hydrated into the map', () => {

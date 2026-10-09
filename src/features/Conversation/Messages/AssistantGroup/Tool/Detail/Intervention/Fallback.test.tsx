@@ -354,9 +354,7 @@ describe('direct tool approval actions', () => {
 
   it('approves directly and flushes edited arguments without a separate Submit step', async () => {
     const beforeApprove = await mountActions();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'tool.intervention.optionApprove', exact: true }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.optionApprove' }));
     await waitFor(() =>
       expect(approveToolCall).toHaveBeenCalledWith('tool-message-1', 'group-1', {
         editedArguments: { command: 'edited' },
@@ -370,7 +368,7 @@ describe('direct tool approval actions', () => {
     const beforeApprove = await mountActions();
     fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.details' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '  use another command  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.reject', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.reject' }));
     await waitFor(() =>
       expect(rejectAndContinueToolCall).toHaveBeenCalledWith(
         'tool-message-1',
@@ -413,12 +411,8 @@ describe('direct tool approval actions', () => {
     expect(
       screen.queryByRole('button', { name: 'tool.intervention.optionApproveRemember' }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'tool.intervention.reject', exact: true }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole('button', { name: 'tool.intervention.optionApprove', exact: true }),
-    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'tool.intervention.reject' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'tool.intervention.optionApprove' })).toBeVisible();
   });
 
   it('opens the rejection details using the existing keyboard shortcut', async () => {
@@ -439,10 +433,10 @@ describe('direct tool approval actions', () => {
     await mountActions();
     expect(screen.getByRole('button', { name: 'tool.intervention.details' })).toBeVisible();
     expect(
-      screen.queryByRole('button', { name: 'tool.intervention.optionApprove', exact: true }),
+      screen.queryByRole('button', { name: 'tool.intervention.optionApprove' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'tool.intervention.reject', exact: true }),
+      screen.queryByRole('button', { name: 'tool.intervention.reject' }),
     ).not.toBeInTheDocument();
     fireEvent.keyDown(document.body, { key: 'Enter' });
     expect(approveToolCall).not.toHaveBeenCalled();
@@ -450,12 +444,8 @@ describe('direct tool approval actions', () => {
 
   it('blocks all approval actions for temporary messages', async () => {
     await mountActions('manual', 'tmp_pending');
-    expect(
-      screen.getByRole('button', { name: 'tool.intervention.optionApprove', exact: true }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: 'tool.intervention.reject', exact: true }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'tool.intervention.optionApprove' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'tool.intervention.reject' })).toBeDisabled();
     expect(approveToolCall).not.toHaveBeenCalled();
     expect(rejectAndContinueToolCall).not.toHaveBeenCalled();
     expect(stopPendingApprovalForCard).not.toHaveBeenCalled();

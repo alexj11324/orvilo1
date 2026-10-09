@@ -70,6 +70,8 @@ export default {
   'datePicker.next': 'Next',
   'datePicker.previous': 'Previous',
   'viewExecutionDetails': 'View execution details',
+  'clear': 'Clear',
+  'error': 'Error',
   'cancel': 'Cancel',
   'changelog': 'Changelog',
   'alreadyUpToDate': 'Already Up to Date',

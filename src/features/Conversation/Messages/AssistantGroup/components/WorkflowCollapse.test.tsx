@@ -5,6 +5,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import common from '@/locales/default/common';
 import type { AssistantContentBlock } from '@/types/index';
 
 import WorkflowCollapse from './WorkflowCollapse';
@@ -64,6 +65,7 @@ vi.mock('react-i18next', () => ({
         }) as Record<string, string>
       )[key] ||
       options?.defaultValue ||
+      new Map(Object.entries(common)).get(key) ||
       key,
   }),
 }));
@@ -444,6 +446,7 @@ describe('WorkflowCollapse', () => {
     const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
     expect(container.querySelector('svg.lucide-check')).toBeNull();
     expect(container.querySelector('svg.lucide-triangle-alert')).not.toBeNull();
+    expect(screen.getByLabelText('Error')).toBeInTheDocument();
   });
 
   it('shows red x when all tools fail after completion', () => {
@@ -475,5 +478,6 @@ describe('WorkflowCollapse', () => {
 
     const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
     expect(container.querySelector('svg.lucide-x')).not.toBeNull();
+    expect(screen.getByLabelText('Error')).toBeInTheDocument();
   });
 });

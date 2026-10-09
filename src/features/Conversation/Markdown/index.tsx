@@ -22,7 +22,10 @@ const MarkdownMessage = memo<MarkdownMessageProps>(
       highlight: { theme: highlighterTheme, ...componentProps?.highlight },
       mermaid: { fullFeatured: false, theme: mermaidTheme, ...componentProps?.mermaid },
     };
-    const renderers = useMemo(() => ({ pre: ChatCodeBlock, ...components }), [components]);
+    const renderers = useMemo<NonNullable<MarkdownProps['components']>>(
+      () => Object.assign({ pre: ChatCodeBlock }, components),
+      [components],
+    );
 
     return (
       <ChatCodeBlockContext

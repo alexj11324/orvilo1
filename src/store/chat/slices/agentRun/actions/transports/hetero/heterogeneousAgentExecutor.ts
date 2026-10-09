@@ -309,6 +309,8 @@ const subscribeBroadcasts = (
   callbacks: {
     onComplete: () => void;
     onError: (error: HeterogeneousAgentSessionError | string) => void;
+    /** Title the ACP agent reported for its session; not part of the event stream. */
+    onSessionTitle?: (title: string) => void;
     onStreamEvent: (event: AgentStreamEvent) => void;
   },
 ): (() => void) => {
@@ -329,14 +331,20 @@ const subscribeBroadcasts = (
     if (data.sessionId === sessionId) callbacks.onError(data.error);
   };
 
+  const onSessionTitle = (_e: any, data: { sessionId: string; title: string }) => {
+    if (data.sessionId === sessionId) callbacks.onSessionTitle?.(data.title);
+  };
+
   const unsubscribeStreamEvent = ipc.on('heteroAgentEvent' as any, onStreamEvent);
   const unsubscribeComplete = ipc.on('heteroAgentSessionComplete' as any, onComplete);
   const unsubscribeError = ipc.on('heteroAgentSessionError' as any, onError);
+  const unsubscribeSessionTitle = ipc.on('heteroAgentSessionTitle' as any, onSessionTitle);
 
   return () => {
     unsubscribeStreamEvent();
     unsubscribeComplete();
     unsubscribeError();
+    unsubscribeSessionTitle();
   };
 };
 
@@ -2219,6 +2227,22 @@ export const executeHeterogeneousAgent = async (
 
     unsubscribe = subscribeBroadcasts(ipcRunSessionId, {
       onStreamEvent: handleStreamEvent,
+
+      // The agent named its own session. Deliberately not gated on
+      // `isAborted()`: a cancelled run's title still belongs to the topic.
+      onSessionTitle: (title) => {
+        if (!context.topicId) return;
+        void get()
+          .applyAgentTopicTitle(
+            context.topicId,
+            title,
+            (get().dbMessagesMap?.[messageMapKey(context)] ??
+              get().messagesMap?.[messageMapKey(context)]) as UIChatMessage[] | undefined,
+          )
+          .catch((err: unknown) => {
+            console.error('[HeterogeneousAgent] Failed to apply the agent session title:', err);
+          });
+      },
 
       onComplete: () => {
         void runCompletionCallback(async () => {

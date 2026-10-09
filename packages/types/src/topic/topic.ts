@@ -182,6 +182,9 @@ export const snapshotTopicExecutionConfig = (
   localSandboxNetwork: config?.localSandboxNetwork,
 });
 
+/** Who last set a topic's title: the user by hand, the external agent (ACP), or Orvilo. */
+export type TopicTitleOrigin = 'agent' | 'auto' | 'user';
+
 export interface ChatTopicMetadata {
   /**
    * User-visible record of mid-conversation agent handoffs. Each entry marks
@@ -410,6 +413,14 @@ export interface ChatTopicMetadata {
     messageId: string;
     reservedAt: string;
   } | null;
+  /**
+   * Who last set `topics.title`. Reserved: `chatTopicMetadataUpdateSchema`
+   * does not accept this key yet, so the server strips it and nothing reads it
+   * from the database. The client tracks the same value in memory
+   * (`canAgentRetitleTopic`); once the schema lists the key, a persisted value
+   * takes over after a reload.
+   */
+  titleSource?: TopicTitleOrigin;
   userMemoryExtractRunState?: TopicUserMemoryExtractRunState;
   userMemoryExtractStatus?: 'pending' | 'completed' | 'failed';
   /**

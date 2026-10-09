@@ -79,3 +79,36 @@ export const acpEventIdOf = (raw: unknown): string | undefined => {
   const meta = toRecord(toRecord(toRecord(raw)?.params)?._meta);
   return typeof meta?.eventId === 'string' ? meta.eventId : undefined;
 };
+
+/** Longest session title forwarded from an agent; longer text is cut. */
+export const MAX_ACP_SESSION_TITLE_LENGTH = 200;
+
+/**
+ * Title carried by an ACP `session_info_update` (`sessionUpdate` payload).
+ *
+ * Returns the trimmed, length-capped title only when it is a non-blank string.
+ * An omitted field means "unchanged", `null` means "cleared", and a
+ * `_meta`-only update is routine bookkeeping (the bundled Prime agent sends
+ * many); none of those is a title, so they all return `undefined`. The text is
+ * untrusted agent output: plain string only, newlines flattened.
+ */
+export const parseAcpSessionTitle = (update: unknown): string | undefined => {
+  const record = toRecord(update);
+  if (record?.sessionUpdate !== 'session_info_update') return undefined;
+  if (typeof record.title !== 'string') return undefined;
+
+  const title = record.title.replaceAll(/\s+/g, ' ').trim().slice(0, MAX_ACP_SESSION_TITLE_LENGTH);
+  return title.trim() || undefined;
+};
+
+/**
+ * {@link parseAcpSessionTitle} for a whole JSON-RPC message: only a live
+ * `session/update` notification counts, never a replayed historical one.
+ */
+export const parseAcpSessionTitleMessage = (message: {
+  method?: string;
+  params?: unknown;
+}): string | undefined => {
+  if (message.method !== 'session/update' || isAcpReplayMessage(message)) return undefined;
+  return parseAcpSessionTitle(toRecord(message.params)?.update);
+};

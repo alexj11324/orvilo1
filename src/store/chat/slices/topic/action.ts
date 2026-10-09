@@ -10,6 +10,7 @@ import {
   type ChatTopicMetadata,
   type HeterogeneousReasoningEffort,
   type MessageMapScope,
+  type TopicTitleOrigin,
   type UIChatMessage,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -71,7 +72,12 @@ import { type TopicData } from './initialState';
 import { type ChatTopicDispatch } from './reducer';
 import { topicReducer } from './reducer';
 import { topicSelectors } from './selectors';
-import { isExternalAgentRuntime, resolveTopicTitleSource, sliceTopicTitle } from './topicTitle';
+import {
+  canAgentRetitleTopic,
+  isExternalAgentRuntime,
+  resolveTopicTitleSource,
+  sliceTopicTitle,
+} from './topicTitle';
 
 const n = setNamespace('t');
 
@@ -156,6 +162,13 @@ export class ChatTopicActionImpl {
   #staleRunningTopicCleanupInFlight = false;
 
   #summarizingTopicTitleIds = new Set<string>();
+  /**
+   * Who last wrote each topic's title in this session. In memory on purpose:
+   * the server's metadata schema does not store a title source yet (see
+   * `ChatTopicMetadata.titleSource`), so after a reload `canAgentRetitleTopic`
+   * falls back to its heuristic.
+   */
+  #topicTitleOrigins = new Map<string, TopicTitleOrigin>();
 
   // A topic-list response is authoritative only for the membership revision
   // at which its request started. Without this ordering, a request that began
@@ -395,7 +408,8 @@ export class ChatTopicActionImpl {
     const agentConfig = agentId
       ? agentSelectors.getAgentConfigById(agentId)(agentState)
       : undefined;
-    // No topic/run field carries an agent-reported title yet, so none is passed.
+    // An agent-reported title (ACP `session_info_update`) arrives later, after
+    // this placeholder, through `applyAgentTopicTitle` — never through here.
     const titleSource = resolveTopicTitleSource(
       agentId
         ? {
@@ -410,6 +424,7 @@ export class ChatTopicActionImpl {
 
     if (titleSource.kind !== 'model') {
       try {
+        this.#topicTitleOrigins.set(topicId, 'auto');
         await this.#get().internal_updateTopic(topicId, {
           title:
             titleSource.kind === 'agent' ? titleSource.title : sliceTopicTitle(messagesForTitle),
@@ -460,10 +475,12 @@ export class ChatTopicActionImpl {
       // otherwise stay in the sidebar forever.
       if (!title) return restorePreviousTitle();
 
+      this.#topicTitleOrigins.set(topicId, 'auto');
       await this.#get().internal_updateTopic(topicId, { title });
     } catch (error) {
       console.error('[summaryTopicTitle] failed to generate a title:', error);
       // Never leave the topic untitled: fall back to the deterministic slice.
+      this.#topicTitleOrigins.set(topicId, 'auto');
       await this.#get()
         .internal_updateTopic(topicId, { title: sliceTopicTitle(messagesForTitle) })
         .catch(() => restorePreviousTitle());
@@ -636,7 +653,48 @@ export class ChatTopicActionImpl {
   };
 
   updateTopicTitle = async (id: string, title: string): Promise<void> => {
+    // A hand-set title outranks everything automatic, including agent titles.
+    this.#topicTitleOrigins.set(id, 'user');
     await this.#get().internal_updateTopic(id, { title });
+  };
+
+  /**
+   * Adopt the title an external ACP agent reported for its session. Outranks
+   * the placeholder (first-message slice) and an earlier agent title, never a
+   * title the user set by hand, and never runs title generation.
+   * `messages` is the topic's conversation, only used to recognise a leftover
+   * first-message slice after a reload.
+   */
+  applyAgentTopicTitle = async (
+    topicId: string,
+    agentTitle: string,
+    messages: UIChatMessage[] = [],
+  ): Promise<void> => {
+    const topic = topicSelectors.getTopicById(topicId)(this.#get());
+    if (!topic) return;
+
+    const source = resolveTopicTitleSource(undefined, agentTitle);
+    if (source.kind !== 'agent') return;
+
+    const previousOrigin = this.#topicTitleOrigins.get(topicId);
+    const allowed = canAgentRetitleTopic({
+      currentTitle: topic.title,
+      origin: previousOrigin ?? topic.metadata?.titleSource,
+      placeholderTitles: [LOADING_FLAT, t('defaultTitle', { ns: 'topic' })],
+      sliceTitle: sliceTopicTitle(normalizeTopicTitleMessages(messages)),
+    });
+    if (!allowed) return;
+
+    this.#topicTitleOrigins.set(topicId, 'agent');
+    if (source.title === topic.title) return;
+
+    try {
+      await this.#get().internal_updateTopic(topicId, { title: source.title });
+    } catch (error) {
+      if (previousOrigin) this.#topicTitleOrigins.set(topicId, previousOrigin);
+      else this.#topicTitleOrigins.delete(topicId);
+      throw error;
+    }
   };
 
   /**

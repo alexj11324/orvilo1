@@ -1013,6 +1013,16 @@ export default class HeterogeneousAgentCtr {
     }
   }
 
+  /**
+   * Forward the title an ACP agent reported for its session
+   * (`session_info_update`). A dedicated channel, not `heteroAgentEvent`: it is
+   * about the session rather than the turn, and the event stream is also
+   * ingested server-side, whose schema rejects unknown event types.
+   */
+  private broadcastSessionTitle(sessionId: string, title: string) {
+    this.broadcast('heteroAgentSessionTitle', { sessionId, title });
+  }
+
   // ─── AskUserQuestion MCP server () ───
 
   /** Register and broadcast a native ACP intervention without starting an MCP server. */
@@ -1330,6 +1340,7 @@ export default class HeterogeneousAgentCtr {
         }
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
       onRuntimeStatus: (status) => {
         this.broadcast('heteroAgentRuntimeStatus', status);
       },
@@ -1432,6 +1443,7 @@ export default class HeterogeneousAgentCtr {
         }
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1511,6 +1523,7 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = 'droid-acp';
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1625,6 +1638,7 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = 'devin-acp';
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1788,6 +1802,7 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = 'trae-acp';
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;
@@ -1943,6 +1958,7 @@ export default class HeterogeneousAgentCtr {
         session.modelSource = transport;
       },
       onRawMessage: (line) => this.appendCliTraceFile(traceSession, 'stdout.jsonl', line),
+      onSessionTitle: (title) => this.broadcastSessionTitle(session.sessionId, title),
       onRuntimeStatus: (status) => this.broadcast('heteroAgentRuntimeStatus', status),
       onSessionId: (agentSessionId) => {
         session.agentSessionId = agentSessionId;

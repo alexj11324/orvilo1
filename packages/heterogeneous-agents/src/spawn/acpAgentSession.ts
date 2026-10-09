@@ -1,6 +1,7 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { isRecord } from '@orvilo/utils/object';
 
+import { parseAcpSessionTitleMessage } from '../adapters/acpCommon';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpStdioClient } from './acpStdioClient';
 import type { AgentStreamPipelineOptions } from './agentStreamPipeline';
@@ -72,6 +73,13 @@ export interface AcpAgentSessionOptions {
   onRawMessage: (line: string) => Promise<void> | void;
   onRuntimeStatus: (status: HeterogeneousAgentRuntimeStatus) => void;
   onSessionId: (sessionId: string) => void;
+  /**
+   * Title the agent reported for this session (`session_info_update`). A
+   * side channel, deliberately outside `onEvents`: the title describes the
+   * session, not the turn, so it is delivered whenever it arrives while the
+   * process is alive, and it never enters the persisted/ingested event stream.
+   */
+  onSessionTitle?: (title: string) => void;
   onStderr: (data: string) => Promise<void> | void;
   operationId: string;
   requestTimeoutMs?: number;
@@ -118,6 +126,9 @@ export abstract class AcpAgentSession<
   private inInertTurnActive = false;
   private readonly transport: HeterogeneousAgentRuntimeStatus['transport'];
   private hostClosed = false;
+  private lastSessionTitle?: string;
+  /** Set once `session/prompt` is about to be sent; earlier updates are `session/load` replay. */
+  private promptStarted = false;
   private lastStatus?: HeterogeneousAgentRuntimeStatus['state'];
 
   protected constructor(
@@ -136,7 +147,10 @@ export abstract class AcpAgentSession<
       cwd: options.cwd,
       detached: options.detached,
       env: options.env,
-      onMessage: (message) => this.handleAgentMessage(message),
+      onMessage: (message) => {
+        this.forwardSessionTitle(message);
+        return this.handleAgentMessage(message);
+      },
       onRawMessage: options.onRawMessage,
       onServerRequest: (message) => this.handleServerRequest(message),
       onStderr: options.onStderr,
@@ -179,6 +193,7 @@ export abstract class AcpAgentSession<
       this.acpSessionId = sessionId;
       this.emitStatus('running');
       this.onBeforePrompt?.();
+      this.promptStarted = true;
       const result = await this.client.request<unknown>(
         'session/prompt',
         await this.buildPromptParams(sessionId),
@@ -364,6 +379,27 @@ export abstract class AcpAgentSession<
   /** `session/cancel` params; agents append extension `_meta` by overriding. */
   protected buildCancelParams(sessionId: string): unknown {
     return { sessionId };
+  }
+
+  /**
+   * Hand an agent-reported session title to `onSessionTitle`. Runs before the
+   * subclass sees the message and is gated only on the host still owning the
+   * session: not on the turn lifecycle (a title can follow the prompt
+   * response), not on the keep-alive gate, not on the event stream. Replayed
+   * history and unchanged titles are ignored; a throwing callback never breaks
+   * the stream.
+   */
+  private forwardSessionTitle(message: AcpRpcMessage): void {
+    if (!this.options.onSessionTitle || !this.promptStarted || this.hostClosed) return;
+    const title = parseAcpSessionTitleMessage(message);
+    if (!title || title === this.lastSessionTitle) return;
+
+    this.lastSessionTitle = title;
+    try {
+      this.options.onSessionTitle(title);
+    } catch (error) {
+      console.error('[acp] onSessionTitle failed:', error);
+    }
   }
 
   /** Serialize a payload as one JSONL line into the adapter pipeline and emit the result. */

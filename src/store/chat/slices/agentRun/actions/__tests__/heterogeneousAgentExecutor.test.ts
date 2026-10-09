@@ -1695,6 +1695,39 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
   // Error handling
   // ────────────────────────────────────────────────────
 
+  describe('agent session title', () => {
+    const emitTitle = (sessionId: string, title: string) => () =>
+      ipc.getListeners().get('heteroAgentSessionTitle')?.(null, { sessionId, title });
+
+    it('hands the title the agent reported to the run topic', async () => {
+      const applyAgentTopicTitle = vi.fn().mockResolvedValue(undefined);
+      const summaryTopicTitle = vi.fn();
+      const store = createMockStore({ applyAgentTopicTitle, summaryTopicTitle });
+
+      await runWithEvents([ccInit(), emitTitle('ipc-sess-1', 'Fix the login loop'), ccResult()], {
+        store,
+      });
+
+      expect(applyAgentTopicTitle).toHaveBeenCalledTimes(1);
+      expect(applyAgentTopicTitle.mock.calls[0].slice(0, 2)).toEqual([
+        'topic-1',
+        'Fix the login loop',
+      ]);
+      expect(summaryTopicTitle).not.toHaveBeenCalled();
+    });
+
+    it('ignores a title reported for another session', async () => {
+      const applyAgentTopicTitle = vi.fn().mockResolvedValue(undefined);
+      const store = createMockStore({ applyAgentTopicTitle });
+
+      await runWithEvents([ccInit(), emitTitle('other-session', 'Not mine'), ccResult()], {
+        store,
+      });
+
+      expect(applyAgentTopicTitle).not.toHaveBeenCalled();
+    });
+  });
+
   describe('error handling', () => {
     it('should persist accumulated content on error', async () => {
       const store = createMockStore();

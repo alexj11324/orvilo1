@@ -34,6 +34,7 @@ vi.mock('@/database/models/task', () => ({
     vi.fn(function () {
       return {
         findById: mocks.findById,
+        hasUnresolvedInput: vi.fn().mockResolvedValue(false),
         resolveTaskReviewRequirement: mocks.resolveTaskReviewRequirement,
         updateContext: mocks.updateContext,
         updateStatus: mocks.updateStatus,

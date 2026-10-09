@@ -74,6 +74,14 @@ The fix preserves actual workflow categories while projecting `needs_input`
 through attention. The later standalone membership adjustments have the targeted
 regression evidence above; no additional independent-pass claim is made.
 
+Full CI Typecheck passed at the implementation SHA. The first complete server
+run exposed four caller suites whose TaskModel doubles omitted the new
+`hasUnresolvedInput` read. Their normal no-pending-input fixtures now implement
+that boundary, and lifecycle assertions explicitly include the persisted
+`blocked` / `execution_failed` parked reason. These follow-up changes only alter
+tests and evidence; the Electron-verified product code is unchanged. All **105
+tests in those four suites** and scoped lint passed after the fixture correction.
+
 Full CI remains a separate merge gate. Earlier scoped server typechecking on the
 integration branch reported cross-package configuration/dependency errors; it was
 not recorded as a clean typecheck.

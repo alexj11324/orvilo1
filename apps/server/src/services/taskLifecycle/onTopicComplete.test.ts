@@ -231,6 +231,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     // `settleTaskExecution` constructs its own model instances — forward the
     // prototype methods to the same shared stubs the service instance uses.
     const taskModelProto = TaskModel.prototype;
+    vi.spyOn(taskModelProto, 'hasUnresolvedInput').mockResolvedValue(false);
     vi.spyOn(taskModelProto, 'findById').mockImplementation(
       async (id: string) => findById(id) as Promise<TaskItem | null>,
     );
@@ -363,7 +364,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         'completion:op-1',
         'running',
         'paused',
-        { error: expect.stringContaining('prerequisite') },
+        { error: expect.stringContaining('prerequisite'), parkedReason: 'blocked' },
       );
       expect(model.releaseRunReservation).toHaveBeenCalledWith('task-1', 'completion:op-1');
       expect(cascadeOnCompletion).not.toHaveBeenCalled();
@@ -422,6 +423,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
 
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
         error: 'Workspace merge could not be completed',
+        parkedReason: 'blocked',
       });
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
@@ -1307,6 +1309,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(captureRemoteIdentityOnComplete).not.toHaveBeenCalled();
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
         error: 'builder failed before push',
+        parkedReason: 'execution_failed',
       });
     });
 
@@ -1323,7 +1326,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: 'boom' });
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
+        error: 'boom',
+        parkedReason: 'execution_failed',
+      });
     });
 
     it('manual run of a schedule task fails → restored to scheduled, NOT paused', async () => {
@@ -1451,7 +1457,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
 
       // 2 prior + this one = 3 = fuse → pause.
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', { error: 'boom' });
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
+        error: 'boom',
+        parkedReason: 'execution_failed',
+      });
       // Audit trail records the pause reason durably.
       expect(updateContext).toHaveBeenCalledWith(
         'task-1',

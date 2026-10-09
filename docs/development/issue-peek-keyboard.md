@@ -4,7 +4,7 @@ Linear's documented peek, on Orvilo's Issue lists. Frontend only.
 
 ## Key map
 
-With focus on an Issue row (or the page body, falling back to the peeked row):
+With focus on an Issue row inside its owning surface:
 
 | Key               | Action                                                                    |
 | ----------------- | ------------------------------------------------------------------------- |
@@ -30,7 +30,7 @@ Nothing fires when:
 - the key comes from `input`, `textarea`, `select`, `contenteditable`,
   `role=textbox|combobox|searchbox` — the peek's title and description editors
   are covered by this;
-- an overlay is open: `role=dialog|alertdialog|menu|listbox`, `aria-modal`,
+- a visible overlay is open: `role=dialog|alertdialog|menu|listbox`, `aria-modal`,
   the command palette (`[cmdk-root]`) or any open Base UI trigger
   (`[data-popup-open]`). Overlays own their keys, including `Esc`;
 - `Cmd`, `Ctrl`, `Alt` or `Shift` is held;

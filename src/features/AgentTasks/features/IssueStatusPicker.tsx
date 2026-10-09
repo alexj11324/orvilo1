@@ -238,17 +238,28 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
 
     const defaultVisual = WORKFLOW_CATEGORY_VISUALS[workflowCategory ?? 'backlog'];
     const TriggerIcon = (glyph ?? defaultVisual).icon;
+    const currentStatusLabel =
+      typeof glyph?.label === 'string'
+        ? glyph.label
+        : (t(COLUMN_I18N_KEYS[workflowCategory ?? 'backlog'] as never) as string);
     const triggerNode =
       children ||
       (loading ? (
-        <span className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}>
+        <span
+          aria-label={t('taskDetail.property.state')}
+          className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}
+        >
           <Spinner className="text-muted-foreground" style={{ height: size, width: size }} />
         </span>
       ) : (
-        <span className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}>
-          <SimpleTooltip
-            title={glyph?.label ?? t(COLUMN_I18N_KEYS[workflowCategory ?? 'backlog'] as never)}
-          >
+        <span
+          className={cn(styles.trigger, PICKER_TRIGGER_FOCUS_CLASS)}
+          aria-label={t('taskDetail.fieldValue', {
+            field: t('taskDetail.property.state'),
+            value: currentStatusLabel,
+          })}
+        >
+          <SimpleTooltip title={glyph?.label ?? currentStatusLabel}>
             <TriggerIcon color={(glyph ?? defaultVisual).color} size={size} />
           </SimpleTooltip>
         </span>

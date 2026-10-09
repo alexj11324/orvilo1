@@ -40,6 +40,22 @@ buttons were unnamed. Loading placeholders and the Plus fallback got titles; `mo
 open-run / group sidebar icon buttons got labels. New topic keys: `actions.recentTopics`,
 `filter.title`.
 
+### Names for the remaining unnamed controls
+
+- The compact picker triggers (`span role="button"`) of `TaskPriorityTag` and `IssueStatusPicker` carry
+  `aria-label` = field + current value (`taskDetail.fieldValue`, e.g. "优先级：高"); the loading spinner
+  state keeps the field name. The `div role="button"` wrapper from `pickerTriggerRender` takes a `label`
+  (labels / agent / assignee pickers in sub-issue rows). Structure is unchanged: no nested `<button>`.
+- The comment send button passes `aria-label` (`taskDetail.sendComment`) through `SendButton`, which
+  spreads rest props onto its `Button`.
+- `ActionPopover` names its trigger wrapper with the `Action` title; the task-manager agent selector
+  button is named "Agent: <current agent>".
+- The Project and Milestone rail rows (and the read-only link variants) use `RAIL_CONTROL_CLASS`. They
+  previously carried the unlayered `railRow` antd-style class, whose `&& { background }` outranked
+  `hover:bg-accent`.
+- The inline (sub-Issue) composer keeps plain Enter as a newline: its editor is the multi-line
+  instruction, and Cmd/Ctrl+Enter submits, exactly like the main create-Issue dialog.
+
 ## Inbox
 
 `InboxListRow` gets the standard row hover wash (`colorFillTertiary`); the selected row keeps its fill.

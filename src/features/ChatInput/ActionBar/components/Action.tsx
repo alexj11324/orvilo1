@@ -103,6 +103,7 @@ const Action = memo<ActionProps>(
     if (popover)
       return (
         <ActionPopover
+          label={typeof title === 'string' ? title : undefined}
           loading={loading}
           open={show}
           trigger={trigger}

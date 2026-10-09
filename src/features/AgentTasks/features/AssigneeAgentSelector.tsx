@@ -312,7 +312,9 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger {...pickerTriggerRender(children, control)} />
+        <PopoverTrigger
+          {...pickerTriggerRender(children, control, undefined, t('taskDetail.agent'))}
+        />
         <PopoverContent align="start" className="w-65 gap-0 p-0">
           <Suspense fallback={<SkeletonList rows={6} />}>
             {isAgentListInit ? (

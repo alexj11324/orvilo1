@@ -31,6 +31,8 @@ export const pickerTriggerRender = (
   children: ReactNode,
   control?: PickerControl,
   style = pickerTriggerStyle,
+  /** Accessible name of the compact wrapper; the rail `Button` is named by its content. */
+  label?: string,
 ): PickerTriggerRender =>
   control
     ? {
@@ -50,6 +52,7 @@ export const pickerTriggerRender = (
         nativeButton: false,
         render: (
           <div
+            aria-label={label}
             className={PICKER_TRIGGER_FOCUS_CLASS}
             style={style}
             onClick={(event) => event.stopPropagation()}

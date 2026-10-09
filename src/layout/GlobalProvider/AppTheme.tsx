@@ -19,9 +19,11 @@ import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors, userGeneralSettingsSelectors } from '@/store/user/selectors';
-import { GlobalStyle } from '@/styles';
+import { BaseGlobalStyle, GlobalStyle } from '@/styles';
 import { ThemeRoles } from '@/styles/themeRoles';
 import { setCookie } from '@/utils/client/cookie';
+
+import AntdStyleLayer from './AntdStyleLayer';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   app: css`
@@ -157,42 +159,46 @@ const AppTheme = memo<AppThemeProps>(
     const currentAppearence = isDark ? 'dark' : 'light';
 
     return (
-      <ConfigProvider
-        locale={uiLocale}
-        motion={m}
-        resources={uiResources}
-        config={{
-          aAs: Link,
-          imgAs: Image,
-          imgUnoptimized: true,
-          proxy: globalCDN ? 'unpkg' : undefined,
-        }}
-      >
-        <ThemeProvider
-          appearance={currentAppearence}
-          className={cx(styles.app, styles.scrollbar, styles.scrollbarPolyfill)}
-          defaultAppearance={currentAppearence}
-          defaultThemeMode={currentAppearence}
-          customTheme={{
-            neutralColor: neutralColor ?? defaultNeutralColor,
-            primaryColor: primaryColor ?? defaultPrimaryColor,
-          }}
-          theme={{
-            cssVar: { key: 'orvilo-vars' },
-            token: {
-              fontFamily,
-              fontFamilyCode,
-              motion: animationMode !== 'disabled',
-              motionUnit: animationMode === 'agile' ? 0.05 : 0.1,
-            },
+      <AntdStyleLayer>
+        <ConfigProvider
+          locale={uiLocale}
+          motion={m}
+          resources={uiResources}
+          config={{
+            aAs: Link,
+            imgAs: Image,
+            imgUnoptimized: true,
+            proxy: globalCDN ? 'unpkg' : undefined,
           }}
         >
-          {!!customFontURL && <FontLoader url={customFontURL} />}
-          <GlobalStyle />
-          <ThemeRoles />
-          {children}
-        </ThemeProvider>
-      </ConfigProvider>
+          <ThemeProvider
+            appearance={currentAppearence}
+            className={cx(styles.app, styles.scrollbar, styles.scrollbarPolyfill)}
+            defaultAppearance={currentAppearence}
+            defaultThemeMode={currentAppearence}
+            enableGlobalStyle={false}
+            customTheme={{
+              neutralColor: neutralColor ?? defaultNeutralColor,
+              primaryColor: primaryColor ?? defaultPrimaryColor,
+            }}
+            theme={{
+              cssVar: { key: 'orvilo-vars' },
+              token: {
+                fontFamily,
+                fontFamilyCode,
+                motion: animationMode !== 'disabled',
+                motionUnit: animationMode === 'agile' ? 0.05 : 0.1,
+              },
+            }}
+          >
+            {!!customFontURL && <FontLoader url={customFontURL} />}
+            <BaseGlobalStyle />
+            <GlobalStyle />
+            <ThemeRoles />
+            {children}
+          </ThemeProvider>
+        </ConfigProvider>
+      </AntdStyleLayer>
     );
   },
 );

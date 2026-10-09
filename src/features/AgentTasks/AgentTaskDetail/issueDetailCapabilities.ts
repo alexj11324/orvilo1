@@ -14,7 +14,7 @@ export interface IssueDetailCapabilities {
   canAddResource: boolean;
   /** The user may add a sub-issue. */
   canAddSubIssue: boolean;
-  /** Title renders as plain text and the property rail is inert. */
+  /** Title renders as plain text and the property editors are unavailable. */
   readOnly: boolean;
   /** The user's own words for why the issue is read-only. */
   readOnlyReason?: string;
@@ -24,7 +24,7 @@ export interface IssueDetailCapabilities {
 
 /**
  * What the current viewer can do on an issue detail body. Read-only viewers
- * get no add actions, a plain-text title and an inert property rail; editors
+ * get no add actions, a plain-text title and readable non-editable properties; editors
  * get resource commands only once the issue has the ids those commands need.
  */
 export const resolveIssueDetailCapabilities = ({

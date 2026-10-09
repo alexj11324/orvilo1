@@ -174,9 +174,9 @@ const TaskProperties = memo(() => {
   return (
     // Plane's property order for the fields we share: State, Assignee,
     // Priority, Due date, Labels. Reviewer and Schedule stay after those.
-    // A reader sees the values but cannot open any picker: `inert` drops every
-    // control in the rail from pointer and keyboard in one attribute.
-    <div className={cn(styles.railSection, readOnly && 'opacity-60')} inert={readOnly}>
+    // Each picker enforces its permission; the due-date button is disabled below. Keep
+    // the values and relation links available to assistive technology.
+    <div className={cn(styles.railSection, readOnly && 'opacity-60')}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
         <PropertyRow label={t('taskDetail.property.state')}>
@@ -251,6 +251,7 @@ const TaskProperties = memo(() => {
                 as well as on click. */}
             <Button
               className={cn(styles.propertyButton, 'min-w-0 justify-start font-normal')}
+              disabled={readOnly}
               variant="ghost"
               onClick={() =>
                 openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })

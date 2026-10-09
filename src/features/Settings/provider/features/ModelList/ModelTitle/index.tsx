@@ -1,202 +1,73 @@
-import { DropdownMenu, Flexbox, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, confirmModal, Skeleton, Text, toast } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
-import { CircleX, EllipsisVertical, LucideRefreshCcwDot, PlusIcon } from 'lucide-react';
-import { memo, use, useEffect, useState } from 'react';
+import { toast } from '@lobehub/ui/base-ui';
+import { CircleX } from 'lucide-react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useIsMobile } from '@/hooks/useIsMobile';
+import ActionIcon from '@/components/ActionIcon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiModelSelectors } from '@/store/aiInfra/selectors';
 
-import { createCreateNewModelModal } from '../CreateNewModelModal';
-import { ProviderSettingsContext } from '../ProviderSettingsContext';
-import Search from './Search';
-
-interface ModelFetcherProps {
+interface ModelTitleProps {
   provider: string;
-  showAddNewModel?: boolean;
-  showModelFetcher?: boolean;
 }
 
-const ModelTitle = memo<ModelFetcherProps>(
-  ({ provider, showAddNewModel = true, showModelFetcher = true }) => {
-    const { t } = useTranslation('modelProvider');
+/** Section heading of the models panel: title, clear-fetched action and enabled count. */
+const ModelTitle = memo<ModelTitleProps>(({ provider }) => {
+  const { t } = useTranslation('modelProvider');
 
-    const { allowed: canManageProvider, reason } = usePermission('manage_provider_key');
-    const [
-      searchKeyword,
-      isEmpty,
-      hasRemoteModels,
-      fetchRemoteModelList,
-      clearObtainedModels,
-      clearModelsByProvider,
-      useFetchAiProviderModels,
-    ] = useAiInfraStore((s) => [
-      s.modelSearchKeyword,
-      aiModelSelectors.isEmptyAiProviderModelList(s),
+  const { allowed: canManageProvider } = usePermission('manage_provider_key');
+  const [hasRemoteModels, clearObtainedModels, useFetchAiProviderModels, enabledCount] =
+    useAiInfraStore((s) => [
       aiModelSelectors.hasRemoteModels(s),
-      s.fetchRemoteModelList,
       s.clearRemoteModels,
-      s.clearModelsByProvider,
       s.useFetchAiProviderModels,
+      aiModelSelectors.enabledAiProviderModelList(s).length,
     ]);
 
-    const { isLoading } = useFetchAiProviderModels(provider);
+  const { isLoading } = useFetchAiProviderModels(provider);
+  const [clearRemoteModelsLoading, setClearRemoteModelsLoading] = useState(false);
 
-    const [fetchRemoteModelsLoading, setFetchRemoteModelsLoading] = useState(false);
-    const [clearRemoteModelsLoading, setClearRemoteModelsLoading] = useState(false);
-    const { showDeployName } = use(ProviderSettingsContext);
+  useEffect(() => {
+    useAiInfraStore.setState({ modelSearchKeyword: '' });
+  }, [provider]);
 
-    const mobile = useIsMobile();
+  return (
+    <div className="flex items-baseline gap-2">
+      <h2 className="text-sm font-semibold">{t('providerModels.list.title')}</h2>
+      {isLoading ? (
+        <Skeleton className="h-4 w-20" />
+      ) : (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {t('providerModels.list.enabledCount', { count: enabledCount })}
+        </span>
+      )}
 
-    useEffect(() => {
-      useAiInfraStore.setState({ modelSearchKeyword: '' });
-    }, [provider]);
-
-    return (
-      <Flexbox
-        gap={12}
-        paddingBlock={8}
-        style={{
-          background: cssVar.colorBgContainer,
-          marginTop: mobile ? 0 : -12,
-          paddingTop: mobile ? 0 : 20,
-          position: 'sticky',
-          top: mobile ? -2 : -32,
-          zIndex: 15,
-        }}
-      >
-        <Flexbox horizontal align={'center'} gap={0} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Text strong style={{ fontSize: 16 }}>
-              {t('providerModels.list.title')}
-            </Text>
-
-            {/* Only meaningful once the list has loaded, so it waits rather
-                than holding a skeleton next to the title. */}
-            {!isLoading && hasRemoteModels && (
-              <ActionIcon
-                disabled={!canManageProvider}
-                icon={CircleX}
-                loading={clearRemoteModelsLoading}
-                size={'small'}
-                title={canManageProvider ? t('providerModels.list.fetcher.clear') : undefined}
-                onClick={async () => {
-                  if (!canManageProvider) return;
-                  setClearRemoteModelsLoading(true);
-                  await clearObtainedModels(provider);
-                  setClearRemoteModelsLoading(false);
-                }}
-              />
-            )}
-          </Flexbox>
-          {isLoading ? (
-            <Skeleton height={28} width={120} />
-          ) : isEmpty ? null : (
-            <Flexbox horizontal align={'center'} gap={8}>
-              {!mobile && (
-                <Search
-                  value={searchKeyword}
-                  onChange={(value) => {
-                    useAiInfraStore.setState({ modelSearchKeyword: value });
-                  }}
-                />
-              )}
-              <Flexbox horizontal gap={4}>
-                {showModelFetcher && (
-                  <Tooltip title={canManageProvider ? undefined : reason}>
-                    <Button
-                      disabled={!canManageProvider}
-                      icon={LucideRefreshCcwDot}
-                      loading={fetchRemoteModelsLoading}
-                      size={'small'}
-                      onClick={async () => {
-                        if (!canManageProvider) return;
-                        setFetchRemoteModelsLoading(true);
-                        try {
-                          await fetchRemoteModelList(provider);
-                        } catch (error) {
-                          console.error(error);
-
-                          const errorMessage =
-                            error instanceof Error
-                              ? error.message
-                              : t('providerModels.list.fetcher.errorFallback');
-
-                          toast.error(
-                            t('providerModels.list.fetcher.error', {
-                              message: errorMessage,
-                            }),
-                          );
-                        } finally {
-                          setFetchRemoteModelsLoading(false);
-                        }
-                      }}
-                    >
-                      {fetchRemoteModelsLoading
-                        ? t('providerModels.list.fetcher.fetching')
-                        : t('providerModels.list.fetcher.fetch')}
-                    </Button>
-                  </Tooltip>
-                )}
-                {showAddNewModel && (
-                  <Tooltip title={canManageProvider ? undefined : reason}>
-                    <Button
-                      disabled={!canManageProvider}
-                      icon={PlusIcon}
-                      size={'small'}
-                      onClick={() => {
-                        if (!canManageProvider) return;
-                        createCreateNewModelModal({
-                          existingModelIds: useAiInfraStore
-                            .getState()
-                            .aiProviderModelList.map((model) => model.id),
-                          showDeployName,
-                        });
-                      }}
-                    />
-                  </Tooltip>
-                )}
-                <DropdownMenu
-                  items={[
-                    {
-                      disabled: !canManageProvider,
-                      key: 'reset',
-                      label: t('providerModels.list.resetAll.title'),
-                      onClick: async () => {
-                        if (!canManageProvider) return;
-                        confirmModal({
-                          content: t('providerModels.list.resetAll.conform'),
-                          onOk: async () => {
-                            await clearModelsByProvider(provider);
-                            toast.success(t('providerModels.list.resetAll.success'));
-                          },
-                          title: t('providerModels.list.resetAll.title'),
-                        });
-                      },
-                    },
-                  ]}
-                >
-                  <Button icon={EllipsisVertical} size={'small'} />
-                </DropdownMenu>
-              </Flexbox>
-            </Flexbox>
-          )}
-        </Flexbox>
-
-        {mobile && (
-          <Search
-            value={searchKeyword}
-            variant={'filled'}
-            onChange={(value) => {
-              useAiInfraStore.setState({ modelSearchKeyword: value });
-            }}
-          />
-        )}
-      </Flexbox>
-    );
-  },
-);
+      {/* Only meaningful once the list has loaded, so it waits rather
+          than holding a skeleton next to the title. */}
+      {!isLoading && hasRemoteModels && (
+        <ActionIcon
+          disabled={!canManageProvider}
+          icon={CircleX}
+          loading={clearRemoteModelsLoading}
+          size={'small'}
+          title={canManageProvider ? t('providerModels.list.fetcher.clear') : undefined}
+          onClick={async () => {
+            if (!canManageProvider) return;
+            setClearRemoteModelsLoading(true);
+            try {
+              await clearObtainedModels(provider);
+            } catch (error) {
+              console.error(error);
+              toast.error(t('providerModels.list.fetcher.errorFallback'));
+            } finally {
+              setClearRemoteModelsLoading(false);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+});
 export default ModelTitle;

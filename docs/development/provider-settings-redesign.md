@@ -81,3 +81,23 @@ when off and none of those exist. A persisted "connection failed" still has no s
 - The credentials section has no "stored only under your account" subtitle. Whether provider keys are per-user or
   per-workspace depends on scope, so the claim is not made. The existing AES-GCM notice stays under the panel.
 - The result of a passing check is a badge next to the select; the button keeps its "Check" label.
+
+## PR 3: models panel
+
+- `ModelList` is a section: heading (`ModelTitle`: title, "N enabled", clear-fetched action) above a `Frame` panel
+  holding the toolbar (`ModelToolbar`: search, fetch, add, reset menu), the type tabs (local `Tabs`), then the enabled
+  and disabled groups as `GroupHeader` rows followed by `ModelItem` rows (44px min height, hover wash).
+- `ModelItem` keeps `ModelInfoTags` (abilities and context window), release date and price text, the config / delete
+  actions (shown on hover or keyboard focus on desktop, always on mobile) and the confirm-delete dialog. The model
+  ID is a `ModelIdChip`: click copies it, the chip shows a check mark for two seconds and the existing toast stays.
+- Disabled group keeps the sort menu, load-more via `IntersectionObserver` and the remote paging; the enabled group
+  keeps batch disable and the sort dialog; search results keep batch enable.
+- Dialogs (add model, model config, sort, reset-all confirm, delete confirm) are untouched and still open through
+  their existing imperative helpers.
+
+### Deviations from the mockup (PR 3)
+
+- Rows are not a strict column table: the abilities and context window come from the existing `ModelInfoTags`
+  (one control), and price / release date stay as the secondary line under the name, not separate aligned columns.
+- The section heading no longer sticks to the top while scrolling (it sat above the page chrome in the old layout).
+- The "N enabled" summary shows enabled models only; the total is not known up front because disabled models page in.

@@ -325,6 +325,7 @@
   "providerModels.list.enabledActions.disableAll": "全部禁用",
   "providerModels.list.enabledActions.enableAll": "全部启用",
   "providerModels.list.enabledActions.sort": "自定义模型排序",
+  "providerModels.list.enabledCount": "已启用 {{count}} 个",
   "providerModels.list.enabledEmpty": "还没有启用模型。先从下方列表挑一个启用，之后随时可以调整",
   "providerModels.list.fetcher.clear": "清除获取的模型",
   "providerModels.list.fetcher.duplicatesRemoved": "已移除 {{count}} 条重复模型：{{ids}}",

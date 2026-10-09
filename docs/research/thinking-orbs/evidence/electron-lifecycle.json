@@ -1,0 +1,176 @@
+{
+  "busy": {
+    "draft": "Synthetic operation fixture draft retained.",
+    "stable": true,
+    "canvas": [
+      {
+        "w": 42,
+        "h": 42,
+        "pixels": "ONHcaE1vyx2BXu+0je5c0DXzzrzx3h46zVF63Cnc9fb7DPR6o19E+y5oX6v6pVH0fwAAAP//lTwJjQAAAAZJREFUAwC5djiRFvNhtQAAAABJRU5ErkJggg=="
+      },
+      {
+        "w": 20,
+        "h": 20,
+        "pixels": "UJ5D8OI8ISiyfxcDAwNcV1fX75GRkTQBNO/z+d7Mzs4mIfYJ32fmfwXPRJ+DuHDBPwAAAP//OO1W6wAAAAZJREFUAwAnPkk4rMt4oQAAAABJRU5ErkJggg=="
+      }
+    ],
+    "beam": "",
+    "animations": [
+      {
+        "state": "running",
+        "duration": 200
+      },
+      {
+        "state": "running",
+        "duration": 1960
+      },
+      {
+        "state": "finished",
+        "duration": 600
+      },
+      {
+        "state": "running",
+        "duration": 12000
+      },
+      {
+        "state": "running",
+        "duration": 12000
+      },
+      {
+        "state": "running",
+        "duration": 600
+      },
+      {
+        "state": "running",
+        "duration": 1000
+      }
+    ]
+  },
+  "motion": {
+    "draft": "Synthetic operation fixture draft retained.",
+    "stable": true,
+    "canvas": [
+      {
+        "w": 42,
+        "h": 42,
+        "pixels": "M/fNedPNyN546PZqV9d1XlcXC0/7XOj5ooBeKEQt8y+B1qLS+fhcUvR81KrF92Oj6H8BAAD//3UjqjcAAAAGSURBVAMAvzxnkXO2d+QAAAAASUVORK5CYII="
+      },
+      {
+        "w": 20,
+        "h": 20,
+        "pixels": "Top2QZ0gEQnT09M+CBZtNtvrwcHBn/C5/oDBM1uB3fAXFTzOJnHCcb/Y/ESCYgsb+X4DAAD//2iKcmwAAAAGSURBVAMAldRGODhdtwkAAAAASUVORK5CYII="
+      }
+    ],
+    "beam": "",
+    "animations": [
+      {
+        "state": "running",
+        "duration": 200
+      },
+      {
+        "state": "running",
+        "duration": 1960
+      },
+      {
+        "state": "finished",
+        "duration": 600
+      },
+      {
+        "state": "running",
+        "duration": 12000
+      },
+      {
+        "state": "running",
+        "duration": 12000
+      },
+      {
+        "state": "running",
+        "duration": 600
+      },
+      {
+        "state": "running",
+        "duration": 1000
+      }
+    ]
+  },
+  "reducedBusy": {
+    "draft": "Synthetic operation fixture draft retained.",
+    "stable": true,
+    "canvas": [
+      {
+        "w": 42,
+        "h": 42,
+        "pixels": "T7uznoJeQrHA1i61e3H9V0B7AbbQxxXQhYp0276iaLcKLhx/RdGFinTbvqJotwouHP8nAAAA//+6kSVHAAAABklEQVQDANL47XOjNJUzAAAAAElFTkSuQmCC"
+      },
+      {
+        "w": 20,
+        "h": 20,
+        "pixels": "HTjTA2iJ6ampKbqtHA7Hrkaj+UbqBv1Iwd5CaIuARCL5gVwmk6mjH4W/Ehw1+TD+DwAAAP//wbB9sAAAAAZJREFUAwB7tfEphtw4mAAAAABJRU5ErkJggg=="
+      }
+    ],
+    "beam": "",
+    "animations": [
+      {
+        "state": "finished",
+        "duration": 0.01
+      },
+      {
+        "state": "running",
+        "duration": 600
+      },
+      {
+        "state": "running",
+        "duration": 1000
+      }
+    ]
+  },
+  "reducedIdle": {
+    "draft": "Synthetic operation fixture draft retained.",
+    "stable": true,
+    "canvas": [
+      {
+        "w": 42,
+        "h": 42,
+        "pixels": "eN+eDf8+sfsbA0e2rC57YeLNm6pNGfQ6gBd7sVjM9cC89+v90/WcNtDpAhrLz4cG9L8AAAD//67Qm/kAAAAGSURBVAMAItvvgufV2yUAAAAASUVORK5CYII="
+      }
+    ],
+    "beam": null,
+    "animations": [
+      {
+        "state": "running",
+        "duration": 600
+      }
+    ]
+  },
+  "reducedRestart": {
+    "draft": "Synthetic operation fixture draft retained.",
+    "stable": true,
+    "canvas": [
+      {
+        "w": 42,
+        "h": 42,
+        "pixels": "vCfjWI1s0qBngscwA4tZ+MKDC4P4e4AxOVkVz8SOv6cMNA72v7TzoFOt7nlFp1rRfwMAAP//TLMbXgAAAAZJREFUAwBJtjSRrY+uXgAAAABJRU5ErkJggg=="
+      },
+      {
+        "w": 20,
+        "h": 20,
+        "pixels": "38VY8nuB8PYCTdOCKIpulyo7Fr1AVAcNO6uqao7mfRoEhG5+QANu+mBofxAQJQ7VxoF/AAAA//8F3QvaAAAABklEQVQDAHM0VilC2UvuAAAAAElFTkSuQmCC"
+      }
+    ],
+    "beam": "",
+    "animations": [
+      {
+        "state": "finished",
+        "duration": 0.01
+      },
+      {
+        "state": "running",
+        "duration": 600
+      },
+      {
+        "state": "running",
+        "duration": 1000
+      }
+    ]
+  }
+}

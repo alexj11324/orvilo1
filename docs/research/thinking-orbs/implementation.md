@@ -55,7 +55,7 @@ prove it. Source CDP visual comparison and package motion captures pending.
 
 ## Implementation checks
 
-- Scoped `bun run check --lint --test` on all 11 changed/new source files and
+- Scoped `bun run check --lint --test` on the 10 changed/new source files and
   `operationActivity.test.ts`: lint clean, 6 tests passed.
 - Independent light review found the added wrapper interrupted fullscreen height
   inheritance. Fixed with fullscreen flex growth, definite height and min-height.

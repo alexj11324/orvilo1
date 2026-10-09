@@ -129,9 +129,11 @@ describe('applyAgentTopicTitle', () => {
       const order: string[] = [];
       vi.mocked(topicService.updateTopicMetadata).mockImplementation(async () => {
         order.push('metadata');
+        return undefined as never;
       });
       vi.mocked(topicService.updateTopic).mockImplementation(async () => {
         order.push('title');
+        return undefined as never;
       });
 
       await useChatStore.getState().updateTopicTitle('p1', 'Mine');

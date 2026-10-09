@@ -1,5 +1,6 @@
 'use client';
 
+import type { NotificationSettings } from '@orvilo/types';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
@@ -40,7 +41,9 @@ const PersonalNotificationSettings = () => {
       }
     >
       <NotificationPreferences
-        value={notification ?? {}}
+        // The store types settings as a deep partial; every field of the
+        // preference is optional already, so the shapes agree.
+        value={(notification ?? {}) as NotificationSettings}
         onChange={(partial) => save(() => setSettings({ notification: partial }))}
       />
     </FormGroup>

@@ -138,16 +138,9 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Hotkeys are a desktop concept; the mobile shell has nothing to bind.
   [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
 
-  // Desktop notifications are a local capability, so the page is served on
-  // Electron regardless of whether the deployment ships the business pages
-  // that host the rest of the notification settings. Without either, the Web
-  // component is a blank business placeholder, so the URL answers not-found
-  // instead of an empty pane.
-  [SettingsTabs.Notification]: {
-    gate: ({ enableBusinessFeatures, isDesktop }) => enableBusinessFeatures || isDesktop,
-    scope: 'user',
-    status: 'enabled',
-  },
+  // Personal inbox and push preferences are available on every deployment.
+  // Electron adds local sound controls to the same settings surface.
+  [SettingsTabs.Notification]: { scope: 'user', status: 'enabled' },
 
   [SettingsTabs.Memory]: { scope: 'user', status: 'enabled' },
   // Electron-only: both pages configure the desktop runtime, and neither has

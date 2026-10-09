@@ -1167,8 +1167,8 @@ export default {
   'settingAgent.modelSettings.modeLabel': 'Mode',
   'settingAgent.modelSettings.modelLabel': 'Model',
   'settingAgent.modelSettings.noBindingDesc':
-    'This agent has no model to run on yet — bind an Orvilo provider first.',
-  'settingAgent.modelSettings.noBindingTitle': 'No provider bound',
+    'Configure a provider and verify its model connection before running this Agent.',
+  'settingAgent.modelSettings.noBindingTitle': 'No verified model available',
   'settingAgent.modelSettings.primeHint':
     'Model routes come from your enabled Orvilo provider bindings.',
   'settingAgent.modelSettings.speedLabel': 'Speed',
@@ -3898,8 +3898,8 @@ export default {
   'workspaceSetting.notification.inboxDesc': 'Notifications in your Orvilo inbox',
   'workspaceSetting.notification.email': 'Email',
   'workspaceSetting.notification.emailDesc': 'Notifications delivered by email',
-  'workspaceSetting.notification.push': 'Mobile push',
-  'workspaceSetting.notification.pushDesc': 'Push notifications on your devices',
+  'workspaceSetting.notification.push': 'Push & desktop',
+  'workspaceSetting.notification.pushDesc': 'Notifications on your desktop and mobile devices',
 
   'workspaceSetting.tab.labels': 'Labels',
   'workspaceSetting.tab.members': 'Members',

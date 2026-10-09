@@ -146,11 +146,10 @@ describe('resolveSettingsCapability', () => {
     expect(isSettingsTabAvailable('apikey', ctx)).toBe(true);
   });
 
-  it('answers not-found for Notification where nothing hosts the page', () => {
-    // On the Web without business pages the component is a blank placeholder.
+  it('offers personal notification preferences on web and desktop without business features', () => {
     const plainWeb = context({ enableBusinessFeatures: false, isDesktop: false });
 
-    expect(isSettingsTabAvailable('notification', plainWeb)).toBe(false);
+    expect(isSettingsTabAvailable('notification', plainWeb)).toBe(true);
     expect(isSettingsTabAvailable('notification', context({ isDesktop: true }))).toBe(true);
     expect(isSettingsTabAvailable('notification', context({ enableBusinessFeatures: true }))).toBe(
       true,

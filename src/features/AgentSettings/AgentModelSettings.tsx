@@ -284,40 +284,6 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
           isLoading={bindingQuery.isLoading}
           onRetry={() => void bindingQuery.mutate()}
         >
-          {bindings
-            .filter((binding) => {
-              const reason = providerBindingUnavailableReason(binding);
-              return reason && reason !== 'configuration';
-            })
-            .map((binding) => (
-              <SettingsRow key={binding.id} label={`${binding.provider} / ${binding.model}`}>
-                <div className={settingsStyles.hint}>
-                  {t(
-                    `settingAgent.modelSettings.unavailable.${providerBindingUnavailableReason(binding) as 'local' | 'endpoint' | 'protocol' | 'unverified' | 'disabled'}`,
-                  )}
-                </div>
-                {providerBindingUnavailableReason(binding) === 'unverified' && (
-                  <Button
-                    disabled={!canEdit || status === 'saving'}
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      void save(async () => {
-                        const result = await providerBindingService.checkConnection(
-                          binding.id,
-                          binding.revision,
-                        );
-                        await bindingQuery.mutate();
-                        if (result.status !== 'ready')
-                          throw new Error(t('settingAgent.modelSettings.unavailable.unverified'));
-                      })
-                    }
-                  >
-                    {t('settingAgent.modelSettings.verifyBinding')}
-                  </Button>
-                )}
-              </SettingsRow>
-            ))}
           {primeModelOptions.length > 0 ? (
             <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
               <AgentModelPicker
@@ -351,6 +317,48 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
               </Alert>
             </SettingsRow>
           )}
+          {bindings
+            .filter((binding) => {
+              const reason = providerBindingUnavailableReason(binding);
+              return reason && reason !== 'configuration';
+            })
+            .map((binding) => (
+              <SettingsRow
+                key={binding.id}
+                label={
+                  <span className="break-all text-sm">{`${binding.provider} / ${binding.model}`}</span>
+                }
+              >
+                <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1 basis-48 text-sm text-muted-foreground">
+                    {t(
+                      `settingAgent.modelSettings.unavailable.${providerBindingUnavailableReason(binding) as 'local' | 'endpoint' | 'protocol' | 'unverified' | 'disabled'}`,
+                    )}
+                  </div>
+                  {providerBindingUnavailableReason(binding) === 'unverified' && (
+                    <Button
+                      className="shrink-0"
+                      disabled={!canEdit || status === 'saving'}
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        void save(async () => {
+                          const result = await providerBindingService.checkConnection(
+                            binding.id,
+                            binding.revision,
+                          );
+                          await bindingQuery.mutate();
+                          if (result.status !== 'ready')
+                            throw new Error(t('settingAgent.modelSettings.unavailable.unverified'));
+                        })
+                      }
+                    >
+                      {t('settingAgent.modelSettings.verifyBinding')}
+                    </Button>
+                  )}
+                </div>
+              </SettingsRow>
+            ))}
         </AsyncBoundary>
       ) : null}
 

@@ -56,3 +56,9 @@ Planning, acceptance drafting and self-evolution resolve the owning built-in Age
 Workspace owners/admins can update name, URL slug and icon through the scoped workspace update procedure. Duplicate slugs fail with a conflict, and a successful slug edit redirects the settings URL. Personal and workspace notification settings expose inbox and push preferences for Issue assignment, review requests, status changes, run completion, run failure and approval. Workspace events read workspace preferences rather than personal overrides. Email is hidden because the open-source build has no email delivery pipeline.
 
 Backend retirement (#622) is deliberately deferred until frontend PRs #612, #615, #616 and #617 merge. These changes do not delete their routes, persisted settings or tables.
+
+### Settings design-system follow-up
+
+The affected workspace forms and notification surfaces now share the existing 640px settings lane, semantic colors, 14px labels, and local controls. General fields stack at narrow container widths, use 36px inputs, and keep Save in a compact action row. Notification sections reuse `FormGroup`, have distinct accessible channel/event labels, and do not add an embedded page heading or idle save badge to the desktop sound page. Provider diagnostics sit below model selection, wrap long IDs, and use readable text beside their verification action. Scoped loading skeletons match the new layouts.
+
+Personal inbox/push preferences now also render on the ordinary Web deployment. This supersedes the old Notification business-feature gate in item 19 above; Electron still adds device-local sound settings. The capability regression fails with the former gate and passes after removal.

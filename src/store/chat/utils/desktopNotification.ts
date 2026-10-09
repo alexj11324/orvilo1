@@ -6,13 +6,17 @@ import {
 } from '@orvilo/const';
 import type { DesktopNotificationSender } from '@orvilo/electron-client-ipc';
 import type { ConversationContext } from '@orvilo/types';
-import { agentDisplayName, isHostUnsupportedResult } from '@orvilo/types';
+import { agentDisplayName, isHostUnsupportedResult, notificationEventEnabled } from '@orvilo/types';
 import { t } from 'i18next';
 
+import { getWorkspaceContextState } from '@/business/client/workspaceContextStore';
+import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 import { getHostPort, hasHostCapability } from '@/platform';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import type { ChatStore } from '@/store/chat/store';
+import { useUserStore } from '@/store/user';
+import { settingsSelectors } from '@/store/user/selectors';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import { renderAvatarToDataUrl } from './notificationAvatar';
@@ -140,6 +144,31 @@ export const buildNotificationBody = (
     : text;
 };
 
+const desktopEventEnabled = async (context: DesktopNotificationContext, event: string) => {
+  const state = useUserStore.getState();
+  if (!context.workspaceSlug)
+    return notificationEventEnabled(
+      settingsSelectors.currentSettings(state).notification,
+      'push',
+      event,
+    );
+  const active = getWorkspaceContextState();
+  if (
+    active.activeWorkspaceSlug === context.workspaceSlug &&
+    state.workspaceUserPreferenceWorkspaceId === active.activeWorkspaceId
+  ) {
+    return notificationEventEnabled(state.workspaceUserPreference.notification, 'push', event);
+  }
+  // A background run must use its original workspace, not the currently open workspace.
+  const workspaces = await createWorkspaceLambdaClient(null).workspace.list.query();
+  const workspace = workspaces.find((item) => item.slug === context.workspaceSlug);
+  if (!workspace) return false;
+  const preference = await createWorkspaceLambdaClient(
+    workspace.id,
+  ).workspaceUserSettings.getPreference.query();
+  return notificationEventEnabled(preference.notification, 'push', event);
+};
+
 export const notifyDesktopHumanApprovalRequired = async (
   get: () => ChatStore,
   context: DesktopNotificationContext,
@@ -147,6 +176,7 @@ export const notifyDesktopHumanApprovalRequired = async (
   if (!hasHostCapability('notification.native')) return;
 
   try {
+    if (!(await desktopEventEnabled(context, 'acp_permission'))) return;
     const title = resolveNotificationTitle(
       get,
       context,
@@ -178,6 +208,7 @@ export interface AgentCompletedNotificationOptions {
   /** The assistant's final reply (markdown); rendered as the notification body. */
   content?: string;
   context: DesktopNotificationContext;
+  event?: 'agent_run_completed' | 'agent_run_failed';
 }
 
 /**
@@ -194,13 +225,17 @@ export interface AgentCompletedNotificationOptions {
  */
 export const notifyDesktopAgentCompleted = async (
   get: () => ChatStore,
-  { context, content, badge }: AgentCompletedNotificationOptions,
+  { context, content, badge, event = 'agent_run_completed' }: AgentCompletedNotificationOptions,
 ): Promise<void> => {
   if (!hasHostCapability('notification.native')) return;
 
   try {
+    if (!(await desktopEventEnabled(context, event))) return;
     const { completionSoundService } = await import('@/services/electron/completionSound');
-    const fallback = t('notification.finishChatGeneration', { ns: 'electron' });
+    const fallback =
+      event === 'agent_run_failed'
+        ? t('notification.events.agent_run_failed', { ns: 'setting' })
+        : t('notification.finishChatGeneration', { ns: 'electron' });
     const navigate = resolveNotificationNavigate(context);
     const [sender, soundName] = await Promise.all([
       buildNotificationSender(context),

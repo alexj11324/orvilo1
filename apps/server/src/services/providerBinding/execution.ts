@@ -1,6 +1,6 @@
 import type { ProviderBinding } from '@orvilo/agent-execution/controlPlane';
 import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
-import type { ProviderBindingConfig } from '@orvilo/types';
+import { type ProviderBindingConfig, providerBindingUnavailableReason } from '@orvilo/types';
 
 import { ProviderBindingModel } from '@/database/models/providerBinding';
 import type { OrviloDatabase } from '@/database/type';
@@ -44,6 +44,7 @@ export const resolveOrviloProviderBinding = async (
   const rows = await new ProviderBindingModel(db, userId).list();
   return rows.find((row) => {
     if (row.config?.enabled !== true) return false;
+    if (target === 'sandbox' && providerBindingUnavailableReason(row.config)) return false;
     const selection = row.config?.selection;
     if (!selection || selection.runtime !== 'orvilo' || selection.target !== target) return false;
     if (match?.provider && row.config?.provider !== match.provider) return false;

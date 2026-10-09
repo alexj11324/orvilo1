@@ -53,7 +53,12 @@ export class GoalExplorationPlanner {
     input: GoalExploreInput,
     options?: { agentId?: string | null },
   ): Promise<GoalExplorationPlan> {
-    const model = await resolveGoalModelConfig(this.db, this.userId);
+    const model = await resolveGoalModelConfig(
+      this.db,
+      this.userId,
+      options?.agentId,
+      this.workspaceId,
+    );
     const result = await new AiGenerationService(
       this.db,
       this.userId,

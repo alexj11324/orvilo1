@@ -3,6 +3,8 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 
+import NotificationSettingsSkeleton from '@/components/Skeleton/Settings/Notification';
+import WorkspaceGeneralSkeleton from '@/components/Skeleton/Settings/WorkspaceGeneral';
 import type { SurfaceSkeletonVariant } from '@/components/Skeleton/Surface';
 import {
   isWorkspaceSettingsTabAvailable,
@@ -20,7 +22,7 @@ import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import WorkspaceSettingsTabGate from '@/features/WorkspaceSetting/TabGate';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
-import type { RouteMeta } from '@/spa/router/routeMeta';
+import { type RouteMeta, routeMeta } from '@/spa/router/routeMeta';
 import { dynamicElement, ErrorBoundary, redirectElement } from '@/utils/router';
 
 /**
@@ -417,6 +419,7 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
   },
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/general'),
+    meta: routeMeta({ Skeleton: WorkspaceGeneralSkeleton }),
     name: 'General',
     path: 'general',
     skeleton: 'form',
@@ -429,6 +432,7 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
   },
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
+    meta: routeMeta({ Skeleton: NotificationSettingsSkeleton }),
     name: 'Notification',
     path: 'notification',
     skeleton: 'form',
@@ -437,6 +441,7 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
   // reads the channel id from the `sub` route param.
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
+    meta: routeMeta({ Skeleton: NotificationSettingsSkeleton }),
     name: 'Notification > Channel',
     path: 'notification/:sub',
     skeleton: 'form',

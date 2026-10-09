@@ -47,17 +47,18 @@ describe('selected provider model readiness', () => {
   it('does not enable a binding when authentication succeeds but its selected model is absent', async () => {
     const { result, model } = await check(['another-model']);
     expect(result.status).toBe('unavailable');
-    expect(model.setEnabled).not.toHaveBeenCalled();
+    expect(model.setEnabled).toHaveBeenCalledWith('binding', false, 1);
+    expect(model.setEnabled).not.toHaveBeenCalledWith('binding', true, 1);
   });
 
   it('enables a selected model reported by the trusted broker', async () => {
     const { result, model } = await check(['selected-model']);
     expect(result.status).toBe('ready');
-    expect(model.setEnabled).toHaveBeenCalledWith('binding', true);
+    expect(model.setEnabled).toHaveBeenCalledWith('binding', true, 1);
   });
   it('preserves provider configuration anchor connectivity checks', async () => {
     const { result, model } = await check([], '__provider_config__');
     expect(result.status).toBe('ready');
-    expect(model.setEnabled).toHaveBeenCalledWith('binding', true);
+    expect(model.setEnabled).toHaveBeenCalledWith('binding', true, 1);
   });
 });

@@ -199,7 +199,7 @@ const desktopWorkspaceSettingsLeaf = (leaf: SharedWorkspaceSettingsLeaf): RouteO
     `Desktop > Workspace > Settings > ${leaf.name}`,
     'settings',
   ),
-  handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton(leaf.skeleton) }) },
+  handle: { meta: leaf.meta ?? routeMeta({ Skeleton: createSurfaceSkeleton(leaf.skeleton) }) },
   path: leaf.path,
 });
 

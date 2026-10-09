@@ -15,6 +15,7 @@ import {
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AiModelModel } from '@/database/models/aiModel';
+import { ProviderBindingModel } from '@/database/models/providerBinding';
 import { UserModel } from '@/database/models/user';
 import { AiInfraRepos, ProviderBindingPlane } from '@/database/repositories/aiInfra';
 import { router } from '@/libs/trpc/lambda';
@@ -22,6 +23,8 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { getUserScopedAiProviderModelList } from '@/server/services/aiProviderAccess';
+import { checkProviderBinding } from '@/server/services/providerBinding/configuration';
+import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 import { type ProviderConfig } from '@/types/user/settings';
 
 const AI_MODEL_UNIQUE_CONSTRAINT = 'ai_models_id_provider_id_user_id_pk';
@@ -65,6 +68,13 @@ const aiModelProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   // binding-managed providers (every scope — see the aiProvider router for
   // why provider settings are a personal credential surface).
   const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
+    verifyBinding: (row) =>
+      checkProviderBinding(
+        new ProviderBindingModel(ctx.serverDB, ctx.userId),
+        ctx.userId,
+        row,
+        createProviderBindingComposition(ctx.serverDB),
+      ),
     decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
     resolveEnabledModelIds: async (providerId) =>
       (await aiInfraRepos.getEnabledModels(false))

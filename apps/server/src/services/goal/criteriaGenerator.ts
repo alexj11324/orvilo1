@@ -118,7 +118,12 @@ export class GoalCriteriaGeneratorService {
     maxCriteria?: number;
   }): Promise<GoalPlanDraft | undefined> {
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_CRITERIA;
-    const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
+    const modelConfig = await resolveGoalModelConfig(
+      this.db,
+      this.userId,
+      params.agentId,
+      this.workspaceId,
+    );
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {
@@ -171,7 +176,12 @@ export class GoalCriteriaGeneratorService {
     agentId?: string | null;
     requirement: string;
   }): Promise<GoalDecompositionDraft | undefined> {
-    const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
+    const modelConfig = await resolveGoalModelConfig(
+      this.db,
+      this.userId,
+      params.agentId,
+      this.workspaceId,
+    );
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {

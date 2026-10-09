@@ -119,3 +119,18 @@ Orvilo 以看板为中心，chat 只用来和 Agent 说话。以下功能连同�
 - Anti-resurrection assertions live in `retiredSettingsSurfaces.test.ts`.
 
 Backend follow-up (not touched here): the persisted `systemAgent.topic` field and its default, and the `taskReview` reader in `apps/server/src/services/taskReview/index.ts`, remain server-side.
+## 2026-10-09: executable model routes and notification preferences (#621, #623, #624)
+
+Provider settings now resolve standard OpenAI-compatible service endpoints when only a key is supplied. Saving credentials or enabling a model keeps its binding disabled until a completion probe and capability check succeed. Credential changes invalidate enabled routes before replacing the shared secret; checks are fenced by the binding revision. Unsupported protocols and local/device targets remain visible with a reason in the built-in Agent settings. Batch enable verifies each model once.
+
+Planning, acceptance drafting and self-evolution resolve the owning built-in Agent model before the global service fallback. A configured but unavailable binding blocks the operation rather than silently substituting another model. CLI Agent owners are explicitly unsupported for these server judgments. Memory extraction covers conversations from all runtimes; memory injection remains built-in-only.
+
+Workspace owners/admins can update name, URL slug and icon through the scoped workspace update procedure. Duplicate slugs fail with a conflict, and a successful slug edit redirects the settings URL. Personal and workspace notification settings expose inbox and push preferences for Issue assignment, review requests, status changes, run completion, run failure and approval. Workspace events read workspace preferences rather than personal overrides. Email is hidden because the open-source build has no email delivery pipeline.
+
+Backend retirement (#622) is deliberately deferred until frontend PRs #612, #615, #616 and #617 merge. These changes do not delete their routes, persisted settings or tables.
+
+### Settings design-system follow-up
+
+The affected workspace forms and notification surfaces now share the existing 640px settings lane, semantic colors, 14px labels, and local controls. General fields stack at narrow container widths, use 36px inputs, and keep Save in a compact action row. Notification sections reuse `FormGroup`, have distinct accessible channel/event labels, and do not add an embedded page heading or idle save badge to the desktop sound page. Provider diagnostics sit below model selection, wrap long IDs, and use readable text beside their verification action. Scoped loading skeletons match the new layouts.
+
+Personal inbox/push preferences now also render on the ordinary Web deployment. This supersedes the old Notification business-feature gate in item 19 above; Electron still adds device-local sound settings. The capability regression fails with the former gate and passes after removal.

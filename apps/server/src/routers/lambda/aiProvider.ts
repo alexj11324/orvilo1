@@ -15,6 +15,7 @@ import {
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AiProviderModel } from '@/database/models/aiProvider';
+import { ProviderBindingModel } from '@/database/models/providerBinding';
 import { UserModel } from '@/database/models/user';
 import {
   AiInfraRepos,
@@ -27,6 +28,8 @@ import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProviderAccess';
+import { checkProviderBinding } from '@/server/services/providerBinding/configuration';
+import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 import { type AiProviderDetailItem, type AiProviderRuntimeState } from '@/types/aiProvider';
 import {
   CreateAiProviderSchema,
@@ -54,6 +57,13 @@ const aiProviderProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   // bindings and credentials themselves are always personal (tenantId is
   // stamped at issuance).
   const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
+    verifyBinding: (row) =>
+      checkProviderBinding(
+        new ProviderBindingModel(ctx.serverDB, ctx.userId),
+        ctx.userId,
+        row,
+        createProviderBindingComposition(ctx.serverDB),
+      ),
     decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
     resolveEnabledModelIds: async (providerId) =>
       (await aiInfraRepos.getEnabledModels(false))

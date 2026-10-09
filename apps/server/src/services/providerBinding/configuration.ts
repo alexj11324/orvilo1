@@ -35,6 +35,11 @@ export async function checkProviderBinding(
   };
 
   const row = await load();
+  if (!(await model.setEnabled(row.id, false, row.revision)))
+    throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
+  if (row.config.providerSettings?.enabled === false) {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_DISABLED' });
+  }
   // Absent host composition still enters the canonical broker, with network access refused.
   const active = composition ?? createClosedProviderComposition(model, userId);
 
@@ -108,7 +113,7 @@ export async function checkProviderBinding(
   // provider rejected (`unavailable`) must not arm it. Enabling is not a
   // config edit — `revision` stays put, and the next save lands
   // `enabled: false` again until re-verified.
-  if (result.value.status === 'ready' && !(await model.setEnabled(row.id, true))) {
+  if (result.value.status === 'ready' && !(await model.setEnabled(row.id, true, row.revision))) {
     throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
   }
   return result.value;

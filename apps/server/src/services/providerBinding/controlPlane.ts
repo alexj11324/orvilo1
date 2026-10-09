@@ -16,7 +16,11 @@ import {
   CONTROL_PLANE_VERSION,
   createProviderConfigurationBroker,
 } from '@orvilo/agent-execution/controlPlane';
-import type { CredentialKVPayload, ProviderBindingConfig } from '@orvilo/types';
+import {
+  type CredentialKVPayload,
+  type ProviderBindingConfig,
+  providerBindingUnavailableReason,
+} from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { eq } from 'drizzle-orm';
 
@@ -133,6 +137,9 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
     const row = await bindings.find(binding.bindingId);
     const config = row?.config;
     if (!config || row?.revision !== binding.revision) return undefined;
+    const reason = providerBindingUnavailableReason({ ...config, enabled: true });
+    if (reason === 'endpoint' || reason === 'protocol' || reason === 'configuration')
+      return undefined;
     const headers = await resolveProviderCredentialHeaders(
       this.db,
       binding.ownerId,
@@ -163,7 +170,16 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
   async check(binding: ProviderBinding): Promise<boolean> {
     // A real OpenAI-compatible model catalog read — the binding must prove
     // endpoint reachability AND credential acceptance, not just stored shape.
-    const response = await this.request(binding, '/models', { method: 'GET' });
+    const response = await this.request(binding, '/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: binding.modelRoutes[0],
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_completion_tokens: 16,
+        stream: false,
+      }),
+    });
     return response?.ok === true;
   }
 

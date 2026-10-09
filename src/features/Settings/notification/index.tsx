@@ -28,6 +28,8 @@ import { getHostPort } from '@/platform';
 import { completionSoundService } from '@/services/electron/completionSound';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 
+import PersonalNotificationSettings from './personal';
+
 const IMPORTED = 'imported';
 const IMPORT = 'import';
 
@@ -285,6 +287,7 @@ export const DesktopNotificationSettings = () => {
           ]}
         />
       )}
+      <PersonalNotificationSettings />
       {enableBusinessFeatures && <BusinessNotification />}
     </>
   );

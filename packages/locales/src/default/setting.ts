@@ -1,4 +1,21 @@
 export default {
+  'settingAgent.modelSettings.unavailable.disabled':
+    'Provider is disabled. Enable it in AI provider settings first.',
+  'notification.events.task_assigned': 'Issue assigned to me',
+  'notification.events.task_review': 'Review or acceptance requested',
+  'notification.events.task_status_changed': 'Issue status changed',
+  'notification.events.agent_run_completed': 'Agent run completed',
+  'notification.events.agent_run_failed': 'Agent run failed',
+  'notification.events.acp_permission': 'Agent needs approval',
+
+  'settingAgent.modelSettings.unavailable.local':
+    'This route is local-only and cannot be used by the built-in agent in the cloud.',
+  'settingAgent.modelSettings.unavailable.endpoint': 'Set an API endpoint in AI provider settings.',
+  'settingAgent.modelSettings.unavailable.protocol':
+    'The built-in agent does not support this API protocol yet. Use an OpenAI-compatible endpoint.',
+  'settingAgent.modelSettings.unavailable.unverified':
+    'Connection is not verified. Check the key, endpoint and model access, then retry.',
+  'settingAgent.modelSettings.verifyBinding': 'Verify connection',
   'tab.orchestrator': 'Orchestrator',
   'orchestrator.description':
     'Choose a configured Agent to coordinate new projects. Existing projects keep their current coordinator.',
@@ -932,7 +949,7 @@ export default {
   'memory.effort.medium': 'Medium — Balanced behavior',
   'memory.effort.title': 'Aggressiveness',
   'memory.enabled.desc':
-    'Allow Orvilo to extract preferences and info from conversations and use them later. You can view, edit, or clear memory anytime.',
+    'Extract memories from conversations with all agents. Saved memories are injected only into the built-in Orvilo agent; CLI agents do not receive them.',
   'memory.enabled.title': 'Enable Memory',
   'memory.manageEntry': 'Manage memories',
   'memory.title': 'Memory Settings',
@@ -947,6 +964,12 @@ export default {
   'notification.email.title': 'Email Notifications',
   'notification.inbox.desc': 'Show notifications in the in-app inbox',
   'notification.inbox.title': 'Inbox Notifications',
+  'notification.matrix.all': 'All notifications',
+  'notification.matrix.cell': '{{channel}}: {{event}}',
+  'notification.matrix.event': 'Event',
+  'notification.matrix.inbox': 'Inbox',
+  'notification.matrix.push': 'Desktop & mobile',
+  'notification.matrix.title': 'Event notifications',
   'notification.push.desc':
     'Send push notifications to your mobile devices (Orvilo mobile app required)',
   'notification.push.title': 'Mobile Push Notifications',
@@ -1161,8 +1184,8 @@ export default {
   'settingAgent.modelSettings.modeLabel': 'Mode',
   'settingAgent.modelSettings.modelLabel': 'Model',
   'settingAgent.modelSettings.noBindingDesc':
-    'This agent has no model to run on yet — bind an Orvilo provider first.',
-  'settingAgent.modelSettings.noBindingTitle': 'No provider bound',
+    'Configure a provider and verify its model connection before running this Agent.',
+  'settingAgent.modelSettings.noBindingTitle': 'No verified model available',
   'settingAgent.modelSettings.primeHint':
     'Model routes come from your enabled Orvilo provider bindings.',
   'settingAgent.modelSettings.speedLabel': 'Speed',
@@ -1656,10 +1679,10 @@ export default {
   'sync.webrtc.signaling.title': 'Signaling Server',
   'sync.webrtc.title': 'WebRTC Sync',
   'systemAgent.expertise.modelDesc':
-    'Model used to draft expertise domains and extract reusable experience from conversations.',
+    'Last fallback for self-evolution when the owning built-in agent has no model. CLI agents are not supported for these flows.',
   'systemAgent.expertise.title': 'Agent Self-Evolution',
   'systemAgent.goal.modelDesc':
-    'Drafts acceptance criteria, analyses task intent and plans exploration. Reviews results only as a last resort, when no verifier or assigned agent model is available.',
+    'Last fallback for planning and acceptance when the owning built-in agent has no model. CLI agents are not supported for these flows.',
   'systemAgent.goal.title': 'Planning & acceptance',
   'systemAgent.customPrompt.addPrompt': 'Add Custom Prompt',
   'systemAgent.customPrompt.desc':
@@ -3767,8 +3790,8 @@ export default {
   'workspaceSetting.notification.inboxDesc': 'Notifications in your Orvilo inbox',
   'workspaceSetting.notification.email': 'Email',
   'workspaceSetting.notification.emailDesc': 'Notifications delivered by email',
-  'workspaceSetting.notification.push': 'Mobile push',
-  'workspaceSetting.notification.pushDesc': 'Push notifications on your devices',
+  'workspaceSetting.notification.push': 'Push & desktop',
+  'workspaceSetting.notification.pushDesc': 'Notifications on your desktop and mobile devices',
 
   'workspaceSetting.tab.members': 'Members',
   'workspaceSetting.storage.comingSoon': 'Workspace-scoped data import & export is coming soon.',

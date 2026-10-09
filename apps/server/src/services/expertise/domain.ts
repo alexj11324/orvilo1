@@ -86,7 +86,12 @@ export class ExpertiseDomainService {
 
   /** Turns one natural-language brief into an editable domain draft; nothing is persisted. */
   draftFromBrief = async (input: DraftFromBriefInput) => {
-    const modelConfig = await resolveExpertiseModelConfig(this.db, this.userId);
+    const modelConfig = await resolveExpertiseModelConfig(
+      this.db,
+      this.userId,
+      input.agentId,
+      this.workspaceId,
+    );
 
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     return DomainDraftSchema.parse(

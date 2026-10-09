@@ -272,7 +272,12 @@ export class ExpertiseIngestionService {
     const context = topicContext.serializedContext.slice(-MAX_CONTEXT_CHARS);
     if (!context.trim()) return { ingested: 0, reason: 'empty-context' } as const;
 
-    const modelConfig = await resolveExpertiseModelConfig(this.db, this.userId);
+    const modelConfig = await resolveExpertiseModelConfig(
+      this.db,
+      this.userId,
+      input.agentId,
+      this.workspaceId,
+    );
 
     const domains = await Promise.all(
       bound.map(async ({ domain }) => ({

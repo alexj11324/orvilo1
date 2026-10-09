@@ -69,7 +69,12 @@ export class TaskIntentService {
     // Intent reading is the same "structure the user's request" model role as
     // goal criteria drafting, so it rides that assignment rather than adding a
     // configurable model slot for a feature still behind a lab toggle.
-    const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
+    const modelConfig = await resolveGoalModelConfig(
+      this.db,
+      this.userId,
+      BUILTIN_AGENT_SLUGS.taskAgent,
+      this.workspaceId,
+    );
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
     const raw = await ai.generateObject(
@@ -118,7 +123,12 @@ export class TaskIntentService {
     context?: string;
     instruction: string;
   }): Promise<TaskInstructionSynthesis> {
-    const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
+    const modelConfig = await resolveGoalModelConfig(
+      this.db,
+      this.userId,
+      BUILTIN_AGENT_SLUGS.taskAgent,
+      this.workspaceId,
+    );
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
     const raw = await ai.generateObject(

@@ -31,7 +31,7 @@ describe('GoalCriteriaGeneratorService', () => {
       goal: 'Publish a benchmark paper',
     });
 
-    expect(resolveGoalModelConfig).toHaveBeenCalledWith({}, 'user-1');
+    expect(resolveGoalModelConfig).toHaveBeenCalledWith({}, 'user-1', undefined, 'workspace-1');
     expect(generateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'goal-model',

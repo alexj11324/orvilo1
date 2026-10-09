@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 
+import NotificationSettingsSkeleton from '@/components/Skeleton/Settings/Notification';
 import SettingsProfileSkeleton from '@/components/Skeleton/Settings/Profile';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import dynamic from '@/libs/next/dynamic';
@@ -29,12 +30,9 @@ export const componentMap = {
   [SettingsTabs.Memory]: dynamic(() => import('../memory'), {
     loading: loading('Settings > Memory'),
   }),
-  [SettingsTabs.Notification]: dynamic(
-    () => import('@/business/client/BusinessSettingPages/Notification'),
-    {
-      loading: loading('Settings > Notification'),
-    },
-  ),
+  [SettingsTabs.Notification]: dynamic(() => import('../notification/personal'), {
+    loading: () => createElement(NotificationSettingsSkeleton),
+  }),
   [SettingsTabs.About]: dynamic(() => import('../about'), {
     loading: loading('Settings > About'),
   }),

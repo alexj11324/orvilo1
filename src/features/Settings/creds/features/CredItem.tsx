@@ -14,6 +14,7 @@ import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { confirmModal } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -129,22 +130,20 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
         <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted">
           {renderAvatar()}
         </div>
-        <div className="flex flex-col gap-[4px]" style={{ overflow: 'hidden' }}>
-          <div>
-            <span className="text-[15px] font-medium">{cred.name}</span>
-            <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
-              {t(`creds.types.${cred.type}`)}
-            </span>
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[15px] font-medium">{cred.name}</span>
+            <Badge variant="outline">{t(`creds.types.${cred.type}`)}</Badge>
             {/* Only populated by workspace-scoped list responses (workspaceCreds.list) —
                 distinguishes a member's shared personal credential from one the workspace owns directly. */}
             {!!cred.ownerDisplayName && (
-              <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
+              <Badge variant="outline">
                 {t('creds.owner.sharedBy', { name: cred.ownerDisplayName })}
-              </span>
+              </Badge>
             )}
           </div>
-          <div>
-            <code className="font-mono text-xs text-muted-foreground">{cred.key}</code>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <code className="shrink-0 font-mono text-xs text-muted-foreground">{cred.key}</code>
             {cred.description && (
               <>
                 <span className="text-muted-foreground">·</span>
@@ -161,7 +160,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
             <DropdownMenuTrigger
               render={
                 <Button
-                  aria-label={t('creds.actions.edit')}
+                  aria-label={t('more', { ns: 'common' })}
                   disabled={!canManageCredentials}
                   size="icon-sm"
                   variant="ghost"

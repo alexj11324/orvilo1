@@ -182,7 +182,16 @@ const OrviloSkillItem = memo<OrviloSkillItemProps>(({ provider, server, isSelect
   // wondering if it's a bug.
   const renderNavExtra = () => {
     if (isConnecting || isWaitingAuth) {
-      return <Button loading size="sm" variant="ghost" />;
+      return (
+        <Button
+          aria-busy
+          disabled
+          loading
+          aria-label={t('tools.orviloSkill.connect')}
+          size="icon-sm"
+          variant="ghost"
+        />
+      );
     }
     if (isConnected) {
       return (

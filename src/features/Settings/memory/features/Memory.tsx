@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import LevelSlider from '@/components/LevelSlider';
-import { Skeleton } from '@/components/ui/skeleton';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
@@ -28,14 +28,7 @@ const MemorySetting = memo(() => {
   const [setSettings, isUserStateInit] = useUserStore((s) => [s.setSettings, s.isUserStateInit]);
   const { status: saveStatus, lastSavedAt, save, retry } = useSaveState();
 
-  if (!isUserStateInit)
-    return (
-      <div aria-busy="true" className="flex flex-col gap-3">
-        {Array.from({ length: 3 }, (_, index) => (
-          <Skeleton className="h-4 w-full" key={index} />
-        ))}
-      </div>
-    );
+  if (!isUserStateInit) return <SettingsSectionSkeleton />;
 
   const memorySettings: FormGroupItemType = {
     children: [

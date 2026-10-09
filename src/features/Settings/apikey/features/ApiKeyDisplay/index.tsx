@@ -1,9 +1,9 @@
-import { Copy, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CopyButton from '@/components/CopyButton';
 import { Button } from '@/components/ui/button';
-import { copyToClipboard } from '@/utils/clipboard';
 
 interface ApiKeyDisplayProps {
   apiKey?: string;
@@ -45,15 +45,7 @@ const ApiKeyDisplay: FC<ApiKeyDisplayProps> = ({ apiKey }) => {
       >
         {isVisible ? <EyeOff /> : <Eye />}
       </Button>
-      <Button
-        size="icon-sm"
-        title={t('apikey.display.copy')}
-        type="button"
-        variant="ghost"
-        onClick={() => void copyToClipboard(apiKey)}
-      >
-        <Copy />
-      </Button>
+      <CopyButton content={apiKey} size="small" title={t('apikey.display.copy')} />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import BusinessNotification from '@/business/client/BusinessSettingPages/Notification';
 import Form from '@/components/GroupForm';
+import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Alert, AlertAction, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -99,13 +99,7 @@ export const DesktopNotificationSettings = () => {
         </Alert>
       )}
       {!settings ? (
-        !error && (
-          <div aria-busy="true" className="flex flex-col gap-3">
-            {Array.from({ length: 3 }, (_, index) => (
-              <Skeleton className="h-4 w-full" key={index} />
-            ))}
-          </div>
-        )
+        !error && <SettingsSectionSkeleton />
       ) : (
         <Form
           collapsible={false}
@@ -191,7 +185,9 @@ export const DesktopNotificationSettings = () => {
                         </SelectContent>
                       </Select>
                       <Button
+                        aria-label={t('completionSound.preview')}
                         disabled={settings.volume === 0}
+                        size="icon"
                         title={t('completionSound.preview')}
                         variant="outline"
                         onClick={() => report(() => completionSoundService.play({ preview: true }))}
@@ -247,6 +243,8 @@ export const DesktopNotificationSettings = () => {
                       }}
                     >
                       <Button
+                        aria-label={t('completionSound.preview')}
+                        size="icon"
                         title={t('completionSound.preview')}
                         variant="outline"
                         onClick={previewBanner}

@@ -3,6 +3,7 @@ import { Minus, Plus } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FormPassword } from '@/components/FormInput';
 import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,11 +105,10 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
                     rules={[pairCompletenessRule(name, t('creds.form.pairIncomplete'))]}
                     style={{ flex: 2, marginBottom: 0 }}
                   >
-                    <Input
+                    <FormPassword
                       autoComplete="new-password"
                       disabled={disabled}
                       placeholder={t('creds.form.valuePlaceholder')}
-                      type="password"
                     />
                   </Form.Item>
                   {fields.length > 1 && (

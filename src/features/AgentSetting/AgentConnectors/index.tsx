@@ -27,9 +27,7 @@ const AgentConnectors = memo(() => {
 
   if (connectors.length === 0) {
     return (
-      <div
-        style={{ color: 'var(--lobe-colors-neutral-500)', padding: '24px 0', textAlign: 'center' }}
-      >
+      <div className="py-6 text-center text-muted-foreground">
         {t('agentConnectors.empty', 'No connectors connected yet. Go to Connectors to add one.')}
       </div>
     );
@@ -55,7 +53,7 @@ const AgentConnectors = memo(() => {
             <LinkIcon size={16} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 500 }}>{connector.name}</div>
-              <div style={{ color: 'var(--lobe-colors-neutral-500)', fontSize: 12 }}>
+              <div className="text-xs text-muted-foreground">
                 {t('agentConnectors.toolCount', '{{count}} tools', { count: enabledCount })}
               </div>
             </div>

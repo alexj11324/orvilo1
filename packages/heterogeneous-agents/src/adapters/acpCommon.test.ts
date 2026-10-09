@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_ACP_SESSION_TITLE_INPUT_LENGTH,
   MAX_ACP_SESSION_TITLE_LENGTH,
   parseAcpSessionTitle,
   parseAcpSessionTitleMessage,
@@ -112,6 +113,36 @@ describe('parseAcpSessionTitle', () => {
     expect(parseAcpSessionTitle(infoUpdate({ title: `${family} trip` }))).toBe(`${family} trip`);
     // a ZWJ hidden in text is not between pictographs, so it goes
     expect(parseAcpSessionTitle(infoUpdate({ title: 'a\u200Db' }))).toBe('ab');
+  });
+
+  it('keeps a ZWJ after a skin-tone modifier', () => {
+    const technologist = '\u{1F469}\u{1F3FD}‍\u{1F4BB}';
+    expect(parseAcpSessionTitle(infoUpdate({ title: `${technologist} pairing` }))).toBe(
+      `${technologist} pairing`,
+    );
+  });
+
+  it('strips variation selectors but keeps the emoji presentation selector', () => {
+    expect(parseAcpSessionTitle(infoUpdate({ title: 'a︀b︎c\u{E0100}d឴e឵f' }))).toBe('abcdef');
+    expect(parseAcpSessionTitle(infoUpdate({ title: '❤️ ok' }))).toBe('❤️ ok');
+  });
+
+  it('never ends on a dangling joiner when the cap lands inside a ZWJ sequence', () => {
+    const pair = '\u{1F468}‍';
+    const capped = parseAcpSessionTitle(infoUpdate({ title: pair.repeat(80) }))!;
+    expect(capped.endsWith('‍')).toBe(false);
+    expect([...capped].length).toBeLessThanOrEqual(MAX_ACP_SESSION_TITLE_LENGTH);
+  });
+
+  it('only scans a bounded prefix of an enormous title', () => {
+    expect(MAX_ACP_SESSION_TITLE_INPUT_LENGTH).toBe(2000);
+    const hidden = `${'​'.repeat(MAX_ACP_SESSION_TITLE_INPUT_LENGTH)}visible`;
+    // the visible tail sits past the scanned prefix, so nothing printable is left
+    expect(parseAcpSessionTitle(infoUpdate({ title: hidden }))).toBeUndefined();
+    const startedAt = performance.now();
+    const title = parseAcpSessionTitle(infoUpdate({ title: `Report ${'‮'.repeat(5_000_000)}` }));
+    expect(title).toBe('Report');
+    expect(performance.now() - startedAt).toBeLessThan(500);
   });
 
   it('caps at 100 characters on a code point boundary', () => {

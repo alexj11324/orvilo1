@@ -83,6 +83,9 @@ export const acpEventIdOf = (raw: unknown): string | undefined => {
 /** Longest session title forwarded from an agent; longer text is cut. */
 export const MAX_ACP_SESSION_TITLE_LENGTH = 100;
 
+/** Raw input considered at all (UTF-16 units); the rest is never scanned. */
+export const MAX_ACP_SESSION_TITLE_INPUT_LENGTH = 2000;
+
 /** Whitespace-like controls that separate words: become one space, never vanish. */
 const TITLE_SEPARATORS = /[\t\n\v\f\r\u0085\u2028\u2029]/gu;
 
@@ -95,9 +98,12 @@ const TITLE_SEPARATORS = /[\t\n\v\f\r\u0085\u2028\u2029]/gu;
  * so a family emoji survives while a hidden joiner in text does not.
  */
 /* eslint-disable no-misleading-character-class -- the class deliberately lists combining marks (U+034F, U+180B-U+180F) to remove them */
-const INVISIBLE_CLASS = String.raw`\p{C}\p{Zl}\p{Zp}\u034F\u115F\u1160\u3164\uFFA0\u180B-\u180F\u2800`;
+// Variation selectors other than U+FE0F (emoji presentation) and the Khmer
+// inherent vowels render nothing and can carry hidden data inside a title.
+const INVISIBLE_CLASS = String.raw`\p{C}\p{Zl}\p{Zp}\u034F\u115F\u1160\u3164\uFFA0\u180B-\u180F\u2800\uFE00-\uFE0E\u{E0100}-\u{E01EF}\u17B4\u17B5`;
+// The pictograph before a kept ZWJ may carry U+FE0F or a skin-tone modifier.
 const INVISIBLE_TITLE_CHARS = new RegExp(
-  String.raw`(?<keep>(?<=\p{Extended_Pictographic}\uFE0F?)\u200D(?=\p{Extended_Pictographic}))|[${INVISIBLE_CLASS}]`,
+  String.raw`(?<keep>(?<=\p{Extended_Pictographic}[\uFE0F\p{Emoji_Modifier}]?)\u200D(?=\p{Extended_Pictographic}))|[${INVISIBLE_CLASS}]`,
   'gu',
 );
 /* eslint-enable no-misleading-character-class */
@@ -122,7 +128,10 @@ export const parseAcpSessionTitle = (update: unknown): string | undefined => {
   // Word separators first, then drop invisible characters (they would
   // survive whitespace collapsing and could hide or reorder text), collapse
   // whitespace, and cap by code points so no surrogate pair is split.
+  // Bound the work first: this runs on the desktop main thread, and the
+  // per-match callback below is linear in the input.
   const printable = record.title
+    .slice(0, MAX_ACP_SESSION_TITLE_INPUT_LENGTH)
     .replaceAll(TITLE_SEPARATORS, ' ')
     .replaceAll(INVISIBLE_TITLE_CHARS, (match, ...rest) => {
       const groups = rest.at(-1) as { keep?: string };
@@ -131,6 +140,8 @@ export const parseAcpSessionTitle = (update: unknown): string | undefined => {
   const title = [...printable.replaceAll(/\s+/gu, ' ').trim()]
     .slice(0, MAX_ACP_SESSION_TITLE_LENGTH)
     .join('')
+    // The cap can land right after a kept joiner, leaving it dangling.
+    .replace(/\u200D+$/u, '')
     .trim();
   if (!VISIBLE_TITLE_CHAR.test(title)) return undefined;
   return title || undefined;

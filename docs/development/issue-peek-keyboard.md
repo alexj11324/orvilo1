@@ -84,6 +84,9 @@ not counted as interactive; a control inside it still is. The duplicated copy in
 | Inbox (`WorkInboxPage`)           | Master / detail, always shows selection | Already had `J` / `K` / arrows / `Enter` / `Esc` (`useInboxListKeyboard`) and `alt+u`; untouched. `Space` is not a peek there.                                             |
 | `/tasks` (no project)             | None                                    | Not added. Rows stay Tab-focusable; `Enter` / `Space` on a row navigate as before.                                                                                         |
 
+`WorkQueryResults`' non-virtual `flatSections` branch has no hook; no host passes
+`flatSections` today.
+
 Board layouts are out of scope (cards own their clicks). `SavedViewPage`'s side
 panel is the view's details, not an Issue peek.
 

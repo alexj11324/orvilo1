@@ -52,3 +52,10 @@ shown. Model counts are not in the list payload either and are omitted.
 - The content column keeps the shared 1024px max width (mockup: 1100px list, 960px detail) because the container
   is shared with the detail page.
 - Groups can collapse and the "All providers" row keeps its icon; the mockup draws neither.
+
+## Carried over from canary
+
+Canary changed these files while the redesign was in flight; the behaviour was re-applied to the new markup:
+
+- Card keyboard access and focus ring (`clickableProps`): the card is a real stretched `button`, so it is focusable, activates on Enter and Space, and shows the `Button` focus ring.
+- Rail "more" menu: accessible name `common:more` (the tooltip keeps the sort label).

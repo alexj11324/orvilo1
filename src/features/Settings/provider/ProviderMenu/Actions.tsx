@@ -13,13 +13,15 @@ interface ActionsProps {
 
 const Actions = memo<ActionsProps>(({ dropdownMenu }) => {
   const { t } = useTranslation('modelProvider');
+  const { t: tCommon } = useTranslation('common');
 
   return (
     <SidebarDropdownMenu items={dropdownMenu} placement="bottomRight">
       <Button
-        aria-label={t('menu.list.disabledActions.sort')}
+        aria-label={tCommon('more')}
         className="flex-none"
         size="icon-xs"
+        title={t('menu.list.disabledActions.sort')}
         variant="ghost"
       >
         <MoreHorizontalIcon />

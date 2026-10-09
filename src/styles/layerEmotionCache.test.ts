@@ -126,7 +126,7 @@ describe('layerEmotionCache on a real antd-style instance', () => {
 });
 
 describe('default runtime cascade', () => {
-  it('layers styles created after the renderer initialization import', async () => {
+  it('keeps styles unlayered after the default renderer initialization import', async () => {
     await import('./antdStyleLayer');
 
     const styles = createStaticStyles(({ css }) => ({
@@ -140,7 +140,8 @@ describe('default runtime cascade', () => {
     }));
 
     const output = insertedCss(styleManager.cache);
-    expect(output).toContain(`@layer antd-style{.${styles.rollout}{`);
+    expect(output).toContain(`.${styles.rollout}{padding:13px;}`);
+    expect(output).not.toContain(`@layer antd-style{.${styles.rollout}{`);
     expect(output).toContain(`.${styles.rollout}:hover{padding:17px;}`);
   });
 });

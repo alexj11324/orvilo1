@@ -1,14 +1,16 @@
 # antd-style rollout: ChatInput controls, batch 1
 
 Status: **draft, not ready to merge**. Base: canary `8af979848`.
-Tracks #577. This is a partial prerequisite rollout, not completion of phase 1
+Tracks #577. This is a local migration batch, not completion of phase 1
 or the historical \~160-file cascade audit.
 
 ## Changes
 
-- Enable `ANTD_STYLE_LAYER_ENABLED` for the candidate. Runtime and production
-  precompilation read the same switch. Regression tests exercise both the default
-  runtime initialization and a real Vite build, rather than only the opt-in helper.
+- Keep `ANTD_STYLE_LAYER_ENABLED = false`. Runtime and production precompilation
+  preserve the existing unlayered default. Explicit layer support remains available
+  for isolated experiments; enabling it globally is a separate deferred rollout.
+  Regression tests exercise default runtime initialization and a real in-memory
+  Vite fixture build, while retaining the explicit-layer tests.
 - Replace style objects in 11 ChatInput files with Tailwind classes. Preserve
   component structure, callbacks, data access, strings and skeletons.
 - Keep selected/open classes last when replacing specificity-boosted `&&` rules
@@ -69,8 +71,13 @@ branch. Package manifests are unchanged.
 
 ## Verification and limits
 
-- Scoped repository check: lint and 26 related tests passed, including the actual
-  default-cache initialization and layered Vite build.
+- The original global-ON candidate reported lint and 26 related tests passing.
+  Its default-layer assertions are historical; the corrected tests verify an
+  unlayered default cache and Vite build instead. The explicit-layer tests remain.
+- The corrected default-OFF runtime/build assertions fail on the prior ON source:
+  2 failed, 21 passed. Restoring OFF passes all 23 tests in those same two existing
+  files with one worker and a 768 MiB heap cap. The build is a real in-memory Vite
+  fixture, not a full application build or a screenshot/source-string test.
 - Independent light review identified open/warning class order and Button
   line-height regressions; both were corrected.
 - Supplemental Chromium fixtures compared 230 style/state/theme cases using the
@@ -78,9 +85,17 @@ branch. Package manifests are unchanged.
   Differences are the zero-width trigger border's unused color and the approval
   Button's primitive hover/expanded foreground becoming effective when the old
   unlayered base text rule is removed. These fixtures are not application or
-  Electron acceptance and do not establish whole-page visual equivalence.
+  Electron acceptance and do not establish whole-page visual equivalence. They ran
+  with the global switch ON and do not validate the current OFF composition.
 - **未做真机验证**. No Electron, local CLI execution, shell creation or real device
-  interaction was exercised. The global flag must not merge on this evidence.
+  interaction was exercised. The local OFF batch still requires fresh Electron
+  light/dark acceptance; no global enablement is delivered by this batch.
+
+The global-switch review identified an untouched consumer: WorkingDirectoryPicker's
+`chooseFolderItem` relies on unlayered Emotion constraints such as full width, auto
+height, start alignment and padding over Button utilities. Layering every remaining
+consumer changes that precedence beyond these 11 converted files. Keeping the shared
+default OFF preserves its current constraints without reverting the local migration.
 
 ## Remaining rollout blockers
 
@@ -98,6 +113,7 @@ branch. Package manifests are unchanged.
   workspace link; the final scoped check does not include that excluded file.
 - Branch/worktree pickers retain animations and third-party input selectors;
   CloudRepoSwitcher retains a raw white foreground requiring a role decision.
-- Finish fixes in small feature batches, then run Electron light/dark acceptance
-  before marking the global rollout ready. Do not remove theme providers,
+- Accept the local OFF batch with Electron light/dark checks of migrated controls
+  and their untouched neighbors. Finish the remaining cascade audit in separate
+  small feature batches before any global switch-on acceptance. Do not remove theme providers,
   dependencies or layer infrastructure; stages 2–6 remain outstanding.

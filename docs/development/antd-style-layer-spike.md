@@ -1,9 +1,10 @@
 # Spike: put all antd-style output in `@layer antd-style`
 
-Status: rollout candidate. The switch is **on in this draft** for runtime and
-production precompilation. The [batch-1 ledger](antd-style-rollout-batch-1.md) lists
-remaining merge blockers; the global cascade has not passed Electron acceptance.
-The original infrastructure landed with the switch off. The broad switch-on rollout is
+Status: opt-in infrastructure. The shared switch remains **off** for runtime and
+production precompilation. The [batch-1 ledger](antd-style-rollout-batch-1.md) tracks
+the local ChatInput conversion with that unlayered default; its earlier global-ON
+fixtures do not validate the current OFF composition. The global cascade rollout is
+deferred and has not passed Electron acceptance. The broad switch-on rollout is
 separate from the active global-reset correction in PR #565. The wrapper and build-time
 evaluator retain their existing real Emotion tests; native evidence and its bounds are
 recorded on the PR before merge.

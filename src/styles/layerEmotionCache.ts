@@ -19,8 +19,9 @@ export const ANTD_STYLE_LAYER = 'antd-style';
  * Vite build-time precompile (`plugins/vite/staticStylesPrecompile.ts`), which
  * bypasses `cache.insert` and therefore needs the same layering baked in.
  */
+// Keep untouched Emotion consumers' precedence until the separate global rollout is accepted.
 // Runtime and precompiled styles must use the same cascade during the rollout.
-export const ANTD_STYLE_LAYER_ENABLED = true;
+export const ANTD_STYLE_LAYER_ENABLED = false;
 
 interface SerializedStyles {
   name: string;

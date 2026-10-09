@@ -608,6 +608,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
           }}
         >
           <EditorCanvas
+            tabMovesFocus
             disabled={!canCreateTask}
             editor={editor}
             floatingToolbar={false}

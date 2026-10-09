@@ -150,3 +150,29 @@ export const findIssueRowElement = (
   }
   return null;
 };
+
+/** A collapse focus intent outlives the list's split-layout remount. */
+const pendingGroupHeaderFocus = new WeakMap<HTMLElement, string>();
+
+export const requestIssueGroupHeaderFocus = (owner: HTMLElement, key: string): void => {
+  pendingGroupHeaderFocus.set(owner, key);
+};
+
+/** Restore only once the replacement list has mounted the collapsed header. */
+export const restoreIssueGroupHeaderFocus = (list: HTMLElement): boolean => {
+  const owner = list.closest<HTMLElement>('[data-work-surface]');
+  if (!owner) return false;
+  const key = pendingGroupHeaderFocus.get(owner);
+  if (key === undefined || !isIssueElementVisible(list)) return false;
+  const header = [...list.querySelectorAll<HTMLElement>('[data-work-group-header]')].find(
+    (element) =>
+      element.dataset.workGroupHeader === key &&
+      element.closest('[data-work-surface]') === owner &&
+      isIssueElementVisible(element),
+  );
+  if (!header) return false;
+  header.focus();
+  if (header.ownerDocument.activeElement !== header) return false;
+  pendingGroupHeaderFocus.delete(owner);
+  return true;
+};

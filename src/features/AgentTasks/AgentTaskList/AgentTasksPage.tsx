@@ -105,8 +105,11 @@ import TasksGroupConfig from './TasksGroupConfig';
 
 const styles = createStaticStyles(({ css }) => ({
   /**
-   * The project issues peek pane — same 400px / layout background contract
-   * the My issues detail pane holds.
+   * The project issues peek pane — same 400px column My issues and Team issues
+   * hold. Under 900px of surface width it overlays the list instead of taking
+   * its width (the project page's own right rail already narrows the surface,
+   * so a side-by-side 400px column crushed the list to ~95px). The list then
+   * keeps the full width underneath.
    */
   detailPane: css`
     overflow-y: auto;
@@ -117,6 +120,17 @@ const styles = createStaticStyles(({ css }) => ({
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
 
     background: ${cssVar.colorBgLayout};
+
+    @container work-surface (max-width: 900px) {
+      position: absolute;
+      z-index: 10;
+      inset-block: 0;
+      inset-inline-end: 0;
+
+      width: min(400px, calc(100% - 40px));
+
+      box-shadow: ${cssVar.boxShadowSecondary};
+    }
   `,
 }));
 
@@ -1039,7 +1053,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
             </div>
           ) : (
-            <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+            <div className="relative flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
               <WorkSurfaceCollection className="flex flex-col gap-4">
                 {projectId && (
                   <IssueFilterChips

@@ -131,3 +131,61 @@ revision; DOM regression tests do not establish native split-view acceptance.
 - **Narrow rows.** `AgentTaskItem` is an `issue-row` size container: labels hide
   below 760px, the milestone below 640px and the project chip below 540px, so
   chips never overlap the identifier and title when the peek narrows the list.
+
+## Collapsing a group while the peek is open
+
+Measured in Electron: with the peek open, collapsing a later group rendered the
+wrong rows (earlier rows missing, a row of the collapsed group in their slot) and
+`J` walked into hidden rows. Collapsing with the peek closed was fine.
+
+- **Cause.** `WorkQueryVirtualList` passed `data={sections.items}` to
+  `GroupedVirtuoso`. react-virtuoso 4.18 (`dist/index.mjs`, list-state builders
+  `Jn` / the `Ft`/`Et` pushes, `wn`) looks `data` up by FLAT slot index, where
+  every group header is a slot, and sizes the first layout by `data.length`. A
+  rows-only array is therefore read shifted by the number of headers before the
+  row, and a collapsed (zero-row) group shifts every later row once more. The
+  keyboard model (`peekRows`) walked `sections.items` by item index, so the
+  rendered rows and the rows `J` / `K` walk disagreed. Which path runs depends on
+  whether the virtualizer has a measured viewport yet; the split layout that the
+  pane opens (a fresh list instance under a different scroll parent) is the case
+  that hits it. A real GroupedVirtuoso under `VirtuosoMockContext` reproduces the
+  shift and truncation with `data` and renders every case correctly without it;
+  that probe was not committed (no React render tests), so the Electron check
+  below is the acceptance.
+- **Fix.** No `data` prop. `itemContent(index)` resolves the row from
+  `sections.items[index]` (the exact array `workQueryVirtualPeekRows` walks) and
+  `computeItemKey(index)` reads `stickyFlatKeys(sections)[index]` (flat slot
+  keys: group slots and rows). `groupCounts`, items, keys and peek rows all come
+  from the one `sections` snapshot of the same render, and the renderer and the
+  peek helper read the same `collapsed` set.
+- **Collapsing the peeked Issue's group closes the peek** (`groupHidesIssue`,
+  lanes included) and focus lands on that group's header
+  (`data-work-group-header`). Closing re-parents the list, so the pending focus
+  key lives in module scope and the replacement list consumes it.
+
+## Project Issues layout and Tab
+
+- The project Issues peek pane is a 400px column only while the surface is wider
+  than 900px; below that it overlays the list (`@container work-surface`), the
+  same rule My issues and Team issues use. The project page's right rail narrows
+  the surface, so a side-by-side column used to leave the list \~95px.
+- Composers (`CreateTaskInlineEntry`, `CommentInput`) pass `tabMovesFocus` to
+  `EditorCanvas`: Tab / Shift+Tab leave the editor instead of inserting a tab
+  character (the list plugin's Tab handler was the trap). Inside a list item Tab
+  still indents; Ctrl / Alt / Meta+Tab are untouched. Enter / Cmd+Enter are not
+  changed. Pure rule: `tabLeavesEditor` in `registerTabFocusEscape.ts`.
+
+## Collapse focus ownership
+
+Collapsing the group containing the peeked Issue closes that peek. The pending
+header focus is keyed by its stable WorkSurface element, so list remounts retain
+it and another split or retained pane with the same collapse key cannot consume
+it. Restoration requires a visible header in that same owner, and the intent is
+consumed only after focus succeeds. The list also observes child mounts so a
+virtualizer's later header render can complete restoration without a parent
+render. Observation disconnects when the list unmounts.
+
+Existing non-React DOM regressions exercise sibling panes, independently pending
+owners, a hidden retained pane, and replacement-list/delayed-header restoration.
+They cover the focus helper; fresh Electron grouped-list acceptance remains
+pending for the current revision.

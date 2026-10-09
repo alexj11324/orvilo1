@@ -28,6 +28,7 @@ import {
 } from '../AgentTaskList/kanbanBoardModel';
 import { renderMenuExtra } from './menuExtra';
 import { PICKER_TRIGGER_FOCUS_CLASS } from './pickerTriggerStyles';
+import { READ_ONLY_BUTTON_WRAPPER_CLASS, readOnlyPickerTrigger } from './readOnlyPickerTrigger';
 import { SimpleTooltip } from './SimpleTooltip';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
@@ -270,8 +271,11 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
     if (!canEditTask)
       return (
         <SimpleTooltip title={reason}>
-          <span className={styles.triggerDisabled} onClick={(e) => e.stopPropagation()}>
-            {triggerNode}
+          <span
+            className={nativeButton ? READ_ONLY_BUTTON_WRAPPER_CLASS : styles.triggerDisabled}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {readOnlyPickerTrigger(triggerNode, nativeButton)}
           </span>
         </SimpleTooltip>
       );

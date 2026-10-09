@@ -23,6 +23,7 @@ import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
 import { PICKER_TRIGGER_FOCUS_CLASS } from './pickerTriggerStyles';
+import { READ_ONLY_BUTTON_WRAPPER_CLASS, readOnlyPickerTrigger } from './readOnlyPickerTrigger';
 import { SimpleTooltip } from './SimpleTooltip';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
 import { useTaskPriorityChange } from './useTaskPriorityChange';
@@ -198,10 +199,14 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       return (
         <SimpleTooltip title={reason}>
           <span
-            className={cn(styles.triggerDisabled, 'inline-flex')}
+            className={
+              nativeButton
+                ? READ_ONLY_BUTTON_WRAPPER_CLASS
+                : cn(styles.triggerDisabled, 'inline-flex')
+            }
             onClick={(e) => e.stopPropagation()}
           >
-            {triggerNode}
+            {readOnlyPickerTrigger(triggerNode, nativeButton)}
           </span>
         </SimpleTooltip>
       );

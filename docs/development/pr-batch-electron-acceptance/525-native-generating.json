@@ -1,0 +1,13 @@
+{
+  "activeInProgressRunning": {
+    "content": "\"\"",
+    "animation": "orvilo-generating-border-flow"
+  },
+  "fixture": "Actual native renderer read transport overrides only T-1 status/category in real task responses, with no persisted state change. This proves rendering for supplied stale/active states, not a local Agent producer or gateway execution.",
+  "prRevision": "22c4dad415cdad90182cb556c2945c6219db49e8",
+  "rendererRevision": "399749f79",
+  "staleTodoRunning": {
+    "content": "none",
+    "animation": "none"
+  }
+}

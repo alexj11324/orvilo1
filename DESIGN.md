@@ -177,7 +177,7 @@ Map shape by purpose and **resolved pixels**, not by assumptions about Tailwind 
 
 Pills, avatars, and circular actions may be fully round. Role-specific shapes may coexist within one view. The current Tailwind base radius resolves to 10px, with `rounded-lg` at 10px and `rounded-xl` at 14px (at a 16px root size); these differ from the approved 8/12px button-card/overlay roles. Record and resolve that drift in a scoped migration. ProjectSidePanel's former 10px card radius was migrated to the 8px card role; its measured 11px inset remains a separate optical exception.
 
-Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another.
+Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another. In the dark theme dialogs take no shadow: the scrim and the 1px ring already define the edge.
 
 Preserve the native desktop glass/translucency boundary in [global styles](src/styles/global.ts) and the desktop shell. Theme-aware translucent surfaces must remain legible over the actual native backdrop; an opaque web reference is not authority to flatten native glass.
 

@@ -198,7 +198,7 @@
     --primary-hover: var(--ant-color-primary-hover, color-mix(in srgb, var(--primary) 90%, var(--card)));
     --primary-hover-foreground: var(--primary-foreground);
     --shadow-popover: var(--ant-box-shadow-secondary, 0 8px 16px -4px rgba(0,0,0,.2));
-    --shadow-dialog: var(--ant-box-shadow, 0 20px 20px -8px rgba(0,0,0,.24));
+    --shadow-dialog: none;
     --sidebar-foreground: var(--foreground);
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--primary-foreground);

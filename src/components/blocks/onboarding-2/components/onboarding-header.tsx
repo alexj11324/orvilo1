@@ -36,17 +36,19 @@ export function OnboardingHeader({
     <header className="flex shrink-0 items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-6 lg:px-12">
       <div className="relative flex min-w-0 items-center pl-7">
         {canGoBack ? (
-          <Button
-            aria-label={t('reui.action.backAria')}
-            className="absolute top-1/2 left-0 shrink-0 -translate-y-1/2"
-            disabled={backDisabled}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-            onClick={onBack}
-          >
-            <ArrowLeftIcon aria-hidden="true" />
-          </Button>
+          <span className="absolute top-1/2 left-0 flex -translate-y-1/2">
+            <Button
+              aria-label={t('reui.action.backAria')}
+              className="shrink-0"
+              disabled={backDisabled}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+              onClick={onBack}
+            >
+              <ArrowLeftIcon aria-hidden="true" />
+            </Button>
+          </span>
         ) : null}
         <OnboardingLogo />
       </div>

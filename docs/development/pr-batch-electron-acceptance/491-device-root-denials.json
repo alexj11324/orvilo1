@@ -1,0 +1,148 @@
+{
+  "candidate": "18e83f00e16d61d787bfdea74f155b811f9b99d4",
+  "cases": [
+    {
+      "name": "Actual Member registers native machine as public offline workspace registry",
+      "role": "member",
+      "path": "device.registerWorkspaceDevice",
+      "expected": "allow",
+      "status": 200,
+      "code": null,
+      "passed": true
+    },
+    {
+      "name": "Enroller approves dedicated temporary directory through normal metadata API",
+      "role": "member",
+      "path": "device.updateWorkspaceDevice",
+      "expected": "allow",
+      "status": 200,
+      "code": null,
+      "passed": true
+    },
+    {
+      "name": "Viewer cannot write even visible device and approved directory",
+      "role": "viewer",
+      "path": "device.writeProjectFile",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "name": "Foreign workspace actor cannot write device files",
+      "role": "foreign",
+      "path": "device.writeProjectFile",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "name": "Member requested unapproved file root denied",
+      "role": "member",
+      "path": "device.writeProjectFile",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "name": "Owner requested unapproved index root denied",
+      "role": "owner",
+      "path": "device.getProjectFileIndex",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "name": "Admin cannot manage another member enrolled public device",
+      "role": "admin",
+      "path": "device.updateWorkspaceDevice",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "name": "Owner may manage visible workspace device without Agent Use",
+      "role": "owner",
+      "path": "device.updateWorkspaceDevice",
+      "expected": "allow",
+      "status": 200,
+      "code": null,
+      "passed": true
+    },
+    {
+      "name": "Owner cannot privatize another enroller public device",
+      "role": "owner",
+      "path": "device.setWorkspaceDeviceVisibility",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    },
+    {
+      "name": "Actual enroller may make own device private",
+      "role": "member",
+      "path": "device.setWorkspaceDeviceVisibility",
+      "expected": "allow",
+      "status": 200,
+      "code": null,
+      "passed": true
+    },
+    {
+      "name": "owner cannot read another member private device",
+      "role": "owner",
+      "path": "device.getProjectFileIndex",
+      "expected": "NOT_FOUND",
+      "status": 404,
+      "code": "NOT_FOUND",
+      "passed": true
+    },
+    {
+      "name": "admin cannot read another member private device",
+      "role": "admin",
+      "path": "device.getProjectFileIndex",
+      "expected": "NOT_FOUND",
+      "status": 404,
+      "code": "NOT_FOUND",
+      "passed": true
+    },
+    {
+      "name": "viewer cannot read another member private device",
+      "role": "viewer",
+      "path": "device.getProjectFileIndex",
+      "expected": "NOT_FOUND",
+      "status": 404,
+      "code": "NOT_FOUND",
+      "passed": true
+    },
+    {
+      "name": "Admin cannot overwrite private enrollment by re-registering",
+      "role": "admin",
+      "path": "device.registerWorkspaceDevice",
+      "expected": "CONFLICT",
+      "status": 409,
+      "code": "CONFLICT",
+      "passed": true
+    },
+    {
+      "name": "Viewer cannot mint workspace enrollment authority",
+      "role": "viewer",
+      "path": "device.mintWorkspaceConnectToken",
+      "expected": "FORBIDDEN",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true
+    }
+  ],
+  "deniedFileAbsent": true,
+  "firstEnrollerPreserved": true,
+  "limitations": [
+    "Dedicated local directory and workspace registry only, not cloud deployment",
+    "No live shared-device RPC success, installed-runtime matching, Git-root or producer device execution proof"
+  ],
+  "realNativeActorVerified": true,
+  "scope": "Actual local application API + role verifier + PostgreSQL registry, source-bound real native machine ID. Normal registration metadata only; registry offline, no workspace gateway enrollment or installed-runtime success claimed."
+}

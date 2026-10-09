@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-09T04:07:23.814Z",
+  "candidate": "b398de98ea5a3a063f37ca23d733cc850b59b508",
+  "cases": [
+    {
+      "name": "Actual PostgreSQL server and delivered source bind",
+      "passed": true
+    },
+    {
+      "name": "Dry run makes no grant or publication writes",
+      "passed": true
+    },
+    {
+      "name": "Failure after earlier real DML rolls back and retains consumed 0600 receipt",
+      "passed": true
+    },
+    {
+      "name": "Membership version drift refuses writes",
+      "passed": true
+    },
+    {
+      "name": "Two distinct sessions enforce real row-lock waiting",
+      "passed": true
+    },
+    {
+      "name": "Concurrent same receipt cannot duplicate writes",
+      "passed": true
+    },
+    {
+      "name": "Applied plan replay is idempotent and global edit preserved",
+      "passed": true
+    },
+    {
+      "name": "Consumed replay never restores revoked grant",
+      "passed": true
+    },
+    {
+      "name": "Receipt digest drift and permission-plan publication rejected",
+      "passed": true
+    },
+    {
+      "name": "Separate approved fixture publication consumes its own receipt",
+      "passed": true
+    }
+  ],
+  "concurrentSecondOutcome": "consumed-plan-refused",
+  "executionNotes": [
+    "Concurrency harness first required SQLSTATE40001, then observed the delivered consumed-plan refusal against the pre-commit snapshot. The final expectation accepts that exact refusal only with real Lock waiting and exactly one durable grant; product source unchanged."
+  ],
+  "limits": [
+    "Local application schema, not deployed cloud schema verification",
+    "Temporary fixture data only; no historical permission conversion or publication acceptance"
+  ],
+  "scope": "Actual delivered migration functions on local PostgreSQL isolated schema copied from current local application tables, separate sessions; no historical or cloud migration apply",
+  "sourceCompiledWithoutChanges": true,
+  "sourceSha256": "4a99b4d385b3fa46c1fd2a1538d9083316056dd8dc38a51f7b62da937bd16aed"
+}

@@ -1,0 +1,170 @@
+{
+  "candidate": "18e83f00e16d61d787bfdea74f155b811f9b99d4",
+  "limitations": [
+    "Owner native UI pending dedicated producer completion to avoid concurrent same-account gateway connection effects",
+    "No cloud deployment verification",
+    "Producer continuity, five controls, queue/resume, stale/duplicate and Device/root selection acceptance separately tracked"
+  ],
+  "roles": [
+    {
+      "role": "admin",
+      "normalPkce": true,
+      "nativeMainAndRendererActorMatch": true,
+      "nativeBearerMembershipRole": "admin",
+      "projectFieldReadOnly": false,
+      "agentSettingsUi": {
+        "configurationVisible": true,
+        "nameEditable": true
+      },
+      "agentManage": true,
+      "agentUse": false,
+      "cases": [
+        {
+          "name": "Actual Project shared field write ceiling",
+          "passed": true,
+          "editable": true
+        },
+        {
+          "name": "Actual native Project summary UI commit persisted",
+          "passed": true
+        },
+        {
+          "name": "Real canonical Agent settings Manage gate",
+          "passed": true,
+          "configurationVisible": true,
+          "nameEditable": true
+        },
+        {
+          "name": "Native transport distinguishes Agent Manage from Use",
+          "passed": true,
+          "canManage": true,
+          "canUse": false
+        }
+      ]
+    },
+    {
+      "role": "member",
+      "normalPkce": true,
+      "nativeMainAndRendererActorMatch": true,
+      "nativeBearerMembershipRole": "member",
+      "projectFieldReadOnly": false,
+      "agentSettingsUi": {
+        "redirectedToAgentList": true,
+        "configurationVisible": false
+      },
+      "agentManage": false,
+      "agentUse": false,
+      "cases": [
+        {
+          "name": "Actual Project shared field write ceiling",
+          "passed": true,
+          "editable": true
+        },
+        {
+          "name": "Actual native Project summary UI commit persisted",
+          "passed": true
+        },
+        {
+          "name": "Real canonical Agent settings Manage gate",
+          "passed": true,
+          "redirectedToAgentList": true,
+          "configurationVisible": false
+        },
+        {
+          "name": "Native transport distinguishes Agent Manage from Use",
+          "passed": true,
+          "canManage": false,
+          "canUse": false
+        }
+      ],
+      "actualSqlProjectMembershipAbsentAfterNativeCollaboration": true,
+      "normalSharedConversationReadable": true,
+      "sendVisibleDisabledWithoutCurrentUse": true,
+      "runVisibleDisabledWithoutCurrentUse": true,
+      "executionReadinessObservation": "Conversation also displayed No device bound; these disabled observations do not prove Device or Root execution readiness."
+    },
+    {
+      "role": "viewer",
+      "normalPkce": true,
+      "nativeMainAndRendererActorMatch": true,
+      "nativeBearerMembershipRole": "viewer",
+      "projectFieldReadOnly": true,
+      "agentSettingsUi": {
+        "redirectedToAgentList": true,
+        "configurationVisible": false
+      },
+      "agentManage": false,
+      "agentUse": false,
+      "cases": [
+        {
+          "name": "Actual Project shared field write ceiling",
+          "passed": true,
+          "editable": false
+        },
+        {
+          "name": "Real canonical Agent settings Manage gate",
+          "passed": true,
+          "redirectedToAgentList": true,
+          "configurationVisible": false
+        },
+        {
+          "name": "Native transport distinguishes Agent Manage from Use",
+          "passed": true,
+          "canManage": false,
+          "canUse": false
+        }
+      ]
+    }
+  ],
+  "scope": "Real candidate Electron UI on existing isolated profile using normal native PKCE and local backend, actual native Bearer membership; no cookie identity inference or permission guard stubs",
+  "sourceHashes": {
+    "frontend": {
+      "packages/locales/src/default/setting.ts": "b93fc64408b4f1d4ff3daee9a99838beeca05185b6bb913d33c09f3c324cc0c0",
+      "src/business/client/hooks/useFetchWorkspaces.ts": "c8a82dbbb393eb55837a2ad160db4e968937558dafb9f59a0cf321d290ed83eb",
+      "src/features/AgentPermission/PermissionForm.tsx": "ff8a184c5d1bec2bab79dc937568d1954487781152998653c47cc376de4dd184",
+      "src/features/AgentPermission/useAgentPermission.ts": "6a23a67d55351938030701dc3814c2ebefb3f24b34e2d81b6af135242a7f19dc",
+      "src/features/AgentSettings/AgentDeviceSettings.tsx": "ae8ee0b56e0b67bb6a190ae3be3fe8be68d153adee931c688ae7f21a2326e685",
+      "src/features/AgentSettings/AgentUseSettings.tsx": "36f3b91bf488888d81fb36c7cc3fac0e20c62aa2fd18e12d75439d9e0f804cfa",
+      "src/features/AgentSettings/agentDeviceSettingsState.ts": "1e24de2627609d17e30fdfce85159ddd68fadf6ceac342c1966282784618b764",
+      "src/features/AgentTasks/AgentTaskDetail/CommentCard.tsx": "ba90ea3edb4c941e82d39ee5959e7e249475084e5322adf71afb8907e9087b42",
+      "src/features/AgentTasks/AgentTaskDetail/TaskDetailHeaderActions.tsx": "658bcd08cf404c57fcdfad02fee80ccc0f1fcaac0fc4dfd31d665d2d2b23e88c",
+      "src/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction.tsx": "56b511fa8704804ceceb8123a237d42ccfa88b19db572bffa879a17ffb46f990",
+      "src/features/ChatInput/ControlBar/HeteroDeviceSwitcher.tsx": "8840a1a7cb23dd3c814f21a5f0f8d942b853bc756cd50507ddfa7281ac4a44bf",
+      "src/features/ChatInput/SendArea/SendButton.tsx": "fed834a53ecba3eb8c2093bfb18f7d344a3d86592775e6a9b2f6949147aca171",
+      "src/features/ChatInput/hooks/useChatInputResourceAccess.ts": "6f3aae13749da8c780173de0b4caa99e811d35519348fcda5d9d682dda673668",
+      "src/features/Conversation/Messages/AssistantGroup/Tool/Detail/Intervention/ApprovalActions.tsx": "465deb921684d65841aaf2cc9c92f6208b29d6037375723b4ba5fa99a23a8159",
+      "src/features/Conversation/hooks/useConversationResourceAccess.ts": "499122f61c83f2fc5dd4ab392e64d4b28916619f3a6aa4966c7d93a4a0d6ff22",
+      "src/features/DeviceManager/const.ts": "611495973e0da963d50c87c9a7963ddf10d13c3cfb0c3cb671f51eb21cbab231",
+      "src/features/DeviceManager/useDeviceList.ts": "5e6324380ff07461bcf5b06b1d043a6d2cba482931fd9255f1a4fad69496c79a",
+      "src/features/DeviceManager/useDeviceSelectorState.ts": "8b6861980e54dbb6afac5e5335b1b3413cbb9b3b8502137765814b1eb149be01",
+      "src/features/Projects/Activity/ProjectActivityPage.tsx": "ca9e2998ceac5dcc59237ece55561d1e905a5745534e626816dad3e66e9d91cd",
+      "src/features/Projects/CreateProjectContent.tsx": "735c40b40edd2dac3d667a1b84a2fac04861f259855036cdaf2dccf66e53d3cc",
+      "src/features/Projects/Resources/ProjectLinks.tsx": "dff55363b6524d1b0313d51f32ca126924030f738875ea585d6017b8b0a422f1",
+      "src/features/Projects/Updates/index.tsx": "5338e89b08b613de6bd88a07be94571d92ee844e0d53625e66312f824556eb6a",
+      "src/features/Projects/Workspace/ProjectDescription.tsx": "ce515ff179f353aadf5a1de4be419327def7c3e6f4e15e5be528e3d60a3e889d",
+      "src/features/Projects/Workspace/ProjectMembersField.tsx": "684fd044a3a97b9756da3e01abcf97c80cd7de948274830d936e104edd89692b",
+      "src/features/Projects/Workspace/ProjectMilestones.tsx": "26a9daff325ed322bf64d260c425ba787eb2f96874e44ae0e61f19cc0c57e11d",
+      "src/features/Projects/Workspace/ProjectOverviewField.tsx": "7f37a61af23c996941aeb80e918ca7b4aa303f596383f527ad76ab0f88d06648",
+      "src/features/Projects/Workspace/ProjectPlanningFields.tsx": "ca9539662c3c51025a332325dc6b5aa6bfc201a116bde9b2e7603c1ea17abfed",
+      "src/features/Projects/Workspace/ProjectPropertiesCard.tsx": "dbe026567c5be6227fe8e42f1187223342d6a8f73cf7188f58c2649d51d62109",
+      "src/features/Projects/Workspace/index.tsx": "48289c99a0f8990002ef6b584635eb56c3d77e74863618b88430a42e0037e918",
+      "src/features/Projects/createProjectForm.ts": "6fcbc2a95d5c4cc373bec8d7d8913685584c5d80becfaa904a0fe0493b94d8e1",
+      "src/features/ResourcePermission/Collaborators/AddCollaboratorsContent.tsx": "dc8eeea0c948be164d067c94b6fda6b50eea6191b12486ab82de3bb710aa0bf1",
+      "src/features/ResourcePermission/Collaborators/CollaboratorList.tsx": "ed37bfbe71e02e9a136f1cf58ac0e590634109978877fdca7970d5b3d21970f8",
+      "src/features/ResourcePermission/Collaborators/index.tsx": "fe445206c6ec562f38a13a996db39e2762df3f8a1d3795dd6a3e64cc5b02016c",
+      "src/features/ResourcePermission/ResourceConfigAccessGate.tsx": "ef6b056f47a3ead7bed3f952dc5b355ed2ac60e737bb89afc2c890079871f163",
+      "src/features/ResourcePermission/useAgentManagementAccess.ts": "b5dfc396ee9a862d1a8eaa6f22bdb41ad4d88fbb3573f14daf2a4905602615ec",
+      "src/features/ResourcePermission/useAgentSelectionPolicies.ts": "2bf2cfe1fe5e54ed5f2184ac79aaa37f4248906f19ebefdd2dbd02ccf4d64612",
+      "src/features/ResourcePermission/useResourceAccess.ts": "245f42b604dca974303f368193fcb3cdb105ea39760d580a918a44c1ed7f3a46",
+      "src/features/ResourcePermission/useResourceCollaborators.ts": "db7d15bbbbbea87b5738ca6c7e82787b4c003d7af42a0c70b523402c91a45568",
+      "src/features/Settings/agents/AgentSettingsDetailPage.tsx": "a648afe5726039ec9d31debc480094db374f912e5e802a1f24dc0085bb3f21ab",
+      "src/features/Settings/agents/AgentSettingsList.tsx": "832f0f2ab131aabcc843010da21535c00c88c29d0dcdfa2060c892ae57b0b64b",
+      "src/hooks/useEffectiveAgencyConfig.ts": "d98120f177af2c40a01c7db68ec8a47be00caf7185e6ecd6cb5b07bcba6b2c21",
+      "src/hooks/usePermission.ts": "8401d581a3042b583fea08e93360e8964f71ffed05e0ce207b3104865a6b5a0d",
+      "src/routes/(main)/agent/profile/features/ProfileEditor/index.tsx": "db17657456f554ba06fd4e620ad64b532db959b33247a15d0cc47c1b2409fe62",
+      "src/services/agent.ts": "e546d09921dfac8b886bf0643421534f71a9a310f3262d9657725a2fcab5738f",
+      "src/services/agentOnboarding.ts": "d77b9df0e0b1e110c1ae0b7fe10b6c94b595d68c3660f38fa01d6dc40e21c5c6",
+      "src/services/device.ts": "360dce03ef5252dedb655d70b64f43c48b2cb51653eca1245878476a5016d2da"
+    }
+  }
+}

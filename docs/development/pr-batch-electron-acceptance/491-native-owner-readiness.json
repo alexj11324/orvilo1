@@ -1,0 +1,16 @@
+{
+  "actualRunEnabled": true,
+  "canManage": true,
+  "canUseResource": true,
+  "candidate": "18e83f00e16d61d787bfdea74f155b811f9b99d4",
+  "gatewayConnected": true,
+  "limits": [
+    "Local backend and personal device pool only",
+    "Owner Project field mutation and live control outcomes not covered by this readiness receipt"
+  ],
+  "nativeMainAndRendererActorMatch": true,
+  "officialOpenCodeAvailable": true,
+  "officialOpenCodeVersion": "1.18.35",
+  "scope": "Actual normal-PKCE Electron producer instance; read-only Owner readiness observations before real TaskRunner execution",
+  "workspaceRole": "owner"
+}

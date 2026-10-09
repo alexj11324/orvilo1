@@ -1,7 +1,6 @@
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
-import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { memo, useCallback } from 'react';
@@ -17,6 +16,7 @@ import {
   type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
+import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { inboxRowSelectKeyDown } from '@/features/WorkInbox/inboxRowKeyboard';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useTaskStore } from '@/store/task';
@@ -204,7 +204,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const milestoneBadge = milestone ? (
     <IssueRowChip
       icon={<MilestoneIcon size={10} />}
-      suffix={milestone.date ? dayjs(milestone.date).format('MMM D') : undefined}
+      suffix={milestone.date ? formatProjectDay(milestone.date) : undefined}
       title={milestone.name}
       onClick={task.projectId ? handleMilestoneClick : undefined}
     >

@@ -41,6 +41,7 @@ import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
 import { getProjectOverviewUpdateState } from './projectOverviewUpdates';
 import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
+import { PROPERTY_CONTROL_CLASS, PROPERTY_LINK_CLASS } from './propertyControl';
 
 const styles = createStaticStyles(({ css }) => ({
   content: css`
@@ -88,35 +89,6 @@ const styles = createStaticStyles(({ css }) => ({
     flex: 1;
     gap: 2px 4px;
     min-width: 0;
-  `,
-  /* The reference's fifth property chip is the project's team: a 28px pill
-     carrying the team's accent glyph (14px) and name, and it is a real
-     navigation target. Ours links to the team page — the destination this
-     codebase already gives a team everywhere else. Its hover fill is the same
-     token the ghost property controls beside it resolve `bg-accent` to. */
-  teamChip: css`
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 6px;
-    border-radius: 9999px;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-decoration: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      text-decoration: none;
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-    }
   `,
 }));
 
@@ -238,7 +210,7 @@ const ProjectWorkspace = memo(() => {
                 <DropdownMenu items={statusItems}>
                   <Button
                     aria-label={t('properties.status')}
-                    className="h-7 w-auto max-w-full shrink-0 gap-2 rounded-full border-0 bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-popup-open:bg-accent [&[data-slot=combobox-trigger]>svg:last-child]:hidden"
+                    className={PROPERTY_CONTROL_CLASS}
                     disabled={updatingStatus || lifecycleLocked}
                     variant="ghost"
                   >
@@ -252,11 +224,15 @@ const ProjectWorkspace = memo(() => {
                 </DropdownMenu>
                 <ProjectPriorityField inline project={project} />
                 <ProjectLeadField inline project={project} />
-                <ProjectDateField inline kind="startDate" project={project} />
+                <ProjectDateField kind="startDate" project={project} />
                 <ArrowRightIcon aria-hidden size={16} />
-                <ProjectDateField inline kind="targetDate" project={project} />
+                <ProjectDateField kind="targetDate" project={project} />
                 {teams.map((team) => (
-                  <WorkspaceLink className={styles.teamChip} key={team.id} to={`/teams/${team.id}`}>
+                  <WorkspaceLink
+                    className={PROPERTY_LINK_CLASS}
+                    key={team.id}
+                    to={`/teams/${team.id}`}
+                  >
                     <TeamIdentity
                       color={team.color}
                       id={team.id}

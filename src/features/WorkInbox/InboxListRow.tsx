@@ -70,6 +70,11 @@ const styles = createStaticStyles(({ css }) => ({
     &:focus-visible {
       box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
     }
+
+    /* The Issue list row's hover wash; the selected row keeps its own fill. */
+    &:hover:not([data-active='true']) {
+      background: ${cssVar.colorFillTertiary};
+    }
   `,
   unreadDot: css`
     position: absolute;

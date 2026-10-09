@@ -22,7 +22,7 @@ const Memory = memo(() => {
   const isEnabled = useMemoryEnabled(agentId);
   const isMobile = useIsMobile();
 
-  if (isLoading) return <ChatInputAction disabled icon={Brain} />;
+  if (isLoading) return <ChatInputAction disabled icon={Brain} title={t('memory.title')} />;
 
   return (
     <ChatInputAction

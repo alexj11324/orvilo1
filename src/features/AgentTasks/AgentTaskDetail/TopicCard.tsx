@@ -402,7 +402,15 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           )}
           <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
-              <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+              <DropdownMenuTrigger
+                render={
+                  <ActionIcon
+                    aria-label={t('more', { ns: 'common' })}
+                    icon={MoreHorizontal}
+                    size={'small'}
+                  />
+                }
+              />
               <DropdownMenuContent align={'end'} className="min-w-40">
                 {menuItems.map((item, index) =>
                   item.type === 'divider' ? (

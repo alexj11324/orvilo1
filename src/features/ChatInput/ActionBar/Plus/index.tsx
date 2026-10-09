@@ -891,17 +891,20 @@ const PlusAction = memo(() => {
 
 PlusAction.displayName = 'PlusAction';
 
+const PlusFallback = () => {
+  const { t } = useTranslation('chat');
+  return (
+    <ChatInputAction
+      disabled
+      icon={PlusIcon}
+      size={{ blockSize: 32, borderRadius: 16, size: 18 }}
+      title={t('plus.tooltip')}
+    />
+  );
+};
+
 const Plus = () => (
-  <Suspense
-    fallback={
-      <ChatInputAction
-        disabled
-        icon={PlusIcon}
-        size={{ blockSize: 32, borderRadius: 16, size: 18 }}
-        title=""
-      />
-    }
-  >
+  <Suspense fallback={<PlusFallback />}>
     <PlusAction />
   </Suspense>
 );

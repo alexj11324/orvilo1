@@ -342,6 +342,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     status === 'running' && task.currentTopicId ? (
       <SimpleTooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
         <ActionIcon
+          aria-label={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}
           icon={MessageSquareTextIcon}
           size={'small'}
           onClick={(event) => {

@@ -124,6 +124,7 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
         <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
           <AttachmentUploadButton onFiles={handleAttach} />
           <SendButton
+            aria-label={t('taskDetail.sendComment')}
             disabled={!canEditTask || (!canSubmit && !submitting)}
             loading={submitting}
             shape={'round'}

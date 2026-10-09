@@ -2,6 +2,7 @@ import { WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import { myWorkPriorityGroupRank } from './myWorkDisplay';
+import type { WorkQueryResultTask } from './workQueryPaging';
 import {
   flattenWorkQueryVirtualItems,
   groupHidesIssue,
@@ -12,7 +13,8 @@ import {
   workQueryVirtualPeekRows,
 } from './workQueryVirtualListModel';
 
-const task = (id: string) => ({ id, identifier: id, parentTaskId: null }) as never;
+const task = (id: string): WorkQueryResultTask =>
+  ({ id, identifier: id, parentTaskId: null }) as WorkQueryResultTask;
 
 describe('nestWorkQueryListGroups', () => {
   it('keeps a primary group and drops an empty one', () => {

@@ -1,0 +1,20 @@
+{
+  "groups": [
+    {
+      "kind": "blockedBy",
+      "text": "Blocked by"
+    },
+    {
+      "kind": "blocking",
+      "text": "Blocks"
+    },
+    {
+      "kind": "relates",
+      "text": "Related"
+    }
+  ],
+  "noneValues": 0,
+  "relationComponentRevision": "98d603a7e9faa9d18d8329bb8551448a9d0ad658",
+  "rendererBase": "c2d7e2512",
+  "scope": "Only TaskPrerequisites is temporarily restored to the PR 523 source; the rest of the composite remains in place. This tests the empty relationship presentation without PR 524 hiding its headings."
+}

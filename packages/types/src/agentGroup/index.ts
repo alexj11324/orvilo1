@@ -126,6 +126,8 @@ export interface ChatGroupItem {
 
 // Agent item with group role info
 export type AgentGroupMember = AgentItem & {
+  /** Public runtime brand metadata survives configuration redaction. */
+  heterogeneousType?: string;
   /**
    * Whether this agent is the supervisor of the group
    */

@@ -1,4 +1,5 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
+import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
 import { TRPCError } from '@trpc/server';
 import { and, asc, desc, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 
@@ -413,6 +414,7 @@ export class ChatGroupModel {
       .where(
         and(
           eq(agents.visibility, 'private'),
+          isOwnedMembership(),
           inArray(
             agents.id,
             this.db
@@ -467,6 +469,7 @@ export class ChatGroupModel {
         .where(
           and(
             ne(agents.visibility, visibility),
+            isOwnedMembership(),
             inArray(
               agents.id,
               this.db
@@ -690,14 +693,15 @@ export class ChatGroupModel {
     agentId: string,
     updates: Partial<Pick<NewChatGroupAgent, 'enabled' | 'order'>> & { role?: GroupMemberRole },
   ): Promise<NewChatGroupAgent> {
-    // A supervisor is the group's own synthetic orchestrator: every path that
-    // creates one creates a fresh virtual agent for it, and the delete/transfer
-    // paths rely on `supervisor ⟹ owned`. Promoting a `referenced` member would
-    // break that invariant and put a member's personal agent on the group's
-    // lifecycle, so it is refused rather than silently reclassified.
-    if (updates.role === GROUP_SUPERVISOR_ROLE) {
-      const [row] = await this.db
-        .select({ role: chatGroupsAgents.role, slug: agents.slug, virtual: agents.virtual })
+    return this.db.transaction(async (tx) => {
+      const [group] = await tx
+        .select({ id: chatGroups.id })
+        .from(chatGroups)
+        .where(and(eq(chatGroups.id, groupId), this.ownership()))
+        .for('update');
+      if (!group) throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
+      const [member] = await tx
+        .select({ membership: chatGroupsAgents, agent: agents })
         .from(chatGroupsAgents)
         .innerJoin(agents, eq(chatGroupsAgents.agentId, agents.id))
         .where(
@@ -705,30 +709,45 @@ export class ChatGroupModel {
             eq(chatGroupsAgents.chatGroupId, groupId),
             eq(chatGroupsAgents.agentId, agentId),
             this.agentsOwnership(),
+            this.memberAgentVisibility(),
           ),
-        );
-
-      if (row && resolveGroupMembershipType(row) !== 'owned') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Only a group-owned member can act as the group supervisor',
-        });
+        )
+        .for('update');
+      if (!member)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Group member is unavailable' });
+      if (updates.role === GROUP_SUPERVISOR_ROLE) {
+        if (!canRunGroupSupervisorRuntime(member.agent.agencyConfig?.heterogeneousProvider))
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'ORCHESTRATOR_RUNTIME_UNSUPPORTED',
+          });
+        await tx
+          .update(chatGroupsAgents)
+          .set({ role: 'participant', updatedAt: new Date() })
+          .where(
+            and(
+              eq(chatGroupsAgents.chatGroupId, groupId),
+              eq(chatGroupsAgents.role, GROUP_SUPERVISOR_ROLE),
+            ),
+          );
       }
-    }
-
-    const [result] = await this.db
-      .update(chatGroupsAgents)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(
-        and(
-          eq(chatGroupsAgents.chatGroupId, groupId),
-          eq(chatGroupsAgents.agentId, agentId),
-          this.agentsOwnership(),
-        ),
-      )
-      .returning();
-
-    return result;
+      const [result] = await tx
+        .update(chatGroupsAgents)
+        .set({
+          ...updates,
+          ...(updates.role === GROUP_SUPERVISOR_ROLE ? { enabled: true } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(chatGroupsAgents.chatGroupId, groupId),
+            eq(chatGroupsAgents.agentId, agentId),
+            this.agentsOwnership(),
+          ),
+        )
+        .returning();
+      return result;
+    });
   }
 
   // ******* Delete Methods ******* //
@@ -1190,7 +1209,7 @@ export class ChatGroupModel {
           // publish guard unsatisfiable — every private group would look like
           // it still holds private members and could never be shared. Only
           // real members can block a publish.
-          ne(chatGroupsAgents.role, 'supervisor'),
+          or(ne(chatGroupsAgents.role, 'supervisor'), sql`${agents.virtual} IS NOT TRUE`),
           this.agentsOwnership(),
         ),
       );

@@ -1,5 +1,5 @@
 import type { UpdateAgentConfigParams } from '@orvilo/builtin-tool-agent-builder';
-import type { MetaData, OrviloAgentConfig } from '@orvilo/types';
+import type { MetaData } from '@orvilo/types';
 
 /**
  * Group Agent Builder Tool Identifier
@@ -87,74 +87,14 @@ export interface CreateAgentParams {
 }
 
 export interface CreateGroupParams {
-  /**
-   * An emoji or image URL for the group's avatar
-   */
   avatar?: string;
-  /**
-   * Background color for the group avatar
-   */
   backgroundColor?: string;
-  /**
-   * A brief description of the group
-   */
+  /** Exactly one selected member coordinates the Group. */
+  coordinatorAgentId: string;
   description?: string;
-  /**
-   * Opening message shown when starting a new conversation with the group
-   */
-  openingMessage?: string;
-  /**
-   * Suggested opening questions for the group
-   */
-  openingQuestions?: string[];
-  /**
-   * Shared prompt/content for the group
-   */
+  /** Existing selected member IDs; creation does not create Agents. */
+  memberAgentIds: string[];
   prompt?: string;
-  /**
-   * Initial supervisor configuration to apply after group creation
-   */
-  supervisor?: {
-    /**
-     * Supervisor avatar
-     */
-    avatar?: string;
-    /**
-     * Background color for the supervisor avatar
-     */
-    backgroundColor?: string;
-    /**
-     * Supervisor description
-     */
-    description?: string;
-    /**
-     * AI model for the supervisor
-     */
-    model?: string;
-    /**
-     * Model parameters for the supervisor
-     */
-    params?: Partial<OrviloAgentConfig['params']>;
-    /**
-     * AI provider for the supervisor
-     */
-    provider?: string;
-    /**
-     * Supervisor system prompt
-     */
-    systemRole?: string;
-    /**
-     * Supervisor tags
-     */
-    tags?: string[];
-    /**
-     * Supervisor display name/title
-     */
-    title?: string;
-  };
-  /**
-   * The display name for the new group
-   */
   title: string;
 }
 

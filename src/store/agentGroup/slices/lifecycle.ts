@@ -23,23 +23,13 @@ export class ChatGroupLifecycleAction {
   }
 
   createGroup = async (
-    newGroup: Omit<NewChatGroup, 'userId'>,
+    newGroup: Omit<NewChatGroup, 'userId'> & { coordinatorAgentId: string },
     agentIds?: string[],
     silent: any = false,
   ) => {
     const { switchToGroup, refreshAgentList } = getHomeStoreState();
 
-    const { group } = await chatGroupService.createGroup(newGroup);
-
-    if (agentIds && agentIds.length > 0) {
-      await chatGroupService.addAgentsToGroup(group.id, agentIds);
-
-      // Wait a brief moment to ensure database transactions are committed
-      // This prevents race condition where loadGroups() executes before member addition is fully persisted
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 100);
-      });
-    }
+    const { group } = await chatGroupService.createGroup({ ...newGroup, agentIds: agentIds ?? [] });
 
     this.#get().internal_dispatchChatGroup({ payload: group, type: 'addGroup' });
 

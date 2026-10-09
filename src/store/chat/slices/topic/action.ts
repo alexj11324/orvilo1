@@ -28,6 +28,8 @@ import { type GitLinkedPRSummary, gitService } from '@/services/git';
 import { messageService } from '@/services/message';
 import type { TopicBatchDeleteScope } from '@/services/topic';
 import { topicService } from '@/services/topic';
+import { getAgentStoreState } from '@/store/agent';
+import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { getAiInfraStoreState } from '@/store/aiInfra';
 import { aiModelSelectors } from '@/store/aiInfra/slices/aiModel/selectors';
 import { type ChatStore } from '@/store/chat';
@@ -55,11 +57,7 @@ import { useGlobalStore } from '@/store/global';
 import { getHomeStoreState } from '@/store/home';
 import { type StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
-import {
-  systemAgentSelectors,
-  userGeneralSettingsSelectors,
-  userProfileSelectors,
-} from '@/store/user/selectors';
+import { userGeneralSettingsSelectors, userProfileSelectors } from '@/store/user/selectors';
 import {
   type ChatTopic,
   type ChatTopicStatus,
@@ -73,6 +71,7 @@ import { type TopicData } from './initialState';
 import { type ChatTopicDispatch } from './reducer';
 import { topicReducer } from './reducer';
 import { topicSelectors } from './selectors';
+import { isExternalAgentRuntime, resolveTopicTitleSource, sliceTopicTitle } from './topicTitle';
 
 const n = setNamespace('t');
 
@@ -386,6 +385,41 @@ export class ChatTopicActionImpl {
 
     this.#summarizingTopicTitleIds.add(topicId);
 
+    // The agent that owns the conversation names it. Heterogeneous, unknown or
+    // model-less agents never call an Orvilo cloud model: the title is sliced
+    // from the first user message instead. Only the topic's own recorded agent
+    // counts: falling back to whichever agent is active could send this
+    // conversation to another agent's provider.
+    const agentId = topic.agentId;
+    const agentState = getAgentStoreState();
+    const agentConfig = agentId
+      ? agentSelectors.getAgentConfigById(agentId)(agentState)
+      : undefined;
+    // No topic/run field carries an agent-reported title yet, so none is passed.
+    const titleSource = resolveTopicTitleSource(
+      agentId
+        ? {
+            heterogeneous: isExternalAgentRuntime(
+              agentByIdSelectors.getAgencyConfigById(agentId)(agentState)?.heterogeneousProvider,
+            ),
+            model: agentConfig?.model,
+            provider: agentConfig?.provider,
+          }
+        : undefined,
+    );
+
+    if (titleSource.kind !== 'model') {
+      try {
+        await this.#get().internal_updateTopic(topicId, {
+          title:
+            titleSource.kind === 'agent' ? titleSource.title : sliceTopicTitle(messagesForTitle),
+        });
+      } finally {
+        this.#summarizingTopicTitleIds.delete(topicId);
+      }
+      return;
+    }
+
     // Keep an optimistic title like "阅读下面..." stable while AI rename runs;
     // otherwise the sidebar flickers `title -> ... -> final title`.
     const shouldShowPlaceholder = !topic.title || topic.title === LOADING_FLAT;
@@ -395,9 +429,6 @@ export class ChatTopicActionImpl {
     const restorePreviousTitle = () => {
       if (shouldShowPlaceholder) internal_updateTopicTitleInSummary(topicId, topic.title);
     };
-
-    // Get current agent for topic
-    const { model, provider } = systemAgentSelectors.topic(useUserStore.getState());
 
     // Structured generation, the same way `SystemAgentService.generateTopicTitle`
     // does it: the chain asks for `TOPIC_TITLE_JSON_SCHEMA`, so read the title
@@ -411,8 +442,8 @@ export class ChatTopicActionImpl {
             userGeneralSettingsSelectors.currentResponseLanguage(useUserStore.getState()),
           ),
           metadata: { topicId },
-          model,
-          provider,
+          model: titleSource.model,
+          provider: titleSource.provider,
           schema: TOPIC_TITLE_JSON_SCHEMA,
           tracing: {
             promptVersion: TOPIC_TITLE_PROMPT_VERSION,
@@ -432,7 +463,10 @@ export class ChatTopicActionImpl {
       await this.#get().internal_updateTopic(topicId, { title });
     } catch (error) {
       console.error('[summaryTopicTitle] failed to generate a title:', error);
-      restorePreviousTitle();
+      // Never leave the topic untitled: fall back to the deterministic slice.
+      await this.#get()
+        .internal_updateTopic(topicId, { title: sliceTopicTitle(messagesForTitle) })
+        .catch(() => restorePreviousTitle());
     } finally {
       this.#summarizingTopicTitleIds.delete(topicId);
     }

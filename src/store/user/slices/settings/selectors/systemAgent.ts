@@ -7,9 +7,7 @@ import { currentSettings } from './settings';
 const currentSystemAgent = (s: UserStore) =>
   merge(DEFAULT_SYSTEM_AGENT_CONFIG, currentSettings(s).systemAgent);
 
-const topic = (s: UserStore) => currentSystemAgent(s).topic;
 const thread = (s: UserStore) => currentSystemAgent(s).thread;
 export const systemAgentSelectors = {
   thread,
-  topic,
 };

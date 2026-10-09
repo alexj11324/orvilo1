@@ -111,3 +111,11 @@ Orvilo 以看板为中心，chat 只用来和 Agent 说话。以下功能连同�
 
 - 旧版桌面 Agent 设置弹窗（`openAgentSettingsModal`）在三个页签（规则、自我迭代、Graph）都被开关关掉时没有页签；它唯一的入口 `routes/(main)/agent/profile` 已无路由（`/agent/:aid/profile` 重定向到 Settings → Agents），未做处理。
 - 语音转文字（STT）没有任何可达界面，只剩无人读取的 `tts.sttModel` 等持久化字段，未做处理。
+## 2026/10/09 Service model: topic naming follows the agent
+
+- **Topic titles follow the conversation's agent.** `summaryTopicTitle` no longer reads `systemAgent.topic`. The model comes from the topic's agent (`topic.agentId`, else the active agent) via `resolveTopicTitleModel` (`src/store/chat/slices/topic/topicTitle.ts`). A built-in Orvilo agent with its own model/provider names the topic through the same `generateJSON` path as before; a heterogeneous (CLI/ACP) agent, a missing agent or a model-less agent never calls an Orvilo cloud model and gets `sliceTopicTitle` (first user message, plain text, 80 chars) instead. A failed generation falls back to the same slice. The dev-only fast path in `buildRunLifecycle.ts` reuses the helper. `summaryThreadTitle` uses `systemAgent.thread`, not `topic`, and is unchanged.
+- **Removed the "Topic Auto-Naming" row** (`SYSTEM_AGENT_MODEL_ITEMS`), the `systemAgentSelectors.topic` selector, its `systemAgent.topic.*` locale keys and the settings-search keyword. `topic` joins the `Exclude` list of `ModelAssignmentItemKey`.
+- **"New Agent" is now "Default model".** The control and its field (`settings.defaultAgent.config`) are live: the server merges it under any personal agent whose model is empty. Only the copy changed, plus a one-line description.
+- Anti-resurrection assertions live in `retiredSettingsSurfaces.test.ts`.
+
+Backend follow-up (not touched here): the persisted `systemAgent.topic` field and its default, and the `taskReview` reader in `apps/server/src/services/taskReview/index.ts`, remain server-side.

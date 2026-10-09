@@ -345,3 +345,38 @@ describe('the chat-era service-model features (2026/10/09) stay retired', () => 
     );
   });
 });
+
+describe('the topic auto-naming service-model row stays retired', () => {
+  // A topic is named by the agent that owns the conversation, so there is no
+  // separate "naming agent" to configure. The persisted `systemAgent.topic`
+  // field stays on the server (taskReview still reads it); only the client
+  // surface is gone.
+  it('keeps the row, its selector and its locale keys out of the client', () => {
+    expect(read('src/features/ServiceModel/ModelAssignmentsForm.tsx')).not.toContain(
+      `{ key: 'topic' }`,
+    );
+    expect(read('src/store/user/slices/settings/selectors/systemAgent.ts')).not.toMatch(
+      /currentSystemAgent\(s\)\.topic\b|^\s+topic,$/m,
+    );
+
+    for (const file of [
+      'packages/locales/src/default/setting.ts',
+      'locales/en-US/setting.json',
+      'locales/zh-CN/setting.json',
+    ]) {
+      expect(read(file), `${file} still carries the topic naming copy`).not.toMatch(
+        /systemAgent\.topic\.(label|modelDesc|title)/,
+      );
+    }
+  });
+
+  it('keeps settings search from pointing at topic naming', () => {
+    expect(read('src/features/SettingsSearch/items.ts')).not.toContain('topic naming');
+  });
+
+  it('does not read the retired model when naming a topic', () => {
+    expect(read('src/store/chat/slices/topic/action.ts')).not.toContain(
+      'systemAgentSelectors.topic',
+    );
+  });
+});

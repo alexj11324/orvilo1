@@ -104,7 +104,7 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.ServiceModel]: [
     'service model',
     'model assignment',
-    'topic naming',
+    'default model',
     'image',
     'image generation',
     'embedding',
@@ -396,7 +396,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
   // Service Model
   {
     anchor: 'service-model-assignments',
-    keywords: ['model assignment', 'topic naming', 'default model'],
+    keywords: ['model assignment', 'default model'],
     labelKey: 'serviceModel.modelAssignments.title',
     tab: SettingsTabs.ServiceModel,
   },

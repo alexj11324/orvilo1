@@ -1,0 +1,68 @@
+{
+  "additionalRenderSurfaces": "ai-preview-surfaces.json",
+  "attachments": {
+    "localBlob": true,
+    "previewOpened": true,
+    "removed": true
+  },
+  "code": {
+    "blocks": 4,
+    "wrapText": "No wrap",
+    "expanded": true,
+    "downloadName": "code.js",
+    "downloadMatchesCopy": true,
+    "copyLineCount": 30,
+    "errors": [],
+    "expansionVerification": "Actual Show more button aria-expanded=true, separate follow-up after wrapper-level null lookup",
+    "horizontalScroll": {
+      "left": 80,
+      "clientWidth": 733,
+      "scrollWidth": 1083
+    },
+    "prefixClippingFixed": true
+  },
+  "confirmation": {
+    "desktopWidth": 776,
+    "contentWidth": 774,
+    "narrowViewport": 900,
+    "narrowWidth": 604.171875,
+    "dispatchEvidence": "ai-approval-host-veto.json"
+  },
+  "fullscreen": {
+    "viewport": [1440, 1000],
+    "composer": [1180, 888],
+    "editor": [1154, 824],
+    "collapsePreservedDraft": true
+  },
+  "queue": {
+    "actualKeyboardEnterEnqueued": true,
+    "count": 1,
+    "fixtureRemovedBeforeCancellation": true
+  },
+  "realGatewayInferenceVerified": false,
+  "reasoning": {
+    "before": "true",
+    "collapsed": "false",
+    "retained": "false"
+  },
+  "source": "d5ddda5fc9eff2c89fa96da3011862c003bc02f3",
+  "sources": {
+    "plainAssistantExpanded": true,
+    "href": "https://elements.ai-sdk.dev",
+    "groupedAssistantCitationsVisible": false
+  },
+  "stop": {
+    "scopedSyntheticOperationStatus": "cancelled",
+    "abortSignal": true,
+    "draft": "Draft survives actual stop click."
+  },
+  "syntheticFixtures": true,
+  "unverified": [
+    "real gateway inference",
+    "real approval resume/persistence",
+    "IME",
+    "task execution",
+    "goal edit persistence",
+    "actual attachment upload"
+  ]
+}

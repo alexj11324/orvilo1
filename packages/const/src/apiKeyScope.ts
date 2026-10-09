@@ -294,6 +294,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // share authorization, not the caller's key scope; never reachable with a
   // restricted key
   shareChat: 'blocked',
+  // Slack OAuth grants and channel bindings manage external access.
+  slackIntegration: 'blocked',
   spend: 'blocked',
   storageOverage: 'blocked',
   subscription: 'blocked',

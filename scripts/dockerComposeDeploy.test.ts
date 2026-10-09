@@ -179,6 +179,8 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(dockerfile).toContain('--out-extension:.js=.mjs');
     expect(dockerfile).toContain('--external:sharp');
     expect(dockerfile).toContain('--external:@hatchet-dev/typescript-sdk');
+    expect(dockerfile).toContain('--external:@copilotkit/channels-core');
+    expect(dockerfile).toContain('@copilotkit/channels-core@0.11.0');
     expect(dockerfile).toContain(
       '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );
@@ -191,6 +193,9 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     );
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@grpc /app/node_modules/@grpc',
+    );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /deps/node_modules/@copilotkit /app/node_modules/@copilotkit',
     );
   });
 
@@ -216,6 +221,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
           '--external:drizzle-orm/*',
           '--external:sharp',
           '--external:@hatchet-dev/typescript-sdk',
+          '--external:@copilotkit/channels-core',
           '--banner:js=import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);',
         ],
         { stdio: 'ignore' },

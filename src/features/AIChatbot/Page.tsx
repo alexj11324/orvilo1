@@ -35,7 +35,7 @@ export default function ChatbotPage({
   return (
     <ChatbotSurfaceContext value>
       <section
-        className="relative flex size-full min-h-0 flex-col divide-y overflow-hidden bg-background text-foreground"
+        className="relative flex size-full min-h-0 flex-col divide-y overflow-hidden bg-card text-card-foreground"
         data-testid="ai-chatbot-page"
       >
         <SplitDropZone style={{ marginBlockEnd: 0 }}>

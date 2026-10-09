@@ -66,6 +66,22 @@ vi.mock('@/features/Conversation/store', () => ({
 }));
 
 describe('ChatItem metadata when personal sender details are hidden', () => {
+  it('keeps the requested avatar on the Chatbot surface without legacy metadata', () => {
+    render(
+      <ChatbotSurfaceContext value>
+        <ChatItem
+          assistantAvatar
+          avatar={{ title: 'Agent' }}
+          customAvatarRender={() => <span aria-label="Agent avatar" role="img" />}
+          message="Real reply"
+          time={Date.UTC(2026, 9, 9, 12)}
+        />
+      </ChatbotSurfaceContext>,
+    );
+    expect(screen.getByRole('img', { name: 'Agent avatar' })).toBeDefined();
+    expect(screen.queryByLabelText('published-date')).toBeNull();
+  });
+
   it('keeps the official Chatbot surface free of the legacy metadata row', () => {
     const view = render(
       <ChatbotSurfaceContext value>

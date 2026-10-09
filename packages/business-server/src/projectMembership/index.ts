@@ -133,7 +133,7 @@ const bumpTargetAuthzVersion = async (
 /**
  * The member whose project access is being set must be an active workspace
  * member; the granted role is clamped to their workspace-role ceiling so a
- * workspace viewer can never hold more than commenter.
+ * workspace Viewer can hold only participant status without write rights.
  */
 const loadActiveTarget = async (
   db: OrviloDatabase,

@@ -1,7 +1,8 @@
-import { and, eq, exists, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 
 import { projects } from '../schemas/project';
 import { projectMembers } from '../schemas/projectMember';
+import { workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from './workspace';
 
@@ -29,5 +30,90 @@ export const buildProjectReadableWhere = (
         ),
       ),
   );
-  return or(base, and(eq(projects.workspaceId, ctx.workspaceId), grantedRead)) as SQL;
+  return and(
+    or(base, and(eq(projects.workspaceId, ctx.workspaceId), grantedRead)),
+    or(
+      isNull(projects.workspaceId),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, projects.workspaceId),
+              eq(workspaceMembers.userId, ctx.userId),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+            ),
+          ),
+      ),
+    ),
+  ) as SQL;
+};
+
+export const buildProjectCommentableWhere = (
+  db: OrviloDatabase,
+  ctx: { userId: string; workspaceId?: string },
+) => {
+  return and(
+    buildProjectReadableWhere(db, ctx),
+    or(
+      isNull(projects.workspaceId),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, projects.workspaceId),
+              eq(workspaceMembers.userId, ctx.userId),
+              inArray(workspaceMembers.role, ['owner', 'admin', 'member']),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+            ),
+          ),
+      ),
+    ),
+  );
+};
+
+export const buildProjectManageableWhere = (
+  db: OrviloDatabase,
+  ctx: { userId: string; workspaceId?: string },
+) => {
+  return and(
+    buildProjectCommentableWhere(db, ctx),
+    or(
+      and(isNull(projects.workspaceId), eq(projects.userId, ctx.userId)),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, projects.workspaceId),
+              eq(workspaceMembers.userId, ctx.userId),
+              inArray(workspaceMembers.role, ['owner', 'admin']),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+            ),
+          ),
+      ),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(projectMembers)
+          .where(
+            and(
+              eq(projectMembers.projectId, projects.id),
+              eq(projectMembers.workspaceId, projects.workspaceId),
+              eq(projectMembers.userId, ctx.userId),
+              eq(projectMembers.role, 'manager'),
+              isNull(projectMembers.deletedAt),
+              isNull(projectMembers.suspendedAt),
+            ),
+          ),
+      ),
+    ),
+  );
 };

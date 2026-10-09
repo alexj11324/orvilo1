@@ -281,7 +281,7 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
             visibility: group.visibility ?? 'private',
           });
 
-          const [agent] = await agentModel.batchCreate([
+          const [agent] = await agentModel.batchCreateGroupAgents([
             {
               ...runtimeConfig,
               avatar: params.avatar,
@@ -331,7 +331,7 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
             visibility: group.visibility ?? 'private',
           });
 
-          const createdAgents = await agentModel.batchCreate(
+          const createdAgents = await agentModel.batchCreateGroupAgents(
             params.agents.map((agent) => ({
               ...runtimeConfig,
               avatar: agent.avatar,

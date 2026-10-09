@@ -1,16 +1,32 @@
 import { TRPCError } from '@trpc/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DeviceModel } from '@/database/models/device';
+import { deviceGateway } from '@/server/services/deviceGateway';
 
-import { assertWorkspaceDeviceVisible, assertWorkspaceRootApproved } from '../deviceWorkspaceGuard';
+import {
+  assertWorkspaceDeviceVisible,
+  assertWorkspaceGitRootApproved,
+  assertWorkspaceRootApproved,
+} from '../deviceWorkspaceGuard';
 
 const mockModel = (row: { defaultCwd?: string | null; workingDirs?: { path: string }[] } | null) =>
   ({
     findByDeviceId: vi.fn().mockResolvedValue(row),
+    findWorkspaceDeviceById: vi.fn().mockResolvedValue(row),
   }) as unknown as DeviceModel;
 
 describe('assertWorkspaceRootApproved', () => {
+  it('uses the shared workspace enrollment roots instead of a same-ID personal row', async () => {
+    const model = mockModel({ defaultCwd: '/personal' });
+    vi.mocked(model.findWorkspaceDeviceById).mockResolvedValue({ defaultCwd: '/shared' } as never);
+    await expect(
+      assertWorkspaceRootApproved(model, 'dev', '/shared', 'ws'),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertWorkspaceRootApproved(model, 'dev', '/personal', 'ws'),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
   it('allows a root that exactly matches a bound workingDir', async () => {
     const model = mockModel({ workingDirs: [{ path: '/Users/me/proj' }] });
     await expect(
@@ -95,5 +111,28 @@ describe('assertWorkspaceDeviceVisible', () => {
     await expect(
       assertWorkspaceDeviceVisible(model, 'someone-elses-private'),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+afterEach(() => vi.restoreAllMocks());
+describe('native Git root approval', () => {
+  const params = { deviceId: 'device', path: '/repo/child', userId: 'actor', workspaceId: 'ws' };
+  it('does not treat approval of the requested child as approval of the native parent repo', async () => {
+    vi.spyOn(deviceGateway, 'inspectGitWorktreePath').mockResolvedValue({
+      kind: 'listed',
+      repoRoot: '/repo',
+    });
+    await expect(
+      assertWorkspaceGitRootApproved(mockModel({ defaultCwd: '/repo/child' }), params),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+  it('uses separately approved parent roots for a legitimate child request', async () => {
+    vi.spyOn(deviceGateway, 'inspectGitWorktreePath').mockResolvedValue({
+      kind: 'listed',
+      repoRoot: '/repo',
+    });
+    await expect(
+      assertWorkspaceGitRootApproved(mockModel({ defaultCwd: '/repo' }), params),
+    ).resolves.toBeUndefined();
   });
 });

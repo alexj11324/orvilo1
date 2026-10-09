@@ -20,6 +20,7 @@ import CollaboratorList from './CollaboratorList';
 export const COLLABORATOR_GRANT_LEVELS: Partial<
   Record<PermissionResourceType, ResourceAccessLevel>
 > = {
+  agent: 'use',
   knowledgeBase: 'edit',
 };
 
@@ -48,7 +49,12 @@ const createAddCollaboratorsModal = ({
       // list, and a divided sticky footer.
       content: { overflow: 'hidden', padding: 0 },
     },
-    title: t('permission.collaborators.addModal.title', { ns: 'setting' }),
+    title: t(
+      resourceType === 'agent'
+        ? 'settingAgent.useMembers.add'
+        : 'permission.collaborators.addModal.title',
+      { ns: 'setting' },
+    ),
     width: 'min(90vw, 520px)',
   });
 
@@ -72,7 +78,9 @@ export const AddCollaboratorButton = memo<CollaboratorTargetProps>(
         <span className="anticon" role="img">
           <PlusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
         </span>
-        {t('permission.collaborators.add')}
+        {t(
+          resourceType === 'agent' ? 'settingAgent.useMembers.add' : 'permission.collaborators.add',
+        )}
       </Button>
     );
   },

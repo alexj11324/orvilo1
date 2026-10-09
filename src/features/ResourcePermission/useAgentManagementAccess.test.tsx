@@ -5,7 +5,9 @@ import { useAgentManagementAccess } from './useAgentManagementAccess';
 
 const testState = vi.hoisted(() => ({
   agent: undefined as
-    { visibility?: 'private' | 'public'; workspaceId?: string | null } | undefined,
+    { visibility?: 'private' | 'public'; workspaceId?: string | null; userId?: string } | undefined,
+  activeWorkspace: true,
+  currentUserId: 'caller',
   permission: {
     canManageResource: false,
     isAccessResolved: true,
@@ -13,6 +15,11 @@ const testState = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('@/business/client/hooks/useHasActiveWorkspace', () => ({
+  useHasActiveWorkspace: () => testState.activeWorkspace,
+}));
+vi.mock('@/store/user', () => ({ useUserStore: () => testState.currentUserId }));
+vi.mock('@/helpers/agentManagementAccess', () => ({ rememberAgentManagementAccess: vi.fn() }));
 vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
   useResourceAccess: () => testState.permission,
 }));
@@ -32,6 +39,7 @@ vi.mock('@/store/agent/selectors', () => ({
 describe('useAgentManagementAccess', () => {
   beforeEach(() => {
     testState.agent = undefined;
+    testState.activeWorkspace = true;
     testState.permission.canManageResource = false;
     testState.permission.isAccessResolved = true;
     testState.permission.isLoading = false;
@@ -60,11 +68,37 @@ describe('useAgentManagementAccess', () => {
     expect(result.current).toEqual({ canManageAgent: false, isAccessLoading: false });
   });
 
-  it('keeps personal and private Agents owner-controlled', () => {
-    testState.agent = { visibility: 'private', workspaceId: 'workspace-1' };
+  it.each(['workspace', 'personal'] as const)(
+    'does not infer Manage from a safe nonowner %s Agent identity',
+    (scope) => {
+      testState.agent = {
+        visibility: 'private',
+        workspaceId: scope === 'workspace' ? 'workspace-1' : null,
+        userId: 'other-owner',
+      };
+      const { result } = renderHook(() => useAgentManagementAccess('agent-1'));
+      expect(result.current.canManageAgent).toBe(false);
+    },
+  );
 
+  it('keeps personal Agents owner-controlled', () => {
+    testState.agent = { visibility: 'private', workspaceId: null, userId: 'caller' };
     const { result } = renderHook(() => useAgentManagementAccess('agent-1'));
-
     expect(result.current).toEqual({ canManageAgent: true, isAccessLoading: false });
+  });
+
+  it('uses actual server management for a private workspace Agent', () => {
+    testState.agent = { visibility: 'private', workspaceId: 'workspace-1', userId: 'caller' };
+    testState.permission.canManageResource = true;
+    const { result } = renderHook(() => useAgentManagementAccess('agent-1'));
+    expect(result.current.canManageAgent).toBe(true);
+  });
+
+  it('does not inherit personal-mode defaults for a cached foreign workspace identity', () => {
+    testState.activeWorkspace = false;
+    testState.agent = { visibility: 'public', workspaceId: 'workspace-1', userId: 'other-owner' };
+    testState.permission.canManageResource = true;
+    const { result } = renderHook(() => useAgentManagementAccess('agent-1'));
+    expect(result.current.canManageAgent).toBe(false);
   });
 });

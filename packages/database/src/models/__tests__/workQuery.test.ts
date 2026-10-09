@@ -60,6 +60,13 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'work-query-ws',
   });
+  await serverDB
+    .insert(workspaceMembers)
+    .values([
+      { role: 'member', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ])
+    .onConflictDoNothing();
 });
 
 afterEach(async () => {
@@ -1364,7 +1371,7 @@ describe('WorkQueryModel', () => {
     expect(byId.get('apr_pr_evil')?.openUrl ?? null).toBeNull();
   });
 
-  it('does not list a private team or its public-visibility tasks to a non-member', async () => {
+  it('shares Issue titles while preserving private Team filters', async () => {
     await serverDB.insert(teams).values({
       createdByUserId: userId,
       id: 'wq-private-team',
@@ -1426,9 +1433,11 @@ describe('WorkQueryModel', () => {
     const outsiderAll = await asOutsider.queryTasks({
       query: { entityType: 'task', schemaVersion: 1 },
     });
-    expect(outsiderAll.tasks.map((row) => row.id)).not.toContain(secret.id);
-    expect(outsiderAll.tasks.map((row) => row.name)).not.toContain('Private-team work');
-    expect((await asOutsider.searchTasks('Private-team work')).map((row) => row.name)).toEqual([]);
+    expect(outsiderAll.tasks.map((row) => row.id)).toContain(secret.id);
+    expect(outsiderAll.tasks.map((row) => row.name)).toContain('Private-team work');
+    expect((await asOutsider.searchTasks('Private-team work')).map((row) => row.name)).toEqual([
+      'Private-team work',
+    ]);
     expect(
       (await asOutsider.searchTasks('Assigned on the private team')).map((row) => row.name),
     ).toEqual(['Assigned on the private team']);
@@ -1462,7 +1471,9 @@ describe('WorkQueryModel', () => {
     });
 
     const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
-    expect((await outsider.searchTasks('Fleet briefing')).map((row) => row.name)).toEqual([]);
+    expect((await outsider.searchTasks('Fleet briefing')).map((row) => row.name)).toEqual([
+      'Fleet briefing',
+    ]);
     expect((await outsider.searchTasks('Assigned fleet note')).map((row) => row.name)).toEqual([
       'Assigned fleet note',
     ]);
@@ -1619,10 +1630,13 @@ describe('WorkQueryModel', () => {
   });
 
   it('hides private projects from search and lists unless the viewer has a grant', async () => {
-    await serverDB.insert(workspaceMembers).values([
-      { role: 'owner', userId, workspaceId },
-      { role: 'member', userId: otherUserId, workspaceId },
-    ]);
+    await serverDB
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ])
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-public-project',
@@ -1669,7 +1683,10 @@ describe('WorkQueryModel', () => {
   });
 
   it('boards projects by real status columns with per-column totals', async () => {
-    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId })
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-board-a',
@@ -1714,7 +1731,10 @@ describe('WorkQueryModel', () => {
   });
 
   it('pages a status-grouped project list by group and rejects a flat cursor', async () => {
-    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId })
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-list-a',
@@ -1771,7 +1791,10 @@ describe('WorkQueryModel', () => {
   });
 
   it('honours project sort by name and rejects a task-only groupBy', async () => {
-    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'owner', userId, workspaceId })
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       { id: 'wq-sort-a', identifier: 'WSA', name: 'Zulu', userId, workspaceId },
       { id: 'wq-sort-b', identifier: 'WSB', name: 'Alpha', userId, workspaceId },
@@ -1795,10 +1818,13 @@ describe('WorkQueryModel', () => {
   });
 
   it('filters projects by ownerUserId and visibility predicates', async () => {
-    await serverDB.insert(workspaceMembers).values([
-      { role: 'owner', userId, workspaceId },
-      { role: 'member', userId: otherUserId, workspaceId },
-    ]);
+    await serverDB
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ])
+      .onConflictDoNothing();
     await serverDB.insert(projects).values([
       {
         id: 'wq-filter-mine',
@@ -1962,10 +1988,13 @@ describe('WorkQueryModel', () => {
   });
 
   it('project options search server-side, page by cursor, and hydrate by id (VW04)', async () => {
-    await serverDB.insert(workspaceMembers).values([
-      { role: 'owner', userId, workspaceId },
-      { role: 'member', userId: otherUserId, workspaceId },
-    ]);
+    await serverDB
+      .insert(workspaceMembers)
+      .values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ])
+      .onConflictDoNothing();
     // Distinct updatedAt values keep the keyset cursor deterministic on real
     // Postgres (timestamps are µs-precise; equal timestamps would rely on the
     // id tie-breaker hitting an eq-boundary).

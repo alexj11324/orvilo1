@@ -197,6 +197,7 @@ describe('AI Agent Router Integration Tests', () => {
   });
 
   afterEach(async () => {
+    await serverDB.delete(agentOperations).where(eq(agentOperations.userId, userId));
     await cleanupTestUser(serverDB, userId);
     vi.clearAllMocks();
   });
@@ -546,7 +547,17 @@ describe('AI Agent Router Integration Tests', () => {
       mockStartExecution.mockReset();
     });
 
+    const insertOperation = async () => {
+      await serverDB.insert(agentOperations).values({
+        agentId: testAgentId,
+        id: operationId,
+        status: 'running',
+        userId,
+      });
+    };
+
     it('acknowledges an already-running run idempotently instead of a second start', async () => {
+      await insertOperation();
       // Repeat start intents must not mint a new generation — they resolve to
       // the same `alreadyStarted` ack every time.
       mockStartExecution.mockResolvedValue({
@@ -577,10 +588,12 @@ describe('AI Agent Router Integration Tests', () => {
       ['terminal', 'CONFLICT'],
       ['not_found', 'NOT_FOUND'],
     ] as const)('maps a %s rejection to %s instead of an internal error', async (denial, code) => {
+      if (denial !== 'not_found') await insertOperation();
       mockStartExecution.mockRejectedValue(new AgentStartError(denial, `denial: ${denial}`));
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       await expect(caller.startExecution({ operationId })).rejects.toMatchObject({ code });
+      if (denial === 'not_found') expect(mockStartExecution).not.toHaveBeenCalled();
     });
   });
 

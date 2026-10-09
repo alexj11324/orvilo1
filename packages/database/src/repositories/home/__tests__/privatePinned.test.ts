@@ -2,6 +2,7 @@
 // shared `pinned` bucket (rendered under the public/Workspace section) — it
 // should surface in `privatePinned` so the sidebar keeps it inside the
 // Private section.
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
@@ -23,6 +24,11 @@ beforeEach(async () => {
     name: 'WS',
     primaryOwnerId: creator,
     slug: 'ws-1',
+  });
+  await clientDB.insert(Schema.workspaceMembers).values({
+    role: 'owner',
+    userId: creator,
+    workspaceId: ws,
   });
   // Creation admission requires a resolvable bound host.
   await clientDB.insert(Schema.devices).values([
@@ -66,11 +72,15 @@ describe('workspace private pinned bucket', () => {
         {
           systemRole: '',
           title: 'Private Agent',
-          visibility: 'private',
+          visibility: 'public',
         } as any,
         ws,
       ),
     );
+    await clientDB
+      .update(Schema.agents)
+      .set({ visibility: 'private' })
+      .where(eq(Schema.agents.id, agent.id));
     await agentModel.update(agent.id, { pinned: true });
 
     const result = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();

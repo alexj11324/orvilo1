@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { pick } from 'es-toolkit';
 import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
@@ -24,6 +25,7 @@ import {
   assertWorkspaceRowManageable,
   isWorkspaceNonOwner,
 } from './_helpers/assertWorkspaceRowManageable';
+import { getResourceConfigAccess, redactAgentConfig } from './_helpers/resourceConfigGuard';
 
 /**
  * Session config updates write through to the linked agent's config, so a
@@ -52,6 +54,59 @@ const assertCanEditSessionAgent = async (
     userId: ctx.userId,
     workspaceId: ctx.workspaceId,
   });
+};
+
+const protectSessionAgentConfigs = async <T extends Record<string, any>>(
+  ctx: { serverDB: OrviloDatabase; userId: string; workspaceId?: string | null },
+  rows: T[],
+): Promise<T[]> => {
+  if (!ctx.workspaceId) return rows;
+  const protectAgent = async (agent: Record<string, any>) => {
+    const access = await getResourceConfigAccess(
+      { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId },
+      'agent',
+      agent.id,
+      {
+        userId: agent.userId,
+        visibility: agent.visibility,
+        workspaceId: agent.workspaceId,
+        slug: agent.slug,
+        virtual: agent.virtual,
+      },
+    );
+    return access === 'none'
+      ? null
+      : access === 'profile'
+        ? {
+            ...redactAgentConfig(agent),
+            ...pick(agent, ['agentId', 'chatGroupId', 'enabled', 'order', 'role']),
+          }
+        : agent;
+  };
+  return Promise.all(
+    rows.map(async (row) => {
+      const result: Record<string, any> = { ...row };
+      if (Array.isArray(row.agentsToSessions))
+        result.agentsToSessions = (
+          await Promise.all(
+            row.agentsToSessions.map(async (link: Record<string, any>) => ({
+              ...link,
+              agent: link.agent ? await protectAgent(link.agent) : null,
+            })),
+          )
+        ).filter((link) => link.agent);
+      if (row.type === 'agent' && row.config?.id) {
+        const config = await protectAgent(row.config);
+        result.config = config ?? {};
+        if (!config) result.meta = {};
+      }
+      if (Array.isArray(row.members))
+        result.members = (await Promise.all(row.members.map(protectAgent))).filter(Boolean);
+      if (Array.isArray(row.agents))
+        result.agents = (await Promise.all(row.agents.map(protectAgent))).filter(Boolean);
+      return result as T;
+    }),
+  );
 };
 
 const sessionProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
@@ -195,7 +250,7 @@ export const sessionRouter = router({
         (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
 
-      return { sessionGroups, sessions: allSessions };
+      return { sessionGroups, sessions: await protectSessionAgentConfigs(ctx, allSessions) };
     }),
 
   getSessions: sessionProcedure
@@ -208,7 +263,7 @@ export const sessionRouter = router({
     .query(async ({ input, ctx }) => {
       const { current, pageSize } = input;
 
-      return ctx.sessionModel.query({ current, pageSize });
+      return protectSessionAgentConfigs(ctx, await ctx.sessionModel.query({ current, pageSize }));
     }),
 
   removeSession: sessionProcedure

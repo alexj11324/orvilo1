@@ -10,6 +10,7 @@ import {
   teams,
   topics,
   works,
+  workspaceMembers,
   workspaces,
   workVersions,
 } from '../../../schemas';
@@ -898,6 +899,10 @@ describe('WorkModel · workspace task visibility', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: userId2, workspaceId },
+    ]);
   };
 
   it('shares legacy private workspace Task Works across every list path', async () => {
@@ -1000,7 +1005,7 @@ describe('WorkModel · workspace task visibility', () => {
     expect(registered).toMatchObject({ userId, visibility: 'public' });
   });
 
-  it('keeps private-team and foreign-workspace Task Works hidden despite public mirrors', async () => {
+  it('shares private-Team Issue Works with active non-Team members and denies foreign-workspace Works', async () => {
     await seedWorkspace();
     await serverDB.insert(teams).values({
       id: 'work-private-team',
@@ -1022,18 +1027,18 @@ describe('WorkModel · workspace task visibility', () => {
       topicId,
     });
     const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
-    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
-    expect(await memberWorks.listVersions(work!.id)).toHaveLength(0);
+    expect((await memberWorks.listByWorkspace({})).items).toHaveLength(1);
+    expect(await memberWorks.listVersions(work!.id)).toHaveLength(1);
     expect(
       await memberWorks.registerTask({
         toolName: 'updateTask',
         toolIdentifier: 'orvilo-task',
         changeType: 'updated',
-        toolCallId: 'forbidden-team-work',
+        toolCallId: 'shared-team-work',
         taskId: task.id,
         topicId,
       }),
-    ).toBeNull();
+    ).toMatchObject({ id: work!.id, visibility: 'public' });
 
     await serverDB.insert(workspaces).values({
       id: 'work-foreign-workspace',
@@ -1047,6 +1052,16 @@ describe('WorkModel · workspace task visibility', () => {
       .where(eq(tasks.id, task.id));
     expect((await memberWorks.listByWorkspace({})).items).toHaveLength(0);
     expect(await memberWorks.listVersions(work!.id)).toHaveLength(0);
+    expect(
+      await memberWorks.registerTask({
+        changeType: 'updated',
+        taskId: task.id,
+        toolCallId: 'forbidden-foreign-work',
+        toolIdentifier: 'orvilo-task',
+        toolName: 'updateTask',
+        topicId,
+      }),
+    ).toBeNull();
   });
 
   it('hides an orphaned private-task Work from other members but keeps it for the registrant', async () => {

@@ -87,11 +87,11 @@ describe('useAgentPermission', () => {
     // The server accepts the policy keys only from the agent's creator or the
     // workspace owner, and strips them from anyone else's *successful* save —
     // so a control the page leaves enabled would discard the choice in silence.
-    it('denies a workspace Admin who can otherwise edit the agent', () => {
+    it('allows a workspace Admin with server-confirmed Manage', () => {
       const { result } = setup();
 
       expect(result.current.canEditConfig).toBe(true);
-      expect(result.current.canEditPolicies).toBe(false);
+      expect(result.current.canEditPolicies).toBe(true);
     });
 
     it('allows the agent creator', () => {
@@ -134,6 +134,18 @@ describe('useAgentPermission', () => {
     expect(mocks.permissionResourceId).toBe('agent-1');
     expect(result.current.accessLevel).toBe('use');
     expect(result.current.canManageAccess).toBe(true);
+  });
+
+  it('preserves personal owner configuration without a workspace permission response', () => {
+    mocks.access = undefined;
+    mocks.agentMap = {
+      'agent-1': { agencyConfig: {}, userId: 'admin', visibility: 'private', workspaceId: null },
+    };
+    expect(setup().result.current.canEditConfig).toBe(true);
+    mocks.agentMap = {
+      'agent-1': { agencyConfig: {}, userId: 'other', visibility: 'private', workspaceId: null },
+    };
+    expect(setup().result.current.canEditConfig).toBe(false);
   });
 
   it('reports a personal agent as out of scope for permissions', () => {

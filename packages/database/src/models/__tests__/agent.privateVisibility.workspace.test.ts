@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, sessionGroups, users, workspaces } from '../../schemas';
+import { agents, sessionGroups, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 
@@ -23,6 +23,10 @@ beforeEach(async () => {
     .values({ name: 'private-vis-ws', primaryOwnerId: userA, slug: 'private-vis-ws' })
     .returning();
   workspaceId = ws.id;
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId: userA, workspaceId },
+    { role: 'member', userId: userB, workspaceId },
+  ]);
 });
 
 afterEach(async () => {
@@ -176,7 +180,7 @@ describe('AgentModel — private/public cross-user isolation', () => {
       });
     };
 
-    it('clears sessionGroupId when demotion leaves a public group', async () => {
+    it('rejects workspace demotion without changing the public folder placement', async () => {
       await insertGroup('pub-group', 'public');
       await insertAgent({ id: 'a-grouped', userId: userA, visibility: 'public', workspaceId });
       await serverDB
@@ -185,13 +189,17 @@ describe('AgentModel — private/public cross-user isolation', () => {
         .where(eq(agents.id, 'a-grouped'));
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const updated = await callerA.setVisibility('a-grouped', 'private');
-
-      expect(updated?.visibility).toBe('private');
-      expect(updated?.sessionGroupId).toBeNull();
+      const before = await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') });
+      await expect(callerA.setVisibility('a-grouped', 'private')).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Workspace Agents must be public',
+      });
+      expect(await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') })).toEqual(
+        before,
+      );
     });
 
-    it('keeps sessionGroupId when the group already matches the new visibility', async () => {
+    it('rejects workspace demotion without changing the existing private folder reference', async () => {
       await insertGroup('priv-group', 'private');
       await insertAgent({ id: 'a-priv-grouped', userId: userA, visibility: 'public', workspaceId });
       await serverDB
@@ -200,20 +208,30 @@ describe('AgentModel — private/public cross-user isolation', () => {
         .where(eq(agents.id, 'a-priv-grouped'));
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const updated = await callerA.setVisibility('a-priv-grouped', 'private');
-
-      expect(updated?.visibility).toBe('private');
-      expect(updated?.sessionGroupId).toBe('priv-group');
+      const before = await serverDB.query.agents.findFirst({
+        where: eq(agents.id, 'a-priv-grouped'),
+      });
+      await expect(callerA.setVisibility('a-priv-grouped', 'private')).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Workspace Agents must be public',
+      });
+      expect(
+        await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-priv-grouped') }),
+      ).toEqual(before);
     });
 
-    it('keeps ungrouped agents ungrouped on demotion', async () => {
+    it('rejects workspace demotion and keeps ungrouped agents unchanged', async () => {
       await insertAgent({ id: 'a-ungrouped', userId: userA, visibility: 'public', workspaceId });
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const updated = await callerA.setVisibility('a-ungrouped', 'private');
-
-      expect(updated?.visibility).toBe('private');
-      expect(updated?.sessionGroupId).toBeNull();
+      const before = await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-ungrouped') });
+      await expect(callerA.setVisibility('a-ungrouped', 'private')).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+        message: 'Workspace Agents must be public',
+      });
+      expect(
+        await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-ungrouped') }),
+      ).toEqual(before);
     });
   });
 

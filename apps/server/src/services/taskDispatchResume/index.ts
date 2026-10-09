@@ -7,6 +7,7 @@ import {
   type TaskDispatchResumeCandidate,
 } from '@/database/models/taskDispatch';
 import type { OrviloDatabase } from '@/database/type';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
@@ -90,11 +91,46 @@ export const processTaskDispatchResume = async (input: {
     };
   }
 
+  // Durable sweeps retain the principal that authorized the intent. The task
+  // owner and the requestedBy audit label never substitute for that member.
+  if (!candidate.initiator)
+    return {
+      dispatchId: candidate.dispatchId,
+      outcome: 'waiting',
+      reason: 'execution_initiator_missing',
+    };
+  if (candidate.workspaceId) {
+    if (!candidate.agentId)
+      return {
+        dispatchId: candidate.dispatchId,
+        outcome: 'waiting',
+        reason: 'execution_agent_missing',
+      };
+    try {
+      await assertCanUseWorkspaceAgent({
+        agentId: candidate.agentId,
+        db,
+        userId: candidate.initiator,
+        workspaceId: candidate.workspaceId,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof TRPCError) ||
+        (error.code !== 'FORBIDDEN' && error.code !== 'NOT_FOUND')
+      )
+        throw error;
+      return { dispatchId: candidate.dispatchId, outcome: 'waiting', reason: 'agent_use_denied' };
+    }
+  }
   const claim = await model.claimForResume(candidate.dispatchId);
   if (!claim) return { dispatchId: candidate.dispatchId, outcome: 'skipped', reason: 'claim_lost' };
 
   try {
-    await new TaskRunnerService(db, candidate.userId, candidate.workspaceId ?? undefined).runTask({
+    await new TaskRunnerService(
+      db,
+      candidate.initiator,
+      candidate.workspaceId ?? undefined,
+    ).runTask({
       ...(candidate.eventEvidence ? { eventEvidence: candidate.eventEvidence } : {}),
       idempotencyKey: candidate.idempotencyKey,
       planRevision: candidate.planRevision ?? undefined,

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { BUILTIN_AGENTS } from '@orvilo/builtin-agents';
 import { DEFAULT_AGENT_CONFIG, DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE } from '@orvilo/const';
+import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
@@ -9,8 +10,13 @@ import { UserModel } from '@/database/models/user';
 import type * as RedisModule from '@/libs/redis';
 import { initializeRedisWithPrefix, isRedisEnabled, RedisKeys } from '@/libs/redis';
 import { parseAgentConfig } from '@/server/globalConfig/parseDefaultAgent';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 
 import { AgentService } from './index';
+
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('@/envs/app', () => ({
   appEnv: {
@@ -306,6 +312,61 @@ describe('AgentService', () => {
 
       expect(result?.model).toBe('user-preferred-model');
       expect(result?.provider).toBe('user-provider');
+    });
+  });
+
+  describe('authorized execution config', () => {
+    it('rejects Use before reading private executable configuration', async () => {
+      const model = {
+        getAgentIdForExecution: vi.fn().mockResolvedValue('private-agent'),
+        getAgentConfigForExecution: vi.fn(),
+      };
+      vi.mocked(AgentModel).mockImplementation(function () {
+        return model as unknown as AgentModel;
+      });
+      vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValueOnce(
+        new TRPCError({ code: 'FORBIDDEN' }),
+      );
+      const actorService = new AgentService(mockDb, 'selected-member', mockWorkspaceId);
+      await expect(actorService.getAgentConfigForExecution('private-agent')).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      expect(model.getAgentConfigForExecution).not.toHaveBeenCalled();
+    });
+
+    it('resolves a selected private Agent with the initiating member preferences', async () => {
+      const model = {
+        getAgentIdForExecution: vi.fn().mockResolvedValue('private-agent'),
+        getAgentConfigForExecution: vi.fn().mockResolvedValue({
+          id: 'private-agent',
+          userId: 'creator',
+          workspaceId: mockWorkspaceId,
+          visibility: 'private',
+          model: 'runtime-model',
+          provider: 'runtime-provider',
+          systemRole: 'Configured role',
+        }),
+      };
+      vi.mocked(AgentModel).mockImplementation(function () {
+        return model as unknown as AgentModel;
+      });
+      vi.mocked(assertCanUseWorkspaceAgent).mockResolvedValue(undefined);
+      const actorService = new AgentService(mockDb, 'selected-member', mockWorkspaceId);
+      await expect(actorService.getAgentConfigForExecution('private-agent')).resolves.toMatchObject(
+        {
+          id: 'private-agent',
+          userId: 'creator',
+          model: 'runtime-model',
+          systemRole: 'Configured role',
+        },
+      );
+      expect(assertCanUseWorkspaceAgent).toHaveBeenCalledWith({
+        agentId: 'private-agent',
+        db: mockDb,
+        userId: 'selected-member',
+        workspaceId: mockWorkspaceId,
+      });
+      expect(UserModel).toHaveBeenLastCalledWith(mockDb, 'selected-member');
     });
   });
 

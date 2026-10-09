@@ -315,10 +315,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
       'approve-remember': t('tool.intervention.optionApproveRemember'),
     };
 
-    // View-only members see the pending intervention but get no approval
-    // controls — the run belongs to a member who can use the agent.
-    if (!canUseResource) return null;
-
+    // Issue readers retain visible execution controls without response authority.
     return (
       <div className={cn('flex flex-col', styles.container)} ref={containerRef}>
         <div className={styles.optionList} role="radiogroup">
@@ -331,6 +328,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
                   key={c}
                   role="radio"
                   onClick={() => {
+                    if (!canUseResource) return;
                     setChoice('reject');
                     rejectInputRef.current?.focus();
                   }}
@@ -339,7 +337,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
                   <input
                     aria-label={t('tool.intervention.rejectReasonPlaceholder')}
                     className={styles.rejectInput}
-                    disabled={loading || isMessageCreating}
+                    disabled={loading || isMessageCreating || !canUseResource}
                     placeholder={t('tool.intervention.rejectReasonPlaceholder')}
                     ref={rejectInputRef}
                     type="text"
@@ -356,10 +354,11 @@ const ApprovalActions = memo<ApprovalActionsProps>(
             return (
               <div
                 aria-checked={choice === c}
+                aria-disabled={!canUseResource}
                 className={cx(styles.option, choice === c && styles.optionSelected)}
                 key={c}
                 role="radio"
-                onClick={() => setChoice(c)}
+                onClick={canUseResource ? () => setChoice(c) : undefined}
               >
                 <span className={styles.number}>{index + 1}.</span>
                 <span className={styles.optionLabel}>{approveLabel[c]}</span>
@@ -370,7 +369,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
 
         <div className={styles.footer}>
           <Button
-            disabled={loading || isMessageCreating}
+            disabled={loading || isMessageCreating || !canUseResource}
             loading={stopping}
             size="default"
             variant="ghost"
@@ -380,7 +379,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
           </Button>
           <Button
             className={styles.submitButton}
-            disabled={isMessageCreating}
+            disabled={isMessageCreating || !canUseResource}
             loading={loading}
             size="default"
             variant="default"

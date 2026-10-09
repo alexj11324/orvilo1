@@ -38,7 +38,15 @@ import {
 } from './types';
 
 const runtime = new AgentManagerRuntime({
-  agentService,
+  agentService: {
+    countAgents: agentService.countAgents,
+    createAgent: agentService.createAgent,
+    duplicateAgent: agentService.duplicateAgent,
+    getAgentConfigById: agentService.getAgentFullConfigById,
+    getRuntimeForCreation: agentService.getRuntimeForCreation,
+    queryAgents: agentService.queryAgents,
+    removeAgent: agentService.removeAgent,
+  },
   discoverService,
 });
 

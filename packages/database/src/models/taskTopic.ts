@@ -81,6 +81,21 @@ export class TaskTopicModel {
       },
     );
 
+  /** Issue reads follow the current parent and workspace, not historical topic flags. */
+  private readable = () =>
+    and(
+      buildWorkspaceWhere(
+        { userId: this.userId, workspaceId: this.workspaceId },
+        { userId: taskTopics.userId, workspaceId: taskTopics.workspaceId },
+      ),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(tasks)
+          .where(and(eq(tasks.id, taskTopics.taskId), this.taskOwnership())),
+      ),
+    );
+
   private taskOwnership = () =>
     buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
 
@@ -592,6 +607,46 @@ export class TaskTopicModel {
     return result.length;
   }
 
+  /** User Issue controls resolve the current parent; callers separately enforce Agent Use. */
+  async findIssueTopicById(topicId: string): Promise<TaskTopicItem | null> {
+    const [row] = await this.db
+      .select()
+      .from(taskTopics)
+      .where(and(eq(taskTopics.topicId, topicId), this.readable()))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /** Exact Issue/topic CAS for an already-authorized user cancellation. */
+  async cancelIssueTopicIfRunning(taskId: string, topicId: string): Promise<boolean> {
+    const rows = await this.db
+      .update(taskTopics)
+      .set({ runState: 'canceled', status: 'canceled' })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          eq(taskTopics.status, 'running'),
+          this.readable(),
+        ),
+      )
+      .returning({ id: taskTopics.id });
+    if (rows.length)
+      await this.db
+        .update(topics)
+        .set({ completedAt: new Date() })
+        .where(
+          and(
+            eq(topics.id, topicId),
+            buildWorkspaceWhere(
+              { userId: this.userId, workspaceId: this.workspaceId },
+              { userId: topics.userId, workspaceId: topics.workspaceId },
+            ),
+          ),
+        );
+    return rows.length > 0;
+  }
+
   async findByTopicId(topicId: string): Promise<TaskTopicItem | null> {
     const result = await this.db
       .select()
@@ -845,7 +900,7 @@ export class TaskTopicModel {
     return this.db
       .select()
       .from(taskTopics)
-      .where(and(eq(taskTopics.taskId, taskId), this.ownership()))
+      .where(and(eq(taskTopics.taskId, taskId), this.readable()))
       .orderBy(desc(taskTopics.seq));
   }
 
@@ -856,11 +911,7 @@ export class TaskTopicModel {
       .select()
       .from(taskTopics)
       .where(
-        and(
-          inArray(taskTopics.taskId, taskIds),
-          eq(taskTopics.status, 'running'),
-          this.ownership(),
-        ),
+        and(inArray(taskTopics.taskId, taskIds), eq(taskTopics.status, 'running'), this.readable()),
       )
       .orderBy(desc(taskTopics.seq));
   }
@@ -868,6 +919,7 @@ export class TaskTopicModel {
   async findWithDetails(taskId: string) {
     return this.db
       .select({
+        agentId: topics.agentId,
         createdAt: topics.createdAt,
         handoff: taskTopics.handoff,
         id: topics.id,
@@ -885,7 +937,7 @@ export class TaskTopicModel {
       })
       .from(taskTopics)
       .innerJoin(topics, eq(taskTopics.topicId, topics.id))
-      .where(and(eq(taskTopics.taskId, taskId), this.ownership()))
+      .where(and(eq(taskTopics.taskId, taskId), this.readable()))
       .orderBy(desc(taskTopics.seq));
   }
 
@@ -911,7 +963,7 @@ export class TaskTopicModel {
       })
       .from(taskTopics)
       .leftJoin(topics, eq(taskTopics.topicId, topics.id))
-      .where(and(eq(taskTopics.taskId, taskId), this.ownership()))
+      .where(and(eq(taskTopics.taskId, taskId), this.readable()))
       .orderBy(desc(taskTopics.seq))
       .limit(limit);
   }

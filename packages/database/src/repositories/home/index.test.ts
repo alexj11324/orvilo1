@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE, INBOX_SESSION_ID } from '@orvilo/const';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -10,7 +11,7 @@ import { devices } from '../../schemas/device';
 import { agentsToSessions } from '../../schemas/relations';
 import { sessionGroups, sessions } from '../../schemas/session';
 import { users } from '../../schemas/user';
-import { workspaces } from '../../schemas/workspace';
+import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 import { HomeRepository } from './index';
 
@@ -468,6 +469,7 @@ describe('HomeRepository', () => {
         primaryOwnerId: userId,
         slug: workspaceId,
       });
+      await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspaceId);
       // Creation admission requires a resolvable bound host.
       await serverDB.insert(devices).values({
@@ -485,8 +487,10 @@ describe('HomeRepository', () => {
         },
         title: 'Transferred Private Agent',
         virtual: false,
-        visibility: 'private',
+        visibility: 'public',
       });
+
+      await serverDB.update(agents).set({ visibility: 'private' }).where(eq(agents.id, agent.id));
 
       await workspaceAgentModel.transferAgent(agent.id, null, userId);
 

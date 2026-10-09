@@ -18,13 +18,18 @@ import {
   ComboboxTrigger,
 } from '@/components/ui/combobox';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   type useProjectMembersQuery,
   useTeammateActions,
   useWorkspaceMembersQuery,
 } from '@/features/Teammates/api/hooks';
 import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 const styles = createStaticStyles(({ css }) => ({
   label: css`
@@ -58,25 +63,28 @@ const INVITE_TEAMMATE_VALUE = '__inviteTeammate__';
 
 export function ProjectMembersField({
   projectId,
+  projectVisibility,
   query,
+  canManage = false,
+  onChanged,
 }: {
   projectId: string;
+  projectVisibility?: 'private' | 'public' | null;
+  canManage?: boolean;
+  onChanged?: () => Promise<unknown>;
   query: ReturnType<typeof useProjectMembersQuery>;
 }) {
-  const { t } = useTranslation('project');
+  const { t } = useTranslation(['project', 'setting']);
   const id = useId();
   const lock = useRef(false);
   const inviting = useRef(false);
   const [open, setOpen] = useState(false);
   const roster = useWorkspaceMembersQuery();
   const capabilities = useWorkspaceCapabilities();
-  const userId = useUserStore(userProfileSelectors.userId);
-  const { addProjectMember, removeProjectMember, mutating } = useTeammateActions();
+  const { addProjectMember, changeProjectMemberRole, removeProjectMember, mutating } =
+    useTeammateActions();
   const members = query.data ?? [];
-  const canEdit =
-    capabilities.canManageMembers ||
-    (capabilities.role === 'member' &&
-      members.some((member) => member.userId === userId && member.role === 'manager'));
+  const canEdit = canManage;
   const failed = (query.error && !query.data) || (roster.error && !roster.data);
   if (failed)
     return (
@@ -237,6 +245,51 @@ export function ProjectMembersField({
           </ComboboxContent>
         </>
       </Combobox>
+      {members.map((member) => {
+        const name = member.user?.fullName || member.user?.username || member.userId;
+        if (
+          projectVisibility === 'private' &&
+          (member.role === 'viewer' || member.role === 'commenter')
+        ) {
+          return (
+            <span className="text-sm text-muted-foreground" key={member.userId} title={name}>
+              {t(`setting:workspaceSetting.members.projectRole.${member.role}`)}
+            </span>
+          );
+        }
+        const role = member.role === 'manager' ? 'manager' : 'contributor';
+        return (
+          <Select
+            disabled={!canManage || mutating}
+            key={member.userId}
+            value={role}
+            items={(['contributor', 'manager'] as const).map((value) => ({
+              value,
+              label: t(`setting:workspaceSetting.members.projectRole.${value}`),
+            }))}
+            onValueChange={async (value) => {
+              if (
+                canManage &&
+                (value === 'contributor' || value === 'manager') &&
+                (await changeProjectMemberRole(projectId, member.userId, value))
+              )
+                await onChanged?.();
+            }}
+          >
+            <SelectTrigger aria-label={`${name}: ${t('properties.members')}`} size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contributor">
+                {t('setting:workspaceSetting.members.projectRole.contributor')}
+              </SelectItem>
+              <SelectItem value="manager">
+                {t('setting:workspaceSetting.members.projectRole.manager')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      })}
     </>
   );
 }

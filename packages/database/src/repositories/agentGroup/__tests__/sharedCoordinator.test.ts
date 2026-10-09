@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { ChatGroupModel } from '../../../models/chatGroup';
-import { agents, chatGroups, chatGroupsAgents, users, workspaces } from '../../../schemas';
+import {
+  agents,
+  chatGroups,
+  chatGroupsAgents,
+  resourcePermissions,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../../schemas';
 import { AgentGroupRepository } from '../index';
 
 const db = await getTestDB();
@@ -56,6 +64,7 @@ describe('shared group coordinator', () => {
   });
 
   it('keeps the selected Agent ID and never inserts another Agent at creation', async () => {
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
     const { agent } = await seed();
     const created = await repo.createGroupWithSupervisor(
       { title: 'Another group', visibility: 'private' },
@@ -65,6 +74,7 @@ describe('shared group coordinator', () => {
     expect(created.supervisorAgentId).toBe(agent.id);
     expect(await db.select().from(agents)).toEqual([agent]);
     expect(created.agents).toHaveLength(1);
+    expect(await db.select().from(resourcePermissions)).toEqual([]);
   });
 
   it('removes only the shared coordinator link', async () => {

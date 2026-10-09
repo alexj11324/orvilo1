@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, chatGroups, sessions, threads, topics } from '@orvilo/database/schemas';
+import {
+  agentOperations,
+  agents,
+  chatGroups,
+  sessions,
+  threads,
+  topics,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
@@ -124,6 +131,7 @@ describe('Agent Task Integration', () => {
   });
 
   afterEach(async () => {
+    await serverDB.delete(agentOperations).where(eq(agentOperations.userId, userId));
     await cleanupTestUser(serverDB, userId);
     vi.clearAllMocks();
   });
@@ -258,6 +266,16 @@ describe('Agent Task Integration', () => {
         type: ThreadType.Isolation,
         status: ThreadStatus.Processing,
         metadata: { operationId },
+      });
+
+      await serverDB.insert(agentOperations).values({
+        id: operationId,
+        userId,
+        agentId: testAgentId,
+        topicId: testTopicId,
+        threadId,
+        chatGroupId: testGroupId,
+        status: 'running',
       });
 
       // 1. Create task

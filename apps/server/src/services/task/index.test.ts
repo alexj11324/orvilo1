@@ -17,6 +17,10 @@ const { cancelScheduled, scheduleNextTopic } = vi.hoisted(() => ({
   scheduleNextTopic: vi.fn(),
 }));
 
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn(),
+}));
+
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(),
 }));
@@ -172,6 +176,7 @@ describe('TaskService', () => {
     existsById: vi.fn().mockResolvedValue(true),
     getAgentAvatarsByIds: vi.fn().mockResolvedValue([]),
     getAgentModelConfig: vi.fn().mockResolvedValue(null),
+    getAgentModelConfigForExecution: vi.fn().mockResolvedValue(null),
     getAgentSnapshotForTaskCreate: vi
       .fn()
       .mockResolvedValue({ snapshot: null, visibility: 'public' }),
@@ -179,6 +184,7 @@ describe('TaskService', () => {
   };
 
   const mockTaskModel = {
+    getCapabilities: vi.fn().mockResolvedValue({ canEdit: true, canDelete: true }),
     areAllDependenciesCompleted: vi.fn().mockResolvedValue(true),
     findBlockedTaskIds: vi.fn().mockResolvedValue([]),
     addActivities: vi.fn(),

@@ -472,6 +472,7 @@ export default {
   'permission.saveNoEditPermission':
     'You have view-only access to this page, so your changes were not saved',
   'permission.updateError': 'Failed to update permission',
+  'permission.actionDenied': 'You do not have permission to perform this action.',
   'permission.viewOnlySendTip': 'You have view-only access and cannot send messages',
   'agentDocuments.createSuccess': 'Documents created from template',
   'agentDocuments.createWithTemplate': 'Create with this template',
@@ -3820,7 +3821,7 @@ export default {
   'workspaceSetting.members.previewTasks_other': '{{count}} assigned issues',
   'workspaceSetting.members.previewTitle': 'This member still owns:',
   'workspaceSetting.members.projectRole.commenter': 'Commenter',
-  'workspaceSetting.members.projectRole.contributor': 'Contributor',
+  'workspaceSetting.members.projectRole.contributor': 'Participant',
   'workspaceSetting.members.projectRole.manager': 'Manager',
   'workspaceSetting.members.projectRole.viewer': 'Viewer',
   'workspaceSetting.members.projectsLabel': 'Add to projects',
@@ -4351,4 +4352,14 @@ export default {
   'settingAgent.list.noDevice': 'No execution target',
   'settingAgent.list.unavailable': 'Agent unavailable',
   'settingAgent.list.error': 'Could not load configuration',
+  'settingAgent.useMembers.title': 'Who can use this agent',
+  'settingAgent.useMembers.hint':
+    'Selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
+  'settingAgent.useMembers.add': 'Select members who can use this agent',
+  'settingAgent.useMembers.empty': 'No members can use this agent',
+  'permission.configAccess.agentManageRequired':
+    'Agent configuration requires its creator or a workspace admin. You can still read Issue conversations.',
+  'settingAgent.deviceSettings.runtimeUnverifiedTitle': 'Device runtime verification incomplete',
+  'settingAgent.deviceSettings.runtimeUnverifiedDesc':
+    'Some authorized devices could not be checked for this agent runtime. Retry verification before choosing a device.',
 };

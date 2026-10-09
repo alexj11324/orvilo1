@@ -24,6 +24,8 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
 
+import { getResourceConfigAccess, redactAgentConfig } from './_helpers/resourceConfigGuard';
+
 const isWorkspaceAdmin = (ctx: unknown) => {
   const workspaceRole = (ctx as { workspaceRole?: WorkspaceRole }).workspaceRole;
   return workspaceRole === 'admin' || workspaceRole === 'owner';
@@ -278,6 +280,11 @@ export const projectRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        if (ctx.workspaceId && input.visibility === 'private')
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'New workspace Projects must be public',
+          });
         return {
           data: await ctx.projectModel.create(
             input,
@@ -319,9 +326,30 @@ export const projectRouter = router({
           ctx.projectModel.getPlanning(project.id),
         ],
       );
+      const projectedAgents =
+        agents === null
+          ? null
+          : (
+              await Promise.all(
+                agents.map(async (linked) => {
+                  const access = await getResourceConfigAccess(
+                    { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId },
+                    'agent',
+                    linked.agent.id,
+                    linked.agent,
+                  );
+                  if (access === 'none') return null;
+                  return {
+                    ...linked,
+                    agent: access === 'profile' ? redactAgentConfig(linked.agent) : linked.agent,
+                  };
+                }),
+              )
+            ).filter((linked) => linked !== null);
       return {
         data: {
-          agents,
+          capabilities: await ctx.projectModel.getCapabilities(project.id),
+          agents: projectedAgents,
           completionReviews,
           knowledgeBases,
           project,
@@ -453,9 +481,9 @@ export const projectRouter = router({
     }),
 
   /**
-   * Edit a published project update/comment. Uses `projectModerationModel` so the
-   * model's moderation ACL sees `canManageAll`: the author, the project
-   * owner/lead, or a workspace admin may edit — everyone else gets NOT_FOUND.
+   * Edit a published project update/comment. Uses `projectPolicyModel` so the
+   * model enforces active writable membership and author-only editing.
+   * Governance permits deletion separately; Lead assignment grants no rights.
    */
   updateUpdate: projectWriteProcedure
     .input(

@@ -15,7 +15,9 @@ import {
   credentials,
   devices,
   projects,
+  resourcePermissions,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../../schemas';
 import { AgentGroupRepository } from '../index';
@@ -100,6 +102,50 @@ const seedLegacyGroup = async (
 };
 
 describe('resource-owned runtime creation', () => {
+  it('initializes revocable Use only for newly inserted workspace group clones', async () => {
+    await seedPrime();
+    const referenced = await new AgentModel(db, userId).create({ ...runtime, title: 'Referenced' });
+    const original = await seedLegacyGroup({ title: 'Original' }, [referenced.id], runtime);
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Clone Use',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await db.update(devices).set({ workspaceId }).where(eq(devices.deviceId, 'resource-host'));
+    const copied = await repo.copyToWorkspace(original.group.id, workspaceId, userId, {
+      targetVisibility: 'private',
+    });
+    const workspaceRepo = new AgentGroupRepository(db, userId, workspaceId);
+    const detail = await workspaceRepo.findByIdWithAgents(copied!.groupId);
+    const grants = (id: string) =>
+      db.select().from(resourcePermissions).where(eq(resourcePermissions.resourceId, id));
+    expect(detail?.agents).toHaveLength(2);
+    for (const agent of detail!.agents)
+      expect(await grants(agent.id)).toMatchObject([{ userId, workspaceId, accessLevel: 'use' }]);
+
+    const duplicate = await workspaceRepo.duplicate(copied!.groupId);
+    expect(duplicate!.supervisorAgentId).not.toBe(copied!.supervisorAgentId);
+    expect(await grants(duplicate!.supervisorAgentId!)).toMatchObject([
+      { userId, workspaceId, accessLevel: 'use' },
+    ]);
+    await db
+      .delete(resourcePermissions)
+      .where(eq(resourcePermissions.resourceId, duplicate!.supervisorAgentId!));
+    await workspaceRepo.findByIdWithAgents(duplicate!.groupId);
+    expect(await grants(duplicate!.supervisorAgentId!)).toEqual([]);
+
+    await repo.transferToWorkspace(original.group.id, workspaceId, userId, 'private');
+    const transferred = await workspaceRepo.findByIdWithAgents(original.group.id);
+    const clonedReference = transferred!.agents.find((agent) => agent.title === 'Referenced')!;
+    expect(clonedReference.id).not.toBe(referenced.id);
+    expect(await grants(clonedReference.id)).toMatchObject([
+      { userId, workspaceId, accessLevel: 'use' },
+    ]);
+    expect(await grants(referenced.id)).toEqual([]);
+  });
+
   it('preserves runtime on supervisor and owned-member duplicates', async () => {
     await seedPrime();
     const member = await new AgentModel(db, userId).create({

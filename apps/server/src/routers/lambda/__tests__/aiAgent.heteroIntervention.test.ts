@@ -126,6 +126,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     serverDB = await getTestDB();
     testDB = serverDB;
     userId = await createTestUser(serverDB);
+    // Clear unconsumed source-claim responses before installing each test's defaults.
+    businessV2.resolveAgentInterventionBySource.mockReset();
+    aiAgentService.execAgent.mockReset();
     store.events.length = 0;
     store.failPublish = false;
     store.seq = 0;
@@ -205,6 +208,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     toolCallId: string;
   }) => {
     const ownerUserId = params.ownerUserId ?? userId;
+    await insertOperation(params.operationId, ownerUserId);
     await serverDB.insert(messages).values({
       content: '',
       id: params.messageId,
@@ -1171,6 +1175,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
   });
 
   it('does not dispatch again when another surface already won the source claim', async () => {
+    await insertOperation('operation-race', userId);
     businessV2.resolveAgentInterventionBySource.mockResolvedValueOnce({
       contractVersion: 2,
       handled: true,
@@ -2202,8 +2207,21 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     it("rejects an owner token reading another user's operation", async () => {
       const otherUserId = await createTestUser(serverDB);
       await insertOperation('op-others', otherUserId);
-      // The victim's answer lands on the stream…
-      await userCaller().submitHeteroIntervention({
+      await expect(
+        userCaller().submitHeteroIntervention({
+          operationId: 'op-others',
+          result: { secret: 'leak me' },
+          toolCallId: 't-victim',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(store.events).toHaveLength(0);
+
+      // The victim's own answer lands on the stream.
+      const victimCaller = aiAgentRouter.createCaller({
+        jwtPayload: { userId: otherUserId },
+        userId: otherUserId,
+      } as any);
+      await victimCaller.submitHeteroIntervention({
         operationId: 'op-others',
         result: { secret: 'leak me' },
         toolCallId: 't-victim',

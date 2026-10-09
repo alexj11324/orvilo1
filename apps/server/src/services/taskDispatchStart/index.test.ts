@@ -1,8 +1,10 @@
 // @vitest-environment node
+import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { processPlanningTaskDispatchStart, sweepPlanningTaskDispatchStarts } from './index';
@@ -16,6 +18,9 @@ const mocks = vi.hoisted(() => ({
   runTask: vi.fn(),
 }));
 
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/database/models/linearSync', () => ({
   LinearSyncModel: vi.fn(function () {
     return { findPlanningRevisionByInputRevision: mocks.findPlanningRevisionByInputRevision };
@@ -39,6 +44,8 @@ vi.mock('@/server/services/taskRunner', () => ({
 }));
 
 const candidate = {
+  agentId: 'agent-1',
+  initiator: 'user-1',
   dispatchId: 'dispatch-1',
   idempotencyKey: 'planning:revision-1:resume:task-1',
   planRevision: 42,
@@ -49,8 +56,20 @@ const candidate = {
 };
 
 describe('planned task dispatch start recovery', () => {
+  it('does not wake or mutate a planned intent when its initiating member has lost Use', async () => {
+    vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValueOnce(
+      new TRPCError({ code: 'FORBIDDEN' }),
+    );
+    await expect(
+      processPlanningTaskDispatchStart({ candidate, db: {} as never }),
+    ).resolves.toMatchObject({ outcome: 'waiting', reason: 'agent_use_denied' });
+    expect(mocks.runTask).not.toHaveBeenCalled();
+    expect(mocks.markWaiting).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
     mocks.findPlanningRevisionByInputRevision.mockResolvedValue({
       proposal: {
         actions: [

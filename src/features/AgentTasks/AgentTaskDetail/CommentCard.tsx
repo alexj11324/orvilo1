@@ -62,6 +62,8 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time);
   const content = activity.content || t('taskDetail.activities.fallback.comment');
   const commentId = activity.id;
+  const canEdit = activity.commentCapabilities?.canEdit === true;
+  const canDelete = activity.commentCapabilities?.canDelete === true;
 
   const editorData = useMemo(
     () => ({
@@ -80,8 +82,8 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   }, [activity.files]);
 
   const handleEdit = useCallback(() => {
-    setIsEditing(true);
-  }, []);
+    if (canEdit) setIsEditing(true);
+  }, [canEdit]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
@@ -95,7 +97,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   );
 
   const handleSave = useCallback(async () => {
-    if (!commentId || submitting) return;
+    if (!canEdit || !commentId || submitting) return;
     const next = String(editor?.getDocument?.('markdown') ?? '').trim();
     const json = editor?.getDocument?.('json') as unknown;
     const hasFiles = getAttachmentFileIdsFromEditor(editor).length > 0;
@@ -107,10 +109,10 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
     } finally {
       setSubmitting(false);
     }
-  }, [commentId, editor, submitting, updateComment]);
+  }, [canEdit, commentId, editor, submitting, updateComment]);
 
   const handleDelete = useCallback(() => {
-    if (!commentId) return;
+    if (!canDelete || !commentId) return;
     confirmModal({
       content: t('taskDetail.comment.deleteConfirm.content'),
       okButtonProps: { danger: true },
@@ -118,25 +120,34 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       onOk: () => deleteComment(commentId),
       title: t('taskDetail.comment.deleteConfirm.title'),
     });
-  }, [commentId, deleteComment, t]);
+  }, [canDelete, commentId, deleteComment, t]);
 
   const menuItems = useMemo(
     () => [
-      {
-        icon: Pencil,
-        key: 'edit',
-        label: t('taskDetail.comment.edit'),
-        onClick: handleEdit,
-      },
-      {
-        danger: true,
-        icon: Trash,
-        key: 'delete',
-        label: t('taskDetail.comment.delete'),
-        onClick: handleDelete,
-      },
+      ...(canEdit
+        ? [
+            {
+              danger: false,
+              icon: Pencil,
+              key: 'edit',
+              label: t('taskDetail.comment.edit'),
+              onClick: handleEdit,
+            },
+          ]
+        : []),
+      ...(canDelete
+        ? [
+            {
+              danger: true,
+              icon: Trash,
+              key: 'delete',
+              label: t('taskDetail.comment.delete'),
+              onClick: handleDelete,
+            },
+          ]
+        : []),
     ],
-    [t, handleEdit, handleDelete],
+    [t, canEdit, canDelete, handleEdit, handleDelete],
   );
 
   return (
@@ -207,7 +218,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
         </Markdown>
       )}
 
-      {!isEditing && commentId && !isOptimisticActivityId(commentId) && (
+      {!isEditing && menuItems.length > 0 && commentId && !isOptimisticActivityId(commentId) && (
         <div className={`${styles.commentActions} comment-actions`}>
           <DropdownMenu>
             <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />

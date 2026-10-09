@@ -251,6 +251,12 @@ class AgentService {
     return lambdaClient.agent.getAgentConfigById.query({ agentId });
   };
 
+  /** Full-only consumer of the same server-authorized config/profile endpoint. */
+  getAgentFullConfigById = async (agentId: string) => {
+    const config = await this.getAgentConfigById(agentId);
+    return isFullAgentConfig(config) ? config : null;
+  };
+
   /**
    * @deprecated use getAgentConfigById instead
    */
@@ -438,3 +444,10 @@ class AgentService {
 }
 
 export const agentService = new AgentService();
+
+/** Narrow an authorized API/cache snapshot; this does not grant configuration access. */
+export const isFullAgentConfig = (
+  config: Awaited<ReturnType<typeof lambdaClient.agent.getAgentConfigById.query>> | undefined,
+): config is OrviloAgentConfig =>
+  // Full snapshots carry merged defaults; safe profiles omit these fields.
+  !!config && 'params' in config && 'systemRole' in config && 'tts' in config;

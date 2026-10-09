@@ -484,6 +484,12 @@ export type BuiltinHeterogeneousAgentType =
 export type HeterogeneousAgentType =
   LocalHeterogeneousAgentType | RemoteHeterogeneousAgentType | BuiltinHeterogeneousAgentType;
 
+/** Public runtime identity for legacy or externally supplied Agent records. */
+export const normalizeAgentRuntimeType = (value: unknown): HeterogeneousAgentType => {
+  const parsed = HeterogeneousAgentTypeSchema.safeParse(value);
+  return parsed.success ? parsed.data : 'orvilo';
+};
+
 /** Query the permission settings advertised by an execution harness. */
 export interface ListHeterogeneousAgentPermissionsParams {
   args?: string[];

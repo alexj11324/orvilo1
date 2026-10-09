@@ -1,0 +1,27 @@
+{
+  "copyAssigneesCheckedByDefault": true,
+  "database": {
+    "id": "task_twlax9rtXw78",
+    "domain_revision": 3,
+    "workflow_category": "todo",
+    "assignee_agent_id": "electron-codex-557-workspace",
+    "assignee_user_id": "user_e2e_test_user_001",
+    "current_topic_id": null,
+    "labels": 2,
+    "operations": 0,
+    "dispatches": 0
+  },
+  "reopen": {
+    "from": "canceled",
+    "to": "todo",
+    "currentTopicId": null
+  },
+  "revision": "c1c1f4258d066a8500e0778ab79e177a3478bcb3",
+  "uiCopy": {
+    "id": "task_twlax9rtXw78",
+    "agent": "electron-codex-557-workspace",
+    "user": "user_e2e_test_user_001",
+    "workflowCategory": "todo",
+    "currentTopicId": null
+  }
+}

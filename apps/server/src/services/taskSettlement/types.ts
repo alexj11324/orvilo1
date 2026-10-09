@@ -84,6 +84,8 @@ export interface SettlementContext {
    * schedule/heartbeat bookkeeping) still run. Used for `complete` outcomes.
    */
   throughTaskService?: boolean;
+  /** The current run still has a question without producer-acknowledged input. */
+  unresolvedInput?: boolean;
   /** A confirmed verify plan owns this run's delivery acceptance. */
   verifyBound?: boolean;
 }

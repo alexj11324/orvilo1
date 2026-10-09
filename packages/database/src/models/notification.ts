@@ -119,11 +119,7 @@ export class NotificationModel {
   private isMentionRow = (): SQL =>
     or(eq(notifications.category, 'mention'), eq(notifications.type, 'mention'))!;
 
-  private unreadClause = (): SQL =>
-    or(
-      eq(notifications.isRead, false),
-      and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
-    )!;
+  private unreadClause = (): SQL => eq(notifications.isRead, false);
 
   private presentationWhere = (filter?: NotificationPresentationFilter): SQL[] => {
     const now = new Date();
@@ -358,8 +354,7 @@ export class NotificationModel {
   }
 
   async getUnreadCount(): Promise<number> {
-    // Same union as the sidebar badge / Inbox header: unread updates plus
-    // unresolved actions, even after the row was marked read. Read ≠ decided.
+    // Unread reminders and unresolved actions are independent: read is not decided.
     const summary = await this.getFeedSummary();
     return summary.unreadBadgeCount;
   }
@@ -380,7 +375,7 @@ export class NotificationModel {
           sql`case when ${notifications.kind} = 'action' and ${notifications.resolvedAt} is null and ${notifications.snoozedUntil} is not null and ${notifications.snoozedUntil} > ${now} then 1 end`,
         ),
         unreadBadgeCount: count(
-          sql`case when ${notifications.isArchived} = false and (${notifications.isRead} = false or (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null)) and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
+          sql`case when ${notifications.isArchived} = false and ${notifications.isRead} = false and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
         ),
         unreadMentionCount: count(
           sql`case when (${notifications.category} = 'mention' or ${notifications.type} = 'mention') and ${notifications.isRead} = false and ${notifications.isArchived} = false and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
@@ -974,34 +969,21 @@ export class NotificationModel {
     return pending;
   }
 
-  /** Delete the notification, preserving the source interaction and a receipt against repair replay. */
+  /** Clear only the observed reminder; keep the card and its underlying pending action. */
   async dismissObserved(id: string, expectedVersion: number): Promise<boolean> {
-    return this.db.transaction(async (tx) => {
-      const [row] = await tx
-        .select()
-        .from(notifications)
-        .where(
-          and(
-            ...this.scope(),
-            this.resourceReadable(),
-            eq(notifications.id, id),
-            eq(notifications.activityVersion, expectedVersion),
-          ),
-        )
-        .for('update');
-      if (!row) return false;
-      if (row.actionKind && row.actionRequestId) {
-        await this.recordEventReceipt(tx, {
-          consumer: 'notification-dismissal',
-          eventId: `action:${row.actionKind}:${row.actionRequestId}`,
-          kind: 'action',
-          notificationId: row.id,
-          recipientUserId: this.userId,
-        });
-      }
-      await tx.delete(notifications).where(eq(notifications.id, row.id));
-      return true;
-    });
+    const rows = await this.db
+      .update(notifications)
+      .set({ isRead: true, readVersion: expectedVersion, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          this.resourceReadable(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      )
+      .returning({ id: notifications.id });
+    return rows.length > 0;
   }
 
   /**

@@ -554,15 +554,19 @@ const WorkInboxPage = memo(() => {
     async (card: NotificationFeedCard) => {
       try {
         await notificationService.dismiss(card.notificationId, card.activityVersion);
-        pager.removeCard(card.notificationId);
-        releaseSelection(card);
-        toast.success(t('inbox.toast.deleted'));
+        pager.updateCard(card.notificationId, (current) => ({
+          ...current,
+          read: true,
+          readVersion: Math.max(current.readVersion, card.activityVersion),
+        }));
+        void mutate(inboxKeys.feedCard(workspaceId, card.notificationId));
+        toast.success(t('inbox.toast.dismissed'));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [organizeFailed, pager, refresh, releaseSelection, t],
+    [organizeFailed, pager, refresh, t, workspaceId],
   );
 
   const unarchiveCard = useCallback(

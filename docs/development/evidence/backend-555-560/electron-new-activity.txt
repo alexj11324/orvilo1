@@ -1,0 +1,12 @@
+{
+  staleDismiss: false,
+  summary: {
+    pendingActionCount: 1,
+    snoozedPendingCount: 0,
+    unreadBadgeCount: 1,
+    unreadMentionCount: 0,
+    unreadOtherCount: 0,
+    unreadUpdateCount: 0,
+  },
+}
+New activity: blue dot returns, pending=1; stale dismissal could not clear newer activity

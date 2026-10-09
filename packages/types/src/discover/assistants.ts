@@ -1,3 +1,4 @@
+import type { HeterogeneousAgentType } from '../agent/heterogeneousAgent';
 import type { FewShots } from '../llm';
 import type { MetaData } from '../meta';
 import type { OrviloAgentSettings } from '../session';
@@ -63,6 +64,7 @@ export interface DiscoverAssistantItem extends Omit<OrviloAgentSettings, 'meta'>
    */
   ownerType?: 'user' | 'organization';
   pluginCount: number;
+  runtimeType?: HeterogeneousAgentType;
   status?: AgentStatus;
   tokenUsage: number;
   type?: AgentType;

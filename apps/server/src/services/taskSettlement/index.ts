@@ -56,10 +56,14 @@ export const settleTaskExecution = async (
   if (!task) {
     return noWrite({ type: 'hold' }, null, 'no_task');
   }
+  const unresolvedInput =
+    !input.runStarted && !context?.issueCancel
+      ? await taskModel.hasUnresolvedInput(taskId, input.operationId)
+      : false;
   if (
-    task.workflowCategory === 'done' ||
+    (!unresolvedInput && task.workflowCategory === 'done') ||
     task.workflowCategory === 'canceled' ||
-    (TERMINAL_LEGACY_STATUSES.has(task.status) && !context?.expectedContract)
+    (TERMINAL_LEGACY_STATUSES.has(task.status) && !context?.expectedContract && !unresolvedInput)
   ) {
     return noWrite({ type: 'hold' }, null, 'terminal');
   }
@@ -91,7 +95,7 @@ export const settleTaskExecution = async (
       : false;
 
   const plan = resolveSettlementPlan({
-    context,
+    context: { ...context, unresolvedInput },
     outcome: input.outcome,
     reviewRequired,
     runStarted: input.runStarted,
@@ -181,9 +185,12 @@ const applyPlan = async (
   const { context } = input;
   const taskModel = new TaskModel(db, userId, workspaceId);
   const status = plan.legacyStatus ?? task.status;
+  const parkedReason =
+    status === 'paused' && plan.attention !== 'none' ? plan.attention : undefined;
 
   const extra = {
     ...workflowPatch,
+    ...(parkedReason ? { parkedReason } : {}),
     ...(context?.error !== undefined ? { error: context.error } : {}),
     ...(context?.clearRunReservation
       ? { runReservationExpiresAt: null as Date | null, runReservationId: null as string | null }
@@ -204,7 +211,7 @@ const applyPlan = async (
       expectedContract: context?.expectedContract,
       id: task.id,
       status: status as TaskStatus,
-      workflow: workflowPatch,
+      workflow: { ...workflowPatch, ...(parkedReason ? { parkedReason } : {}) },
     };
     const options = {
       beforeMutation: context?.beforeMutation,

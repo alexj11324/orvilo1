@@ -139,6 +139,16 @@ export const resolveSettlementPlan = ({
     });
   }
 
+  if (context?.unresolvedInput) {
+    return plan({
+      attention: 'needs_input',
+      decision: { type: 'keep_open', attention: 'needs_input' },
+      execution: 'failed',
+      legacyStatus: 'paused',
+      workflowCategory: task.workflowCategory === 'done' ? 'todo' : task.workflowCategory,
+    });
+  }
+
   // ── Verify-driven settles ──
   if (verifyOutcome) {
     if (verifyOutcome === 'passed') {

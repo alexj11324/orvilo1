@@ -1,6 +1,14 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { agents, messagePlugins, messages, topics } from '@orvilo/database/schemas';
+import {
+  agentOperations,
+  agents,
+  messagePlugins,
+  messages,
+  topics,
+  workspaceMembers,
+  workspaces,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import { eq } from 'drizzle-orm';
@@ -10,6 +18,7 @@ import {
   deriveAgentInterventionContinuationOperationId,
   deriveAgentInterventionQueueDeduplicationId,
 } from '@/business/server/agent-run/agentInterventionIdentity';
+import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import type * as ToolApprovalReceipt from '@/server/services/agentExecution/toolApprovalReceipt';
 
 import { aiAgentRouter } from '../aiAgent';
@@ -196,6 +205,74 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     const { agentOperations } = await import('@/database/schemas');
     await serverDB.insert(agentOperations).values({ id, status: 'running', userId: ownerId });
   };
+
+  it('does not let another workspace member answer the owner operation', async () => {
+    const otherId = await createTestUser(serverDB);
+    const workspaceId = `operation-owner-${userId}`;
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      slug: workspaceId,
+      name: 'Operations',
+      primaryOwnerId: userId,
+    });
+    await serverDB.insert(workspaceMembers).values([
+      { userId, workspaceId, role: 'owner' },
+      { userId: otherId, workspaceId, role: 'member' },
+    ]);
+    await serverDB
+      .insert(agents)
+      .values({ id: 'shared-operation-agent', userId, workspaceId, visibility: 'public' });
+    await new ResourcePermissionModel(serverDB, workspaceId).upsertCollaborators({
+      accessLevel: 'use',
+      createdBy: userId,
+      resourceId: 'shared-operation-agent',
+      resourceType: 'agent',
+      userIds: [userId, otherId],
+    });
+    await serverDB.insert(agentOperations).values({
+      id: 'owned-workspace-operation',
+      userId,
+      workspaceId,
+      agentId: 'shared-operation-agent',
+      status: 'running',
+    });
+    const caller = aiAgentRouter.createCaller({
+      jwtPayload: { userId: otherId },
+      userId: otherId,
+      workspaceId,
+      workspaceRole: 'member',
+    } as any);
+    try {
+      await expect(
+        caller.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'owner-question',
+          result: { answer: 'overwrite' },
+        }),
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Operation is outside the caller scope',
+      });
+      expect(store.events).toHaveLength(0);
+      expect(business.resolveHeteroIntervention).not.toHaveBeenCalled();
+      const owner = aiAgentRouter.createCaller({
+        userId,
+        workspaceId,
+        jwtPayload: { userId },
+      } as any);
+      await expect(
+        owner.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'owner-question',
+          result: { answer: 'owner' },
+        }),
+      ).resolves.toMatchObject({ success: true });
+      expect(store.events).toHaveLength(1);
+    } finally {
+      await serverDB.delete(workspaces).where(eq(workspaces.id, workspaceId));
+      await cleanupTestUser(serverDB, otherId);
+    }
+  });
 
   const insertPendingTool = async (params: {
     batchId: string;
@@ -2202,8 +2279,8 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     it("rejects an owner token reading another user's operation", async () => {
       const otherUserId = await createTestUser(serverDB);
       await insertOperation('op-others', otherUserId);
-      // The victim's answer lands on the stream…
-      await userCaller().submitHeteroIntervention({
+      // The operation owner publishes their own answer; a different user cannot.
+      await ownerTokenCaller(otherUserId).submitHeteroIntervention({
         operationId: 'op-others',
         result: { secret: 'leak me' },
         toolCallId: 't-victim',

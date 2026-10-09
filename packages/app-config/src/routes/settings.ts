@@ -380,3 +380,27 @@ export const isWorkspaceSettingsTabAvailable = (
   tab: string,
   { enableBusinessFeatures }: WorkspaceSettingsCapabilityContext,
 ): boolean => enableBusinessFeatures || !BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS.has(tab);
+
+/**
+ * Capabilities whose workspace page is a superset of the personal one: the
+ * shared device pool next to the private devices, statistics with the
+ * by-member split, shared credentials next to the personal ones. Inside a
+ * workspace there is one page per capability, so the personal URL moves there.
+ */
+const WORKSPACE_PAGE_OF_PERSONAL_TAB: Readonly<Record<string, string>> = {
+  [SettingsTabs.Creds]: 'credential',
+  [SettingsTabs.Devices]: 'devices',
+  [SettingsTabs.Stats]: 'statistics',
+};
+
+/**
+ * Where `/settings/<tab>` belongs while a workspace is active, or `undefined`
+ * when the personal page is the right one (no workspace, or a personal tab).
+ */
+export const resolveWorkspaceSettingsUrl = (
+  tab: string | undefined,
+  slug: string | null | undefined,
+): string | undefined => {
+  if (!tab || !slug || !Object.hasOwn(WORKSPACE_PAGE_OF_PERSONAL_TAB, tab)) return undefined;
+  return `/${slug}/settings/${WORKSPACE_PAGE_OF_PERSONAL_TAB[tab]}`;
+};

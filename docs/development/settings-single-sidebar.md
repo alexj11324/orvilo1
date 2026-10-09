@@ -27,6 +27,10 @@
 
 `apikey` 的工作区镜像带一层成员角色守卫 `WorkspaceApiKeyGuard`。守卫移到了个人页内部，侧边栏的 API Key 行同时要求 `create_content` 权限。
 
+## 一项能力一页
+
+设备、数据统计、凭证管理原先各有个人页和工作区页。工作区页包含个人页的全部内容，所以在工作区内，`/settings/devices`、`/settings/stats`、`/settings/credential` 跳到对应的工作区页。没有工作区时仍渲染个人页。映射在 `resolveWorkspaceSettingsUrl`。
+
 ## 实现
 
 - `src/features/Settings/hooks/useCategory.tsx`：唯一的分类来源。工作区行通过 `href` 带上工作区地址；`SettingsNavKey` 在 `SettingsTabs` 之外加入四个只属于工作区的键。
@@ -36,7 +40,7 @@
 - `packages/app-config/src/routes/settings.ts`：`WORKSPACE_SETTINGS_ALIASES` 增加八条重定向。
 - `src/features/Workspace/workspaceAwarePath.ts`：`WORKSPACE_SETTINGS_TABS` 只保留真正的工作区页；`/settings` 首页不再加工作区前缀。
 
-删除：`src/features/WorkspaceSetting/SideBar/`、`src/features/WorkspaceSetting/hooks/useCategory.tsx`，以及八个镜像路由目录。
+删除：无人引用的 `src/features/Settings/ProviderBindings/`、`src/features/WorkspaceSetting/SideBar/`、`src/features/WorkspaceSetting/hooks/useCategory.tsx`，以及八个镜像路由目录。
 
 ## 取代的做法
 
@@ -44,6 +48,5 @@
 
 ## 未做
 
-- 个人路由下的 `/settings/devices`、`/settings/stats`、`/settings/credential` 仍可通过地址访问，侧边栏不再列出。把这三对页面合成一页是后续工作。
 - 移动端的工作区设置仍复用移动端设置外壳，没有工作区分组。
 - 商业版部署下计费行指向工作区页这一点未在云端环境验证。

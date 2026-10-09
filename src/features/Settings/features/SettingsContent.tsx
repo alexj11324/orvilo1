@@ -3,8 +3,13 @@
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import NotFound from '@/components/404';
-import { isSettingsTabAvailable, resolveSettingsCapability } from '@/config/routes/settings';
+import {
+  isSettingsTabAvailable,
+  resolveSettingsCapability,
+  resolveWorkspaceSettingsUrl,
+} from '@/config/routes/settings';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useSettingsAnchorScroll } from '@/features/SettingsSearch/anchor';
@@ -91,6 +96,15 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     }
   }, [navigate, redirectTo]);
 
+  const slug = useActiveWorkspaceSlug();
+  // Devices, statistics and credentials have one page per workspace; the
+  // personal URL only renders when there is no workspace to own it.
+  const workspaceUrl = resolveWorkspaceSettingsUrl(activeTab, slug);
+
+  useEffect(() => {
+    if (workspaceUrl) navigate(workspaceUrl, { escape: true, replace: true });
+  }, [navigate, workspaceUrl]);
+
   const renderComponent = (tab: string) => {
     const Component = componentMap[tab as keyof typeof componentMap];
     // A tab the registry calls `enabled` without a component is a wiring bug,
@@ -121,7 +135,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     return <Component {...componentProps} />;
   };
 
-  if (redirectTo) return null;
+  if (redirectTo || workspaceUrl) return null;
 
   if (activeTab && !isSettingsTabAvailable(activeTab, capabilityContext)) {
     // Unknown ids, withdrawn surfaces, and tabs whose gate is closed in this

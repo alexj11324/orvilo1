@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isWorkspaceSettingsTabAvailable, WORKSPACE_SETTINGS_ALIASES } from './settings';
+import {
+  isWorkspaceSettingsTabAvailable,
+  resolveWorkspaceSettingsUrl,
+  WORKSPACE_SETTINGS_ALIASES,
+} from './settings';
 
 const open = { enableBusinessFeatures: false };
 const business = { enableBusinessFeatures: true };
@@ -55,4 +59,28 @@ describe('retired workspace mirrors of account pages', () => {
       WORKSPACE_SETTINGS_ALIASES.find((entry) => entry.alias === 'notification')?.subPaths,
     ).toBe(true);
   });
+});
+
+// Regression: Devices, Statistics and Credentials each had a personal page and
+// a workspace page, reachable from two sidebars. The workspace page contains the
+// personal one, so inside a workspace the personal URL hands over to it.
+describe('resolveWorkspaceSettingsUrl', () => {
+  it.each([
+    ['devices', '/acme/settings/devices'],
+    ['stats', '/acme/settings/statistics'],
+    ['credential', '/acme/settings/credential'],
+  ])('moves /settings/%s to the workspace page', (tab, url) => {
+    expect(resolveWorkspaceSettingsUrl(tab, 'acme')).toBe(url);
+  });
+
+  it('keeps the personal page when there is no workspace', () => {
+    expect(resolveWorkspaceSettingsUrl('devices', null)).toBeUndefined();
+  });
+
+  it.each(['profile', 'notification', 'provider', 'toString', undefined])(
+    'leaves %s on the personal page',
+    (tab) => {
+      expect(resolveWorkspaceSettingsUrl(tab, 'acme')).toBeUndefined();
+    },
+  );
 });

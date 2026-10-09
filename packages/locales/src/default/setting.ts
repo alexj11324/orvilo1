@@ -959,9 +959,9 @@ export default {
   'notification.item.subscription_payment_failed': 'Subscription renewal payment failed',
   'notification.item.subscription_plan_changed': 'Subscription plan changed',
   'notification.item.subscription_renewed': 'Subscription renewed',
-  'notification.item.task_assigned': 'Task assigned to you',
-  'notification.item.task_comment_activity': 'Task comment activity',
-  'notification.item.task_comment_mentioned': 'Mentioned in a task comment',
+  'notification.item.task_assigned': 'Issue assigned to you',
+  'notification.item.task_comment_activity': 'Issue comment activity',
+  'notification.item.task_comment_mentioned': 'Mentioned in an issue comment',
   'notification.item.topic_comment_activity': 'Comment activity',
   'notification.item.topic_comment_mentioned': 'Mentioned in a comment',
   'notification.item.video_generation_completed': 'Video generation completed',
@@ -2668,7 +2668,8 @@ export default {
     'All agents, skills, and their configurations',
   'workspace.general.delete.confirm.warning.items.billing':
     'Subscription, budget settings, and auto top-up',
-  'workspace.general.delete.confirm.warning.items.conversations': 'All messages, topics, and tasks',
+  'workspace.general.delete.confirm.warning.items.conversations':
+    'All messages, topics, and issues',
   'workspace.general.delete.confirm.warning.items.files':
     'Uploaded files, generations, and knowledge base data',
   'workspace.general.delete.confirm.warning.items.members':
@@ -3473,7 +3474,7 @@ export default {
   'workspaceSetting.tab.linear': 'Linear sync',
   'workspaceSetting.linear.title': 'Linear workspace sync',
   'workspaceSetting.linear.description':
-    'Connect one Linear organization to this workspace, map projects, and coordinate task changes with durable sync and replanning.',
+    'Connect one Linear organization to this workspace, map projects, and coordinate issue changes with durable sync and replanning.',
   'workspaceSetting.linear.connectionTitle': 'Linear connection',
   'workspaceSetting.linear.connectionDescription': 'Authorize Linear through your Orvilo account.',
   'workspaceSetting.linear.connectedAs': 'Connected as {{name}}',
@@ -3635,7 +3636,7 @@ export default {
   'workspaceSetting.linear.wizard.completeScope': 'Choose a valid team and Linear project first.',
   'workspaceSetting.linear.wizard.mappingTitle': 'Status and assignee mappings',
   'workspaceSetting.linear.wizard.mappingDescription':
-    'Review explicit mappings before any issue is imported into the shared task view.',
+    'Review explicit mappings before any issue is imported into the shared issue view.',
   'workspaceSetting.linear.wizard.completeBinding': 'Save the local project binding first.',
   'workspaceSetting.linear.wizard.importTitle': 'Import preview and status',
   'workspaceSetting.linear.wizard.importDescription':
@@ -3651,9 +3652,9 @@ export default {
   'workspaceSetting.linear.wizard.complete': 'Complete',
   'workspaceSetting.linear.wizard.open': 'Available',
   'workspaceSetting.linear.wizard.locked': 'Locked',
-  'workspaceSetting.linear.wizard.scopeBoundaryTitle': 'One shared task view',
+  'workspaceSetting.linear.wizard.scopeBoundaryTitle': 'One shared issue view',
   'workspaceSetting.linear.wizard.scopeBoundary':
-    'Linear-linked issues continue to use the existing Workspace, Project, and Agent task views. This setup does not create a second task pool or route.',
+    'Linear-linked issues continue to use the existing Workspace, Project, and Agent issue views. This setup does not create a second issue pool or route.',
   'workspaceSetting.linear.conflicts.title': 'Synchronization conflicts',
   'workspaceSetting.linear.conflicts.description':
     'Review both values. Keep one side or choose a source for every field before merging.',
@@ -3800,7 +3801,7 @@ export default {
   'workspaceSetting.members.inviteTitle': 'Invite teammates',
   'workspaceSetting.members.leave': 'Leave workspace',
   'workspaceSetting.members.leaveConfirmContent':
-    'You will lose access to {{name}} and its projects. Tasks you were assigned or reviewing become unassigned. Rejoining requires a new invitation.',
+    'You will lose access to {{name}} and its projects. Issues you were assigned or reviewing become unassigned. Rejoining requires a new invitation.',
   'workspaceSetting.members.leaveConfirmTitle': 'Leave {{name}}?',
   'workspaceSetting.members.leaveOwnerHint': 'Transfer ownership before leaving this workspace.',
   'workspaceSetting.members.leaveSuccess': 'You have left the workspace.',
@@ -3815,8 +3816,8 @@ export default {
     "Couldn't load the impact preview. You can still remove.",
   'workspaceSetting.members.previewReviews': '{{count}} open review',
   'workspaceSetting.members.previewReviews_other': '{{count}} open reviews',
-  'workspaceSetting.members.previewTasks': '{{count}} assigned task',
-  'workspaceSetting.members.previewTasks_other': '{{count}} assigned tasks',
+  'workspaceSetting.members.previewTasks': '{{count}} assigned issue',
+  'workspaceSetting.members.previewTasks_other': '{{count}} assigned issues',
   'workspaceSetting.members.previewTitle': 'This member still owns:',
   'workspaceSetting.members.projectRole.commenter': 'Commenter',
   'workspaceSetting.members.projectRole.contributor': 'Contributor',
@@ -3983,8 +3984,8 @@ export default {
   'tools.builtins.orvilo-skills.description': 'Activate and use reusable skill packages',
   'tools.builtins.orvilo-skills.title': 'Skills',
   'tools.builtins.orvilo-task.description':
-    'Create, schedule, list, edit, and delete tasks with dependencies and review configuration',
-  'tools.builtins.orvilo-task.title': 'Task Tools',
+    'Create, schedule, list, edit, and delete issues with dependencies and review configuration',
+  'tools.builtins.orvilo-task.title': 'Issue Tools',
   'tools.builtins.orvilo-topic-reference.description':
     'Retrieve context from referenced topic conversations',
   'tools.builtins.orvilo-topic-reference.title': 'Topic Reference',

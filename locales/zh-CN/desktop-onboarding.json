@@ -74,7 +74,7 @@
   "screen5.badge": "登录",
   "screen5.description": "登录以在所有设备间同步智能体、群组、设置和上下文。",
   "screen5.entry.browserHint": "在浏览器中完成登录后，返回 Orvilo 继续。",
-  "screen5.entry.description": "登录后，回到你的工作空间、Agent 和任务。",
+  "screen5.entry.description": "登录后，回到你的工作空间、Agent 和 Issue。",
   "screen5.entry.or": "或",
   "screen5.entry.selfhostAction": "连接自己的服务器",
   "screen5.entry.serverTitle": "连接你的 Orvilo 服务器",

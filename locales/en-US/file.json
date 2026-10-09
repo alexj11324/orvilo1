@@ -302,7 +302,7 @@
   "work.createdAt": "Created {{date}}",
   "work.date.today": "Today",
   "work.date.yesterday": "Yesterday",
-  "work.empty.desc": "Works your agents produce — tasks, documents, Linear and GitHub items — will collect here.",
+  "work.empty.desc": "Works your agents produce — issues, documents, Linear and GitHub items — will collect here.",
   "work.empty.title": "No works yet",
   "work.fromTopic": "{{topic}}",
   "work.group": "Works",
@@ -318,6 +318,6 @@
   "work.type.githubPullRequest": "GitHub PR",
   "work.type.linearDocument": "Linear Document",
   "work.type.linearIssue": "Linear Issue",
-  "work.type.task": "Task",
+  "work.type.task": "Issue",
   "work.updatedAt": "Updated {{date}}"
 }

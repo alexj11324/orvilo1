@@ -54,6 +54,8 @@ export type CheckErrorRender = (props: {
 
 interface ConnectionCheckerProps {
   checkErrorRender?: CheckErrorRender;
+  /** True when the provider needs a key or endpoint and none is filled in yet. */
+  missingCredentials?: boolean;
   model: string;
   onAfterCheck: () => Promise<void>;
   onBeforeCheck: () => Promise<boolean>;
@@ -61,7 +63,14 @@ interface ConnectionCheckerProps {
 }
 
 const Checker = memo<ConnectionCheckerProps>(
-  ({ model, provider, checkErrorRender: CheckErrorRender, onBeforeCheck, onAfterCheck }) => {
+  ({
+    model,
+    provider,
+    missingCredentials,
+    checkErrorRender: CheckErrorRender,
+    onBeforeCheck,
+    onAfterCheck,
+  }) => {
     const { t } = useTranslation('setting');
     const { t: tProvider } = useTranslation('modelProvider');
     const { allowed: canManageProvider } = usePermission('manage_provider_key');
@@ -106,6 +115,9 @@ const Checker = memo<ConnectionCheckerProps>(
     const [checkModel, setCheckModel] = useState(model);
 
     const [error, setError] = useState<ChatMessageError | undefined>();
+    // Set when Check is pressed without credentials; it only shows while they are still missing.
+    const [triedWithoutCredentials, setTriedWithoutCredentials] = useState(false);
+    const showMissingCredentials = !!missingCredentials && triedWithoutCredentials;
 
     // Sync checkModel state when model prop changes
     useEffect(() => {
@@ -162,6 +174,15 @@ const Checker = memo<ConnectionCheckerProps>(
 
     const defaultError = error ? <Error error={error as ChatMessageError} /> : null;
 
+    const missingCredentialsContent = (
+      <Alert className="w-full max-w-[600px]" variant="destructive">
+        <CircleAlertIcon />
+        <AlertTitle className="line-clamp-none">
+          {tProvider('providerModels.config.checker.missingCredentials')}
+        </AlertTitle>
+      </Alert>
+    );
+
     const errorContent = CheckErrorRender ? (
       <CheckErrorRender defaultError={defaultError} error={error} setError={setError} />
     ) : (
@@ -172,8 +193,10 @@ const Checker = memo<ConnectionCheckerProps>(
       <FieldRow
         className="bg-accent"
         desc={tProvider('providerModels.config.checker.desc')}
-        footer={error ? errorContent : undefined}
         label={tProvider('providerModels.config.checker.title')}
+        footer={
+          showMissingCredentials ? missingCredentialsContent : error ? errorContent : undefined
+        }
       >
         {pass && (
           <Badge variant="success-light">
@@ -216,6 +239,16 @@ const Checker = memo<ConnectionCheckerProps>(
           variant="outline"
           onClick={async () => {
             if (!canManageProvider) return;
+
+            // Nothing to check against: say so instead of sending a request
+            // that can only fail slowly and silently.
+            if (missingCredentials) {
+              setPass(false);
+              setError(undefined);
+              setTriedWithoutCredentials(true);
+              return;
+            }
+            setTriedWithoutCredentials(false);
 
             try {
               const shouldCheck = await onBeforeCheck();

@@ -1,12 +1,12 @@
 'use client';
 
-import { copyToClipboard } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const COPIED_RESET_MS = 2000;
 
@@ -29,9 +29,14 @@ const ModelIdChip = memo<{ id: string }>(({ id }) => {
       variant="outline"
       onClick={async (e) => {
         e.stopPropagation();
-        await copyToClipboard(id);
-        setCopied(true);
-        toast.success(t('copySuccess'));
+        // Same pattern as the other copy buttons: a toast plus an inline check mark,
+        // and an error toast when the clipboard write is refused.
+        if (await copyToClipboard(id)) {
+          setCopied(true);
+          toast.success(t('copySuccess'));
+        } else {
+          toast.error(t('copyFail'));
+        }
       }}
     >
       <span className="truncate">{id}</span>

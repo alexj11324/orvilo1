@@ -3,28 +3,15 @@
 import { Navigate, useParams } from 'react-router';
 
 /**
- * Personal settings deep-links use the `/settings/provider/:providerId` path
- * shape, while the workspace provider page keeps the selected provider in the
- * `provider` query param. Workspace-prefixed deep-links in the path shape
- * (e.g. from `WorkspaceLink` / `useWorkspaceAwareNavigate` callsites) would
- * otherwise fall through to the catch-all route and kick the user out of the
- * workspace, so redirect them to the canonical query form.
+ * Provider bindings are personal, so the workspace provider page was retired.
+ * Workspace-prefixed deep links in the path shape
+ * (`/:slug/settings/provider/:providerId`) land on the same provider in the
+ * personal settings instead of falling through to the catch-all route.
  */
 const WorkspaceProviderRedirect = () => {
-  const { providerId = 'all', workspaceSlug } = useParams<{
-    providerId: string;
-    workspaceSlug: string;
-  }>();
+  const { providerId = 'all' } = useParams<{ providerId: string }>();
 
-  return (
-    <Navigate
-      replace
-      to={{
-        pathname: `/${workspaceSlug}/settings/provider`,
-        search: `?active=provider&provider=${encodeURIComponent(providerId)}`,
-      }}
-    />
-  );
+  return <Navigate replace to={`/settings/provider/${encodeURIComponent(providerId)}`} />;
 };
 
 WorkspaceProviderRedirect.displayName = 'WorkspaceProviderRedirect';

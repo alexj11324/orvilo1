@@ -1,7 +1,7 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Bot, Check, Minus } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -49,7 +49,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   row: css`
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 90px 80px 80px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 90px;
     gap: 12px;
     align-items: center;
 
@@ -58,9 +58,9 @@ const styles = createStaticStyles(({ css }) => ({
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
   table: css`
-    /* Six columns floor at ~720px; below that the wrapper scrolls
+    /* Four columns floor at ~560px; below that the wrapper scrolls
        horizontally instead of crushing cells or overflowing the page. */
-    min-width: 720px;
+    min-width: 560px;
   `,
   tableScroll: css`
     overflow-x: auto;
@@ -118,16 +118,6 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
           {t(`workspaceSetting.agents.status.${status}`, { defaultValue: status })}
         </Tag>
       </div>
-      {/* v1 read-only: capability columns exist so the shape is stable when
-          the backend starts reporting per-agent grants. */}
-      <div className={styles.cell}>
-        <Check size={14} style={{ color: cssVar.colorSuccess }} />
-        <span>{t('workspaceSetting.agents.canUse')}</span>
-      </div>
-      <div className={styles.cell}>
-        <Minus size={14} style={{ color: cssVar.colorTextTertiary }} />
-        <span>{t('workspaceSetting.agents.cannotEdit')}</span>
-      </div>
     </div>
   );
 });
@@ -136,9 +126,8 @@ AgentRow.displayName = 'AgentRow';
 
 /**
  * Workspace-visible agent roster — read-only v1. Agents are rendered as
- * agents (bot badge, maintainer attribution), never as human accounts; the
- * 'can use' / 'can edit' columns are static placeholders until the backend
- * reports per-agent grants.
+ * agents (bot badge, maintainer attribution), never as human accounts. Per-agent
+ * grants are not shown: the API does not report them yet.
  */
 export const AgentsPanel = memo(() => {
   const { t } = useTranslation('setting');
@@ -185,8 +174,6 @@ export const AgentsPanel = memo(() => {
             </span>
             <span className={styles.headerCell}>{t('workspaceSetting.agents.columnProjects')}</span>
             <span className={styles.headerCell}>{t('workspaceSetting.agents.columnStatus')}</span>
-            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnCanUse')}</span>
-            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnCanEdit')}</span>
           </div>
           {agents.map((agent) => (
             <AgentRow agent={agent} key={agent.id} />

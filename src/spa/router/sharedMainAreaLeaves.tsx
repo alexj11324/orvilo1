@@ -4,7 +4,10 @@ import type { ComponentType, ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 
 import type { SurfaceSkeletonVariant } from '@/components/Skeleton/Surface';
-import { WORKSPACE_SETTINGS_ALIASES } from '@/config/routes/settings';
+import {
+  isWorkspaceSettingsTabAvailable,
+  WORKSPACE_SETTINGS_ALIASES,
+} from '@/config/routes/settings';
 import { goalDetailRouteMeta } from '@/features/AgentGoals/routeMeta';
 import { taskRouteMeta, tasksRouteMeta } from '@/features/AgentTasks/routeMeta';
 import { agentsRouteMeta } from '@/features/AgentViewAll/routeMeta';
@@ -15,6 +18,7 @@ import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { taskDraftsRouteMeta } from '@/features/TaskDrafts/routeMeta';
 import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
+import WorkspaceSettingsTabGate from '@/features/WorkspaceSetting/TabGate';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import type { RouteMeta } from '@/spa/router/routeMeta';
 import { dynamicElement, ErrorBoundary, redirectElement } from '@/utils/router';
@@ -364,25 +368,32 @@ export const sharedAgentTaskLeaf: SharedRouteLeaf = {
 export interface SharedWorkspaceSettingsLeaf extends SharedRouteLeaf {
   /** Full-bleed tabs own their internal layout (no padded content wrapper). */
   fullBleed?: boolean;
-  /** Mobile-specific page module when the page exposes a mobile variant. */
-  loadMobile?: SharedRouteLeaf['load'];
   path: string;
   /** Skeleton surface the desktop route meta registers. */
   skeleton: SurfaceSkeletonVariant;
 }
 
+/**
+ * Element for a workspace settings leaf. Tabs that only exist with the business
+ * overlay are wrapped so a direct URL returns to the settings root when the
+ * flag is off; every other tab mounts unwrapped.
+ */
+export const workspaceSettingsLeafElement = (
+  leaf: SharedWorkspaceSettingsLeaf,
+  label: string,
+  preloadId?: string,
+): ReactElement => {
+  const element = leafElement(leaf, label, preloadId);
+  const tab = leaf.path.split('/')[0];
+
+  return isWorkspaceSettingsTabAvailable(tab, { enableBusinessFeatures: false }) ? (
+    element
+  ) : (
+    <WorkspaceSettingsTabGate tab={tab}>{element}</WorkspaceSettingsTabGate>
+  );
+};
+
 export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
-  {
-    fullBleed: true,
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/provider'),
-    loadMobile: () =>
-      import('@/routes/(main)/[workspaceSlug]/settings/provider').then((m) => ({
-        default: m.WorkspaceProviderSettingMobile,
-      })),
-    name: 'Provider',
-    path: 'provider',
-    skeleton: 'list',
-  },
   {
     fullBleed: true,
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/connector'),
@@ -467,12 +478,6 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
     skeleton: 'grid',
   },
   {
-    load: () => import('@/routes/(main)/[workspaceSlug]/settings/service-model'),
-    name: 'Service Model',
-    path: 'service-model',
-    skeleton: 'form',
-  },
-  {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/credential'),
     name: 'Credential',
     path: 'credential',
@@ -532,7 +537,9 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
  */
 export const sharedWorkspaceSettingsAliasRoutes: RouteObject[] = WORKSPACE_SETTINGS_ALIASES.flatMap(
   ({ alias, subPaths, target }): RouteObject[] => {
-    const element = redirectElement(target === 'root' ? '..' : `../${target}`);
+    const element = redirectElement(
+      target === 'root' ? '..' : target.startsWith('/') ? target : `../${target}`,
+    );
     return [{ element, path: alias }, ...(subPaths ? [{ element, path: `${alias}/:sub` }] : [])];
   },
 );
@@ -540,9 +547,9 @@ export const sharedWorkspaceSettingsAliasRoutes: RouteObject[] = WORKSPACE_SETTI
 /** Legacy `/<slug>/settings/linear` deep links land on the Linear import tab. */
 export const sharedWorkspaceSettingsRedirects: RouteObject[] = [
   { element: redirectElement('../imports/linear'), path: 'linear' },
-  // Path-shaped provider deep-links (`/:slug/settings/provider/:id`)
-  // redirect to the query form the workspace provider page uses, so
-  // they don't fall through to the catch-all and leave the workspace.
+  // Path-shaped provider deep-links (`/:slug/settings/provider/:id`) land on
+  // the same provider in the personal settings (the bare `provider` alias
+  // cannot carry the id).
   // Static element: the redirect is tiny and lazy-loading it would
   // flash the generic brand loader before redirecting.
   { element: <WorkspaceProviderRedirect />, path: 'provider/:providerId' },

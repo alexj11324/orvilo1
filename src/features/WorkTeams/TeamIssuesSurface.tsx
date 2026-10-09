@@ -124,9 +124,6 @@ const styles = createStaticStyles(({ css }) => ({
     flex: 1;
     min-width: 0;
   `,
-  separator: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
 }));
 
 // Board mode bounds the collection body to the scrollport so the kanban's own
@@ -691,7 +688,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               />
             ) : null}
             {team ? <span className="text-sm text-muted-foreground">{team.name}</span> : null}
-            <span aria-hidden className={styles.separator}>
+            <span aria-hidden className="text-muted-foreground">
               ›
             </span>
             <span className="text-sm font-medium">{t('teams.navIssues')}</span>

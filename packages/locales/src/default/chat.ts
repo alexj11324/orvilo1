@@ -2110,7 +2110,6 @@ export default {
     'A task with an Assignee stays visible to the workspace.',
   'createTask.visibility.privateAgentDisabled':
     'Private agents can only run private tasks. Pick a workspace agent or switch this task to Private.',
-  'createTask.visibility.privateAgentLocked': 'Private agents can only run private tasks.',
   'createTask.visibility.private': 'Private',
   'createTask.visibility.workspace': 'Workspace',
   'taskIntent.analyzing': 'Reading…',

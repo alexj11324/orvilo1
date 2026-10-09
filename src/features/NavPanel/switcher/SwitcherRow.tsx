@@ -1,4 +1,5 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -42,7 +43,7 @@ const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLab
   >
     <Avatar avatar={item.avatar} background={item.background} shape={'square'} size={28} />
     <div
-      className="truncate font-[active ? 500 : undefined]"
+      className={cn('truncate', active && 'font-medium')}
       style={{ flex: 1, color: active ? cssVar.colorText : cssVar.colorTextSecondary }}
     >
       {item.title}

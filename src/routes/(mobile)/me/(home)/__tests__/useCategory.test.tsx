@@ -45,7 +45,23 @@ describe('useCategory', () => {
     try {
       const { result } = renderHook(() => useCategory(), { wrapper });
       act(() => result.current.find((item) => item.key === 'get-desktop-app')?.onClick?.());
-      expect(open).toHaveBeenCalledWith(DOWNLOAD_URL.default, '__blank');
+      expect(open).toHaveBeenCalledWith(DOWNLOAD_URL.default, '_blank', 'noopener,noreferrer');
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it('opens every external link in a fresh tab that cannot reach the opener', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    try {
+      const { result } = renderHook(() => useCategory(), { wrapper });
+      for (const key of ['docs', 'feedback']) {
+        act(() => result.current.find((item) => item.key === key)?.onClick?.());
+      }
+      expect(open).toHaveBeenCalledTimes(2);
+      for (const call of open.mock.calls) {
+        expect(call.slice(1)).toEqual(['_blank', 'noopener,noreferrer']);
+      }
     } finally {
       open.mockRestore();
     }

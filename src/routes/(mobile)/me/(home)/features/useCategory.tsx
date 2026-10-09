@@ -53,7 +53,7 @@ export const useCategory = () => {
       icon: Download,
       key: 'get-desktop-app',
       label: t('getDesktopApp'),
-      onClick: () => window.open(DOWNLOAD_URL.default, '__blank'),
+      onClick: () => window.open(DOWNLOAD_URL.default, '_blank', 'noopener,noreferrer'),
     },
     {
       type: 'divider',
@@ -65,19 +65,20 @@ export const useCategory = () => {
       icon: Cloudy,
       key: 'cloud',
       label: t('userPanel.cloud', { name: ORVILO_CLOUD }),
-      onClick: () => window.open(`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}`, '__blank'),
+      onClick: () =>
+        window.open(`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}`, '_blank', 'noopener,noreferrer'),
     },
     {
       icon: Book,
       key: 'docs',
       label: t('document'),
-      onClick: () => window.open(DOCUMENTS, '__blank'),
+      onClick: () => window.open(DOCUMENTS, '_blank', 'noopener,noreferrer'),
     },
     {
       icon: Feather,
       key: 'feedback',
       label: t('feedback'),
-      onClick: () => window.open(FEEDBACK, '__blank'),
+      onClick: () => window.open(FEEDBACK, '_blank', 'noopener,noreferrer'),
     },
     {
       icon: FileClockIcon,

@@ -2,8 +2,10 @@
 
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { VList } from 'virtua';
 
+import AsyncError from '@/components/AsyncError';
 import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useHomeStore } from '@/store/home';
@@ -12,6 +14,7 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 import GroupItem from '../List/AgentGroupItem';
 import AgentItem from '../List/AgentItem';
 import { useKeepSidebarListed } from '../List/useAgentList';
+import { resolveAllAgentsContentState } from './contentState';
 
 interface ContentProps {
   open: boolean;
@@ -19,6 +22,7 @@ interface ContentProps {
 }
 
 const Content = memo<ContentProps>(({ searchKeyword }) => {
+  const { t } = useTranslation('common');
   // Use server-side search if there's a keyword
   const trimmedKeyword = searchKeyword.trim();
   const isSearching = trimmedKeyword.length > 0;
@@ -28,9 +32,13 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
     s.closeAllAgentsDrawer,
     s.useSearchAgents,
   ]);
-  const { data: searchResults, isLoading: isSearchLoading } = useSearchAgents(
-    isSearching ? trimmedKeyword : undefined,
-  );
+  const {
+    data: searchResults,
+    error: searchError,
+    isLoading: isSearchLoading,
+    isValidating: isSearchValidating,
+    mutate: retrySearch,
+  } = useSearchAgents(isSearching ? trimmedKeyword : undefined);
 
   // Get all agents from homeStore (ungrouped agents for default view)
   const allUngroupedAgents = useHomeStore(homeAgentListSelectors.ungroupedAgents, isEqual);
@@ -48,8 +56,28 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
   // Close on navigation because the Home layout stays mounted offscreen across route changes.
   const handleNavigate = closeAllAgentsDrawer;
 
+  const state = resolveAllAgentsContentState({
+    count,
+    hasSearchResults: !!searchResults,
+    isSearchLoading,
+    isSearching,
+    searchError,
+  });
+
+  if (state === 'error') {
+    return (
+      <AsyncError
+        error={searchError}
+        retrying={isSearchValidating}
+        title={t('navPanel.searchAgentFailed')}
+        variant={'inline'}
+        onRetry={() => void retrySearch()}
+      />
+    );
+  }
+
   // Show loading skeleton when searching
-  if (isSearching && (isSearchLoading || !searchResults)) {
+  if (state === 'loading') {
     return (
       <div className="flex flex-col gap-[1px] py-[1px] px-[4px]">
         <SkeletonList rows={5} />
@@ -58,7 +86,7 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
   }
 
   // Show empty state when no agents
-  if (count === 0) {
+  if (state === 'empty') {
     return <AgentSelectionEmpty search={isSearching} />;
   }
 

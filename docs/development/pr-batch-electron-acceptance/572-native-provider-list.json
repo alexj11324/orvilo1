@@ -1,0 +1,37 @@
+{
+  "applicablePrHead": "c1bdeded1021cfe51e8f145d335254b268f90661",
+  "candidateHead": "0668667df5bf5c7cd353dda6ed7dabb94dac3057",
+  "mode": "Actual routed list/grid/rail/search/card-to-detail in provider stack; does not claim credentials save",
+  "samples": [
+    {
+      "theme": "light",
+      "railWidth": 264,
+      "grid": {
+        "columns": "333.328px 333.328px 333.344px",
+        "clientWidth": 1024,
+        "scrollWidth": 1024,
+        "cardCount": 5
+      },
+      "searchResultsPresent": true,
+      "nonMatchRemovesOpenAI": true,
+      "clearRestores": true,
+      "openAIActualHeadings": ["OpenAIOpenAIOpenAI", "Credentials", "Model List"],
+      "title": "Orvilo"
+    },
+    {
+      "theme": "dark",
+      "railWidth": 264,
+      "grid": {
+        "columns": "333.328px 333.328px 333.344px",
+        "clientWidth": 1024,
+        "scrollWidth": 1024,
+        "cardCount": 5
+      },
+      "searchResultsPresent": true,
+      "nonMatchRemovesOpenAI": true,
+      "clearRestores": true,
+      "openAIActualHeadings": ["OpenAIOpenAIOpenAI", "Credentials", "Model List"],
+      "title": "Orvilo"
+    }
+  ]
+}

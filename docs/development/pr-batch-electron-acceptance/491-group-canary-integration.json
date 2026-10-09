@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-09T05:38:01.062Z",
+  "backendPathsCompared": 62,
+  "base": "f93fb962884b5deb340bb158d83239be72ec9971",
+  "byteEqualPaths": 55,
+  "candidate": "79a588f46fea04e6ff20602218dc7cd5a46e5da0",
+  "changedBackendPaths": [
+    "apps/server/src/routers/lambda/agentGroup.ts",
+    "apps/server/src/services/agentGroup/index.ts",
+    "apps/server/src/services/toolExecution/serverRuntimes/groupAgentBuilder.ts",
+    "packages/database/src/models/chatGroup.ts",
+    "packages/database/src/repositories/agentGroup/index.ts",
+    "packages/database/src/utils/groupMembership.ts",
+    "packages/types/src/agentGroup/index.ts"
+  ],
+  "normalHooksPassed": true,
+  "oldCandidate": "18e83f00e16d61d787bfdea74f155b811f9b99d4",
+  "owningCases": {
+    "database": 22,
+    "router": 43,
+    "groupBuilder": 17,
+    "total": 82
+  },
+  "regression": "focused clone creator Use initially failed with missing grants; transactional initializer applied only to returned new clone rows; all owning cases passed",
+  "scope": "Author integration in isolated worktree. Runtime source was not replaced. Local native/HTTP proof retained for unchanged permission paths; group lifecycle validated separately. Cloud acceptance is not claimed."
+}

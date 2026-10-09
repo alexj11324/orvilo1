@@ -1,0 +1,204 @@
+{
+  "candidateHead": "392a3edfb4f8b192be2d7a24eb9669d36521f7a0",
+  "mode": "Actual immutable product components rendered in native ModalHost under current product theme; Connector data and callbacks are presentation fixtures, not connector service integration",
+  "samples": [
+    {
+      "theme": "light",
+      "connector": {
+        "idle": {
+          "background": "rgba(0, 0, 0, 0)",
+          "padding": "6px 12px",
+          "margin": "0px 4px",
+          "gap": "8px",
+          "radius": "6px",
+          "shadow": "none"
+        },
+        "hover": {
+          "background": "rgba(0, 0, 0, 0.03)",
+          "padding": "6px 12px",
+          "margin": "0px 4px",
+          "gap": "8px",
+          "radius": "6px",
+          "shadow": "none"
+        },
+        "selected": {
+          "background": "rgba(0, 0, 0, 0.03)",
+          "padding": "6px 12px",
+          "margin": "0px 4px",
+          "gap": "8px",
+          "radius": "6px",
+          "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.134408 0.00000612438 0.00000268966 / 0.5) 0px 0px 0px 3px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+        },
+        "keyboardAndClick": true
+      },
+      "loading": {
+        "normal": {
+          "width": 28,
+          "height": 28,
+          "parentMinHeight": "96px",
+          "name": "spin",
+          "duration": "0.8s",
+          "timing": "linear",
+          "iterations": "infinite",
+          "borderStart": "rgb(102, 102, 102)"
+        },
+        "reduced": {
+          "width": 28,
+          "height": 28,
+          "parentMinHeight": "96px",
+          "name": "none",
+          "duration": "0s",
+          "timing": "ease",
+          "iterations": "1",
+          "borderStart": "rgb(102, 102, 102)"
+        }
+      },
+      "oauthInclusiveNativeBreakpoints": [
+        {
+          "viewport": 767,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "viewport": 768,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "viewport": 769,
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "nativeMinimumSizeFixture": "Temporary minimum width400 via normal IPC; original product minimum1000 restored",
+      "guide": {
+        "descendants": [
+          {
+            "tag": "H3",
+            "margin": "0px",
+            "fontWeight": "700",
+            "text": "Cover heading"
+          },
+          {
+            "tag": "P",
+            "margin": "0px",
+            "fontWeight": "400",
+            "text": "Cover paragraph"
+          },
+          {
+            "tag": "H3",
+            "margin": "0px",
+            "fontWeight": "700",
+            "text": "Guide title"
+          },
+          {
+            "tag": "P",
+            "margin": "0px",
+            "fontWeight": "400",
+            "text": "Guide description"
+          }
+        ],
+        "cancelCallbackAndClose": true
+      }
+    },
+    {
+      "theme": "dark",
+      "connector": {
+        "idle": {
+          "background": "rgba(0, 0, 0, 0)",
+          "padding": "6px 12px",
+          "margin": "0px 4px",
+          "gap": "8px",
+          "radius": "6px",
+          "shadow": "none"
+        },
+        "hover": {
+          "background": "rgba(255, 255, 255, 0.06)",
+          "padding": "6px 12px",
+          "margin": "0px 4px",
+          "gap": "8px",
+          "radius": "6px",
+          "shadow": "none"
+        },
+        "selected": {
+          "background": "rgba(255, 255, 255, 0.06)",
+          "padding": "6px 12px",
+          "margin": "0px 4px",
+          "gap": "8px",
+          "radius": "6px",
+          "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.999994 0.0000455678 0.0000200868 / 0.5) 0px 0px 0px 3px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+        },
+        "keyboardAndClick": true
+      },
+      "loading": {
+        "normal": {
+          "width": 28,
+          "height": 28,
+          "parentMinHeight": "96px",
+          "name": "spin",
+          "duration": "0.8s",
+          "timing": "linear",
+          "iterations": "infinite",
+          "borderStart": "rgb(170, 170, 170)"
+        },
+        "reduced": {
+          "width": 28,
+          "height": 28,
+          "parentMinHeight": "96px",
+          "name": "none",
+          "duration": "0s",
+          "timing": "ease",
+          "iterations": "1",
+          "borderStart": "rgb(170, 170, 170)"
+        }
+      },
+      "oauthInclusiveNativeBreakpoints": [
+        {
+          "viewport": 767,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "viewport": 768,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "viewport": 769,
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "nativeMinimumSizeFixture": "Temporary minimum width400 via normal IPC; original product minimum1000 restored",
+      "guide": {
+        "descendants": [
+          {
+            "tag": "H3",
+            "margin": "0px",
+            "fontWeight": "700",
+            "text": "Cover heading"
+          },
+          {
+            "tag": "P",
+            "margin": "0px",
+            "fontWeight": "400",
+            "text": "Cover paragraph"
+          },
+          {
+            "tag": "H3",
+            "margin": "0px",
+            "fontWeight": "700",
+            "text": "Guide title"
+          },
+          {
+            "tag": "P",
+            "margin": "0px",
+            "fontWeight": "400",
+            "text": "Guide description"
+          }
+        ],
+        "cancelCallbackAndClose": true
+      }
+    }
+  ]
+}

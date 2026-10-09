@@ -1,0 +1,36 @@
+{
+  "candidateHead": "392a3edfb4f8b192be2d7a24eb9669d36521f7a0",
+  "disabledPreference": {
+    "setting": "Appearance Response Animation Off via actual UI",
+    "name": "none"
+  },
+  "mode": "Actual SharePopover consumer on own temporary normal-API topic, and actual Appearance Off setting; no ACL/store/network mocks",
+  "originalMotionPreferenceRestored": true,
+  "ownTopicAndCascadedSharingDeleted": true,
+  "samples": [
+    {
+      "theme": "light",
+      "share": {
+        "padding": "16px",
+        "hintFont": "12px",
+        "hintLine": "17.1429px",
+        "parentLine": "20px",
+        "parentFont": "14px",
+        "text": "Share Topic\nVisibility\nPrivate\nOnly you can access this link\nExport"
+      },
+      "normalEscapeClose": true
+    },
+    {
+      "theme": "dark",
+      "share": {
+        "padding": "16px",
+        "hintFont": "12px",
+        "hintLine": "17.1429px",
+        "parentLine": "20px",
+        "parentFont": "14px",
+        "text": "Share Topic\nVisibility\nPrivate\nOnly you can access this link\nExport"
+      },
+      "normalEscapeClose": true
+    }
+  ]
+}

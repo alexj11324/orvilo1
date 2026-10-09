@@ -1,0 +1,43 @@
+{
+  "candidateHead": "392a3edfb4f8b192be2d7a24eb9669d36521f7a0",
+  "defaultGlobalEmotionLayerFlagChanged": false,
+  "files": [
+    {
+      "path": "src/components/GuideModal/index.tsx",
+      "candidateSha256": "00583c157a2574dcd7c97a478990e8b7fe046fef6f9b7417571e6b8abb4d982f",
+      "actualSha256": "00583c157a2574dcd7c97a478990e8b7fe046fef6f9b7417571e6b8abb4d982f"
+    },
+    {
+      "path": "src/components/Loading/ContentLoading/index.tsx",
+      "candidateSha256": "e35ae442e98ada25783272ab36e897624e7c679b8880a16fc9359b491891b095",
+      "actualSha256": "e35ae442e98ada25783272ab36e897624e7c679b8880a16fc9359b491891b095"
+    },
+    {
+      "path": "src/features/Auth/OAuthConsent/OAuthApplicationLogo.tsx",
+      "candidateSha256": "e1d8eeb7ca69c27cec7f9d8b3fccaefc442346bcad835a40e4b0cbf351b1bf93",
+      "actualSha256": "e1d8eeb7ca69c27cec7f9d8b3fccaefc442346bcad835a40e4b0cbf351b1bf93"
+    },
+    {
+      "path": "src/features/Connectors/ConnectorList/ConnectorItem.tsx",
+      "candidateSha256": "7755c477df64bed8ff4af676a0bf8ad8ab077ade9355fb2a6cc792e8aec1141a",
+      "actualSha256": "7755c477df64bed8ff4af676a0bf8ad8ab077ade9355fb2a6cc792e8aec1141a"
+    },
+    {
+      "path": "src/features/SharePopover/style.ts",
+      "candidateSha256": "c1a9bf450277fa8b33aad951b462ecc26db63a7581d1d3155039f5c9b290494a",
+      "actualSha256": "c1a9bf450277fa8b33aad951b462ecc26db63a7581d1d3155039f5c9b290494a"
+    }
+  ],
+  "globalEmotionActivationAuthorized": false,
+  "motionPolicyCorrectionAcceptedByFrontendOwner": true,
+  "nativeScope": "Actual component ModalHost fixtures for Connector/Guide/OAuth/Loading; actual SharePopover consumer on normal-API self-owned topic. Light/Dark, reduced motion and actual Appearance Off preference, native widths767/768/769; temporary min restored1000x600. Other connector/OAuth service flows not covered.",
+  "ownOnlyCleanup": {
+    "topicAndSharing": true,
+    "animationPreferenceRestored": true,
+    "windowMinimumRestored": true,
+    "modalFixturesClosed": true
+  },
+  "phase1Authorized": false,
+  "rendererBase": "36eaebc5cc3f941bda05c6ddbf1d21f9a2dffcad",
+  "sourceMode": "Exactly five delivered sample source modules over existing composite runtime; no full580 application bundle parity claim"
+}

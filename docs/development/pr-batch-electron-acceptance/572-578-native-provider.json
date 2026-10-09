@@ -1,0 +1,51 @@
+{
+  "candidateHead": "0668667df5bf5c7cd353dda6ed7dabb94dac3057",
+  "credentials": {
+    "actualInvalidURLMessage": "Please enter a valid URL",
+    "invalidValueNotSaved": true,
+    "syntheticKeyAndLoopbackEndpointPersisted": true,
+    "actualNativeReloadRestoredValues": true,
+    "saveDoneViaActualAntdBoundFields": true,
+    "externalConnectivityPerformed": false,
+    "nativeNarrow": {
+      "clientWidth": 428,
+      "scrollWidth": 428
+    }
+  },
+  "mode": "Actual routed native Admin provider list/detail; own normal-API custom provider with synthetic credentials and loopback discard endpoint; no model or external connection test",
+  "ownProviderDeleted": true,
+  "parent572": "c1bdeded1021cfe51e8f145d335254b268f90661",
+  "parent578": "7a2a97851c3cd379b2e9c18139db33b1ddc2fc79",
+  "samples": [
+    {
+      "theme": "light",
+      "railWidth": 264,
+      "grid": {
+        "columns": "333.328px 333.328px 333.344px",
+        "clientWidth": 1024,
+        "scrollWidth": 1024,
+        "cardCount": 5
+      },
+      "searchResultsPresent": true,
+      "nonMatchRemovesOpenAI": true,
+      "clearRestores": true,
+      "openAIActualHeadings": ["OpenAIOpenAIOpenAI", "Credentials", "Model List"],
+      "title": "Orvilo"
+    },
+    {
+      "theme": "dark",
+      "railWidth": 264,
+      "grid": {
+        "columns": "333.328px 333.328px 333.344px",
+        "clientWidth": 1024,
+        "scrollWidth": 1024,
+        "cardCount": 5
+      },
+      "searchResultsPresent": true,
+      "nonMatchRemovesOpenAI": true,
+      "clearRestores": true,
+      "openAIActualHeadings": ["OpenAIOpenAIOpenAI", "Credentials", "Model List"],
+      "title": "Orvilo"
+    }
+  ]
+}

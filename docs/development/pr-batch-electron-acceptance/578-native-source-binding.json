@@ -1,0 +1,53 @@
+{
+  "allScopedParentBlobsEqual": true,
+  "applicablePrHead": "7a2a97851c3cd379b2e9c18139db33b1ddc2fc79",
+  "cleanup": "Own created Provider removed via normal API; Member normal PKCE restoration scheduled before source release",
+  "nativeScope": "Real Admin custom provider with synthetic API key and loopback discard URL: invalidURL form validation/nonpersist, normal input autosave, actual Electron reload restored fields, narrow428 pane overflow; no external check/OAuth/model call",
+  "rendererBase": "36eaebc5cc3f941bda05c6ddbf1d21f9a2dffcad",
+  "runtimeStackCandidate": "0668667df5bf5c7cd353dda6ed7dabb94dac3057",
+  "scopedFiles": [
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/Checker.tsx",
+      "parentSha256": "3b1772c04627f88725125736a47f99aa8fe960db64f2741ed7f1afc78ea594a2",
+      "actualRuntimeSha256": "3b1772c04627f88725125736a47f99aa8fe960db64f2741ed7f1afc78ea594a2",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/CredentialsPanel.tsx",
+      "parentSha256": "844751dd33ae3834bbd59e4b59745aa6bf82bd21ba7f302e59e87c457e6e4ac6",
+      "actualRuntimeSha256": "844751dd33ae3834bbd59e4b59745aa6bf82bd21ba7f302e59e87c457e6e4ac6",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/EnableSwitch.tsx",
+      "parentSha256": "6deb5ca222ae766476d8bedc9340c8f3b321062b27644f27154d1ece6220214b",
+      "actualRuntimeSha256": "6deb5ca222ae766476d8bedc9340c8f3b321062b27644f27154d1ece6220214b",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/FormSwitch.tsx",
+      "parentSha256": "4ac06c02294950b14ce4dcef1bf42896131589b8e0e78a3806330984ac062088",
+      "actualRuntimeSha256": "4ac06c02294950b14ce4dcef1bf42896131589b8e0e78a3806330984ac062088",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/ProviderHeader.tsx",
+      "parentSha256": "a2c40f04d0cc821c70218d83ff79e098d8a85e03bde8f336d2b8422d5af19a19",
+      "actualRuntimeSha256": "a2c40f04d0cc821c70218d83ff79e098d8a85e03bde8f336d2b8422d5af19a19",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/UpdateProviderInfo/index.tsx",
+      "parentSha256": "3cc8ab3694e17c1450aac6331bbf011ef70d807ea2dd764899a2ae17971950f6",
+      "actualRuntimeSha256": "3cc8ab3694e17c1450aac6331bbf011ef70d807ea2dd764899a2ae17971950f6",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/index.tsx",
+      "parentSha256": "e0482c5f32245d2ab9efbab1cdc5273ac2a2fe5c79013e7b19172fb19fd8cc4f",
+      "actualRuntimeSha256": "e0482c5f32245d2ab9efbab1cdc5273ac2a2fe5c79013e7b19172fb19fd8cc4f",
+      "exactParentBlobEqual": true
+    }
+  ],
+  "sourceMode": "Actual provider parent/child stack over existing composite auth/backend; listed credential/header blobs compared to578 only, not whole40"
+}

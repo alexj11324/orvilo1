@@ -1,0 +1,106 @@
+{
+  "allScopedParentBlobsEqual": true,
+  "applicablePrHead": "c1bdeded1021cfe51e8f145d335254b268f90661",
+  "localeScope": "Runtime uses later578/579 modelProvider resource files; PR572 list/menu values preserved, added child credentials/model-count keys are not claimed byte-equal whole resources",
+  "nativeEnglishListMenuCopy": {
+    "path": "locales/en-US/modelProvider.json",
+    "comparedKeys": 16,
+    "allValuesPreserved": true
+  },
+  "nativeScope": "Actual Admin list/grid/rail/search/clear/card-to-detail-title in light/dark, independent of subsequent578credentialsave harness.",
+  "rendererBase": "36eaebc5cc3f941bda05c6ddbf1d21f9a2dffcad",
+  "runtimeStackCandidate": "0668667df5bf5c7cd353dda6ed7dabb94dac3057",
+  "scopedFiles": [
+    {
+      "path": "src/features/Settings/provider/(list)/ProviderGrid/Card.tsx",
+      "parentSha256": "55288b9e7925457f5dc1d3366fdd12e1ca97ad2e14a0e860c6d8f5494eacfea3",
+      "actualRuntimeSha256": "55288b9e7925457f5dc1d3366fdd12e1ca97ad2e14a0e860c6d8f5494eacfea3",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/(list)/ProviderGrid/EnableSwitch.tsx",
+      "parentSha256": "817bc4d77729c032c4c3159863ceabbbd01baabb9b6c3f45a47dd53d6fbcd86b",
+      "actualRuntimeSha256": "817bc4d77729c032c4c3159863ceabbbd01baabb9b6c3f45a47dd53d6fbcd86b",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/(list)/ProviderGrid/index.tsx",
+      "parentSha256": "9855f9edebe1d1fb3b557b4a81b341998cc6aea759a14a4943f4b73fda04d515",
+      "actualRuntimeSha256": "9855f9edebe1d1fb3b557b4a81b341998cc6aea759a14a4943f4b73fda04d515",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/(list)/ProviderGrid/style.ts",
+      "parentSha256": null,
+      "actualRuntimeSha256": null,
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/Actions.tsx",
+      "parentSha256": "6664cdbc458cc3ac9bc6b153ede218d14b3e5ad8803a6f220d26635a6ab69ec6",
+      "actualRuntimeSha256": "6664cdbc458cc3ac9bc6b153ede218d14b3e5ad8803a6f220d26635a6ab69ec6",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/AddNew.tsx",
+      "parentSha256": "06b636d5b4281e92c3746b9d671e37785ace6a3c675e67237c3b55301e2f6c0c",
+      "actualRuntimeSha256": "06b636d5b4281e92c3746b9d671e37785ace6a3c675e67237c3b55301e2f6c0c",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/Item.tsx",
+      "parentSha256": "be638fec9ba32ed906619596fdb5ea7e7fc2c4d989ca64427e77c8ced441723b",
+      "actualRuntimeSha256": "be638fec9ba32ed906619596fdb5ea7e7fc2c4d989ca64427e77c8ced441723b",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/List.tsx",
+      "parentSha256": "a72ee689aa554a7852e22633b1aecb9880eb9732162e705212db6f7443748b60",
+      "actualRuntimeSha256": "a72ee689aa554a7852e22633b1aecb9880eb9732162e705212db6f7443748b60",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/SearchResult.tsx",
+      "parentSha256": "32a6fcc9b53cfff8cc70afd043cb11ba274e275f66c2823a05203a67ae3adc3a",
+      "actualRuntimeSha256": "32a6fcc9b53cfff8cc70afd043cb11ba274e275f66c2823a05203a67ae3adc3a",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/index.tsx",
+      "parentSha256": "44d8c67b4568f593f579fa3115a200f7f4914c923b605f15866f6f50f2ad7bae",
+      "actualRuntimeSha256": "44d8c67b4568f593f579fa3115a200f7f4914c923b605f15866f6f50f2ad7bae",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/useDropdownMenu.tsx",
+      "parentSha256": "e6108e7c301056b70bd3547d98a6e2510102c465fd14e17adb21186d537878a4",
+      "actualRuntimeSha256": "e6108e7c301056b70bd3547d98a6e2510102c465fd14e17adb21186d537878a4",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/_layout/Desktop/Container.tsx",
+      "parentSha256": "419ca652e3d39609c8026daae06b1edf79123ff8018213e7a6b1848b62cb990d",
+      "actualRuntimeSha256": "419ca652e3d39609c8026daae06b1edf79123ff8018213e7a6b1848b62cb990d",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/_layout/Desktop/index.tsx",
+      "parentSha256": "f4cdcd876f497536cc58eb81a9369b3854384db7695fcd54a8515f102dc3c0d5",
+      "actualRuntimeSha256": "f4cdcd876f497536cc58eb81a9369b3854384db7695fcd54a8515f102dc3c0d5",
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/_layout/Desktop/style.ts",
+      "parentSha256": null,
+      "actualRuntimeSha256": null,
+      "exactParentBlobEqual": true
+    },
+    {
+      "path": "src/features/Settings/provider/index.tsx",
+      "parentSha256": "f86400fa724755157449b427aa016d026b0e05bebbdc484ec2059c3b45d9163c",
+      "actualRuntimeSha256": "f86400fa724755157449b427aa016d026b0e05bebbdc484ec2059c3b45d9163c",
+      "exactParentBlobEqual": true
+    }
+  ],
+  "sourceMode": "Guarded 40-file provider stack overlay; only listed list/grid/rail/layout blobs are compared to PR572, not whole40"
+}

@@ -1,0 +1,65 @@
+{
+  "artifacts": {
+    "permissionCard": "544-no-builtin-native-permission-card.png",
+    "finalMessage": "544-no-builtin-native-continuation.png"
+  },
+  "at": "2026-10-09T05:49:35.017Z",
+  "backendSource": "491+544 twelve-path composite before cold-provider fix",
+  "cliBundleSha256": "e2d620ce1fd23af040be41a7a649eba23558dc520d0fec567cb412114d4303df",
+  "cliHead": "c4c2cdd0dc84f5762282c4596f4fdac9448529f1",
+  "environment": {
+    "electron": "43.2.0",
+    "opencode": "1.18.35",
+    "model": "opencode/step-5-preview-free",
+    "smallModel": "opencode/step-5-preview-free",
+    "plugins": [],
+    "builtinToolsEnvPresent": false,
+    "builtinToolCount": 0,
+    "normalPkceLogin": true,
+    "actualMainRendererActorMatch": true,
+    "normalUseGrant": true,
+    "personalGateway": true
+  },
+  "limits": [
+    "This receipt proves actual ACP permission, not unsupported freeform structured questions.",
+    "OpenCode upstream does not advertise question/elicitation through ACP.",
+    "Resolved Inbox card can remain as historical action; no pending question form remains.",
+    "Pending provider was genuinely opencode but persisted resolved provider was lost; owning cold-hydration regression/fix follows.",
+    "Old OOM-orphan operation remains fail-closed; this new Agent was created normally without changing the orphan configuration."
+  ],
+  "native": {
+    "actualIssueRunClick": true,
+    "actualInboxPermissionCard": true,
+    "interactionKind": "permission",
+    "providerAtPending": "opencode",
+    "actualInboxAllowOnceSubmit": true,
+    "producerAck": true,
+    "resolutionRequestIdPresent": true,
+    "writeResult": "Wrote file successfully.",
+    "readResult": "NATIVE_NO_BUILTIN_PERMISSION_ACCEPTED",
+    "finalReply": "NATIVE_NO_BUILTIN_PERMISSION_CONTINUED",
+    "topicStatus": "completed",
+    "runState": "succeeded",
+    "operationStatus": "done",
+    "operationCompletionReason": "done",
+    "sameOperation": true,
+    "sameVendorSession": true,
+    "actualReloadPendingFormAbsent": true,
+    "notificationResolvedPersisted": true,
+    "actualIssueExpandRunFinalMessageVisible": true
+  },
+  "observedFailures": {
+    "rendererBecameUnresponsive": true,
+    "normalPageReloadRecoveredSameMainAndOperation": true,
+    "cgroupOomCounterUnchanged": true,
+    "officialProviderAutomaticallyRetriedTransientEndpointErrors": true,
+    "coldProviderLostOnAck": true
+  },
+  "times": {
+    "permissionRequest": "2026-10-09T05:42:10.874Z",
+    "producerAck": "2026-10-09T05:46:02.301Z",
+    "readMarker": "2026-10-09T05:46:06.627Z",
+    "finalReply": "2026-10-09T05:47:30.614Z",
+    "notificationResolvedAt": "2026-10-09T05:48:50.478Z"
+  }
+}

@@ -101,6 +101,7 @@ export default function Composer({
   return (
     <div
       className={cn('relative w-full', expand && 'fixed inset-4 z-50 flex w-auto flex-col bg-card')}
+      data-testid="chat-input"
       ref={slashMenuRef}
       style={{ display: hidden ? 'none' : undefined }}
       onDragOver={(event) => {

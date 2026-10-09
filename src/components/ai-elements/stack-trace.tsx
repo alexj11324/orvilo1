@@ -4,7 +4,7 @@ import { useControllableState } from '@radix-ui/react-use-controllable-state';
 import { cn } from 'cn';
 import { AlertTriangleIcon, CheckIcon, ChevronDownIcon, CopyIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
-import { createContext, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, memo, use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';

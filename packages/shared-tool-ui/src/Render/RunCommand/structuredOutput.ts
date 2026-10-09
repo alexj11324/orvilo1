@@ -9,12 +9,21 @@ const assertion = z.object({
   status: z.enum(['passed', 'failed', 'pending', 'skipped', 'todo', 'disabled']),
 });
 const report = z.object({
+  success: z.boolean().optional(),
+  numFailedTestSuites: count.optional(),
+  numRuntimeErrorTestSuites: count.optional(),
   numFailedTests: count,
   numPassedTests: count,
   numPendingTests: count,
   numTodoTests: count.optional(),
   numTotalTests: count,
-  testResults: z.array(z.object({ name: z.string(), assertionResults: z.array(assertion) })),
+  testResults: z.array(
+    z.object({
+      name: z.string(),
+      assertionResults: z.array(assertion),
+      status: z.string().optional(),
+    }),
+  ),
 });
 
 /** Only complete Jest/Vitest JSON reports; plain logs and partial streaming JSON stay raw. */
@@ -29,6 +38,21 @@ export function parseTestReport(output: string) {
   const parsed = report.safeParse(value);
   if (!parsed.success) return;
   const data = parsed.data;
+  // Collection/setup failures have no failed assertion to display. Keep their full diagnostics raw.
+  const failedSuites = data.testResults.filter((suite) =>
+    suite.assertionResults.some((test) => test.status === 'failed'),
+  ).length;
+  if (
+    (data.numRuntimeErrorTestSuites ?? 0) > 0 ||
+    (data.numFailedTestSuites ?? 0) > failedSuites ||
+    (data.success === false && data.numFailedTests === 0) ||
+    data.testResults.some(
+      (suite) =>
+        suite.status === 'failed' &&
+        !suite.assertionResults.some((test) => test.status === 'failed'),
+    )
+  )
+    return;
   const tests = data.testResults.flatMap((suite) => suite.assertionResults);
   const passed = tests.filter((test) => test.status === 'passed').length;
   const failed = tests.filter((test) => test.status === 'failed').length;

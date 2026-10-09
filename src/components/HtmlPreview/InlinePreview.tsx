@@ -1,5 +1,5 @@
 import { HtmlPreview } from '@lobehub/ui';
-import type { CSSProperties } from 'react';
+import type { ComponentProps, CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 
 import { WebPreview, WebPreviewBody } from '@/components/ai-elements/web-preview';
@@ -14,12 +14,22 @@ interface InlineHtmlPreviewProps {
   className?: string;
   content: string;
   height?: CSSProperties['height'];
+  previewProps?: Omit<ComponentProps<typeof HtmlPreview>, 'children'>;
   style?: CSSProperties;
   width?: CSSProperties['width'];
 }
 
 const InlineHtmlPreview = memo<InlineHtmlPreviewProps>(
-  ({ animated, baseUrl, className, content, height = '100%', style, width = '100%' }) => {
+  ({
+    animated,
+    baseUrl,
+    className,
+    content,
+    previewProps,
+    height = '100%',
+    style,
+    width = '100%',
+  }) => {
     const previewContent = useMemo(
       () => applyHtmlPreviewBaseUrl(content, baseUrl),
       [baseUrl, content],
@@ -29,6 +39,7 @@ const InlineHtmlPreview = memo<InlineHtmlPreviewProps>(
       <WebPreview className="min-h-0 border-0 rounded-none" style={{ height, width, ...style }}>
         <WebPreviewBody>
           <HtmlPreview
+            {...previewProps}
             actionsRender={hideHtmlPreviewActions}
             animated={animated}
             className={className}

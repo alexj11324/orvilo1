@@ -3,7 +3,7 @@
 import { cn } from 'cn';
 import { ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, useCallback, useMemo, useState } from 'react';
+import { createContext, use, useCallback, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -103,6 +103,7 @@ export const WebPreviewNavigationButton = ({
             className="h-8 w-8 p-0 hover:text-foreground"
             disabled={disabled}
             size="sm"
+            variant="ghost"
             onClick={onClick}
             {...props}
           >

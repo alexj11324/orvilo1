@@ -32,7 +32,7 @@ export const AudioPlayer = ({ children, style, ...props }: AudioPlayerProps) => 
         '--media-button-icon-width': '1rem',
         '--media-control-background': 'transparent',
         '--media-control-hover-background': 'var(--color-accent)',
-        '--media-control-padding': '0',
+        '--media-control-padding': '0px',
         '--media-font': 'var(--font-sans)',
         '--media-font-size': '10px',
         '--media-icon-color': 'currentColor',
@@ -127,7 +127,7 @@ export const AudioPlayerSeekForwardButton = ({
 export type AudioPlayerTimeDisplayProps = ComponentProps<typeof MediaTimeDisplay>;
 
 export const AudioPlayerTimeDisplay = ({ className, ...props }: AudioPlayerTimeDisplayProps) => (
-  <div className="flex min-w-0 flex-1 items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-lg border px-2">
     <MediaTimeDisplay
       className={cn('tabular-nums', className)}
       data-slot="audio-player-time-display"
@@ -150,7 +150,7 @@ export const AudioPlayerDurationDisplay = ({
   className,
   ...props
 }: AudioPlayerDurationDisplayProps) => (
-  <div className="flex min-w-0 flex-1 items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-lg border px-2">
     <MediaDurationDisplay
       className={cn('tabular-nums', className)}
       data-slot="audio-player-duration-display"
@@ -162,7 +162,7 @@ export const AudioPlayerDurationDisplay = ({
 export type AudioPlayerMuteButtonProps = ComponentProps<typeof MediaMuteButton>;
 
 export const AudioPlayerMuteButton = ({ className, ...props }: AudioPlayerMuteButtonProps) => (
-  <div className="flex min-w-0 flex-1 items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-lg border px-2">
     <MediaMuteButton
       className={cn('', className)}
       data-slot="audio-player-mute-button"
@@ -174,7 +174,7 @@ export const AudioPlayerMuteButton = ({ className, ...props }: AudioPlayerMuteBu
 export type AudioPlayerVolumeRangeProps = ComponentProps<typeof MediaVolumeRange>;
 
 export const AudioPlayerVolumeRange = ({ className, ...props }: AudioPlayerVolumeRangeProps) => (
-  <div className="flex min-w-0 flex-1 items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-lg border px-2">
     <MediaVolumeRange
       className={cn('', className)}
       data-slot="audio-player-volume-range"

@@ -9,7 +9,7 @@ import {
   XCircleIcon,
 } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes } from 'react';
-import { createContext, useMemo } from 'react';
+import { createContext, use, useMemo } from 'react';
 import { Trans } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';

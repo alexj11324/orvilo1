@@ -1,7 +1,8 @@
-import { HtmlPreview, isFullHtmlDocument, type MarkdownProps, Mermaid } from '@lobehub/ui';
+import { isFullHtmlDocument, type MarkdownProps, Mermaid } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { type ComponentProps, createContext, use } from 'react';
 
+import { ChatHtmlPreview } from '@/components/HtmlPreview/ChatPreview';
 import {
   CodeBlock,
   CodeBlockCopyButton,
@@ -63,13 +64,7 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
   }
   if (enableHtmlPreview && language === 'html' && isFullHtmlDocument(code)) {
     return (
-      <HtmlPreview
-        animated={animated}
-        fullFeatured={fullFeaturedCodeBlock}
-        {...componentProps?.html}
-      >
-        {code}
-      </HtmlPreview>
+      <ChatHtmlPreview animated={animated} content={code} previewProps={componentProps?.html} />
     );
   }
 

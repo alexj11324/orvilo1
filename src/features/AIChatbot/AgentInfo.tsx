@@ -11,6 +11,7 @@ import {
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 /** Reads the same selected agent as the existing selector; it never selects a model. */
 export function AgentInfo() {
@@ -19,10 +20,14 @@ export function AgentInfo() {
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   if (!config) return null;
+  const runtime = resolveAgentRuntimeType(config);
 
   return (
     <Agent data-ai-element="agent">
-      <AgentHeader model={config.model} name={meta.title || t('untitledAgent')} />
+      <AgentHeader
+        model={runtime === 'orvilo' ? config.model : runtime}
+        name={meta.title || t('untitledAgent')}
+      />
       {(meta.description || config.systemRole) && (
         <AgentContent className="max-h-64 overflow-auto">
           {meta.description && <p className="text-sm text-muted-foreground">{meta.description}</p>}

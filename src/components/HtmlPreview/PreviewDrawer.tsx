@@ -89,7 +89,7 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
           <SheetTitle>{t('HtmlPreview.title')}</SheetTitle>
           {extra}
         </SheetHeader>
-        <div style={{ height: '100%' }}>
+        <div className="min-h-0 flex-1">
           {mode === 'preview' ? (
             <div className={styles.container}>
               <WebPreview>

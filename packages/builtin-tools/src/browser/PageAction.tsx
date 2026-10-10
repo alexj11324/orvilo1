@@ -1,23 +1,14 @@
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
 import type { BrowserPageState } from './types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-  `,
-  url: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  container: 'rounded-(--radius-card) border border-divider px-2.5 py-1.5 text-sm leading-5.5',
+  url: 'text-xs leading-5 text-muted-foreground',
+};
 
 /** Compact "acted on this page" row used by navigate/click/fill/press/scroll. */
 const PageAction = memo<BuiltinRenderProps<unknown, BrowserPageState, string>>(

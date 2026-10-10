@@ -2,7 +2,7 @@
 
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { AlertTriangle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,25 +13,11 @@ export interface CodexErrorArgs {
   type?: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  icon: css`
-    flex: none;
-    color: ${cssVar.colorWarning};
-  `,
-  message: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    color: ${cssVar.colorWarningText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  root: css`
-    gap: 6px;
-    align-items: center;
-  `,
-}));
+const styles = {
+  icon: 'flex-none text-warning-text',
+  message: 'min-w-0 truncate text-warning-text',
+  root: 'items-center gap-1.5',
+};
 
 const ErrorInspector = memo<BuiltinInspectorProps<CodexErrorArgs>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {

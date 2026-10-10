@@ -31,17 +31,21 @@ const stopLocalMotion = css`
   [class~='transition']::after,
   .animate-spin,
   .text-shiny,
-  .text-shiny::after {
+  .text-shiny::after,
+  .orvilo-shiny,
+  .orvilo-shiny::after {
     transition: none !important;
     animation: none !important;
   }
 
-  .text-shiny {
+  .text-shiny,
+  .orvilo-shiny {
     color: var(--shiny-color);
     background: none;
   }
 
-  .text-shiny::after {
+  .text-shiny::after,
+  .orvilo-shiny::after {
     display: none;
   }
 `;

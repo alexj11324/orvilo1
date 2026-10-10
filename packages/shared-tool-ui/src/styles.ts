@@ -15,23 +15,13 @@ const localTextGroupStyles = createStaticStyles(({ css }) => ({
 /**
  * Inspector text style — ellipsis + secondary color + flex align
  */
-export const inspectorTextStyles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    /* Coordinate space for the shiny sweep: every shimmering span in the row
-     * resolves its overlay against this box, so they read as one wave. */
-    ${localTextGroupStyles.shinyGroup}
-
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+export const inspectorTextStyles = {
+  // Keep the shared sweep coordinate group and its feature-query behavior.
+  root: cx(
+    localTextGroupStyles.shinyGroup,
+    'flex min-w-0 items-center overflow-hidden text-sm leading-5.5 text-muted-foreground text-ellipsis whitespace-nowrap',
+  ),
+};
 
 /**
  * Highlight underline effect using gradient background
@@ -152,7 +142,8 @@ const localShinyText = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 export const shinyTextStyles = {
-  shinyText: cx(localShinyText.shiny, shinyToneStyles.secondary),
+  // A motion marker must survive Tailwind text-color class merging.
+  shinyText: cx('orvilo-shiny', localShinyText.shiny, shinyToneStyles.secondary),
 };
 
 export const shinyGroupStyles = {

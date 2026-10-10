@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,90 +12,19 @@ import {
   getWebSearchResults,
 } from './webSearchUtils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  output: css`
-    overflow: auto;
-
-    max-height: 280px;
-    margin: 0;
-    padding-block: 2px;
-    padding-inline: 4px;
-
-    font-family: ${cssVar.fontFamily};
-    font-size: 13px;
-    line-height: 1.55;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre-wrap;
-  `,
-  query: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  queryLabel: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  queryRow: css`
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-
-    font-size: 12px;
-  `,
-  resultItem: css`
-    min-width: 0;
-    padding-block: 5px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    &:last-child {
-      border-block-end: 0;
-    }
-  `,
-  resultList: css`
-    gap: 0;
-    min-width: 0;
-  `,
-  root: css`
-    gap: 4px;
-    min-width: 0;
-    padding-block: 2px;
-  `,
-  snippet: css`
-    font-size: 12px;
-    line-height: 1.45;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.45;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &:hover {
-      color: ${cssVar.colorLink};
-    }
-  `,
-  url: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  output:
+    'm-0 max-h-70 overflow-auto px-1 py-0.5 font-sans text-sm leading-5.5 whitespace-pre-wrap text-muted-foreground',
+  query: 'min-w-0 truncate text-foreground',
+  queryLabel: 'shrink-0 text-muted-foreground',
+  queryRow: 'items-center gap-1.5 px-1 py-0.5 text-xs leading-5',
+  resultItem: 'min-w-0 border-b border-divider px-1 py-1.5 last:border-b-0',
+  resultList: 'min-w-0 gap-0',
+  root: 'min-w-0 gap-1 py-0.5',
+  snippet: 'text-xs leading-5 text-muted-foreground',
+  title: 'truncate text-sm font-medium leading-5.5 text-foreground hover:text-primary-text',
+  url: 'truncate text-xs leading-5 text-muted-foreground',
+};
 
 const WebSearchRender = memo<BuiltinRenderProps<CodexWebSearchArgs, CodexWebSearchArgs>>(
   ({ args, content, pluginState }) => {
@@ -125,7 +53,7 @@ const WebSearchRender = memo<BuiltinRenderProps<CodexWebSearchArgs, CodexWebSear
               const title = <span className={styles.title}>{result.title}</span>;
 
               return (
-                <div className={cn('flex', 'flex-col', 'gap-0.75', styles.resultItem)} key={key}>
+                <div className={cn('flex', 'flex-col', 'gap-1', styles.resultItem)} key={key}>
                   {result.url ? (
                     <a href={result.url} rel={'noreferrer'} target={'_blank'}>
                       {title}

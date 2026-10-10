@@ -2,7 +2,6 @@
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { fromNow } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ExternalLink, Inbox, Link2 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -21,140 +20,26 @@ import {
   type LinearLink,
 } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-    min-width: 0;
-  `,
-  description: css`
-    overflow: auto;
-
-    max-height: 180px;
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  empty: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-
-    padding-block: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  entityHeader: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-width: 0;
-  `,
-  headLeft: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    min-width: 0;
-  `,
-  timeItem: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-  `,
-  metaItem: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: baseline;
-
-    min-width: 0;
-
-    font-size: 12px;
-    line-height: 1.5;
-  `,
-  metaLabel: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  metaRow: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    align-items: baseline;
-
-    min-width: 0;
-  `,
-  metaValue: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  linkRow: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: 6px;
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorLink};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  linkText: css`
-    overflow: hidden;
-    min-width: 0;
-  `,
-  rawDetails: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    summary {
-      cursor: pointer;
-      width: fit-content;
-      margin-block-end: 6px;
-    }
-  `,
-  sectionLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  titleLink: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-
-    &:hover {
-      color: ${cssVar.colorLink};
-    }
-  `,
-}));
+const styles = {
+  container: 'min-w-0 overflow-hidden text-sm leading-5.5',
+  description: 'max-h-45 overflow-auto rounded-(--radius-card) bg-muted p-3',
+  entityHeader: 'flex min-w-0 items-center justify-between gap-3',
+  headLeft: 'flex min-w-0 items-center gap-1.5',
+  linkRow:
+    'flex h-8 min-w-0 items-center gap-2 overflow-hidden rounded-(--radius-button) px-2 text-sm leading-5.5 text-foreground hover:bg-accent hover:text-primary-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+  linkText: 'min-w-0 overflow-hidden',
+  metaItem: 'inline-flex min-w-0 items-baseline gap-1 text-xs leading-5',
+  metaLabel: 'shrink-0 text-muted-foreground',
+  metaRow: 'flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1',
+  metaValue: 'min-w-0 truncate text-muted-foreground',
+  rawDetails:
+    'text-xs leading-5 text-muted-foreground [&_summary]:mb-1.5 [&_summary]:w-fit [&_summary]:cursor-pointer [&_summary]:focus-visible:outline-none [&_summary]:focus-visible:ring-3 [&_summary]:focus-visible:ring-ring/50',
+  sectionLabel: 'text-xs leading-5 text-muted-foreground',
+  timeItem: 'shrink-0 whitespace-nowrap text-xs leading-5 text-muted-foreground',
+  titleLink:
+    'inline-flex min-w-0 items-center gap-1 text-inherit hover:text-primary-text focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+  empty: 'flex items-center justify-center gap-1.5 py-4 text-sm leading-5.5 text-muted-foreground',
+};
 
 const hasItems = <T,>(items: T[]) => items.length > 0;
 
@@ -219,15 +104,7 @@ const EntityCard = memo<{ entity: LinearEntity }>(({ entity }) => {
   const showId = Boolean(id) && (!title || !isUuidLike(id!));
 
   return (
-    <div
-      className="flex flex-col gap-2 p-2.5"
-      style={{
-        background: cssVar.colorBgContainer,
-        border: `1px solid ${cssVar.colorBorderSecondary}`,
-        borderRadius: cssVar.borderRadius,
-        width: '100%',
-      }}
-    >
+    <div className="flex w-full flex-col gap-2 rounded-(--radius-card) border border-divider p-4">
       <div className={styles.entityHeader}>
         <div className={styles.headLeft}>
           {title &&
@@ -263,7 +140,7 @@ const EntityCard = memo<{ entity: LinearEntity }>(({ entity }) => {
       <MetaRow fields={entity.fields} />
       {entity.description && (
         <div className={styles.description}>
-          <Markdown fontSize={13} variant={'chat'}>
+          <Markdown fontSize={14} variant={'chat'}>
             {entity.description}
           </Markdown>
         </div>
@@ -314,9 +191,9 @@ const LinearRender = memo<BuiltinRenderProps<Record<string, unknown>, unknown, u
         {model.resultText && (
           <CodeBlock
             wrap
+            className="max-h-55 overflow-auto px-2"
             code={model.resultText}
             language={'text'}
-            style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
           >
             <CodeBlockCopyButton />
@@ -327,9 +204,9 @@ const LinearRender = memo<BuiltinRenderProps<Record<string, unknown>, unknown, u
             <summary>Raw result</summary>
             <CodeBlock
               wrap
+              className="max-h-65 overflow-auto px-2"
               code={model.rawResultJson}
               language={'json'}
-              style={{ maxHeight: 260, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
             />
           </details>
@@ -338,9 +215,9 @@ const LinearRender = memo<BuiltinRenderProps<Record<string, unknown>, unknown, u
           <Section title={'Error'}>
             <CodeBlock
               wrap
+              className="max-h-55 overflow-auto px-2"
               code={model.errorText}
               language={'text'}
-              style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
             >
               <CodeBlockCopyButton />

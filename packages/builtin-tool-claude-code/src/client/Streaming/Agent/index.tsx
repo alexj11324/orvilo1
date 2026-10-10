@@ -2,8 +2,7 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,30 +13,12 @@ import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
 import type { AgentArgs } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 4px;
-  `,
-  label: css`
-    padding-inline-start: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  labelRow: css`
-    margin-block-end: 4px;
-  `,
-  openThread: css`
-    height: 22px;
-    padding-inline: 6px;
-    font-size: 12px;
-  `,
-  promptBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  container: 'py-1',
+  label: 'ps-1 text-xs leading-5 text-muted-foreground',
+  labelRow: 'mb-1',
+  promptBox: 'rounded-(--radius-card) bg-muted px-3 py-2',
+};
 
 /**
  * Streaming view for CC's `Agent` tool — shown while the subagent is still
@@ -83,12 +64,7 @@ const AgentStreaming = memo<BuiltinStreamingProps<AgentArgs>>(({ args, toolCallI
               {t('builtins.orvilo-claude-code.agent.instruction')}
             </div>
             {subagentThread && (
-              <Button
-                className={cn(styles.openThread)}
-                size="sm"
-                variant="ghost"
-                onClick={handleToggleThread}
-              >
+              <Button size="compact" variant="ghost" onClick={handleToggleThread}>
                 <ListTree data-icon="inline-start" />
                 {isOpenInPortal
                   ? tChat('thread.closeSubagentThread')
@@ -97,7 +73,9 @@ const AgentStreaming = memo<BuiltinStreamingProps<AgentArgs>>(({ args, toolCallI
             )}
           </div>
           <div className={cx('flex flex-col', styles.promptBox)}>
-            <Markdown variant={'chat'}>{prompt}</Markdown>
+            <Markdown fontSize={14} variant={'chat'}>
+              {prompt}
+            </Markdown>
           </div>
         </div>
       )}

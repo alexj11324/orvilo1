@@ -10,7 +10,7 @@ import DeviceCard from '../DeviceCard';
 
 const styles = {
   failure:
-    'flex gap-2 items-center py-3 ps-3 pe-3 border border-[var(--ant-color-warning-border)] rounded-[var(--ant-border-radius)] text-sm leading-[inherit] text-[var(--ant-color-warning-text)] bg-[var(--ant-color-warning-bg)]',
+    'flex gap-2 items-center py-3 ps-3 pe-3 border border-(--ant-color-warning-border) rounded-(--ant-border-radius) text-sm leading-[inherit] text-(--ant-color-warning-text) bg-(--ant-color-warning-bg)',
 };
 
 const ActivateDevice = memo<BuiltinRenderProps<ActivateDeviceParams, ActivateDeviceState, string>>(

@@ -11,7 +11,7 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { ListOnlineDevicesState } from '../../../types';
 
 const styles = {
-  count: 'inline-flex items-center h-5 text-xs leading-5 text-[var(--ant-color-text-description)]',
+  count: 'inline-flex items-center h-5 text-xs leading-5 text-(--ant-color-text-description)',
   icon: 'flex-none',
   root: 'gap-2',
 };

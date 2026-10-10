@@ -13,9 +13,9 @@ import { copyToClipboard } from '@/utils/clipboard';
 const styles = {
   cardBody: 'ps-3 pe-3 [padding-block-start:12px]',
   container:
-    'overflow-hidden justify-between min-w-[360px] max-w-[360px] h-[136px] border border-sidebar-border rounded-[var(--radius-overlay)]',
+    'overflow-hidden justify-between min-w-[360px] max-w-[360px] h-[136px] border border-sidebar-border rounded-(--radius-overlay)',
   footer:
-    'py-2 ps-3 pe-3 text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)] bg-[var(--ant-color-fill-quaternary)]',
+    'py-2 ps-3 pe-3 text-xs leading-[inherit] text-(--ant-color-text-tertiary) bg-(--ant-color-fill-quaternary)',
   text: cn('line-clamp-2 text-ellipsis', shinyTextStyles.shinyText),
 };
 

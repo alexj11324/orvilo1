@@ -19,11 +19,11 @@ import { resolveCCSubagentType } from '../subagentTypes';
 const styles = {
   chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
   chipText: 'overflow-hidden min-w-0 text-[12px] text-foreground text-ellipsis whitespace-nowrap',
-  icon: 'shrink-0 mx-1.5 text-[var(--ant-color-text-description)]',
+  icon: 'shrink-0 mx-1.5 text-(--ant-color-text-description)',
   label: 'shrink-0 text-foreground',
   metrics:
-    'inline-flex shrink-0 gap-1.5 items-center ms-2 text-[12px] text-[var(--ant-color-text-description)]',
-  metricsDot: 'text-[var(--ant-color-text-quaternary)]',
+    'inline-flex shrink-0 gap-1.5 items-center ms-2 text-[12px] text-(--ant-color-text-description)',
+  metricsDot: 'text-(--ant-color-text-quaternary)',
 };
 
 const formatTokens = (n: number): string => {

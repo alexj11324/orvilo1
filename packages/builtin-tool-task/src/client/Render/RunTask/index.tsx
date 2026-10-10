@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Play } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,23 +9,10 @@ import { useTranslation } from 'react-i18next';
 import type { RunTaskParams, RunTaskState } from '../../../types';
 import { InlineField, monoChipClassName, SectionField, TaskResultCard } from '../shared';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  topicChip: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    align-self: flex-start;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorInfo};
-
-    background: ${cssVar.colorInfoBg};
-  `,
-}));
+const styles = {
+  topicChip:
+    'inline-flex items-center gap-1 self-start rounded-[999px] bg-[var(--ant-color-info-bg)] px-2 py-0.5 text-[12px] text-info',
+};
 
 export const RunTaskRender = memo<BuiltinRenderProps<RunTaskParams, RunTaskState>>(
   ({ args, pluginState }) => {
@@ -43,7 +29,7 @@ export const RunTaskRender = memo<BuiltinRenderProps<RunTaskParams, RunTaskState
     return (
       <TaskResultCard
         icon={Play}
-        iconColor={cssVar.colorWarning}
+        iconColor={'var(--warning)'}
         identifier={identifier}
         title={t('builtins.orvilo-task.apiName.runTask')}
       >

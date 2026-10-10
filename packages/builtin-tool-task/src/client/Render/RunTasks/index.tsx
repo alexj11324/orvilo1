@@ -1,99 +1,26 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RunTasksItemResult, RunTasksParams, RunTasksState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  failedBadge: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorError};
-
-    background: ${cssVar.colorErrorBg};
-  `,
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  headerCount: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  identifier: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  index: css`
-    flex-shrink: 0;
-
-    width: 18px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-    text-align: end;
-  `,
-  meta: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  row: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-  `,
-  taskBody: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 4px;
-
-    min-width: 0;
-  `,
-  taskItem: css`
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-}));
+const styles = {
+  failedBadge:
+    'shrink-0 rounded-[999px] bg-[var(--ant-color-error-bg)] px-2 py-px text-[12px] text-destructive',
+  header: 'flex items-center gap-2 px-3 py-2 [border-block-end:1px_solid_var(--sidebar-border)]',
+  headerCount: 'text-[13px] font-medium text-foreground',
+  identifier:
+    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+  index: 'w-[18px] shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)] text-end',
+  row: 'flex min-w-0 items-center gap-2',
+  taskBody: 'flex min-w-0 flex-1 flex-col gap-1',
+  taskItem:
+    'flex items-start gap-2 px-3 py-2.5 [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
+  meta: 'truncate font-mono text-[11px] text-[var(--ant-color-text-tertiary)]',
+};
 
 export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksState>>(
   ({ args, pluginState }) => {
@@ -113,9 +40,9 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
     return (
       <div
         style={{
-          background: cssVar.colorBgContainer,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadius,
+          background: 'var(--card)',
+          border: '1px solid var(--sidebar-border)',
+          borderRadius: 'var(--ant-border-radius)',
           width: '100%',
         }}
       >
@@ -140,8 +67,8 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
               <div className={styles.taskBody}>
                 <div className={styles.row}>
                   <span className={styles.identifier}>{row.identifier}</span>
-                  {success && <Check size={14} style={{ color: cssVar.colorSuccess }} />}
-                  {failedRow && <X size={14} style={{ color: cssVar.colorError }} />}
+                  {success && <Check size={14} style={{ color: 'var(--success)' }} />}
+                  {failedRow && <X size={14} style={{ color: 'var(--destructive)' }} />}
                 </div>
                 {result?.topicId && <span className={styles.meta}>topic {result.topicId}</span>}
                 {failedRow && (

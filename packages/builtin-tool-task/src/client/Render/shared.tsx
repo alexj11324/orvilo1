@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import { PanelRight, PanelRightClose } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -15,101 +15,23 @@ import { useUserDisplayMeta } from '@/features/AgentTasks/shared/useUserDisplayM
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  assignee: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 100%;
-  `,
-  assigneeName: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  body: css`
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    padding-block: 12px;
-    padding-inline: 12px;
-  `,
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-  `,
-  headerDivider: css`
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  identifier: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  inlineRow: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-  `,
-  inlineValue: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-  `,
-  label: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  section: css`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  `,
-  sectionValue: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    overflow-wrap: anywhere;
-  `,
-  spacer: css`
-    flex: 1;
-  `,
-  title: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  assignee: 'inline-flex min-w-0 max-w-full items-center gap-1.5',
+  assigneeName: 'truncate text-[13px] text-foreground',
+  body: 'flex flex-col gap-2.5 p-3',
+  header: 'flex items-center gap-2 px-3 py-2.5',
+  headerDivider: '[border-block-end:1px_solid_var(--sidebar-border)]',
+  identifier:
+    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+  inlineRow: 'flex min-w-0 items-center gap-2',
+  inlineValue: 'min-w-0 flex-1 overflow-hidden text-[13px] text-foreground',
+  label: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  mono: 'font-mono text-[12px] text-muted-foreground',
+  section: 'flex min-w-0 flex-col gap-1',
+  sectionValue: 'text-[13px] leading-[1.6] text-muted-foreground [overflow-wrap:anywhere]',
+  spacer: 'flex-1',
+  title: 'text-[13px] font-medium text-foreground',
+};
 
 /**
  * Shared open/close wiring for a task's detail portal, reused by every
@@ -165,18 +87,18 @@ export const TaskResultCard = memo<TaskResultCardProps>(
     return (
       <div
         style={{
-          background: cssVar.colorBgContainer,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadius,
+          background: 'var(--card)',
+          border: '1px solid var(--sidebar-border)',
+          borderRadius: 'var(--ant-border-radius)',
           width: '100%',
         }}
         onClick={canOpen ? open : undefined}
       >
-        <div className={cx(styles.header, !!children && styles.headerDivider)}>
+        <div className={cn(styles.header, !!children && styles.headerDivider)}>
           {icon &&
             createElement(icon, {
               size: 15,
-              style: { color: iconColor ?? cssVar.colorTextSecondary },
+              style: { color: iconColor ?? 'var(--muted-foreground)' },
             })}
           <div className={styles.title}>{title}</div>
           {identifier && <span className={styles.identifier}>{identifier}</span>}

@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -12,34 +11,12 @@ import StreamingMarkdown from '@/components/StreamingMarkdown';
 
 import type { CreateDocumentArgs } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  icon: css`
-    color: ${cssVar.colorPrimary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'w-full overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
+  header: 'border-b border-sidebar-border px-3 py-2.5',
+  icon: 'text-primary',
+  title: 'line-clamp-1 font-medium text-foreground',
+};
 
 export const CreateDocumentStreaming = memo<BuiltinStreamingProps<CreateDocumentArgs>>(
   ({ args }) => {

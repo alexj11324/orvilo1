@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { FileTextIcon, Maximize2, Minimize2, PencilLine } from 'lucide-react';
 import { memo } from 'react';
@@ -15,48 +14,15 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    position: relative;
-
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  content: css`
-    padding-inline: 16px;
-    font-size: 14px;
-  `,
-  expandButton: css`
-    position: absolute;
-    inset-block-end: 16px;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-
-    box-shadow: ${cssVar.boxShadow};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  icon: css`
-    color: ${cssVar.colorPrimary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'relative w-full overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
+  content: 'px-4 text-[14px]',
+  expandButton:
+    'absolute start-1/2 [inset-block-end:16px] -translate-x-1/2 shadow-[var(--ant-box-shadow)]',
+  header: 'border-b border-sidebar-border px-3 py-2.5',
+  icon: 'text-primary',
+  title: 'line-clamp-1 font-medium text-foreground',
+};
 
 interface DocumentCardProps {
   content: string;

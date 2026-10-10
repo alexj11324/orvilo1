@@ -181,7 +181,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
     <div className={cx(styles.row, 'flex flex-col gap-1.5')}>
       <div className="flex items-start gap-3">
         <div
-          className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground"
+          className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground"
           style={{ flex: 'none', marginTop: 2 }}
         >
           {habit.code}
@@ -212,7 +212,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
                   )}
                   {domainTitle && <Badge variant="secondary">{domainTitle}</Badge>}
                 </div>
-                <div className="text-[12px] text-muted-foreground">{hint}</div>
+                <div className="text-xs text-muted-foreground">{hint}</div>
               </div>
             }
           />
@@ -281,7 +281,7 @@ const HabitList = memo<HabitListProps>(
         <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
           <div className="flex items-baseline gap-2">
             <div className="font-semibold">{t('habits.title')}</div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('habits.summary', { count: habits.length })}
             </div>
           </div>

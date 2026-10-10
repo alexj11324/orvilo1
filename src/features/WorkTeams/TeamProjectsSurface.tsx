@@ -75,7 +75,7 @@ const styles = {
   sidebarRow:
     'cursor-pointer flex gap-2 items-center w-full py-1.25 px-2 border-none rounded-[6px] text-foreground text-start bg-transparent hover:bg-accent',
   sidebarRowActive: 'text-primary bg-selected',
-  sidebarRowCount: 'ms-auto text-[12px] text-muted-foreground',
+  sidebarRowCount: 'ms-auto text-xs text-muted-foreground',
   sidebarSection: 'flex flex-col gap-0.5',
   viewChip:
     'cursor-pointer inline-flex items-center h-7 px-3 border border-transparent rounded-[999px] text-muted-foreground bg-transparent hover:bg-accent',

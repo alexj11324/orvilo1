@@ -185,12 +185,12 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           onChange={(event) => setRawEmails(event.target.value)}
         />
         {invalid.length > 0 && (
-          <div className="text-[12px] text-destructive">
+          <div className="text-xs text-destructive">
             {t('workspaceSetting.members.invalidEmails', { emails: invalid.join(', ') })}
           </div>
         )}
         {emails.length > 0 && (
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {t('workspaceSetting.members.emailCount', { count: emails.length })}
           </div>
         )}
@@ -256,7 +256,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
                       : cssVar.colorError,
                   size: 14,
                 })}
-                <div className={cn('text-[12px]', entry.ok ? undefined : 'text-destructive')}>
+                <div className={cn('text-xs', entry.ok ? undefined : 'text-destructive')}>
                   {emailFailed
                     ? t('workspaceSetting.members.inviteEmailFailed', { email: entry.email })
                     : entry.ok

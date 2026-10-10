@@ -37,7 +37,7 @@ const UserInfo = memo<UserInfoProps>(({ avatarProps, onClick, ...rest }) => {
             {nickname}
           </div>
           {username && (
-            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
+            <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.4 }}>
               {username}
             </div>
           )}

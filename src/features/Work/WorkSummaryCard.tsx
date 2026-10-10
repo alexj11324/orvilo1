@@ -259,9 +259,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
             <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
               <div className={cn('truncate min-w-0', styles.title)}>{title}</div>
               {showIdentifier && (
-                <div
-                  className={cn('font-mono rounded bg-muted px-1 text-[12px]', styles.identifier)}
-                >
+                <div className={cn('font-mono rounded bg-muted px-1 text-xs', styles.identifier)}>
                   {identifier}
                 </div>
               )}
@@ -277,9 +275,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
             )}
           </div>
           {description && (
-            <div className={cn('truncate min-w-0 text-[12px]', styles.description)}>
-              {description}
-            </div>
+            <div className={cn('truncate min-w-0 text-xs', styles.description)}>{description}</div>
           )}
         </div>
       </div>

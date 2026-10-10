@@ -211,10 +211,10 @@ const SelfLearning = memo(() => {
                 <div className="flex flex-col p-3 border border-sidebar-border bg-card">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                      <div className="text-[12px] text-muted-foreground">{t('teachNew.help')}</div>
+                      <div className="text-xs text-muted-foreground">{t('teachNew.help')}</div>
                       {!single && (
                         <div className="flex items-center gap-1.5">
-                          <div className="text-[12px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {t('teachNew.domain')}
                           </div>
                           {scoped.map((d) => (

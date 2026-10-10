@@ -58,7 +58,7 @@ const List = memo<ListProps>(({ mode, count = 3, disabled }) => {
         }}
       >
         <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-        <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-xs" style={{ color: cssVar.colorTextSecondary }}>
           {tCommon('switch')}
         </div>
       </div>

@@ -10,7 +10,7 @@ import Avatar from '@/components/Avatar';
 import OfficialIcon from '@/components/OfficialIcon';
 import { Badge } from '@/components/reui/badge';
 import { buttonVariants } from '@/components/ui/button';
-import { SimpleTooltip } from '@/components/ui/tooltip';
+import { SimpleTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
 import { useCategory } from '@/hooks/useMCPCategory';
@@ -79,10 +79,15 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
   );
 
   const cateBadge = (
-    <Badge variant="secondary">
-      {cate?.icon ? <cate.icon size={16} /> : null}
-      {cate?.label}
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger render={<Badge className="max-w-full" variant="secondary" />}>
+        {cate?.icon ? <cate.icon size={16} /> : null}
+        <span className="truncate">{cate?.label}</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="min-w-0 break-words">{cate?.label}</span>
+      </TooltipContent>
+    </Tooltip>
   );
 
   return (

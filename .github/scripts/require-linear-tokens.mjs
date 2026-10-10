@@ -142,7 +142,7 @@ if (findings.length) {
   console.error('Linear token gate failed — out-of-scale literals added on a parity surface:');
   for (const finding of findings) console.error(`  ${finding}`);
   console.error(
-    '\nFix: use the Linear scale (body ≤14, title ≤22, row icon ≤20, weight ≤600, mono identifiers, token colors — no arbitrary values), or annotate the line with `// linear-token-override` and why.',
+    '\nFix: use the Linear scale (body ≤14, title ≤22, row icon ≤20, weight ≤600, mono identifiers, token colors — no arbitrary values), or annotate the line with `// linear-token-override` and why.\nClass forms: .agents/skills/react/SKILL.md#role-lookup — whole pixels are px ÷ 4 on the scale (h-[44px] → h-11), radii are role variables (rounded-(--radius-card)), dense 13px text is text-(length:--text-dense).',
   );
   process.exit(1);
 }

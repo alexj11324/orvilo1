@@ -16,11 +16,43 @@ Apply the semantic role in DESIGN.md before choosing a CSS expression. `cssVar.*
 
 Use the application's existing theme mechanism and `[data-theme]` mappings. Do not copy an upstream `.dark`-only override or add a parallel theme toggle. Adapt design-system generation and Tailwind examples to the project's installed toolchain; do not initialize a second theme/configuration or replace existing fonts from an example.
 
-| Scenario                                                   | Approach                                                       |
-| ---------------------------------------------------------- | -------------------------------------------------------------- |
-| Most cases                                                 | `createStaticStyles` + `cssVar.*` (zero-runtime, module-level) |
-| Simple one-off                                             | Inline `style` attribute                                       |
-| Truly dynamic (JS color fns like `readableColor`/`chroma`) | `createStyles` + `token` — **last resort**                     |
+| Scenario                                                   | Approach                                                                    |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| New component, new file, or a file already on Tailwind     | Local primitives + the Tailwind role classes in [Role lookup](#role-lookup) |
+| Editing a file that already uses `createStaticStyles`      | Stay in it with `cssVar.*`; do not style one element through both systems   |
+| Value computed at render time (measured width, user color) | Inline `style`, for that value only                                         |
+| Truly dynamic (JS color fns like `readableColor`/`chroma`) | `createStyles` + `token` — **last resort**                                  |
+
+A static value never belongs in `style`. Do not start a new `createStaticStyles` block in a file that has none.
+
+### Role lookup
+
+Pick the role, then write the class in this table. A literal such as `text-[13px]`, `rounded-[8px]`, `h-[32px]`, `#080808` or `rgba(...)` in a component means a row here was skipped.
+
+| Need                                               | Write                                                                                 | Resolves to                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------- |
+| Primary / secondary text                           | `text-foreground` / `text-muted-foreground`                                           | `colorText` / `colorTextSecondary` |
+| Canvas / panel / overlay surface                   | `bg-background` / `bg-card` / `bg-popover`                                            | layout / container / elevated      |
+| Hover wash / selected or pressed                   | `hover:bg-accent` (static: `bg-muted`) / `bg-selected`                                | `colorFillTertiary` / `…Secondary` |
+| Stronger edge                                      | `border-border`                                                                       | `colorBorder`                      |
+| Status text or icon                                | `text-destructive-text`, `text-success-text`, …                                       | contrast-checked `*-text` role     |
+| Filled action                                      | `<Button>`; else `bg-primary text-primary-foreground`                                 | primary pair                       |
+| Metadata / body / emphasis text                    | `text-xs` / `text-sm` / `text-base`                                                   | 12 / 14 / 16px                     |
+| Dense label, on a surface DESIGN.md scopes to 13px | `text-(length:--text-dense)`                                                          | 13px                               |
+| Chip or tag radius                                 | `rounded-(--radius-chip)`                                                             | 4px                                |
+| Input or small-control radius                      | `rounded-(--radius-input)`                                                            | 6px                                |
+| Button / card radius                               | `rounded-(--radius-button)` / `rounded-(--radius-card)`                               | 8px                                |
+| Menu, popover or dialog radius                     | `rounded-(--radius-overlay)`                                                          | 12px                               |
+| Pill, avatar, circular action                      | `rounded-full`                                                                        |                                    |
+| Control height                                     | `<Button size>`: `lg` 36 normal, `default` 32 compact toolbar, `sm` 28 dense, `xs` 24 | never `h-*` on a Button            |
+| Any other whole-pixel size or gap                  | px ÷ 4 on the scale: `h-11` 44px, `w-70` 280px, `gap-2` 8px                           | 4px rhythm; half steps allowed     |
+| Full width or height                               | `w-full` / `h-full`                                                                   | not `w-[100%]`                     |
+
+- **`rounded-lg` is 10px and `rounded-xl` is 14px** until the Tailwind radius scale is re-pinned; neither is an approved role. Use the role forms above. `rounded-sm` (6px) and `rounded-md` (8px) happen to match and appear in installed primitives; new code still names the role.
+- **Do not invent a utility name for a role.** `cn` cannot classify one: `cn('text-foreground', 'text-dense')` drops the text color and `cn('rounded-md', 'rounded-card')` keeps both. The variable forms above merge correctly, which is why role variables live in `:root` in [globals.css](../../../src/app/globals.css) and not in `@theme`.
+- `text-xs` and `text-sm` carry Tailwind's line height (16px / 20px), not the 20px / 22px in DESIGN.md; the variable form sets font size only. Add `leading-5` to prose or multi-line metadata that needs the DESIGN.md line box. Re-pinning `--text-xs--line-height` and `--text-sm--line-height` is a scoped migration, like the radius scale.
+- `border-border` is the stronger edge. The everyday divider (`colorBorderSecondary`) has a role class only in the sidebar (`border-sidebar-border`); elsewhere keep the surrounding file's divider and add a role to DESIGN.md and `globals.css` before repeating a literal.
+- An arbitrary value is right only when no row fits: `calc()`, viewport units, a CSS variable owned by the component, or a measured optical correction. Explain the last kind on the line, as DESIGN.md requires. If a role is missing, add it to DESIGN.md and `globals.css` rather than repeating a literal.
 
 ## Component Priority
 

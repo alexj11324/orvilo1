@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,13 +14,9 @@ import WorkPreviewCard from '@/features/WorkGallery/WorkPreviewCard';
 
 import SectionTitle from './SectionTitle';
 
-const styles = createStaticStyles(({ css }) => ({
-  grid: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px;
-  `,
-}));
+const styles = {
+  grid: 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3',
+};
 
 /** The dashboard shows only the freshest works; the full gallery lives at /resource/works. */
 const MAX_RECENT_WORKS = 3;

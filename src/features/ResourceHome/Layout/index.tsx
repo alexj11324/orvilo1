@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
@@ -11,7 +11,7 @@ const HomeLayout: FC = () => {
   return (
     <>
       <Sidebar />
-      <div className={cx('flex flex-col flex-1 h-[100%]', styles.mainContainer)}>
+      <div className={cn('flex flex-col flex-1 h-[100%]', styles.mainContainer)}>
         <Outlet />
       </div>
     </>

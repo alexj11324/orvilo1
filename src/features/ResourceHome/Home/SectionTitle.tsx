@@ -1,33 +1,15 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  title: css`
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  viewAll: css`
-    cursor: pointer;
-
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-}));
+const styles = {
+  title: 'm-0 text-[15px] font-semibold text-foreground',
+  viewAll:
+    'cursor-pointer border-none text-[13px] text-muted-foreground [background:none] hover:text-foreground',
+};
 
 interface SectionTitleProps {
   title: string;

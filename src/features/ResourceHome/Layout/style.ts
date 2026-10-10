@@ -1,10 +1,3 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Main container
-  mainContainer: css`
-    position: relative;
-    overflow: hidden;
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+export const styles = {
+  mainContainer: 'relative overflow-hidden bg-card',
+};

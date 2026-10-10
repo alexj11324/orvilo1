@@ -1,21 +1,14 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Check } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { UpdatePromptParams, UpdatePromptState } from '../../../types';
-
-const styles = createStaticStyles(({ css }) => ({
-  statusIcon: css`
-    margin-block-end: -2px;
-    margin-inline-start: 4px;
-  `,
-}));
 
 export const UpdatePromptInspector = memo<
   BuiltinInspectorProps<UpdatePromptParams, UpdatePromptState>
@@ -52,17 +45,16 @@ export const UpdatePromptInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-agent-builder.apiName.updatePrompt')}
       </span>
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{
-            marginInlineStart: 4,
-            color: lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError,
-          }}
+          className={cn(
+            'ms-1 font-mono rounded bg-muted px-1 text-[12px]',
+            lengthDiff >= 0 ? 'text-success' : 'text-destructive',
+          )}
         >
           ({lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
@@ -71,16 +63,13 @@ export const UpdatePromptInspector = memo<
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
-        <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
-        >
+        <span className="ms-1 font-mono rounded bg-muted px-1 text-[12px] text-[var(--ant-color-text-description)]">
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})
         </span>
       )}
       {!isLoading && !isArgumentsStreaming && isSuccess && (
-        <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+        <Check className="ms-1 [margin-block-end:-2px]" color={'var(--success)'} size={14} />
       )}
     </div>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,14 +15,9 @@ import {
   useFeedbackAttachments,
 } from '../Evidence/attachments';
 
-const styles = createStaticStyles(({ css }) => ({
-  warning: css`
-    padding-block: 10px;
-    padding-inline: 14px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorWarningBg};
-  `,
-}));
+const styles = {
+  warning: 'rounded-(--ant-border-radius-lg) bg-(--ant-color-warning-bg) px-3.5 py-2.5',
+};
 
 /**
  * A frosted scrim for the acceptance decision dialogs — the page behind reads

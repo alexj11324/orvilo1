@@ -13,6 +13,7 @@ import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FORM_STYLE } from '@/const/layoutTokens';
+import UnsavedChangesGuard from '@/features/EditorCanvas/UnsavedChangesGuard';
 import { useSaveState } from '@/hooks/useSaveState';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 
@@ -25,6 +26,36 @@ const WorkspaceGeneral = () => {
   const [draft, setDraft] = useState<{ id: string; name: string; slug: string; avatar: string }>();
   const current = draft?.id === workspace?.id ? draft : undefined;
   const canEdit = workspace?.role === 'owner' || workspace?.role === 'admin';
+
+  // Only the fields this form changed are sent. Sending the whole snapshot
+  // would write back a name or URL another admin changed while the page was
+  // open.
+  const saveDraft = async (): Promise<boolean> => {
+    if (!current || !workspace) return true;
+    const changed = Object.fromEntries(
+      (['name', 'slug', 'avatar'] as const)
+        .filter((key) => current[key] !== (workspace[key] ?? ''))
+        .map((key) => [key, current[key]]),
+    );
+    if (Object.keys(changed).length === 0) {
+      setDraft(undefined);
+      return true;
+    }
+
+    // `save` reports failure through its status, not by throwing.
+    let savedSlug: string | undefined;
+    await save(async () => {
+      const updated = await createWorkspaceLambdaClient(current.id).workspace.update.mutate(
+        changed,
+      );
+      await mutate();
+      setDraft(undefined);
+      savedSlug = updated.slug;
+    });
+    if (savedSlug === undefined) return false;
+    if (savedSlug !== workspace.slug) navigate(`/${savedSlug}/settings`, { replace: true });
+    return true;
+  };
   const field = (key: 'name' | 'slug' | 'avatar', label: string) => (
     <Input
       aria-label={label}
@@ -48,6 +79,12 @@ const WorkspaceGeneral = () => {
 
   return (
     <>
+      {/* Leaving with unsaved edits saves them first instead of dropping them. */}
+      <UnsavedChangesGuard
+        isDirty={!!current && status !== 'saving'}
+        message={''}
+        onAutoSave={saveDraft}
+      />
       {/* Same wide filled card as the personal settings pages. */}
       <Form
         collapsible={false}
@@ -105,17 +142,7 @@ const WorkspaceGeneral = () => {
         <Button
           disabled={!canEdit || !current || status === 'saving'}
           size="lg"
-          onClick={() =>
-            current &&
-            void save(async () => {
-              const { id, ...value } = current;
-              const updated = await createWorkspaceLambdaClient(id).workspace.update.mutate(value);
-              await mutate();
-              setDraft(undefined);
-              if (updated.slug !== workspace?.slug)
-                navigate(`/${updated.slug}/settings`, { replace: true });
-            })
-          }
+          onClick={() => void saveDraft()}
         >
           {t('save', { ns: 'common' })}
         </Button>

@@ -532,7 +532,7 @@ stale frame separately if you observed it. Pair it with a warm control run: if
 the warm run renders data while the request is held paused and the cold run shows
 the skeleton, the cache tier is proven to be what the render reads.
 
-#### P17 · Reaching the Goals page: nested route plus a Labs toggle
+#### P17 · Reaching the Goals page: nested route
 
 **applies-to:** surface=web · runtime=any · phase=drive
 
@@ -540,18 +540,11 @@ the skeleton, the cache tier is proven to be what the render reads.
 
 **Doesn't work:** opening `/agent/goals` directly. The goals route is nested under
 `/agent/:aid/goals`, so `goals` is parsed as an agentId and the page reports
-"assistant unavailable". The page is also gated behind the Labs toggle
-`enableTopicAcceptance`; while it is off, the route silently replaces back to
-`/agent/:aid`.
+"assistant unavailable".
 
 **Works:** look up the seeded user's agentId
-(`select id from agents where user_id=...`), then turn the Labs toggle on through the
-public store action (it persists to user preferences and applies for the whole
-session):
-
-```js
-window.__ORVILO_STORES.user().updateLab({ enableTopicAcceptance: true });
-```
+(`select id from agents where user_id=...`). The Labs settings page was retired and
+`enableTopicAcceptance` defaults to on, so no toggle is needed.
 
 Then open `/agent/<agentId>/goals`. In the create-Goal dialog, "start from blank"
 skips AI generation of the acceptance criteria (required when there is no local LLM

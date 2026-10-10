@@ -404,6 +404,10 @@ export class ChatTopicActionImpl {
         console.error('[topicTitle] failed to persist the title source:', error);
       }
     }
+    // The marker write above is awaited, so a later rename can start meanwhile
+    // and record its own origin. Whoever recorded last owns the title; an older
+    // write that resumes now must not overwrite it.
+    if (this.#topicTitleOrigins.get(id) !== origin) return;
     await this.#get().internal_updateTopic(id, { title });
   };
 

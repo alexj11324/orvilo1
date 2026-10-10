@@ -143,6 +143,30 @@ describe('applyAgentTopicTitle', () => {
       expect(useChatStore.getState().topicDetailMap.p1.metadata?.titleSource).toBe('user');
     });
 
+    // Regression: the marker write is awaited before the title write. A user
+    // rename that started during that wait used to be overwritten when the
+    // older agent write resumed.
+    it('lets a user rename that starts during the agent marker write keep the title', async () => {
+      seedTopic('p-race', sliceTopicTitle(messages));
+      let releaseAgentMarker = () => {};
+      vi.mocked(topicService.updateTopicMetadata).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseAgentMarker = () => resolve(undefined as never);
+          }),
+      );
+
+      const agentWrite = useChatStore
+        .getState()
+        .applyAgentTopicTitle('p-race', 'Agent title', messages);
+      await Promise.resolve();
+      await useChatStore.getState().updateTopicTitle('p-race', 'Renamed by me');
+      releaseAgentMarker();
+      await agentWrite;
+
+      expect(titleOf('p-race')).toBe('Renamed by me');
+    });
+
     it('stores `agent` with the agent title and keeps other metadata keys', async () => {
       seedTopic('p2', sliceTopicTitle(messages), { metadata: { heteroSessionId: 'hs-1' } });
 

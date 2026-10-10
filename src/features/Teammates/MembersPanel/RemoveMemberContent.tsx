@@ -98,30 +98,30 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
       )}
       {preview && (
         <div className="flex flex-col gap-1">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('workspaceSetting.members.previewTitle')}
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-(length:--text-dense) text-muted-foreground">
               {t('workspaceSetting.members.previewTasks', { count: preview.assignedTaskCount })}
             </div>
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-(length:--text-dense) text-muted-foreground">
               {t('workspaceSetting.members.previewReviews', {
                 count: preview.reviewingTaskCount,
               })}
             </div>
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-(length:--text-dense) text-muted-foreground">
               {t('workspaceSetting.members.previewDelegations', {
                 count: preview.runningDelegationCount,
               })}
             </div>
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-(length:--text-dense) text-muted-foreground">
               {t('workspaceSetting.members.previewDevices', {
                 count: preview.sharedDeviceCount,
               })}
@@ -132,7 +132,7 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
 
       {preview && hasImpact && reassignOptions.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('workspaceSetting.members.reassignLabel')}
           </div>
           <Select

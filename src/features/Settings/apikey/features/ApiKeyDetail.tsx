@@ -163,7 +163,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                 <span className="w-24 flex-none text-xs text-muted-foreground">
                   {t('apikey.list.columns.name')}
                 </span>
-                <span className="flex items-center overflow-hidden text-[13px]">
+                <span className="flex items-center overflow-hidden text-(length:--text-dense)">
                   <EditableCell
                     disabled={!canEdit}
                     placeholder={t('apikey.display.enterPlaceholder')}
@@ -181,7 +181,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                 <span className="w-24 flex-none text-xs text-muted-foreground">
                   {t('apikey.list.columns.key')}
                 </span>
-                <span className="flex items-center overflow-hidden text-[13px]">
+                <span className="flex items-center overflow-hidden text-(length:--text-dense)">
                   {apiKey.isMine === false ? (
                     <span style={{ opacity: 0.5 }}>{`sk-ov-${'*'.repeat(12)}`}</span>
                   ) : apiKey.keyDecryptionFailed ? (
@@ -199,7 +199,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                   <span className="w-24 flex-none text-xs text-muted-foreground">
                     {t('apikey.list.columns.creator')}
                   </span>
-                  <span className="flex items-center overflow-hidden text-[13px]">
+                  <span className="flex items-center overflow-hidden text-(length:--text-dense)">
                     {apiKey.creator}
                   </span>
                 </div>
@@ -209,7 +209,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                 <span className="w-24 flex-none text-xs text-muted-foreground">
                   {t('apikey.detail.createdAt')}
                 </span>
-                <span className="flex items-center overflow-hidden text-[13px]">
+                <span className="flex items-center overflow-hidden text-(length:--text-dense)">
                   {formatAbsoluteDateTime(apiKey.createdAt)}
                 </span>
               </div>
@@ -218,7 +218,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                 <span className="w-24 flex-none text-xs text-muted-foreground">
                   {t('apikey.list.columns.lastUsedAt')}
                 </span>
-                <span className="flex items-center overflow-hidden text-[13px]">
+                <span className="flex items-center overflow-hidden text-(length:--text-dense)">
                   {formatAbsoluteDateTime(apiKey.lastUsedAt) || t('apikey.display.neverUsed')}
                 </span>
               </div>
@@ -227,7 +227,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                 <span className="w-24 flex-none text-xs text-muted-foreground">
                   {t('apikey.list.columns.expiresAt')}
                 </span>
-                <span className="flex items-center overflow-hidden text-[13px]">
+                <span className="flex items-center overflow-hidden text-(length:--text-dense)">
                   <EditableCell
                     disabled={!canEdit}
                     placeholder={t('apikey.display.neverExpires')}
@@ -248,7 +248,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                   {t('apikey.list.columns.status')}
                 </span>
                 <span
-                  className="flex items-center overflow-hidden text-[13px]"
+                  className="flex items-center overflow-hidden text-(length:--text-dense)"
                   title={canEdit ? undefined : manageTooltip}
                 >
                   <Switch
@@ -265,7 +265,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
             </div>
 
             <div className="flex flex-col gap-3">
-              <span className="text-[13px] font-medium text-muted-foreground">
+              <span className="text-(length:--text-dense) font-medium text-muted-foreground">
                 {t('apikey.form.fields.scopes.label')}
               </span>
               <ApiKeyScopeEditor

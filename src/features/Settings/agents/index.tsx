@@ -77,7 +77,10 @@ const AgentSettingsIndex = memo(() => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="text-[20px] font-semibold">{t('tab.agents')}</div>
-            <div className="text-[13px]" style={{ color: 'var(--ant-color-text-description)' }}>
+            <div
+              className="text-(length:--text-dense)"
+              style={{ color: 'var(--ant-color-text-description)' }}
+            >
               {t('agentsIndexHint')}
             </div>
           </div>

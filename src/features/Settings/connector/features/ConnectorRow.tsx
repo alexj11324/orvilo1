@@ -47,7 +47,7 @@ const ConnectorRow = memo<ConnectorRowProps>(
         <span
           title={title}
           className={cn(
-            'flex-1 truncate text-[13px] font-medium',
+            'flex-1 truncate text-(length:--text-dense) font-medium',
             active
               ? 'text-foreground'
               : muted

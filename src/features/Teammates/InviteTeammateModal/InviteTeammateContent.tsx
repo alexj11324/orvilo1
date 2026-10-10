@@ -176,7 +176,9 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
       </Alert>
 
       <div className={cx(styles.field, 'flex flex-col')}>
-        <div className="text-[13px] font-medium">{t('workspaceSetting.members.emailsLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('workspaceSetting.members.emailsLabel')}
+        </div>
         <Textarea
           autoFocus
           placeholder={t('workspaceSetting.members.emailsPlaceholder')}
@@ -197,7 +199,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
       </div>
 
       <div className={cx(styles.field, 'flex flex-col')}>
-        <div className="text-[13px] font-medium">
+        <div className="text-(length:--text-dense) font-medium">
           {t('workspaceSetting.members.workspaceRoleLabel')}
         </div>
         <Select
@@ -208,7 +210,9 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
       </div>
 
       <div className={cx(styles.field, 'flex flex-col')}>
-        <div className="text-[13px] font-medium">{t('workspaceSetting.members.projectsLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('workspaceSetting.members.projectsLabel')}
+        </div>
         <Select
           allowClear
           mode="multiple"
@@ -221,7 +225,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           const project = projects.find((item) => item.id === projectId);
           return (
             <div className="flex items-center gap-2 justify-between" key={projectId}>
-              <div className="text-[13px]">{project?.name ?? projectId}</div>
+              <div className="text-(length:--text-dense)">{project?.name ?? projectId}</div>
               <Select
                 options={projectRoleOptions}
                 size="small"

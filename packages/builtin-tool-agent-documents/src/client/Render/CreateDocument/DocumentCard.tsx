@@ -16,7 +16,7 @@ import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 
 const styles = {
   container: 'relative w-full overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
-  content: 'px-4 text-[14px]',
+  content: 'px-4 text-sm',
   expandButton:
     'absolute start-1/2 [inset-block-end:16px] -translate-x-1/2 shadow-[var(--ant-box-shadow)]',
   header: 'border-b border-sidebar-border px-3 py-2.5',

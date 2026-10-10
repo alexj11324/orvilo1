@@ -18,14 +18,14 @@ const MoveLocalFiles = memo<BuiltinInterventionProps<MoveLocalFilesParams>>(({ a
         {operations.map((op, i) => (
           <div className="flex flex-row items-center gap-2" key={i}>
             <span
-              className="font-mono rounded bg-muted px-1 truncate block text-[12px]"
+              className="font-mono rounded bg-muted px-1 truncate block text-xs"
               style={{ maxWidth: 200 }}
             >
               {op.source}
             </span>
             <ArrowRight size={12} />
             <span
-              className="font-mono rounded bg-muted px-1 truncate block text-[12px]"
+              className="font-mono rounded bg-muted px-1 truncate block text-xs"
               style={{ maxWidth: 200 }}
             >
               {op.destination}

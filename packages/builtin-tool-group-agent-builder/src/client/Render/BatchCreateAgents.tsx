@@ -14,7 +14,7 @@ import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../type
 const styles = {
   container: 'rounded-[8px] bg-[var(--ant-color-fill-quaternary)] px-4 py-1',
   description:
-    'line-clamp-1 text-ellipsis text-[12px] leading-[1.5] text-[var(--ant-color-text-description)]',
+    'line-clamp-1 text-ellipsis text-xs leading-[1.5] text-[var(--ant-color-text-description)]',
   empty: 'p-4 text-[var(--ant-color-text-tertiary)]',
   item: 'py-3 not-last:[border-block-end:1px_solid_var(--sidebar-border)]',
   title: 'truncate text-[13px] font-medium',

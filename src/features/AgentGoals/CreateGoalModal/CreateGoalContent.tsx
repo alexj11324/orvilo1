@@ -538,7 +538,9 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck color={cssVar.colorTextTertiary} size={16} />
-                <div className="text-[13px] font-semibold">{t('createGoal.criteriaTitle')}</div>
+                <div className="text-(length:--text-dense) font-semibold">
+                  {t('createGoal.criteriaTitle')}
+                </div>
                 <div className={cn('text-[12px]', styles.sectionHint)}>
                   {t('createGoal.criteriaHint')}
                 </div>
@@ -594,7 +596,9 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           </div>
 
           <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
-            <div className="text-[13px] font-semibold">{t('createGoal.budgetTitle')}</div>
+            <div className="text-(length:--text-dense) font-semibold">
+              {t('createGoal.budgetTitle')}
+            </div>
             <div className="flex flex-col gap-3">
               <div className={styles.budgetField}>
                 <div className="text-[12px] text-muted-foreground">

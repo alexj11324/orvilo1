@@ -109,7 +109,9 @@ const GoalAcceptanceCriteria = memo<{ criteriaIds: string[]; goalId: string }>(
       >
         {criteriaIds.length === 0 && (
           <div className={`flex flex-col ${styles.row}`}>
-            <div className="text-[13px] text-muted-foreground">{t('goalAcceptance.empty')}</div>
+            <div className="text-(length:--text-dense) text-muted-foreground">
+              {t('goalAcceptance.empty')}
+            </div>
           </div>
         )}
         {(criteria ?? []).map((item, index) => (

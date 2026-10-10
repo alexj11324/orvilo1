@@ -301,7 +301,7 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
               </span>
             )}
             {chip && (
-              <div className="flex items-center gap-[5px]">
+              <div className="flex items-center gap-1.25">
                 {chip.icon ? (
                   <chip.icon color={chip.color} size={13} />
                 ) : (
@@ -443,7 +443,7 @@ export const GhostNodeView = memo(() => {
             <KIND_ICON.task size={16} />
           </div>
           <div
-            className="flex flex-col gap-[7px]"
+            className="flex flex-col gap-1.75"
             style={{ flex: 1, minWidth: 0, paddingBlockStart: 1 }}
           >
             <span className={cx(styles.title, shinyTextStyles.shinyText)}>

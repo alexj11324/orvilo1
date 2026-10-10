@@ -60,7 +60,9 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
   return (
     <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">{t('goalProcess.northStar.declare.keyLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.northStar.declare.keyLabel')}
+        </div>
         <Input
           autoFocus
           placeholder={t('goalProcess.northStar.declare.keyPlaceholder')}
@@ -69,7 +71,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">
+        <div className="text-(length:--text-dense) font-medium">
           {t('goalProcess.northStar.declare.titleLabel')}
         </div>
         <Input
@@ -80,7 +82,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
       </div>
       <div className="flex gap-3">
         <div className="flex flex-col flex-1 gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('goalProcess.northStar.declare.opLabel')}
           </div>
           <Select
@@ -104,7 +106,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
           </Select>
         </div>
         <div className="flex flex-col flex-1 gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('goalProcess.northStar.declare.targetLabel')}
           </div>
           <Input

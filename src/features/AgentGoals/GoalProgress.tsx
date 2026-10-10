@@ -18,7 +18,7 @@ const styles = {
   acceptance: 'min-w-0',
   metric: 'justify-self-end whitespace-nowrap',
   metrics:
-    'grid grid-cols-[minmax(178px,1fr)_72px_48px_64px] gap-x-3 items-center w-[min(100%,390px)] min-w-[390px]',
+    'grid grid-cols-[minmax(178px,1fr)_72px_48px_64px] gap-x-3 items-center w-[min(100%,390px)] min-w-97.5',
   needsYou: 'justify-self-end text-warning whitespace-nowrap',
   progress: 'overflow-hidden w-16 h-1 rounded-(--ant-border-radius-xs) bg-selected',
   progressValue:

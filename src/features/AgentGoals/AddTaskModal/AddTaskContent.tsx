@@ -46,7 +46,9 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
   return (
     <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">{t('goalProcess.addTask.titleLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.addTask.titleLabel')}
+        </div>
         <Input
           autoFocus
           placeholder={t('goalProcess.addTask.titlePlaceholder')}
@@ -58,7 +60,9 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">{t('goalProcess.addTask.descriptionLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.addTask.descriptionLabel')}
+        </div>
         <Textarea
           placeholder={t('goalProcess.addTask.descriptionPlaceholder')}
           rows={3}

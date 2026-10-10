@@ -125,7 +125,7 @@ const Deliverables = memo<{ graph: GoalGraphView }>(({ graph }) => {
     return (
       <div className="flex items-center gap-1.5">
         <Link2 color={'var(--ant-color-text-quaternary)'} size={14} />
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           {t('goalProcess.deliverables.empty')}
         </div>
       </div>

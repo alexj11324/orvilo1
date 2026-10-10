@@ -166,7 +166,7 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                 onClick={() => onSelect(finding.id)}
               >
                 <KindDot kind={'finding'} />
-                <div className="text-[13px]">
+                <div className="text-(length:--text-dense)">
                   {t('goalProcess.activity.finding', { title: finding.title })}
                 </div>
               </div>

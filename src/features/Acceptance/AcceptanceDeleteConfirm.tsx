@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
@@ -20,33 +19,10 @@ import { frostedModalStyles } from './Viewer/Review/modals';
 
 const PREVIEW_BATCH_LIMIT = 20;
 
-const styles = createStaticStyles(({ css }) => ({
-  facts: css`
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 4px 14px;
-
-    margin: 0;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    dt {
-      margin: 0;
-      color: ${cssVar.colorTextTertiary};
-    }
-
-    dd {
-      margin: 0;
-      color: ${cssVar.colorText};
-    }
-  `,
-}));
+const styles = {
+  facts:
+    'm-0 grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1 rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary) px-3 py-2.5 text-[13px] tabular-nums [&_dt]:m-0 [&_dt]:text-(--ant-color-text-tertiary) [&_dd]:m-0 [&_dd]:text-foreground',
+};
 
 interface DeleteConfirmProps {
   description?: string;

@@ -63,6 +63,8 @@ Pick the role, then write the class in this table. A literal such as `text-[13px
 4. **antd** — only as `GroupForm`'s validation layer; never import antd controls directly.
 5. **Custom implementation** — true last resort.
 
+Settings → Proxy is the first migrated form: use local `Field` components with `react-hook-form` and the existing `zod` validation; no resolver package is needed. Its schema only validates: submit raw values with the page's mounted-field payload contract. Unmigrated forms keep `GroupForm` until their own behavior and caller migration is reviewed; do not remove shared providers based on this one page.
+
 For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over `<Modal open … />`. The new `ModalHost` and sonner `ToastHost` are mounted in `SPAGlobalProvider` and every app shell; the lobehub base-ui hosts stay mounted until call-site slices finish migrating.
 
 > Common slip: `import { createModal } from '@lobehub/ui/base-ui'` is the legacy stack — use `@/components/Modal`. Same for `toast`, `useToast`, `ModalFooter`, `ModalInstance`.

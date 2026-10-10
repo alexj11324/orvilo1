@@ -9,3 +9,5 @@ Scoped legacy geometry is preserved: status gap 5px and 99px radius, caption 5px
 This batch does not change React Flow handles, third-party controls, resizable history rails or the global legacy style layer. These require separate component/cascade migration.
 
 Validation: scoped lint and related tests, normal hooks and one independent light review. No new behavior test is added for class-only changes. 未做真机验证；no Electron acceptance or visual parity claimed.
+
+CI follow-up: the Chinese UI font guard parses arbitrary \[font:inherit] utilities as CSS text and rejects the trailing classes. The native button now retains the same complete font inheritance through its public inline style, which the guard explicitly allows. No font stack or guard rule changes.

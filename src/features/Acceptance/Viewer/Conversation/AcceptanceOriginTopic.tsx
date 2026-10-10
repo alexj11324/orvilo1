@@ -9,7 +9,7 @@ import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { useOriginConversation } from './originConversation';
 
 const styles = {
-  chip: 'cursor-pointer border-0 bg-none bg-transparent p-0 text-muted-foreground [font:inherit] hover:text-foreground hover:underline',
+  chip: 'cursor-pointer border-0 bg-none bg-transparent p-0 text-muted-foreground hover:text-foreground hover:underline',
 };
 
 const AcceptanceOriginTopic = () => {
@@ -30,6 +30,7 @@ const AcceptanceOriginTopic = () => {
   return (
     <button
       className={styles.chip}
+      style={{ font: 'inherit' }}
       title={t('acceptance.origin.openTopic')}
       type={'button'}
       onClick={openTopic}

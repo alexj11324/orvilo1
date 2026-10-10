@@ -1,3 +1,4 @@
+// File-type hues identify formats consistently across light and dark surfaces.
 export const mimeTypeMap: Record<string, string> = {
   csv: '#43aa55',
   doc: '#2b56b1',

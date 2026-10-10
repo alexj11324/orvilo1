@@ -429,6 +429,11 @@ This entry is what `packages/builtin-tools/src/index.ts` and `identifiers.ts` im
 
 ## 8. `package.json`
 
+Declare only dependencies actually imported by the package. New client UI follows
+the [React component inventory](../../react/SKILL.md#component-priority); do not
+copy legacy UI peer dependencies into every new tool package. Add a retained rich
+component dependency only when that tool actually uses it.
+
 ```json
 {
   "dependencies": {
@@ -446,9 +451,6 @@ This entry is what `packages/builtin-tools/src/index.ts` and `identifiers.ts` im
   "main": "./src/index.ts",
   "name": "@orvilo/builtin-tool-<name>",
   "peerDependencies": {
-    "@lobehub/ui": "^5",
-    "antd": "^6",
-    "antd-style": "*",
     "lucide-react": "*",
     "react": "*",
     "react-i18next": "*"

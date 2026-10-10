@@ -37,31 +37,31 @@ interface BuiltinInterventionProps<Arguments = any> {
 ```tsx
 import type { RunCommandParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { Flexbox, Highlighter, Text } from '@lobehub/ui';
+import { Highlighter } from '@lobehub/ui';
 import { memo } from 'react';
 
 const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) => {
   const { description, command, timeout } = args;
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal justify="space-between">
-        {description && <Text>{description}</Text>}
+    <div className="flex flex-col gap-2">
+      <div className="flex justify-between">
+        {description && <span>{description}</span>}
         {timeout && (
-          <Text style={{ fontSize: 12 }} type="secondary">
-            timeout: {formatTimeout(timeout)}
-          </Text>
+          <span className="text-xs text-muted-foreground">timeout: {formatTimeout(timeout)}</span>
         )}
-      </Flexbox>
+      </div>
       {command && (
         <Highlighter wrap language="sh" showLanguage={false} variant="outlined">
           {command}
         </Highlighter>
       )}
-    </Flexbox>
+    </div>
   );
 });
 export default RunCommand;
 ```
+
+Component selection follows [React](../../../react/SKILL.md); the retained rich-code renderer here is not a recommendation to use legacy layout or text components.
 
 ## Intervention rules
 

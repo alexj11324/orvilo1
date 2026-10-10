@@ -14,6 +14,6 @@
 10. **有风险的动作必须 Intervention。** 写文件、删除、发送、安装、执行命令、外部可见操作、权限敏感操作，都应该在执行前给出可理解的确认界面；确认文案要说明影响范围，而不是只问 “是否继续”。
 11. **错误、空态和截断都是正式状态。** Render 不能在失败、无结果、超长结果时退化成空白。错误要说明发生在哪一步；空态要告诉用户没有产物；超长内容要明确 “展示前 N 项 / 还有 N 项”。
 12. **信息密度要克制。** 默认展示最有判断价值的部分：标题、来源、状态、摘要、少量关键字段。大对象、长列表、原文、调试数据放进可展开区域或 Portal，避免把聊天流撑成后台管理页。
-13. **视觉上融入聊天流。** Tool UI 应该使用 `@lobehub/ui` / base-ui、`Flexbox`、`createStaticStyles` 和 `cssVar.*`，遵循现有间距、圆角、颜色、字号；不要为单个工具发明一套独立视觉语言。具体的样式约定见 [shared-rules.md](shared-rules.md)。
+13. **视觉上融入聊天流。** 组件选择、样式与布局遵循 [react skill](../../../react/SKILL.md#styling) 和它的 [角色对照表](../../../react/SKILL.md#role-lookup)，视觉数值遵循 [DESIGN.md](../../../../../DESIGN.md)。工具 UI 的单层卡片与状态组织见 [shared-rules.md](shared-rules.md)，不另建样式规范。
 14. **Devtools fixture 是验收入口。** 新增或修改 Tool UI 时，应在 `/devtools` 里准备覆盖典型态、loading/streaming、空态、错误态、长内容态的 fixture；一个 API 如果在真实聊天里会出现，就不应该在 devtools 中缺席。
 15. **先做用户会看的 UI，再做调试 UI。** Raw JSON、trace、schema、内部 id 可以存在，但应默认收起或放到调试区；主界面先回答用户最关心的问题：工具做了什么，结果值不值得信任，下一步能做什么。

@@ -9,7 +9,9 @@ One HTML file, double-click to open, fully interactive, rendered by the **actual
 design system** (`@lobehub/ui` 5.x + antd 6 + antd-style tokens, exact versions from
 this repo's `node_modules`) — while the source stays **production-style React**
 (`import { Block } from '@lobehub/ui'`, `createStyles(({ css, token }) => …)`, hooks,
-`memo`). Promotion to production is mostly "split into files", not "rewrite".
+`memo`). This runtime is a legacy prototype sandbox. Production promotion must follow the
+[React skill](../react/SKILL.md) for local components, native layouts and Tailwind
+roles; the sandbox exports below are capabilities, not production import guidance.
 
 Prototype code may be quick-and-dirty (one file, no i18n, inline data) — but the
 **interaction must be complete**: states, transitions, and affordances are the point

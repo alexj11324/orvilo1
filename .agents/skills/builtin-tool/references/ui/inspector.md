@@ -23,25 +23,22 @@ interface BuiltinInspectorProps<Arguments = any, State = any> {
 
 | Phase                               | What's available                                           | What to show                                               |
 | ----------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
-| Args streaming, no useful field yet | `isArgumentsStreaming === true`, `partialArgs.X` undefined | Just the API title with `shinyTextStyles.shinyText`        |
+| Args streaming, no useful field yet | `isArgumentsStreaming === true`, `partialArgs.X` undefined | Just the API title with `text-shiny`                       |
 | Args streaming, key field arrived   | `partialArgs.X` populated                                  | Title + key field chip, still pulse-animated               |
 | Args complete, executor running     | `args` populated, `isLoading === true`                     | Same as above, still pulse-animated                        |
 | Result arrived                      | `pluginState` populated, `isLoading === false`             | Title + chips + result summary (count, identifier, status) |
 
 ## Canonical example — Search
 
-`packages/builtin-tool-web-browsing/src/client/Inspector/Search/index.tsx`:
+New-code example based on the search Inspector lifecycle (not a verbatim copy of a legacy implementation):
 
 ```tsx
 'use client';
 
 import type { BuiltinInspectorProps, SearchQuery, UniformSearchResponse } from '@orvilo/types';
-import { Text } from '@lobehub/ui';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSearchResponse>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {
@@ -53,7 +50,12 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
 
     if (isArgumentsStreaming && !query) {
       return (
-        <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>
+        <div
+          className={cn(
+            'relative flex min-w-0 items-center truncate text-muted-foreground',
+            'text-shiny',
+          )}
+        >
           <span>{t('builtins.orvilo-web-browsing.apiName.search')}</span>
         </div>
       );
@@ -61,22 +63,22 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
 
     return (
       <div
-        className={cx(
-          inspectorTextStyles.root,
-          (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
+        className={cn(
+          'relative flex min-w-0 items-center truncate text-muted-foreground',
+          (isArgumentsStreaming || isLoading) && 'text-shiny',
         )}
       >
         <span>{t('builtins.orvilo-web-browsing.apiName.search')}:&nbsp;</span>
-        {query && <span className={highlightTextStyles.primary}>{query}</span>}
+        {query && <span className="ms-1 min-w-0 truncate text-foreground">{query}</span>}
         {!isLoading &&
           !isArgumentsStreaming &&
           pluginState?.results &&
           (hasResults ? (
-            <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
+            <span className="ms-1">({resultCount})</span>
           ) : (
-            <Text as="span" color={cssVar.colorTextDescription} fontSize={12}>
+            <span className="text-xs text-muted-foreground">
               ({t('builtins.orvilo-web-browsing.inspector.noResults')})
-            </Text>
+            </span>
           ))}
       </div>
     );
@@ -88,8 +90,8 @@ export default SearchInspector;
 
 ## Inspector rules
 
-- Wrap the whole row with `inspectorTextStyles.root` (provides correct flex / line-height baseline).
-- Pulse with `shinyTextStyles.shinyText` whenever `isArgumentsStreaming || isLoading`.
+- Keep the row single-line, shrinkable and clipped; choose typography and tone through the [React role lookup](../../../react/SKILL.md#role-lookup).
+- Pulse with `text-shiny` whenever `isArgumentsStreaming || isLoading`.
 - Show the i18n title first so the row is non-empty during the earliest streaming phase.
 - Read both `args?.X` and `partialArgs?.X` together — `args` is final, `partialArgs` is in-stream.
 - Use chips/tags for distinct facets (identifier, name, parent, status, count). Each chip should clip with `text-overflow: ellipsis` and have a `max-width` so long values don't blow out the chat bubble.

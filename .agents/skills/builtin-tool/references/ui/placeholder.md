@@ -18,62 +18,44 @@ No `pluginState` — Placeholder lives entirely in the "executing" gap.
 
 ## Canonical example — Search Placeholder
 
-`packages/builtin-tool-web-browsing/src/client/Placeholder/Search.tsx`:
+A new-code example based on the search placeholder shape; existing call sites may still be migrating:
 
 ```tsx
 import type { BuiltinPlaceholderProps, SearchQuery } from '@orvilo/types';
-import { Flexbox, Icon, Skeleton } from '@lobehub/ui';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { SearchIcon } from 'lucide-react';
-import { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { shinyTextStyles } from '@/styles';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  query: cx(
-    css`
-      padding: 4px 8px;
-      border-radius: 8px;
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    `,
-    shinyTextStyles.shinyText,
-  ),
-}));
-
-export const Search = memo<BuiltinPlaceholderProps<SearchQuery>>(({ args }) => {
-  const { query } = args || {};
+export const Search = ({ args }: BuiltinPlaceholderProps<SearchQuery>) => {
   const isMobile = useIsMobile();
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal={!isMobile} gap={isMobile ? 8 : 40}>
-        <Flexbox horizontal align="center" className={styles.query} gap={8}>
-          <Icon icon={SearchIcon} />
-          {query ? query : <Skeleton.Block active style={{ height: 20, width: 40 }} />}
-        </Flexbox>
-        <Skeleton.Block active style={{ height: 20, width: 40 }} />
-      </Flexbox>
-      <Flexbox horizontal gap={12}>
+    <div className="flex flex-col gap-2">
+      <div className={cn('flex', isMobile ? 'flex-col gap-2' : 'flex-row gap-10')}>
+        <div className="text-shiny flex items-center gap-2 rounded-(--radius-card) px-2 py-1 text-xs text-muted-foreground hover:bg-accent">
+          <SearchIcon aria-hidden className="size-4" />
+          {args?.query || <Skeleton className="h-5 w-10" />}
+        </div>
+        <Skeleton className="h-5 w-10" />
+      </div>
+      <div className="flex gap-3">
         {[1, 2, 3, 4, 5].map((id) => (
-          <Skeleton.Button active key={id} style={{ borderRadius: 8, height: 80, width: 160 }} />
+          <Skeleton className="h-20 w-40 rounded-(--radius-card)" key={id} />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
-});
+};
 ```
 
 ## Placeholder rules
 
 - **Mirror the eventual Render's layout.** When the result arrives the Placeholder unmounts and the Render mounts; if they share dimensions, the chat doesn't jump.
-- Use `Skeleton.Block` / `Skeleton.Button` from `@lobehub/ui` for placeholder shapes.
+- Use the local `Skeleton` from `@/components/ui/skeleton`; component selection and sizing follow the [React skill](../../../react/SKILL.md).
 - Embed any args you have (e.g. the query text) — context helps the user know what's loading.
-- Pulse with `shinyTextStyles.shinyText` if the Placeholder includes literal text.
+- Use the shared `text-shiny` utility for literal loading text; keep the completed text unanimated.
 
 ## Placeholder registry — `client/Placeholder/index.ts`
 

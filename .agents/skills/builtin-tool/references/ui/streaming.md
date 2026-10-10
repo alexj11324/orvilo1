@@ -45,7 +45,7 @@ export const RunCommandStreaming = memo<BuiltinStreamingProps<RunCommandParams>>
       wrap
       language="sh"
       showLanguage={false}
-      style={{ padding: '4px 8px' }}
+      className="px-2 py-1"
       variant="outlined"
     >
       {command}

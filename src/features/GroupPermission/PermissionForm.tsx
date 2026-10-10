@@ -294,7 +294,7 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
           .filter((group): group is PermissionFormGroup => !!group)
           .map((group) => (
             <div
-              className="flex flex-col gap-2 rounded-lg p-3"
+              className="flex flex-col gap-2 rounded-(--radius-card) p-3"
               key={String(group.title)}
               style={{ background: cssVar.colorFillTertiary }}
             >

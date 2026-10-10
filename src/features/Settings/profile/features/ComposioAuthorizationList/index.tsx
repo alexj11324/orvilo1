@@ -58,7 +58,7 @@ const ComposioAuthItem = memo<ComposioAuthItemProps>(({ server }) => {
   };
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-sm">
+    <span className="inline-flex items-center gap-1 rounded-(--radius-chip) border border-border px-2 py-1 text-sm">
       <div
         className="flex flex-row gap-[4px] items-center"
         style={{ opacity: isRevoking ? 0.5 : 1 }}

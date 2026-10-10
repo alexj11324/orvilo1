@@ -149,7 +149,7 @@ const TransferManifestList = ({
     );
 
   return (
-    <div className="flex flex-col gap-2 p-3 rounded-lg bg-secondary" style={style}>
+    <div className="flex flex-col gap-2 p-3 rounded-(--radius-card) bg-secondary" style={style}>
       <div className="text-[12px] text-muted-foreground font-medium">
         {t('transferRequest.manifestTitle')}
       </div>

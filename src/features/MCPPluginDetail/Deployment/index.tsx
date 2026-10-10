@@ -139,7 +139,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   if (!deploymentOptions)
     return (
-      <div className="rounded-md border bg-card">
+      <div className="rounded-(--radius-card) border bg-card">
         <SimpleEmpty
           description={t('plugin:mcpEmpty.deployment')}
           descriptionProps={{ fontSize: 14 }}

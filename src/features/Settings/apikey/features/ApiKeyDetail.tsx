@@ -108,7 +108,7 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
   return (
     <div className="flex flex-col gap-3">
       {initialFullAccess ? (
-        <div className="flex flex-col gap-0.5 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-0.5 rounded-(--radius-card) border border-border p-3">
           <span className="text-sm" style={{ fontSize: 14 }}>
             {t('apikey.scopes.fullAccess')}
           </span>

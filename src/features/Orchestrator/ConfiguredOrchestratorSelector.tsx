@@ -68,7 +68,7 @@ const ConfiguredOrchestratorSelector = ({
       ) : (
         <RadioGroup
           aria-label={t('orchestrator.select')}
-          className="max-h-64 overflow-auto rounded-lg border p-3"
+          className="max-h-64 overflow-auto rounded-(--radius-card) border p-3"
           value={value ?? ''}
           onValueChange={(next) => {
             const item = data?.find(({ agent }) => agent.id === next);

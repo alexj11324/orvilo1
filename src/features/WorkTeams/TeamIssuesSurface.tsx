@@ -422,7 +422,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
         <PROJECT_ENTITY_ICON
           aria-hidden
           className="size-4 shrink-0"
-          color={key === 'none' ? cssVar.colorTextQuaternary : undefined}
+          color={key === 'none' ? 'var(--ant-color-text-quaternary)' : undefined}
         />
       );
     }

@@ -17,3 +17,5 @@ Anchor reset interactions in other team surfaces and resource-dialog descendant
 control overrides remain separate. No DOM changes, new tokens or important
 modifiers. Scoped checks and independent review are recorded on the PR.
 未做真机验证；no visual parity or Electron acceptance claimed.
+
+CI follow-up: the project grouping icon had one remaining cssVar reference after the import removal. Its optional color prop now reads the identical --ant-color-text-quaternary variable directly. This repairs the undefined identifier without changing icon behavior. The existing independent review follow-up budget was already used; no additional independent pass is claimed for this one-line repair.

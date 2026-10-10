@@ -1,36 +1,17 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { type CSSProperties, type FC, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    close: css`
-      color: white;
-    `,
-    container: css`
-      position: relative;
-    `,
-    footer: css`
-      display: flex;
-      justify-content: end;
-      width: 100%;
-    `,
-    overlay: css`
-      .ant-popover-inner {
-        border: none;
-      }
-    `,
-    tip: css`
-      position: absolute;
-      inset-inline-start: 50%;
-      transform: translate(-50%);
-    `,
-  };
-});
+const styles = {
+  close: 'text-popover-foreground',
+  container: 'relative',
+  overlay:
+    'z-[1000] select-none rounded-(--radius-overlay) bg-popover text-sm leading-5.5 text-popover-foreground',
+};
 
 export interface TipGuideProps {
   /**
@@ -93,7 +74,7 @@ const TipGuide: FC<TipGuideProps> = ({
 }) => {
   const { t: tCommon } = useTranslation('common');
   return open ? (
-    <div className={cx(styles.container, className)} style={style}>
+    <div className={cn(styles.container, className)} style={style}>
       <div
         style={{
           marginTop: offsetY,
@@ -103,17 +84,14 @@ const TipGuide: FC<TipGuideProps> = ({
           <PreviewCard.Trigger render={<span />}>{children}</PreviewCard.Trigger>
           <PreviewCard.Portal>
             <PreviewCard.Positioner side={placement} sideOffset={4}>
-              <PreviewCard.Popup
-                className={styles.overlay}
-                style={{ maxWidth, userSelect: 'none', zIndex: 1000 }}
-              >
+              <PreviewCard.Popup className={styles.overlay} style={{ maxWidth }}>
                 <div className={'flex gap-6'}>
                   <div>{title}</div>
                   <ActionIcon
                     aria-label={tCommon('close')}
                     className={styles.close}
                     icon={XIcon}
-                    size={'small'}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                     onClick={() => {
                       setOpen(false);
                     }}

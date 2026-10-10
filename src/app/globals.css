@@ -14,6 +14,13 @@
 @custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
 
 @theme inline {
+    /* Shared feedback animations; reuse identical frames without changing timing. */
+    --animate-dots-loading-fade: dots-loading-fade 1.2s ease-in-out infinite;
+    --animate-unread-ripple: unread-ripple 1.8s ease-out infinite;
+    --animate-neural-pulse: dots-loading-fade 2s infinite;
+    --animate-neural-flow: neural-flow 2s infinite;
+    --animate-neural-scale: neural-scale 2s infinite;
+    --animate-neural-rotate: spin 20s infinite linear;
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
             'Helvetica Neue', Arial, 'Noto Sans', sans-serif);
@@ -387,6 +394,59 @@
     }
 
     100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Shared loading frames. Neural pulse shares dots-loading-fade; rotation uses Tailwind spin. */
+@keyframes dots-loading-fade {
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes unread-ripple {
+    0% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+@keyframes neural-flow {
+    0% {
+        transform: translateX(0);
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(var(--flow-distance));
+        opacity: 0.5;
+    }
+}
+
+@keyframes neural-scale {
+    0%,
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
         transform: scale(1);
         opacity: 1;
     }

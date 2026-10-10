@@ -1,4 +1,4 @@
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type CSSProperties, type SVGProps } from 'react';
 
 interface RingLoadingIconProps extends SVGProps<SVGSVGElement> {
@@ -12,16 +12,16 @@ const RingLoadingIcon = ({
   size = 16,
   className,
   style,
-  ringColor = cssVar.colorBorder,
+  ringColor = 'var(--border)',
   ...rest
 }: RingLoadingIconProps & { ref?: React.RefObject<SVGSVGElement | null> }) => {
   return (
     <svg
-      className={cx('anticon', className)}
+      className={cn('anticon flex-none leading-none', className)}
       color="currentColor"
       height={size}
       ref={ref}
-      style={{ flex: 'none', lineHeight: 1, ...style }}
+      style={style}
       viewBox="0 0 1024 1024"
       width={size}
       xmlns="http://www.w3.org/2000/svg"

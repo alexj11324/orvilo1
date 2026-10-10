@@ -1,54 +1,11 @@
-import { createStaticStyles, keyframes } from 'antd-style';
 import { memo } from 'react';
 
-const rippleAnim = keyframes`
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  dot: css`
-    position: relative;
-    z-index: 1;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorInfo};
-  `,
-  ripple: css`
-    position: absolute;
-    inset: 0;
-
-    width: 6px;
-    height: 6px;
-    margin: auto;
-    border: 1px solid ${cssVar.colorInfo};
-    border-radius: 50%;
-
-    background: transparent;
-
-    animation: ${rippleAnim} 1.8s ease-out infinite;
-  `,
-  wrapper: css`
-    position: relative;
-
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-  `,
-}));
+const styles = {
+  dot: 'relative z-1 size-1.5 rounded-full bg-info',
+  ripple:
+    'absolute inset-0 m-auto size-1.5 rounded-full border border-info bg-transparent animate-unread-ripple',
+  wrapper: 'relative flex size-3.5 flex-none items-center justify-center',
+};
 
 interface UnreadDotProps {
   /** Announces the mark to screen readers — pass it wherever the dot is the only carrier of "unread". */

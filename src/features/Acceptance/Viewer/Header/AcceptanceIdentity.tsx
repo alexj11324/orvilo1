@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { GitPullRequest } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,26 +11,11 @@ import { acceptanceCodingScope } from '../History/codingScope';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import AcceptanceStatusPill from './AcceptanceStatusPill';
 
-const styles = createStaticStyles(({ css }) => ({
-  titleRow: css`
-    @media (width <= 767px) {
-      padding-inline-end: 48px;
-    }
-  `,
-  metaRow: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  scopeLink: css`
-    cursor: pointer;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      text-decoration: underline;
-    }
-  `,
-}));
+const styles = {
+  titleRow: '[@media(width<=767px)]:pe-12',
+  metaRow: 'text-[13px] text-muted-foreground',
+  scopeLink: 'cursor-pointer text-muted-foreground hover:text-foreground hover:underline',
+};
 
 interface AcceptanceIdentityProps {
   statusSlot?: ReactNode;
@@ -88,7 +72,7 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
         {authorName && (
           <div className="flex items-center gap-1.5">
             <Avatar avatar={author?.avatar || authorName.slice(0, 1)} size={18} />
-            <div style={{ color: cssVar.colorText, fontSize: 'inherit' }}>{authorName}</div>
+            <div style={{ color: 'var(--foreground)', fontSize: 'inherit' }}>{authorName}</div>
           </div>
         )}
         {originAgent && (
@@ -109,7 +93,7 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
         {pullRequest?.number ? (
           pullRequest.url ? (
             <a
-              className={cx(styles.scopeLink)}
+              className={styles.scopeLink}
               href={pullRequest.url}
               rel={'noreferrer'}
               target={'_blank'}

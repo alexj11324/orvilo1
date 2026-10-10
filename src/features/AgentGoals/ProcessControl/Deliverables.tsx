@@ -88,12 +88,12 @@ const DeliverableRow = memo<{
       {!!producerTitle && (
         <div className={`flex items-center gap-1.5 ${styles.producer}`}>
           <KindDot kind={'task'} />
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground">
+          <div className="truncate min-w-0 text-xs text-muted-foreground">
             {t('goalProcess.deliverables.from', { title: producerTitle })}
           </div>
         </div>
       )}
-      <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
+      <div className={cn('text-xs text-muted-foreground', styles.time)} title={title}>
         {text}
       </div>
     </RowTag>

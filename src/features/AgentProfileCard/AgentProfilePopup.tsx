@@ -124,7 +124,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         {pluginCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <SkillsIcon size={13} />
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('agentProfile.skills', { count: pluginCount })}
             </div>
           </div>
@@ -132,7 +132,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         {knowledgeCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <BookOpen size={13} />
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('agentProfile.knowledgeBases', { count: knowledgeCount })}
             </div>
           </div>
@@ -140,7 +140,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         {fileCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <FileText size={13} />
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('agentProfile.files', { count: fileCount })}
             </div>
           </div>

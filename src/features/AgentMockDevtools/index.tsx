@@ -23,7 +23,7 @@ const AgentMockPanel = memo(() => {
   return (
     <div className={devDockPanelStyles.root}>
       {!isAgentTopicRoute && (
-        <div className={cn('text-[12px]', 'text-muted-foreground', styles.notice)}>
+        <div className={cn('text-xs', 'text-muted-foreground', styles.notice)}>
           Open an agent topic conversation to replay mock cases into it.
         </div>
       )}

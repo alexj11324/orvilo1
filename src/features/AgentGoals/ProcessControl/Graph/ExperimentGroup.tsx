@@ -76,11 +76,11 @@ const ExperimentGroup = ({ data }: NodeProps) => {
       <div className="flex gap-3" style={{ paddingBlock: 6, paddingInline: 16 }}>
         <div className="flex items-center gap-[5px]">
           <status.icon color={status.color} size={13} />
-          <div className="text-[12px]" style={{ color: status.color }}>
+          <div className="text-xs" style={{ color: status.color }}>
             {t(`goalExperiment.status.${view.node.status}`)}
           </div>
         </div>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t('goalExperiment.members', { count: memberCount ?? 0 })}
         </div>
       </div>

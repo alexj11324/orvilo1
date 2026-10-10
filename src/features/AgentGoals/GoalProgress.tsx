@@ -52,7 +52,7 @@ export const GoalProgress = memo<GoalProgressProps>(
               <div className={styles.progressValue} style={{ width: `${progress}%` }} />
             </div>
             <div
-              className="truncate min-w-0 text-[12px]"
+              className="truncate min-w-0 text-xs"
               style={{ color: 'var(--ant-color-text-tertiary)' }}
             >
               {t('goalList.taskProgress', { done: taskDone, total: taskTotal })}
@@ -60,32 +60,32 @@ export const GoalProgress = memo<GoalProgressProps>(
           </div>
         ) : (
           <div
-            className="truncate min-w-0 text-[12px]"
+            className="truncate min-w-0 text-xs"
             style={{ color: 'var(--ant-color-text-tertiary)' }}
           >
             {t('goalList.noTasks')}
           </div>
         )}
         {pendingDecisions > 0 ? (
-          <div className={cn('text-[12px]', styles.needsYou)}>
+          <div className={cn('text-xs', styles.needsYou)}>
             {t('goalList.needsYou', { count: pendingDecisions })}
           </div>
         ) : (
           <div
-            className={cn('text-[12px]', styles.metric)}
+            className={cn('text-xs', styles.metric)}
             style={{ color: 'var(--ant-color-text-tertiary)' }}
           >
             {t('goalList.findings', { count: findingCount })}
           </div>
         )}
         <div
-          className={cn('text-[12px]', styles.metric)}
+          className={cn('text-xs', styles.metric)}
           style={{ color: 'var(--ant-color-text-tertiary)' }}
         >
           {formatGoalDuration(totalRunDuration)}
         </div>
         <div
-          className={cn('text-[12px]', styles.metric)}
+          className={cn('text-xs', styles.metric)}
           style={{ color: 'var(--ant-color-text-tertiary)' }}
         >
           {formatGoalCost(totalRunCost)}

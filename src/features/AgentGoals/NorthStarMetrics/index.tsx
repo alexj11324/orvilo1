@@ -46,7 +46,7 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
     return (
       <div className={`flex flex-col gap-1.5 ${styles.card}`}>
         <div className="flex items-center gap-2 justify-between">
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground">{card.label}</div>
+          <div className="truncate min-w-0 text-xs text-muted-foreground">{card.label}</div>
           <div className="flex items-center gap-1">
             {card.met && (
               <Badge size="sm" variant="success">
@@ -76,10 +76,10 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         </div>
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-baseline gap-1.5">
-            <div className={cn('text-[20px] font-bold', card.met ? styles.metValue : '')}>
+            <div className={cn('text-xl font-bold', card.met ? styles.metValue : '')}>
               {formatMetricValue(card.current)}
             </div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t(`goalProcess.northStar.op.${card.op}` as const)} {formatMetricValue(card.target)}
               {card.unit ? ` ${card.unit}` : ''}
             </div>
@@ -96,7 +96,7 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
             }}
           />
         </div>
-        <div className={cn('text-[11px] text-muted-foreground', card.stale ? styles.stale : '')}>
+        <div className={cn('text-xs text-muted-foreground', card.stale ? styles.stale : '')}>
           {freshness}
           {card.stale ? ` · ${t('goalProcess.northStar.staleWarning')}` : ''}
         </div>

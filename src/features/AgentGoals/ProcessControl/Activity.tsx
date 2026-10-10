@@ -81,7 +81,7 @@ const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
   const elapsed = useElapsed(startedAt);
   if (!elapsed) return null;
   return (
-    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} style={{ flex: 'none' }}>
+    <div className={cn('text-xs text-muted-foreground', styles.mono)} style={{ flex: 'none' }}>
       {t('goalProcess.running.elapsed', { duration: elapsed })}
     </div>
   );
@@ -114,14 +114,14 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
             {coordinatorTitleKey ? t(coordinatorTitleKey as any) : view.node.title}
           </div>
           <div
-            className="truncate min-w-0 text-[14px] text-muted-foreground"
+            className="truncate min-w-0 text-sm text-muted-foreground"
             style={{ flexShrink: 1, minWidth: 0 }}
           >
             {summarize(view)}
           </div>
           {view.startedAt && <RunningClock startedAt={view.startedAt} />}
           <div
-            className={cn('text-[12px] text-muted-foreground', cn(styles.time, styles.mono))}
+            className={cn('text-xs text-muted-foreground', cn(styles.time, styles.mono))}
             title={title}
           >
             {text}
@@ -134,13 +134,13 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                 {view.attempts.map((attempt) => (
                   <div className={`flex flex-col gap-0.5 ${styles.attempt}`} key={attempt.index}>
                     <div className="flex items-center gap-2">
-                      <div className="text-[12px] font-semibold" style={{ flex: 'none' }}>
+                      <div className="text-xs font-semibold" style={{ flex: 'none' }}>
                         {t('goalProcess.attempts.nth', { index: attempt.index })}
                       </div>
                       <div
                         style={{ flex: 'none' }}
                         className={cn(
-                          'text-[12px]',
+                          'text-xs',
                           attempt.outcome === 'passed'
                             ? 'text-success'
                             : attempt.outcome === 'failed'
@@ -152,7 +152,7 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                       </div>
                     </div>
                     {attempt.reason && (
-                      <div className="text-[12px] text-muted-foreground">{attempt.reason}</div>
+                      <div className="text-xs text-muted-foreground">{attempt.reason}</div>
                     )}
                   </div>
                 ))}

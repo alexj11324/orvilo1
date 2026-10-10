@@ -171,13 +171,13 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'acceptance',
                 title: (
                   <div className="flex items-center gap-2">
-                    <div className="text-[14px] font-semibold">{t('goalAcceptance.title')}</div>
+                    <div className="text-sm font-semibold">{t('goalAcceptance.title')}</div>
                     {criteriaIds.length > 0 && (
                       <Badge size="sm" variant="secondary">
                         {criteriaIds.length}
                       </Badge>
                     )}
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('goalAcceptance.gateHint')}
                     </div>
                   </div>
@@ -195,7 +195,7 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'deliverables',
                 title: (
                   <div className="flex items-center gap-2">
-                    <div className="text-[14px] font-semibold">
+                    <div className="text-sm font-semibold">
                       {t('goalProcess.deliverables.title')}
                     </div>
                     {graph.artifacts.length > 0 && (
@@ -215,9 +215,7 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'findings',
                 title: (
                   <div className="flex items-center gap-2">
-                    <div className="text-[14px] font-semibold">
-                      {t('goalProcess.findings.title')}
-                    </div>
+                    <div className="text-sm font-semibold">{t('goalProcess.findings.title')}</div>
                     {graph.findings.length > 0 && (
                       <Badge size="sm" variant="secondary">
                         {graph.findings.length}
@@ -235,9 +233,7 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'activity',
                 title: (
                   <div className="flex items-center gap-2">
-                    <div className="text-[14px] font-semibold">
-                      {t('goalProcess.activity.title')}
-                    </div>
+                    <div className="text-sm font-semibold">{t('goalProcess.activity.title')}</div>
                   </div>
                 ),
               },

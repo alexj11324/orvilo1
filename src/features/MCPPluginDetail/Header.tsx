@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import OfficialIcon from '@/components/OfficialIcon';
 import { Badge } from '@/components/reui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
@@ -78,11 +78,11 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
     />
   );
 
-  const cateButton = (
-    <Button disabled size="compact">
+  const cateBadge = (
+    <Badge variant="secondary">
       {cate?.icon ? <cate.icon size={16} /> : null}
       {cate?.label}
-    </Button>
+    </Badge>
   );
 
   return (
@@ -166,7 +166,7 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
         style={{ color: cssVar.colorTextSecondary, gap: mobile ? 12 : 24 }}
       >
         {mobile && scores}
-        {!mobile && cateButton}
+        {!mobile && cateBadge}
         <div className="flex flex-row items-center flex-wrap" style={{ gap: mobile ? 12 : 24 }}>
           {Boolean(github?.language) && (
             <div className="flex flex-row items-center gap-1.5">

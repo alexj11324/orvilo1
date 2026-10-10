@@ -308,7 +308,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                     </div>
                   </div>
                 )}
-                <div className="flex flex-col gap-[7px]">
+                <div className="flex flex-col gap-1.75">
                   <div className="flex items-center gap-2">
                     <div className="text-[12px] text-muted-foreground">
                       {t('taskDetail.acceptance.checklist')}

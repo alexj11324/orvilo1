@@ -1,6 +1,5 @@
 'use client';
 
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import {
   FileOutputIcon,
@@ -229,7 +228,7 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
 
     if (!canShare) {
       return (
-        <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className={cn('flex flex-col gap-2', styles.container)}>
           <div className="font-semibold">{t('share', { ns: 'common' })}</div>
           <div className="text-muted-foreground">{reason}</div>
         </div>
@@ -238,7 +237,7 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
 
     if (loadError || failedTopicId === activeTopicId) {
       return (
-        <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className={cn('flex flex-col gap-2', styles.container)}>
           <div className="font-semibold">{t('share', { ns: 'common' })}</div>
           <div className="text-muted-foreground">{t('shareModal.popover.loadError')}</div>
           <div className="flex flex-row justify-end">
@@ -254,7 +253,7 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
     // real body (visibility defaults to private) instead of an eternal skeleton.
     if (isLoading || (!shareInfo && canPublishLink)) {
       return (
-        <div className={cx('flex flex-col gap-4', styles.container)}>
+        <div className={cn('flex flex-col gap-4', styles.container)}>
           <div className="font-semibold">{t('share', { ns: 'common' })}</div>
           <ArticleSkeleton rows={2} />
         </div>
@@ -291,7 +290,7 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
     };
 
     return (
-      <div className={cx('flex flex-col gap-3', styles.container)} ref={containerRef}>
+      <div className={cn('flex flex-col gap-3', styles.container)} ref={containerRef}>
         <div className="font-semibold">{t('shareModal.popover.title')}</div>
 
         <div className="flex flex-col gap-1">
